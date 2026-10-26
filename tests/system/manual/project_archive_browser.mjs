@@ -36,8 +36,7 @@ const fixture = join(repo, 'tests/fixtures/project_archive/sc-neut-cwl_tb2ti2o7-
 const documents = spawnSync('python', ['-c', 'import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z: print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))', fixture], {encoding:'utf8'});
 assert.equal(documents.status, 0, 'Browser input comes from Python zipfile, independently of the app');
 const initial = JSON.parse(documents.stdout);
-const declaredRule=Buffer.from(initial['project.edi'],'base64').toString().match(/^_su_format\.rule\s+(\S+)/m)?.[1];
-assert(declaredRule,'The archive fixture must declare the save rule that Open and Save must retain');
+const expectedRule=Buffer.from(initial['project.edi'],'base64').toString().match(/^_su_format\.rule\s+(\S+)/m)?.[1] || 'iucr_99';
 const archiveInput=(await readFile(fixture)).toString('base64');
 const receipts = {};
 let activePage;
@@ -200,11 +199,14 @@ try {
         }};
         await walk(await window.__projectFolderReady); return result;
       });
-      await ready(()=>page.evaluate(async rule => {
+      const firstRecord=await ready(()=>page.evaluate(async () => {
         const root=await window.__projectFolderReady;
         const text=await (await (await root.getFileHandle('project.edi')).getFile()).text();
-        return text.match(/^_su_format\.rule\s+(\S+)/m)?.[1]===rule && text.includes('archive-folder-first');
-      },declaredRule),'The chosen folder must contain the edited project with its declared save rule retained');
+        return text.includes('archive-folder-first') && text;
+      }),'The chosen folder must contain the edited project before its bytes are compared');
+      await writeFile(join(output,'folder-saved-project.edi'),firstRecord);
+      assert.equal(firstRecord.match(/^_su_format\.rule\s+(\S+)/m)?.[1],expectedRule,
+        'A saved project must retain its declared rule or use the two-digit default when the input declares none');
       const first=await readFolder();
       assert.equal(first['reports/opaque.html'],initial['reports/opaque.html'],'Picked-folder Save retains exact report bytes');
       const picks=await page.evaluate(()=>window.__projectFolderPickCount);
