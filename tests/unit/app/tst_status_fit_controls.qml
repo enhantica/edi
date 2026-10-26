@@ -309,14 +309,17 @@ TestCase {
             return;
         verify(actionable(item), "The secondary hover witness has a real available action");
         const label = View.textItems(item).find(text => text.text === caption(item));
-        verify(label !== undefined, "The secondary status action renders its actual caption");
-        const oldInk = label.color, oldIcon = item.iconColor;
+        const glyphs = View.textItems(item).filter(text => text.text === icon(item));
+        verify(glyphs.length > 0, "The secondary status action renders its icon even when its caption is compacted");
+        const oldInk = item.valueColor, oldIcon = item.iconColor;
         mouseMove(item, item.width / 2, item.height / 2, 0);
-        tryVerify(() => colorsMatch(label.color, EaStyle.Colors.themeAccent) && colorsMatch(item.iconColor, EaStyle.Colors.themeAccent), 1500, "Hovering an available secondary status action turns its caption and icon accent blue");
+        tryVerify(() => colorsMatch(item.valueColor, EaStyle.Colors.themeAccent) && colorsMatch(item.iconColor, EaStyle.Colors.themeAccent) && glyphs.some(glyph => colorsMatch(glyph.color, EaStyle.Colors.themeAccent)), 1500, "Hovering an available secondary status action turns its caption and visible icon accent blue");
+        if (label !== undefined)
+            tryVerify(() => colorsMatch(label.color, EaStyle.Colors.themeAccent), 1500, "An expanded secondary caption visibly turns accent blue on hover");
         if (light)
             verify(paintedGrayMatches(fill, 1), "Secondary hover retains its white background while only the ink turns blue");
         mouseMove(appWindow.contentItem, 1, 1, 0);
-        tryVerify(() => colorsMatch(label.color, oldInk) && colorsMatch(item.iconColor, oldIcon), 1500, "Leaving a secondary status action restores its normal caption and icon colours");
+        tryVerify(() => colorsMatch(item.valueColor, oldInk) && colorsMatch(item.iconColor, oldIcon) && glyphs.some(glyph => colorsMatch(glyph.color, oldIcon)), 1500, "Leaving a secondary status action restores its normal caption and visible icon colours");
     }
     function test_button_style(data) {
         open("single");
@@ -438,9 +441,8 @@ TestCase {
             return Math.abs(a.r - b.r) <= 1 / 255 && Math.abs(a.g - b.g) <= 1 / 255 && Math.abs(a.b - b.b) <= 1 / 255;
         }, 1500, "Disabled Fit has the same rendered background as disabled Follow in each theme");
         const label = View.textItems(button).find(item => item.text === caption(button));
-        const peer = View.textItems(follow).find(item => item.text === caption(follow));
-        verify(label !== undefined && peer !== undefined, "Both disabled controls render their captions");
-        tryCompare(label, "color", peer.color, 1500, "Disabled Fit uses Follow's normal caption colour");
+        verify(label !== undefined, "Disabled Fit retains its caption while secondary controls may compact to icons");
+        tryCompare(label, "color", follow.valueColor, 1500, "Disabled Fit uses Follow's normal caption colour");
         tryCompare(button, "iconColor", follow.iconColor, 1500, "Disabled Fit uses Follow's normal icon colour");
         normalButtonStyle(button, data.tag === "light", false);
         normalButtonStyle(follow, data.tag === "light", false);
