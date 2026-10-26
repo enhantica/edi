@@ -285,6 +285,12 @@ for antialiasing placement. Each name and symbol must contribute visible ink in
 the declared foreground. Merely retaining a segment or a colour property does
 not satisfy this contract.
 
+An `IconLine` segment without a `color` inherits the row's `textColor`. In
+particular, the separate `Bragg peaks` and structure-name text pieces may use
+that inherited disabled colour. The range/visibility gate resolves this fallback
+and also checks every instantiated drawing piece's actual `color`; requiring an
+explicit colour field on every segment would incorrectly reject that rendering.
+
 Before the amended owner record, the legend rule would have required an
 unchanged range for every click. The gates now separate the default keep rule
 from visible-only fits and test both actual preference choices and persistence.
