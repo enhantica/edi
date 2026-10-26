@@ -432,14 +432,8 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case, recor
             )
             == expected['input_sha256']
         ), 'the current model must match the explicitly labelled post-change regression pin'
-        assert retained_hashes(
-            observe_legacy_pin(source, tmp_path / 'saved', calculator=True),
-            observe_legacy_pin(
-                source, tmp_path / 'transition' / 'converted', calculator=True, excluded=True
-            ),
-            rounded_pins(expected['saved_sha256']),
-        ) == rounded_pins(expected['saved_sha256']), (
-            'the complete saved project must match the labelled model-change regression pin'
+        assert_saved_projection(
+            source, tmp_path, rounded_pins(expected['saved_sha256']), case, record_property
         )
         return
     if case == 'repo:docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project':
