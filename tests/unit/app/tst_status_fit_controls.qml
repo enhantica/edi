@@ -291,6 +291,33 @@ TestCase {
         const color = paintedColor(fill);
         return Math.abs(color.r - channel) <= 1 / 255 && Math.abs(color.g - channel) <= 1 / 255 && Math.abs(color.b - channel) <= 1 / 255;
     }
+    function colorsMatch(a, b) {
+        return Math.abs(a.r - b.r) <= 1 / 255 && Math.abs(a.g - b.g) <= 1 / 255 && Math.abs(a.b - b.b) <= 1 / 255 && Math.abs(a.a - b.a) <= 1 / 255;
+    }
+    function normalButtonStyle(item, light, canHover) {
+        mouseMove(appWindow.contentItem, 1, 1, 0);
+        const fill = rectangle(item);
+        if (light)
+            tryVerify(() => paintedGrayMatches(fill, 1), 1500, "Secondary status buttons have a rendered white background in light mode");
+        else
+            tryVerify(() => paintedLuminance(fill) > luminance(EaStyle.Colors.statusBarBackground), 1500, "Secondary status buttons are slightly lighter than the dark status bar");
+        compare(fill.border.width, 1, "Secondary status buttons have a one-pixel border");
+        tryVerify(() => colorsMatch(fill.border.color, EaStyle.Colors.appBarBorder), 1500, "Secondary button borders match the status bar's own border line");
+        if (light)
+            verify(luminance(fill.border.color) < luminance(EaStyle.Colors.statusBarBackground), "The light secondary border is darker than the status bar background");
+        if (!canHover)
+            return;
+        verify(actionable(item), "The secondary hover witness has a real available action");
+        const label = View.textItems(item).find(text => text.text === caption(item));
+        verify(label !== undefined, "The secondary status action renders its actual caption");
+        const oldInk = label.color, oldIcon = item.iconColor;
+        mouseMove(item, item.width / 2, item.height / 2, 0);
+        tryVerify(() => colorsMatch(label.color, EaStyle.Colors.themeAccent) && colorsMatch(item.iconColor, EaStyle.Colors.themeAccent), 1500, "Hovering an available secondary status action turns its caption and icon accent blue");
+        if (light)
+            verify(paintedGrayMatches(fill, 1), "Secondary hover retains its white background while only the ink turns blue");
+        mouseMove(appWindow.contentItem, 1, 1, 0);
+        tryVerify(() => colorsMatch(label.color, oldInk) && colorsMatch(item.iconColor, oldIcon), 1500, "Leaving a secondary status action restores its normal caption and icon colours");
+    }
     function test_button_style(data) {
         open("single");
         Session.project.fit.start();
@@ -301,17 +328,25 @@ TestCase {
         verify(status !== null && status.visible, "A real fit provides its outcome button beside the status Fit shortcut");
         mouseMove(appWindow.contentItem, 1, 1);
         const fill = rectangle(button), outcome = rectangle(status);
-        const idleChannel = data.tag === "light" ? 0x33 / 255 : 0xe0 / 255;
-        tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "The status Fit background is #333333 in light mode and #e0e0e0 in dark mode while idle");
+        const idleChannel = data.tag === "light" ? 0 : 1;
+        tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "The enabled status Fit background is pure black in light mode and pure white in dark mode");
         tryVerify(() => data.tag === "light" ? paintedLuminance(outcome) > paintedLuminance(fill) : paintedLuminance(outcome) < paintedLuminance(fill), 1500, "The drawn outcome button has a lighter light-mode background and an inverse dark-mode hierarchy after overlay compositing");
         fuzzyCompare(fill.height, outcome.height, 1, "Fit and outcome buttons have the same background height");
         fuzzyCompare(fill.radius, outcome.radius, .5, "Fit and outcome buttons have the same rounded corners");
         verify(fill.radius > 0, "The status Fit button has rounded corners");
         const label = View.textItems(button).filter(item => item.text === "Fit");
         compare(label.length, 1, "The status shortcut renders the white or inverse Fit caption");
-        tryVerify(() => data.tag === "light" ? luminance(label[0].color) > .9 : luminance(label[0].color) < .25, 1500, "Fit caption ink is white in light mode and inverted in dark mode");
+        const ink = data.tag === "light" ? Qt.rgba(1, 1, 1, 1) : Qt.rgba(0, 0, 0, 1);
+        tryVerify(() => colorsMatch(label[0].color, ink), 1500, "The enabled Fit caption is pure white in light mode and pure black in dark mode");
         const glyphs = View.textItems(button).filter(item => item.text !== "Fit");
-        verify(glyphs.length > 0 && glyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The status Fit icon has the same white or inverse ink as its caption");
+        verify(glyphs.length > 0 && glyphs.some(item => colorsMatch(item.color, ink)), "The status Fit icon uses the same pure white or black ink as its caption");
+        mouseMove(button, button.width / 2, button.height / 2, 0);
+        tryVerify(() => colorsMatch(paintedColor(fill), EaStyle.Colors.themeAccent), 1500, "Hovering enabled Fit changes its rendered background to the app accent blue");
+        compare(label[0].color, ink, "Fit keeps its inverted caption ink on the blue hover background");
+        verify(glyphs.some(item => colorsMatch(item.color, ink)), "Fit keeps its inverted icon ink on the blue hover background");
+        mouseMove(appWindow.contentItem, 1, 1, 0);
+        tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "Leaving Fit restores its pure black or white background");
+        normalButtonStyle(status, data.tag === "light", true);
         rightmostFitAction();
     }
     function test_scan_controls_data() {
@@ -407,6 +442,9 @@ TestCase {
         verify(label !== undefined && peer !== undefined, "Both disabled controls render their captions");
         tryCompare(label, "color", peer.color, 1500, "Disabled Fit uses Follow's normal caption colour");
         tryCompare(button, "iconColor", follow.iconColor, 1500, "Disabled Fit uses Follow's normal icon colour");
+        normalButtonStyle(button, data.tag === "light", false);
+        normalButtonStyle(follow, data.tag === "light", false);
+        normalButtonStyle(scanControl("reset"), data.tag === "light", true);
     }
     function test_fit_tooltip_data() {
         return [
