@@ -30,7 +30,7 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.ListViewLabel {
-                    text: qsTr("Project directory")
+                    text: WebFiles.available ? qsTr("Project") : qsTr("Project directory")
                     horizontalAlignment: Text.AlignLeft
                 }
                 EaComponents.ListViewLabel {
@@ -44,6 +44,8 @@ EaElements.GroupBox {
             delegate: TableRow {
                 id: row
                 required property string path
+                required property string label
+                required property bool inBrowser
                 required property bool available
 
                 MouseArea {
@@ -54,7 +56,7 @@ EaElements.GroupBox {
                     onClicked: {
                         row.activated();
                         if (row.available)
-                            Session.openProject(Session.projectDirectoryUrl(row.path));
+                            AppState.afterChanges(() => RecentProjects.open(row.path));
                     }
                 }
                 EaComponents.ListViewLabel {
@@ -64,9 +66,9 @@ EaElements.GroupBox {
                 }
                 EaComponents.ListViewLabel {
                     objectName: `recentProjects.path.${row.index}`
-                    text: row.path
+                    text: row.label
                     horizontalAlignment: Text.AlignLeft
-                    ToolTip.text: row.path
+                    ToolTip.text: row.label
                 }
                 // Found or missing on disk as an icon, the word in its tooltip, as the experiments' fit column.
                 IconCell {
@@ -80,7 +82,7 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignHCenter
                     objectName: `recentProjects.remove.${row.index}`
                     fontIcon: "minus-circle"
-                    ToolTip.text: qsTr("Remove from recent projects")
+                    ToolTip.text: row.inBrowser ? qsTr("Delete from this browser") : qsTr("Remove from recent projects")
                     onClicked: RecentProjects.forget(row.index)
                 }
             }

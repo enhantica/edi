@@ -32,7 +32,7 @@ Item {
     readonly property bool available: correlations !== null && correlations.available >= 2
     // The two toggles change only how shown correlations look: disabled whenever the filter shows none (owner,
     // 2026-10-13).
-    readonly property bool showsAny: available && count >= 2
+    readonly property bool showsAny: available && correlations.labels.length >= 2
     // The toolbar's two toggles.
     property bool namesShown: false
     property bool fullMatrix: false
@@ -45,8 +45,25 @@ Item {
     readonly property color negativeColor: "#d73027"
     readonly property color positiveColor: "#4575b4"
 
-    readonly property var labels: correlations ? correlations.labels : []
-    readonly property var values: correlations ? correlations.values : []
+    // The cells drawn follow the model while the tab is shown. Hidden, the chart keeps what it drew and catches up
+    // when shown again, so the end of a fit does not rebuild cells nobody sees; on the web each new cell is also a
+    // new accessible element, and that rebuild held the window for most of a second.
+    property var labels: []
+    property var values: []
+    Binding {
+        target: chart
+        property: "values"
+        value: chart.correlations ? chart.correlations.values : []
+        when: chart.shown
+        restoreMode: Binding.RestoreNone
+    }
+    Binding {
+        target: chart
+        property: "labels"
+        value: chart.correlations ? chart.correlations.labels : []
+        when: chart.shown
+        restoreMode: Binding.RestoreNone
+    }
     readonly property int count: labels.length
 
     // A cell's value; NaN outside the values, which can trail the labels by one change. Above the diagonal, the full

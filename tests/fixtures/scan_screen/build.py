@@ -190,6 +190,14 @@ def snapshot(root, output, fixture):
         ['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True
     ).strip()
     (output / 'source-sha.txt').write_text(source_sha + '\n')
+    (output / 'source-policy.json').write_text(
+        json.dumps({
+            'kind': 'git-archive',
+            'revision': source_sha,
+            'includes_uncommitted_changes': False,
+        })
+        + '\n'
+    )
     archive = output / 'source.tar'
     with archive.open('wb') as stream:
         run(['git', '-C', root, 'archive', source_sha], stdout=stream)
@@ -320,6 +328,7 @@ def build(root, output, sdk, engine_source, backend):  # noqa: PLR0914 - qualifi
         'production': production,
         'compiled_inputs': {'production': production, 'sdk': compiled_sdk},
         'source_sha': (output / 'source-sha.txt').read_text().strip(),
+        'source_policy': json.loads((output / 'source-policy.json').read_text()),
         'engine_sha': subprocess.check_output(
             ['git', '-C', engine_source, 'rev-parse', 'HEAD'], text=True
         ).strip(),

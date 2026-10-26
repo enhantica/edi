@@ -233,6 +233,11 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
     // project's directory; an empty string on success, else the core's message (also `lastError`).
     QString saveTo(const QString& directory);
+    // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
+    // (edi ADR-0052). Not a save and not an edit.
+    void workIn(const QString& folder);
+    // The project holds changes its place does not (the web app's kept unsaved state, reopened).
+    void markUnsaved() { setModified(true); }
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
@@ -406,6 +411,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
+    // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
+    void edited();
     void refused(const QString& message);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
     void message(const QString& text);

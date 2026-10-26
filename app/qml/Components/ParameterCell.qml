@@ -138,6 +138,13 @@ EaComponents.ListViewParameter {
     } : ({})
 
     warned: warningText !== ""
+    // A help text set as `ToolTip.text` shows in the app's tooltip on hover, unless the cell shows why its value is
+    // red (never the attached tooltip Qt draws in its own style).
+    property bool helpToolTip: false
+    EaElements.ToolTip {
+        text: cell.ToolTip.text
+        visible: cell.helpToolTip && text !== "" && cell.hovered && !cell.warned && EaGlobals.Vars.showToolTips
+    }
     ToolTip.text: warningText
     WarningToolTip {
         text: cell.warningText

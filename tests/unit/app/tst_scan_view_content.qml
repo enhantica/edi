@@ -1149,6 +1149,7 @@ Rectangle {
             zoom(30, 90);
             const coarse = logicalImage(chart);
             const columns = Math.round(layer.width);
+            let checkedGaps = 0;
             for (let column = 3; column < columns - 3; column += 17) {
                 const left = axes.axisX.min + column / columns * (axes.axisX.max - axes.axisX.min);
                 const right = axes.axisX.min + (column + 1) / columns * (axes.axisX.max - axes.axisX.min);
@@ -1167,20 +1168,28 @@ Rectangle {
                         let hit = false;
                         for (let dx = -1; dx <= 1; ++dx)
                             for (let dy = -2; dy <= 2; ++dy)
-                                hit = hit || ink(coarse.pixel(Math.round(at.x) + dx, Math.round(at.y) + dy), expected, chart.colors.chartBackground);
+                                hit = hit || ink(coarse.pixel(Math.floor(at.x) + dx, Math.floor(at.y) + dy), expected, chart.colors.chartBackground);
                         verify(hit, "A zoomed Stacked pixel column retains the true independently enumerated visible minimum and maximum");
                     }
-                    for (const outside of [low - 40, high + 40].filter(value => value > 0 && value < 255)) {
+                    const neighborWidth = (axes.axisX.max - axes.axisX.min) / columns;
+                    const neighborhood = [];
+                    for (let i = Math.ceil((left - neighborWidth - 10) * 40); i <= Math.floor((right + neighborWidth - 10) * 40 - 1e-8); ++i)
+                        neighborhood.push(values[((i % 8) + 8) % 8]);
+                    const minimum = Math.min(...neighborhood), maximum = Math.max(...neighborhood);
+                    for (const outside of [minimum / 2, (maximum + 255) / 2].filter(value => value > 0 && value < 255)) {
+                        ++checkedGaps;
                         const y = (axes.axisY.max - (250 + outside / 255 * scan.stackHeight)) / (axes.axisY.max - axes.axisY.min) * layer.height;
                         const at = layer.mapToItem(chart, column + .5, y);
-                        verify(!ink(coarse.pixel(Math.round(at.x), Math.round(at.y)), expected, chart.colors.chartBackground), "A visible-range Stacked column has no spurious ink from extrema outside its actual visible samples");
+                        verify(!ink(coarse.pixel(Math.floor(at.x), Math.floor(at.y)), expected, chart.colors.chartBackground), "A visible-range Stacked column has no spurious ink from extrema outside its actual visible samples");
                     }
                 } else {
                     const table = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
-                    const at = layer.mapToItem(chart, column + .5, layer.height * .2);
-                    compare(String(coarse.pixel(Math.round(at.x), Math.round(at.y))).toLowerCase(), table[high].toLowerCase(), "A zoomed Map column uses the true maximum of its visible raw samples rather than a stretched full-range envelope");
+                    const at = layer.mapToItem(chart, column + .5, (axes.axisY.max - 250) / (axes.axisY.max - axes.axisY.min) * layer.height);
+                    compare(String(coarse.pixel(Math.floor(at.x), Math.floor(at.y))).toLowerCase(), table[high].toLowerCase(), "A zoomed Map column uses the true maximum of its visible raw samples rather than a stretched full-range envelope");
                 }
             }
+            if (data.mode === "stacked")
+                verify(checkedGaps > 0, "The zoom reference exercises actual empty gaps outside the neighboring joined extrema");
             zoom(50, 50.4);
             const frame = logicalImage(chart);
             let checked = 0;
@@ -1196,12 +1205,12 @@ Rectangle {
                     let hit = false;
                     for (let dx = -1; dx <= 1; ++dx)
                         for (let dy = -2; dy <= 2; ++dy)
-                            hit = hit || ink(frame.pixel(Math.round(at.x) + dx, Math.round(at.y) + dy), expected, chart.colors.chartBackground);
+                            hit = hit || ink(frame.pixel(Math.floor(at.x) + dx, Math.floor(at.y) + dy), expected, chart.colors.chartBackground);
                     verify(hit, "Below pixel resolution the actual zoomed Stacked line passes through each independently specified measured point");
                 } else {
-                    const at = layer.mapToItem(chart, px, layer.height * .2);
+                    const at = layer.mapToItem(chart, px, (axes.axisY.max - 250) / (axes.axisY.max - axes.axisY.min) * layer.height);
                     const table = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
-                    const pixel = frame.pixel(Math.round(at.x), Math.round(at.y)), expected = rgb(table[intensity]);
+                    const pixel = frame.pixel(Math.floor(at.x), Math.floor(at.y)), expected = rgb(table[intensity]);
                     verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - expected[c]) <= 3 / 255), "Below pixel resolution the Map retains each real sample intensity without stretching the prior envelope");
                 }
                 ++checked;
@@ -1793,8 +1802,8 @@ Rectangle {
         Component {
             id: applicationFactory
             Main {
-                width: 1500
-                height: 1000
+                width: Math.min(1500, SettingsProof.screen().width)
+                height: Math.min(1000, SettingsProof.screen().height - 80)
                 visible: true
             }
         }

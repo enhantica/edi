@@ -28,8 +28,8 @@ Rectangle {
     Component {
         id: appFactory
         Main {
-            width: 1400
-            height: 1000
+            width: Math.min(1400, SettingsProof.screen().width)
+            height: Math.min(1000, SettingsProof.screen().height - 80)
             visible: true
         }
     }
@@ -166,7 +166,12 @@ Rectangle {
             const label = group.contentItemLabel;
             verify(label !== undefined, "The actual combobox exposes its rendered text padding and arrow clearance");
             const clearance = label.leftPadding + label.rightPadding + group.leftPadding + group.rightPadding;
-            verify(Math.abs(group.width - longest - clearance) <= 1, "The measured-style combobox fits its own longest item with normal padding and arrow clearance" + "; selector=" + group.objectName + " readWidth=" + group.width + " expected=" + (longest + clearance) + " maximumTextWidth=" + longest + " clearanceSum=" + clearance + " paddings=" + JSON.stringify({labelLeft: label.leftPadding, labelRight: label.rightPadding, controlLeft: group.leftPadding, controlRight: group.rightPadding}));
+            verify(Math.abs(group.width - longest - clearance) <= 1, "The measured-style combobox fits its own longest item with normal padding and arrow clearance" + "; selector=" + group.objectName + " readWidth=" + group.width + " expected=" + (longest + clearance) + " maximumTextWidth=" + longest + " clearanceSum=" + clearance + " paddings=" + JSON.stringify({
+                labelLeft: label.leftPadding,
+                labelRight: label.rightPadding,
+                controlLeft: group.leftPadding,
+                controlRight: group.rightPadding
+            }));
             const axes = [findChild(chart, "chart.toolbar.xaxis"), findChild(chart, "chart.toolbar.yscale")], legend = findChild(chart, "chart.toolbar.legend");
             verify(axes.every(item => item !== null) && legend !== null, "Group placement is measured against the actual axis selectors and legend button");
             const left = group.mapToItem(chart, 0, 0).x, right = group.mapToItem(chart, group.width, 0).x;
@@ -195,7 +200,7 @@ Rectangle {
             compare(nearInk(chart, "main", 46, data.token === "band" ? 7.5 : 26.5, measured), hasLine || data.token === "band", "The line joins independent samples exactly when the selected style draws a line or band");
             compare(layer.visible && layer.count > 0, hasPoints, "Markers and uncertainty bars are present exactly for Points and Line-and-points");
             if (data.token !== "band")
-                compare(nearInk(chart, "main", 52, 31.5, measured), hasPoints, "The independent middle sample has error-bar ink between its centre and lower s.u. edge only in the two marker styles; the band interior is checked separately");
+                tryVerify(() => nearInk(chart, "main", 52, 31.5, measured) === hasPoints, 1500, "The independent middle sample has error-bar ink between its centre and lower s.u. edge only in the two marker styles; the band interior is checked separately");
             if (hasPoints) {
                 verify(nearInk(chart, "main", 40, 18, measured) && nearInk(chart, "main", 40, 22, measured), "The actual marker styles draw both independent error-bar ends");
             }
@@ -239,6 +244,7 @@ Rectangle {
             tryVerify(() => !Ui.moving(app.contentItem), 2000, "The actual Pattern tab finishes moving before a style observation");
             const result = Render.descendants(page).filter(item => item.objectName === "chart" && item.shown && item.visible && item.report === null);
             compare(result.length, 1, "The current page supplies exactly one shown Pattern chart");
+            app.update();
             verify(waitForRendering(result[0]), "The current Pattern chart has a real completed frame");
             return result[0];
         }

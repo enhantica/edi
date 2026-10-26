@@ -25,6 +25,7 @@ Each surface lists only its own column: the application's About window reads thi
 | llvm-openmp | 23.1.2 | Apache-2.0 WITH LLVM-exception | linked | — | linked | — | the LLVM OpenMP runtime (macOS) |
 | nanobind | 2.13.0 | BSD-3-Clause | — | — | compiled in | — | the Python bindings, compiled into the Python extension |
 | robin-map |  | MIT | — | — | compiled in | — | the hash map inside nanobind, compiled into the Python extension |
+| miniz | 3.0.2 | MIT | compiled in | compiled in | compiled in | — | reads and writes project .zip archives, compiled into edi's core |
 | Emscripten runtime | 4.0.7 | MIT AND Apache-2.0 WITH LLVM-exception | — | compiled in | — | — | the C and C++ runtime of the web build (Emscripten's libc from musl, libc++ and libc++abi from LLVM) |
 
 ## Application framework

@@ -47,7 +47,10 @@ class IoError : public std::runtime_error {
 // unless the caller passes `on_warning`; then each message goes only to the sink. The app passes
 // one so it can show the warnings to its user.
 using WarningSink = std::function<void(const std::string&)>;
-Project load_project(const std::string& directory, const WarningSink& on_warning = {});
+// `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
+// new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
+// and it reads its scan data from the unpacked folder.
+Project load_project(const std::string& path, const WarningSink& on_warning = {});
 
 // Structures and experiments enter an open project only from `.edi` block files. Each load
 // refuses a path without the `.edi` extension and content without the project format's
@@ -145,6 +148,12 @@ void save_project_as(Project& project, const std::string& directory);
 // changed. A report saved next stays current after the project is reopened. A project the loader refuses (one
 // without a structure) is left as it is.
 bool adopt_saved_values(Project& project, const std::string& directory);
+
+// The save sequence after a successful write of `project` to `directory`, the same on every surface (edi ADR-0052):
+// adopt_saved_values, then, when a value changed and the project held a calculation, calculate it from the adopted
+// values and write it again, so the files, the open project and a reopen agree, the calculated pattern and R factors
+// included. Returns whether any value changed.
+bool adopt_saved_project(Project& project, const std::string& directory);
 
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).

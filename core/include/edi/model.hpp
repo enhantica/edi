@@ -4801,6 +4801,9 @@ class Project : public detail::ProjectAnchor {
     // so scan data are read in place and never copied. Forwarded to crysta's
     // Project::scan_data_root; never persisted.
     std::string scan_data_root;
+    // The .zip a project opened from an archive works for (edi ADR-0052): Python's `save()` writes `path` (the
+    // unpacked folder) and then rewrites this archive from it; empty for a project in a folder. Never persisted.
+    std::string archive;
     // diffraction-lib `Project.metadata` / `Project.name`: plain data, mirrored on crysta.
     // `load_project` and the binding's `save_as` keep metadata.path in step.
     ProjectMetadata metadata;

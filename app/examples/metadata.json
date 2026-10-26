@@ -1018,7 +1018,7 @@
         "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/latp.edi"
       ]
     },
-    "sc-neut-cwl_tb2ti2o7-heidi_fit": {
+    "sc-neut-cwl_tb2ti2o7-heidi": {
       "samples": [
         "Tb₂Ti₂O₇ [Fd-3m]"
       ],
@@ -1057,18 +1057,18 @@
         ]
       },
       "searchAliases": [
-        "sc-neut-cwl_tb2ti2o7-heidi_fit",
+        "sc-neut-cwl_tb2ti2o7-heidi",
         "Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II)",
         "Single crystal · Anisotropic displacements and extinction from a rough start"
       ],
       "sources": [
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/project.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/experiments/heidi.edi",
-        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/structures/tb2ti2o7.edi"
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project/experiments/heidi.edi",
+        "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project/structures/tb2ti2o7.edi"
       ]
     },
-    "sc-neut-cwl_pr2nio4-5c2_fit": {
+    "sc-neut-cwl_pr2nio4-5c2": {
       "samples": [
         "Pr₂NiO₄ [Fmmm]"
       ],
@@ -1107,18 +1107,18 @@
         ]
       },
       "searchAliases": [
-        "sc-neut-cwl_pr2nio4-5c2_fit",
+        "sc-neut-cwl_pr2nio4-5c2",
         "Pr₂NiO₄ [Fmmm] · 5C2 @ LLB",
         "Single crystal · Anisotropic displacements and coordinates from a rough start"
       ],
       "sources": [
-        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/project.edi",
-        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi",
-        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/structures/pr2nio4.edi"
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project/project.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project/experiments/llb_5c2.edi",
+        "docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project/structures/pr2nio4.edi"
       ]
     },
-    "sc-neut-tof_taurine_fit": {
+    "sc-neut-tof_taurine-senju": {
       "samples": [
         "Taurine [P2₁/c]"
       ],
@@ -1157,20 +1157,20 @@
         ]
       },
       "searchAliases": [
-        "sc-neut-tof_taurine_fit",
+        "sc-neut-tof_taurine-senju",
         "Taurine [P2₁/c] · SENJU @ J-PARC",
         "Single crystal · Time of flight · Six datasets · Anisotropic displacements"
       ],
       "sources": [
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/analysis/analysis.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_1.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_2.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_3.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_4.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_5.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_6.edi",
-        "docs/user/cli/sc-neut-tof_taurine_fit/project/structures/taurine.edi"
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/project.edi",
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/analysis/analysis.edi",
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_1.edi",
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_2.edi",
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_3.edi",
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_4.edi",
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_5.edi",
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/experiments/senju_6.edi",
+        "docs/user/cli/sc-neut-tof_taurine-senju/project/structures/taurine.edi"
       ]
     }
   }

@@ -8,6 +8,7 @@
 #include <QGuiApplication>
 #include <QQmlContext>
 #include <QQmlEngine>
+#include <QQmlIncubationController>
 #include <QQuickWindow>
 #include <QFileInfo>
 #include <QSettings>
@@ -138,6 +139,32 @@ class WheelGestures final : public QObject {
 namespace edi_app {
 
 namespace {
+
+// The pages are built in the background after a project opens (edi ADR-0052): asynchronous loaders, incubated here in
+// slices of about 50 ms per turn of the event loop while any is pending, so input and drawing go on between slices and
+// an answer to the user never waits much longer than a tenth of a second. The window's own controller incubates only
+// around frames it draws, which left an idle window building its pages for seconds; 12 ms slices took about half as
+// long again as 50 ms ones.
+class PageIncubation : public QObject, public QQmlIncubationController {
+   public:
+    PageIncubation() {
+        timer_.setInterval(0);
+        QObject::connect(&timer_, &QTimer::timeout, &timer_, [this] { incubateFor(50); });
+    }
+
+   protected:
+    void incubatingObjectCountChanged(int count) override {
+        if (count > 0) {
+            timer_.start();
+        } else {
+            timer_.stop();
+        }
+    }
+
+   private:
+    QTimer timer_;
+};
+
 // A bundled font file's family, registered from the base's font resources; empty when the file is missing.
 QString registered_family(const char* file) {
     return QFontDatabase::applicationFontFamilies(
@@ -207,6 +234,8 @@ QByteArray& platform_spec() {
 }  // namespace
 
 void configure_engine(QQmlEngine& engine) {
+    static PageIncubation incubation;
+    engine.setIncubationController(&incubation);
     // The base's Settings objects write here (Globals/Vars.qml `pySettingsPath`); without it they would
     // point inside the read-only module resources. A demo or a test run uses its fresh directory.
     const QString config_dir = fresh_config_dir().isEmpty()
