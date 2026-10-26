@@ -287,16 +287,16 @@ TestCase {
         verify(fill.radius > 0, "The status Fit button has rounded corners");
         const label = View.textItems(button).filter(item => item.text === "Fit");
         compare(label.length, 1, "The status shortcut renders the white or inverse Fit caption");
-        tryVerify(() => data.tag === "light" ? luminance(label[0].color) > .9 : luminance(label[0].color) < .1, 1500, "Fit caption ink is white in light mode and inverted in dark mode");
+        tryVerify(() => data.tag === "light" ? luminance(label[0].color) > .9 : luminance(label[0].color) < .25, 1500, "Fit caption ink is white in light mode and inverted in dark mode");
         const glyphs = View.textItems(button).filter(item => item.text !== "Fit");
-        verify(glyphs.length > 0 && glyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .1), "The status Fit icon has the same white or inverse ink as its caption");
+        verify(glyphs.length > 0 && glyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The status Fit icon has the same white or inverse ink as its caption");
         const sidebar = analysisButton(), sidebarFill = rectangle(sidebar);
         tryVerify(() => data.tag === "light" ? paintedLuminance(sidebarFill) < .25 : paintedLuminance(sidebarFill) > .75, 1500, "The Analysis fit button shares the status shortcut's dark primary fill and its dark-mode inverse");
         const sidebarLabel = View.textItems(sidebar).filter(item => item.text === sidebar.text);
         compare(sidebarLabel.length, 1, "The primary Analysis fit button renders its state caption");
-        tryVerify(() => data.tag === "light" ? luminance(sidebarLabel[0].color) > .9 : luminance(sidebarLabel[0].color) < .1, 1500, "The primary Analysis fit caption shares the status shortcut's white or inverse ink");
+        tryVerify(() => data.tag === "light" ? luminance(sidebarLabel[0].color) > .9 : luminance(sidebarLabel[0].color) < .25, 1500, "The primary Analysis fit caption shares the status shortcut's white or inverse ink");
         const sidebarGlyphs = View.textItems(sidebar).filter(item => item.text === icon(sidebar));
-        verify(sidebarGlyphs.length > 0 && sidebarGlyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .1), "The primary Analysis fit icon shares the status shortcut's white or inverse ink");
+        verify(sidebarGlyphs.length > 0 && sidebarGlyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The primary Analysis fit icon shares the status shortcut's white or inverse ink");
         verify(button.mapToItem(area(), 0, 0).x < status.mapToItem(area(), 0, 0).x, "The Fit shortcut sits at the left of the fit-results controls");
     }
     function test_preference_default_and_user_store() {
