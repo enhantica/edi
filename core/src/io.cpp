@@ -2873,13 +2873,21 @@ static void refuse_adp_spellings(const Block& written, const std::string& where)
                        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         return text;
     };
-    std::map<std::string, std::string> site_types;  // lowercase site id -> type
+    // Each site's type as the site reader reads it: Biso when the file declares none or gives `.`, a
+    // type it does not read left to its own refusal. Site ids are exact.
+    std::map<std::string, std::optional<std::string>> site_types;
     for (const Loop& loop : written.loops) {
         const int id = column_of(loop, "_atom_site.id");
         const int type = column_of(loop, "_atom_site.adp_type");
         for (const auto& row : id < 0 ? std::vector<std::vector<std::string>>{} : loop.rows) {
-            site_types[lower(row[static_cast<std::size_t>(id)])] =
-                type < 0 ? std::string("Biso") : row[static_cast<std::size_t>(type)];
+            std::optional<std::string> read = std::string("Biso");
+            if (type >= 0) {
+                const std::string& token = row[static_cast<std::size_t>(type)];
+                if (token != "." && !token.empty()) {
+                    read = is_adp_type(token) ? std::optional<std::string>(token) : std::nullopt;
+                }
+            }
+            site_types[row[static_cast<std::size_t>(id)]] = read;
         }
     }
     for (const Loop& loop : written.loops) {
@@ -2894,8 +2902,11 @@ static void refuse_adp_spellings(const Block& written, const std::string& where)
             const bool isotropic_value = detail::current_edi_name(loop.tags[column], true) == "_atom_site.adp_iso";
             for (const auto& row : variants.empty() ? std::vector<std::vector<std::string>>{} : loop.rows) {
                 const std::string& site = row[static_cast<std::size_t>(id)];
-                const auto found = site_types.find(lower(site));
-                const std::string type = found != site_types.end() ? found->second : std::string("Biso");
+                const auto found = site_types.find(site);
+                if (found != site_types.end() && !found->second.has_value()) {
+                    continue;
+                }
+                const std::string type = found != site_types.end() ? *found->second : std::string("Biso");
                 const std::string form = lower(type);
                 if (isotropic_value && (form == "uani" || form == "bani" || form == "beta")) {
                     continue;
