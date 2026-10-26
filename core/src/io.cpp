@@ -4957,9 +4957,24 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     for (const auto& slot : parameter_slots(saved)) {
         held.emplace(slot.unique_name, slot.parameter);
     }
+    // A bank whose background estimate is due was written with the engine's estimate and keeps its own points
+    // (ADR-0040): a save does not estimate the open project's background.
+    std::set<const Parameter*> due;
+    std::set<std::string> due_names;
+    for (const auto& experiment : project.experiments) {
+        if (background_estimate_due(*experiment)) {
+            due_names.insert(experiment->name.value());
+            for (const auto& point : experiment->background) {
+                due.insert(&point->intensity);
+            }
+            for (const auto& term : experiment->background_terms) {
+                due.insert(&term->coef);
+            }
+        }
+    }
     for (const auto& slot : parameter_slots(project)) {
         const auto found = held.find(slot.unique_name);
-        if (found == held.end()) {
+        if (found == held.end() || due.contains(slot.parameter)) {
             continue;
         }
         Parameter& parameter = *slot.parameter;
@@ -4976,11 +4991,22 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
     // still the estimate's (ADR-0040) and a changed setting estimates again rather than refusing them as edited.
     for (const auto& experiment : project.experiments) {
         for (const auto& held : saved.experiments) {
-            if (held->name.value() == experiment->name.value() &&
+            if (held->name.value() == experiment->name.value() && !due_names.contains(experiment->name.value()) &&
                 (experiment->background_estimate_inputs != held->background_estimate_inputs ||
                  experiment->background_estimate_points != held->background_estimate_points)) {
                 experiment->background_estimate_inputs = held->background_estimate_inputs;
                 experiment->background_estimate_points = held->background_estimate_points;
+                changed = true;
+            }
+        }
+    }
+    // A time-of-flight bank angle is a setting, not a fit parameter: the project takes the six digits its file holds.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& held : saved.experiments) {
+            Parameter& bank = experiment->instrument.setup_twotheta_bank;
+            const double written = held->instrument.setup_twotheta_bank.value.get();
+            if (held->name.value() == experiment->name.value() && bank.value.get() != written) {
+                bank.value = written;
                 changed = true;
             }
         }
@@ -5030,6 +5056,10 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     // describe the values beside them.
     if (!adopt_saved_values(project, directory)) {
         return false;
+    }
+    // A calculation would estimate a due background, which only a calculation the user asks for does (ADR-0040).
+    if (background_estimates_due(project)) {
+        return true;
     }
     const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
         return (item->data.has_value() && !item->data->intensity_calc.empty()) ||
