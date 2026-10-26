@@ -258,13 +258,22 @@ class Session : public QObject {
     bool openWebCopy(const QString& path, const WebPlace& place);
     // Writes `folder` into `place`; `done` hears whether it was written.
     void writeWebPlace(const WebPlace& place, const QString& folder, const std::function<void(bool)>& done);
-    // A Save or a moving Save as is being written to a place: another waits until it is.
+    // A browser Save or Save as is being written to a place: another waits until it is.
     bool web_writing_ = false;
-    // What a Save writes (round, adopt, recalculate, write), done on a copy in `folder` inside a new `root`; the open
-    // project is left as it is.
-    bool stageCopy(QString& root, QString& folder);
-    // Writes the working folder into the .zip `archive`; a refusal leaves the project unsaved.
-    bool rewriteArchive(const QString& archive);
+    // A save staged on a copy: its folder inside a new `root` and the metadata it wrote.
+    struct Staged {
+        QString root;
+        QString folder;
+        edi::ProjectMetadata metadata;
+    };
+    // What a Save writes (round, adopt, recalculate, write), done on a copy in `name` inside a new folder (the folder
+    // itself for an empty name), once the project may be saved; the open project is left as it is.
+    bool stageCopy(const char* purpose, const QString& name, Staged& staged);
+    // Writes the staged snapshot into the .zip `archive`, then the project takes it and works in its folder.
+    bool publishArchive(const Staged& staged, const QString& archive);
+    // The browser's place holds the staged snapshot: the project takes it and works in its folder, unless it was
+    // edited since `revision` or a fit started. Whether it did.
+    bool takeWebSave(const Staged& staged, quint64 revision);
     // A web open request: its answer replaces the project only if no later request or open came meanwhile, and the
     // project was not edited while it was read.
     std::function<bool(const WebStorageAnswer&)> openRequest(const QString& root);
@@ -273,8 +282,6 @@ class Session : public QObject {
     QString downloadName() const;
     // Whether the project's place is the browser's own storage (not a folder or .zip on the disk).
     bool webPlaceInBrowser() const;
-    // Saves the project into the memory folder it works in (one is made for a new project).
-    bool saveInMemory();
     // The open project was uploaded from a file or folder on the disk.
     bool web_from_file_ = false;
     // Keeps the open project's unsaved state in the browser, a few seconds after its last edit.

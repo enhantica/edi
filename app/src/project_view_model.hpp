@@ -236,14 +236,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
     // (edi ADR-0052). Not a save and not an edit.
     void workIn(const QString& folder);
+    // Why the project cannot be saved now (a fit is running), or empty.
+    QString saveRefusal() const;
+    // The project takes a save already written into `directory` (by itself or a staged copy of it, which wrote
+    // `metadata`): it works there and holds what the files hold. An empty string, else why not (also `lastError`).
+    QString adoptSave(const QString& directory, const edi::ProjectMetadata& metadata);
     // The model a save writes: a scan's template while a dataset is shown, else the project.
     const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
     // The project holds changes its place does not (the web app's kept unsaved state, reopened).
     void markUnsaved() { setModified(true); }
     // How many edits the project has had: a save that finishes later knows whether the project changed meanwhile.
     quint64 revision() const { return revision_; }
-    // A save that wrote the project's own folder but not its archive or place: still unsaved, and not an edit.
-    void keepUnsaved();
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }

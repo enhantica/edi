@@ -2478,13 +2478,6 @@ void ProjectViewModel::setModified(bool modified) {
     }
 }
 
-void ProjectViewModel::keepUnsaved() {
-    if (!modified_) {
-        modified_ = true;
-        emit modifiedChanged();
-    }
-}
-
 
 void ProjectViewModel::workIn(const QString& folder) {
     project_->path = folder.toStdString();
@@ -2493,26 +2486,43 @@ void ProjectViewModel::workIn(const QString& folder) {
     emit pathChanged();
 }
 
-QString ProjectViewModel::saveTo(const QString& directory) {
+QString ProjectViewModel::saveRefusal() const {
     // A running fit owns the project's output (a scan appends its results there): nothing is saved under it.
     if (fit_ != nullptr && fit_->running()) {
-        const QString message = tr("The project cannot be saved while a fit is running");
-        setLastError(message);
-        return message;
+        return tr("The project cannot be saved while a fit is running");
+    }
+    return {};
+}
+
+QString ProjectViewModel::saveTo(const QString& directory) {
+    if (const QString refusal = saveRefusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return refusal;
     }
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.
+    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
     try {
-        if (scan_template_) {
-            edi::save_project_as(*scan_template_, directory.toStdString());
-        } else {
-            edi::save_project_as(*project_, directory.toStdString());
-        }
+        edi::save_project_as(saved, directory.toStdString());
     } catch (const std::exception& refusal) {
         const QString message = QString::fromUtf8(refusal.what());
         setLastError(message);
         return message;
     }
+    return adoptSave(directory, saved.metadata);
+}
+
+QString ProjectViewModel::adoptSave(const QString& directory, const edi::ProjectMetadata& metadata) {
+    if (const QString refusal = saveRefusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return refusal;
+    }
+    // The project works where the save was written, with the metadata it wrote, and reads its scan data from there.
+    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
+    saved.metadata = metadata;
+    saved.path = directory.toStdString();
+    saved.metadata.path = saved.path;
+    saved.scan_data_root.clear();
     if (scan_template_) {
         project_->path = scan_template_->path;
         project_->metadata = scan_template_->metadata;
@@ -2522,9 +2532,9 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     // the project's rule), calculated from that and written again (edi ADR-0052): not an edit, so it stays unmodified
     // with nothing to undo.
     try {
-        edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
         if (edi::adopt_saved_project(saved, directory.toStdString())) {
-            // A due background is estimated only by a calculation the user asks for (ADR-0040): the shown results stay.
+            // A due background is estimated only by a calculation the user asks for (ADR-0040): the save calculated the
+            // project with it deferred, and those results are published as they are.
             const bool estimate_due = edi::background_estimates_due(saved);
             if (!estimate_due && scan_template_) {
                 scan_template_->refresh_calculated_pattern();
