@@ -1254,7 +1254,9 @@ class ExperimentFactory:
 
         diffraction-lib ``ExperimentFactory.from_cif_path``.
         """
-        return _experiment_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'), str(cif_path))
+        return _experiment_from_edi_text(
+            _Path(cif_path).read_text(encoding='utf-8'), str(cif_path)
+        )
 
     @classmethod
     def from_data_path(

@@ -51,13 +51,13 @@ Column {
         ValueField {
             objectName: "instrument.name"
             editable: false
-            label: qsTr("Instrument")
+            label: Session.label("instrument.name")
             fieldValue: group.experiment && group.experiment.instrumentName !== "" ? group.experiment.instrumentName : qsTr("Not specified")
         }
         ValueField {
             objectName: "instrument.facility"
             editable: false
-            label: qsTr("Facility")
+            label: Session.label("instrument.facility")
             fieldValue: group.experiment && group.experiment.facility !== "" ? group.experiment.facility : qsTr("Not specified")
         }
     }
