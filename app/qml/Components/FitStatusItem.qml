@@ -24,6 +24,9 @@ Control {
     // The key is shown only while every item of the bar fits with its key (StatusBar.keysFit).
     property bool showKey: true
     property bool clickable: false
+    // A framed clickable item shows its frame all the time, as a button, and a stronger one on hover (the owner,
+    // 2026-10-26: the fit status beside the Fit button).
+    property bool framed: false
     property bool shown: valueText !== ""
     // The hover frame's height, which the fit's progress bar shares (the owner, 2026-10-13).
     readonly property real frameHeight: Math.round(font.pixelSize * 1.8)
@@ -83,15 +86,15 @@ Control {
         }
     }
 
-    // A clickable item highlights on hover, as the bar's Messages item does.
+    // A clickable item highlights on hover, as the bar's Messages item does; a framed one is as round as the Fit button.
     background: Item {
         Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width
             height: control.frameHeight
-            radius: 2
-            visible: control.clickable && hover.hovered
-            color: AppColors.hoverHighlight
+            radius: control.framed ? height / 2 : 2
+            visible: control.clickable && (control.framed || hover.hovered)
+            color: control.framed && hover.hovered ? AppColors.hoverHighlightStrong : AppColors.hoverHighlight
         }
     }
 

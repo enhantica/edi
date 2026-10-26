@@ -145,7 +145,8 @@ EaElements.StatusBar {
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         spacing: EaStyle.Sizes.fontPixelSize * 1.2
-        visible: bar.fit !== null && (running || bar.fit.outcome !== "")
+        // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one.
+        visible: bar.fit !== null && (AppState.analysisPageEnabled || running || bar.fit.outcome !== "")
 
         readonly property bool running: bar.fit !== null && bar.fit.running
         readonly property bool scanning: bar.fit !== null && bar.fit.scanning
@@ -170,7 +171,7 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            for (const extra of [outOfDate, progress]) {
+            for (const extra of [fitButton, outOfDate, progress]) {
                 if (extra.visible) {
                     width += extra.width;
                     shown += 1;
@@ -186,7 +187,15 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             color: EaStyle.Colors.appBarBorder
         }
-        // The last fit's outcome, in its colour.
+        // First in the area: the Fit button, what the Analysis page's fit button does (the owner, 2026-10-26).
+        StatusBarFitButton {
+            id: fitButton
+            objectName: "statusBar.fit.button"
+            visible: AppState.analysisPageEnabled
+            fit: bar.fit
+            frameHeight: statusItem.frameHeight
+        }
+        // The last fit's outcome, in its colour, framed as a button that opens its results.
         FitStatusItem {
             id: statusItem
             objectName: "statusBar.fit.outcome"
@@ -200,6 +209,7 @@ EaElements.StatusBar {
             valueColor: FitOutcomes.color(outcome)
             // The last fit's results table, also for a project opened with one.
             clickable: bar.fit !== null && bar.fit.results.count > 0
+            framed: true
             ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
             onClicked: fitResultsDialog.open()
         }

@@ -191,6 +191,16 @@ AppDialog {
                 enabled: false
                 checked: false
             }
+
+            RowLabel {
+                text: qsTr("Show fit results after fitting") + ":"
+            }
+            RowCheckBox {
+                objectName: "preferences.showFitResults"
+                checked: Preferences.showFitResults
+                onToggled: Preferences.showFitResults = checked
+                ToolTip.text: qsTr("Open the results window when a fit ends; the fit status in the status bar opens it too")
+            }
         }
 
         // Updates: no update check exists yet, so both are disabled and the start check is off.
