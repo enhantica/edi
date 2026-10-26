@@ -197,9 +197,10 @@ void ScanLayer::setModel(ScanViewModel* model) {
 
 void ScanLayer::setMode(const QString& mode) {
     assign(mode_, mode, &ScanLayer::modeChanged);
-    lines_->setVisible(lines_on_gpu());
-    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
-    update();  // the painted image clears when the lines move to the GPU
+    showLines();
+    if (!deferred()) {
+        update();  // the painted image clears when the lines move to the GPU
+    }
 }
 void ScanLayer::setXMin(double value) { assign(x_min_, value, &ScanLayer::xMinChanged); }
 void ScanLayer::setXMax(double value) { assign(x_max_, value, &ScanLayer::xMaxChanged); }
@@ -252,6 +253,7 @@ void ScanLayer::setActive(bool active) {
         active_ = active;
         emit activeChanged();
         if (active_ && stale_) {
+            update();  // the painted image too: a renderer chosen while hidden may need it cleared
             redraw();
         }
     }
@@ -263,9 +265,10 @@ int ScanLayer::highlighted() const {
 
 void ScanLayer::setGpu(bool on) {
     assign(gpu_, on, &ScanLayer::gpuChanged);
-    lines_->setVisible(lines_on_gpu());
-    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
-    update();  // the painted image clears when the lines move to the GPU
+    showLines();
+    if (!deferred()) {
+        update();  // the painted image clears when the lines move to the GPU
+    }
 }
 
 void ScanLayer::setOffset(double offset) {
@@ -294,9 +297,20 @@ void ScanLayer::geometryChange(const QRectF& next, const QRectF& previous) {
     redraw();
 }
 
-void ScanLayer::redraw() {
+bool ScanLayer::deferred() {
     if (!active_) {
         stale_ = true;
+    }
+    return !active_;
+}
+
+void ScanLayer::showLines() {
+    lines_->setVisible(lines_on_gpu());
+    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
+}
+
+void ScanLayer::redraw() {
+    if (deferred()) {
         return;
     }
     stale_ = false;
@@ -712,10 +726,13 @@ std::vector<QRect> excluded_bands(const ScanViewModel& model, const std::vector<
 }  // namespace
 
 void ScanLayer::updatePolish() {
-    reduce();
     lines_->setObjectName(objectName() + QStringLiteral(".gpuLines"));
-    lines_->setVisible(lines_on_gpu());
-    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
+    // A polish asked for while the view was shown can come after it is hidden.
+    if (deferred()) {
+        return;
+    }
+    reduce();
+    showLines();
     if (lines_on_gpu() && model_) {
         feedLines();
     }
@@ -785,6 +802,11 @@ void ScanLayer::feedLines() {
 }
 
 QSGNode* ScanLayer::updatePaintNode(QSGNode* old, UpdatePaintNodeData* data) {
+    // Not painted while not shown, whatever asked for it (a resize, an update already queued); the GUI thread waits
+    // while the scene is synchronised, so the flags are read and written safely here.
+    if (deferred()) {
+        return old;
+    }
     QSGNode* node = QQuickPaintedItem::updatePaintNode(old, data);
     if (!lines_on_gpu()) {
         ++redraws_;

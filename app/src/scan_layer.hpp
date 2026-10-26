@@ -215,6 +215,12 @@ class ScanLayer : public QQuickPaintedItem {
     bool lines_on_gpu() const { return gpu_ && mode_ == QLatin1String("stacked"); }
     // Asks for this frame's drawing: the reductions and the GPU lines at the polish, the painting after it.
     void redraw();
+    // While the view is not shown: notes that its drawing is out of date and says to do no work, whatever asked for it
+    // (a change, a polish or paint already queued, a resize).
+    bool deferred();
+    // The GPU lines are in the scene while they draw the view. They sync only what the polish feeds them, so a view not
+    // shown costs them nothing.
+    void showLines();
     void measure();
     void place();
     // A stacked dataset's value on the vertical axis, as its line is drawn.
