@@ -335,6 +335,14 @@ EaElements.GroupBox {
             sourceModel: ParameterFilterModel {
                 id: parameterFilter
                 sourceModel: group.project ? group.project.parameters : null
+                // The Settings tab's show-filters, by ParameterItem.FitGroup from NotMeasured (edi ADR-0053).
+                readonly property var wanted: [Preferences.analysisShowNotMeasured, Preferences.analysisShowBySymmetry, Preferences.analysisShowByConstraint, Preferences.analysisShowFixedSettings]
+                function follow() {
+                    for (let i = 0; i < wanted.length; ++i)
+                        setShownGroup(i + 1, wanted[i]);
+                }
+                onWantedChanged: follow()
+                Component.onCompleted: follow()
             }
             marksCurrentRow: true
             currentRow: group.selectedRow

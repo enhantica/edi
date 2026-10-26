@@ -50,6 +50,7 @@ ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& e
       refinable_(false),
       fittable_(false),
       fit_reason_(QString::fromStdString(edi::fit_reason(edi::FitBlocker::Descriptor))),
+      fit_group_(FixedSetting),
       path_(QString::fromStdString(entry.path)),
       uid_(QString::fromStdString(entry.uid)),
       block_kind_(QString::fromStdString(entry.block_kind)),
@@ -65,7 +66,11 @@ ParameterItem::ParameterItem(const edi::DescriptorEntry& entry, ProjectEditor& e
     category_icon_ = category_presentation(category_).icon;
 }
 
-void ParameterItem::setFittability(bool fittable, const QString& reason) {
+void ParameterItem::setFittability(bool fittable, const QString& reason, int group) {
+    if (fit_group_ != group) {
+        fit_group_ = group;
+        emit fitGroupChanged();
+    }
     if (fittable_ != fittable) {
         fittable_ = fittable;
         emit fittableChanged();

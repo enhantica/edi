@@ -39,13 +39,21 @@ crysta may have no derivative for it yet, such as the wavelength of an X-ray exp
 5. **The fit.** `Project.fit`, `fit_joint` and the scan entries refuse a free flag the rule blocks, naming the
    parameter and the reason. Such a flag can survive a change to the project, for example removing the powder pattern
    that let a single crystal's cell be fitted; only a load clears it.
-6. **The Analysis table** lists every numerical input of the structures and experiments, fittable or not: each
+6. **The Analysis table** can list every numerical input of the structures and experiments, fittable or not: each
    parameter, and each value that is no parameter (a background point's position, a polynomial term's order, the peak
    cutoff, a texture direction's indices, a scattering length), which is shown read-only and edited on its page.
    Measured data, computed values and fit results stay out. The Free checkbox is enabled where a fit can vary the
    value, or while it is free so the flag can be cleared; otherwise its tooltip says "Cannot be fitted: " and the
    reason. The variability filter splits the rows into free, fixed and not fittable, and the status bar counts what a
    fit can vary.
+7. **Show-filters.** Which of the values a fit cannot free the table lists is chosen on the Analysis page's Settings
+   tab, with four boxes, two to a row, one per group of crysta's reasons: not measured in this fit (this fit's data
+   cannot determine it, or crysta cannot vary it yet), fixed by symmetry, set by a constraint, and fixed settings (the
+   descriptors). Each box adds its group's rows to those a fit can free, and its label counts them. A value marked free
+   is always listed, so its flag can be cleared. By default the values not measured in this fit and the fixed settings
+   are listed, the other two groups are not. The choice is remembered per user by the app and never saved in the
+   project; Python and the command line are not filtered. The variability filter's counts are of the rows the
+   show-filters leave.
 
 ## Consequences
 
@@ -63,3 +71,4 @@ crysta may have no derivative for it yet, such as the wavelength of an X-ray exp
 | Hide the rows a fit cannot vary, as before | Rejected: the owner asked to see every value with the reason it cannot be fitted |
 | Clear a blocked flag whenever the project changes | Rejected: it discards a choice made for another fit; a load clears it, a fit refuses it |
 | Edit every descriptor in the Analysis table | Deferred: values that are no parameter are edited where their rows are added and removed |
+| Save the show-filters in the project | Rejected: they choose what this user sees, not what the project holds |
