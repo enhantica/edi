@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace edi::detail {
@@ -24,8 +25,8 @@ namespace {
 constexpr std::array<std::string_view, 3> kRoleNames{"total_calculation", "background", "difference"};
 
 struct Palette {
-    std::vector<std::array<std::string, 2>> measured, structure;  // light, dark
-    std::array<std::array<std::string, 2>, 3> role;                // by ChartRole
+    std::vector<std::array<std::string, 2>> figure;  // light, dark
+    std::array<std::array<std::string, 2>, 3> role;  // by ChartRole
 };
 
 // A table's rows, by role, in the order listed; a malformed row or a missing colour refuses the whole table.
@@ -52,10 +53,8 @@ Palette parse(const char* text) {
         if (!hex(light) || !hex(dark)) {
             throw std::logic_error("a palette row is malformed: " + line);
         }
-        if (role == "measured") {
-            palette.measured.push_back({light, dark});
-        } else if (role == "structure") {
-            palette.structure.push_back({light, dark});
+        if (role == "figure") {
+            palette.figure.push_back({light, dark});
         } else {
             const auto found = std::find(kRoleNames.begin(), kRoleNames.end(), role);
             if (found == kRoleNames.end()) {
@@ -66,16 +65,23 @@ Palette parse(const char* text) {
             roles_read[at] = true;
         }
     }
-    if (palette.measured.size() != kGroupColourCount || palette.structure.size() != kGroupColourCount ||
+    if (palette.figure.size() != kPaletteColourCount ||
         !std::all_of(roles_read.begin(), roles_read.end(), [](bool read) { return read; })) {
-        throw std::logic_error("a palette does not list five measured, five structure and three role colours");
+        throw std::logic_error("a palette does not list eleven figure colours and three role colours");
     }
     return palette;
 }
 
-constexpr std::array<std::string_view, 5> kNames{"ediNatural", "ediCoast", "ediGarden", "ediStudio", "ediContrast"};
-constexpr std::array<std::string_view, 5> kTitles{"Edi Natural", "Edi Coast", "Edi Garden", "Edi Studio",
-                                                  "Edi Contrast"};
+constexpr std::array<std::string_view, 5> kNames{"earth", "classic", "soft", "natural", "colourBlindSafe"};
+constexpr std::array<std::string_view, 5> kTitles{"Earth", "Classic", "Soft", "Natural", "Colour-blind safe"};
+// The palettes before these five, each read as the new one nearest it (ADR-0038).
+constexpr std::array<std::pair<std::string_view, ColourScheme>, 5> kEarlierNames{{
+    {"ediNatural", ColourScheme::Natural},
+    {"ediCoast", ColourScheme::Natural},
+    {"ediGarden", ColourScheme::Classic},
+    {"ediStudio", ColourScheme::Classic},
+    {"ediContrast", ColourScheme::ColourBlindSafe},
+}};
 
 const Palette& palette_of(ColourScheme scheme) {
     static const std::vector<Palette> kPalettes = [] {
@@ -128,23 +134,6 @@ std::string hex_of(const Lab& lab) {
     return out;
 }
 
-// ADR-0038: up to five items take the group's first colours in order; more take a gradient over the whole group, from
-// its first colour to its second, item `place` at t = place / (count - 1). The ends are the colours themselves.
-std::string group_colour(const std::vector<std::array<std::string, 2>>& group, std::size_t place, std::size_t count,
-                         std::size_t side) {
-    if (count <= group.size()) {
-        return group[std::min(place, group.size() - 1)][side];
-    }
-    const std::size_t at = std::min(place, count - 1);
-    if (at == 0 || at == count - 1) {
-        return group[at == 0 ? 0 : 1][side];
-    }
-    const double t = static_cast<double>(at) / static_cast<double>(count - 1);
-    const Lab from = oklab(group[0][side]);
-    const Lab to = oklab(group[1][side]);
-    return hex_of({from.l + (to.l - from.l) * t, from.a + (to.a - from.a) * t, from.b + (to.b - from.b) * t});
-}
-
 }  // namespace
 
 std::string mix_colours(const std::string& from, const std::string& to, double t) {
@@ -155,6 +144,11 @@ std::string mix_colours(const std::string& from, const std::string& to, double t
     const Lab a = oklab(from);
     const Lab b = oklab(to);
     return hex_of({a.l + (b.l - a.l) * at, a.a + (b.a - a.a) * at, a.b + (b.b - a.b) * at});
+}
+
+double oklab_distance(const std::string& a, const std::string& b) {
+    const Lab one = oklab(a), other = oklab(b);
+    return std::hypot(one.l - other.l, one.a - other.a, one.b - other.b);
 }
 
 double contrast_ratio(const std::string& a, const std::string& b) {
@@ -227,17 +221,88 @@ std::optional<ColourScheme> colour_scheme_from_name(std::string_view name) {
 }
 
 ColourScheme colour_scheme_or_default(std::string_view name) {
-    return colour_scheme_from_name(name).value_or(kDefaultColourScheme);
+    if (const std::optional<ColourScheme> scheme = colour_scheme_from_name(name)) {
+        return *scheme;
+    }
+    for (const auto& [earlier, scheme] : kEarlierNames) {
+        if (earlier == name) {
+            return scheme;
+        }
+    }
+    return kDefaultColourScheme;
 }
 
 std::string_view colour_scheme_title(ColourScheme scheme) { return kTitles[static_cast<std::size_t>(scheme)]; }
 
-std::string pattern_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark) {
-    return group_colour(palette_of(scheme).measured, place, count, dark ? 1 : 0);
+bool reserves_experiment_colours(ColourScheme scheme) { return scheme == ColourScheme::Earth; }
+
+std::vector<std::size_t> colour_positions(ColourScheme scheme, std::span<const FigureItem> items) {
+    const bool reserved = reserves_experiment_colours(scheme);
+    const auto allowed = [reserved](FigureKind kind, std::size_t position) {
+        return !reserved || kind == FigureKind::Experiment || position >= 2;
+    };
+    std::vector<bool> taken;
+    const auto vacant = [&taken](std::size_t position) { return position >= taken.size() || !taken[position]; };
+    const auto take = [&taken](std::size_t position) {
+        if (position >= taken.size()) {
+            taken.resize(position + 1, false);
+        }
+        taken[position] = true;
+    };
+    // First every position held and still allowed, then the rest in order, each at the lowest free one.
+    std::vector<std::optional<std::size_t>> out(items.size());
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        const std::optional<std::size_t> held = items[i].position;
+        if (held && allowed(items[i].kind, *held) && vacant(*held)) {
+            out[i] = held;
+            take(*held);
+        }
+    }
+    std::vector<std::size_t> positions(items.size());
+    for (std::size_t i = 0; i < items.size(); ++i) {
+        if (!out[i]) {
+            std::size_t position = 0;
+            while (!allowed(items[i].kind, position) || !vacant(position)) {
+                ++position;
+            }
+            out[i] = position;
+            take(position);
+        }
+        positions[i] = *out[i];
+    }
+    return positions;
 }
 
-std::string structure_colour(ColourScheme scheme, std::size_t place, std::size_t count, bool dark) {
-    return group_colour(palette_of(scheme).structure, place, count, dark ? 1 : 0);
+std::vector<std::size_t> free_positions(ColourScheme scheme, FigureKind kind, std::size_t count,
+                                        std::span<const std::size_t> taken) {
+    const std::size_t lowest = reserves_experiment_colours(scheme) && kind == FigureKind::Structure ? 2 : 0;
+    std::vector<std::size_t> out;
+    out.reserve(count);
+    for (std::size_t position = lowest; out.size() < count; ++position) {
+        if (std::find(taken.begin(), taken.end(), position) == taken.end()) {
+            out.push_back(position);
+        }
+    }
+    return out;
+}
+
+std::vector<std::size_t> colour_positions(ColourScheme scheme, std::size_t experiments, std::size_t structures) {
+    std::vector<FigureItem> items(experiments, FigureItem{FigureKind::Experiment, std::nullopt});
+    items.resize(experiments + structures, FigureItem{FigureKind::Structure, std::nullopt});
+    return colour_positions(scheme, items);
+}
+
+std::string figure_colour(ColourScheme scheme, std::size_t position, std::size_t count, bool dark) {
+    const std::vector<std::array<std::string, 2>>& figure = palette_of(scheme).figure;
+    const std::size_t side = dark ? 1 : 0;
+    if (position < figure.size()) {
+        return figure[position][side];
+    }
+    // Past the palette, shades from its first colour to its second that repeat neither (the owner, 2026-10-26).
+    const std::size_t before = figure.size() - 1;
+    const std::size_t last = std::max(count, position + 1);
+    const double t = static_cast<double>(position - before) / static_cast<double>(last - before);
+    return mix_colours(figure[0][side], figure[1][side], t);
 }
 
 std::string role_colour(ColourScheme scheme, ChartRole role, bool dark) {

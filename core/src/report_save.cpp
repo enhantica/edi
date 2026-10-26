@@ -71,7 +71,7 @@ std::string cif_digest(const Project& project) {
 
 ReportOptions report_file_options(ReportOptions options) {
     options.colour_scheme = kDefaultColourScheme;
-    options.structure_colour_scheme.reset();
+    options.colour_positions.clear();
     options.correlation_experiment = 0;
     options.element_colours = ColorScheme::Jmol;
     return options;
@@ -79,7 +79,7 @@ ReportOptions report_file_options(ReportOptions options) {
 
 bool chooses_presentation(const ReportOptions& options) {
     return options.colour_scheme != kDefaultColourScheme ||
-           options.structure_colour_scheme.value_or(options.colour_scheme) != options.colour_scheme ||
+           !options.colour_positions.empty() ||
            options.correlation_experiment != 0 || options.element_colours != ColorScheme::Jmol;
 }
 
