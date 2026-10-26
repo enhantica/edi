@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T13:28:10Z
+# measured_utc = 2026-10-26T15:18:44Z
 #
-# Recorded from: measured test run (9 node(s) measured once, 15861 banked, 33 stale row(s) dropped)
-# Collected tests: 17886; with a reported duration: 10358
+# Recorded from: measured test run (18 node(s) measured once, 15861 banked, 0 stale row(s) dropped)
+# Collected tests: 17904; with a reported duration: 10364
 # Module-scoped fixture costs recorded: 77
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17886
+# inventory_python = 17904
 # inventory_cpp = 396
-# inventory_measured = 15861
-# inventory_unmeasured = 2421
+# inventory_measured = 15867
+# inventory_unmeasured = 2433
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -14408,6 +14408,24 @@ UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.p
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_newest_open_recent_or_recovery_intent_wins_in_both_completion_orders
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_old_save_cannot_remove_new_recovery_and_unavailable_storage_is_not_success
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_pending_reads_recheck_new_edits_and_refuse_a_different_replacement
+1.050	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[list-experiments-NotAllowedError]
+1.040	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[list-experiments-UnknownError]
+0.990	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[list-structures-NotAllowedError]
+1.010	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[list-structures-UnknownError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[lookup-experiments-NotAllowedError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[lookup-experiments-UnknownError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[lookup-structures-NotAllowedError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[lookup-structures-UnknownError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-experiments-Error]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-experiments-NoModificationAllowedError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-experiments-NotAllowedError]
+1.000	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-experiments-NotFoundError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-experiments-UnknownError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-structures-Error]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-structures-NoModificationAllowedError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-structures-NotAllowedError]
+0.990	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-structures-NotFoundError]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-structures-UnknownError]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_save_choice_releases_replacement_or_quit_only_after_durable_success
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]

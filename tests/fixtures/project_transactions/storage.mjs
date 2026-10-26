@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
-const [root,input,output,chrome]=process.argv.slice(2);
+const [root,input,output,chrome,scenario='population']=process.argv.slice(2);
 assert(root&&input&&output&&chrome,'Storage observations require source, independent files, output and pinned Chromium');
 const source=await readFile(join(root,'app/src/web_storage.cpp'),'utf8');
 const bodies={};
@@ -19,7 +19,7 @@ const browser=await chromium.launch({executablePath:chrome,args:['--no-sandbox']
 try {
  const page=await browser.newPage();await page.goto('http://127.0.0.1:'+server.address().port);
  const files=JSON.parse(await readFile(input,'utf8'));
- const result=await page.evaluate(async({bodies,files})=>{
+ const result=await page.evaluate(async({bodies,files,scenario})=>{
    const root=await navigator.storage.getDirectory();const chosen=await root.getDirectoryHandle('existing-project',{create:true});
    const bytes=text=>Uint8Array.from(atob(text),c=>c.charCodeAt(0));
    const write=async(name,body)=>{const parts=name.split('/');let parent=chosen;for(const part of parts.slice(0,-1))parent=await parent.getDirectoryHandle(part,{create:true});const stream=await(await parent.getFileHandle(parts.at(-1),{create:true})).createWritable();await stream.write(body);await stream.close();};
@@ -48,6 +48,45 @@ try {
    invoke('edi_storage_write',[['job',2],['key_utf8',picked.key],['kind_utf8','folder'],['name_utf8',picked.name],['recovery',0]]);
    const written=await answer(2);const actual={};
    for(const [name,handle] of await ediStorage.walk(chosen,'',[]))actual[name]=btoa(String.fromCharCode(...new Uint8Array(await(await handle.getFile()).arrayBuffer())));
+   const cleanup=[];let nextJob=100;
+   const faultSpecs=[];
+   if(scenario.startsWith('cleanup'))for(const category of ['structures','experiments']) {
+     for(const error of ['NotAllowedError','NoModificationAllowedError','UnknownError','Error','NotFoundError'])faultSpecs.push({stage:'remove',category,error});
+     for(const stage of ['lookup','list'])for(const error of ['NotAllowedError','UnknownError'])faultSpecs.push({stage,category,error});
+   }
+   for(const spec of faultSpecs.filter(s=>scenario==='cleanup'||scenario===`cleanup:${s.stage}:${s.category}:${s.error}`)) {
+     const destination=await root.getDirectoryHandle('cleanup-'+nextJob,{create:true});
+     const put=async(path,body)=>{let parent=destination;const parts=path.split('/');for(const part of parts.slice(0,-1))parent=await parent.getDirectoryHandle(part,{create:true});const stream=await(await parent.getFileHandle(parts.at(-1),{create:true})).createWritable();await stream.write(body);await stream.close();};
+     for(const [path,body] of Object.entries(files))await put(path,bytes(body));
+     await put('structures/obsolete.edi',bytes(files[structure]));await put('experiments/obsolete.edi',bytes(files[experiment]));await put('keep.txt','independent unrelated content');
+     const categoryHandle=await destination.getDirectoryHandle(spec.category);
+     const originalGet=destination.getDirectoryHandle.bind(destination),originalRemove=categoryHandle.removeEntry.bind(categoryHandle),originalEntries=categoryHandle.entries.bind(categoryHandle);
+     let failing=spec.stage!=='remove',attempts=0;
+     const fault=()=>{++attempts;throw spec.error==='Error'?new Error('independent cleanup refusal'):new DOMException('independent cleanup refusal',spec.error);};
+     Object.defineProperty(destination,'getDirectoryHandle',{value:async(name,options)=>{
+       if(name!==spec.category)return originalGet(name,options);
+       if(failing&&spec.stage==='lookup'&&!options?.create)fault();
+       return categoryHandle;
+     }});
+     Object.defineProperty(categoryHandle,'entries',{value:async function*(){if(failing&&spec.stage==='list')fault();yield* originalEntries();}});
+     Object.defineProperty(categoryHandle,'removeEntry',{value:async(name,options)=>{if(name==='obsolete.edi'){++attempts;if(failing)throw spec.error==='Error'?new Error('independent cleanup refusal'):new DOMException('independent cleanup refusal',spec.error);}return originalRemove(name,options);}});
+     for(const name of ['queryPermission','requestPermission'])if(typeof destination[name]!=='function')Object.defineProperty(destination,name,{value:async()=> 'granted'});
+     window.showDirectoryPicker=async()=>destination;
+     const pick=async()=>{const job=nextJob++;invoke('edi_storage_pick_save',[['job',job],['kind_utf8','folder'],['suggested_utf8','source'],['start_utf8','']]);return answer(job);};
+     const writePicked=async picked=>{const job=nextJob++;ediStorage.staged.set(job,Object.entries(files).map(([name,body])=>[name,bytes(body)]));invoke('edi_storage_write',[['job',job],['key_utf8',picked.key],['kind_utf8','folder'],['name_utf8',picked.name],['recovery',0]]);return answer(job);};
+     const firstPick=await pick();const knownBefore=firstPick.ok?[...ediStorage.loaded.get(firstPick.key)||[]].sort():null;
+     if(spec.stage==='remove') {
+       if(spec.error==='NotFoundError')await originalRemove('obsolete.edi');
+       failing=true;
+     }
+     const first=firstPick.ok?await writePicked(firstPick):firstPick;
+     const knownAfter=firstPick.ok?[...ediStorage.loaded.get(firstPick.key)||[]].sort():null;
+     const recordAfter=firstPick.ok?await ediStorage.record(firstPick.key):null;
+     const attemptsBeforeRetry=attempts;failing=false;
+     const retryPick=firstPick.ok?firstPick:await pick();const retry=retryPick.ok?await writePicked(retryPick):retryPick;
+     const members=(await ediStorage.walk(destination,'',[])).map(([name])=>name).sort();
+     cleanup.push({...spec,firstPick,first,retry,knownBefore,knownAfter,recordAfter:recordAfter??null,attemptsBeforeRetry,attemptsAfterRetry:attempts,members,knownAfterRetry:[...ediStorage.loaded.get(retryPick.key)||[]].sort()});
+   }
    // Hold the worker boundary with immediate fake metadata/directory operations.
    // The real production write/drop entry points still own their causal ordering.
    let releaseWrite, announceHeld, recoveryPresent=true;
@@ -63,7 +102,7 @@ try {
    await new Promise(ok=>requestAnimationFrame(ok));
    const discardedBeforeWriteSettled=answers.has(11);
    releaseWrite();await Promise.all([answer(10),answer(11)]);
-   return {picked,written,actual,recoveryRace:{discardedBeforeWriteSettled,recoveryPresent}};
- },{bodies,files});
+   return {picked,written,actual,cleanup,recoveryRace:{discardedBeforeWriteSettled,recoveryPresent}};
+ },{bodies,files,scenario});
  await writeFile(output,JSON.stringify(result,null,2));
 } finally {await browser.close();await new Promise(ok=>server.close(ok));}

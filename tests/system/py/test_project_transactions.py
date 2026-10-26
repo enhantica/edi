@@ -209,7 +209,7 @@ def test_desktop_refusal_preserves_location_origin_and_unsaved_state_then_retrie
         )
 
 
-def browser_receipt(tmp_path):
+def browser_receipt(tmp_path, *, cleanup=None):
     node = shutil.which('node')
     chrome = os.environ.get('CHROME_HEADLESS_SHELL')
     if not chrome:
@@ -237,10 +237,11 @@ def browser_receipt(tmp_path):
             str(inputs),
             str(output),
             chrome,
+            cleanup or 'population',
         ],
         capture_output=True,
         text=True,
-        timeout=15,
+        timeout=30,
         check=False,
     )
     assert result.returncode == 0, (
@@ -371,3 +372,60 @@ def test_discard_during_a_pending_recovery_write_cannot_resurrect_recovery(tmp_p
     assert not race['recoveryPresent'], (
         'A recovery write held across Discard must never resurrect the discarded recovery'
     )
+
+
+@pytest.mark.parametrize(
+    ('stage', 'category', 'error'),
+    [
+        (stage, category, error)
+        for category in ('structures', 'experiments')
+        for stage, errors in (
+            (
+                'remove',
+                (
+                    'NotAllowedError',
+                    'NoModificationAllowedError',
+                    'UnknownError',
+                    'Error',
+                    'NotFoundError',
+                ),
+            ),
+            ('lookup', ('NotAllowedError', 'UnknownError')),
+            ('list', ('NotAllowedError', 'UnknownError')),
+        )
+        for error in errors
+    ],
+)
+def test_required_browser_cleanup_failures_retain_inventory_and_retry(
+    tmp_path, stage, category, error
+):
+    receipt, expected = browser_receipt(tmp_path, cleanup=f'cleanup:{stage}:{category}:{error}')
+    rows = receipt['cleanup']
+    assert [(r['stage'], r['category'], r['error']) for r in rows] == [(stage, category, error)], (
+        'Each cleanup fault reaches its independently selected real browser handle boundary'
+    )
+    for row in rows:
+        missing = row['stage'] == 'remove' and row['error'] == 'NotFoundError'
+        assert row['first']['ok'] is missing, (
+            'Only a proven missing entry permits cleanup to acknowledge success: ' + str(row)
+        )
+        assert row['attemptsBeforeRetry'] > 0, (
+            'Every cleanup fault reaches an actual browser handle operation'
+        )
+        if row['stage'] == 'remove' and not missing:
+            assert row['knownAfter'] == row['knownBefore'], (
+                'A failed cleanup retains the old known population for retry'
+            )
+            assert row['recordAfter'] is None or not row['recordAfter'].get('saved', False), (
+                'A failed cleanup never records the candidate as durably saved'
+            )
+            assert row['attemptsAfterRetry'] > row['attemptsBeforeRetry'], (
+                'Retry must attempt the previously refused removal again'
+            )
+        assert row['retry']['ok'], 'Removing the injected fault permits the next real write'
+        assert row['members'] == sorted([*expected, 'keep.txt']), (
+            'A successful retry removes obsolete entities and preserves unrelated content'
+        )
+        assert row['knownAfterRetry'] == sorted(expected), (
+            'Only successful reconciliation replaces the known saved population'
+        )
