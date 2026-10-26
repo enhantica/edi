@@ -13,9 +13,11 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "edi/background_estimate.hpp"
+#include "edi/display.hpp"
 #include "edi/io.hpp"
 
 namespace edi {
@@ -81,24 +83,6 @@ std::string default_peak_profile(BeamModeEnum mode) {
     return mode == BeamModeEnum::CONSTANT_WAVELENGTH ? "cwl-tch-pseudo-voigt" : "tof-jorgensen";
 }
 
-std::string peak_profile_label(const std::string& token) {
-    static const std::vector<std::pair<std::string, std::string>> labels{
-        {"cwl-gaussian", "Gaussian"},
-        {"cwl-lorentzian", "Lorentzian"},
-        {"cwl-pseudo-voigt", "Pseudo-Voigt"},
-        {"cwl-pseudo-voigt-berar-baldinozzi", "Pseudo-Voigt + Bérar-Baldinozzi asymmetry"},
-        {"cwl-tch-pseudo-voigt", "Thompson-Cox-Hastings pseudo-Voigt (TCH)"},
-        {"cwl-tch-pseudo-voigt-fcj",
-         "Thompson-Cox-Hastings pseudo-Voigt (TCH) + Finger-Cox-Jephcoat asymmetry (FCJ)"},
-    };
-    for (const auto& [known, label] : labels) {
-        if (known == token) {
-            return label;
-        }
-    }
-    return token;
-}
-
 std::vector<std::string> supported_absorption_families(BeamModeEnum mode) {
     // crysta's vocabulary table, in its order (ADR-0017): edi keeps no list of its own.
     return absorption_file_tokens(mode);
@@ -122,21 +106,6 @@ std::vector<std::string> applicable_fitting_modes(const Project& project) {
         return {"joint"};
     }
     return {"single"};
-}
-
-std::string fitting_mode_label(const std::string& token) {
-    static const std::vector<std::pair<std::string, std::string>> labels{
-        {"single", "Single experiment"},
-        {"joint", "Joint: all experiments at once"},
-        {"sequential", "Sequential: each from the previous"},
-        {"independent", "Independent: each from the same start"},
-    };
-    for (const auto& [known, label] : labels) {
-        if (known == token) {
-            return label;
-        }
-    }
-    return token;
 }
 
 void select_peak_profile(ExperimentBase& experiment, const std::string& token) {
@@ -184,26 +153,17 @@ void select_absorption(ExperimentBase& experiment, const std::string& value) {
                             absorption_file_token(experiment.effective_beam_mode(), value));
 }
 
-std::vector<std::string> extinction_type_labels() {
+// Each value of a selector by its dictionary name (edi ADR-0051).
+static std::vector<std::string> option_labels(std::string_view uid, const std::vector<std::string>& tokens) {
     std::vector<std::string> labels;
-    for (const std::string& token : extinction_type_tokens()) {
-        if (token == "none") {
-            labels.emplace_back("None");
-        } else if (token == "becker-coppens-type-1") {
-            labels.emplace_back("Isotropic Becker-Coppens type I");
-        } else if (token == "becker-coppens-type-2") {
-            labels.emplace_back("Isotropic Becker-Coppens type II");
-        } else if (token == "becker-coppens-mixed") {
-            labels.emplace_back("Isotropic Becker-Coppens mixed");
-        } else if (token == "larson-isotropic") {
-            labels.emplace_back("Isotropic Larson");
-        } else if (token == "larson-anisotropic") {
-            labels.emplace_back("Anisotropic Larson");
-        } else {
-            labels.push_back(token);
-        }
+    for (const std::string& token : tokens) {
+        labels.push_back(option_label(uid, token));
     }
     return labels;
+}
+
+std::vector<std::string> extinction_type_labels() {
+    return option_labels("extinction.type", extinction_type_tokens());
 }
 
 std::vector<std::string> extinction_type_choice_labels() {
@@ -220,11 +180,7 @@ std::vector<std::string> extinction_type_choice_labels() {
 }
 
 std::vector<std::string> mosaic_distribution_labels() {
-    std::vector<std::string> labels;
-    for (const std::string& token : mosaic_distribution_tokens()) {
-        labels.push_back(token == "gaussian" ? "Gaussian" : token == "lorentzian" ? "Lorentzian" : token);
-    }
-    return labels;
+    return option_labels("extinction.mosaic_distribution", mosaic_distribution_tokens());
 }
 
 void select_extinction(ExperimentBase& experiment, const std::string& token) {
@@ -235,11 +191,7 @@ void select_extinction(ExperimentBase& experiment, const std::string& token) {
 }
 
 std::vector<std::string> reflns_threshold_basis_labels() {
-    std::vector<std::string> labels;
-    for (const std::string& token : reflns_threshold_basis_tokens()) {
-        labels.push_back(token == "amplitude" ? "F" : "I");
-    }
-    return labels;
+    return option_labels("reflns.threshold_basis", reflns_threshold_basis_tokens());
 }
 
 void select_mosaic_distribution(ExperimentBase& experiment, const std::string& token) {

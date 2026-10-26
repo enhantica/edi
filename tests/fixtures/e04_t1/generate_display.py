@@ -105,7 +105,10 @@ def generate(added_project=None, updated_project=None, output_dir=None, *, catal
         })
 
     for project in projects:
-        for structure in sorted((project / 'structures').glob('*.edi')):
+        for structure in sorted([
+            *(project / 'structures').glob('*.edi'),
+            *(project / 'structures').glob('*.cif'),
+        ]):
             values = read(structure)
             name = values['_space_group.name_h_m']
             number, system = IDENTITIES[name]

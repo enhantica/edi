@@ -122,7 +122,7 @@ def test_supported_only_selectors_are_disabled_and_explain_the_reason():
 
 def test_atom_site_position_column_uses_a_choice_with_coordinates():
     source = text('Pages/Structure/AtomSitesGroup.qml')
-    assert 'qsTr("WP")' in source and 'qsTr("WL")' not in source, (
+    assert re.search(r'HeaderLabel\s*\{[^}]*uid:\s*"atom_site.wyckoff_letter"', source), (
         'The atom position column must be labelled WP'
     )
     assert re.search(r'(?:ComboBox|PositionCell)\s*\{', source), (

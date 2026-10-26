@@ -93,9 +93,10 @@ Item {
     readonly property real xTitleHeight: Math.round(em * 1.7)
     readonly property int xTicks: Math.max(2, Math.min(8, Math.round(width / (em * 6))))
     readonly property int yTicks: Math.max(2, Math.min(6, Math.floor((height - em * 7 - xTitleHeight) / (em * 2.5))))
-    // F² or F on both axes.
+    // F² or F on both axes, each titled by its item's dictionary label (edi ADR-0051).
     readonly property bool squared: reportMode || Preferences.singleCrystalQuantity !== "f"
-    readonly property string quantity: squared ? "F²" : "F"
+    readonly property string calculatedItem: squared ? "refln.intensity_calc" : "refln.f_calc"
+    readonly property string measuredItem: squared ? "refln.intensity_meas" : "refln.f_meas"
     // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
     property list<real> zoom: []
     readonly property real fullLow: {
@@ -448,7 +449,7 @@ Item {
         x: view.x + view.plotArea.x + (view.plotArea.width - width) / 2
         y: view.y + view.height + chart.em * 0.6
         color: chart.colors.chartLabels
-        text: qsTr("%1 calc").arg(chart.quantity)
+        text: Session.label(chart.calculatedItem)
     }
     EaElements.Label {
         x: chart.sideMargin - chart.em * 0.5
@@ -456,7 +457,7 @@ Item {
         rotation: -90
         transformOrigin: Item.TopLeft
         color: chart.colors.chartLabels
-        text: qsTr("%1 meas").arg(chart.quantity)
+        text: Session.label(chart.measuredItem)
     }
 
     Item {

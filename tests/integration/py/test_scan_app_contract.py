@@ -815,21 +815,25 @@ def test_data_free_experiment_type_has_a_write_boundary(axis):
     )
     require(
         control,
-        r'onActivated:\s*index => row\.choose\(' + axis + r',\s*"' + axis + r'",\s*index\)',
+        r'onSelected:\s*token => row\.choose\("' + axis + r'",\s*token\)',
         'Type wiring: each supported axis uses the selected-row edit route',
     )
     chooser = block(text, 'function choose(')
-    program = """const Qt={binding:f=>f()}; let calls=[];
-const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}
-
-};
-const box={value:'old',permittedValues:['old','chosen','other'],currentIndex:0}
-
-;
+    activation = block(source('qml/Components/SelectorField.qml'), 'onActivated:').split(':', 1)[1]
+    program = (
+        """const Qt={binding:f=>f()}; let calls=[];
+const row={experimentIndex:3,project:{setExperimentType:(...args)=>calls.push(args)}};
+const options={tokenAt:index=>['old','chosen','other'][index],
+               indexOf:value=>['old','chosen','other'].indexOf(value)};
+const selector={token:'old'}; const token=selector.token; let currentIndex=0; let refusal='';
+const Session={project:{lastError:''}};
 CHOOSER
-choose(box,AXIS,1);
-console.log(JSON.stringify([calls,box.currentIndex]));""".replace('CHOOSER', chooser).replace(
-        'AXIS', json.dumps(axis)
+const selected=token=>choose(AXIS,token);
+(ACTIVATION)(1);
+console.log(JSON.stringify([calls,currentIndex]));"""
+        .replace('CHOOSER', chooser)
+        .replace('AXIS', json.dumps(axis))
+        .replace('ACTIVATION', activation)
     )
     assert javascript(program) == [[[3, axis, 'chosen']], 0], (
         'Type wiring: activation forwards the selected experiment, axis '
@@ -1139,9 +1143,9 @@ def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibil
             (),
         ),
         (
-            'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'box.permittedValues[index]',
-            'box.permittedValues[0]',
+            'qml/Components/SelectorField.qml',
+            'options.tokenAt(index)',
+            'options.tokenAt(0)',
             test_data_free_experiment_type_has_a_write_boundary,
             ('beamMode',),
         ),

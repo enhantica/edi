@@ -106,6 +106,15 @@ bool inside(const QString& path) {
     const QStringList parts = QString(path).replace(QLatin1Char('\\'), QLatin1Char('/')).split(QLatin1Char('/'));
     return !parts.contains(QStringLiteral(".."));
 }
+
+// An archive any unzip tool restores usable. Files are rw-r--r--, not Qt's rw-------. No folder entries are
+// written: QZipWriter stores a folder without its owner's execute bit, which macOS then unpacks as a folder nobody
+// can open, while unzip tools make the folders a file's path names anyway.
+void prepare(QZipWriter& writer) {
+    writer.setCompressionPolicy(QZipWriter::AutoCompress);
+    writer.setCreationPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ReadUser | QFile::WriteUser |
+                                  QFile::ReadGroup | QFile::ReadOther);
+}
 }  // namespace
 
 bool WebFiles::available() {
@@ -134,8 +143,7 @@ QByteArray WebFiles::pack(const QString& directory) {
     QBuffer buffer(&archive);
     buffer.open(QIODevice::WriteOnly);
     QZipWriter writer(&buffer);
-    writer.setCompressionPolicy(QZipWriter::AutoCompress);
-    writer.addDirectory(top);
+    prepare(writer);
     QStringList files;
     QDirIterator it(directory, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
     while (it.hasNext()) {
@@ -158,7 +166,7 @@ QByteArray WebFiles::packFiles(const QList<QPair<QString, QByteArray>>& files) {
     QBuffer buffer(&archive);
     buffer.open(QIODevice::WriteOnly);
     QZipWriter writer(&buffer);
-    writer.setCompressionPolicy(QZipWriter::AutoCompress);
+    prepare(writer);
     for (const auto& [path, data] : files) {
         writer.addFile(path, data);
     }

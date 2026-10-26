@@ -79,7 +79,9 @@ std::string format_change(double current, double previous);
 
 // One per-iteration progress line, for a surface that subscribes to fit()'s `on_iteration`.
 // Rendered here so the streaming view and the `full` table share this module's formatting rules.
-std::string iteration_line(const IterationRecord& record, double previous_reduced_chi2);
+// `variant` is the fit's sample form as metric_variant gives it: a single crystal's factors are R(F²) and wR(F²).
+std::string iteration_line(const IterationRecord& record, double previous_reduced_chi2,
+                           const std::string& variant = {});
 
 // Streaming seams. The live human table (`python -m edi fit`, default) and the post-hoc the
 // retired post-hoc report shared ONE implementation with them, so a streamed table and an
@@ -90,22 +92,29 @@ std::string iteration_line(const IterationRecord& record, double previous_reduce
 // rendered from a `FitPreamble` because a live surface has only the pre-fit facts before iteration 1;
 // `project_name` labels the
 // header (typically the directory name).
-std::string stream_header(const FitPreamble& preamble, const std::string& project_name);
+std::string stream_header(const FitPreamble& preamble, const std::string& project_name,
+                          const std::string& variant = {});
 
 
-// The summary line: `  done · <converged> · <n> iters · reduced χ² … · Rwp … · <t> s`.
-std::string summary_line(const FitResultBase& outcome);
+// The summary line: `  done · <converged> · <n> iters · reduced χ² … · Rwp … % · <t> s`, the two metrics by their
+// dictionary labels and units.
+std::string summary_line(const FitResultBase& outcome, const std::string& variant = {});
+
+// The sample form a fit's metrics are named by (edi ADR-0051): `single crystal` when every experiment is one, so its
+// profile factors read R(F²) and wR(F²) as the app and the report name them; empty (the powder names) otherwise.
+std::string metric_variant(const Project& project);
 
 // The blocks that follow the summary at `full` verbosity: the per-bank Rwp line (joint only) and the
 // `parameter · start · value · s.u. · change` table keyed by edi identity path. Always renders the
 // block; the SURFACE decides whether to print it (only at full), so this is a pure renderer.
-std::string parameter_table(const FitResultBase& outcome);
+// With `project`, each ADP is labelled and rounded by its site's type and values with an s.u. by the project's rule.
+std::string parameter_table(const FitResultBase& outcome, const Project* project = nullptr);
 
 // The scan progress line, in the house `·` style — one line per completed scan file, rendered
 // here so every surface (CLI, notebooks, later front ends) shows one implementation and only
 // chooses the emission mode (in place on a TTY, one line per file otherwise):
 //
-//   [███░░░░░░░░░░░] · 38/213 · 18% · elapsed 2m41s · eta 12m05s · 35 ok · 3 fail · cosio_213K · χ² 4.81
+//   [███░░░░░░░░░░░] · 38/213 · 18% · elapsed 2m41s · eta 12m05s · 35 ok · 3 fail · cosio_213K · reduced χ² 4.81
 //
 // Every clause is load-bearing:
 //   * `total_files` comes from the scan preamble — with it unknown (nullopt) the line degrades
@@ -135,7 +144,7 @@ std::string scan_progress_line(int completed, std::optional<int> total_files,
 
 // The scan summary, after the frozen progress line:
 //
-//   scan · 213 files · 210 converged · 3 failed · χ² 3.91-8.44 · 14m52s
+//   scan · 213 files · 210 converged · 3 failed · reduced χ² 3.91-8.44 · 14m52s
 //
 // The summary COUNTS failures and never lists them — a 324-file scan printed 99 names; the
 // per-file outcome is in analysis/results.csv. Every population quantity — the counts and the χ²

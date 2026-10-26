@@ -440,10 +440,10 @@ Item {
             objectName: "chart.toolbar.xaxis"
             // d can be chosen once a calculation has given the experiment its d column (the owner, 2026-10-22);
             // the box shows the axis drawn, and names it as its list does; the d axis is "x: d-spacing" in both
-            // (the owner, 2026-10-22).
+            // (the owner, 2026-10-22). The axis names are the dictionary's.
             enabled: chart.experiment !== null && controller.dAvailable
             toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
-            readonly property var entries: [chart.nativeAxis === "timeOfFlight" ? qsTr("TOF") : qsTr("2θ"), qsTr("x: d-spacing")]
+            readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))]
             model: entries
             closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
             shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
