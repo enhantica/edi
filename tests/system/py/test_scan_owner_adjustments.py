@@ -48,10 +48,22 @@ def button_states(text):
     reset = item(text, 'statusBar.fit.reset')
     enabled = 'clickable' if re.search(r'(?m)^\s*clickable:', reset) else 'enabled'
     shown = 'shown' if re.search(r'(?m)^\s*shown:', reset) else 'visible'
+    group_state = ''
+    if property_value(reset, shown) == 'fitButtons.scanMode':
+        position = text.index('id: fitButtons')
+        begin, end = min(
+            ((a, b) for a, b in spans(text) if a < position < b),
+            key=lambda span: span[1] - span[0],
+        )
+        group_state = (
+            'const fitButtons={scanMode:(' + property_value(text[begin:end], 'scanMode') + ')};'
+        )
     result = evaluate(
         '[null,{scanMode:false,canReset:false},{scanMode:false,canReset:true},'
         '{scanMode:true,canReset:false},{scanMode:true,canReset:true}].map(fit=>{'
-        'const bar={fit};return ['
+        'const bar={fit};'
+        + group_state
+        + 'return ['
         + property_value(reset, shown)
         + ','
         + property_value(reset, enabled)
