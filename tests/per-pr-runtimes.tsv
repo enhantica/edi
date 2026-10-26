@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T19:33:13Z
+# measured_utc = 2026-10-26T19:46:33Z
 #
-# Recorded from: measured test run (3 node(s) measured once, 15914 banked, 0 stale row(s) dropped)
-# Collected tests: 18459; with a reported duration: 10411
+# Recorded from: measured test run (6 node(s) measured once, 15914 banked, 0 stale row(s) dropped)
+# Collected tests: 18465; with a reported duration: 10411
 # Module-scoped fixture costs recorded: 78
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 18459
+# inventory_python = 18465
 # inventory_cpp = 396
 # inventory_measured = 15914
-# inventory_unmeasured = 2941
+# inventory_unmeasured = 2947
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -14733,6 +14733,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test
 0.990	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-structures-NotFoundError]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_required_browser_cleanup_failures_retain_inventory_and_retry[remove-structures-UnknownError]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_save_choice_releases_replacement_or_quit_only_after_durable_success
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_scan_bookkeeping_finishes_before_publication_and_preserves_the_prepared_snapshot[web-move-folder-clean]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_scan_bookkeeping_finishes_before_publication_and_preserves_the_prepared_snapshot[web-move-folder-dirty]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_scan_bookkeeping_finishes_before_publication_and_preserves_the_prepared_snapshot[web-save-folder-clean]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_scan_bookkeeping_finishes_before_publication_and_preserves_the_prepared_snapshot[web-save-folder-dirty]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_scan_bookkeeping_finishes_before_publication_and_preserves_the_prepared_snapshot[zip-as-folder-clean]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_scan_bookkeeping_finishes_before_publication_and_preserves_the_prepared_snapshot[zip-as-folder-dirty]
 0.140	tests/system/py/test_project_transactions.py::test_successful_desktop_zip_publication_uses_exactly_one_staged_snapshot[zip-as]
 0.150	tests/system/py/test_project_transactions.py::test_successful_desktop_zip_publication_uses_exactly_one_staged_snapshot[zip-save]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_write_authority_survives_replacement_even_with_distinct_keys_for_one_physical_place[False-False-False-intents0-folder]
@@ -18950,7 +18956,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 64.280	tests/system/py/test_project_page_readiness.py
 # module-cost: 100.158	tests/system/py/test_project_tooltip_style.py
-# module-cost: 1.486	tests/system/py/test_project_transactions.py
+# module-cost: 1.577	tests/system/py/test_project_transactions.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
 # module-cost: 2.346	tests/system/py/test_report_index_width.py

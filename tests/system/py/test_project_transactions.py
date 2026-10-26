@@ -786,6 +786,23 @@ def test_publication_is_followed_only_by_an_infallible_prepared_live_commit(
 ):
     group = f'after-publication/{route}/{kind}/' + ('dirty' if dirty else 'clean')
     row = observe(observer, group, tmp_path)[0]
+    check_publication_commit(row, dirty)
+
+
+@pytest.mark.parametrize('dirty', [False, True], ids=['clean', 'dirty'])
+@pytest.mark.parametrize(
+    ('route', 'kind'), [('zip-as', 'folder'), ('web-save', 'folder'), ('web-move', 'folder')]
+)
+def test_scan_bookkeeping_finishes_before_publication_and_preserves_the_prepared_snapshot(
+    observer, tmp_path, route, kind, dirty
+):
+    source = ROOT / 'tests/fixtures/scan_template/project'
+    group = f'after-publication/{route}/{kind}/' + ('dirty' if dirty else 'clean')
+    row = observe(observer, group, tmp_path, source)[0]
+    check_publication_commit(row, dirty)
+
+
+def check_publication_commit(row, dirty):
     assert row['before']['modified'] is dirty, (
         'Post-publication observations start with both clean and dirty exact-value projects'
     )
@@ -804,6 +821,11 @@ def test_publication_is_followed_only_by_an_infallible_prepared_live_commit(
     assert not row['after']['modified'], 'The successfully published unchanged snapshot is clean'
     assert row['after']['parameters'] == row['publishedParameters'], (
         'The prepared live values and uncertainties equal the actual durable published snapshot'
+    )
+
+    assert row['snapshotMatches'], (
+        'The live working folder retains exactly the files and scientific metadata '
+        'of the immutable published snapshot, including scan bookkeeping'
     )
 
 

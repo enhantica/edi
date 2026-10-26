@@ -12,6 +12,7 @@
 #include <QQmlApplicationEngine>
 #include <QQmlComponent>
 #include <QQmlExpression>
+#include <QRegularExpression>
 #include <QTemporaryDir>
 #include <QThread>
 #include <QtQml>
@@ -162,17 +163,20 @@ QJsonObject shownState(ProjectViewModel& project) {
 }
 QString preciseInput(const QString& source, const QString& destination) {
     copy(source, destination);
-    const QString name = destination + "/structures/phase.edi";
+    const QDir structures(destination + "/structures");
+    const auto names = structures.entryList({"*.edi"}, QDir::Files, QDir::Name);
+    need(names.size() == 1, "The precision stimulus selects the actual authored structure");
+    const QString name = structures.filePath(names.front());
     QFile file(name);
     need(file.open(QIODevice::ReadOnly), "High-precision author input exists");
-    QByteArray data = file.readAll();
+    QString data = QString::fromUtf8(file.readAll());
     file.close();
-    need(data.contains("_cell.length_a 4.1\n"),
-         "The authored cell witness reaches its actual tag");
-    data.replace("_cell.length_a 4.1\n", "_cell.length_a 1.23456789\n");
+    const QRegularExpression tag("(?m)^_cell\\.length_a[ \t]+[^\\s]+$");
+    need(data.contains(tag), "The authored cell witness reaches its actual tag");
+    data.replace(tag, "_cell.length_a 1.23456789");
     need(file.open(QIODevice::WriteOnly | QIODevice::Truncate),
          "High-precision author input is writable");
-    file.write(data);
+    file.write(data.toUtf8());
     return destination;
 }
 QJsonObject state(Session& session) {
@@ -889,6 +893,7 @@ QJsonObject afterPublication(const QString& source, const QStringList& spec) {
             returned = session.save();
         else
             returned = session.saveProjectAs(QUrl::fromLocalFile(destination), true, false);
+        settle(session);  // queued publication work is covered by the same armed refusal
     } catch (const std::exception& error) {
         exception = QString::fromUtf8(error.what());
     }
@@ -943,6 +948,8 @@ QJsonObject afterPublication(const QString& source, const QStringList& spec) {
             {"ownFolderExists", ownFolderExists},
             {"ownFolderReadable", ownFolderReadable},
             {"publishedParameters", publishedParameters},
+            {"snapshotMatches",
+             !publishedRoot.isEmpty() && image(publishedRoot) == image(session.project()->path())},
             {"oldFolderUnchanged", image(originalFolder) == originalBytes}};
 }
 QJsonValue optionalNumber(const std::optional<double>& value) {
