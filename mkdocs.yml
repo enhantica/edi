@@ -89,6 +89,9 @@ nav:
           - dev/design/diffraction-lib-parity.md
           - dev/design/modern-qt-guidelines.md
           - dev/design/scan-folder-loading.md
+          - dev/design/scan-view-timings.md
+          - dev/design/scan-renderer-interface.md
+          - dev/design/scan-update-interface.md
           - dev/public-release-checklist.md
           - dev/design/where-tests-live.md
       - Requirements:

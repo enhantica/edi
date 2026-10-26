@@ -1,0 +1,170 @@
+# Chart redraw acceptance
+
+The placement oracle is the independent relative stack rule: a trace's height H is
+P / (1 + (N - 1) * offset) in Fit mode, otherwise P * heightPercent / 100.
+Baseline i is i * H * offset. The QML actor observes the Stacked layer's rowOf and peakOf in the
+unzoomed zero-to-one axis coordinates, then captures the production chart
+through xcb/OpenGL. Model scan-value rows are used only for Map. The visible
+[placement contract](../../../docs/dev/design/scan-renderer-interface.md#stacked-placement-and-selectors)
+names the units, defaults and exact-text selector activation.
+The input generator writes independent triangular traces into private scan files.
+
+The toolbar oracle uses control types and their actual mapped rectangles.
+The wide viewport reserves room for the actual chart after the adaptive sidebar,
+and a physical control-width check precedes the one-line assertion. Minimum and
+intermediate sizes still exercise wrapping and each line's selector-aligned centre. It
+requires a single centred line when the controls fit; otherwise combo-only lines
+above button-only lines. It visits both chart pages through Main.
+
+For the work-count acceptance, the scan layer exposes read-only diagnostic
+`traceBuildCount` and `redrawCount` values. They count actual trace reductions and
+actual rendered updates, respectively. The actor checks positive invalidation as
+well as zero work on restyling, and compares a synchronous burst with frames
+observed on the real window. These are observations, never rendering inputs.
+
+The minimum comes from the production window's minimumWidth/minimumHeight,
+not a second numeric constant. The undersize actor releases the native window's
+minimum constraint to exercise the same content-area predicate used by wasm.
+A browser run still needs to exercise the compiled wasm build separately.
+
+Timing thresholds follow the committed acceptance policy, not a measured result.
+Gate 1's conductor decision of 2026-10-26 (hub record `19e74c0e8`, owner unanswered)
+keeps every GPU data, zoom, pan, restyle and select median strictly below 100 ms.
+On software rendering, data is at most 250 ms, zoom at most 115 ms, and pan,
+restyle and select each at most 100 ms, including equality. The workload remains
+324 datasets; no drawn pattern, label or tick is dropped to meet a time bound.
+The rendering and complete-work gates remain required alongside timings.
+The other pending comparisons remain:
+162 datasets, Every pattern, display catches up / Adaptive fit ratio at most 1.05; LBCO slider-step
+cost before and after fitting within the baseline's measured noise.
+
+Redraw and fit comparisons require the observed graphics API and renderer in
+`backend` (`api`, `renderer`). `backend_comparisons` requires a llvmpipe OpenGL
+row as well as any hardware rows; every row keeps its own redraw and fit bound.
+Software and hardware timings are never pooled. `changes` must contain all five
+keys `data`, `zoom`, `pan`, `restyle` and `select`, each with repeated positive
+`before_ms` and `after_ms` samples. Every result names its `change`, `limit_ms`,
+`inclusive` convention and `within_limit` verdict. This replaces the former
+single strict `under_100_ms` redraw result. An absent operation is refused;
+a fast selection or pan cannot cover a slow data change.
+
+Every complete backend row also carries `conditions`: `quiet: true`, a positive
+integer `logical_cpus`, and either `load_average` (three finite nonnegative
+1/5/15-minute readings) or `cpu_busy_percent` (a finite value from 0 to 100 for
+hosts without POSIX load averages). The stated load and its units stay in the
+result. A quiet declaration and load fields do not themselves prove a quiet
+machine; actual performance acceptance still needs the quiet interval and its
+observed load, judged as required by the packet. Loaded development runs remain
+diagnostics. Missing, false or malformed conditions cannot produce a complete
+timing verdict. The arithmetic tests use
+synthetic samples and make no performance claim. Live samples and their backend
+identity still come from the measured app, with the same machine and project
+for each comparison. GPU measurements need a GPU host.
+The OpenGL renderer is empty on APIs such as Metal, which have no OpenGL context.
+
+Each backend row keeps `fits.pattern` and `fits.stacked`, with separate
+`display_catches_up_ms`, `fit_waits_for_display_ms` and `adaptive_ms` samples.
+Only display catches up carries the 1.05 bound. The legacy Every-pattern
+baseline remains a fit-waits regression pin; it is never relabelled as catch-up.
+`python -m tests.fixtures.fast_chart_redraws.measure_fit DIR` now drives the
+actual update-mode UI in a native app host, records the worker-completion time,
+then lets the display finish. It alternates all three modes on both tabs with
+repeated samples. Each receipt retains the selected UI text, tab, complete
+scientific file count and independent Qt backend. `sample.json` and
+`fit-comparisons.json` retain the raw samples and separate mode ratios.
+The previous producer used the app's old Every/Adaptive demo routes.
+The [scan update contract](../../../docs/dev/design/scan-update-interface.md)
+describes the queue, visible progress, legacy migration and parameter range
+observations. Timing replay remains a local diagnostic; final performance
+proof still needs the packet's quiet-machine measurements.
+
+Adaptive remains a separate choice in the real Analysis Settings selector.
+The native actor selects it after Every pattern, fit waits for the display, and follows the saved 162-file
+scan, checking live coalescing, the ADR-0029 half-second interval, completion of
+all files and restoration of the final dataset.
+
+Rendering detection is compared with `QSGRendererInterface::graphicsApi` and
+`glGetString(GL_RENDERER)` read in Qt's rendering callback. The normal app must
+report those values at startup without forced Qt debug logs. Preferences,
+Develop must display them and identify software rendering as no GPU. Its scan
+renderer selector offers GPU and software/painter choices, optionally automatic; the actor
+finds those choices by their displayed text rather than a new public API.
+Each explicit choice is written through real input, then read and exercised by
+a second host process using the same private settings file.
+The restart actor lives in the system tier and runs through that two-process
+harness, with an actual display and private settings, rather than the unit
+runner's offscreen all-files invocation.
+
+The [scan renderer interface](../../../docs/dev/design/scan-renderer-interface.md)
+defines requested and effective choices, the loaded-scan observations, restart
+persistence and the difference between llvmpipe OpenGL and Qt Quick's Software
+backend. The gate previously inferred the path from the wrapper's superclass;
+it now observes the selected path and rendered contribution, allowing a painted
+wrapper to host the GPU line child.
+
+Each fit-timing combination now has a separate native entry point, as specified
+in the scan update contract. A caller cannot select a six-fit aggregate timing
+function; the existing per-process watchdog still bounds one case. Fit-waits is
+reported without the catch-up ratio bound. Its functional view cases include
+Stacked, Map and scientific completion with no shown pattern view.
+
+The startup-report parser is shared by the existing-project stderr gate and the
+normal-app renderer gate. It exempts only complete renderer report lines and
+preserves adjacent project diagnostics and malformed lookalikes. Pure boundary
+cases exercise those refusals; actual startup values still come from the
+independent Qt observer. Sidebar gates use the actual selected tab and settled
+view, rather than accepting an empty filter for the former tab count.
+
+
+The wheel gate uses real input on the page-owned Stacked chart on Experiment and
+Analysis. Twelve independently authored triangles at 50% fixed height and 100%
+offset have baselines `i / 2` and top `6`. The wheel must move a span-one viewport
+from `[0, 1]` to `[5, 6]`, allow actual selection of the last triangle, and return
+to `[0, 1]` without resizing the traces.
+
+The joint-exclusion gate uses the saved two-bank joint project with independently
+specified TOF calibrations and disjoint native exclusions `[1213, 1513]` and
+`[5481, 6231]`. It checks both forced Stacked GPU and painter paths under Qt's
+normal capture API. At offset/height 100%/20% the vertical spans are `[0, .2]`
+and `[.2, .4]`; at 50%/40% they are `[0, .4]` and `[.2, .6]`. Interior pixels
+must be tinted and pixels immediately outside the corresponding extent must
+match untinted included columns away from the analytic triangle's peak. The
+expected spans never come from `rowOf`, `peakOf` or Map row extents. Pixel
+coordinates scale with the captured image, preserving DPR handling.
+
+`HiddenScanRedraws.qml` warms all four real page-owned scan views, then hides them
+through both actual page and tab navigation. It reloads both joint experiments
+from independently authored six-knot profiles twice while hidden, allowing
+completed frames after each change. Positive baseline 10 retains every point
+through the plain-data reader; plateaus 255 move from 20–30 through 35–45 to
+55–65 on the unchanged 10–80 x support, and back again in the tab case.
+Every hidden layer's `traceBuildCount` must remain unchanged. Showing just the
+target view must add exactly the dataset count, with no further increment on
+unchanged frames and no work in the other three hidden layers. No active flag
+or visibility override supplies the result. Actual input determines visibility.
+
+Current-point checks use real rendered pixels: Stacked has independently
+normalised half-height rows at full relative offset and must draw each latest
+rising edge while removing the old one; Map must move the frozen Viridis high
+and low colours to the latest and former plateau positions. The three-logical-
+pixel Stacked corridor covers its two-pixel pen and coordinate rounding, with
+RGB tolerance .09; flat Map plateaus use the frozen endpoints within 3/255 per
+channel. Both positive current ink and absence of old ink are required.
+
+The inactive-request matrix independently covers both pages, Stacked GPU,
+Stacked painter and Map, through three work-entry channels. It changes actual
+measured data while shown, proves Qt has queued polish without consuming it,
+and changes the real application page index in the same GUI turn before a
+frame can run; `ensurePolished()` then exercises any outstanding work. This
+uses the real page binding rather than assigning the layer's activity flag.
+The other channels switch both renderer directions and the public chart mode,
+issue direct update and QPainter requests while inactive, and resize the hidden
+view through actual window geometry changes before restoring its extent.
+
+Both `traceBuildCount` and `redrawCount` must remain unchanged while inactive.
+The latter observes GPU-line scene updates as well as the painted path. The
+existing passive `paintedInk` helper must positively see a shown painter/Map,
+then obtain zero ink when directly calling its real paint entry while inactive.
+Activation must add exactly one reduction per dataset, actually draw the latest
+independent shape, and leave both work counts unchanged on later unchanged
+frames. Requested activity values never supply the expected work result.

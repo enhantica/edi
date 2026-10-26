@@ -23,9 +23,9 @@ The owner keep-all record now pins the offered roster to 28 names in `offered.js
 
 Evolution retains its selected-line witness: two opaque core pixels plus one
 half-transparent opposite-colour pixel on each side, with exact theme colours,
-physical centre and rendered pixels. Stacked and Map use the final open-rectangle
-amendment described below. Row-colour samples avoid the separate selected overlay,
-preserving every independently specified row and colour assertion.
+physical centre and rendered pixels. Stacked and Map use the bold-label and
+highlight amendment described below. Colour observations turn highlighting off,
+preserving every independently specified dataset and colour assertion.
 
 Actors run in private OpenGL sessions through `run.sh`. Software rendering,
 Windows/ANGLE and exact-head CI are separate evidence; a copied native host is only
@@ -39,27 +39,15 @@ ramps. Published-map endpoint/interior and theme checks remain. Map ramps retain
 their background/end-colour checks and occupy the first five positions in both
 actual selectors.
 
-The final indicator amendment keeps Evolution's four-pixel line and replaces the
-Stacked/Map line with an open rectangle: independent row-to-peak or midpoint-band
-bounds, one opaque border pixel and one half-transparent opposite-colour pixel on
-either side. A data-underlay capture temporarily makes only the prior indicator
-transparent; the selected frame must retain empty interior pixels and the exact
-themed border composites. Async-coordinate and cross-page checks follow the
-rectangle bounds rather than the superseded line centre.
-
 The Map default witness removes the actual ScanViews/mapColours key, restarts the production engine, and expects Edi Natural shades. It then chooses Plasma through real toolbar input and restarts again to prove that a saved choice is retained (owner decision 2026-10-22, b8b32e8c9).
 
 Owner decisions 62d2c7401 and 1f6bd79e6 replace the Stacked numeric y-scale witness with named, coloured icon rows. The sparse temperatures remain 100, 250 and 700 K, so they distinguish physical spacing from equal file/datablock bands. The font witness compares real Pattern tick/title fonts with all three scan charts and the Map key. The dense generator writes 48 distinct private files (temperatures 100.345 + 7*i K) or 48 distinct joint datablocks; real plot selection must reveal a previously thinned label, and actual drag zoom must restore every interior label that now fits. The Map keeps its numeric scan-value scale and a separately rendered edge tick per measured dataset.
 
-Rectangle geometry allows the three-pixel stroke envelope around a Stacked curve, with only raster rounding beyond it; Map bounds follow the independent midpoint band edges. Pixel tests separately require the exact one-pixel core, inner/outer half-alpha stripes, and untouched open interior. Settings restart observes the real Preferences singleton in a fresh engine; actual selectors and their input bindings are checked in the rendered chart engine, avoiding unsupported headless Qt Graphs teardown in the restart observer.
-
-The viewport-edge selection actor leaves a quarter logical pixel of an independently
-specified natural band visible at either y edge, checks the full open box, then
-moves that band wholly offscreen and resets it. The minimum is eight logical pixels.
-The failed-middle-file actor checks every interior part of its reserved index band
-against the plot background in both Map modes, retaining healthy-neighbour ink and
-the read diagnostic. Uneven-row edge colours retain their midpoint/quarter-height
-oracle above.
+Settings restart observes the real Preferences singleton in a fresh engine;
+actual selectors and their input bindings are checked in the rendered chart
+engine. Older failed-band, excluded-region and edge-colour actors retain their
+original background, mask and midpoint/quarter-height oracles; these are separate
+from the selection/tick adaptations.
 
 `gap()` supplies either two endpoints (10 and 20) around the excluded interval
 [14, 16], or 10001 samples on that same domain. The dense subpixel interval is
@@ -70,8 +58,8 @@ falling d coordinates use wavelength 1.87 and offset 0.29 in Bragg's formula.
 The actors use the ordinary included-only control, fine zoom between sparse
 endpoints, positive full-range ink and restored full-range drawing. Captures map
 plot coordinates into a chart image explicitly; the sampled-column reference
-retains the chart's own grid underlay. Selection outlines are transparent during
-these data-only observations.
+retains the chart's own grid underlay. Highlighting is off during these data-only
+observations.
 
 The coincident-value generator writes three equal temperatures (250 K), or five
 files with temperatures 250, 100, 250, 700, 250 K and constant intensities
@@ -79,4 +67,26 @@ files with temperatures 250, 100, 250, 700, 250 K and constant intensities
 all-equal intensities are 0, 128, 255. Pixel ownership uses the frozen viridis
 samples or approved categorical colours, without prescribing row positions.
 Real mouse selection on Map pixels or a Stacked baseline must agree with the
-independently identified data and its open box. Explicit file ordering is the control in both Map modes and Stacked.
+independently identified data and its bold selected label. Explicit file ordering
+is the control in both Map modes and Stacked.
+
+Legacy chart gates now turn highlighting off for data-colour observations. The
+retired selection rectangle is replaced by the visible row label's bold face,
+accent colour and actual ink over its captured underlay. Dense row-label cases
+check that mark after selecting a previously thinned label. Rectangle border,
+minimum-height and clipping cases no longer describe a product requirement.
+Evolution keeps its position-line check. The named `rowTicks` strip is observed
+through its real pixels, rather than expecting one QML item per dataset.
+
+The Stacked `bounded-rows` palette witness retains the three independently
+specified constant interior intensities (0, 128, 255), with endpoints explicitly
+anchored at 0 and 255. Every pattern therefore has the same nonzero intensity
+range; its expected interior plot height does not depend on how an implementation
+handles a degenerate constant range. Map retains the original constant bands.
+Palette witnesses give plot-boundary lines clear space from the frame. The
+separate placement gates continue to check the closed-form offset/height rules.
+
+Every input generator refuses an empty, relative or non-file private-project URL
+before reading or writing data. A failed temporary copy cannot become writes in
+the caller's working directory; a dedicated gate exercises every generator with
+invalid roots and a recording writer.

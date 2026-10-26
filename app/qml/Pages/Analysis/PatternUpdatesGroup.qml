@@ -16,8 +16,8 @@ EaElements.GroupBox {
     readonly property string openKey: "Settings:patternUpdates"
 
     objectName: "group.patternUpdates"
-    collapsed: !SideBarGroups.isOpen(openKey)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
     title: qsTr("Pattern updates during a scan")
     icon: "chart-line"
@@ -25,9 +25,11 @@ EaElements.GroupBox {
     EaElements.ComboBox {
         objectName: "analysis.patternUpdates"
         width: EaStyle.Sizes.sideBarContentWidth
-        // The order is FitViewModel.patternUpdates's.
-        model: [qsTr("Every pattern"), qsTr("About once a second"), qsTr("Adaptive"), qsTr("Only at the end")]
-        currentIndex: Preferences.scanPatternUpdates
-        onActivated: index => Preferences.scanPatternUpdates = index
+        // The order the owner chose (2026-10-24); `values` holds each entry's FitViewModel.patternUpdates, so saved
+        // choices keep their meaning: a saved 0, the earlier "Every pattern", is "fit waits".
+        readonly property list<int> values: [2, 1, 0, 4, 3]
+        model: [qsTr("Adaptive"), qsTr("About once a second"), qsTr("Every pattern, fit waits for the display"), qsTr("Every pattern, display catches up"), qsTr("Only at the end")]
+        currentIndex: values.indexOf(Preferences.scanPatternUpdates)
+        onActivated: index => Preferences.scanPatternUpdates = values[index]
     }
 }

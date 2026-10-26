@@ -15,6 +15,11 @@ QtObject {
     // the same on Home and in About (WordmarkWithVersion, edi ADR-0017 §1).
     readonly property real homeMarkDiameter: unit * 5
 
+    // The smallest app area every page is made for (the owner, 2026-10-25): the desktop window cannot be made smaller,
+    // and the browser's page shows only a request to make it larger below it (Main.qml). In logical pixels.
+    readonly property int minimumAppWidth: 1024
+    readonly property int minimumAppHeight: 640
+
     // Home page (easydiffractionbeta Pages/Home/Page.qml)
     readonly property real homeBlockSpacer: unit * 2.5
     readonly property real homeLinkColumnsSpacing: unit * 3
