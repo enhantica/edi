@@ -6,6 +6,10 @@ _experiment_type.sample_form powder
 _experiment_type.beam_mode "time-of-flight"
 _experiment_type.radiation_probe neutron
 _experiment_type.scattering_type bragg
+_experiment_type.dimensionality 1d
+_experiment_type.polarisation unpolarised
+_instrument.name DREAM
+_instrument.facility ESS
 
 _scattering_source.neutron_scattering_length sears1992
 

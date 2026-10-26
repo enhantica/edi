@@ -4,8 +4,3 @@ _metadata.name pd-neut-tof_si-sepd
 _metadata.title "Silicon [Fd-3m] · SEPD @ Argonne"
 _metadata.description "Silicon standard · Jorgensen–Von Dreele profile · Time-of-flight neutron powder data"
 _metadata.authors .
-_metadata.purpose "refinement"
-_metadata.dimensionality "1D"
-_metadata.instrument "SEPD"
-_metadata.facility "Argonne"
-_metadata.polarisation "none"
