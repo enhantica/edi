@@ -8,6 +8,7 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+#include "edi/project_archive.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
@@ -3705,7 +3706,7 @@ std::vector<std::string> registered_peak_types() {
     return tokens;
 }
 
-Project load_project(const std::string& directory, const WarningSink& on_warning) {
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -4603,6 +4604,27 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     return project;
 }
 
+Project load_project(const std::string& path, const WarningSink& on_warning) {
+    // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
+    std::error_code error;
+    const fs::path given(path);
+    if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
+        const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");
+        return load_project_folder(folder.string(), on_warning);
+    }
+    if (is_project_archive(path)) {
+        const std::string folder = unpack_project_archive(read_file(path), fresh_archive_directory("open"));
+        Project project = load_project_folder(folder, on_warning);
+        // The unpacked folder is temporary: the project has no directory of its own until it is saved somewhere, and
+        // reads its scan data from the unpacked folder meanwhile.
+        project.scan_data_root = folder;
+        project.path.clear();
+        project.metadata.path.clear();
+        return project;
+    }
+    return load_project_folder(path, on_warning);
+}
+
 double parse_edi_double(const std::string& text, const std::string& where) {
     // Review-10 F2: the ONE numeric boundary, exported for the adapter's start_tied parsing —
     // finite, full-token, classic-locale (the loader's own to_double), so the new column can
@@ -5000,6 +5022,24 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
         }
     }
     return changed;
+}
+
+bool adopt_saved_project(Project& project, const std::string& directory) {
+    // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one that held a
+    // calculation is calculated again from those values and written once more, so its calculated pattern and R factors
+    // describe the values beside them.
+    if (!adopt_saved_values(project, directory)) {
+        return false;
+    }
+    const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
+        return (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+               (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
+    });
+    if (calculated) {
+        project.refresh_calculated_pattern();
+        save_project(project, directory);
+    }
+    return true;
 }
 
 

@@ -1002,7 +1002,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     }
     const Project& project = scan ? scan->project : input;
     // A report and its CIF round by the IUCr rule whatever the project's own setting (the owner, 2026-10-24).
-    const std::string rule = kDefaultSuRule;
+    const std::string rule = kReportSuRule;
     ReportModel model;
     model.generated = options.generated.empty() ? utc_now() : options.generated;
     // The optional groups (the owner, 2026-10-13): each in the contents, marked whether the options leave it out.

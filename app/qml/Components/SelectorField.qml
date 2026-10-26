@@ -5,6 +5,7 @@ import QtQuick.Controls
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Globals as EaGlobals
 
 import edi.app
 
@@ -25,6 +26,8 @@ EaElements.ParamComboBox {
     property string refusal: ""
     // What `auto` resolves to, shown after it in grey ("auto · arpls"); empty shows the choice alone.
     property string resolved: ""
+    // A help text set as `ToolTip.text` shows in the app's tooltip on hover, unless a refusal is shown.
+    property bool helpToolTip: false
     signal selected(string token)
 
     // Shares the row's width with its siblings at the input spacing, as ParamTextField does (the base's
@@ -45,6 +48,11 @@ EaElements.ParamComboBox {
     WarningToolTip {
         text: selector.refusal
         visible: text !== "" && selector.hovered
+    }
+    // The app's tooltip, never the attached one Qt draws in its own style.
+    EaElements.ToolTip {
+        text: selector.ToolTip.text
+        visible: selector.helpToolTip && text !== "" && selector.refusal === "" && selector.hovered && EaGlobals.Vars.showToolTips
     }
 
     onTokenChanged: refusal = ""

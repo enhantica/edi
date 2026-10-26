@@ -1029,8 +1029,9 @@ the toolbar and the matrix (the owner, 2026-10-13).
 
 ### 21. Standard uncertainties follow the project's rule
 
-A value with a standard uncertainty is shown as the project writes it: its uncertainty rounded up to one digit, or two
-from 10 to 19 (`iucr_19`, the default), or always two (`iucr_99`), and the value rounded to the same digit. The value
+A value with a standard uncertainty is shown as the project writes it: its uncertainty rounded to two digits
+(`iucr_99`, the default since the owner's record of 2026-10-24) or by IUCr recommendation 12, one digit or two from 10
+to 19 (`iucr_19`), and the value rounded to the same digit. The value
 and s.u. cells, and the report, take both texts from one core function (`edi::su_text`, over crysta's), so the screen,
 the Text tab and the files agree. A value the cells write in scientific notation (at or above a million, or below 1e-4;
 the owner, 2026-10-10) keeps that notation. The rule is a project setting: the Project page's Extra tab has **Standard

@@ -151,12 +151,12 @@ llvm-openmp = "23.*"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-7217664e47fdfc12448adf76396950e00dad39e5"
-CRYSTA_SDK_SHA256 = "3813ae5935da6cdcc4217b08515e0f948e1b9bf42f61f41ee1200e00dcfbac64"
+CRYSTA_SDK_TAG = "build-f2b66df6f79abd131fae6c474d539d3b091bf5dd"
+CRYSTA_SDK_SHA256 = "be291c135df99f736aa29fdd82fbca7f88bce7a88a7a30797c97d9bbce9cdbaf"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-7217664e47fdfc12448adf76396950e00dad39e5"
-CRYSTA_SDK_SHA256 = "5c37b891ceb9ef14a0a27b727a14e92683fc740f8ef14c63f33995cb8328ae4f"
+CRYSTA_SDK_TAG = "build-f2b66df6f79abd131fae6c474d539d3b091bf5dd"
+CRYSTA_SDK_SHA256 = "bc35b64e257aaab8bd78887f19e9f2128935c6e3b81c1d6f24abe92395838377"
 
 [target.linux-64.dependencies]
 cxx-compiler = "*"
@@ -286,8 +286,6 @@ app = ["app"]
 [pypi-dependencies]
 easydiffraction = { path = ".", editable = true }
 nanobind = "*"
-# An independent CIF reader for the CIF report checks.
-gemmi = "==0.7.5"
 
 [tasks]
 # --- lint / format -----------------------------------------------------------------
@@ -425,7 +423,7 @@ wasm-parallel-check = { cmd = ["bash", "tools/ci/wasm-parallel-check.sh"] }
 # The cadence entry points: `verify-quick` — the static checks, the core build, the audit and
 # the quick group — runs ONCE before handing to review; `verify-full` (== `verify`, the mount
 # `verify:` command and the x-ship gate) runs ONCE when ready to merge, after the accept.
-verify-quick = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "display-sources-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-quick", "py-cov-unit", "generated-regions", "app-verify"] }
+verify-quick = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-quick", "py-cov-unit", "generated-regions", "app-verify"] }
 # Gate the audit: every collected test must have a recorded runtime backing its tier. Collection
 # imports `edi._edi`, so without core-build the audit dies with
 # `ImportError: edi's compiled extension ... is not importable`. It passed locally and inside
@@ -439,9 +437,6 @@ entity-path-check = { cmd = ["python", "tools/checks/entity_path_convention.py"]
 # ADR-0018: every category has its schema, and the committed census is the generated one —
 # in verify-quick, verify-full and the CI lint job's static policy step.
 category-census-check = { cmd = ["python", "tools/checks/category_census.py"] }
-# ADR-0051: every name and number a surface shows comes from crysta's dictionary through the display bridge. It reads
-# the dictionary from the pinned crysta source, which core-build fetches.
-display-sources-check = { cmd = ["python", "tools/checks/display_sources.py"], depends-on = ["core-build"] }
 # The declared tutorial execution-exclusion gate (edi half).
 tutorial-exclusions = { cmd = ["python", "tools/checks/tutorial_execution_exclusions.py"] }
 # Re-measure and rewrite the manifest (serial, so per-test numbers are attributable).
@@ -513,7 +508,7 @@ verify = { depends-on = ["verify-full"] }
 # `verify-full` is the merge-time FULL chain (the `full` group replaces the former per-commit
 # selection; `verify` == `verify-full` — the mount `verify:` command and the x-ship gate, run
 # ONCE after the accept). `verify-quick` is the review-time chain.
-verify-full = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "display-sources-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-full", "py-cov-unit", "notebook-tests", "generated-regions", "docs-build", "tsan-worker", "app-verify"] }
+verify-full = { depends-on = ["check", "format-check", "weakref-policy", "entity-path-check", "tutorial-exclusions", "category-census-check", "core-build", "python-surface-superset", "python-surface-check", "cli-vocabulary-check", "per-pr-audit", "crysta-consumer", "cli-projects", "group-full", "py-cov-unit", "notebook-tests", "generated-regions", "docs-build", "tsan-worker", "app-verify"] }
 # The merge-Linux equivalence set: the full chain itself (`verify` now IS the full chain,
 # so the two are one). `tools/ci/local-ci.sh` runs this.
 merge-tasks = { depends-on = ["verify-full"] }

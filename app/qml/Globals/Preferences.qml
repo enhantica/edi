@@ -33,7 +33,7 @@ QtObject {
     property int scanPatternUpdates: 2
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
-    property string newProjectSuRule: "iucr_19"
+    property string newProjectSuRule: "iucr_99"
     // The experiments' and structures' colours (data/palettes, edi ADR-0038): a scheme's token, "ediNatural" (the
     // default) or another of ApplicationInfo.colourSchemes; a stored token no longer offered reads as the default.
     // Every chart, icon and report the app draws follows it, a report in the scheme's light colours.
@@ -56,7 +56,7 @@ QtObject {
         preferences.sideBarSide = "Right";
         preferences.engineThreads = 0;
         preferences.scanPatternUpdates = 2;
-        preferences.newProjectSuRule = "iucr_19";
+        preferences.newProjectSuRule = "iucr_99";
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "ediNatural";
         preferences.structureColourScheme = "";

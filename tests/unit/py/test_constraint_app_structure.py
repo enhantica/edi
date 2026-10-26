@@ -1,5 +1,6 @@
 """Static app wiring checks retained while native app tests are disabled."""
 
+import json
 import re
 from pathlib import Path
 
@@ -102,7 +103,12 @@ def test_preview_projects_cannot_be_bundled_as_application_resources():
     cmake = (ROOT / 'app/CMakeLists.txt').read_text()
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
     bundled = [row['id'] for row in registry if row.get('user-facing') is True]
-    assert bundled and len(bundled) == 20, 'the app bundles the complete owner-selected catalogue'
+    selected = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    assert bundled == [row['id'] for row in selected], (
+        'The app must bundle the complete independent owner selection in its declared order'
+    )
     assert 'file(STRINGS ${_cli}/projects.yml' in cmake and 'user-facing:' in cmake, (
         'the app example selection must read the registry user-facing declarations'
     )

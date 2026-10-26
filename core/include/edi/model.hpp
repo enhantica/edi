@@ -4614,8 +4614,10 @@ inline void validate_sequential_data_dir(const std::string& data_dir, const std:
 // The top-level user object. calculate(tof_grid) runs the edi model through the crysta adapter and
 // returns the calculated intensity on the supplied TOF grid (len == tof_grid.size()); the grid is
 // the caller's argument (no measured data needed for a pure forward calculation).
-// The s.u. rule of a project that states none: IUCr recommendation 12 (`iucr_19`).
-inline constexpr const char* kDefaultSuRule = "iucr_19";
+// The s.u. rule of a project that states none: two s.u. digits (`iucr_99`).
+inline constexpr const char* kDefaultSuRule = "iucr_99";
+// Reports and their CIF always round by IUCr recommendation 12.
+inline constexpr const char* kReportSuRule = "iucr_19";
 
 class Project : public detail::ProjectAnchor {
    public:
@@ -4786,8 +4788,7 @@ class Project : public detail::ProjectAnchor {
     ItemVec<BraggPdExperiment> experiments;
     std::string fitting_mode;
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
-    // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits), by crysta's
-    // rule.
+    // `iucr_99` (always two digits, the default) or `iucr_19` (IUCr recommendation 12), by crysta's rule.
     std::string su_rule = kDefaultSuRule;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
@@ -4812,6 +4813,9 @@ class Project : public detail::ProjectAnchor {
     // so scan data are read in place and never copied. Forwarded to crysta's
     // Project::scan_data_root; never persisted.
     std::string scan_data_root;
+    // The .zip a project opened from an archive works for (edi ADR-0052): Python's `save()` writes `path` (the
+    // unpacked folder) and then rewrites this archive from it; empty for a project in a folder. Never persisted.
+    std::string archive;
     // diffraction-lib `Project.metadata` / `Project.name`: plain data, mirrored on crysta.
     // `load_project` and the binding's `save_as` keep metadata.path in step.
     ProjectMetadata metadata;

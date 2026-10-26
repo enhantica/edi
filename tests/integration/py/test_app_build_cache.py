@@ -55,6 +55,14 @@ def namespace(tmp_path, monkeypatch):
         ],
         check=True,
     )
+    head = subprocess.check_output(
+        ['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True
+    ).strip()
+    (root / 'build/app/app/edi_app').write_bytes(
+        b'transport-only binary identity; not application evidence\nedi-build-commit:'
+        + head.encode()
+        + b'\n'
+    )
     return roots
 
 
