@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T13:39:43Z
+# measured_utc = 2026-10-26T17:17:32Z
 #
-# Recorded from: measured test run (2 node(s) measured once, 16028 banked, 0 stale row(s) dropped)
-# Collected tests: 18031; with a reported duration: 10597
+# Recorded from: measured test run (15 node(s) measured once, 16028 banked, 2 stale row(s) dropped)
+# Collected tests: 18046; with a reported duration: 10612
 # Module-scoped fixture costs recorded: 75
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 18031
+# inventory_python = 18046
 # inventory_cpp = 396
-# inventory_measured = 16028
+# inventory_measured = 16043
 # inventory_unmeasured = 2399
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -8132,6 +8132,21 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_adp_site_symmetry.py::test_ea
 0.030	tests/system/py/test_adp_site_symmetry.py::test_loaded_same_site_atoms_retain_each_complete_tensor[tetragonal-Bani]
 0.030	tests/system/py/test_adp_site_symmetry.py::test_loaded_same_site_atoms_retain_each_complete_tensor[tetragonal-Uani]
 0.030	tests/system/py/test_adp_site_symmetry.py::test_loaded_same_site_atoms_retain_each_complete_tensor[tetragonal-beta]
+2.570	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_defaults_and_grid]
+3.910	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_every_combination:cubic-constraint-0]
+3.840	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_every_combination:cubic-constraint-12]
+2.900	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_every_combination:cubic-constraint-4]
+3.100	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_every_combination:cubic-constraint-8]
+3.110	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_every_combination:triclinic-0]
+3.380	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_every_combination:triclinic-12]
+3.500	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_every_combination:triclinic-4]
+3.090	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_every_combination:triclinic-8]
+3.550	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_labels_follow_context_and_free_override]
+4.110	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_preferences_survive_a_fresh_engine_and_another_project]
+2.610	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_view_choices_preserve_project_bytes_and_flags]
+2.550	tests/system/py/test_analysis_show_filters.py::test_analysis_reason_group_view[test_view_model_intersections_and_reset]
+0.460	tests/system/py/test_analysis_show_filters.py::test_cli_calculation_ignores_all_four_app_view_choices
+0.020	tests/system/py/test_analysis_show_filters.py::test_python_keeps_inputs_hidden_by_every_app_group
 0.570	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-screen]
 0.600	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-browser-selector]
 0.540	tests/system/py/test_app_receipt_current_inputs.py::test_real_host_receipt_refuses_stale_compiled_inputs[entry-desktop-screen]

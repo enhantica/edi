@@ -399,6 +399,26 @@ public:
         if (!file.open(QIODevice::ReadOnly)) return {};
         return QString::fromUtf8(file.readAll());
     }
+    Q_INVOKABLE QVariantMap projectBytes(const QUrl& project) const {
+        const QDir root(project.toLocalFile());
+        if (!root.exists()) return {{"error", "The saved project directory is missing"}};
+        QVariantMap result;
+        QDirIterator files(root.absolutePath(), QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+        while (files.hasNext()) {
+            QFile file(files.next());
+            if (!file.open(QIODevice::ReadOnly)) return {{"error", "A saved project file cannot be read"}};
+            auto bytes = file.readAll();
+            const auto relative = root.relativeFilePath(file.fileName());
+            if (relative == QStringLiteral("project.edi")) {
+                QString record = QString::fromUtf8(bytes);
+                record.replace(QRegularExpression(QStringLiteral("(?m)^(_metadata\\.(?:created|last_modified)[ \\t]+)[^\\r\\n]+")),
+                               QStringLiteral("\\1<CLOCK>"));
+                bytes = record.toUtf8();
+            }
+            result.insert(relative, QString::fromLatin1(bytes.toBase64()));
+        }
+        return result;
+    }
     Q_INVOKABLE bool write(const QUrl& project, const QString& relative, const QString& text) const {
         QFile file(QDir(project.toLocalFile()).filePath(relative));
         if (!QDir().mkpath(QFileInfo(file).absolutePath())) return false;

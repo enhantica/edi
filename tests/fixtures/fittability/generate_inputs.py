@@ -15,6 +15,7 @@ def main():
         'unused': {'single': False, 'other': True},
         'disabled': {'single': False, 'enabled': False},
         'constrained': {'constraint': True},
+        'cubic-constrained': {'cubic': True, 'constraint': True},
     }
     for name, options in cases.items():
         materialize(root / name, **options)
