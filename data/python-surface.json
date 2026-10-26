@@ -4307,6 +4307,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "location": {
+     "need": {
+      "by": "deviation",
+      "ref": "D91",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "metadata": {
      "need": {
       "by": "counterpart",
@@ -7459,6 +7468,7 @@
     "fitting_mode",
     "free_parameters",
     "load",
+    "location",
     "metadata",
     "name",
     "parameters",
