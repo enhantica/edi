@@ -60,6 +60,9 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(double faded MEMBER faded_ WRITE setFaded NOTIFY fadedChanged)
     // A fit holds the cores: the painter strokes the lines on one thread, not on every core, so the fit is not slowed.
     Q_PROPERTY(bool busy MEMBER busy_ WRITE setBusy NOTIFY busyChanged)
+    // The view is on the screen. A layer not shown only notes that it is out of date, and draws once, with the latest
+    // data, when it is shown again: the pattern chart's rule (PatternChartController::active).
+    Q_PROPERTY(bool active MEMBER active_ WRITE setActive NOTIFY activeChanged)
     // The stacked lines on the GPU (a ScanLines child) rather than painted.
     Q_PROPERTY(bool gpu MEMBER gpu_ WRITE setGpu NOTIFY gpuChanged)
     // The stacked patterns' placing (edi ADR-0041 §4), on a vertical axis whose 0 to 1 is the plot's height: each
@@ -113,6 +116,7 @@ class ScanLayer : public QQuickPaintedItem {
     void setHighlight(bool on);
     void setFaded(double opacity);
     void setBusy(bool busy);
+    void setActive(bool active);
     void setOffset(double offset);
     void setHeightShare(double share);
     void setLabelled(bool labelled);
@@ -169,6 +173,7 @@ class ScanLayer : public QQuickPaintedItem {
     void highlightChanged();
     void fadedChanged();
     void busyChanged();
+    void activeChanged();
     void offsetChanged();
     void heightShareChanged();
     void placementChanged();
@@ -236,6 +241,7 @@ class ScanLayer : public QQuickPaintedItem {
     bool highlight_ = false;
     double faded_ = 0.3;
     bool busy_ = false;
+    bool active_ = true, stale_ = false;
     double offset_ = 0.1, height_share_ = 0.0;
     bool labelled_ = false;
     double label_gap_ = 1.0;

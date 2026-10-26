@@ -154,7 +154,10 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    crossing itself up and down a narrow peak stays one even colour.
    Each dataset's reduction (its trace, or the Map's pixel columns) is kept until its points, the x range, the plot's
    width, the y scale or the included range change: a colour, a reversal or a row placing reduces nothing, and a
-   change of the shown dataset draws nothing. The changes of one frame are drawn once, at the frame's polish. The row
+   change of the shown dataset draws nothing. The changes of one frame are drawn once, at the frame's polish. A view
+   on a page or tab not shown draws nothing: it notes that it is out of date and draws once, with the latest data,
+   when it is shown again, as the pattern chart does (ADR-0017). The two pages' views share their datasets, so one
+   change would otherwise be reduced and drawn four times. The row
    labels are kept while the rows are placed again: only a label's text, place and colour follow, and the room they
    take is measured once after their widths change.
 

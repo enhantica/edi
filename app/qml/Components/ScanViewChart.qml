@@ -362,6 +362,8 @@ Item {
             includedOnly: Preferences.chartIncludedOnly
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
+            // A view on a page or tab not shown draws again only once it is shown.
+            active: chart.shown && chart.visible
             // The row labels' choice (shownLabels): only while the view is shown and labels its rows; a label's text item is
             // its font's line tall, rounded up to a whole pixel, which can be more than the row height it is given.
             labelled: chart.shown && chart.rowLabels && chart.scan !== null && chart.scan.rowTextsRevision >= 0 && chart.scan.count > 0

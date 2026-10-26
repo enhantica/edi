@@ -247,6 +247,16 @@ void ScanLayer::setBusy(bool busy) {
     }
 }
 
+void ScanLayer::setActive(bool active) {
+    if (active != active_) {
+        active_ = active;
+        emit activeChanged();
+        if (active_ && stale_) {
+            redraw();
+        }
+    }
+}
+
 int ScanLayer::highlighted() const {
     return highlight_ && current_ >= 0 && static_cast<std::size_t>(current_) < reductions_.size() ? current_ : -1;
 }
@@ -285,6 +295,11 @@ void ScanLayer::geometryChange(const QRectF& next, const QRectF& previous) {
 }
 
 void ScanLayer::redraw() {
+    if (!active_) {
+        stale_ = true;
+        return;
+    }
+    stale_ = false;
     polish();
     if (!lines_on_gpu()) {
         update();
