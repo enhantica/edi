@@ -79,6 +79,34 @@ the selector above the chart. A click on a point shows that dataset everywhere.
 After an edit of the template, the old results stay visible and are marked *out of date* in the
 status bar and on the Evolution tab until the next run replaces them.
 
+## Stacked and Map
+
+The Analysis page's **Stacked** tab draws every file's pattern above the others, and **Map** draws them as rows of
+colour. Their toolbars group the boxes: the axes (x, y and z), then on Stacked the spacing, and on the Map the colour
+map and its direction.
+
+- **Spacing** sets how far apart the stacked patterns are: Overlay (every pattern on one baseline, full height),
+  Close, Medium, Wide (the default) or Separate (each pattern in its own band). The change is linear from one end to
+  the other, so Close already separates the patterns a little without shrinking them much. At Separate each pattern
+  fills its band with what the zoom shows, so zooming away from large peaks shows the small ones larger. The project
+  remembers the step on this computer.
+- **Colour map**: Blue-Red (the default), Viridis, Batlow, Inferno, Lapaz or Greys, each shown with its colour bar.
+  **Direction**: Auto (the default) starts the map at the chart's background, white in the light theme and dark grey
+  in the dark one, and follows a theme switch; Normal and Inverted fix it. The project remembers the choice.
+- **Subtract background**, beside the included-range button, here and on the pattern chart: each pattern is drawn
+  less the project's background (its points or terms, fitted or not). It is off by default, and disabled when no
+  shown pattern has a background.
+- **Legend** on Stacked: each file's line and name, or for more than fifteen files the first, the selected one and
+  the last with how many more. With **Highlight the selected dataset** on, the selected file is bold in the legend
+  and its name leaves the y axis.
+
+The colours of experiments, structures and Stacked lines come from the **Palette** in Preferences, Appearance:
+Earth (the default), Classic, Soft, Natural or Colour-blind safe. Under the choice, the palette's eleven colours show
+in the order new blocks take them: a colour the open project uses shows its block's icon, a free one a square, and
+the calculated curve's colour, the same in every palette, shows as the calculator icon. Each new experiment or
+structure takes the next free colour; in Earth the first two are kept for experiments. Saved reports and pictures
+always use the light theme's colours.
+
 ## Examples and saving
 
 A bundled example opens as a temporary copy, so a run never writes into the bundle. **Save As**

@@ -1,7 +1,7 @@
 # 0041. Stacked patterns and a 2D map for a sequential fit
 
 - **Status:** Accepted
-- **Date:** 2026-10-22
+- **Date:** 2026-10-22, amended 2026-10-26 (one spacing selector, Map colour maps and direction, toolbar groups)
 - **Implementation:** ✅ Implemented
 - **Priority:** Medium
 
@@ -47,17 +47,20 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    a dataset gives none, the rows stay in order by file and the views name that dataset.
 4. **Stacked.** Each dataset is drawn as a line rising from its baseline, joining its points, or, with more than four
    points to a device pixel column, each column's first, lowest, highest and last point in their order, so a narrow
-   peak keeps its height (§9). The vertical axis is the plot's height, 0 to 1, and two toolbar boxes place the patterns
-   on it (the owner, 2026-10-24): *offset*, 0 to 100 % of a pattern's own height in steps of 10, 10 % by default, how far
-   each baseline sits above the one below it (0 % puts every baseline on one line, 100 % starts each pattern where the one
-   below ends); and *height*, Fit or 10 to 100 % of the plot's height, Fit by default, how far a pattern's highest point
-   rises above its baseline. Fit makes the height 1 / (1 + (N − 1) × offset) for N patterns, so the stack fills the
-   plot; a fixed height can make the stack taller than the plot, and the wheel then scrolls through it (§7). Both are
-   app settings. Each pattern spans its own lowest to highest value, so every pattern has the same height. Its rows are
-   labelled (§2), not scaled. The datasets take the colours §6 describes. Lower rows are drawn over higher ones. A line
-   is 2 px, as the pattern chart's measured line, narrowing toward 1 px where neighbouring rows are closer than six
-   pixels so a dense scan's lines never merge. One placement serves the lines, the labels, the row ticks, the clicks and
-   the excluded regions' tint.
+   peak keeps its height (§9). The vertical axis is the plot's height H, 0 to 1, and one toolbar box, *spacing*, places
+   the patterns on it (the owner, 2026-10-26), changing them linearly from overlaid to fully separated: Overlay, Close,
+   Medium, Wide and Separate, s = 0, 0.25, 0.5, 0.75 and 1. For N patterns each is h = H (1 − s) + (H / N) s tall and
+   the i-th from the bottom has its baseline at i s H / N, so the stack always fills the plot: Overlay puts every
+   baseline on one line at the plot's full height, Separate gives each pattern its own band H / N tall
+   (`edi::stacked_placement`). Wide is the default for any number of patterns. A project keeps its step (ADR-0031 §1,
+   in the app's settings keyed by its folder), so it reopens at the step it was left at. The rule replaces the
+   offset and height boxes of 2026-10-24, whose 10 % offset already shrank each of 162 patterns to a sliver. Each
+   pattern spans its own lowest to highest value, so every pattern has the same height; at Separate it spans its values
+   in the x range shown, so a zoom that leaves large peaks out still fills each band and no two patterns overlap. Its rows are labelled (§2),
+   not scaled. The datasets take the colours §6 describes. Lower rows are drawn over higher ones. A line is 2 px, as
+   the pattern chart's measured line, narrowing toward 1 px where neighbouring rows are closer than six pixels so a
+   dense scan's lines never merge. One placement serves the lines, the labels, the row ticks, the clicks and the
+   excluded regions' tint.
 5. **Map.** Each pixel column takes the colour of its highest value, or, with no more points than columns, of the
    line joining the points at the column's centre. Up, each dataset is one band, out to halfway to its neighbouring
    rows, drawn from that dataset only and empty where it has no point. A toolbar toggle chooses stepped colour, the
@@ -72,30 +75,26 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    pixel row, covered twice in part, let the background show through as a thin light line.
    A colour bar at the right is drawn through the same lookup as the map, and labelled with the intensities its ends
    stand for, each label centred on its end.
-6. **Colours** (the owner, 2026-10-22). The Stacked and Map colours are chosen in the app's Preferences with the
-   structures' and patterns' (ADR-0038 §3); the Map keeps a box on its toolbar for the same setting, beside its
-   reverse and stepped or smooth switches. The colours stand in a toolbar group of their own: on the
-   Map its colour box and a reverse button, on Stacked a reverse button alone that runs the Stacked colours the other
-   way, each remembered with its colour setting (the owner, 2026-10-22). The Map lists the ramps below first, then the colour maps, and takes Edi Natural's
-   ramp by default, for now (the owner, 2026-10-22); the Stacked view
-   offers no ramp, as one colour's shades make neighbouring lines hard to tell apart (the owner, 2026-10-22). The
-   choices: the colour maps viridis, magma, inferno and plasma (Smith, van der Walt and Firing; CC0; `data/colormaps` with their
-   provenance), all perceptually uniform, reading in grey and to the common colour-vision deficiencies, and in either
-   app theme; and for each colour scheme a ramp from the pattern chart's plot background in the current theme to the
-   scheme's first measured colour, mixed in Oklab (ADR-0038's gradients). The Stacked view also offers the five
-   schemes' own colours (ADR-0038: by place, a gradient past five), its default the app's scheme. A pattern on the
-   Stacked view takes a map's colour at its place along the scan between a tenth and nine tenths of the map, so no line
-   takes the background's colour. cividis and turbo were left out: their
-   tables come under other licences, and turbo is not perceptually uniform. On the owner's asking for more pleasing maps
-   than matplotlib's (2026-10-22), candidates were added for the owner to choose from, each with its source table and
-   licence (`data/colormaps/PROVENANCE.md`, DEPENDENCIES.md): six of Fabio Crameri's Scientific colour maps, five
-   of cmocean's, Google's Turbo, three ColorBrewer schemes and three of Peter Kovesi's CET maps; the ones not chosen
-   are removed with their rows. On the owner's asking for maps with a light low end for the light theme, cmocean's
-   tempo, ColorBrewer's Blues, Purples and YlOrRd and CET L17 and L18 joined them, and the Map's toolbar gained a
-   reverse switch, remembered with the other settings, that runs any map the other way; the colour key follows it.
+6. **Colours** (the owner, 2026-10-26). The Stacked lines take the app's figure palette (ADR-0038), each dataset the
+   colour at the position of its place in the scan, or a palette or colour map chosen in Preferences; a pattern on a
+   colour map takes the map's colour at its place along the scan between a tenth and nine tenths of the map, so no
+   line takes the background's colour, and a reverse button runs the Stacked colours the other way. The Map takes one
+   of six colour maps, in this order: **Blue-Red** (the default), Viridis, Batlow, Inferno, Lapaz and Greys
+   (`data/colormaps/PROVENANCE.md`), chosen on its toolbar and in Preferences. Blue-Red runs from the chart's background
+   through blue to red, mixed in Oklab: `#FFFFFF`, `#3F7FBF`, `#C8323C` in the light theme and `#444444`, `#6AA6EA`,
+   `#FC4F81` in the dark. The maps are named as the app shows them, capitalised, and the colour-map box draws each
+   map's colour bar beside its name, in its list and for the current choice. A name means one set of colours in one
+   order, low to high; a *direction* box beside it chooses which end takes the low values: **Auto** (the default) puts
+   the end nearer the chart's background, by distance in Oklab, at the low values, so a map starts light in the light
+   theme and dark in the dark theme and follows a theme switch; Normal runs the map as named; Inverted the other way
+   (`edi::scan_map_inverted`). The bars and the colour key follow the direction. A project keeps its direction choice,
+   never the direction Auto resolved to; an export resolves Auto as in the light theme (ADR-0038 §6). The earlier
+   choices (matplotlib's magma and plasma, the other candidates and each palette's ramp) are retired; a stored one
+   reads as Blue-Red.
 7. **Axes and toolbar.** Each view has a toolbar above its plot, laid out by the one rule of every chart (the owner,
-   2026-10-24): the boxes (the axes' types, the Stacked offset and height, the colours) and the buttons (the included
-   range, the highlight, the zoom and the reset) on one line centred above the plot when they fit. Every axis type is one setting with each other
+   2026-10-24): the boxes and the buttons (the included range, the highlight, the zoom and the reset) on one line
+   centred above the plot when they fit. The boxes stand in groups a group's spacing apart (the owner, 2026-10-26): the
+   axes' types (x, y and z), then on Stacked the spacing alone, and on the Map the colour map and its direction. Every axis type is one setting with each other
    selector of the same quantity: x is the project's own (2θ or TOF, or d-spacing read off the template's current d
    column through its own axis, the pattern chart's rule, ADR-0017 §15; a joint fit's experiment by its own d column,
    d offered once every experiment has one; a joint fit's experiments on different native axes, 2θ beside TOF, are
@@ -107,7 +106,7 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    reset, a secondary click (a touchpad's two-finger click, as on the pattern chart), another scan, another x axis or
    another row placing returns to the whole range. On the Stacked view the wheel scrolls the shown range up and down
    the stack, keeping its height, from the lowest baseline to the highest pattern's top, so a stack taller than the plot
-   (a fixed height, §4) can be read to its last dataset. The plot starts below the toolbar, so nothing is cut at the top;
+   (a zoomed one) can be read to its last dataset. The plot starts below the toolbar, so nothing is cut at the top;
    when the chart is too narrow for one toolbar line, the buttons take a second line, each line centred as the
    pattern chart's. An axis box names its choice as its list does (`x: d-spacing` for the list's `d-spacing`; the owner, 2026-10-22),
    on the pattern chart too, and d can be chosen only once a calculation has given a current d column: until then
@@ -161,6 +160,17 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    datasets, so one change would otherwise be reduced and drawn four times. The row
    labels are kept while the rows are placed again: only a label's text, place and colour follow, and the room they
    take is measured once after their widths change.
+10. **Legend and background** (the owner, 2026-10-26). The Stacked toolbar has a legend button, as the pattern chart's,
+   off by default (an app setting): a box at the plot's top right lists each dataset's line in its colour and its row's
+   text; past fifteen datasets only the first, the shown and the last, then how many more there are. With *Highlight
+   the selected dataset* on and the legend shown, the shown dataset is bold in the accent colour in the legend and
+   is not named on the y axis. A *subtract background* button, beside the included range on the pattern chart,
+   Stacked and the Map and one app setting for all three, off by default, draws every pattern less the project's
+   background at each point: its points or terms, fitted or not, as the calculation evaluates them (a scan's datasets
+   the template's, linear between its points; a joint fit's experiment its own). A pattern with no background set is
+   drawn as it is, and when no shown pattern has one the button is disabled, its tooltip saying why. No background is
+   estimated for it. The pattern chart then draws the measured and calculated curves less the background, the
+   background at zero and each structure's curve rising from zero; the residual is unchanged.
 
 ## Consequences
 
