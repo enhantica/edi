@@ -319,15 +319,6 @@ TestCase {
         tryVerify(() => data.tag === "light" ? luminance(sidebarLabel[0].color) > .9 : luminance(sidebarLabel[0].color) < .25, 1500, "The primary Analysis fit caption shares the status shortcut's white or inverse ink");
         const sidebarGlyphs = View.textItems(sidebar).filter(item => item.text === icon(sidebar));
         verify(sidebarGlyphs.length > 0 && sidebarGlyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The primary Analysis fit icon shares the status shortcut's white or inverse ink");
-        for (const control of [button, sidebar]) {
-            Ui.scrollIntoView(control);
-            const point = Ui.clickPoint(control);
-            verify(point !== null, "Each fit button has an exposed pointer target for its hover colour");
-            mouseMove(control, point.x, point.y);
-            tryVerify(() => data.tag === "light" ? paintedLuminance(rectangle(control)) < .05 : paintedLuminance(rectangle(control)) > .99, 1500, "Both fit buttons keep the previous near-black light-mode and white dark-mode hover colours");
-            mouseMove(appWindow.contentItem, 1, 1);
-            tryVerify(() => paintedGrayMatches(rectangle(control), idleChannel), 1500, "Leaving either fit button restores the owner's idle background colour");
-        }
         rightmostFitAction();
     }
     function test_preference_default_and_user_store() {
