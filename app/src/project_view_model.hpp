@@ -246,11 +246,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The project takes a save already written into `directory` (by itself, which wrote `metadata`): it works there
     // and holds what the files hold. An empty string, else why not (also `lastError`).
     QString adoptSave(const QString& directory, const edi::ProjectMetadata& metadata);
-    // A processed scan's results written into a staged save's `directory`, before it is published. Why not, or empty.
-    QString stageScanRun(const QString& directory);
+    // What a scan project reads of a staged save's folder, read before the save is published: the folder's listing
+    // (its datasets, index and run) and the shown dataset's values over the staged copy.
+    struct StagedScan {
+        std::shared_ptr<ScanSession> listing;
+        QString refusal;  // why the listing refused, if it did: the scan shows it, the save goes ahead
+        std::optional<std::vector<edi::Edit::ScanValue>> shown;
+    };
+    // A processed scan's results written into a staged save's `directory`, and what the project will read there read
+    // into `scan`, before the save is published. Why not, or empty.
+    QString stageScan(const QString& directory, const edi::Project& staged, StagedScan& scan);
     // The project takes a published staged save: `staged` is the staged copy, which already wrote `directory`. It works
-    // there and holds the staged values and results. Reads and writes no file.
-    void takeStaged(const QString& directory, const edi::Project& staged);
+    // there and holds the staged values and results, and a scan the listing `scan` read. Reads and writes no file.
+    void takeStaged(const QString& directory, const edi::Project& staged, StagedScan scan);
     // The model a save writes: a scan's template while a dataset is shown, else the project.
     const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
     // The project holds changes its place does not (the web app's kept unsaved state, reopened).
@@ -674,6 +682,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void applyDatasetView(std::uint64_t request, int index, DatasetView view);
     // The values a dataset is shown with: the template's, with its results row's over them.
     std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row) const;
+    // The same over `from`, read with `index`'s columns.
+    std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
+                                                    const edi::ScanResultIndex& index) const;
     void syncDatasets();
     // One dataset's row in the lists (its outcome, extracted values, template tag).
     void syncDataset(int index);

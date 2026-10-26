@@ -454,7 +454,7 @@ bool Session::publishArchive(const Staged& staged, const QString& archive) {
         return false;
     }
     // The archive holds the staged snapshot: the open project takes it and works in its folder from now on.
-    project_->takeStaged(staged.folder, *staged.project);
+    project_->takeStaged(staged.folder, *staged.project, staged.scan);
     releaseTemporaryFolder();
     temporary_folder_ = staged.root;
     return true;
@@ -472,7 +472,7 @@ bool Session::takeWebSave(const Staged& staged, quint64 revision) {
         emit webSaveFailed(tr("The project was written to its place, but it stays unsaved here: %1").arg(refusal));
         return false;
     }
-    project_->takeStaged(staged.folder, *staged.project);
+    project_->takeStaged(staged.folder, *staged.project, staged.scan);
     releaseTemporaryFolder();
     if (!web_copy_.isEmpty()) {
         QDir(web_copy_).removeRecursively();
@@ -502,8 +502,8 @@ bool Session::stageCopy(const char* purpose, const QString& name, Staged& staged
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
     }
-    // Everything that can refuse happens before the save is published: a scan's results too.
-    if (const QString refusal = project_->stageScanRun(staged.folder); !refusal.isEmpty()) {
+    // Everything that can refuse happens before the save is published: a scan's results and its listing too.
+    if (const QString refusal = project_->stageScan(staged.folder, *staged.project, staged.scan); !refusal.isEmpty()) {
         QDir(staged.root).removeRecursively();
         setLastError(refusal);
         return false;

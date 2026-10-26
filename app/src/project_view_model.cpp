@@ -1304,10 +1304,16 @@ void ProjectViewModel::syncDataset(int index) {
 }
 
 std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vector<std::string>& row) const {
+    return datasetValues(row, scanTemplateOrModel(), scan_session_->index());
+}
+
+std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vector<std::string>& row,
+                                                                  const edi::Project& template_project,
+                                                                  const edi::ScanResultIndex& index) const {
     // Every parameter at the template's state, then the results row's value and uncertainty over it. The row was
     // checked as it was read: a cell that does not convert now refuses, never falling back to the template's value.
     std::vector<edi::Edit::ScanValue> values;
-    edi::Project& from = const_cast<edi::Project&>(scanTemplateOrModel());
+    edi::Project& from = const_cast<edi::Project&>(template_project);
     for (const edi::NamedSlot& slot : edi::named_slots(from)) {
         values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()});
     }
@@ -1315,7 +1321,7 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
         return values;
     }
     std::map<std::string, const edi::ScanParameterColumns*> columns;
-    for (const edi::ScanParameterColumns& parameter : scan_session_->index().parameters) {
+    for (const edi::ScanParameterColumns& parameter : index.parameters) {
         columns.emplace(parameter.name, &parameter);
     }
     for (edi::Edit::ScanValue& value : values) {
@@ -2621,20 +2627,36 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     return adoptSave(directory, saved.metadata);
 }
 
-QString ProjectViewModel::stageScanRun(const QString& directory) {
-    // A processed scan's results are part of what a save writes: written into a staged save's folder before it is
-    // published, so taking the save afterwards writes nothing.
-    if (scan_session_ == nullptr || !scanProcessed() || scan_session_->run().identity.empty()) {
+QString ProjectViewModel::stageScan(const QString& directory, const edi::Project& staged, StagedScan& scan) {
+    if (scan_session_ == nullptr) {
         return {};
     }
-    edi::Project shown = *project_;
-    shown.path = directory.toStdString();
-    shown.metadata.path = shown.path;
-    shown.scan_data_root.clear();
-    return scan_session_->writeRun(shown, scan_session_->run());
+    // A processed scan's results are part of what a save writes: written into a staged save's folder before it is
+    // published, so taking the save afterwards writes nothing.
+    if (scanProcessed() && !scan_session_->run().identity.empty()) {
+        edi::Project shown = *project_;
+        shown.path = directory.toStdString();
+        shown.metadata.path = shown.path;
+        shown.scan_data_root.clear();
+        if (const QString refusal = scan_session_->writeRun(shown, scan_session_->run()); !refusal.isEmpty()) {
+            return refusal;
+        }
+    }
+    // What the project will read there, read now: the folder's listing, and the shown dataset's values over the
+    // staged copy, which is what the template takes.
+    scan.listing = std::make_shared<ScanSession>(nullptr);
+    scan.refusal = scan.listing->load(staged);
+    if (scan_template_ && current_dataset_ >= 0 && project_->experiment().data && scan.refusal.isEmpty()) {
+        try {
+            scan.shown = datasetValues(scan.listing->row(staged, current_dataset_), staged, scan.listing->index());
+        } catch (const std::exception& refusal) {
+            return QString::fromUtf8(refusal.what());
+        }
+    }
+    return {};
 }
 
-void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& staged) {
+void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& staged, StagedScan scan) {
     // The staged save already wrote, adopted and calculated what the project takes: nothing here reads or writes a
     // file, so nothing can refuse after the save was published.
     edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
@@ -2647,16 +2669,26 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
         project_->metadata = scan_template_->metadata;
         project_->scan_data_root = scan_template_->scan_data_root;
     }
-    if (edi::adopt_values(saved, staged)) {
+    const bool changed = edi::adopt_values(saved, staged);
+    // A shown dataset is the template with that dataset's values over it, as a view builds it: built again over the
+    // template the save adopted.
+    if (scan_template_ && scan.shown && project_->experiment().data) {
+        edi::Edit::scan_view(*project_, project_->experiment(), std::move(*scan.shown), *project_->experiment().data)();
+        project_->refresh_calculated_pattern(edi::DueEstimates::Defer);
+    }
+    if (changed) {
         // Calculated with due background estimates deferred, as the staged save was (ADR-0040).
         saved.refresh_calculated_pattern(edi::DueEstimates::Defer);
+    }
+    if (changed || scan.shown) {
         publish(false);
         publishCalculating();
     }
     setLastError({});
     emit pathChanged();
-    if (scan_session_ != nullptr) {
-        scan_refusal_ = scan_session_->load(*project_);
+    if (scan_session_ != nullptr && scan.listing) {
+        scan_session_->take(*scan.listing);
+        scan_refusal_ = scan.refusal;
         syncScanAdmission();
         showScanResults();
     }
@@ -2700,9 +2732,13 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
             publishCalculating();
         }
     } catch (const std::exception& error) {
+        // The write succeeded, so the project works where it was written, with the metadata it wrote; it keeps its
+        // own values, which the files round, and stays unsaved.
         const QString message =
             tr("The project was saved, but reading it back failed: %1").arg(QString::fromUtf8(error.what()));
         setLastError(message);
+        emit pathChanged();
+        publishMetadata();
         return message;
     }
     setLastError({});

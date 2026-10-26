@@ -266,6 +266,7 @@ class Session : public QObject {
         QString root;
         QString folder;
         std::shared_ptr<const edi::Project> project;  // the staged copy: what the open project takes once published
+        ProjectViewModel::StagedScan scan;             // what a scan project reads there, read before publication
     };
     // What a Save writes (round, adopt, recalculate, write), done on a copy in `name` inside a new folder (the folder
     // itself for an empty name), once the project may be saved; the open project is left as it is.
