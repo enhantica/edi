@@ -100,7 +100,7 @@ TestCase {
         const group = area(), button = shortcut();
         const left = button.mapToItem(group, 0, 0).x;
         for (const item of group.children) {
-            if (item === button || !item.visible || item.width <= 0)
+            if (item === button || View.descendants(item).includes(button) || !item.visible || item.width <= 0)
                 continue;
             verify(item.mapToItem(group, item.width, 0).x <= left, "The Fit action follows every visible fit indicator, statistic and progress bar: " + item.objectName);
         }
@@ -138,29 +138,35 @@ TestCase {
         verify(waitForRendering(appWindow.contentItem), "Completion handlers and popup layout reach a frame before visibility is checked");
     }
     function preference() {
-        Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
-        Ui.click(test, Probe, appWindow, "sideBar.tab.settings");
-        const page = Ui.page(appWindow);
-        const labels = View.descendants(page).filter(item => typeof item.text === "string" && item.text.replace(/:$/, "").trim() === "Show fit results after fitting");
-        compare(labels.length, 1, "Analysis Settings exposes Show fit results after fitting once with the owner's label");
-        const label = labels[0];
+        Ui.click(test, Probe, appWindow, "appBar.button.preferences");
+        const dialog = findChild(appWindow, "preferences");
+        verify(dialog !== null, "The real application owns its Preferences dialog");
+        tryCompare(dialog, "opened", true, 1000, "Preferences finishes opening before its fit-results choice is inspected");
+        const prompts = findChild(dialog.contentItem, "preferences.tab.prompts");
+        verify(prompts !== null, "Fit results preferences live on the actual Prompts tab");
+        click(prompts);
+        verify(waitForPolish(dialog.contentItem), "Prompts lays out its fit-results and tool-tip choices");
+        const label = View.descendants(dialog.contentItem).find(item => typeof item.text === "string" && item.text.replace(/:$/, "").trim() === "Show fit results after fitting");
+        verify(label !== undefined, "App preferences expose Show fit results after fitting with the owner's label");
         let box = label;
         if (typeof box.checked !== "boolean") {
             const siblings = label.parent.children;
             box = siblings.slice(siblings.indexOf(label) + 1).find(item => typeof item.checked === "boolean");
         }
         verify(box !== undefined && typeof box.toggled === "function", "The fit-results preference is an actual user-toggleable checkbox");
-        for (let group = box.parent; group; group = group.parent) {
-            if (group.collapsed !== true || !group.titleArea)
-                continue;
-            click(group.titleArea);
-            tryCompare(group, "collapsed", false, 1000, "The Analysis Settings group opens through its real header");
-            tryVerify(() => Math.abs(group.height - (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < .01, 2000, "The fit-results settings group finishes expanding before checkbox input");
+        const toolTips = findChild(dialog.contentItem, "preferences.toolTips");
+        verify(toolTips !== null && Ui.exposed(toolTips) && Ui.exposed(box), "Prompts shows fit results beside Enable tool tips");
+        compare(box.parent, toolTips.parent, "Both prompt choices belong to the same preferences grid");
+        const tabs = View.descendants(dialog.contentItem).filter(item => item.objectName.startsWith("preferences.tab."));
+        for (const tab of tabs) {
+            if (Ui.exposed(box))
+                break;
+            click(tab);
+            verify(waitForPolish(dialog.contentItem), "The selected Preferences tab lays out its actual fit-results checkbox");
         }
-        Ui.scrollIntoView(box);
-        verify(waitForPolish(page), "Analysis Settings lays out its actual fit-results checkbox");
-        tryVerify(() => Ui.exposed(box), 1000, "The fit-results preference is reachable on the visible Analysis Settings tab");
+        verify(Ui.exposed(box), "The fit-results preference is reachable on a visible Preferences tab");
         return {
+            dialog: dialog,
             box: box
         };
     }
@@ -172,7 +178,8 @@ TestCase {
             click(control.box);
         tryCompare(control.box, "checked", enabled, 1000, "Actual checkbox input selects the user's automatic results-window choice");
         compare(Session.project.modified, modified, "The app preference never modifies the scientific project");
-        Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
+        control.dialog.close();
+        tryCompare(control.dialog, "visible", false, 1000, "Preferences closes before the actual fit starts");
     }
     function test_visibility_tracks_analysis_on_every_page() {
         const empty = View.descendants(area()).filter(item => typeof item.clicked === "function" && item.text === "Fit");
@@ -501,14 +508,9 @@ TestCase {
     }
     function test_preference_default_and_user_store() {
         open("single");
-        Ui.click(test, Probe, appWindow, "appBar.button.preferences");
-        const dialog = findChild(appWindow, "preferences");
-        verify(dialog !== null, "The application retains its real Preferences dialog");
-        tryCompare(dialog, "opened", true, 1000, "App Preferences opens before checking the relocated option");
-        const oldLabels = View.descendants(dialog.contentItem).filter(item => typeof item.text === "string" && item.text.replace(/:$/, "").trim() === "Show fit results after fitting");
-        compare(oldLabels.length, 0, "The relocated fit-results option no longer appears in App Preferences");
-        dialog.close();
-        tryCompare(dialog, "visible", false, 1000, "App Preferences closes before opening Analysis Settings");
+        Ui.click(test, Probe, appWindow, "sideBar.tab.settings");
+        const relocated = View.descendants(Ui.page(appWindow)).filter(item => typeof item.text === "string" && item.text.replace(/:$/, "").trim() === "Show fit results after fitting");
+        compare(relocated.length, 0, "Analysis Settings no longer duplicates the application-wide fit-results preference");
         const control = preference();
         compare(control.box.checked, true, "Show fit results after fitting is on in a fresh user store");
         const before = {};
@@ -519,7 +521,7 @@ TestCase {
         const modified = Session.project.modified;
         click(control.box);
         compare(control.box.checked, false, "The actual preference checkbox accepts the user's off choice");
-        compare(Session.project.modified, modified, "The Analysis Settings choice leaves the scientific project unchanged");
+        compare(Session.project.modified, modified, "The app Preferences choice leaves the scientific project unchanged");
         const changed = Object.keys(before).filter(key => before[key] === true && Preferences[key] === false);
         compare(changed.length, 1, "The preference checkbox changes one actual application preference");
         const source = 'import QtQuick; import edi.app; QtObject { property bool saved: Preferences[' + JSON.stringify(changed[0]) + '] }';
@@ -552,6 +554,113 @@ TestCase {
         verify(status !== null && status.visible && status.clickable, "Finished results remain reachable from the actual outcome button with either preference choice");
         click(status);
         tryVerify(() => dialogs().length === 1, 1000, "Clicking the outcome button still opens the retained fit results when automatic opening is off");
+    }
+    function outdatedModes() {
+        return [
+            {
+                tag: "sequential"
+            },
+            {
+                tag: "independent"
+            }
+        ];
+    }
+    function resultBytes() {
+        const path = Session.project.path;
+        return ["results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"].map(name => SettingsProof.text(path, "analysis/" + name));
+    }
+    function resultRows() {
+        const table = Session.project.fit.results, rows = [];
+        for (let i = 0; i < table.count; ++i)
+            rows.push(["metric", "value", "outcome"].map(column => table.text(i, column)));
+        return JSON.stringify(rows);
+    }
+    function outdatedScan(mode) {
+        open("scan");
+        Session.project.analysis.fittingMode = mode;
+        Preferences.showFitResults = false;
+        Session.project.fit.start();
+        finish();
+        tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 10000, "The followed final dataset settles before editing the scan template");
+        compare(Session.project.fit.scanFitted, 2, "Both independently authored scan files have results before the template edit");
+        verify(!Session.project.fit.outOfDate, "A freshly completed scan is current before its template changes");
+        dialogs().forEach(dialog => dialog.close());
+        const before = {
+            bytes: resultBytes(),
+            rows: resultRows(),
+            outcome: Session.project.fit.outcome
+        };
+        const parameters = Session.project.parameters;
+        let cell = null;
+        for (let i = 0; i < parameters.count; ++i)
+            if (parameters.item(i, "parameter").uid === "cell.length_a" && parameters.item(i, "parameter").blockName === "phase")
+                cell = parameters.item(i, "parameter");
+        verify(cell !== null, "The independent scan fixture exposes its template cell length");
+        before.edited = cell.value + .03125;
+        cell.value = before.edited;
+        compare(cell.lastError, "", "The template edit has no silent model refusal");
+        compare(cell.value, before.edited, "The template cell edit is admitted without changing its requested value");
+        tryCompare(Session.project.fit, "outOfDate", true, 2000, "A nontrivial template cell edit marks the retained scan results outdated");
+        compare(JSON.stringify(resultBytes()), JSON.stringify(before.bytes), "Editing the template preserves all previous result and provenance bytes");
+        compare(resultRows(), before.rows, "Editing the template preserves the previous results model");
+        return before;
+    }
+    function test_outdated_outcome_data() {
+        return outdatedModes();
+    }
+    function test_outdated_outcome(data) {
+        const before = outdatedScan(data.tag);
+        const outcome = findChild(appWindow, "statusBar.fit.outcome");
+        verify(outcome !== null && outcome.visible && actionable(outcome), "Outdated scan results remain accessible from the outcome button");
+        compare(caption(outcome), "Outdated", "The outcome button replaces its previous outcome with Outdated");
+        compare(icon(outcome), "history", "The Outdated outcome uses the history icon");
+        compare(outcome.iconColor, EaStyle.Colors.orange, "The Outdated history icon is amber");
+        const separate = findChild(appWindow, "statusBar.fit.outOfDate");
+        verify(separate === null || !separate.visible, "The status bar has no separate out of date label");
+    }
+    function test_outdated_results_banner_data() {
+        return outdatedModes();
+    }
+    function test_outdated_results_banner(data) {
+        const before = outdatedScan(data.tag);
+        const outcome = findChild(appWindow, "statusBar.fit.outcome");
+        verify(outcome !== null && outcome.visible && actionable(outcome), "Previous outdated results retain their real window-opening action");
+        click(outcome);
+        tryVerify(() => dialogs().length === 1, 1000, "The Outdated outcome opens the retained results window");
+        const dialog = dialogs()[0];
+        const banner = View.textItems(dialog.contentItem).find(item => item.visible && item.text === "These results are from before your parameter changes. Fit again to update them.");
+        verify(banner !== undefined && Ui.exposed(banner), "Previous results display the owner's exact visible warning banner");
+        const table = findChild(dialog.contentItem, "fit.results.list");
+        let amber = colorsMatch(banner.color, EaStyle.Colors.orange);
+        for (let item = banner.parent; item && item !== dialog.contentItem && !View.descendants(item).includes(table); item = item.parent)
+            amber = amber || View.descendants(item).some(child => child.visible && child.color && colorsMatch(child.color, EaStyle.Colors.orange));
+        verify(amber, "The stale-results warning banner itself has a visible amber treatment");
+        verify(table !== null && banner.mapToItem(dialog.contentItem, 0, banner.height).y <= table.mapToItem(dialog.contentItem, 0, 0).y, "The warning banner sits above the retained result table");
+        verify(View.textItems(dialog.contentItem).some(item => item.visible && item.text === FitOutcomes.word(before.outcome)), "The original outcome remains visible inside the outdated results window");
+        compare(resultRows(), before.rows, "Opening outdated results leaves the previous scientific result rows unchanged");
+    }
+    function test_refit_and_undo_data() {
+        return outdatedModes();
+    }
+    function test_refit_and_undo(data) {
+        const before = outdatedScan(data.tag);
+        fitState("Refit");
+        verify(Session.project.fit.available && actionable(shortcut()), "Outdated completed scans enable Refit without Reset");
+        runningSpy.clear();
+        click(shortcut());
+        verify(runningSpy.count > 0, "Actual Refit pointer input starts the worker");
+        finish();
+        compare(Session.project.fit.scanFitted, 2, "Refit processes every scan file again rather than continuing after the last result");
+        verify(!Session.project.fit.outOfDate, "A full Refit clears the outdated state");
+        verify(JSON.stringify(resultBytes()) !== JSON.stringify(before.bytes), "Refit replaces the old result generation with the edited template's generation");
+        verify(Session.project.canUndo, "Refit retains a single reversible result replacement");
+        Session.project.undo();
+        tryVerify(() => !Session.project.calculating && Session.project.fit.outOfDate, 10000, "One Undo restores the previous outdated result generation");
+        compare(JSON.stringify(resultBytes()), JSON.stringify(before.bytes), "One Undo restores every previous result and provenance byte");
+        compare(resultRows(), before.rows, "One Undo restores the old scientific result rows");
+        compare(Session.project.fit.outcome, before.outcome, "One Undo restores the original recorded outcome");
+        fitState("Refit");
+        verify(actionable(shortcut()), "Undo leaves the restored outdated results available for another Refit");
     }
     function test_existing_analysis_start() {
         open("single");
