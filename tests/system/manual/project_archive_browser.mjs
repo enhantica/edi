@@ -36,6 +36,8 @@ const fixture = join(repo, 'tests/fixtures/project_archive/sc-neut-cwl_tb2ti2o7-
 const documents = spawnSync('python', ['-c', 'import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z: print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))', fixture], {encoding:'utf8'});
 assert.equal(documents.status, 0, 'Browser input comes from Python zipfile, independently of the app');
 const initial = JSON.parse(documents.stdout);
+const declaredRule=Buffer.from(initial['project.edi'],'base64').toString().match(/^_su_format\.rule\s+(\S+)/m)?.[1];
+assert(declaredRule,'The archive fixture must declare the save rule that Open and Save must retain');
 const archiveInput=(await readFile(fixture)).toString('base64');
 const receipts = {};
 let activePage;
@@ -88,6 +90,11 @@ try {
     await page.goto(origin + '/?build='+mode);
     await page.waitForFunction(expected=>window.ediBuildInfo?.build===expected && typeof window.ediControlGeometry==='function',mode,{timeout:90000});
     const frame = () => page.evaluate(() => new Promise(ok => requestAnimationFrame(() => ok(true))));
+    const ready=async(read,obligation)=>{
+      const deadline=Date.now()+45000;
+      do {const value=await read();if(value)return value;await frame();}while(Date.now()<deadline);
+      throw Error(obligation);
+    };
     const settle=async()=>{
       const deadline=Date.now()+15000;let previous,stable=0;
       do {
@@ -141,7 +148,7 @@ try {
     };
     const inspect = archive => {
       const result=spawnSync('python',['-c','import base64,json,sys,zipfile\nwith zipfile.ZipFile(sys.argv[1]) as z: print(json.dumps({n:base64.b64encode(z.read(n)).decode() for n in z.namelist() if not n.endswith("/")}))',archive],{encoding:'utf8'});
-      assert.equal(result.status,0,'The exported project is independently readable with Python zipfile');
+      assert.equal(result.status,0,'The exported project is independently readable with Python zipfile: '+result.stderr);
       return JSON.parse(result.stdout);
     };
     const saveAs = async (zip, copy, name) => {
@@ -164,13 +171,11 @@ try {
       const path = join(output, name);
       if(completed) await (await completed).saveAs(path);
       else {
-        await page.waitForFunction(async previous=>{
-          const handle=window.__projectArchiveWrites[previous];return handle && (await handle.getFile()).size>0;
-        },previous);
-        const encoded=await page.evaluate(async previous=>{
-          const file=await window.__projectArchiveWrites[previous].getFile();
-          return btoa(Array.from(new Uint8Array(await file.arrayBuffer()),value=>String.fromCharCode(value)).join(''));
-        },previous);
+        const encoded=await ready(()=>page.evaluate(async previous=>{
+          const handle=window.__projectArchiveWrites[previous];if(!handle)return false;
+          const file=await handle.getFile(),bytes=new Uint8Array(await file.arrayBuffer());
+          return file.size>0 && bytes.length===file.size && btoa(Array.from(bytes,value=>String.fromCharCode(value)).join(''));
+        },previous),'The browser must finish writing nonempty ZIP bytes before independent inspection');
         await writeFile(path,Buffer.from(encoded,'base64'));
       }
       return inspect(path);
@@ -195,19 +200,20 @@ try {
         }};
         await walk(await window.__projectFolderReady); return result;
       });
-      await page.waitForFunction(async () => {
+      await ready(()=>page.evaluate(async rule => {
         const root=await window.__projectFolderReady;
-        return (await (await root.getFileHandle('project.edi')).getFile()).text().then(text=>/_su_format\.rule\s+iucr_99/.test(text));
-      });
+        const text=await (await (await root.getFileHandle('project.edi')).getFile()).text();
+        return text.match(/^_su_format\.rule\s+(\S+)/m)?.[1]===rule && text.includes('archive-folder-first');
+      },declaredRule),'The chosen folder must contain the edited project with its declared save rule retained');
       const first=await readFolder();
       assert.equal(first['reports/opaque.html'],initial['reports/opaque.html'],'Picked-folder Save retains exact report bytes');
       const picks=await page.evaluate(()=>window.__projectFolderPickCount);
       await rename('archive-folder-second');
       await click(/^Save current state of the project$/, 'button');
-      await page.waitForFunction(async () => {
+      await ready(()=>page.evaluate(async () => {
         const root=await window.__projectFolderReady;
         return (await (await root.getFileHandle('project.edi')).getFile()).text().then(text=>text.includes('archive-folder-second'));
-      });
+      }),'Ordinary Save must finish overwriting the chosen folder before its bytes are compared');
       const second=await readFolder();
       assert.equal(await page.evaluate(()=>window.__projectFolderPickCount),picks,'Later Save overwrites the picked folder without another picker');
       assert.notEqual(second['project.edi'],first['project.edi'],'A later Save really overwrites the picked folder with the edited model');
@@ -228,10 +234,11 @@ try {
   await writeFile(join(output,'project-archives.json'),JSON.stringify({mode,receipts},null,2));
 } catch(error) {
   if(activePage && !activePage.isClosed()) {
-    await activePage.screenshot({path:join(output,'failure.png')});
     await writeFile(join(output,'failure.json'),JSON.stringify({error:error.stack,
-      page:await activePage.evaluate(()=>({build:window.ediBuildInfo,screen:document.getElementById('screen')?.style.display})),
+      page:await activePage.evaluate(()=>({build:window.ediBuildInfo,screen:document.getElementById('screen')?.style.display})).catch(()=>null),
     },null,2));
+    await activePage.screenshot({path:join(output,'failure.png'),timeout:5000}).catch(captureError=>
+      console.error('Failure screenshot unavailable:',captureError.message));
   }
   throw error;
 } finally {await browser.close(); await new Promise(ok=>server.close(ok));}
