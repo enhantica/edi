@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T04:06:19Z
+# measured_utc = 2026-10-26T05:07:28Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 15475 banked, 0 stale row(s) dropped)
-# Collected tests: 17001; with a reported duration: 9915
+# Recorded from: measured test run (7 node(s) measured once, 15527 banked, 0 stale row(s) dropped)
+# Collected tests: 17021; with a reported duration: 9917
 # Module-scoped fixture costs recorded: 83
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17001
+# inventory_python = 17021
 # inventory_cpp = 393
-# inventory_measured = 15476
-# inventory_unmeasured = 1918
+# inventory_measured = 15534
+# inventory_unmeasured = 1880
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -90,41 +90,41 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::te
 0.000	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
 0.400	tests/integration/app/test_display_fonts.py::test_display_alphabet_uses_only_packaged_rendering_fonts
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-324f]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-3f]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-1]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-4]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-2]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-4]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_pbso4_beba-asymmetry]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_yap-spodi_3k]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_cecoal-polaris_chebyshev]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ceo2-pearl_polynomial]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ferrite-austenite-beer_joint]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-2bank_start-3]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-3bank_start-5]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-5]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-2]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-5]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_latp_scan-4f]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_pbso4-lab_round-robin]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_pr2nio4-5c2_fit]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_fit]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-tof_taurine_fit]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_lab6-echidna_fcj-asymmetry]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_y2o3_beta-adp]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-tof_diamond-dream_basic]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-tof_fe_pseudo-voigt]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-xray-cwl_lif_single]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-cwl_pr2nio4-5c2_basic]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_basic]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction]
-UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-tof_taurine-unknown_basic]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-162f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-324f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_scan-3f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-1]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20_start-4]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lab6-11b-echidna_tch-fcj]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-2]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_lbco-hrpt_start-4]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_pbso4_beba-asymmetry]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_yap-spodi_3k]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_cecoal-polaris_chebyshev]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ceo2-pearl_polynomial]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ferrite-austenite-beer_joint]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-2bank_start-3]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-3bank_start-5]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-5]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-2]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-tof_si-sepd_start-5]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_latp_scan-4f]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-xray-cwl_pbso4-lab_round-robin]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_pr2nio4-5c2_fit]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_fit]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[sc-neut-tof_taurine_fit]
+0.002	tests/integration/app/test_e04_t1_projects.py::test_existing_projects_open_and_populate_pages
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_lab6-echidna_fcj-asymmetry]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-cwl_y2o3_beta-adp]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-tof_diamond-dream_basic]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-neut-tof_fe_pseudo-voigt]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[pd-xray-cwl_lif_single]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-cwl_pr2nio4-5c2_basic]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_basic]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction]
+0.000	tests/integration/app/test_e04_t1_projects.py::test_verification_directory_executes_in_the_production_host[sc-neut-tof_taurine-unknown_basic]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-162f]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-324f]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t1_runtime_escapes.py::test_existing_project_receipts_cover_every_registered_example[pd-neut-cwl_cosio-d20_scan-3f]
@@ -12548,8 +12548,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_sch
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[vesta-dark]
 UNMEASURED:failed-in-this-run	tests/system/py/test_element_contrast.py::test_scheme_selector_explains_display_adjustment[vesta-light]
 1.390	tests/system/py/test_excluded_examples.py::test_committed_examples_do_not_claim_excluded_zero_calculations
-UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[pattern]
-UNMEASURED:failed-in-this-run	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[stacked]
+0.000	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[pattern]
+0.000	tests/system/py/test_fast_chart_fit_timing.py::test_every_pattern_overhead_on_each_actual_chart_tab[stacked]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_adaptive_is_retained]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_cache_and_pacing:map]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_cache_and_pacing:stacked]
@@ -13544,10 +13544,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[basetemp]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[keyword]
 0.000	tests/system/py/test_pytest_child_environment.py::test_parent_options_do_not_reach_nested_pytest[marker]
-0.006	tests/system/py/test_rendering_setup.py::test_actual_qt_renderer_reference_is_available
+0.005	tests/system/py/test_rendering_setup.py::test_actual_qt_renderer_reference_is_available
 0.000	tests/system/py/test_rendering_setup.py::test_detected_rendering_setup_in_the_app[test_default_uses_detected_renderer]
 0.000	tests/system/py/test_rendering_setup.py::test_detected_rendering_setup_in_the_app[test_develop_reports_detection]
-1.790	tests/system/py/test_rendering_setup.py::test_normal_app_reports_its_actual_rendering_setup_at_startup
+2.470	tests/system/py/test_rendering_setup.py::test_normal_app_reports_its_actual_rendering_setup_at_startup
 0.000	tests/system/py/test_rendering_setup.py::test_user_override_controls_the_renderer_after_a_complete_restart[gpu]
 0.000	tests/system/py/test_rendering_setup.py::test_user_override_controls_the_renderer_after_a_complete_restart[software]
 0.003	tests/system/py/test_report_browser_readiness.py::test_report_observer_waits_for_drawing_without_animation_frames[delayed-render]
@@ -15087,7 +15087,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_scan_screen.py::test_scan_pat
 1.440	tests/system/py/test_scan_screen.py::test_stale_drawn_points_cannot_claim_a_new_model_file[desktop]
 0.000	tests/system/py/test_scan_update_modes.py::test_real_scan_update_contract[test_catchup:pattern]
 0.000	tests/system/py/test_scan_update_modes.py::test_real_scan_update_contract[test_catchup:stacked]
-0.001	tests/system/py/test_scan_update_modes.py::test_real_scan_update_contract[test_choices_and_legacy]
+0.004	tests/system/py/test_scan_update_modes.py::test_real_scan_update_contract[test_choices_and_legacy]
+0.000	tests/system/py/test_scan_update_modes.py::test_real_scan_update_contract[test_wait_views:map]
+0.000	tests/system/py/test_scan_update_modes.py::test_real_scan_update_contract[test_wait_views:stacked]
+0.000	tests/system/py/test_scan_update_modes.py::test_real_scan_update_contract[test_wait_without_a_pattern_view]
 3.170	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[dispatch]
 1.190	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[follow]
 3.870	tests/system/py/test_scan_wiring_escapes.py::test_native_connection_observers_reject_swapped_dispatch_enabled_joint_and_wrong_follow[joint]
@@ -15118,10 +15121,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_sequential_scan_performance.p
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterRename]
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterResetUndo]
 0.000	tests/system/py/test_shared_correlation_app_state.py::test_retained_boundary_gate_refuses_each_changed_snapshot[originalAfterReset]
-UNMEASURED:failed-in-this-run	tests/system/py/test_sidebar_defaults.py::test_existing_sidebar_border_gate_uses_the_new_default
+0.000	tests/system/py/test_sidebar_defaults.py::test_existing_sidebar_border_gate_uses_the_new_default
 0.000	tests/system/py/test_sidebar_defaults.py::test_first_group_default_and_remembered_fold_on_every_page[analysis]
 0.000	tests/system/py/test_sidebar_defaults.py::test_first_group_default_and_remembered_fold_on_every_page[experiment]
-0.000	tests/system/py/test_sidebar_defaults.py::test_first_group_default_and_remembered_fold_on_every_page[home]
+0.004	tests/system/py/test_sidebar_defaults.py::test_first_group_default_and_remembered_fold_on_every_page[home]
 0.000	tests/system/py/test_sidebar_defaults.py::test_first_group_default_and_remembered_fold_on_every_page[project]
 0.000	tests/system/py/test_sidebar_defaults.py::test_first_group_default_and_remembered_fold_on_every_page[report]
 0.000	tests/system/py/test_sidebar_defaults.py::test_first_group_default_and_remembered_fold_on_every_page[structure]
@@ -17059,6 +17062,23 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_e09_t74_ci_source_wiring.py::te
 0.000	tests/unit/py/test_inactive_weight_bytes.py::test_inactive_weight_projection_refuses_undeclared_input_rows[unknown]
 0.000	tests/unit/py/test_native_capture_artifact.py::test_copy_that_straddles_a_relink_is_refused
 0.000	tests/unit/py/test_native_capture_artifact.py::test_native_capture_retains_its_artifact_across_relink
+0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[Direct3D 11, hardware rendering-Direct3D 11--False]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[Metal, hardware rendering-Metal--False]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[OpenGL, renderer Apple M2, hardware rendering-OpenGL-Apple M2-False]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[OpenGL, renderer llvmpipe (LLVM 23.1.1, 256 bits), software rendering (no GPU)-OpenGL-llvmpipe (LLVM 23.1.1, 256 bits)-True]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[Software, software rendering (no GPU)-Software--True]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_complete_report_retains_backend_identity[Vulkan, hardware rendering-Vulkan--False]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[edi: graphics: , hardware rendering\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[edi: graphics: Metal, software rendering (no GPU)\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[edi: graphics: OpenGL, hardware rendering\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[edi: graphics: OpenGL, renderer , hardware rendering\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[edi: graphics: Software, hardware rendering\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[edi: graphics: Software, renderer project failed, software rendering (no GPU)\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[edi: graphics: Software, software rendering (no GPU), project warning\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[edi: project load failed\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_lookalikes_remain_diagnostics[warning: edi: graphics: Software, software rendering (no GPU)\n]
+0.000	tests/unit/py/test_renderer_startup_report.py::test_project_diagnostic_beside_report_is_preserved
 0.000	tests/unit/py/test_report_collection_domain.py::test_complete_views_and_genuinely_undrawable_models_remain_valid[complete]
 0.000	tests/unit/py/test_report_collection_domain.py::test_complete_views_and_genuinely_undrawable_models_remain_valid[no-figures]
 0.000	tests/unit/py/test_report_collection_domain.py::test_complete_views_and_genuinely_undrawable_models_remain_valid[no-instances]
@@ -17439,7 +17459,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
 # module-cost: 43.513	tests/integration/app/test_c13_t2_gui.py
-# module-cost: 300.120	tests/integration/app/test_e04_t1_projects.py
+# module-cost: 666.578	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 24.342	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
 # module-cost: 0.258	tests/integration/app/test_phase_scan_state.py
@@ -17482,7 +17502,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 1.762	tests/system/py/test_e09_t58_start_tied_numeric.py
 # module-cost: 0.346	tests/system/py/test_e09_t75_native_execution.py
 # module-cost: 86.934	tests/system/py/test_element_contrast.py
-# module-cost: 12.163	tests/system/py/test_fast_chart_fit_timing.py
+# module-cost: 687.412	tests/system/py/test_fast_chart_fit_timing.py
 # module-cost: 263.960	tests/system/py/test_fast_chart_redraws.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
@@ -17492,7 +17512,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 27.704	tests/system/py/test_pattern_range.py
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
-# module-cost: 29.634	tests/system/py/test_rendering_setup.py
+# module-cost: 33.845	tests/system/py/test_rendering_setup.py
 # module-cost: 4.607	tests/system/py/test_report_browser_readiness.py
 # module-cost: 2.346	tests/system/py/test_report_index_width.py
 # module-cost: 0.115	tests/system/py/test_report_publication_failures.py
@@ -17508,9 +17528,9 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_report_model_json.py::test_repo
 # module-cost: 0.318	tests/system/py/test_scan_output_aliases.py
 # module-cost: 210.388	tests/system/py/test_scan_owner_additions.py
 # module-cost: 156.132	tests/system/py/test_scan_screen.py
-# module-cost: 133.929	tests/system/py/test_scan_update_modes.py
+# module-cost: 241.876	tests/system/py/test_scan_update_modes.py
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
-# module-cost: 82.330	tests/system/py/test_sidebar_defaults.py
+# module-cost: 71.426	tests/system/py/test_sidebar_defaults.py
 # module-cost: 28.755	tests/system/py/test_stacked_line_quality.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 9.952	tests/system/py/test_structure_backend.py

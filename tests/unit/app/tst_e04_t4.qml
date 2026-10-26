@@ -44,10 +44,18 @@ TestCase {
             Ui.click(test, Probe, appWindow, "appBar.tab." + page);
         tryVerify(() => Math.abs(Ui.page(appWindow).mapToItem(appWindow.contentItem, 0, 0).x) < 1, 2000, " gate 1: selected page reaches the viewport");
         const tab = Ui.control(Probe, appWindow, "sideBar.tab." + tier);
-        if (tab && !tab.checked)
+        verify(tab !== null && tab.enabled, "The sidebar witness reaches its requested enabled tab");
+        if (!tab.checked)
             Ui.click(test, Probe, appWindow, "sideBar.tab." + tier);
+        tryCompare(tab, "checked", true, 2000, "The requested sidebar tab is actually selected before observing groups");
         verify(waitForPolish(appWindow, 2000), " gate 1: sidebar layout settles");
-        tryVerify(() => Review.descendants(Ui.page(appWindow)).filter(item => item.visible && item.interactive === false && item.count === 3 && item.currentItem).every(view => Math.abs(view.currentItem.mapToItem(view, 0, 0).x) < 0.1), 2000, " gate 1: selected sidebar pane reaches the viewport");
+        const tabCount = Review.descendants(Ui.page(appWindow)).filter(item => item.objectName.startsWith("sideBar.tab.")).length;
+        const views = Review.descendants(Ui.page(appWindow)).filter(item => item.visible && item.interactive === false && item.count === tabCount && item.currentItem && item.currentItem.sourceComponent !== undefined && item.contentItem && item.contentItem.currentItem === item.currentItem);
+        compare(views.length, 1, "The sidebar witness finds one actual view matching its real tab inventory");
+        const index = tab.TabBar.index;
+        verify(index >= 0 && index < tabCount, "The requested sidebar tab has its actual toolkit position in the full tab inventory");
+        tryCompare(views[0], "currentIndex", index, 2000, "The sidebar view displays the requested tab rather than the previous one");
+        tryVerify(() => Math.abs(views[0].currentItem.mapToItem(views[0], 0, 0).x) < 0.1, 2000, "The requested sidebar pane reaches its viewport before group observations");
     }
     function group(name) {
         const found = Review.findGroup(Ui.page(appWindow), "group." + name);
@@ -136,14 +144,12 @@ TestCase {
                 pane(page, tier);
                 const groups = Review.descendants(Ui.page(appWindow)).filter(item => item.visible && item.objectName.startsWith("group.") && Ui.inPane(Ui.target(item)));
                 verify(groups.length > 0, "ideas 10/11: active pane has observable groups");
-                const headers = Review.descendants(Ui.page(appWindow)).filter(item => typeof item.collapsed === "boolean" && item.titleArea && Ui.inPane(item.titleArea));
-                headers.sort((a, b) => a.titleArea.mapToItem(appWindow.contentItem, 0, 0).y - b.titleArea.mapToItem(appWindow.contentItem, 0, 0).y);
-                groups.forEach(item => {
-                    if (item.collapsible)
-                        compare(item.collapsed, item !== headers[0], "The first group starts unfolded and subsequent foldable groups retain their closed default");
-                });
-                compare(groups[groups.length - 1].last, true, "idea 11: last visible group suppresses its bottom border");
-                groups.slice(0, -1).filter(item => item.collapsible).forEach(item => compare(item.last, false, "idea 11: preceding foldable categories retain their separators"));
+                for (const parent of new Set(groups.map(item => item.parent))) {
+                    const siblings = groups.filter(item => item.parent === parent).sort((a, b) => a.mapToItem(appWindow.contentItem, 0, 0).y - b.mapToItem(appWindow.contentItem, 0, 0).y);
+                    siblings.filter(item => item.collapsible).forEach(item => compare(item.collapsed, item !== siblings[0], "The first group starts unfolded and subsequent foldable groups retain their closed default"));
+                    compare(siblings[siblings.length - 1].last, true, "The last shown group in each actual sidebar column suppresses its bottom border");
+                    siblings.slice(0, -1).filter(item => item.collapsible).forEach(item => compare(item.last, false, "Preceding foldable groups in the same shown sidebar column retain their separators"));
+                }
             });
         });
     }

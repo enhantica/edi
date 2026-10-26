@@ -118,7 +118,7 @@ Item {
         function exercise(mode, tab, inspectBacklog) {
             const selector = open();
             const selection = select(selector, labels[mode]);
-            const tabName = "mainArea.analysis.tab." + (tab === "pattern" ? "fitting" : "stacked");
+            const tabName = "mainArea.analysis.tab." + (tab === "pattern" ? "fitting" : tab);
             Ui.click(test, Probe, app, tabName);
             tryCompare(Ui.control(Probe, app, tabName), "checked", true, 1000, "The timing receipt names the actual selected chart tab");
             const fit = Session.project.fit;
@@ -149,7 +149,8 @@ Item {
             }
             ChartBackendProof.setFrameDelay(0);
             if (mode === "catchup" || mode === "wait") {
-                tryCompare(fit, "scanPatternUpdates", 162, 120000, "Every pattern is actually presented before display completion");
+                // Fit-waits has no display queue left to drain after worker completion.
+                tryCompare(fit, "scanPatternUpdates", 162, mode === "wait" ? 3000 : 120000, "Every pattern is actually presented before display completion");
                 compare(drawn.length, 162, "Every file produces a distinct shown-file receipt");
                 compare(new Set(drawn).size, 162, "Every-pattern display neither duplicates nor drops a saved file");
                 verify(drawn.every((file, index) => index === 0 || drawn[index - 1] < file), "Every-pattern display preserves the independently saved ascending filename order");
@@ -161,13 +162,33 @@ Item {
         }
         function test_catchup_data() { return ["pattern", "stacked"].map(tab => ({tag: tab, tab: tab})); }
         function test_catchup(data) { exercise("catchup", data.tab, true); }
-        function test_timing_data() {
-            const rows = [];
-            for (const tab of ["pattern", "stacked"])
-                for (const mode of ["catchup", "wait", "adaptive"])
-                    rows.push({tag: tab + "-" + mode, tab: tab, mode: mode});
-            return rows;
+        function test_wait_views_data() { return ["stacked", "map"].map(tab => ({tag: tab, tab: tab})); }
+        function test_wait_views(data) { exercise("wait", data.tab, false); }
+        function test_wait_without_a_pattern_view() {
+            const selector = open();
+            select(selector, labels.wait);
+            Ui.click(test, Probe, app, "appBar.tab.home");
+            tryVerify(() => Render.descendants(app.contentItem).filter(item => item.objectName === "chart" || /^scanView\.(stacked|map)$/.test(item.objectName)).every(item => !item.shown), 2000, "The hidden-view witness leaves no Pattern, Stacked or Map view shown");
+            app.hide();
+            compare(app.visible, false, "The no-view scan has no window able to acknowledge drawn frames");
+            const fit = Session.project.fit;
+            drawn = []; frames = 0; tracking = true;
+            fit.start();
+            tryCompare(fit, "running", true, 1000, "Fit-waits starts scientific work with no pattern view shown");
+            tryCompare(fit, "running", false, 120000, "The complete scientific scan finishes without requiring a display acknowledgement");
+            compare(fit.scanFitted, 162, "No-view fit-waits still fits every independently saved file");
+            compare(fit.outcome, "success", "The no-view scientific scan succeeds");
+            compare(frames, 0, "No rendered window frame was needed for scientific completion");
+            compare(fit.scanPatternUpdates, 0, "A scan with no shown pattern view invents no presentation receipts");
+            tracking = false;
         }
-        function test_timing(data) { console.log("FIT_TIMING " + JSON.stringify(exercise(data.mode, data.tab, false))); }
+        // Each timing entry point runs one fit; there is no six-row aggregate actor.
+        function timing(mode, tab) { console.log("FIT_TIMING " + JSON.stringify(exercise(mode, tab, false))); }
+        function test_timing_pattern_catchup() { timing("catchup", "pattern"); }
+        function test_timing_pattern_wait() { timing("wait", "pattern"); }
+        function test_timing_pattern_adaptive() { timing("adaptive", "pattern"); }
+        function test_timing_stacked_catchup() { timing("catchup", "stacked"); }
+        function test_timing_stacked_wait() { timing("wait", "stacked"); }
+        function test_timing_stacked_adaptive() { timing("adaptive", "stacked"); }
     }
 }
