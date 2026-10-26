@@ -2682,7 +2682,8 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
     }
     if (changed || scan.shown) {
         publish(false);
-        publishCalculating();
+        // The save's own calculation reaches the charts as a preview's does.
+        published(edi::PreviewResult{});
     }
     setLastError({});
     emit pathChanged();
@@ -2729,7 +2730,8 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
                 preview_->recalculate();
             }
             publish(false);
-            publishCalculating();
+            // The save's own calculation reaches the charts as a preview's does.
+            published(edi::PreviewResult{});
         }
     } catch (const std::exception& error) {
         // The write succeeded, so the project works where it was written, with the metadata it wrote; it keeps its
