@@ -266,6 +266,25 @@ hidden curves out. Showing everything restores the full-data fitted range.
 Visibility remains independent per chart across navigation in the running app
 and resets when another project opens.
 
+Disabled entries retain their own symbols as well as their names: the measured,
+calculated, background and residual samples keep their geometry, and each Bragg
+entry keeps both its tick and its `layer-group` structure icon. The named
+`chart.legend.entry` supplies the actionable row; its actual `IconLine` pieces
+must draw the same symbols with the shared disabled foreground. A hidden
+structure's `chart.bragg.label` beside the tick strip remains shown, with both
+its structure icon and name in the disabled foreground. One- and two-structure
+saved projects exercise every structure independently on Experiment and Analysis
+Pattern; both single-crystal charts exercise their own entry too.
+
+The symbol gate compares actual enabled and disabled drawing as a round-trip
+invariant, not a generated correctness golden. It checks semantic symbol and
+loaded icon-font identity, then rendered ink over each piece's actual underlay:
+physical dimensions within one pixel, normalised ink area within 15 percent,
+and at least 95 percent bidirectional shape coverage within one physical pixel
+for antialiasing placement. Each name and symbol must contribute visible ink in
+the declared foreground. Merely retaining a segment or a colour property does
+not satisfy this contract.
+
 Before the amended owner record, the legend rule would have required an
 unchanged range for every click. The gates now separate the default keep rule
 from visible-only fits and test both actual preference choices and persistence.
