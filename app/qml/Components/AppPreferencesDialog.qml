@@ -183,6 +183,18 @@ AppDialog {
                 onToggled: Preferences.toolTips = checked
             }
 
+            // Fitting works from every page's status bar, so whether a fit opens its results is an app preference
+            // (the owner, 2026-10-26).
+            RowLabel {
+                text: qsTr("Show fit results after fitting") + ":"
+            }
+            RowCheckBox {
+                objectName: "preferences.showFitResults"
+                checked: Preferences.showFitResults
+                onToggled: Preferences.showFitResults = checked
+                ToolTip.text: qsTr("Open the results window when a fit ends; the fit status in the status bar opens it too")
+            }
+
             RowLabel {
                 enabled: false
                 text: qsTr("Enable user guides") + ":"
