@@ -171,11 +171,15 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            for (const extra of [fitButton, outOfDate, progress]) {
+            for (const extra of [outOfDate, progress]) {
                 if (extra.visible) {
                     width += extra.width;
                     shown += 1;
                 }
+            }
+            if (fitButtons.visible) {
+                width += fitButtons.widthWith(itemWidth);
+                shown += 1;
             }
             return width + (shown - 1) * spacing;
         }
@@ -292,7 +296,7 @@ EaElements.StatusBar {
             color: EaStyle.Colors.orange
             text: qsTr("out of date")
         }
-        // Before the Fit button, at the right: the live values before it change width, and the bar stays where it is.
+        // Before the fit buttons, at the right: the live values before it change width, and the bar stays where it is.
         FitProgressBar {
             id: progress
             objectName: "statusBar.fit.progress"
@@ -307,13 +311,64 @@ EaElements.StatusBar {
             fontFamily: EaStyle.Fonts.ptMono.name
             text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
         }
-        // Last, at the bar's right end whatever the area's width: the Fit button, what the Analysis page's fit button does
-        // (the owner, 2026-10-26).
-        StatusBarFitButton {
-            id: fitButton
-            objectName: "statusBar.fit.button"
-            shown: AppState.analysisPageEnabled
-            fit: bar.fit
+        // Last, at the bar's right end whatever the area's width (the owner, 2026-10-26): Reset and Follow in a scan
+        // project, then the Fit button in the corner. Fitting is run from here only; Reset and Follow give up their words
+        // first when the bar runs short of room.
+        Row {
+            id: fitButtons
+
+            readonly property bool scanMode: bar.fit !== null && bar.fit.scanMode
+            readonly property list<FitStatusItem> buttons: [resetButton, followButton, fitButton]
+
+            function widthWith(itemWidth) {
+                let width = 0;
+                let shown = 0;
+                for (const button of buttons) {
+                    if (button.shown) {
+                        width += itemWidth(button);
+                        shown += 1;
+                    }
+                }
+                return width + Math.max(0, shown - 1) * spacing;
+            }
+
+            objectName: "statusBar.fit.buttons"
+            visible: AppState.analysisPageEnabled
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.5)
+
+            StatusBarButton {
+                id: resetButton
+                objectName: "statusBar.fit.reset"
+                shown: fitButtons.scanMode
+                dropsWord: true
+                showWord: bar.keysFit
+                clickable: bar.fit !== null && bar.fit.canReset
+                keyIcon: "eraser"
+                valueText: qsTr("Reset")
+                ToolTip.text: qsTr("Clear every dataset's fit result")
+                onClicked: bar.fit.reset()
+            }
+            StatusBarButton {
+                id: followButton
+                objectName: "statusBar.fit.follow"
+                shown: fitButtons.scanMode
+                dropsWord: true
+                showWord: bar.keysFit
+                // Enabled while a scan runs; on, the pattern tab shows the dataset being fitted.
+                clickable: bar.fit !== null && bar.fit.scanning
+                checked: bar.fit !== null && bar.fit.scanning && bar.fit.following
+                keyIcon: "crosshairs"
+                valueText: qsTr("Follow")
+                ToolTip.text: qsTr("Show the dataset being fitted")
+                onClicked: bar.fit.following = !bar.fit.following
+            }
+            StatusBarFitButton {
+                id: fitButton
+                objectName: "statusBar.fit.button"
+                shown: AppState.analysisPageEnabled
+                fit: bar.fit
+            }
         }
     }
 

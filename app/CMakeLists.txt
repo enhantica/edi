@@ -119,8 +119,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/SelectedPatternBox.qml
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
-        qml/Components/PrimarySideBarButton.qml
         qml/Components/StatusBar.qml
+        qml/Components/StatusBarButton.qml
         qml/Components/StatusBarFitButton.qml
         qml/Components/StatusBarItem.qml
         qml/Components/StructureScene.qml
@@ -151,7 +151,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/AnalysisPage.qml
         qml/Pages/Analysis/ConstraintsGroup.qml
         qml/Pages/Analysis/FitStartGroup.qml
-        qml/Pages/Analysis/FittingGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml
         qml/Pages/Analysis/FreeHeaderMenu.qml
         qml/Pages/Analysis/JointFitGroup.qml
