@@ -25,7 +25,9 @@ endif()
 FetchContent_Declare(gui_components
     URL https://github.com/easyscience/gui-components/archive/${EDI_GUI_COMPONENTS_SHA}.tar.gz
     URL_HASH SHA256=${EDI_GUI_COMPONENTS_ARCHIVE_SHA256}
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    # Extracted files take the extraction time, not the archive's: after a pin move an existing build tree then embeds
+    # and compiles the new QML, where older times left its resources holding the previous files.
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
     INACTIVITY_TIMEOUT 60
     TIMEOUT 600
     SOURCE_SUBDIR no-cmake-build  # upstream has no CMakeLists.txt; the modules are declared below
