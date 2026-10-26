@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T00:39:39Z
+# measured_utc = 2026-10-26T05:24:29Z
 #
-# Recorded from: measured test run (14 node(s) measured once, 15657 banked, 0 stale row(s) dropped)
-# Collected tests: 17542; with a reported duration: 10204
+# Recorded from: measured test run (37 node(s) measured once, 15664 banked, 29 stale row(s) dropped)
+# Collected tests: 17550; with a reported duration: 10204
 # Module-scoped fixture costs recorded: 75
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17542
+# inventory_python = 17550
 # inventory_cpp = 393
-# inventory_measured = 15671
-# inventory_unmeasured = 2264
+# inventory_measured = 15701
+# inventory_unmeasured = 2242
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -2371,9 +2371,6 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-xray-cwl_latp-bm01_scan]
 0.100	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-xray-cwl_nacl_simulation]
 0.030	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[pd-xray-cwl_pbso4-lab]
-UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[sc-neut-cwl_pr2nio4-5c2]
-UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[sc-neut-cwl_tb2ti2o7-heidi]
-UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error[sc-neut-tof_taurine-senju]
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_cosio-d20]
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_cosio-d20_scan]
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_fullprof_reference_binds_all_committed_start_inputs_and_outputs[pd-neut-cwl_hs-hrpt]
@@ -2432,9 +2429,20 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::t
 0.000	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-xray-cwl_lam7o3-p021]
 0.010	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-xray-cwl_latp-bm01_scan]
 0.010	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[pd-xray-cwl_pbso4-lab]
-UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[sc-neut-cwl_pr2nio4-5c2]
-UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[sc-neut-cwl_tb2ti2o7-heidi]
-UNMEASURED:not-completed-in-this-run	tests/integration/py/test_catalogue_fullprof.py::test_measured_reference_has_a_fit_and_its_fitted_fixed_twin[sc-neut-tof_taurine-senju]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_comparison_refuses_reference_and_model_gap_escapes[changed-value]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_comparison_refuses_reference_and_model_gap_escapes[fake-model-gap]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_comparison_refuses_reference_and_model_gap_escapes[missing-value]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_comparison_refuses_reference_and_model_gap_escapes[relabelled-value]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_comparison_refuses_reference_and_model_gap_escapes[relaxed-bound]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_comparison_refuses_reference_and_model_gap_escapes[unlabelled-model-gap]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_comparison_refuses_reference_and_model_gap_escapes[wrong-factor]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_comparison_refuses_reference_and_model_gap_escapes[wrong-free-count]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_parameters_retain_fullprof_values_and_independent_report_units[sc-neut-cwl_pr2nio4-5c2]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_parameters_retain_fullprof_values_and_independent_report_units[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_parameters_retain_fullprof_values_and_independent_report_units[sc-neut-tof_taurine-senju]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_reference_retains_its_actual_f_squared_fit_report[sc-neut-cwl_pr2nio4-5c2]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_reference_retains_its_actual_f_squared_fit_report[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/py/test_catalogue_fullprof.py::test_single_crystal_reference_retains_its_actual_f_squared_fit_report[sc-neut-tof_taurine-senju]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-agreement]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-loops]
 0.000	tests/integration/py/test_catalogue_retention_escapes.py::test_catalogue_projection_refuses_every_retained_input_escape[data-native]
@@ -5905,29 +5913,29 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e05_t1_physical_domain.p
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-XPUT-osx-arm64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-linux-64]
 0.160	tests/integration/py/test_e09_t75_sdk_consumer.py::test_sdk_download_http_method_remains_bound_to_the_addressed_read[-dBODY-osx-arm64]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_cosio-d20]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_cosio-d20_scan]
-0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_hs-hrpt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_lbco-hrpt]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_lbco_simulation]
-0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_lmo-echidna]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_y2o3-spodi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-cwl_yalo3-al2o3-spodi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_cecoal-polaris]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_ceo2-pearl]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_ferrite-austenite-beer]
-0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_lbco-si-mcstas]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_ncaf-wish]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_si-sepd]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-tof_si_simulation]
-0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-neut-xray-cwl_pbso4-d1a-lab]
-0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-xray-cwl_lam7o3-p021]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-xray-cwl_latp-bm01_scan]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-xray-cwl_nacl_simulation]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[pd-xray-cwl_pbso4-lab]
-0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[sc-neut-cwl_pr2nio4-5c2]
-0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[sc-neut-cwl_tb2ti2o7-heidi]
-UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_licence_and_content_digest[sc-neut-tof_taurine-senju]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-cwl_cosio-d20]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-cwl_cosio-d20_scan]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-cwl_hs-hrpt]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-cwl_lbco-hrpt]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-cwl_lbco_simulation]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-cwl_lmo-echidna]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-cwl_y2o3-spodi]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-cwl_yalo3-al2o3-spodi]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-tof_cecoal-polaris]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-tof_ceo2-pearl]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-tof_ferrite-austenite-beer]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-tof_lbco-si-mcstas]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-tof_ncaf-wish]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-tof_si-sepd]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-tof_si_simulation]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-neut-xray-cwl_pbso4-d1a-lab]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-xray-cwl_lam7o3-p021]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-xray-cwl_latp-bm01_scan]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-xray-cwl_nacl_simulation]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[pd-xray-cwl_pbso4-lab]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[sc-neut-cwl_pr2nio4-5c2]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[sc-neut-cwl_tb2ti2o7-heidi]
+0.000	tests/integration/py/test_example_catalogue.py::test_committed_data_has_a_source_and_content_digest[sc-neut-tof_taurine-senju]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_cosio-d20]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_cosio-d20_scan]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_example_catalogue.py::test_each_case_has_one_project_and_matching_tutorial_sources[pd-neut-cwl_hs-hrpt]

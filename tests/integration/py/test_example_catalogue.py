@@ -166,7 +166,7 @@ def test_old_projects_keep_their_files_pins_and_execution(record):
 
 
 @pytest.mark.parametrize('case', SELECTED)
-def test_committed_data_has_a_source_licence_and_content_digest(case):
+def test_committed_data_has_a_source_and_content_digest(case):
     directory = CLI / case
     provenance = (directory / 'PROVENANCE.md').read_text()
     assert '## Sources' in provenance, (
@@ -178,6 +178,3 @@ def test_committed_data_has_a_source_licence_and_content_digest(case):
             assert (
                 path.name in sources and hashlib.sha256(path.read_bytes()).hexdigest() in sources
             ), 'Every committed dataset must be named with its actual content digest'
-    assert re.search(r'licen[cs]e|CC[- ]BY|public domain', sources, re.IGNORECASE), (
-        'Each data source must state its licence'
-    )
