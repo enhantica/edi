@@ -40,8 +40,13 @@ Item {
     // A piece's width uncut. otherWidth sums these, never the pieces' `width`, so the elided piece's cut cannot feed
     // back into the room it is given while the segments change.
     function naturalWidth(segment, piece) {
+        const fixed = fixedWidth(segment);
+        return fixed !== undefined ? fixed : piece.implicitWidth;
+    }
+    // A slot's or a mark's set width; undefined for a text, which takes its own.
+    function fixedWidth(segment) {
         const mark = segment ? segment.mark ?? "" : "";
-        return segment && segment.slot ? pixelSize * 1.15 : mark === "dash" ? pixelSize * 1.2 : mark !== "" ? pixelSize * 0.6 : piece.implicitWidth;
+        return segment && segment.slot ? pixelSize * 1.15 : mark === "dash" ? pixelSize * 1.2 : mark !== "" ? pixelSize * 0.6 : undefined;
     }
     // The width of every other piece, with their spacing: what the elided piece leaves room for.
     readonly property real otherWidth: {
@@ -104,7 +109,9 @@ Item {
                 readonly property bool factors: !isIcon && modelData.factors === true && FactorText.has(modelData.text)
                 textFormat: factors ? Text.RichText : modelData.rich === true ? Text.StyledText : Text.AutoText
                 text: isIcon ? modelData.icon : mark !== "" ? "" : factors ? FactorText.rich(modelData.text) : modelData.text
-                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : line.naturalWidth(modelData, piece)
+                // A text not cut keeps its own width (undefined resets it to the implicit width), so a piece changed
+                // in place never reads its own layout while it is laid out again.
+                width: elided ? Math.max(0, Math.min(implicitWidth, line.maximumWidth - line.otherWidth)) : line.fixedWidth(modelData)
                 elide: elided ? line.elide : Text.ElideNone
                 y: isIcon ? line.centreY - inkMiddle : textMetrics.ascent - baselineOffset
 
