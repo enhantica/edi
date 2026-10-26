@@ -95,6 +95,17 @@ TestCase {
     function caption(item) {
         return typeof item.valueText === "string" ? item.valueText : item.text;
     }
+    function rightmostFitAction() {
+        verify(waitForPolish(appWindow.contentItem), "The status bar finishes layout before the Fit action's position is checked");
+        const group = area(), button = shortcut();
+        const left = button.mapToItem(group, 0, 0).x;
+        for (const item of group.children) {
+            if (item === button || !item.visible || item.width <= 0)
+                continue;
+            verify(item.mapToItem(group, item.width, 0).x <= left, "The Fit action follows every visible fit indicator, statistic and progress bar: " + item.objectName);
+        }
+        fuzzyCompare(button.mapToItem(group, button.width, 0).x, group.width, 1, "The Fit action is the last item at the status bar's right end");
+    }
     function fitState(shortText, sidebarText) {
         compare(caption(shortcut()), shortText, "The status Fit shortcut names the actual idle, continuing or running state");
         compare(analysisButton().text, sidebarText, "The Analysis button names the same actual fitting state");
@@ -236,6 +247,9 @@ TestCase {
         Session.project.fit.start();
         verify(Session.project.fit.running, "The actual worker enters its running state synchronously before stop input");
         fitState("Stop", "Stop fitting");
+        const progress = findChild(appWindow, "statusBar.fit.progress");
+        verify(progress !== null && progress.visible, "The running position witness includes the actual fit progress bar");
+        rightmostFitAction();
         if (data.tag === "status") {
             compare(button.enabled, analysisButton().enabled, "While running the status shortcut remains enabled exactly like Analysis");
             compare(icon(button), icon(analysisButton()), "While running the status shortcut changes to the actual Analysis stop icon");
@@ -297,7 +311,7 @@ TestCase {
         tryVerify(() => data.tag === "light" ? luminance(sidebarLabel[0].color) > .9 : luminance(sidebarLabel[0].color) < .25, 1500, "The primary Analysis fit caption shares the status shortcut's white or inverse ink");
         const sidebarGlyphs = View.textItems(sidebar).filter(item => item.text === icon(sidebar));
         verify(sidebarGlyphs.length > 0 && sidebarGlyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The primary Analysis fit icon shares the status shortcut's white or inverse ink");
-        verify(button.mapToItem(area(), 0, 0).x < status.mapToItem(area(), 0, 0).x, "The Fit shortcut sits at the left of the fit-results controls");
+        rightmostFitAction();
     }
     function test_preference_default_and_user_store() {
         open("single");
