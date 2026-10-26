@@ -88,13 +88,18 @@ def rounded_record(contents, rule='iucr_19', *, six=False):
         b'_preferred_orientation',
         b'_absorption',
         b'_scattering_source',
-        *({b'_extinction', b'_excluded_region'} if six else set()),
+        *({b'_extinction'} if six else set()),
     }
     identities = {b'id', b'type_symbol', b'wyckoff_letter', b'adp_type', b'structure_id', b'type'}
 
     def parameter(tag):
         category, _, field = tag.partition(b'.')
-        return (category in categories and field not in identities) or (
+        fitted = category in categories and field not in identities
+        if category == b'_background':
+            # Anchor abscissae and series basis constants are exact configuration,
+            # independently declared as non-Parameter fields in the dictionary.
+            fitted = field in {b'intensity', b'coef'}
+        return fitted or (
             six
             and (
                 (

@@ -25,7 +25,10 @@ from tests.fixtures.excluded_display.historical_bytes import (
 )
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
 from tests.fixtures.loop_parameter_ids.historical_fit_ids import historical_fit_ids
-from tests.fixtures.report_units.iucr_reference import without_default_rule
+from tests.fixtures.project_save.carried_results import CASES as CARRIED_CASES
+from tests.fixtures.project_save.carried_results import carried_hashes
+from tests.fixtures.project_save.computed_columns import check as check_computed
+from tests.fixtures.report_units.iucr_reference import saved_record, without_default_rule
 from tests.fixtures.report_units.saved_iucr import rounded_pins
 from tests.fixtures.table_display import metadata_bytes, stored_id_bytes
 from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
@@ -269,19 +272,22 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
         ' I22 removing the required calculator block preserves every old output byte'
     )
     record = tmp_path / 'project.edi'
-    rule = b'_su_format.rule iucr_19\n'
+    rule = b'_su_format.rule iucr_99\n'
     record.write_bytes(canonical + rule)
     assert (
         REFERENCE.saved_hashes(tmp_path)['project.edi'] == hashlib.sha256(canonical).hexdigest()
-    ), 'I22 calculator-like bytes outside experiments survive the checked default IUCr declaration'
+    ), (
+        'Calculator-like bytes outside experiments survive '
+        'the checked two-digit default declaration'
+    )
     for setting in (
         b'',
         rule * 2,
-        rule.replace(b'iucr_19', b'iucr_99'),
+        rule.replace(b'iucr_99', b'iucr_19'),
         rule + b'_su_format.extra invalid\n',
     ):
         record.write_bytes(canonical + setting)
-        with pytest.raises(AssertionError, match=r'IUCr|s\.u\.'):
+        with pytest.raises(AssertionError, match=r'default|s\.u\.'):
             REFERENCE.saved_hashes(tmp_path)
     record.write_bytes(canonical + rule)
     experiment.write_bytes(ordinary.replace(b'0.125', b'0.126') + canonical)
@@ -289,6 +295,16 @@ def test_saved_byte_inventory_covers_every_current_cli_and_corpus_project(tmp_pa
         REFERENCE.saved_hashes(tmp_path)['experiments/d20.edi'] != old_saved['experiments/d20.edi']
     ), ' I22 a non-calculator change still refuses the retained output oracle'
     check_excluded_transition()
+    axes = (
+        b'_background.origin 40111.8789123\nloop_\n_background.id\n'
+        b'_background.position\n_background.intensity\npoint 40111.8789 1.23456789()\n'
+        b'loop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\n'
+        b'1 66503.6875 132603.0938\n'
+    )
+    assert saved_record(axes) == axes.replace(b'1.23456789()', b'1.23457()'), (
+        'Independent saved-token projection rounds model parameters while retaining '
+        'exact anchor abscissae, exclusion boundaries and basis settings'
+    )
 
 
 def check_excluded_transition():
@@ -331,8 +347,35 @@ def check_excluded_transition():
         )
 
 
+def assert_saved_projection(source, tmp_path, previous, case, record_property):
+    ordinary = observe_legacy_pin(source, tmp_path / 'saved', calculator=True)
+    converted = observe_legacy_pin(
+        source, tmp_path / 'transition' / 'converted', calculator=True, excluded=True
+    )
+    actual = retained_hashes(ordinary, converted, previous)
+    if case in CARRIED_CASES:
+        record_property(
+            'carried_computed_columns',
+            json.dumps(check_computed(tmp_path / 'saved', __import__('edi')), sort_keys=True),
+        )
+        record_property(
+            'carried_result_hashes',
+            json.dumps(
+                {
+                    'case': case,
+                    'before': previous,
+                    'after': actual,
+                },
+                sort_keys=True,
+            ),
+        )
+    assert actual == carried_hashes(previous, case), (
+        ' I22 save must retain the pre-move bytes of every file in this project'
+    )
+
+
 @pytest.mark.parametrize('case', sorted(BASELINE['cases']))
-def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
+def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case, record_property):
     source = restored_source(REFERENCE.inputs()[case], tmp_path)
     expected = BASELINE['cases'][case]
     public_rows = json.loads(
@@ -458,14 +501,8 @@ def test_save_matches_the_labelled_pre_move_regression_pin(tmp_path, case):
         )
         == expected['input_sha256']
     ), ' I22 the storage move cannot alter inputs to hide a serialization regression'
-    assert retained_hashes(
-        observe_legacy_pin(source, tmp_path / 'saved', calculator=True),
-        observe_legacy_pin(
-            source, tmp_path / 'transition' / 'converted', calculator=True, excluded=True
-        ),
-        rounded_pins(expected['saved_sha256']),
-    ) == rounded_pins(expected['saved_sha256']), (
-        ' I22 save must retain the pre-move bytes of every file in this project'
+    assert_saved_projection(
+        source, tmp_path, rounded_pins(expected['saved_sha256']), case, record_property
     )
     if case in estimate_bytes.CASES:
         estimate_bytes.require_saved(
@@ -595,11 +632,15 @@ def test_c13_t6_new_projects_have_a_second_save_fixed_point(tmp_path, case):
     )
 
 
-def test_c34_t28_live_main_provenance_cannot_hide_changed_scientific_input(tmp_path, monkeypatch):
+def test_c34_t28_live_main_provenance_cannot_hide_changed_scientific_input(
+    tmp_path, monkeypatch, record_property
+):
     case = 'repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project'
     source = REFERENCE.inputs()[case]
     # The main boundary must reach the live tree before any historical metadata projection.
-    test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'ordinary', case)
+    test_save_matches_the_labelled_pre_move_regression_pin(
+        tmp_path / 'ordinary', case, record_property
+    )
     changed = tmp_path / 'changed-input'
     shutil.copytree(source, changed)
     structure = changed / 'structures/cosio.edi'
@@ -611,7 +652,9 @@ def test_c34_t28_live_main_provenance_cannot_hide_changed_scientific_input(tmp_p
     )
     monkeypatch.setattr(REFERENCE, 'inputs', lambda: {case: changed})
     with pytest.raises(AssertionError, match='changed live example bytes'):
-        test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'damaged', case)
+        test_save_matches_the_labelled_pre_move_regression_pin(
+            tmp_path / 'damaged', case, record_property
+        )
 
 
 @pytest.mark.parametrize('damage', ['mode', 'method', 'missing', 'duplicate', 'extra', 'value'])

@@ -15,6 +15,8 @@ import edi
 import pytest
 
 from conftest import corpus_case_dir
+from tests.fixtures.project_save.agreement import rounded_model_reference
+from tests.fixtures.project_save.reference import six_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = json.loads((ROOT / 'tests/fixtures/e05_t1/cli.json').read_text())['cases']
@@ -82,6 +84,12 @@ def run_cli_fit_save_reopen_and_undo(case, tmp_path):
         ' gate 8 CLI default save writes the persisted fit-result category'
     )
     reference = case['record']
+    fit_output = dict(line.split('=', 1) for line in run.stdout.splitlines() if '=' in line)
+    for key in ('rwp', 'reduced_chi_square'):
+        assert math.isclose(
+            float(fit_output[key]), float(reference[key]), rel_tol=5e-9, abs_tol=5e-10
+        ), 'Full-precision CLI fit metrics retain the independent fixture before save adoption'
+    reference = rounded_model_reference(edi, source, reference)
     for field, record in [
         ('iterations', 'iterations'),
         ('reduced_chi_square', 'reduced_chi_square'),
@@ -91,10 +99,10 @@ def run_cli_fit_save_reopen_and_undo(case, tmp_path):
     ]:
         assert math.isclose(
             float(actual['_fit_result.' + field]),
-            float(reference[record]),
+            six_digits(float(reference[record])),
             rel_tol=5e-9,
             abs_tol=5e-10,
-        ), ' gate 8 saved fit metrics equal the author-time CLI fixture'
+        ), 'Saved fit metrics follow independent residual sums from the rounded written model'
     assert float(actual['_fit_result.fitting_time']) > 0, (
         ' gate 8 fit duration is present positive seconds and never a frozen expectation'
     )
@@ -106,7 +114,7 @@ def run_cli_fit_save_reopen_and_undo(case, tmp_path):
     )
     check_projection(actual, reference, MODEL_COUNTS[case['id']])
     if case['mode'] == 'joint':
-        check_banks(source / 'analysis/analysis.edi', reference)
+        check_banks(source / 'analysis/analysis.edi', reference, saved=True)
     assert actual.get('_fit_result.descent') == reference['descent'], (
         ' gate 8 actual CLI save binds the producing minimizer to the result'
     )
@@ -118,7 +126,7 @@ def run_cli_fit_save_reopen_and_undo(case, tmp_path):
         ' gate 8 reopening and saving restore all result metadata'
     )
     if case['mode'] == 'joint':
-        check_banks(saved / 'analysis/analysis.edi', reference)
+        check_banks(saved / 'analysis/analysis.edi', reference, saved=True)
     undo = subprocess.run(
         [sys.executable, '-m', 'edi', 'undo', str(source), '--report', 'machine'],
         capture_output=True,
@@ -181,9 +189,19 @@ def check_projection(actual, reference, parameter_count):
         value = float(actual['_fit_result.' + field])
         assert math.isfinite(value), 'The extended powder projection contains finite metrics'
         assert value >= 0, 'The extended powder projection contains nonnegative metrics'
+        metric = {
+            'prof_r_factor': 'rp',
+            'prof_wr_expected': 'rexp',
+            'prof_cr_factor': 'crp',
+            'prof_cwr_factor': 'cwrp',
+        }[field]
+        assert math.isclose(value, six_digits(reference[metric]), rel_tol=5e-9, abs_tol=5e-10), (
+            'Every saved powder factor equals independent residual sums '
+            'of the written rounded model'
+        )
     assert math.isclose(
         float(actual['_fit_result.prof_wr_expected']),
-        float(reference['rwp']) / math.sqrt(float(reference['reduced_chi_square'])),
+        six_digits(float(reference['rwp']) / math.sqrt(float(reference['reduced_chi_square']))),
         rel_tol=5e-9,
         abs_tol=5e-10,
     ), 'Expected R must retain the independent Rwp and reduced-chi-square identity'
@@ -196,7 +214,7 @@ def check_projection(actual, reference, parameter_count):
     )
     assert math.isclose(
         float(actual['_fit_result.objective_value']),
-        float(reference['reduced_chi_square']) * dof,
+        six_digits(float(reference['reduced_chi_square']) * dof),
         rel_tol=5e-9,
         abs_tol=5e-10,
     ), ' gate 8 objective is unreduced chi-square rather than reduced chi-square'
@@ -209,7 +227,7 @@ def check_projection(actual, reference, parameter_count):
         )
 
 
-def check_banks(path, reference):
+def check_banks(path, reference, *, saved=False):
     # : compare declared metrics, never numerical membership in a row.
     tokens = shlex.split(path.read_text(), comments=True)
     banks = []
@@ -262,17 +280,19 @@ def check_banks(path, reference):
         for metric, column in (('rwp', 'prof_wr_factor'), ('chi_square', 'chi_square')):
             assert math.isclose(
                 float(row['_fit_result_bank.' + column]),
-                float(reference['bank.' + name + '.' + metric]),
+                six_digits(float(reference['bank.' + name + '.' + metric]))
+                if saved
+                else float(reference['bank.' + name + '.' + metric]),
                 rel_tol=5e-9,
                 abs_tol=5e-10,
             ), ' gate 8 each named bank metric retains its own independent CLI value'
-        check_extended_bank_metrics(row, reference)
+        check_extended_bank_metrics(row, reference, saved=saved)
         assert int(row['_fit_result_bank.n_data_points']) == int(
             reference['bank.' + name + '.n_points']
         ), ' gate 8 each bank retains its exact independently fitted point count'
 
 
-def check_extended_bank_metrics(row, reference):
+def check_extended_bank_metrics(row, reference, *, saved=False):
     name = row['_fit_result_bank.experiment_id']
     for metric, column in (
         ('rp', 'prof_r_factor'),
@@ -285,14 +305,17 @@ def check_extended_bank_metrics(row, reference):
         assert value >= 0, 'A persisted bank metric must be nonnegative'
         key = 'bank.' + name + '.' + metric
         if key in reference:
-            assert math.isclose(value, float(reference[key]), rel_tol=5e-9, abs_tol=5e-10), (
-                'Each new bank metric must retain its independently planted value'
-            )
+            assert math.isclose(
+                value,
+                six_digits(float(reference[key])) if saved else float(reference[key]),
+                rel_tol=5e-9,
+                abs_tol=5e-10,
+            ), 'Each new bank metric must retain its independently planted value'
         elif metric == 'rexp':
             expected = float(reference['bank.' + name + '.rwp']) * math.sqrt(
                 (int(reference['bank.' + name + '.n_points']) - int(reference['n_free']))
                 / float(reference['bank.' + name + '.chi_square'])
             )
-            assert math.isclose(value, expected, rel_tol=5e-9, abs_tol=5e-10), (
-                'Each expected R must agree with its bank Rwp, raw chi square and N minus P'
-            )
+            assert math.isclose(
+                value, six_digits(expected) if saved else expected, rel_tol=5e-9, abs_tol=5e-10
+            ), 'Each expected R must agree with its bank Rwp, raw chi square and N minus P'
