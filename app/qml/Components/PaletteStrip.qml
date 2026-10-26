@@ -34,6 +34,8 @@ Column {
     spacing: EaStyle.Sizes.fontPixelSize * 0.5
 
     Row {
+        id: cells
+
         spacing: EaStyle.Sizes.fontPixelSize * 0.25
 
         Repeater {
@@ -90,7 +92,10 @@ Column {
             text: qsTr("calc")
         }
     }
+    // As wide as the colours, on as many lines as it needs.
     EaElements.Label {
+        width: cells.width
+        wrapMode: Text.WordWrap
         color: EaStyle.Colors.themeForegroundMinor
         text: qsTr("Each new experiment or structure takes the next free colour.")
     }

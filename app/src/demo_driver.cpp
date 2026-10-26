@@ -1017,7 +1017,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             {"figures-30-ncaf-map-d-dark", "theme:dark"},
             {"figures-31-ncaf-stacked-d-dark", stacked, "wait-scan:stacked"},
             {"figures-32-taurine-atom-sites-dark", "open-cli-project:sc-neut-tof_taurine_fit", "appBar.tab.structure",
-             basic, "expand:group.atom_site"},
+             basic, "expand:group.atom_site", "reveal:atomSite.fractX.8"},
             {"figures-33-taurine-vesta-dark", "structure.toolbar.colors", "choose:VESTA"},
             {"figures-34-taurine-vesta-light", "theme:light"},
             {"figures-35-taurine-atom-sites-light", "structure.toolbar.colors", "choose:Jmol"},
