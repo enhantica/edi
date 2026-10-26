@@ -5,7 +5,7 @@ import {readFile, writeFile, mkdir, access} from 'node:fs/promises';
 import {resolve, extname, sep, join, dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {spawnSync} from 'node:child_process';
-import {restoreCanvasViewport} from './web_control_geometry.mjs';
+import {restoreCanvasViewport,waitControlGeometry} from './web_control_geometry.mjs';
 import {installDownloadBoundary,assertPendingNotice,checkNoticeControls,assertFallbackChoices,assertBrowserWarning,checkChoiceAndWarningControls} from './browser_download_boundary.mjs';
 checkNoticeControls();checkChoiceAndWarningControls();
 
@@ -160,11 +160,12 @@ try {
     let selectedExample='sc-neut-cwl_tb2ti2o7-heidi';
     const click=async(regex,role)=>{
       await restoreCanvasViewport(expression=>evaluate(expression));
-      // Qt's shipped Popup controls are drawn but absent from the web AX tree.
+      // Qt's dialog DOM remains closed; observe the native controls while its AX tree is unavailable.
       // Resolve the declared native radio/checkbox, then use trusted input; the
       // subsequent real picker/write proves that the dialog accepted the choice.
       if(role==='radio'||role==='checkbox') {
-        const opening=await evaluate(()=>{try{return window.ediControlGeometry('open.folder').visible}catch{return false}});
+        const opening=await evaluate(()=>{try{return window.ediControlGeometry('open.folder').visible}
+          catch(error){if(/no visible item|no item is named/.test(error.message))return false;throw error;}});
         const objectName=role==='checkbox'?'saveAs.copy':(opening?'open.':'saveAs.')+(regex.test('Zip archive')?'zip':'folder');
         const rect=await geometry(objectName);console.log(mode,scenario,'native choice',objectName);
         await page.mouse.move(rect.x+rect.width/2,rect.y+rect.height/2);await page.mouse.down();await frame();await page.mouse.up();await frame();return;
@@ -193,8 +194,7 @@ try {
     };
     const geometry=async(name,timeout=45000)=>{
       console.log(mode,scenario,'geometry',name);
-      await page.waitForFunction(name=>{try{const r=window.ediControlGeometry?.(name);return r?.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}},name,{timeout});
-      return evaluate(name=>window.ediControlGeometry(name),name);
+      return waitControlGeometry(expression=>evaluate(expression),frame,name,{timeoutMs:timeout});
     };
     const location=async regex=>{
       const rect=await geometry('project.location');
