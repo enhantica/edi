@@ -11,6 +11,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
+#include "edi/fittability.hpp"
 #include "edi/validation.hpp"
 
 #include "edi/parameter_spec.hpp"
@@ -4567,39 +4568,15 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             warn(message.str());
         }
     }
-    // A single-crystal fit has no derivative for its wavelength, so a free one loads fixed, and said so (crysta's fit
-    // refuses one).
-    for (const auto& experiment : project.experiments) {
-        if (experiment->reflections.has_value() && experiment->instrument.setup_wavelength &&
-            experiment->instrument.setup_wavelength->free) {
-            experiment->instrument.setup_wavelength->free = false;
-            warn("experiment '" + experiment->name.value() +
-                 "': a single-crystal fit does not refine the wavelength; _instrument.setup_wavelength loaded fixed");
-        }
-    }
-    // A single crystal's integrated intensities do not fix the cell, which comes from its reflections' positions, so a
-    // fit of single crystals only does not refine it: a cell parameter marked free loads fixed, and said so.
-    if (!project.experiments.empty() &&
-        std::all_of(project.experiments.begin(), project.experiments.end(),
-                    [](const auto& experiment) { return experiment->reflections.has_value(); })) {
-        for (const auto& structure : project.structures) {
-            std::string fixed;
-            for (Parameter* parameter : structure->cell.parameters()) {
-                if (parameter->free && parameter->spec != nullptr) {
-                    parameter->free = false;
-                    fixed += (fixed.empty() ? "" : ", ") + std::string(parameter->spec->edi_names[0]);
-                }
-            }
-            if (!fixed.empty()) {
-                warn("structure '" + structure->name.value() + "': a single-crystal fit does not refine the cell; " +
-                     fixed + " loaded fixed");
-            }
-        }
-    }
     // The declared and symmetry relations, as crysta reads them: refused when they cannot hold,
     // every parameter marked, a dependent's free flag cleared with a warning (not for the bracket of a
     // dependent saved with its s.u.).
     refresh_relations(project, warn, true);
+    // A free mark a fit could not honour (a descriptor, a value this fit's data cannot determine, one crysta cannot
+    // differentiate) loads fixed, its value and s.u. kept, and is said (ADR-0053).
+    for (const std::string& note : clear_unfittable_free(project)) {
+        warn("crysta.domain.unfittable_free_ignored: " + note);
+    }
     return project;
 }
 
