@@ -2568,6 +2568,15 @@ std::string one_row_category(const std::string& tag) {
 #endif
 }
 
+std::vector<std::string> name_variants(const std::string& tag) {
+#if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
+    return crysta::name_variants(tag);
+#else
+    static_cast<void>(tag);
+    return {};
+#endif
+}
+
 // crysta's check that a text's names are not a CIF's; an SDK without it has no such check.
 void refuse_cif_names(const std::vector<std::string>& tags) {
 #if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
