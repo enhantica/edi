@@ -4775,9 +4775,9 @@ class Project : public detail::ProjectAnchor {
     ItemVec<BraggPdExperiment> experiments;
     std::string fitting_mode;
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
-    // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits), by crysta's
-    // rule.
-    std::string su_rule = "iucr_19";
+    // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
+    // recommendation 12), by crysta's rule.
+    std::string su_rule = "iucr_99";
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
     // libraries, and the groups the report leaves out (their keys separated by spaces; empty leaves out none). Its
