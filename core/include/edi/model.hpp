@@ -3279,6 +3279,18 @@ struct ExperimentType {
     ScatteringTypeEnum effective_scattering_type() const {
         return scattering_type.value_or(ScatteringTypeEnum::BRAGG);
     }
+    // The experiment's description (ADR-0052), each held as declared and empty until
+    // declared, `?` and `.` included: the dimensionality (`1d`, the only one) and the polarisation
+    // (`unpolarised` for neutron, the inapplicable `.` for X-ray).
+    std::string dimensionality;
+    std::string polarisation;
+    std::string effective_dimensionality() const { return dimensionality.empty() ? "1d" : dimensionality; }
+    std::string effective_polarisation() const {
+        if (!polarisation.empty()) {
+            return polarisation;
+        }
+        return effective_radiation_probe() == RadiationProbeEnum::XRAY ? "." : "unpolarised";
+    }
     // Renewed by every Python write, whatever value it leaves.
     detail::Epoch epoch;
     // ADR-0018: the row of this object's non-loop categories.
@@ -3439,6 +3451,10 @@ struct InstrumentBase {
     // The X-ray CW K-alpha doublet: the second wavelength and its intensity relative to the first,
     // presence-tracked like the polarization pair (a ratio of 0 is a single wavelength).
     OptionalParameter setup_wavelength_2, setup_wavelength_2_to_1_ratio;
+    // The instrument and facility that measured the experiment (ADR-0052), text held as
+    // declared and empty until declared; `?` states an unknown one.
+    std::string name;
+    std::string facility;
 
     InstrumentBase();  // attaches the parameter specs (inline below)
 
@@ -5233,8 +5249,8 @@ static_assert(detail::one_entry_per_column(GeomCategory::columns, GeomCategory::
 struct ExperimentTypeCategory {
     using Owner = ExperimentType;
     static constexpr const char* name = "_experiment_type";
-    static constexpr auto columns = std::tuple{&ExperimentType::sample_form, &ExperimentType::beam_mode, &ExperimentType::radiation_probe, &ExperimentType::scattering_type};
-    static constexpr std::array items{"sample_form", "beam_mode", "radiation_probe", "scattering_type"};
+    static constexpr auto columns = std::tuple{&ExperimentType::sample_form, &ExperimentType::beam_mode, &ExperimentType::radiation_probe, &ExperimentType::scattering_type, &ExperimentType::dimensionality, &ExperimentType::polarisation};
+    static constexpr std::array items{"sample_form", "beam_mode", "radiation_probe", "scattering_type", "dimensionality", "polarisation"};
     static constexpr std::array legacy{"_easydiffraction_experiment_type", "_expt_type"};
 };
 static_assert(detail::one_entry_per_column(ExperimentTypeCategory::columns, ExperimentTypeCategory::items));
@@ -5259,8 +5275,8 @@ static_assert(detail::one_entry_per_column(PeakCategory::columns, PeakCategory::
 struct InstrumentCategory {
     using Owner = InstrumentBase;
     static constexpr const char* name = "_instrument";
-    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta, &InstrumentBase::setup_wavelength_2, &InstrumentBase::setup_wavelength_2_to_1_ratio};
-    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta", "setup_wavelength_2", "setup_wavelength_2_to_1_ratio"};
+    static constexpr auto columns = std::tuple{&InstrumentBase::calib_d_to_tof_offset, &InstrumentBase::calib_d_to_tof_linear, &InstrumentBase::calib_d_to_tof_quadratic, &InstrumentBase::calib_d_to_tof_reciprocal, &InstrumentBase::setup_twotheta_bank, &InstrumentBase::setup_wavelength, &InstrumentBase::calib_twotheta_offset, &InstrumentBase::calib_sample_displacement, &InstrumentBase::calib_sample_transparency, &InstrumentBase::setup_polarization_coefficient, &InstrumentBase::setup_monochromator_twotheta, &InstrumentBase::setup_wavelength_2, &InstrumentBase::setup_wavelength_2_to_1_ratio, &InstrumentBase::name, &InstrumentBase::facility};
+    static constexpr std::array items{"calib_d_to_tof_offset", "calib_d_to_tof_linear", "calib_d_to_tof_quadratic", "calib_d_to_tof_reciprocal", "setup_twotheta_bank", "setup_wavelength", "calib_twotheta_offset", "calib_sample_displacement", "calib_sample_transparency", "setup_polarization_coefficient", "setup_monochromator_twotheta", "setup_wavelength_2", "setup_wavelength_2_to_1_ratio", "name", "facility"};
     static constexpr std::array legacy{"_instr", "_diffrn_radiation_wavelength", "_pd_calib"};
 };
 static_assert(detail::one_entry_per_column(InstrumentCategory::columns, InstrumentCategory::items));

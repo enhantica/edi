@@ -5,6 +5,7 @@
 - **Implementation:** ✅ Implemented — the catalogue, its three forms, its check, the FullProf references and the
   comparison page
 - **Priority:** High
+- **Amended by:** [0052](0052-experiment-description.md) — the bundle leaves out the registry's verification projects by their flag
 
 Amends [Example metadata and filters](0031-example-metadata-and-filters.md): the app bundles the registry's
 user-facing projects, in registry order, and its own LiF example is retired.

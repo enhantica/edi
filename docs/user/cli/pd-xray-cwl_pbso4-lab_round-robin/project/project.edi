@@ -6,7 +6,3 @@ _metadata.description "Rietveld round-robin data · Kα doublet and Bérar-Baldi
 _metadata.created          "13 Oct 2026 09:12:02"
 _metadata.last_modified    "13 Oct 2026 09:12:03"
 _metadata.timestamp        ?
-_metadata.purpose "refinement"
-_metadata.dimensionality "1D"
-_metadata.instrument ?
-_metadata.facility ?
