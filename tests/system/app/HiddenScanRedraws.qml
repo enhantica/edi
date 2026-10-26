@@ -4,6 +4,7 @@ import QtTest
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
+import ChartBackendAcceptance 1.0
 import "../../unit/app/RenderedTable.js" as Render
 import "../../unit/app/UiInteraction.js" as Ui
 import "../../unit/app/ApprovedPalette.js" as Approved
@@ -116,6 +117,121 @@ Item {
                     verify(!stale, "Every newly shown Stacked trace removes the pre-hide rising edge rather than drawing cached old points");
                 }
             }
+        }
+        function rawReload(shape) {
+            // Do not yield to the event loop: the queued-polish case must hide the
+            // actual page before the first frame can consume this new data.
+            for (let index = 0; index < 2; ++index) {
+                const name = "request-" + index + ".xy";
+                verify(SettingsProof.write(projectRoot, name, dataText(shape)), "An inactive-request stimulus writes its independent latest measured points");
+                verify(Session.project.loadData(index, Qt.resolvedUrl(String(projectRoot) + "/" + name)), "The queued redraw comes from an actual measured-data replacement");
+            }
+        }
+        function requestWork(chart) {
+            const item = traceLayer(chart);
+            return {traces: item.traceBuildCount, draws: item.redrawCount};
+        }
+        function inactiveWorkUnchanged(chart, before) {
+            const item = traceLayer(chart), after = requestWork(chart);
+            compare(after.traces, before.traces, "An inactive scan view consumes no queued reduction or line build at the actual work boundary");
+            compare(after.draws, before.draws, "An inactive scan view performs no GPU-line or painted update from direct or base-class requests");
+            compare(ChartBackendProof.paintedInk(item), 0, "A direct paint request on an inactive real scan layer produces no painted pixels");
+        }
+        function test_inactive_requests_data() {
+            const rows = [];
+            for (const page of ["experiment", "analysis"])
+                for (const path of ["stacked-gpu", "stacked-painter", "map"])
+                    for (const trigger of ["queued", "renderer", "resize"])
+                        rows.push({tag: page + "-" + path + "-" + trigger, page, path, trigger, mode: path === "map" ? "map" : "stacked", renderer: path === "stacked-gpu" ? "gpu" : "software"});
+            return rows;
+        }
+        function test_inactive_requests(data) {
+            Preferences.resetToDefaults();
+            Preferences.chartHighlightSelected = false;
+            Preferences.scanRenderer = data.renderer;
+            Preferences.scanStackedPalette = "ediNatural";
+            Preferences.scanMapColours = "viridis";
+            Preferences.scanMapSmooth = false;
+            Preferences.scanMapReversed = false;
+            Preferences.scanStackedOffset = 100;
+            Preferences.scanStackedSize = 0;
+            app = factory.createObject(null);
+            verify(app !== null, "Inactive request coverage uses the real application on each page");
+            app.requestActivate();
+            tryCompare(app, "active", true, 2000, "The inactive-request actor owns its actual window");
+            Ui.click(test, Probe, app, "appBar.tab.home");
+            const homeIndex = app.appBarCentralTabs.currentIndex;
+            projectRoot = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project"));
+            Input.joint(SettingsProof, projectRoot, false, "cwl");
+            verify(Session.openProject(projectRoot), "Each inactive request starts from an independent saved joint project");
+            Session.project.patternDSpacing = false;
+            reload("left");
+            const target = show(data.page, data.mode), item = traceLayer(target);
+            const pageIndex = app.appBarCentralTabs.currentIndex;
+            verify(pageIndex !== homeIndex, "The actual target page differs from the measured Home navigation index");
+            compare(item.gpu, data.renderer === "gpu", "The matrix exercises the actual requested Stacked GPU, Stacked painter or Map renderer");
+            verify(item.traceBuildCount >= 2 && item.redrawCount > 0, "The shown view positively reduces and draws both real datasets before inactivity is tested");
+            if (data.path !== "stacked-gpu")
+                verify(ChartBackendProof.paintedInk(item) > 0, "The direct-paint observer positively sees the shown painter or Map data before checking hidden silence");
+            assertLatestPixels(target, "left");
+            let before;
+            if (data.trigger === "queued") {
+                const prior = requestWork(target);
+                rawReload("right");
+                verify(isPolishScheduled(item), "Actual changed data has queued this shown scan layer's polish before deactivation");
+                compare(item.traceBuildCount, prior.traces, "The queued redraw has not consumed its new data before the page is deactivated");
+                before = requestWork(target);
+                // Real application navigation state, changed in this same GUI turn.
+                // Unlike pointer helpers this cannot pump a frame before hiding.
+                app.appBarCentralTabs.currentIndex = homeIndex;
+                verify(!target.shown, "The actual page binding deactivates the queued view before its next frame");
+                item.ensurePolished();
+                frame();
+            } else {
+                Ui.click(test, Probe, app, "appBar.tab.home");
+                settle();
+                verify(!target.shown, "The real page is inactive before renderer and base-geometry requests");
+                before = requestWork(target);
+                reload("right");
+                if (data.trigger === "renderer") {
+                    Preferences.scanRenderer = data.renderer === "gpu" ? "software" : "gpu";
+                    item.update(); frame();
+                    inactiveWorkUnchanged(target, before);
+                    Preferences.scanRenderer = data.renderer;
+                    item.update(); frame();
+                    inactiveWorkUnchanged(target, before);
+                    const otherMode = data.mode === "map" ? "stacked" : "map";
+                    target.mode = otherMode;
+                    compare(item.mode, otherMode, "The public chart mode change reaches its actual hidden layer before the direct update");
+                    item.update(); frame();
+                    inactiveWorkUnchanged(target, before);
+                    target.mode = data.mode;
+                    item.update(); frame();
+                } else {
+                    const width = app.width, oldPlotWidth = item.width;
+                    app.width = width + 73;
+                    tryVerify(() => Math.abs(item.width - oldPlotWidth) > 1, 3000, "The actual hidden painted item receives a real base-class geometry change");
+                    frame();
+                    inactiveWorkUnchanged(target, before);
+                    app.width = width;
+                    tryVerify(() => Math.abs(item.width - oldPlotWidth) < 1, 3000, "The hidden geometry returns to its prior extent before activation");
+                    frame();
+                }
+            }
+            tryVerify(() => !Session.project.calculating, 15000, "Latest data and its calculation settle while the affected view remains inactive");
+            verify(!target.shown, "Every work-boundary observation occurs while the real page remains unshown");
+            item.ensurePolished(); item.update(); frame();
+            inactiveWorkUnchanged(target, before);
+            const resumed = show(data.page, data.mode);
+            compare(resumed, target, "Activation reuses the same page-owned item with its deferred dirty data");
+            const after = requestWork(target);
+            compare(after.traces - before.traces, 2, "Activation reduces the latest data exactly once for each independently supplied dataset");
+            verify(after.draws > before.draws, "Activation positively performs the deferred actual drawing");
+            assertLatestPixels(target, "right");
+            frame(); frame();
+            compare(item.traceBuildCount, after.traces, "Unchanged frames do not repeat a deferred reduction or line build");
+            compare(item.redrawCount, after.draws, "Unchanged frames do not repeat deferred GPU-line or painted updates");
+            console.log("INACTIVE_REQUEST " + JSON.stringify({page: data.page, path: data.path, trigger: data.trigger, before, after, datasets: 2}));
         }
         function test_hidden_views_data() {
             const rows = [];

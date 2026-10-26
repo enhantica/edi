@@ -150,3 +150,21 @@ and low colours to the latest and former plateau positions. The three-logical-
 pixel Stacked corridor covers its two-pixel pen and coordinate rounding, with
 RGB tolerance .09; flat Map plateaus use the frozen endpoints within 3/255 per
 channel. Both positive current ink and absence of old ink are required.
+
+The inactive-request matrix independently covers both pages, Stacked GPU,
+Stacked painter and Map, through three work-entry channels. It changes actual
+measured data while shown, proves Qt has queued polish without consuming it,
+and changes the real application page index in the same GUI turn before a
+frame can run; `ensurePolished()` then exercises any outstanding work. This
+uses the real page binding rather than assigning the layer's activity flag.
+The other channels switch both renderer directions and the public chart mode,
+issue direct update and QPainter requests while inactive, and resize the hidden
+view through actual window geometry changes before restoring its extent.
+
+Both `traceBuildCount` and `redrawCount` must remain unchanged while inactive.
+The latter observes GPU-line scene updates as well as the painted path. The
+existing passive `paintedInk` helper must positively see a shown painter/Map,
+then obtain zero ink when directly calling its real paint entry while inactive.
+Activation must add exactly one reduction per dataset, actually draw the latest
+independent shape, and leave both work counts unchanged on later unchanged
+frames. Requested activity values never supply the expected work result.

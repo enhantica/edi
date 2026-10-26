@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T17:27:30Z
+# measured_utc = 2026-10-26T18:29:48Z
 #
-# Recorded from: scoped completed scene, redraw and dictionary-header replay; complete-module budgets retained
-# Collected tests: 17876; with a reported duration: 10277
+# Recorded from: F7 request-boundary actors explicitly unmeasured; previous completed-row measurements retained
+# Collected tests: 17894; with a reported duration: 10277
 # Module-scoped fixture costs recorded: 90
 #
 # Breaches are decided PER TIER against the table
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17876
+# inventory_python = 17894
 # inventory_cpp = 396
 # inventory_measured = 16024
-# inventory_unmeasured = 2248
+# inventory_unmeasured = 2266
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -13531,6 +13531,24 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fit_quality_observation_cover
 0.000	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[analysis-stacked]
 0.000	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[experiment-map]
 0.000	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[experiment-stacked]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-map-queued]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-map-renderer]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-map-resize]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-stacked-gpu-queued]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-stacked-gpu-renderer]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-stacked-gpu-resize]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-stacked-painter-queued]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-stacked-painter-renderer]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-analysis-stacked-painter-resize]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-map-queued]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-map-renderer]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-map-resize]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-stacked-gpu-queued]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-stacked-gpu-renderer]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-stacked-gpu-resize]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-stacked-painter-queued]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-stacked-painter-renderer]
+UNMEASURED:expected red on exact pre-F7 ScanLayer component; full repaired-host replay pending	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[request-experiment-stacked-painter-resize]
 0.300	tests/system/py/test_latest_fit_uncertainty.py::test_cli_fit_clears_fixed_uncertainty_on_disk
 0.080	tests/system/py/test_latest_fit_uncertainty.py::test_every_fit_path_clears_fixed_su_and_keeps_dependent_su[independent]
 0.090	tests/system/py/test_latest_fit_uncertainty.py::test_every_fit_path_clears_fixed_su_and_keeps_dependent_su[joint]
