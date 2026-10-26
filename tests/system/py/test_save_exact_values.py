@@ -8,7 +8,7 @@ from html.parser import HTMLParser
 import gemmi
 import pytest
 
-from tests.fixtures.project_save.review2 import bank_angle, ordinary_position, special_position
+from tests.fixtures.project_save.boundaries import bank_angle, ordinary_position, special_position
 from tests.integration.py.test_anisotropic_adps import loop_rows
 
 ENGINE = importlib.import_module('edi')

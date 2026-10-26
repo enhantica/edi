@@ -28,6 +28,65 @@ def run(command, **kwargs):
     return subprocess.check_output(command, text=True, **kwargs)
 
 
+def observe_fallible_core(prefix, output, core_observed):
+    # Observe fallible read/write/adoption boundaries in copied core objects only.
+    # The actual definitions still run before publication; the observer can refuse
+    # any attempted call afterwards without damaging the published snapshot files.
+    io_names = {}
+    for member_name, spellings in (
+        (
+            'io.cpp.o',
+            (
+                'load_project',
+                'save_project',
+                'save_project_as',
+                'adopt_saved_values',
+                'adopt_saved_project',
+            ),
+        ),
+        ('adapter.cpp.o', ('save_report_settings',)),
+    ):
+        io_member = output / member_name
+        with io_member.open('wb') as stream:
+            subprocess.run(
+                [str(prefix / 'bin/llvm-ar'), 'p', str(core_observed), member_name],
+                stdout=stream,
+                check=True,
+            )
+        defined = run([str(prefix / 'bin/llvm-nm'), '--defined-only', str(io_member)])
+        replacements = {}
+        for spelling in spellings:
+            # Exact Itanium namespace/length prevents matching another overload/name.
+            prefix_name = '_ZN3edi' + str(len(spelling)) + spelling + 'E'
+            matches = [
+                line.split()[-1]
+                for line in defined.splitlines()
+                if len(line.split()) >= 3
+                and line.split()[-2] == 'T'
+                and line.split()[-1].lstrip('_').startswith(prefix_name.lstrip('_'))
+            ]
+            if len(matches) != 1:
+                raise RuntimeError(
+                    'Every fallible observation must delegate one actual core boundary'
+                )
+            replacements[matches[0]] = (
+                ('_' if sys.platform == 'darwin' else '') + 'transaction_real_' + spelling
+            )
+        io_names.update(replacements)
+        subprocess.run(
+            [
+                str(prefix / 'bin/llvm-objcopy'),
+                *(f'--redefine-sym={old}={new}' for old, new in replacements.items()),
+                str(io_member),
+            ],
+            check=True,
+        )
+        subprocess.run(
+            [str(prefix / 'bin/llvm-ar'), 'r', str(core_observed), str(io_member)], check=True
+        )
+    return io_names
+
+
 def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and boundary identities are distinct
     root, native, output = (path.resolve() for path in (root, native, output))
     output.mkdir(parents=True, exist_ok=True)
@@ -161,6 +220,7 @@ def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and 
         check=True,
     )
     subprocess.run([str(prefix / 'bin/llvm-ar'), 'r', str(core_observed), str(member)], check=True)
+    io_names = observe_fallible_core(prefix, output, core_observed)
     adapted = output / 'probe.cpp'
     text = source.read_text()
     for literal in re.findall(r'__asm__\(\s*((?:"[^"]*"\s*)+)\)', text):
@@ -214,6 +274,7 @@ def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and 
             'sha256': digest(native / core_library),
         },
         'archive_boundary': archive_names,
+        'fallible_core_boundary': io_names,
         'sdk': {
             str(path): digest(path)
             for parent in ('include', 'share/crysta-sdk')

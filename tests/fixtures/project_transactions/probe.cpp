@@ -30,6 +30,7 @@
 #include "web_storage.hpp"
 #undef private
 #include "block_text.hpp"
+#include "crysta/background_estimate.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/project_archive.hpp"
@@ -46,6 +47,13 @@ bool browser = false;
 using Image = QMap<QString, QByteArray>;
 QMap<QString, Image> durable;
 bool aliasPlaces = false;
+bool faultArmed = false, publicationCompleted = false;
+QStringList postPublicationCalls;
+void fallibleBoundary(const char* name) {
+    if (!faultArmed || !publicationCompleted) return;
+    postPublicationCalls.append(name);
+    throw std::runtime_error("Independent refusal of fallible work after durable publication");
+}
 void need(bool, const char*);
 Image image(const QString& root) {
     Image result;
@@ -99,6 +107,9 @@ QJsonArray numberBits(const Column& values) {
 QJsonObject scientificState(const edi::Project& project) {
     const auto& m = project.metadata;
     const auto text = [](const std::string& value) { return QString::fromStdString(value); };
+    const auto metric = [](const std::optional<double>& value) {
+        return value ? QJsonValue(bits(*value)) : QJsonValue();
+    };
     QJsonObject metadata{{"name", text(m.name)},
                          {"title", text(m.title)},
                          {"description", text(m.description)},
@@ -111,7 +122,10 @@ QJsonObject scientificState(const edi::Project& project) {
     for (const auto& bank : project.experiments) {
         QJsonObject row{{"name", text(bank->name.value())},
                         {"inputsDigest", QString::number(bank->background_estimate_inputs, 16)},
-                        {"pointsDigest", QString::number(bank->background_estimate_points, 16)}};
+                        {"pointsDigest", QString::number(bank->background_estimate_points, 16)},
+                        {"rp", metric(bank->fit_prof_r_factor)},
+                        {"rwp", metric(bank->fit_prof_wr_factor)},
+                        {"chi", metric(bank->fit_chi_square)}};
         if (bank->data) {
             const auto& data = *bank->data;
             row["calculated"] = numberBits(data.intensity_calc);
@@ -134,9 +148,12 @@ QJsonObject shownState(ProjectViewModel& project) {
         QJsonArray values, backgrounds;
         for (int row = 0; row < model->rowCount(); ++row) {
             const auto index = model->index(row, 0);
-            values.append(bits(model->data(index, PatternModel::IntensityCalcRole).toDouble()));
-            backgrounds.append(
-                bits(model->data(index, PatternModel::IntensityBkgRole).toDouble()));
+            const auto calculated = model->data(index, PatternModel::IntensityCalcRole);
+            const auto background = model->data(index, PatternModel::IntensityBkgRole);
+            values.append(calculated.isValid() ? QJsonValue(bits(calculated.toDouble()))
+                                               : QJsonValue());
+            backgrounds.append(background.isValid() ? QJsonValue(bits(background.toDouble()))
+                                                    : QJsonValue());
         }
         shown[bank->name()] = QJsonObject{
             {"calculated", values}, {"background", backgrounds}, {"stale", model->stale()}};
@@ -198,6 +215,7 @@ void finish(size_t index, bool ok, const QString& input = {}, bool pump = true) 
     if (!input.isEmpty()) answer.path = copy(input, job.root + "/" + QFileInfo(input).fileName());
     if (ok && job.action == "write" && !job.recovery)
         durable[aliasPlaces ? QString("working") : job.key] = job.payload;
+    if (faultArmed && ok && job.action == "write" && !job.recovery) publicationCompleted = true;
     job.answer(answer);
     if (pump) turn();
 }
@@ -316,6 +334,7 @@ QJsonObject browserSave(const QString& source, const QString& kind, bool ok, boo
     QObject::connect(&session, &Session::webSaveFailed, &session,
                      [&](const QString&) { ++errors; });
     session.project()->setName("edited-before-save");
+    settle(session);
     const auto before = state(session);
     if (unavailable) WebStorage::instance()->usable_ = false;
     bool returned = false;
@@ -483,6 +502,7 @@ QJsonObject desktopSave(const QString& source, const QString& origin, const QStr
     settle(session);
     session.project()->currentStructure()->cell()->lengthA()->setValue(4.123456789);
     session.project()->setName("unsaved-refusal-edit");
+    settle(session);
     const auto before = state(session);
     // ENOTDIR and an existing directory at a ZIP filename are reliable even as root.
     QFile blocker(temp.filePath("blocker"));
@@ -556,8 +576,9 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
     need(spec.size() == 8,
          "A save conflict declares kind, second intent, outcomes, order, edit and replacement");
     const QString kind = spec[1], second = spec[2], replacement = spec[7];
-    const bool alias = spec[0].startsWith("save-alias-");
-    const QString firstAction = alias ? spec[0].mid(11) : QString("move");
+    const bool across = spec[0].startsWith("save-replaced-");
+    const bool alias = spec[0].startsWith("save-alias-") || across;
+    const QString firstAction = alias ? spec[0].section('-', 2) : QString("move");
     const bool firstOk = spec[3] == "1", secondFirst = spec[4] == "1", secondOk = spec[5] == "1",
                edit = spec[6] == "1";
     QTemporaryDir temp;
@@ -566,7 +587,9 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
     openBrowserInput(session, input, alias ? kind : QString("folder"));
     aliasPlaces = alias;
     durable.clear();
+    if (alias) durable["working"] = image(input);
     if (alias) session.project()->setName("first-submitted-revision");
+    settle(session);
     QStringList messages;
     QObject::connect(&session, &Session::webSaved, &session,
                      [&](const QString& text) { messages.append(text); });
@@ -582,7 +605,7 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
         first = beginMove(session, kind, firstAction == "copy");
     need(first < jobs.size(), "The first moving save reaches an actual held write");
     auto pending = state(session);
-    if (edit || alias) {
+    if (edit) {
         session.project()->setName("edited-during-moving-save");
         session.project()->currentStructure()->cell()->lengthA()->setValue(1.45678901);
         settle(session);
@@ -591,7 +614,14 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
     const auto edited = state(session);
     if (replacement != "none") {
         browser = false;
-        if (replacement == "example")
+        if (replacement == "Recent" || replacement == "Open" || replacement == "recovery") {
+            browser = true;
+            const auto read = jobs.size();
+            start(session, replacement, "new-key-for-the-same-physical-place");
+            need(jobs.size() == read + 1, "Project replacement reaches the actual browser read");
+            jobs[read].kind = kind;
+            finish(read, true, input);
+        } else if (replacement == "example")
             need(session.openExample("pd-neut-cwl_cosio-d20"),
                  "A real example supersedes the save");
         else if (replacement == "new")
@@ -604,11 +634,16 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
         settle(session);
         browser = true;
     }
+    if (across) {
+        session.project()->setName("edited-replacement-revision");
+        session.project()->currentStructure()->cell()->lengthA()->setValue(1.45678901);
+        settle(session);
+    }
     const auto replacementBefore = state(session);
     const auto countBefore = jobs.size();
     bool secondReturned = false;
     std::size_t secondWrite = jobs.size();
-    if (!edit && replacement == "none") {
+    if (!edit && (replacement == "none" || across)) {
         if (second == "save") {
             secondReturned = session.save();
             secondWrite = nextWrite(countBefore);
@@ -618,6 +653,28 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
     const auto afterSecond = state(session);
     const auto secondJobs = jobs.size() - countBefore;
     const bool acceptedSecond = secondWrite < jobs.size() && jobs[secondWrite].action == "write";
+    const QString secondAction = second.section('-', 0, 0);
+    QStringList remaining;
+    for (const auto& candidate : {"save", "move", "copy"})
+        if (QString(candidate) != firstAction && QString(candidate) != secondAction)
+            remaining.append(candidate);
+    const QString third = remaining.isEmpty()
+                              ? QString("save")
+                              : remaining[remaining.size() > 1 && secondOk ? 1 : 0];
+    const auto thirdStart = jobs.size();
+    std::size_t thirdWrite = jobs.size();
+    bool thirdReturned = false;
+    if (alias && !edit && (replacement == "none" || across)) {
+        if (third == "save") {
+            thirdReturned = session.save();
+            thirdWrite = nextWrite(thirdStart);
+        } else
+            thirdWrite = beginMove(session, kind == "folder" ? "zip" : "folder", third == "copy");
+    }
+    const auto afterThird = state(session);
+    const auto thirdJobs = jobs.size() - thirdStart;
+    const bool acceptedThird = thirdWrite < jobs.size() && jobs[thirdWrite].action == "write";
+
     QJsonArray after;
     auto done = [&](std::size_t index, bool ok) {
         finish(index, ok);
@@ -625,27 +682,17 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
         after.append(state(session));
     };
     if (acceptedSecond && secondFirst) done(secondWrite, secondOk);
+    if (acceptedThird && secondFirst) done(thirdWrite, true);
     done(first, firstOk);
     if (acceptedSecond && !secondFirst) done(secondWrite, secondOk);
+    if (acceptedThird && !secondFirst) done(thirdWrite, true);
     const auto completed = state(session);
     const auto dropsAfterFirst = drops;
     const auto messagesAfterFirst = messages;
-    const auto nextStart = jobs.size();
-    bool nextReturned = false;
-    bool nextReached = false;
-    if (replacement == "none") {
-        WebStorage::instance()->usable_ = true;
-        session.project()->setName("next-save-after-settlement");
-        nextReturned = session.save();
-        const auto next = nextWrite(nextStart);
-        nextReached = next < jobs.size();
-        if (nextReached) finish(next, true);
-        settle(session);
-    }
-    const auto final = state(session);
-    QJsonArray durableParameters;
-    if (alias && durable.contains("working")) {
-        const auto root = temp.filePath("durable-reopen");
+    const auto durableProjection = [&](const QString& directory) {
+        QJsonArray parameters;
+        if (!alias || !durable.contains("working")) return parameters;
+        const auto root = temp.filePath(directory);
         for (auto file = durable["working"].cbegin(); file != durable["working"].cend(); ++file) {
             const auto path = root + "/" + file.key();
             QDir().mkpath(QFileInfo(path).absolutePath());
@@ -656,20 +703,38 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
         auto reopened = edi::load_project(root.toStdString());
         for (const auto& entry : edi::parameter_entries(reopened)) {
             const auto& parameter = *entry.parameter;
-            durableParameters.append(QJsonObject{
+            parameters.append(QJsonObject{
                 {"path", QString::fromStdString(entry.path)},
                 {"value", static_cast<double>(parameter.value)},
                 {"uncertainty",
                  parameter.uncertainty ? QJsonValue(*parameter.uncertainty) : QJsonValue()},
                 {"free", static_cast<bool>(parameter.free)}});
         }
+        return parameters;
+    };
+    const auto firstDurable = durableProjection("durable-at-first");
+    const auto nextStart = jobs.size();
+    bool nextReturned = false;
+    bool nextReached = false;
+    if (replacement == "none" || across) {
+        WebStorage::instance()->usable_ = true;
+        session.project()->setName("next-save-after-settlement");
+        settle(session);
+        nextReturned = session.save();
+        const auto next = nextWrite(nextStart);
+        nextReached = next < jobs.size();
+        if (nextReached) finish(next, true);
+        settle(session);
     }
+    const auto final = state(session);
+    const auto durableParameters = durableProjection("durable-after-next");
     aliasPlaces = false;
     browser = false;
     return {{"kind", kind},
             {"second", second},
             {"firstAction", firstAction},
             {"durableParameters", durableParameters},
+            {"firstDurableParameters", firstDurable},
             {"firstOk", firstOk},
             {"secondFirst", secondFirst},
             {"secondOk", secondOk},
@@ -681,6 +746,10 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
             {"replacementBefore", replacementBefore},
             {"afterSecond", afterSecond},
             {"secondJobs", int(secondJobs)},
+            {"third", third},
+            {"thirdJobs", int(thirdJobs)},
+            {"thirdReturned", thirdReturned},
+            {"afterThird", afterThird},
             {"secondReturned", secondReturned},
             {"after", after},
             {"completed", completed},
@@ -712,6 +781,7 @@ QJsonObject rollback(const QString& source, const QStringList& spec) {
         settle(session);
     }
     if (dirty) session.project()->setName("dirty-before-refusal");
+    settle(session);
     const auto before = state(session);
     bool returned = false;
     QString blocked;
@@ -771,6 +841,110 @@ QJsonObject rollback(const QString& source, const QStringList& spec) {
             {"returned", returned}, {"refused", refused},
             {"retry", retry},       {"afterRetry", afterRetry}};
 }
+QJsonObject afterPublication(const QString& source, const QStringList& spec) {
+    need(spec.size() == 4,
+         "A publication observation declares route, kind and initial modified state");
+    const QString route = spec[1], kind = spec[2];
+    const bool web = route.startsWith("web-"), dirty = spec[3] == "dirty";
+    QTemporaryDir temp;
+    Session session;
+    QString input = preciseInput(source, temp.filePath("precision-input"));
+    if (web)
+        openBrowserInput(session, input, kind);
+    else {
+        browser = false;
+        if (route == "zip-save") {
+            const QString archive = temp.filePath("original.zip");
+            edi::write_project_archive(input.toStdString(), archive.toStdString());
+            input = archive;
+        }
+        need(session.openProject(QUrl::fromLocalFile(input)),
+             "The publication input really opens");
+        settle(session);
+    }
+    if (dirty) session.project()->setName("dirty-publication-witness");
+    settle(session);
+    const auto before = state(session);
+    const QString originalFolder = session.project()->path();
+    const auto originalBytes = image(originalFolder);
+    jobs.clear();
+    archiveSources.clear();
+    archiveTargets.clear();
+    durable.clear();
+    postPublicationCalls.clear();
+    publicationCompleted = false;
+    faultArmed = true;
+    bool returned = false;
+    QString exception;
+    const QString destination = temp.filePath("published.zip");
+    try {
+        if (web) {
+            const auto start = jobs.size();
+            returned =
+                route == "web-save" ? session.save() : beginMove(session, kind) < jobs.size();
+            const auto write = nextWrite(start);
+            need(write < jobs.size(), "A valid browser publication reaches its real held write");
+            finish(write, true, {}, false);
+        } else if (route == "zip-save")
+            returned = session.save();
+        else
+            returned = session.saveProjectAs(QUrl::fromLocalFile(destination), true, false);
+    } catch (const std::exception& error) {
+        exception = QString::fromUtf8(error.what());
+    }
+    faultArmed = false;
+    settle(session);
+    const auto after = state(session);
+    const auto calls = postPublicationCalls;
+    const bool ownFolderExists = QFileInfo::exists(session.project()->path() + "/project.edi");
+    bool ownFolderReadable = false;
+    try {
+        auto own = edi::load_project(session.project()->path().toStdString());
+        ownFolderReadable = !own.structures.empty();
+    } catch (...) {
+    }
+    QString publishedRoot;
+    if (web && !durable.isEmpty()) {
+        publishedRoot = temp.filePath("published-browser-check");
+        const auto payload = durable.constBegin().value();
+        for (auto f = payload.cbegin(); f != payload.cend(); ++f) {
+            const QString path = publishedRoot + "/" + f.key();
+            QDir().mkpath(QFileInfo(path).absolutePath());
+            QFile out(path);
+            need(out.open(QIODevice::WriteOnly),
+                 "The independently published payload is materialized");
+            out.write(f.value());
+        }
+    } else if (!web && publicationCompleted) {
+        QFile archive(route == "zip-save" ? input : destination);
+        need(archive.open(QIODevice::ReadOnly), "The actual published ZIP is readable");
+        publishedRoot = QString::fromStdString(edi::unpack_project_archive(
+            archive.readAll().toStdString(), temp.filePath("published-zip-check").toStdString()));
+    }
+    QJsonArray publishedParameters;
+    if (!publishedRoot.isEmpty()) {
+        auto saved = edi::load_project(publishedRoot.toStdString());
+        for (const auto& entry : edi::parameter_entries(saved)) {
+            const auto& p = *entry.parameter;
+            publishedParameters.append(QJsonObject{
+                {"path", QString::fromStdString(entry.path)},
+                {"value", double(p.value)},
+                {"uncertainty", p.uncertainty ? QJsonValue(*p.uncertainty) : QJsonValue()},
+                {"free", bool(p.free)}});
+        }
+    }
+    browser = false;
+    return {{"before", before},
+            {"after", after},
+            {"returned", returned},
+            {"exception", exception},
+            {"published", publicationCompleted},
+            {"calls", QJsonArray::fromStringList(calls)},
+            {"ownFolderExists", ownFolderExists},
+            {"ownFolderReadable", ownFolderReadable},
+            {"publishedParameters", publishedParameters},
+            {"oldFolderUnchanged", image(originalFolder) == originalBytes}};
+}
 QJsonValue optionalNumber(const std::optional<double>& value) {
     return value ? QJsonValue(bits(*value)) : QJsonValue();
 }
@@ -818,15 +992,37 @@ auto namedBank(const edi::Project& project, const char* name) {
         if (bank->name.value() == name) return bank;
     throw std::runtime_error("The authored mixed-bank project retains both named banks");
 }
+bool pointsCoherent(const edi::ExperimentBase& bank) {
+    std::vector<crysta::BackgroundPointValues> points;
+    if (bank.background_type == "line-segment") {
+        for (const auto& point : bank.background)
+            points.push_back({point->id.value(), point->position, point->intensity.value,
+                              point->intensity.free});
+    } else {
+        for (const auto& term : bank.background_terms)
+            points.push_back({term->id.value(), static_cast<double>(int(term->order)),
+                              term->coef.value, term->coef.free});
+    }
+    return bank.background_estimate_points == crysta::background_points_digest(points);
+}
 QJsonObject mixedSave(const QString& source, bool web) {
     QTemporaryDir temp;
     browser = web;
     auto core = edi::load_project(copy(source, temp.filePath("input")).toStdString());
     auto due = namedBank(core, "due");
     const auto mode = due->background_estimate_mode;
+    const auto origin = due->background_origin;
+    const auto minimum = due->background_x_min, maximum = due->background_x_max;
     const auto inputs = due->background_estimate_inputs, points = due->background_estimate_points;
     // Prepare an already-open model through the public model, without an opening Auto estimate.
     due->background_estimate_mode = "manual";
+    // Opening preview is deliberately valid Manual state. Restore the authored
+    // absent Auto constants before the actual save stimulus and its snapshot.
+    if (due->background_type == "polynomial" && !origin) due->background_origin = 0.;
+    if (due->background_type == "chebyshev" && (!minimum || !maximum)) {
+        due->background_x_min = 10.;
+        due->background_x_max = 60.;
+    }
     ProjectViewModel project(std::move(core), nullptr);
     QElapsedTimer clock;
     clock.start();
@@ -836,6 +1032,9 @@ QJsonObject mixedSave(const QString& source, bool web) {
     }
     need(!project.calculating(), "Initial Manual preview completes before the save stimulus");
     due->background_estimate_mode = mode;
+    due->background_origin = origin;
+    due->background_x_min = minimum;
+    due->background_x_max = maximum;
     due->background_estimate_inputs = inputs;
     due->background_estimate_points = points;
     const auto before = backgroundState(*due);
@@ -855,8 +1054,13 @@ QJsonObject mixedSave(const QString& source, bool web) {
     need(analysis.open(QIODevice::ReadOnly), "The save writes its actual analysis record");
     const auto analysisText = QString::fromUtf8(analysis.readAll());
     QJsonArray liveCurrent, fileCurrent, freshCurrent, liveInputs;
-    for (const auto& point : namedBank(project.project(), "current")->background)
-        liveInputs.append(double(point->intensity.value));
+    const auto currentBank = namedBank(project.project(), "current");
+    if (currentBank->background_type == "line-segment")
+        for (const auto& point : currentBank->background)
+            liveInputs.append(double(point->intensity.value));
+    else
+        for (const auto& term : currentBank->background_terms)
+            liveInputs.append(double(term->coef.value));
     const auto currentValues = [](const edi::Project& p) {
         QJsonArray out;
         const auto& bank = namedBank(p, "current");
@@ -866,7 +1070,11 @@ QJsonObject mixedSave(const QString& source, bool web) {
     };
     liveCurrent = currentValues(project.project());
     fileCurrent = currentValues(reopened);
-    namedBank(reopened, "due")->background_estimate_mode = "manual";
+    for (std::size_t i = 0; i < reopened.experiments.size(); ++i)
+        if (reopened.experiments[i]->name.value() == "due") {
+            reopened.experiments.erase_at(i);
+            break;
+        }
     reopened.refresh_calculated_pattern();
     freshCurrent = currentValues(reopened);
     const auto after = backgroundState(*namedBank(project.project(), "due"));
@@ -877,6 +1085,8 @@ QJsonObject mixedSave(const QString& source, bool web) {
             {"immediate", immediate},
             {"after", after},
             {"file", backgroundState(*namedBank(exactFile, "due"))},
+            {"livePointsCoherent", pointsCoherent(*namedBank(project.project(), "due"))},
+            {"filePointsCoherent", pointsCoherent(*namedBank(exactFile, "due"))},
             {"shownBefore", shownBefore},
             {"shownAfter", shownState(project)},
             {"scientificBefore", scientificBefore},
@@ -885,6 +1095,8 @@ QJsonObject mixedSave(const QString& source, bool web) {
             {"liveCurrent", liveCurrent},
             {"fileCurrent", fileCurrent},
             {"freshCurrent", freshCurrent},
+            {"fileScience", scientificState(exactFile)},
+            {"freshScience", scientificState(reopened)},
             {"analysis", analysisText}};
 }
 QJsonObject exactFields(const QString& source) {
@@ -944,7 +1156,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
     if (web)
         openBrowserInput(session, input, kind);
     else {
-        if (route == "zip-save") {
+        if (route == "zip-save" || route == "zip-copy-current") {
             const QString archive = temp.filePath("original.zip");
             edi::write_project_archive(input.toStdString(), archive.toStdString());
             input = archive;
@@ -954,9 +1166,14 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
         settle(session);
     }
     session.project()->setName("publication-fit-witness");
-    const QString destination =
-        temp.filePath(route.startsWith("folder") ? "chosen-folder" : "chosen.zip");
+    settle(session);
     const QString workingBefore = session.project()->path();
+    const QString destination =
+        route == "folder-copy-current" ? workingBefore
+        : route == "zip-copy-current"
+            ? input
+            : temp.filePath(route.startsWith("folder") ? "chosen-folder" : "chosen.zip");
+    const bool destinationExisted = QFileInfo::exists(destination);
     const auto folderBefore = image(workingBefore);
     QFile archive(input);
     QByteArray archiveBefore;
@@ -1059,7 +1276,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
             {"archivedParameters", archivedParameters},
             {"folderUnchanged", image(workingBefore) == folderBefore},
             {"archiveUnchanged", archiveAfter == archiveBefore},
-            {"destinationExists", QFileInfo::exists(destination)},
+            {"destinationCreated", !destinationExisted && QFileInfo::exists(destination)},
             {"messages", QJsonArray::fromStringList(messages)},
             {"drops", QJsonArray::fromStringList(drops)}};
 }
@@ -1071,10 +1288,43 @@ void write_project_archive(const std::string& source, const std::string& target)
     archiveSources.append(QString::fromStdString(source));
     archiveTargets.append(QString::fromStdString(target));
     transaction_real_archive(source, target);
+    if (faultArmed) publicationCompleted = true;
 }
 std::string fresh_archive_directory(const std::string& kind) {
     stageKinds.append(QString::fromStdString(kind));
     return transaction_real_directory(kind);
+}
+}  // namespace edi
+extern "C" edi::Project transaction_real_load_project(const std::string&, const edi::WarningSink&);
+extern "C" void transaction_real_save_project(const edi::Project&, const std::string&);
+extern "C" void transaction_real_save_project_as(edi::Project&, const std::string&);
+extern "C" bool transaction_real_adopt_saved_values(edi::Project&, const std::string&);
+extern "C" bool transaction_real_adopt_saved_project(edi::Project&, const std::string&);
+extern "C" bool transaction_real_save_report_settings(const edi::Project&, const std::string&);
+namespace edi {
+Project load_project(const std::string& path, const WarningSink& warnings) {
+    fallibleBoundary("load_project");
+    return transaction_real_load_project(path, warnings);
+}
+void save_project(const Project& p, const std::string& path) {
+    fallibleBoundary("save_project");
+    transaction_real_save_project(p, path);
+}
+void save_project_as(Project& p, const std::string& path) {
+    fallibleBoundary("save_project_as");
+    transaction_real_save_project_as(p, path);
+}
+bool adopt_saved_values(Project& p, const std::string& path) {
+    fallibleBoundary("adopt_saved_values");
+    return transaction_real_adopt_saved_values(p, path);
+}
+bool adopt_saved_project(Project& p, const std::string& path) {
+    fallibleBoundary("adopt_saved_project");
+    return transaction_real_adopt_saved_project(p, path);
+}
+bool save_report_settings(const Project& p, const std::string& path) {
+    fallibleBoundary("save_report_settings");
+    return transaction_real_save_report_settings(p, path);
 }
 }  // namespace edi
 extern "C" bool boundary_available() __asm__("__wrap__ZN7edi_app8WebFiles9availableEv");
@@ -1128,7 +1378,8 @@ int main(int argc, char** argv) {
         need(argc == 3, "Requires the independent project folder and the named observation group");
         QString source = argv[1], group = argv[2];
         QJsonArray rows;
-        if (group.startsWith("save-conflict/") || group.startsWith("save-alias-"))
+        if (group.startsWith("save-conflict/") || group.startsWith("save-alias-") ||
+            group.startsWith("save-replaced-"))
             rows.append(saveConflict(source, group.split('/')));
         else if (group == "exact-fields")
             rows.append(exactFields(source));
@@ -1136,6 +1387,8 @@ int main(int argc, char** argv) {
             rows.append(mixedSave(source, group == "mixed-web"));
         else if (group.startsWith("fit-save/"))
             rows.append(fitPublication(source, group.split('/')));
+        else if (group.startsWith("after-publication/"))
+            rows.append(afterPublication(source, group.split('/')));
         else if (group.startsWith("rollback/"))
             rows.append(rollback(source, group.split('/')));
         else if (group == "overlap")

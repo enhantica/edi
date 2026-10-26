@@ -1,10 +1,13 @@
 """Authored save-boundary witnesses; numeric expectations come from decimals and rationals."""
 
+import copy
 import math
 import re
 import shutil
 from decimal import Decimal
 from pathlib import Path
+
+from tests.fixtures.project_save.reference import expected_pair, six_digits
 
 HERE = Path(__file__).resolve().parent
 MEASURED = ((20, 1.23, 1), (30, 1.24, 2), (40, 1.25, 1), (50, 1.26, 2))
@@ -82,7 +85,7 @@ def bank_angle(destination, *, exact=False):
     return root
 
 
-def mixed_project(destination, *, empty=False, provenance='stale'):
+def mixed_project(destination, *, empty=False, provenance='stale', kind='line-segment'):
     root = base(destination)
     (root / 'analysis/analysis.edi').write_text(
         '_edi.schema_version 3\n_fitting_mode.type joint\n'
@@ -174,12 +177,37 @@ MEASURED_ROWS
                         '1.23456789 1.23456789 incl\n'
                     ),
                 )
+        if kind != 'line-segment':
+            text = text.replace('_background.type line-segment', '_background.type ' + kind)
+            constants = (
+                '_background.origin 25.1256\n'
+                if kind == 'polynomial'
+                else '_background.x_min 19.1234\n_background.x_max 51.1234\n'
+            )
+            terms = (
+                ''
+                if name == 'due' and empty
+                else (
+                    'floor 0 2.34567891()\nslope 1 3.45678912\n'
+                    if name == 'due'
+                    else 'floor 0 1.23456789\n'
+                )
+            )
+            block = (
+                constants + 'loop_\n_background.id\n_background.order\n_background.coef\n' + terms
+            )
+            if 'loop_\n_background.id\n' in text:
+                text = re.sub(
+                    r'loop_\n_background.id\n.*?(?=loop_\n_data)', block, text, flags=re.DOTALL
+                )
+            else:
+                text = text.replace('loop_\n_data', block + 'loop_\n_data', 1)
         (root / 'experiments' / (name + '.edi')).write_text(text)
     return root
 
 
-def prepared_mixed(engine, root, *, empty=False, provenance='stale'):
-    root = mixed_project(root, empty=empty, provenance=provenance)
+def prepared_mixed(engine, root, *, empty=False, provenance='stale', kind='line-segment'):
+    root = mixed_project(root, empty=empty, provenance=provenance, kind=kind)
     return engine.Project.load(root), root
 
 
@@ -214,16 +242,42 @@ def bank_state(bank):
     }
 
 
+def rounded_bank_state(before):
+    """Apply only the independent ordinary-value save rule to a background snapshot."""
+    after = copy.deepcopy(before)
+
+    def pair(value, su, free):
+        if free and su is not None and math.isfinite(su) and su > 0:
+            return expected_pair(value, su, 'iucr_99')
+        return six_digits(value), su
+
+    # The dictionary declares positions and origin/domain as basis settings,
+    # distinct from intensity/coefficient Parameters. Keep those settings exact.
+    after['rows'] = [
+        (key, position, *pair(value, su, free), free)
+        for key, position, value, su, free in before['rows']
+    ]
+    after['terms'] = [
+        (key, order, *pair(value, su, free), free)
+        for key, order, value, su, free in before['terms']
+    ]
+    return after
+
+
 if __name__ == '__main__':
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('destination', type=Path)
     args = parser.parse_args()
-    for is_empty in (False, True):
-        for state in ('stale', 'absent'):
-            mixed_project(
-                args.destination / (('empty' if is_empty else 'points') + '-' + state),
-                empty=is_empty,
-                provenance=state,
-            )
+    for model_kind in ('line-segment', 'polynomial', 'chebyshev'):
+        for is_empty in (False, True):
+            for state in ('stale', 'absent'):
+                prefix = '' if model_kind == 'line-segment' else model_kind + '-'
+                mixed_project(
+                    args.destination
+                    / (prefix + ('empty' if is_empty else 'points') + '-' + state),
+                    empty=is_empty,
+                    provenance=state,
+                    kind=model_kind,
+                )
