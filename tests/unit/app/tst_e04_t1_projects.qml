@@ -246,6 +246,19 @@ TestCase {
         compare(Session.openedExample, "", "A directory load cannot claim an example row selection");
         populated(data.expected);
     }
+    function test_retained_fixture_directories_keep_their_independent_project_population_data() {
+        return Oracle.frozen.projects.filter(p => !Oracle.frozen.app_ids.includes(p.id) && p.metadata["_metadata.purpose"] !== "verification").map(p => ({
+                    tag: p.id,
+                    expected: p
+                }));
+    }
+    function test_retained_fixture_directories_keep_their_independent_project_population(data) {
+        verify(!Probe.rows(Session.examples).some(row => row.exampleId === data.expected.id), "A retained fixture stays outside the app examples");
+        Session.openProject(Probe.repoUrl(data.expected.path));
+        verify(Session.hasProject, "The retained fixture directory remains loadable");
+        compare(Session.openedExample, "", "A fixture directory load cannot claim an example row selection");
+        populated(data.expected);
+    }
     function test_directory_warning_is_forwarded_without_special_casing_data() {
         return [
             {
