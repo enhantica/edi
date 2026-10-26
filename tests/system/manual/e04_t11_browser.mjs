@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
-import { controlPointer, restoreCanvasViewport } from './web_control_geometry.mjs';
+import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
@@ -170,18 +170,24 @@ try {
     throw Error('page navigation must finish rendering before the next pointer action');
   };
   const waitNative = async objectName => {
-    const deadline=Date.now()+45000;
-    do {
-      const ready=await evaluate(`(() => {try {const r=window.ediControlGeometry(${JSON.stringify(objectName)});return r.visible&&r.enabled&&r.width>0&&r.height>0;}catch(error){if(/no visible item|no item is named|visible items/.test(error.message))return false;throw error;}})()`);
-      if(ready)return await controlPointer(evaluate,objectName);
-      await frame();
-    } while(Date.now()<deadline);
-    throw Error('The real dialog must expose its declared native control '+objectName);
+    await waitControlGeometry(evaluate,frame,objectName);
+    return controlPointer(evaluate,objectName);
   };
   const click = async (regex, role, nativeObjectName, containerName) => {
     await restoreCanvasViewport(evaluate);
+    const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
+      /Open project/.test(regex.source)?'project.open':/Create a new project/.test(regex.source)?'project.create':null;
+    if(projectAction) {
+      const shown=await evaluate(`(() => {const group=window.ediControlGeometry('group.getStarted');
+        const item=window.ediControlGeometry(${JSON.stringify(projectAction)});
+        return item.x>=group.x && item.y>=group.y && item.x+item.width<=group.x+group.width && item.y+item.height<=group.y+group.height;})()`);
+      if(!shown)await click(/Get started$/,'button');
+      nativeObjectName=projectAction;containerName='group.getStarted';
+    }
     if (role==='radio' && (regex.test('Folder') || regex.test('Zip archive'))) {
-      const target=regex.test('Folder')?'open.folder':'saveAs.zip';
+      const opening=await evaluate(`(() => {try {return window.ediControlGeometry('open.folder').visible;}
+        catch(error) {if (/no visible item|no item is named/.test(error.message)) return false; throw error;}})()`);
+      const target=(opening?'open.':'saveAs.')+(regex.test('Folder')?'folder':'zip');
       await settleRenderedPage();
       const point=await waitNative(target);
       console.log(`browser ${mode}: native choice ${target}, pointer ${point.x},${point.y}`);
@@ -502,7 +508,11 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const fitStarted = await evaluate('performance.now()');
   await click(/^Start fitting$/);
 
-  await waitAX(/^Success$/);
+  // Qt wasm leaves dialog DOM elements closed; observe the actual native summary instead.
+  const outcome=await waitControlGeometry(evaluate,frame,'fit.results.value.0',{enabled:false});
+  assert.equal(outcome.text,'Success',
+    'The actual rendered fit-results Overall status must report successful fitting');
+  await writeFile(join(output,`${mode}-fit-outcome.json`),JSON.stringify(outcome,null,2));
   const fitElapsedMs = (await evaluate('performance.now()')) - fitStarted;
   assert(Number.isFinite(fitElapsedMs) && fitElapsedMs > 0, 'fit measurement must span the actual browser fitting action'); await waitModal(true); await shot('fit-results');
   const progress = await evaluate('window.__e04Progress');
@@ -547,7 +557,6 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   for (const type of ['keyDown','keyUp']) await send('Input.dispatchKeyEvent', {type,key:'Escape',code:'Escape',windowsVirtualKeyCode:27});
   await waitModal(false);
   await click(/^Project$/);
-  await click(/Get started$/, 'button');
   const saved = await saveArchive();
   const before = inspectArchive(saved);
   assertSavedProject(before.name, fitCase);
