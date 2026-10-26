@@ -78,6 +78,11 @@ def decoded(token):
     return gemmi.cif.as_string(token)
 
 
+def native_value(token):
+    """Native experiment markers retain their declared unknown or inapplicable value."""
+    return token if token in {'?', '.'} else decoded(token)
+
+
 def same(actual, token):
     try:
         value = Decimal(re.sub(r'\(\d+\)', '', token))

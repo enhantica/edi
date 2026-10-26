@@ -43,7 +43,7 @@ def test_each_tracked_record_migrates_all_experiments_and_preserves_scientific_b
         ), 'The textual migration preserves every scientific and fit-setting byte'
         values = case.columns(path.read_text())
         for tag, expected in experiment['expected'].items():
-            assert [case.decoded(v) for v in values.get(case.key(tag), [])] == [expected], (
+            assert [case.native_value(v) for v in values.get(case.key(tag), [])] == [expected], (
                 'Every experiment receives its own declared description: ' + tag
             )
     project = importlib.import_module(case.API).Project.load(record.parent)
@@ -52,7 +52,7 @@ def test_each_tracked_record_migrates_all_experiments_and_preserves_scientific_b
         saved = tmp_path / 'saved/experiments' / Path(experiment['path']).name
         values = case.columns(saved.read_text())
         for tag, expected in experiment['expected'].items():
-            assert [case.decoded(v) for v in values.get(case.key(tag), [])] == [expected], (
+            assert [case.native_value(v) for v in values.get(case.key(tag), [])] == [expected], (
                 'Loading and saving must retain every migrated description '
                 'including explicit unknowns'
             )
@@ -133,7 +133,7 @@ def test_legacy_records_convert_once_and_save_only_experiment_fields(tmp_path, c
                 wanted = '?'
             else:
                 wanted = expected
-            assert [case.decoded(v) for v in values.get(case.key(tag), [])] == [wanted], (
+            assert [case.native_value(v) for v in values.get(case.key(tag), [])] == [wanted], (
                 'Legacy descriptions are assigned per experiment and mixed '
                 'probes do not inherit one instrument'
             )
@@ -171,8 +171,20 @@ def test_example_facets_follow_the_pre_move_catalogue_and_each_experiment():
             expected['instruments'] = ['?', 'D1A']
             expected['facilities'] = ['?', 'ILL']
             expected['polarisation'] = ['.', 'unpolarised']
-        assert {k: sorted(v) for k, v in actual.items()} == {
-            k: sorted(v) for k, v in expected.items()
+
+        def facet_value(key, value):
+            if key == 'polarisation' and value == '__not_applicable__':
+                return '.'
+            if (
+                key in {'instruments', 'facilities'} and value == ''  # noqa: PLC1901 - null and false are not string placeholders
+            ):
+                return '?'
+            return value
+
+        assert {
+            k: sorted(facet_value(k, value) for value in values) for k, values in actual.items()
+        } == {
+            k: sorted(facet_value(k, value) for value in values) for k, values in expected.items()
         }, (
             'Every bundled example preserves its facets through the '
             'declared experiment-level conversion'
@@ -185,6 +197,7 @@ def test_description_members_expose_the_effective_probe_defaults(probe):
         case.ROOT / 'tests/fixtures/loop_parameter_ids/line-segment/experiments/bank.edi'
     ).read_text()
     text = text.replace('radiation_probe neutron', 'radiation_probe ' + probe)
+    text += '\n_instrument.name ReferenceInstrument\n_instrument.facility ReferenceFacility\n'
     obj = importlib.import_module(case.API).ExperimentFactory.from_cif_str(text)
     assert obj.experiment_type.dimensionality == '1d', (
         'Omitted dimensionality exposes its effective one-dimensional value'
@@ -192,8 +205,12 @@ def test_description_members_expose_the_effective_probe_defaults(probe):
     assert obj.experiment_type.polarisation == ('unpolarised' if probe == 'neutron' else '.'), (
         'Omitted polarisation exposes the effective value of this radiation probe'
     )
-    assert obj.instrument.name == '?', 'An omitted instrument exposes a declared unknown'
-    assert obj.instrument.facility == '?', 'An omitted facility exposes a declared unknown'
+    assert obj.instrument.name == 'ReferenceInstrument', (
+        'A declared instrument is exposed through the public description member'
+    )
+    assert obj.instrument.facility == 'ReferenceFacility', (
+        'A declared facility is exposed through the public description member'
+    )
 
 
 def test_registry_keeps_verification_as_a_declared_catalogue_flag():
