@@ -1147,9 +1147,17 @@ class CategoryRef {
 
     void point_at(const RowLink& link) noexcept { link_ = &link; }
     const RowLink* get() const noexcept { return link_; }
+    // The site or the experiment holding the parameter, as its handle last reached it, so its display
+    // variant follows its owner in a project or not. Like the row, each encloses the parameter.
+    void held_by(const AtomSite& site) noexcept { site_ = &site; }
+    void held_by(const ExperimentBase& experiment) noexcept { experiment_ = &experiment; }
+    const AtomSite* site() const noexcept { return site_; }
+    const ExperimentBase* experiment() const noexcept { return experiment_; }
 
    private:
     const RowLink* link_ = nullptr;
+    const AtomSite* site_ = nullptr;
+    const ExperimentBase* experiment_ = nullptr;
 };
 
 }  // namespace detail
@@ -4606,6 +4614,11 @@ inline void validate_sequential_data_dir(const std::string& data_dir, const std:
 // The top-level user object. calculate(tof_grid) runs the edi model through the crysta adapter and
 // returns the calculated intensity on the supplied TOF grid (len == tof_grid.size()); the grid is
 // the caller's argument (no measured data needed for a pure forward calculation).
+// The s.u. rule of a project that states none: always two digits (`iucr_99`).
+inline constexpr const char* kDefaultSuRule = "iucr_99";
+// The rule a report and its CIF round by, whatever the project's own: IUCr recommendation 12 (`iucr_19`).
+inline constexpr const char* kReportSuRule = "iucr_19";
+
 class Project : public detail::ProjectAnchor {
    public:
     // A default project holds ONE default structure and ONE default experiment, so the
@@ -4777,7 +4790,7 @@ class Project : public detail::ProjectAnchor {
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
     // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
     // recommendation 12), by crysta's rule.
-    std::string su_rule = "iucr_99";
+    std::string su_rule = kDefaultSuRule;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
     // libraries, and the groups the report leaves out (their keys separated by spaces; empty leaves out none). Its
@@ -5962,7 +5975,12 @@ inline void point_at_row(Category& category) {
     }
 }
 inline void point_parameters(Cell& cell) { point_at_row(cell); }
-inline void point_parameters(AtomSite& site) { point_at_row(site); }
+inline void point_parameters(AtomSite& site) {
+    point_at_row(site);
+    for (Parameter* parameter : site.parameters()) {
+        parameter->category.held_by(site);
+    }
+}
 inline void point_parameters(AtomSiteAniso& tensor) { point_at_row(tensor); }
 inline void point_parameters(LineSegment& point) { point_at_row(point); }
 inline void point_parameters(PolynomialTerm& term) { point_at_row(term); }
@@ -5983,6 +6001,9 @@ inline void point_parameters(Structure& structure) {
 inline void point_parameters(ExperimentBase& experiment) {
     point_parameters(experiment.peak);
     point_parameters(experiment.instrument);
+    for (Parameter* parameter : experiment.instrument.parameters()) {
+        parameter->category.held_by(experiment);
+    }
     for (const std::shared_ptr<LinkedStructure>& link : experiment.linked_structures) {
         point_parameters(*link);
     }

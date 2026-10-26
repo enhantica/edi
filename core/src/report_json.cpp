@@ -8,6 +8,7 @@
 #include <string>
 #include <utility>
 
+#include "edi/model.hpp"
 #include "edi/report_model.hpp"
 #include "json.hpp"
 
@@ -294,7 +295,8 @@ Value single_crystal_json(const ReportSingleCrystal& crystal) {
     };
     return Object{{"h", indices(crystal.h)},         {"k", indices(crystal.k)},       {"l", indices(crystal.l)},
                   {"meas", numbers(crystal.meas)},     {"su", numbers(crystal.su)},     {"calc", numbers(crystal.calc)},
-                  {"title", crystal.title}};
+                  {"title", crystal.title},            {"name", crystal.name},          {"x_title", crystal.x_title},
+                  {"y_title", crystal.y_title},        {"hover", strings(crystal.hover)}};
 }
 
 ReportSingleCrystal single_crystal_of(const Value& value) {
@@ -313,6 +315,17 @@ ReportSingleCrystal single_crystal_of(const Value& value) {
     crystal.su = numbers_of(value.at("su"), "su");
     crystal.calc = numbers_of(value.at("calc"), "calc");
     crystal.title = value.at("title").string("title");
+    // A report written before the chart carried its labels and hover has none of them: they are made from its numbers
+    // as a report makes them, by the dictionary and the report's IUCr rule.
+    const Value& hover = value.get("hover");
+    if (hover.is_null()) {
+        label_single_crystal(crystal, kReportSuRule);
+    } else {
+        crystal.name = value.at("name").string("name");
+        crystal.x_title = value.at("x_title").string("x_title");
+        crystal.y_title = value.at("y_title").string("y_title");
+        crystal.hover = strings_of(hover, "hover");
+    }
     const std::size_t count = crystal.meas.size();
     if (crystal.h.size() != count || crystal.k.size() != count || crystal.l.size() != count ||
         crystal.su.size() != count || (!crystal.calc.empty() && crystal.calc.size() != count)) {

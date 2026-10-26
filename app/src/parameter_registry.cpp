@@ -3,6 +3,7 @@
 
 #include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/parameter_walk.hpp"
 #include "parameter_item.hpp"
 #include "project_editor.hpp"
@@ -54,6 +55,7 @@ void ParameterRegistry::rebuild(edi::Project& project) {
     }
     refreshElements(project);
     refreshEstimated(project);
+    refreshSpelling(project);
     refreshDefiniteness(project);
     if (changed) {
         emit itemsChanged();
@@ -68,26 +70,23 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
     // without changing the set of parameters: it is read again at every publish, never kept from a rebuild.
     // Likewise an ADP parameter's symbol and units, which follow its site's declared type.
     std::unordered_map<const edi::Parameter*, std::string> element;
-    std::unordered_map<const edi::Parameter*, edi::AdpDisplay> adp;
     for (const auto& structure : project.structures) {
         for (const auto& site : structure->atom_sites) {
             for (const edi::Parameter* parameter :
                  {&site->fract_x, &site->fract_y, &site->fract_z, &site->occupancy, &site->adp_iso}) {
                 element.emplace(parameter, site->type_symbol);
             }
-            adp.emplace(&site->adp_iso, edi::adp_display(site->adp_type.value(), "iso"));
             for (const auto& tensor : structure->atom_site_aniso) {
                 if (tensor->id.value() == site->id.value()) {
-                    const char* const components[] = {"11", "22", "33", "12", "13", "23"};
-                    const auto parameters = tensor->parameters();
-                    for (std::size_t i = 0; i < parameters.size(); ++i) {
-                        element.emplace(parameters[i], site->type_symbol);
-                        adp.emplace(parameters[i], edi::adp_display(site->adp_type.value(), components[i]));
+                    for (const edi::Parameter* parameter : tensor->parameters()) {
+                        element.emplace(parameter, site->type_symbol);
                     }
                 }
             }
         }
     }
+    // An ADP's label and units for its site's declared type, from the dictionary's variants.
+    const std::unordered_map<const edi::Parameter*, std::string> variants = edi::parameter_variants(project);
     // A phase's scale and texture take the colour of the structure they belong to, when there are several.
     std::unordered_map<const edi::Parameter*, int> phase;
     if (project.structures.size() > 1) {
@@ -117,9 +116,16 @@ void ParameterRegistry::refreshElements(const edi::Project& project) {
         item->setElementSymbol(site != element.end() ? QString::fromStdString(site->second) : QString());
         const auto owner = phase.find(item->parameter());
         item->setPhaseIndex(owner != phase.end() ? owner->second : -1);
-        if (const auto label = adp.find(item->parameter()); label != adp.end()) {
-            item->setLabel(QString::fromStdString(label->second.short_name),
-                           QString::fromStdString(label->second.display_units));
+        if (const auto variant = variants.find(item->parameter()); variant != variants.end()) {
+            const std::string uid = item->uid().toStdString();
+            item->setLabel(QString::fromStdString(edi::label(uid, variant->second)),
+                           QString::fromStdString(edi::units_label(uid, variant->second)));
+            item->setVariant(QString::fromStdString(variant->second));
+        } else if (!item->variant().isEmpty()) {
+            // A variant the parameter no longer has (a doublet switched off) gives back the item's own label.
+            const std::string uid = item->uid().toStdString();
+            item->setLabel(QString::fromStdString(edi::label(uid)), QString::fromStdString(edi::units_label(uid)));
+            item->setVariant(QString());
         }
     }
 }
@@ -168,6 +174,15 @@ void ParameterRegistry::refreshEstimated(const edi::Project& project) {
     }
 }
 
+void ParameterRegistry::refreshSpelling(const edi::Project& project) {
+    // A field shows a value as the save writes it, exactly where the save does: a cell that rounded would not
+    // load, or every value. That follows any edit, so it is read again with the rule at every publish.
+    const edi::SaveSpelling spelling = edi::save_spelling(project);
+    for (ParameterItem* item : items_) {
+        item->setSpelling(project.su_rule, edi::written_exactly(spelling, project, *item->parameter()));
+    }
+}
+
 void ParameterRegistry::refreshDefiniteness(const edi::Project& project) {
     // A tensor with a negative eigenvalue is kept and shown red, each of its components naming why (the owner,
     // 2026-10-23).
@@ -189,6 +204,7 @@ void ParameterRegistry::publish(edi::Project& project) {
     refreshElements(project);
     refreshRefinable(project);
     refreshEstimated(project);
+    refreshSpelling(project);
     refreshDefiniteness(project);
     for (ParameterItem* item : items_) {
         item->publish();

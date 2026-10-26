@@ -122,7 +122,7 @@ def violations(text, case):
             ],
         ],
         'structure-cardinality': [
-            (text['structure'], r'openFiles\("\.edi", false\)', 'one Structure file'),
+            (text['structure'], r'openFiles\("\.cif,\.edi", false\)', 'one Structure file'),
             (text['experiment'], r'openFiles\("\.edi", true\)', 'Experiment batch'),
             (
                 text['source'],
@@ -204,7 +204,7 @@ def test_every_browser_file_receiver_preserves_request_ownership(case):
             ],
         ],
         'structure-cardinality': [
-            ('structure', 'openFiles(".edi", false)', 'openFiles(".edi", true)'),
+            ('structure', 'openFiles(".cif,.edi", false)', 'openFiles(".cif,.edi", true)'),
             ('experiment', 'openFiles(".edi", true)', 'openFiles(".edi", false)'),
         ],
     }

@@ -772,7 +772,7 @@ TEST_CASE("E09-T55 background and measured loops reject partial plausible shapes
          "requires a loop declaring both"},
         {with_background("loop_\n_background.id\n_background.position\n1 10\n"
                          "loop_\n_background.id\n_background.intensity\n1 169"),
-         "the background points are declared in more than one loop"},
+         "both _background.id and _background.id"},
     };
     for (const auto& [source, fragment] : background_refusals) {
         check_io_error([&] { static_cast<void>(edi::experiment_from_edi_text(source)); }, fragment,

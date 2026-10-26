@@ -123,7 +123,7 @@ class Session : public QObject {
     // `reportLibraries` is the preference for whether its saved HTML reports embed their chart libraries, written into
     // the new project's `_report.html_offline` (ADR-0036 §7); no other project takes the preference.
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
-                                   const QString& suRule = QStringLiteral("iucr_19"), const QString& title = QString(),
+                                   const QString& suRule = QStringLiteral("iucr_99"), const QString& title = QString(),
                                    const QString& authors = QString(), bool reportLibraries = false);
     Q_INVOKABLE void closeProject();
     // The open project's calculation refusals into the message list, after each recalculation (§14).
@@ -162,6 +162,24 @@ class Session : public QObject {
     Q_INVOKABLE bool projectDirectoryExists(const QString& path) const;
     /// Turn a native directory path into the file URL accepted by openProject.
     Q_INVOKABLE QUrl projectDirectoryUrl(const QString& path) const;
+
+    // Every name and number a page shows, from crysta's dictionary through the core's display bridge: an item's
+    // label, units and tooltip (the label and the `.edi` name it labels), a selector option's name, a category's
+    // title, and a value in the item's display format. `uid` is `category.name`; `variant` the token its label or
+    // format depends on (an ADP's type). An item the dictionary lacks shows its uid, so the page still reads.
+    Q_INVOKABLE QString label(const QString& uid, const QString& variant = QString()) const;
+    Q_INVOKABLE QString units(const QString& uid, const QString& variant = QString()) const;
+    Q_INVOKABLE QString tooltip(const QString& uid, const QString& variant = QString()) const;
+    Q_INVOKABLE QString optionLabel(const QString& uid, const QString& token) const;
+    Q_INVOKABLE QString optionTooltip(const QString& uid, const QString& token) const;
+    Q_INVOKABLE QString categoryTitle(const QString& id) const;
+    // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
+    Q_INVOKABLE QString written(const QString& uid, double value) const;
+    Q_INVOKABLE QString display(const QString& uid, double value, const QString& variant = QString()) const;
+    // A read-only value of item `uid` and its s.u. as a table shows them apart: rounded by the s.u. under the project's
+    // rule (edi::fitted_text), or without one by the item's display format, the s.u. then empty.
+    Q_INVOKABLE QString valueText(const QString& uid, double value, double su) const;
+    Q_INVOKABLE QString suText(const QString& uid, double value, double su) const;
 
    signals:
     // Just before the open project is replaced (or closed): the pages let go of it first (edi ADR-0052).
