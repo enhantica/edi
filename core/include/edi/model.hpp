@@ -1209,6 +1209,10 @@ struct Parameter {
     // fittable).
     FitBlocker fit_blocker = FitBlocker::None;
     std::string fit_reason;
+    // Set with them: no enabled link reads the value (a disabled link's scale and texture, a structure no enabled link
+    // names). Its free flag is kept for when a link reads it again, so a fit leaves it out and neither a fit nor a load
+    // refuses or clears it.
+    bool fit_idle = false;
 
     Parameter() = default;
     Parameter(double value_, std::optional<double> esd_ = 0.0, bool free_ = false)

@@ -34,11 +34,13 @@ bool is_descriptor(const std::string& uid);
 std::string fit_reason(FitBlocker blocker);
 
 // The fit entries' check: refreshes the marks, then refuses (std::invalid_argument) the first free parameter a fit
-// cannot vary, as `<unique name> cannot be fitted: <reason>`. A dependent's flag is cleared by the relations instead.
+// cannot vary, as `<unique name> cannot be fitted: <reason>`. A dependent's flag is cleared by the relations instead,
+// and an idle parameter's (Parameter::fit_idle) is kept.
 void require_fittable_free(Project& project);
 
 // The loader's pass: refreshes the marks, clears the free flag of every parameter a fit cannot vary, keeping its
-// value and uncertainty, and returns one note each, `<unique name> cannot be fitted: <reason>; loaded fixed`.
+// value and uncertainty, and returns one note each, `<unique name> cannot be fitted: <reason>; loaded fixed`. An idle
+// parameter's flag is kept.
 std::vector<std::string> clear_unfittable_free(Project& project);
 
 }  // namespace edi
