@@ -88,9 +88,18 @@ TestCase {
         return item;
     }
     function shortcut() {
-        const candidates = View.descendants(area()).filter(item => typeof item.clicked === "function" && (item.text === "Fit" || item.keyText === "Fit" || item.valueText === "Fit"));
-        compare(candidates.length, 1, "The fit-results group contains exactly one status shortcut labelled Fit");
+        const candidates = View.descendants(area()).filter(item => item.objectName === "statusBar.fit.button" && typeof item.clicked === "function");
+        compare(candidates.length, 1, "The fit-results group contains exactly one stateful Fit shortcut");
         return candidates[0];
+    }
+    function caption(item) {
+        return typeof item.valueText === "string" ? item.valueText : item.text;
+    }
+    function fitState(shortText, sidebarText) {
+        compare(caption(shortcut()), shortText, "The status Fit shortcut names the actual idle, continuing or running state");
+        compare(analysisButton().text, sidebarText, "The Analysis button names the same actual fitting state");
+        compare(icon(shortcut()), icon(analysisButton()), "The status shortcut uses the sidebar icon for its actual fitting state");
+        verify(icon(shortcut()) !== "", "Each fitting state renders its sidebar action icon");
     }
     function analysisButton() {
         const item = findChild(Ui.page(appWindow), "fitting.start");
@@ -175,6 +184,7 @@ TestCase {
     }
     function test_status_start() {
         open("single");
+        fitState("Fit", "Start fitting");
         const button = shortcut();
         compare(button.enabled, analysisButton().enabled, "An idle status shortcut follows Analysis availability");
         compare(icon(button), icon(analysisButton()), "The idle status shortcut shows the Analysis start icon");
@@ -201,11 +211,13 @@ TestCase {
         tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 10000, "The restored partial scan publishes its selected dataset");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
         verify(Session.project.fit.continuable && /Continue/.test(analysisButton().text), "The physical resume witness reaches Analysis Continue fitting");
+        fitState("Continue", "Continue fitting");
         compare(shortcut().enabled, analysisButton().enabled, "The status shortcut follows Continue fitting availability");
         compare(icon(shortcut()), icon(analysisButton()), "The status shortcut follows Continue fitting's icon");
         click(shortcut());
         finish();
         compare(Session.project.fit.scanFitted, 2, "Status Fit continues the partial scan through the newly added measured dataset");
+        fitState("Fit", "Start fitting");
     }
     function test_running_action_data() {
         return [
@@ -220,8 +232,10 @@ TestCase {
     function test_running_action(data) {
         open("scan");
         const button = data.tag === "status" ? shortcut() : analysisButton();
+        fitState("Fit", "Start fitting");
         Session.project.fit.start();
         verify(Session.project.fit.running, "The actual worker enters its running state synchronously before stop input");
+        fitState("Stop", "Stop fitting");
         if (data.tag === "status") {
             compare(button.enabled, analysisButton().enabled, "While running the status shortcut remains enabled exactly like Analysis");
             compare(icon(button), icon(analysisButton()), "While running the status shortcut changes to the actual Analysis stop icon");
@@ -230,6 +244,7 @@ TestCase {
         click(button);
         finish();
         compare(Session.project.fit.outcome, "stopped", "The running status and Analysis actions both stop the actual fit worker");
+        fitState(Session.project.fit.continuable ? "Continue" : "Fit", Session.project.fit.continuable ? "Continue fitting" : "Start fitting");
     }
     function test_button_style_data() {
         return [
@@ -269,6 +284,13 @@ TestCase {
         tryVerify(() => data.tag === "light" ? luminance(label[0].color) > .9 : luminance(label[0].color) < .1, 1500, "Fit caption ink is white in light mode and inverted in dark mode");
         const glyphs = View.textItems(button).filter(item => item.text !== "Fit");
         verify(glyphs.length > 0 && glyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .1), "The status Fit icon has the same white or inverse ink as its caption");
+        const sidebar = analysisButton(), sidebarFill = rectangle(sidebar);
+        tryVerify(() => data.tag === "light" ? luminance(sidebarFill.color) < .25 : luminance(sidebarFill.color) > .75, 1500, "The Analysis fit button shares the status shortcut's dark primary fill and its dark-mode inverse");
+        const sidebarLabel = View.textItems(sidebar).filter(item => item.text === sidebar.text);
+        compare(sidebarLabel.length, 1, "The primary Analysis fit button renders its state caption");
+        tryVerify(() => data.tag === "light" ? luminance(sidebarLabel[0].color) > .9 : luminance(sidebarLabel[0].color) < .1, 1500, "The primary Analysis fit caption shares the status shortcut's white or inverse ink");
+        const sidebarGlyphs = View.textItems(sidebar).filter(item => item.text === icon(sidebar));
+        verify(sidebarGlyphs.length > 0 && sidebarGlyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .1), "The primary Analysis fit icon shares the status shortcut's white or inverse ink");
         verify(button.mapToItem(area(), 0, 0).x < status.mapToItem(area(), 0, 0).x, "The Fit shortcut sits at the left of the fit-results controls");
     }
     function test_preference_default_and_user_store() {
