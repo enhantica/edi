@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <limits>
 #include <map>
+#include <numeric>
 #include <unordered_map>
 #include <memory>
 #include <optional>
@@ -883,9 +884,6 @@ ReportOptions effective_report_options(const Project& project, const ReportOverr
     if (overrides.colour_scheme) {
         options.colour_scheme = scheme_named(*overrides.colour_scheme);
     }
-    if (overrides.structure_colour_scheme) {
-        options.structure_colour_scheme = scheme_named(*overrides.structure_colour_scheme);
-    }
     if (overrides.correlation_experiment) {
         const auto& experiments = project.experiments;
         const auto found = std::find_if(experiments.begin(), experiments.end(), [&overrides](const auto& experiment) {
@@ -1078,11 +1076,23 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
         model.sections.push_back(ReportSection::Evolution);
         model.evolution = evolution_of(input, rule);
     }
-    // A scan reports its template dataset at its place among the scan's datasets, in the colour the app's pages give
-    // it there; the table has a measured row for each dataset.
-    model.pattern_styles = pattern_style_table(options.colour_scheme,
-                                               scan && scan->place ? scan->files : project.experiments.size(),
-                                               project.structures.size(), options.structure_colour_scheme);
+    // Every item at its position in the palette, the app's when it gives them. A scan reports its template dataset at
+    // its place among the scan's datasets, in the colour the app's pages give it there; the table has a measured row
+    // for each dataset.
+    const std::size_t experiments = project.experiments.size();
+    const std::size_t structures = project.structures.size();
+    std::vector<std::size_t> positions = options.colour_positions.size() == experiments + structures
+                                             ? options.colour_positions
+                                             : colour_positions(options.colour_scheme, experiments, structures);
+    if (scan && scan->place) {
+        // The datasets at the positions the structures leave free (ADR-0038 §4).
+        const std::vector<std::size_t> held(positions.begin() + static_cast<std::ptrdiff_t>(experiments),
+                                            positions.end());
+        positions = free_positions(options.colour_scheme, FigureKind::Experiment, scan->files, held);
+        positions.insert(positions.end(), held.begin(), held.end());
+    }
+    model.pattern_styles = pattern_style_table(options.colour_scheme, scan && scan->place ? scan->files : experiments,
+                                               structures, positions);
     model.structure_styles = structure_style_table();
     return model;
 }
