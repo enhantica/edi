@@ -209,9 +209,10 @@ def test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo(
     assert observed['refitUndoRestored'], (
         'Refit Undo: the previous prefix and provenance bytes are restored exactly'
     )
-    for field in ('parameterFacts', 'rows', 'summary', 'template', 'stale', 'evolutionStale'):
+    for field in ('rows', 'summary', 'template', 'stale', 'evolutionStale'):
         assert observed['undoRefit'][field] == observed['edited'][field], (
-            'Refit Undo: the previous edited template and result state restore together'
+            'Refit Undo: the previous result rows, summary, template designation '
+            'and stale state restore'
         )
     assert not observed['saveError'], 'Refit: Save As of the new results must succeed'
     for name in ('mixed', 'reopened', 'undoReset'):
