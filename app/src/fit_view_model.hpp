@@ -214,9 +214,12 @@ class FitViewModel : public QObject {
     // A pattern chart of the current experiment, or a Stacked view or Map, was shown or hidden
     // (ProjectViewModel::patternShown, scanViewShown).
     void patternShownChanged();
+    // The followed file's points are in the frame being started: its name and count change now, in that frame; the
+    // next file waits for followRendered. `token` as below.
+    void followPresented(std::uint64_t token, const std::string& file);
     // The followed file handed to the owner was drawn on screen (`drawn`), or will not be (its read or application
-    // failed, or the window drew nothing in time): only now is it counted, and the next pattern asked for.
-    // `token` is the one handed over with the file (handOver); a receipt with any other is ignored.
+    // failed, or the window drew nothing in time): it is counted now unless followPresented counted it, and the next
+    // pattern asked for. `token` is the one handed over with the file (handOver); a receipt with any other is ignored.
     void followRendered(std::uint64_t token, const std::string& file, bool drawn);
     bool measured() const { return measured_; }
     bool available() const { return available_; }
@@ -363,6 +366,8 @@ class FitViewModel : public QObject {
     bool caught_up_pending_ = false;
     // A followed file is drawn: the shown file and the count move on.
     void patternDrawn(const std::string& file);
+    // The token whose file's name and count already moved with its frame (followPresented); 0 if none.
+    std::uint64_t presented_token_ = 0;
     // Every pattern, fit waits: the job waits while a view that shows each file is on screen.
     bool waitsForView(int mode) const;
     // The view can take the next followed file.

@@ -684,6 +684,7 @@ void FitViewModel::dropHandedFile() {
     // A receipt still on its way for the file handed over last no longer counts.
     if (handed_token_ != 0) {
         handed_token_ = 0;
+        presented_token_ = 0;
         handed_file_.clear();
         owner_.releaseFollow();
     }
@@ -703,8 +704,8 @@ void FitViewModel::drainFollowed() {
     // A pattern chart draws the file's pattern; without one (the Stacked or the Map view) the file is shown as the
     // current dataset.
     const bool chart = owner_.patternShown();
-    if (chart ? !owner_.followReady() : !owner_.viewSettled()) {
-        return;
+    if (chart ? !owner_.followReady() : !owner_.scanViewShown() || !owner_.viewSettled()) {
+        return;  // shown once a view that shows it is on screen
     }
     auto [file, frame] = std::move(catch_up_.front());
     catch_up_.pop_front();
@@ -769,14 +770,25 @@ void FitViewModel::followShown() {
     }
 }
 
+void FitViewModel::followPresented(std::uint64_t token, const std::string& file) {
+    if (token == 0 || token != handed_token_ || presented_token_ == token) {
+        return;
+    }
+    presented_token_ = token;
+    // The interval runs from the drawing, so no two drawn patterns are closer than it.
+    follow_clock_.start();
+    patternDrawn(file);
+}
+
 void FitViewModel::followRendered(std::uint64_t token, const std::string& file, bool drawn) {
     if (token == 0 || token != handed_token_) {
         return;  // a receipt for a file handed over before the one awaited, or one already dropped
     }
+    const bool presented = presented_token_ == token;
     handed_token_ = 0;
     handed_file_.clear();
-    if (drawn) {
-        // The interval runs from the drawing, so no two drawn patterns are closer than it.
+    presented_token_ = 0;
+    if (drawn && !presented) {
         follow_clock_.start();
         patternDrawn(file);
     }

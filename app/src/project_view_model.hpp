@@ -613,8 +613,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int render_swaps_ = -1;  // 1 while a followed file waits for its frame, -1 while nothing waits for one
     // Set while a followed file waits for its frame; cleared at the start of the next frame (QQuickWindow::afterAnimating).
     std::atomic<bool> render_armed_{false};
+    // Set at the start of the frame that takes a followed file's points; the render thread clears it once that frame is
+    // synchronised, and the receipt follows on this thread.
+    std::atomic<bool> render_synced_{false};
     QTimer render_wait_;
     QMetaObject::Connection render_connection_;
+    QMetaObject::Connection render_sync_connection_;
     void handFollowed(int index, const std::string& file, std::uint64_t token);
     void awaitRender();
     bool presentedFollowed() const;

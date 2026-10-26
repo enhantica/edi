@@ -1904,7 +1904,8 @@ void ProjectViewModel::handFollowed(int index, const std::string& file, std::uin
 bool ProjectViewModel::presentedFollowed() const {
     // Presented as the current dataset: it still is.
     if (follow_selection_) {
-        return current_dataset_ == follow_index_;
+        // As the current dataset on a shown Stacked view or Map.
+        return current_dataset_ == follow_index_ && scanViewShown();
     }
     // The model still holds the followed dataset, and a shown chart has drawn its pattern (the one its application
     // set, or a later calculation of the same dataset).
@@ -1941,17 +1942,42 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // The pattern is in the scene now, so the next frame synchronises it. Its file name, its count and the receipt
-        // that asks for the next file go at the start of that frame, on this thread before the frame's polish and
-        // synchronisation, so the name a user reads changes in the frame that shows the file's points, never a frame
-        // before or after (edi ADR-0029). The next file then arrives after this frame is synchronised, and is applied
-        // while the render thread draws this one.
+        // The pattern is in the scene now, so the next frame synchronises it. Its file name and count change at the
+        // start of that frame, on this thread before its polish and synchronisation, so the name a user reads changes in
+        // the frame that shows the file's points (edi ADR-0029). The receipt that releases the next file comes once that
+        // frame is synchronised: the render thread signals it, and it reaches this thread after the frame has taken the
+        // points, so the next file is applied while the render thread draws this one, never in the same frame.
         render_connection_ = connect(window, &QQuickWindow::afterAnimating, this, [this] {
-            if (render_armed_.exchange(false) && render_swaps_ > 0) {
+            if (!render_armed_.exchange(false) || render_swaps_ <= 0) {
+                return;
+            }
+            if (!presentedFollowed()) {
                 // Hidden, or another pattern replaced it, before its frame: not drawn.
-                followRendered(presentedFollowed());
+                followRendered(false);
+                return;
+            }
+            // This frame synchronises the file's points: its name and count go with them now, and the receipt that
+            // releases the next file once the frame has taken them.
+            render_synced_.store(true);
+            if (fit_ != nullptr) {
+                fit_->followPresented(follow_token_, follow_file_);
             }
         });
+        render_sync_connection_ = connect(
+            window, &QQuickWindow::afterSynchronizing, this,
+            [this] {
+                if (render_synced_.exchange(false)) {
+                    QMetaObject::invokeMethod(
+                        this,
+                        [this] {
+                            if (render_swaps_ > 0) {
+                                followRendered(presentedFollowed());
+                            }
+                        },
+                        Qt::QueuedConnection);
+                }
+            },
+            Qt::DirectConnection);
     }
     render_swaps_ = 1;
     render_armed_.store(true);
@@ -1972,6 +1998,7 @@ void ProjectViewModel::followRendered(bool drawn) {
     follow_selection_ = false;
     render_swaps_ = -1;
     render_armed_.store(false);
+    render_synced_.store(false);
     render_wait_.stop();
     if (fit_ != nullptr) {
         fit_->followRendered(token, file, drawn);
