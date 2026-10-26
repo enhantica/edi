@@ -107,12 +107,14 @@ def inventory():
                 names += variant.get('cif_names', [])
         rows.append({
             **row,
-            'cif_names': list(dict.fromkeys(filter(None, names))),
+            'cif_names': list(dict.fromkeys(n for n in names if n.startswith('_'))),
             'edi_names': row.get('edi_names', [row.get('cif_tag', '')]),
         })
     known = {key(n) for row in rows for n in row['edi_names']}
     census = json.loads((source_root() / 'data/category-census.json').read_text())
     for category in census['categories']:
+        if not category['name'].startswith('_'):
+            continue
         for column in category.get('columns', []):
             for item in column.get('items', []):
                 canonical = category['name'] + '.' + item
@@ -125,7 +127,7 @@ def inventory():
                         'edi_names': [canonical],
                     })
                     known.add(key(canonical))
-    return rows
+    return [row for row in rows if row['cif_names']]
 
 
 def token(row):
@@ -170,7 +172,7 @@ def project_input(kind, text, directory, suffix='.cif'):
 
 def attach(api, kind, obj):
     if API == 'crysta' and kind == 'structure':
-        return api.Project(obj,[])
+        return api.Project(obj, [])
     if API == 'crysta' and kind == 'experiment':
         phase = api.StructureFactory.from_cif_str(
             STRUCTURE.replace('data_witness', 'data_phase', 1)
@@ -208,6 +210,8 @@ def attach(api, kind, obj):
 
 
 def observe(kind, text, directory, route='factory-str', suffix='.cif'):
+    if route == 'collection-edi-path':
+        suffix = '.edi'
     api = importlib.import_module(API)
     directory.mkdir(parents=True, exist_ok=True)
     with warnings.catch_warnings(record=True) as caught:

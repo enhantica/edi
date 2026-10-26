@@ -68,7 +68,7 @@ def generate():
         'rows': rows,
     }
     Path(__file__).with_name('readers-before.json.gz').write_bytes(
-        gzip.compress(json.dumps(payload,separators=(',',':')).encode(),mtime=0)
+        gzip.compress(json.dumps(payload, separators=(',', ':')).encode(), mtime=0)
     )
 
 
