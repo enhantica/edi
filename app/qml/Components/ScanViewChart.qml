@@ -408,6 +408,18 @@ Item {
             objectName: "scanView." + chart.mode + ".pointer"
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
+            // On Stacked the wheel scrolls through a stack taller than the plot (a fixed height), the shown range keeping
+            // its height so each pattern keeps its own: up to the highest pattern's top, down to the lowest baseline.
+            onWheel: wheel => {
+                const top = Math.max(1, layer.stackTop);
+                const span = chart.yMax - chart.yMin;
+                if (chart.mode !== "stacked" || wheel.angleDelta.y === 0 || !(span > 0) || span >= top) {
+                    wheel.accepted = false;
+                    return;
+                }
+                const from = Math.max(0, Math.min(top - span, chart.yMin + wheel.angleDelta.y / 120 * span * 0.2));
+                chart.setZoom(chart.zoomX, [from, from + span]);
+            }
             hoverEnabled: true
             cursorShape: Qt.CrossCursor
             onExited: hovered = -1

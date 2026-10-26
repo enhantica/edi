@@ -344,8 +344,19 @@ void ScanLayer::place() {
     for (std::size_t i = 0; i < order.size(); ++i) {
         baselines_[order[i]] = static_cast<double>(i) * pattern_height_ * offset_;
     }
+    stack_top_ = std::max(0.0, count - 1.0) * pattern_height_ * offset_ + pattern_height_;
     emit placementChanged();
     redraw();
+}
+
+std::vector<edi::ScanRowSpan> ScanLayer::stackedSpans() const {
+    // Each stacked pattern from its baseline to its top (place), the extent its excluded ranges are tinted over.
+    std::vector<edi::ScanRowSpan> spans(baselines_.size());
+    for (std::size_t d = 0; d < baselines_.size(); ++d) {
+        spans[d].low = baselines_[d];
+        spans[d].high = baselines_[d] + pattern_height_;
+    }
+    return spans;
 }
 
 double ScanLayer::rowOf(int dataset) const {
@@ -642,12 +653,12 @@ QColor excluded_tint(bool dark) {
     return tint;
 }
 
-// The excluded ranges (edi ADR-0021 §4), each over its dataset's row, on whole pixels so that two rows' bands meet
-// without a line between them; a scan's datasets share the template's ranges, so its bands run the plot's height.
-std::vector<QRect> excluded_bands(const ScanViewModel& model, double x_min, double x_max, double y_min, double y_max,
-                                  int columns, int pixel_rows) {
+// The excluded ranges (edi ADR-0021 §4), each over its dataset's row, `spans` (the Map's rows, or each stacked pattern's
+// baseline to its top), on whole pixels so that two rows' bands meet without a line between them; a scan's datasets
+// share the template's ranges, so its bands run the plot's height.
+std::vector<QRect> excluded_bands(const ScanViewModel& model, const std::vector<edi::ScanRowSpan>& spans, double x_min,
+                                  double x_max, double y_min, double y_max, int columns, int pixel_rows) {
     const std::vector<ScanViewModel::Pattern>& patterns = model.patterns();
-    const std::vector<edi::ScanRowSpan>& spans = model.spans();
     const std::size_t count = std::min({patterns.size(), model.rows().size(), spans.size()});
     const auto px = [&](double x) { return (x - x_min) / (x_max - x_min) * columns; };
     const auto py = [&](double y) { return (y_max - y) / (y_max - y_min) * pixel_rows; };
@@ -671,6 +682,9 @@ std::vector<QRect> excluded_bands(const ScanViewModel& model, double x_min, doub
         return bands;
     }
     for (std::size_t d = 0; d < count; ++d) {
+        if (!std::isfinite(spans[d].low) || !std::isfinite(spans[d].high)) {
+            continue;  // a dataset with no place
+        }
         const int top = std::clamp(static_cast<int>(std::lround(py(spans[d].high))), 0, pixel_rows);
         const int bottom = std::clamp(static_cast<int>(std::lround(py(spans[d].low))), 0, pixel_rows);
         for (const auto& [a, b] : patterns[d].excluded_shown) {
@@ -748,7 +762,7 @@ void ScanLayer::feedLines() {
     if (x_max_ > x_min_ && y_max_ > y_min_) {
         const int columns = std::max(1, static_cast<int>(std::ceil(width())));
         const int pixel_rows = std::max(1, static_cast<int>(std::ceil(height())));
-        for (const QRect& band : excluded_bands(*model_, x_min_, x_max_, y_min_, y_max_, columns, pixel_rows)) {
+        for (const QRect& band : excluded_bands(*model_, stackedSpans(), x_min_, x_max_, y_min_, y_max_, columns, pixel_rows)) {
             bands.emplace_back(band);
         }
     }
@@ -776,7 +790,8 @@ void ScanLayer::paint(QPainter* painter) {
     const int pixel_columns = std::max(1, static_cast<int>(std::ceil(width())));
     const int pixel_rows = std::max(1, static_cast<int>(std::ceil(height())));
     const auto excluded = [&](const QColor& colour) {
-        for (const QRect& band : excluded_bands(*model_, x_min_, x_max_, y_min_, y_max_, pixel_columns, pixel_rows)) {
+        for (const QRect& band : excluded_bands(*model_, mode_ == QLatin1String("map") ? spans : stackedSpans(), x_min_, x_max_, y_min_, y_max_,
+                                                 pixel_columns, pixel_rows)) {
             painter->fillRect(band, colour);
         }
     };
