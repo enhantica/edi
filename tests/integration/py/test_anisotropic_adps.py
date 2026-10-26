@@ -12,6 +12,12 @@ import numpy as np
 import pytest
 
 from conftest import project_record_datetime, tree_bytes_with_normalized_project_metadata
+from tests.fixtures.project_save.reference import (
+    require_saved_parameters,
+    saved_parameters,
+    six_digits,
+)
+from tests.fixtures.project_save.rounded_input import materialize as rounded_input
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/anisotropic_adps'
@@ -166,19 +172,24 @@ def test_each_declared_type_survives_load_and_two_saves(tmp_path, cell, kind):
     site = project.structure.atom_sites[0]
     assert site.adp_type == kind, 'Loading must preserve each declared ADP type'
     first = pattern(project)
+    rounded = engine.Project.load(rounded_input(tmp_path / 'input', tmp_path / 'rounded-input'))
+    expected_pattern = pattern(rounded)
+    assert first.shape == expected_pattern.shape, (
+        'Independent decimal projection retains every observed pattern coordinate'
+    )
     previous = None
     previous_files = None
     previous_modified = None
     for generation in range(2):
+        expected_parameters = saved_parameters(project, 'iucr_99')
         text = saved(project, tmp_path / f'saved-{generation}')
+        require_saved_parameters(project.parameters, expected_parameters)
         rows = loop_rows(text, '_atom_site')
         assert rows[0]['_atom_site.adp_type'] == kind, 'Saving must write the current ADP type'
         if kind in {'Uani', 'Bani', 'beta'}:
-            np.testing.assert_allclose(
+            np.testing.assert_array_equal(
                 tensor_from_saved(text),
-                reference['values'][kind],
-                rtol=2e-7,
-                atol=2e-9,
+                [six_digits(value) for value in reference['values'][kind]],
                 err_msg='All six declared tensor components must survive serialization',
             )
         if generation:
@@ -201,15 +212,16 @@ def test_each_declared_type_survives_load_and_two_saves(tmp_path, cell, kind):
         previous_modified = modified
         previous = text
         project = engine.Project.load(tmp_path / f'saved-{generation}')
+        require_saved_parameters(project.parameters, expected_parameters)
         assert project.structure.atom_sites[0].adp_type == kind, (
             'Reloading must preserve the serialized ADP type'
         )
         np.testing.assert_allclose(
             pattern(project),
-            first,
+            expected_pattern,
             rtol=3e-7,
             atol=1e-7,
-            err_msg='A complete ADP round trip must preserve the calculated pattern',
+            err_msg='A saved ADP pattern matches the independently rounded input model',
         )
 
 
@@ -241,24 +253,38 @@ def test_user_type_change_converts_with_cctbx_and_saves_current_type(tmp_path, s
     reference = ORACLE['cells'][0]
     project = load_project(tmp_path / 'input', structure_text(source, reference))
     project.structure.atom_sites[0].adp_type = target
+    if target in {'Uani', 'Bani', 'beta'}:
+        expected = list(reference['isotropic' if source in {'Uiso', 'Biso'} else 'values'][target])
+        if source in {'Uiso', 'Biso'} and reference['cell'][3] == reference['cell'][5] == 90:
+            # cos(alpha) = cos(gamma) = 0 makes reciprocal xy and yz exactly zero.
+            expected[3] = expected[5] = 0.0
+        actual = [
+            getattr(project.structure.atom_site_aniso[0], 'adp_' + s).value for s in SUFFIXES
+        ]
+        np.testing.assert_allclose(
+            actual,
+            expected,
+            rtol=2e-7,
+            atol=2e-9,
+            err_msg='Before Save type changes use the noncubic cctbx conversion',
+        )
+    else:
+        assert project.structure.atom_sites[0].adp_iso.value == pytest.approx(
+            reference[target], rel=2e-7
+        ), 'Before Save scalar conversion and tensor equivalent values agree with cctbx'
+    expected_parameters = saved_parameters(project, 'iucr_99')
     text = saved(project, tmp_path / 'changed')
+    require_saved_parameters(project.parameters, expected_parameters)
     row = loop_rows(text, '_atom_site')[0]
     assert row['_atom_site.adp_type'] == target, (
         'A user type change must become the saved current type'
     )
     if target in {'Uani', 'Bani', 'beta'}:
-        expected = reference['isotropic' if source in {'Uiso', 'Biso'} else 'values'][target]
-        np.testing.assert_allclose(
+        np.testing.assert_array_equal(
             tensor_from_saved(text),
-            expected,
-            rtol=2e-7,
-            atol=2e-9,
+            [six_digits(value) for value in expected],
             err_msg='Type changes must use the noncubic cctbx conversion',
         )
-    else:
-        assert project.structure.atom_sites[0].adp_iso.value == pytest.approx(
-            reference[target], rel=2e-7
-        ), 'Scalar conversion and tensor equivalent values must agree with cctbx'
 
 
 @pytest.mark.parametrize('kind', ['Uani', 'Bani', 'beta'])

@@ -49,6 +49,8 @@ def violations(text, case):
     opener = section('session', 'void Session::openWebProject(')
     receiver = section('session', 'WebStorage::Answer Session::webOpenAnswer(')
     stored = section('session', 'void Session::openStoredProject(')
+    request = section('session', 'Session::openRequest(')
+    replacement = section('session', 'void Session::replaceProject(')
     picker = section('storage', 'void WebStorage::pickOpen(')
     begin = section('storage', 'int WebStorage::begin(Reply reply)')
     finish = section('storage', 'void WebStorage::finish(')
@@ -88,23 +90,32 @@ def violations(text, case):
                 re.escape('const Reply done = jobs_.take(job)'),
                 'one terminal callback per request',
             ),
-            (receiver, r'\[this, root, before\]', 'receiver captures its own folder root'),
+            (
+                receiver,
+                r'\[this, root, current = openRequest\(root\)\]',
+                'actual receiver owns the shared request guard',
+            ),
+            (
+                request,
+                r'\[this, root, request, before, revision\]',
+                'guard captures folder, generation, project and edit revision',
+            ),
         ],
         'replacement-during-upload': [
             (
-                receiver,
+                request,
                 re.escape('const QPointer<ProjectViewModel> before = project_'),
                 'folder initiating project',
             ),
             (
-                receiver,
-                re.escape('if (before != project_ || !answer.ok)'),
+                request,
+                re.escape('if (request != open_request_ || before != project_ || !answer.ok)'),
                 'folder completion project ownership',
             ),
             (
-                receiver,
-                r'if \(before != project_ \|\| answer.cancelled\)\s*\{\s*return;',
-                'obsolete completion refuses before loading',
+                request,
+                re.escape('request == open_request_ && before == project_ && !answer.cancelled'),
+                'only a current non-cancelled failure may report an error',
             ),
             (
                 opener,
@@ -135,22 +146,55 @@ def violations(text, case):
         ],
     }
     problems = [message for body, pattern, message in specs[case] if not re.search(pattern, body)]
+    return problems + project_request_violations(receiver, stored, request, replacement, case)
+
+
+def project_request_violations(receiver, stored, request, replacement, case):
+    """Trace both callers through the common generation/project/revision guard."""
+    problems = []
     if case == 'overlapping-folder-uploads':
-        # Callback identity and distinct roots cannot confer replacement authority.
-        # The request counter is shared by Open, Recent and recovery, before reads begin.
-        for route, body in [('Open', opener), ('Recent/recovery', stored)]:
-            if not re.search(r'\+\+open_request_|open_request_\+\+', body):
-                problems.append(route + ' advances the shared replacement intent before reading')
+        # Open, Recent and recovery create the same guard before the async read.
         for route, body in [('Open', receiver), ('Recent/recovery', stored)]:
-            guard = re.search(r'\b\w+\s*!=\s*open_request_|open_request_\s*!=\s*\w+', body)
+            if 'current = openRequest(root)' not in body:
+                problems.append(route + ' uses the shared replacement intent factory')
+            guard = body.find('if (!current(answer))')
             load = body.find('openWebCopy(')
-            if guard is None or load < 0 or guard.start() > load:
-                problems.append(route + ' rejects superseded intent before project replacement')
+            if guard < 0 or load < 0 or guard > load:
+                problems.append(route + ' rejects obsolete intent before project replacement')
+        if 'const quint64 request = ++open_request_;' not in request:
+            problems.append('the shared guard advances replacement intent before reading')
+        if '++open_request_;' not in replacement:
+            problems.append('every replacement route supersedes outstanding browser reads')
+        if 'request != open_request_' not in request:
+            problems.append('the shared guard rejects an older read generation')
     if case == 'replacement-during-upload':
-        guard = receiver.find('if (before != project_ || !answer.ok)')
-        load = receiver.find('openWebCopy(answer.path, place)')
-        if guard < 0 or load < 0 or guard > load:
-            problems.append('initiating-project guard precedes actual browser replacement')
+        for route, body in [('Open', receiver), ('Recent/recovery', stored)]:
+            guard = body.find('if (!current(answer))')
+            load = body.find('openWebCopy(answer.path, place)')
+            if 'current = openRequest(root)' not in body or guard < 0 or load < 0 or guard > load:
+                problems.append(route + ' checks the actual receiver before replacement')
+        rejection = request.find(
+            'if (request != open_request_ || before != project_ || !answer.ok)'
+        )
+        edited = request.find('project_->modified() && project_->revision() != revision')
+        accepted = request.find('return true;')
+        if min(rejection, edited, accepted) < 0 or not rejection < edited < accepted:
+            problems.append('generation, different-project and edits guards precede acceptance')
+        if (
+            'const quint64 revision = project_ != nullptr ? project_->revision() : 0;'
+            not in request
+        ):
+            problems.append('the initiating edit revision is captured before the read')
+        required = (
+            'QDir(root).removeRecursively()',
+            'emit loadFailed(last_error_)',
+            'was not opened: the open project was changed while it was read',
+        )
+        problems.extend(
+            'the shared refusal cleans the copy and explains edited-read loss'
+            for message in required
+            if message not in request
+        )
     return problems
 
 
@@ -189,14 +233,33 @@ def test_every_browser_file_receiver_preserves_request_ownership(case):
                 'pickOpen(kind, root, unusedAnswer(root))',
             ),
             ('session', 'fresh_archive_directory("web")', 'shared_archive_directory("web")'),
-            ('session', '++open_request_', 'open_request_'),
+            (
+                'session',
+                'const quint64 request = ++open_request_;',
+                'const quint64 request = open_request_;',
+            ),
+            (
+                'session',
+                block(text['session'], 'void Session::replaceProject('),
+                block(text['session'], 'void Session::replaceProject(').replace(
+                    '++open_request_;', 'open_request_;'
+                ),
+            ),
+            ('session', 'request != open_request_', 'request == open_request_'),
+            ('session', 'current = openRequest(root)', 'current = unusedRequest(root)'),
         ],
         'replacement-during-upload': [
             ('session', 'before != project_ || !answer.ok', 'before == project_ || !answer.ok'),
+            ('session', 'project_->revision() != revision', 'false'),
             (
                 'session',
-                'if (before != project_ || !answer.ok)',
-                'openWebCopy(answer.path, place); if (before != project_ || !answer.ok)',
+                'const quint64 revision = project_ != nullptr ? project_->revision() : 0;',
+                'const quint64 revision = 0;',
+            ),
+            (
+                'session',
+                'if (!current(answer))',
+                'openWebCopy(answer.path, place); if (!current(answer))',
             ),
             *[
                 (page, '=== group.webRequestProject', '!== null')
