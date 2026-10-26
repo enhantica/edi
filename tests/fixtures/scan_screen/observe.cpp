@@ -364,7 +364,7 @@ void scan_screen_install(QQmlApplicationEngine& engine) {
                     return;
                 }
                 if (!project->pendingRefusal().isEmpty() || project->calculating() ||
-                    project->currentExperiment()->pattern()->stale() || result->value("frames").toArray().isEmpty())
+                    project->currentExperiment()->pattern()->stale())
                     return;
                 if (!result->contains("readyGeneration")) {
                     (*result)["readyGeneration"] = static_cast<qint64>(project->currentExperiment()->patternGeneration());
