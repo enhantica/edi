@@ -640,14 +640,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             const std::string_view title = edi::colour_scheme_title(edi::colour_scheme_or_default(name));
             schemes.append(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
         }
-        // The structures and the patterns each take the scheme, as the one choice did before they were split.
         const auto pick = [](const QString& scheme) {
-            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.structureColours",
-                               "choose:" + scheme, "preferences.patternColours", "choose:" + scheme, "choose:OK"};
+            return QStringList{"appBar.button.preferences", "preferences.tab.appearance", "preferences.colours",
+                               "choose:" + scheme, "choose:OK"};
         };
         steps_.push_back({"schemes-0-list", QStringList{"resize:1280x960", "theme:light"} + start
                                                 + QStringList{"appBar.button.preferences", "preferences.tab.appearance",
-                                                              "preferences.patternColours"}});
+                                                              "preferences.colours"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             for (int i = 0; i < schemes.size(); ++i) {
                 QStringList actions = i == 0 && theme == QLatin1String("light")
@@ -764,10 +763,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     }
     // A scan's stacked patterns and 2D map (edi ADR-0041) on cosio's 155 patterns, in both themes, before a fit and
     // while one runs, with the views' toolbars: the shown dataset's line, also on Evolution; the x box offering d only
-    // after a calculation; the map on a log scale in magma and in shades of a palette's first colour, zoomed on
-    // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
-    // on and off; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
-    // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
+    // after a calculation; the map on a log scale in Inferno and in Greys, zoomed on d-spacing; a narrow zoom drawn
+    // from the measured points, reset by a secondary click; only the included range, on and off; a narrow chart's
+    // toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing, Stacked and Map, in both
+    // themes. Run only when asked (`--demo-only scanviews-`).
     // Every page at the supported minimum (AppSizes.minimumAppWidth × minimumAppHeight), its sidebar scrolled to its
     // last inputs, to check every control can be reached. Run only when asked (`--demo-only minimum-`).
     if (only.startsWith(QLatin1String("minimum-"))) {
@@ -799,8 +798,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"lines-1-pattern", {"resize:1280x960", "theme:light", "preference:scanRenderer=gpu",
                                               "open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", "appBar.tab.analysis", basic,
                                               "mainArea.analysis.tab.fitting"}});
-        steps_.push_back({"lines-2-stacked", {"preference:scanStackedSize=100", "mainArea.analysis.tab.stacked",
-                                              "wait-scan:stacked"}});
+        steps_.push_back({"lines-2-stacked", {"mainArea.analysis.tab.stacked", "scanView.stacked.toolbar.spacing",
+                                              "choose:Overlay", "wait-scan:stacked"}});
         // The same drawn by the painter, as a machine without a GPU draws it.
         steps_.push_back({"lines-3-stacked-painter", {"preference:scanRenderer=software", "wait-scan:stacked"}});
     }
@@ -810,8 +809,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                             + QStringList{analysis, basic, "mainArea.analysis.tab.stacked"}});
         steps_.push_back({"scanviews-02-map-light", {"mainArea.analysis.tab.map"}});
         steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
-        steps_.push_back({"scanviews-04-map-light-log-magma", {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale",
-                                                              "choose:log", "scanView.map.toolbar.colourMap", "choose:magma"}});
+        steps_.push_back({"scanviews-04-map-light-log-inferno",
+                          {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale", "choose:log",
+                           "scanView.map.toolbar.colourMap", "choose:Inferno"}});
         steps_.push_back({"scanviews-05-map-light-running", {"reveal:fitting.start", "fitting.start", "wait-files:40",
                                                             "capture-now"}});
         steps_.push_back({"scanviews-06-stacked-light-running", {"mainArea.analysis.tab.stacked", "wait-files:60",
@@ -822,8 +822,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                "wait-files:80", "capture-now"}});
         steps_.push_back({"scanviews-09-map-dark-running", {"mainArea.analysis.tab.map", "wait-files:100", "capture-now"}});
         steps_.push_back({"scanviews-10-evolution-dark", {"wait-fit", "choose:OK", "mainArea.analysis.tab.evolution"}});
-        steps_.push_back({"scanviews-11-map-dark-shades", {"mainArea.analysis.tab.map", "scanView.map.toolbar.colourMap",
-                                                          "choose:Edi Natural shades"}});
+        steps_.push_back({"scanviews-11-map-dark-greys", {"mainArea.analysis.tab.map", "scanView.map.toolbar.colourMap",
+                                                         "choose:Greys"}});
         steps_.push_back({"scanviews-12-map-dark-d-zoom", {"scanView.map.toolbar.xaxis", "choose:x: d-spacing",
                                                           "drag:scanView.map.pointer:0.05,0.2,0.45,0.7"}});
         steps_.push_back({"scanviews-13-stacked-dark-narrow-zoom", {"mainArea.analysis.tab.stacked",
@@ -871,9 +871,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                             "mainArea.experiment.tab.stacked"}});
         steps_.push_back({"colours-2-experiment-map-light", {"mainArea.experiment.tab.map"}});
         steps_.push_back({"colours-3-preferences", {"appBar.button.preferences", "preferences.tab.appearance"}});
-        steps_.push_back({"colours-4-structures-coast-patterns-contrast",
-                          {"preferences.structureColours", "choose:Edi Coast", "preferences.patternColours",
-                           "choose:Edi Contrast", "choose:OK", "mainArea.experiment.tab.chart"}});
+        steps_.push_back({"colours-4-classic",
+                          {"preferences.colours", "choose:Classic", "choose:OK", "mainArea.experiment.tab.chart"}});
         steps_.push_back({"colours-5-dark", {"theme:dark"}});
         steps_.push_back({"colours-6-experiment-stacked-dark", {"mainArea.experiment.tab.stacked"}});
     }
@@ -923,16 +922,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"rowlabels-15-joint-map-d-stepped-light", {"scanView.map.toolbar.smooth"}});
         steps_.push_back({"rowlabels-16-joint-map-d-stepped-dark", {"theme:dark", "scanView.map.toolbar.smooth"}});
     }
-    // Every colour map the scan views offer, on cosio's map on a log scale, in both themes, for the owner to choose the
-    // ones that ship (2026-10-22). Run only when asked (`--demo-only mapcands-`).
+    // Every colour map the scan views offer, on cosio's map on a log scale, in both themes (the six the owner chose on
+    // 2026-10-26). Run only when asked (`--demo-only mapcands-`).
     if (only.startsWith(QLatin1String("mapcands-"))) {
-        const QStringList titles = {"viridis", "magma", "inferno", "plasma", "batlow (Crameri)", "oslo (Crameri)",
-                                    "lajolla (Crameri)", "acton (Crameri)", "devon (Crameri)", "lapaz (Crameri)",
-                                    "thermal (cmocean)", "haline (cmocean)", "deep (cmocean)", "dense (cmocean)",
-                                    "ice (cmocean)", "tempo (cmocean)", "turbo (Google)", "YlGnBu (ColorBrewer)",
-                                    "PuBu (ColorBrewer)", "GnBu (ColorBrewer)", "Blues (ColorBrewer)",
-                                    "Purples (ColorBrewer)", "YlOrRd (ColorBrewer)", "gouldian (CET-L20)", "CET-L08",
-                                    "CET-L06", "CET-L17", "CET-L18"};
+        const QStringList titles = {"Blue-Red", "Viridis", "Batlow", "Inferno", "Lapaz", "Greys"};
         steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
                                                   + open_example("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.map",
@@ -952,7 +945,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                     actions.prepend("theme:" + theme);
                 }
                 if (theme == QLatin1String("dark") && i == 0) {
-                    actions << "scanView.map.toolbar.reverse";  // the last one reversed, to show the switch
+                    // The last one inverted, to show the direction box.
+                    actions << "scanView.map.toolbar.direction" << "choose:Inverted";
                 }
                 const QString slug = titles[i].section(QLatin1Char(' '), 0, 0).toLower();
                 steps_.push_back({QStringLiteral("mapcands-%1-%2-%3").arg(theme).arg(i + 1, 2, 10, QLatin1Char('0')).arg(slug),
@@ -969,6 +963,70 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"elements-2-analysis-light", {analysis, basic}});
         steps_.push_back({"elements-3-structure-dark", {"theme:dark", "appBar.tab.structure", basic}});
         steps_.push_back({"elements-4-analysis-dark", {analysis, basic}});
+    }
+    // The figure palettes and the scan views' controls (the owner, 2026-10-26), in both themes: the 3-file scan on the
+    // pattern chart and Stacked, with its legend and the background subtracted, and the Preferences' colour order; the
+    // 162-file scan on Stacked at Wide, Overlay and Separate, zoomed, with the short legend, and on the Map in Blue-Red
+    // on Auto; NCAF's five banks on d; taurine's element icons. Each project is opened once, a copy of it being made
+    // only once. Run only when asked (`--demo-only figures-`).
+    if (only.startsWith(QLatin1String("figures-"))) {
+        const QString stacked = QStringLiteral("mainArea.analysis.tab.stacked");
+        const QString map = QStringLiteral("mainArea.analysis.tab.map");
+        const QString pattern = QStringLiteral("mainArea.analysis.tab.fitting");
+        const QString spacing = QStringLiteral("scanView.stacked.toolbar.spacing");
+        const QString legend = QStringLiteral("scanView.stacked.toolbar.legend");
+        const QString preferences = QStringLiteral("appBar.button.preferences");
+        const QString colourMap = QStringLiteral("scanView.map.toolbar.colourMap");
+        const QStringList figures[] = {
+            {"figures-01-3f-pattern-light", "resize:1280x960", "theme:light",
+             "open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", analysis, basic, pattern},
+            {"figures-02-3f-pattern-subtracted-light", "chart.toolbar.subtractBackground"},
+            {"figures-03-3f-stacked-subtracted-light", stacked, "wait-scan:stacked"},
+            {"figures-04-3f-stacked-legend-light", "scanView.stacked.toolbar.subtractBackground", legend},
+            {"figures-05-3f-preferences-light", preferences, "preferences.tab.appearance"},
+            {"figures-06-3f-preferences-dark", "theme:dark"},
+            {"figures-07-3f-stacked-legend-dark", "key:Escape"},
+            {"figures-08-3f-stacked-subtracted-dark", legend, "scanView.stacked.toolbar.subtractBackground"},
+            {"figures-09-3f-pattern-subtracted-dark", pattern},
+            {"figures-10-3f-pattern-dark", "chart.toolbar.subtractBackground"},
+            {"figures-11-162f-stacked-wide-dark", "open-cli-project:pd-neut-cwl_cosio-d20_scan-162f", analysis, basic,
+             stacked, "wait-scan:stacked"},
+            {"figures-12-162f-stacked-legend-dark", legend},
+            {"figures-13-162f-stacked-overlay-dark", legend, spacing, "choose:Overlay"},
+            {"figures-14-162f-stacked-separate-dark", spacing, "choose:Separate"},
+            {"figures-15-162f-stacked-separate-zoom-dark", "drag:scanView.stacked.pointer:0.55,0.70,0.75,0.95"},
+            {"figures-16-162f-map-dark", "scanView.stacked.toolbar.reset", spacing, "choose:Wide", map,
+             "wait-scan:map"},
+            {"figures-17-162f-map-colour-maps-dark", colourMap},
+            {"figures-18-162f-map-subtracted-dark", "key:Escape", "scanView.map.toolbar.subtractBackground"},
+            {"figures-19-162f-map-subtracted-light", "theme:light"},
+            {"figures-20-162f-map-colour-maps-light", "scanView.map.toolbar.subtractBackground", colourMap},
+            {"figures-21-162f-map-light", "key:Escape"},
+            {"figures-22-162f-stacked-separate-zoom-light", stacked, spacing, "choose:Separate",
+             "drag:scanView.stacked.pointer:0.55,0.70,0.75,0.95"},
+            {"figures-23-162f-stacked-separate-light", "scanView.stacked.toolbar.reset"},
+            {"figures-24-162f-stacked-overlay-light", spacing, "choose:Overlay"},
+            {"figures-25-162f-stacked-legend-light", spacing, "choose:Wide", legend},
+            {"figures-26-162f-stacked-wide-light", legend},
+            // The banks are calculated once opened, which gives their d columns: d is chosen a step later.
+            {"figures-27-ncaf-stacked-light", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
+             stacked, "wait-scan:stacked"},
+            {"figures-28-ncaf-stacked-d-light", "scanView.stacked.toolbar.xaxis", "choose:x: d-spacing",
+             "wait-scan:stacked"},
+            {"figures-29-ncaf-map-d-light", map, "wait-scan:map"},
+            {"figures-30-ncaf-map-d-dark", "theme:dark"},
+            {"figures-31-ncaf-stacked-d-dark", stacked, "wait-scan:stacked"},
+            {"figures-32-taurine-atom-sites-dark", "open-cli-project:sc-neut-tof_taurine_fit", "appBar.tab.structure",
+             basic, "expand:group.atom_site"},
+            {"figures-33-taurine-vesta-dark", "structure.toolbar.colors", "choose:VESTA"},
+            {"figures-34-taurine-vesta-light", "theme:light"},
+            {"figures-35-taurine-atom-sites-light", "structure.toolbar.colors", "choose:Jmol"},
+            {"figures-36-taurine-preferences-light", preferences, "preferences.tab.appearance"},
+            {"figures-37-taurine-preferences-dark", "theme:dark"},
+        };
+        for (const QStringList& step : figures) {
+            steps_.push_back({step.front(), step.mid(1)});
+        }
     }
     // A click on any cell makes its row current, an editable cell's too, and every table marks the current row the
     // same way (the owner, 2026-10-22): Atom sites and the parameter table. Run only when asked (`--demo-only rows-`).

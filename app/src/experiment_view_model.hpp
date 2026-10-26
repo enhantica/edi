@@ -9,6 +9,7 @@
 #include <QtQml/qqmlregistration.h>
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -273,14 +274,16 @@ class ExperimentViewModel : public QObject {
     // A chart's x axis: while one chart is on d, the pattern is captured on d as well.
     void setChartAxis(const QObject* chart, edi::PatternAxis axis);
     bool dSpacingWanted() const { return !d_charts_.isEmpty(); }
-    // The colour of this experiment's pattern (edi::pattern_colour) is its place among a count: by default among the
-    // project's experiments; a scan's template shows one dataset at a time and takes that dataset's place among the
-    // scan's datasets, as the Project page lists them (setColourPlace).
+    // The colour of this experiment's pattern (edi::figure_colour) is the position of its place among a count: by
+    // default its place among the project's experiments; a scan's template shows one dataset at a time and takes that
+    // dataset's place among the scan's datasets, as the Project page lists them (setColourPlace). The positions are
+    // its chart's style table's (edi::pattern_style_table): the experiments' or the datasets', then the structures'.
     std::size_t colourPlace() const { return colour_place_.value_or(place()); }
     std::size_t colourCount() const { return colour_place_ ? colour_count_ : project_.experiments.size(); }
     // The project's structures, whose ticks the pattern shows.
     std::size_t structureCount() const { return project_.structures.size(); }
-    void setColourPlace(std::optional<std::size_t> place, std::size_t count);
+    const std::vector<std::size_t>& colourPositions() const { return colour_positions_; }
+    void setColourPlace(std::optional<std::size_t> place, std::size_t count, std::vector<std::size_t> positions);
     // An edit was admitted: what the pattern shows was calculated before it. The frame stays; the pattern
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.
@@ -349,6 +352,8 @@ class ExperimentViewModel : public QObject {
     void scaleChanged();
     void lastErrorChanged();
     void patternSourceChanged();
+    // Another experiment's or a structure's position in the palette changed (setColourPlace).
+    void colourPositionsChanged();
     void patternWentStale();
     void adjustingChanged();
     void patternShownChanged();
@@ -367,6 +372,7 @@ class ExperimentViewModel : public QObject {
     bool adjusting_ = false;
     std::optional<std::size_t> colour_place_;
     std::size_t colour_count_ = 0;
+    std::vector<std::size_t> colour_positions_;
     std::uint64_t presented_generation_ = 0;
     ProjectEditor& editor_;
     bool can_load_data_ = false;
