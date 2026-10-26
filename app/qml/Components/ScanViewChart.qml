@@ -482,7 +482,6 @@ Item {
                 EaElements.ToolTip {
                     id: hoverTip
 
-                    readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
                     readonly property real plotWidth: pointer.width
 
                     objectName: "scanView." + chart.mode + ".hover"
