@@ -264,6 +264,12 @@ TestCase {
     function luminance(color) {
         return .2126 * color.r + .7152 * color.g + .0722 * color.b;
     }
+    function paintedLuminance(fill) {
+        const image = grabImage(appWindow.contentItem);
+        const point = fill.mapToItem(appWindow.contentItem, fill.width / 2, 2);
+        const scale = image.width / appWindow.contentItem.width;
+        return luminance(image.pixel(Math.round(point.x * scale), Math.round(point.y * scale)));
+    }
     function test_button_style(data) {
         open("single");
         Session.project.fit.start();
@@ -274,8 +280,8 @@ TestCase {
         verify(status !== null && status.visible, "A real fit provides its outcome button beside the status Fit shortcut");
         mouseMove(appWindow.contentItem, 1, 1);
         const fill = rectangle(button), outcome = rectangle(status);
-        tryVerify(() => data.tag === "light" ? luminance(fill.color) < .25 : luminance(fill.color) > .75, 1500, "Fit has a near-black light-mode background and the inverse in dark mode");
-        verify(data.tag === "light" ? luminance(outcome.color) > luminance(fill.color) : luminance(outcome.color) < luminance(fill.color), "The outcome button has a visibly lighter light-mode background and an inverse dark-mode hierarchy");
+        tryVerify(() => data.tag === "light" ? paintedLuminance(fill) < .25 : paintedLuminance(fill) > .75, 1500, "Fit has a near-black light-mode background and the inverse in dark mode");
+        tryVerify(() => data.tag === "light" ? paintedLuminance(outcome) > paintedLuminance(fill) : paintedLuminance(outcome) < paintedLuminance(fill), 1500, "The drawn outcome button has a lighter light-mode background and an inverse dark-mode hierarchy after overlay compositing");
         fuzzyCompare(fill.height, outcome.height, 1, "Fit and outcome buttons have the same background height");
         fuzzyCompare(fill.radius, outcome.radius, .5, "Fit and outcome buttons have the same rounded corners");
         verify(fill.radius > 0, "The status Fit button has rounded corners");
@@ -285,7 +291,7 @@ TestCase {
         const glyphs = View.textItems(button).filter(item => item.text !== "Fit");
         verify(glyphs.length > 0 && glyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .1), "The status Fit icon has the same white or inverse ink as its caption");
         const sidebar = analysisButton(), sidebarFill = rectangle(sidebar);
-        tryVerify(() => data.tag === "light" ? luminance(sidebarFill.color) < .25 : luminance(sidebarFill.color) > .75, 1500, "The Analysis fit button shares the status shortcut's dark primary fill and its dark-mode inverse");
+        tryVerify(() => data.tag === "light" ? paintedLuminance(sidebarFill) < .25 : paintedLuminance(sidebarFill) > .75, 1500, "The Analysis fit button shares the status shortcut's dark primary fill and its dark-mode inverse");
         const sidebarLabel = View.textItems(sidebar).filter(item => item.text === sidebar.text);
         compare(sidebarLabel.length, 1, "The primary Analysis fit button renders its state caption");
         tryVerify(() => data.tag === "light" ? luminance(sidebarLabel[0].color) > .9 : luminance(sidebarLabel[0].color) < .1, 1500, "The primary Analysis fit caption shares the status shortcut's white or inverse ink");
