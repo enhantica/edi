@@ -3336,7 +3336,7 @@ Block translate_experiment_cif(const Block& in) {
 
 // An ADP column spelled by a name of some site types only (`_atom_site_U_iso_or_equiv` holds a U value) must match
 // the type of every site it gives a value for, declared or the default Biso, or the value would be read in the wrong
-// representation; such a column is refused (crysta ADR-0103 §1). Checked on the names as written.
+// representation; such a column is refused. Checked on the names as written.
 static void refuse_adp_spellings(const Block& written, const std::string& where) {
     const auto column_of = [](const Loop& loop, const std::string& name) {
         for (std::size_t index = 0; index < loop.tags.size(); ++index) {

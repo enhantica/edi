@@ -34,7 +34,7 @@ std::string current_edi_name(const std::string& tag, bool every_name);
 std::string one_row_category(const std::string& tag);
 
 // The site types whose own names include `tag`, an ADP name that spells its item for those types only
-// (`_atom_site_U_iso_or_equiv`: Uiso and Uani); empty for a name every type shares (crysta ADR-0103 §1).
+// (`_atom_site_U_iso_or_equiv`: Uiso and Uani); empty for a name every type shares.
 std::vector<std::string> name_variants(const std::string& tag);
 
 // Returns unless `tags`, the names a structure or experiment text spells as edi's reader reads
