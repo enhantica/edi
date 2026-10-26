@@ -855,14 +855,17 @@ Item {
         delegate: IconLine {
             required property var modelData
 
+            // Disabled with its ticks hidden from the legend, as the legend's entry is.
+            readonly property color ink: modelData.hidden ? chart.colors.themeForegroundDisabled : modelData.color
+
             objectName: "chart.bragg.label"
             visible: braggView.visible
             height: AppSizes.legendRowHeight
-            textColor: modelData.color
+            textColor: ink
             segments: [
                 {
                     "icon": "layer-group",
-                    "color": modelData.color
+                    "color": ink
                 },
                 {
                     "text": modelData.text

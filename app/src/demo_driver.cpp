@@ -792,6 +792,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                 "mainArea.analysis.tab.fitting", "chart.toolbar.legend", "chart.legend.toggle"}});
         steps_.push_back({"legendhide-2-shown", {"preference:chartHiddenRange=fit", "chart.legend.toggle"}});
         steps_.push_back({"legendhide-3-fit", {"chart.legend.toggle"}});
+        // The Bragg row, the legend's last: its structure icon and the tick strip's label disabled with it.
+        steps_.push_back({"legendhide-4-bragg", {"preference:chartHiddenRange=keep", "drag:chart.legend:0.5,0.9,0.5,0.9"}});
     }
     // The same three patterns as lines on the Pattern chart and on Stacked at full height, drawn on the GPU and then by
     // the painter, to compare the two charts' line quality (edi ADR-0041 §9). Run only when asked (`--demo-only
