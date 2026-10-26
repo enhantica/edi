@@ -341,3 +341,22 @@ placement, annotation, colour and line-quality requirements still apply. A
 numeric timing result is not evidence of rendering completeness, and synthetic
 arithmetic tests are not performance measurements. Loaded local diagnostics
 cannot establish the packet's quiet-machine performance acceptance.
+
+Legacy scan acceptance observations follow the same selection contract. Palette
+and all-pattern witnesses explicitly turn highlighting off before sampling
+unfaded ink; the default-on setting is checked by the dedicated highlight gate.
+`scanView.<mode>.current` no longer exists. Selection witnesses read the visible
+`scanView.<mode>.rowLabel.<dataset>` IconLine, its bold text segment, the loaded
+bold font face, accent colour and actual text pixels. Evolution's position line
+retains its own gate. Former open-rectangle geometry, minimum-height, border and
+clipping cases are retired with the rectangle; selection and dense-label gates
+cover the replacement behaviour.
+
+Dataset ticks are now one scene-graph strip, `scanView.<mode>.rowTicks`, rather
+than QObject children `rowTick.N`. Gates read its plot-relative rectangle and
+actual pixels. Expected dataset locations and colours remain independent: Map
+uses the authored scientific rows; Stacked uses the closed-form placement above.
+At coincident raster rows, later dataset ticks paint over earlier ticks. The
+strip starts one logical pixel right of the plot; a tick is one logical pixel
+high and clips to the plot at boundary rows. Empty strip pixels between expected
+rows must remain the chart background.
