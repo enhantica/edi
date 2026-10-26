@@ -1966,10 +1966,20 @@ NB_MODULE(_edi, m) {
     m.def("_model_dump", &edi::engine_model_dump, "project"_a);
     m.def("_folds_reflections", &edi::engine_folds_reflections, "project"_a);
     m.def("_structure_factor_evaluations", &edi::engine_structure_factor_evaluations);
-    m.def("_structure_from_edi_text",
-          [](const std::string& text) { return edi::structure_from_edi_text(text); });
-    m.def("_experiment_from_edi_text",
-          [](const std::string& text) { return edi::experiment_from_edi_text(text); });
+    // `where` names the text in a refusal (the path, for a file); crysta's reports on a CIF are
+    // Python warnings.
+    m.def(
+        "_structure_from_edi_text",
+        [](const std::string& text, const std::string& where) {
+            return edi::structure_from_edi_text(text, where, warn_python);
+        },
+        "text"_a, "where"_a = "<from_cif_str>");
+    m.def(
+        "_experiment_from_edi_text",
+        [](const std::string& text, const std::string& where) {
+            return edi::experiment_from_edi_text(text, where, warn_python);
+        },
+        "text"_a, "where"_a = "<from_cif_str>");
     // A single crystal for ExperimentFactory: diffraction-lib's defaults (wavelength 1.5406 at
     // constant wavelength, no extinction, as the loader
     // gives a block that declares none), and its reflections read from a FullProf .int or a plain
@@ -2654,7 +2664,28 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "scattering_type",
             [](const edi::ExperimentType& t) { return t.effective_scattering_type(); },
-            [](edi::ExperimentType& t, edi::ScatteringTypeEnum value) { t.scattering_type = value; });
+            [](edi::ExperimentType& t, edi::ScatteringTypeEnum value) { t.scattering_type = value; })
+        // ADR-0052: the description, read as its effective value and set as declared.
+        .def_prop_rw(
+            "dimensionality", [](const edi::ExperimentType& t) { return t.effective_dimensionality(); },
+            [](edi::ExperimentType& t, const std::string& value) {
+                if (value != "1d") {
+                    throw nb::value_error(("dimensionality '" + value + "' is not a known token (expected '1d')").c_str());
+                }
+                t.dimensionality = value;
+            })
+        .def_prop_rw(
+            "polarisation", [](const edi::ExperimentType& t) { return t.effective_polarisation(); },
+            [](edi::ExperimentType& t, const std::string& value) {
+                const bool xray = t.effective_radiation_probe() == edi::RadiationProbeEnum::XRAY;
+                if (value != (xray ? "." : "unpolarised")) {
+                    throw nb::value_error(("polarisation '" + value + "' does not fit " +
+                                           (xray ? "an X-ray experiment (expected '.')"
+                                                 : "a neutron experiment (expected 'unpolarised')"))
+                                              .c_str());
+                }
+                t.polarisation = value;
+            });
 
     // The peak-profile category: typed selector + TOF/CW parameter blocks (CW presence-tracked).
     nb::class_<edi::views::PeakNode> peak(m, "PeakBase");
@@ -2848,6 +2879,19 @@ NB_MODULE(_edi, m) {
     // presence-tracked.
     nb::class_<edi::views::InstrumentNode> instrument(m, "InstrumentBase");
     instrument.def("__setattr__", renewing_setattr<edi::views::InstrumentNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
+    // ADR-0052: the instrument's and its facility's names, `?` when unknown.
+    instrument.def_prop_rw(
+        "name",
+        [](const edi::views::InstrumentNode& self) {
+            return self.storage().name.empty() ? std::string("?") : self.storage().name;
+        },
+        [](edi::views::InstrumentNode& self, const std::string& value) { self.storage().name = value; });
+    instrument.def_prop_rw(
+        "facility",
+        [](const edi::views::InstrumentNode& self) {
+            return self.storage().facility.empty() ? std::string("?") : self.storage().facility;
+        },
+        [](edi::views::InstrumentNode& self, const std::string& value) { self.storage().facility = value; });
 
     nb::class_<edi::views::CwlInstrumentBase, edi::views::InstrumentNode>(m, "CwlInstrumentBase");
     nb::class_<edi::views::CwlPdInstrumentBase, edi::views::CwlInstrumentBase>(
