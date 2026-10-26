@@ -12,6 +12,7 @@
 #include <stdexcept>
 
 #include "background.hpp"
+#include "edi/display.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 #include "scan_session.hpp"
@@ -558,9 +559,11 @@ void ScanViewModel::placeAxis() {
         placePattern(pattern);
     }
     placeRange();
-    publish(x_title_,
-            d || !native_shared_ ? QStringLiteral("d (Å)")
-              : mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? QStringLiteral("2θ (deg)") : QStringLiteral("TOF (µs)"),
+    // The axis is titled by its data item's dictionary label and units (edi ADR-0051).
+    const char* const axis = d || !native_shared_                                  ? "data.d_spacing"
+                             : mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? "data.two_theta"
+                                                                               : "data.time_of_flight";
+    publish(x_title_, QString::fromStdString(edi::label(axis) + " (" + edi::units_label(axis) + ")"),
             &ScanViewModel::xTitleChanged);
 }
 

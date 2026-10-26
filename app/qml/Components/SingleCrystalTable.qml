@@ -3,7 +3,9 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
 import edi.app
@@ -23,12 +25,15 @@ DataTable {
     property real spareHeight: 0
 
     // A column title that sorts the rows by its column on a click, again in reverse on a second, and marks the
-    // sorted column with its direction.
+    // sorted column with its direction. A column of a `.edi` item is titled by the item's dictionary label and units
+    // (edi ADR-0051), with the label and the `.edi` name as its tooltip, as HeaderLabel titles one.
     component SortTitle: EaComponents.ListViewLabel {
         id: title
 
         required property string role
-        property string label
+        property string uid: ""
+        readonly property string units: uid !== "" ? Session.units(uid) : ""
+        property string label: uid === "" ? "" : units !== "" ? `${Session.label(uid)} (${units})` : Session.label(uid)
 
         objectName: "singleCrystal.reflections.sort." + role
         horizontalAlignment: Text.AlignHCenter
@@ -45,11 +50,19 @@ DataTable {
                     table.sourceModel.sortBy(title.role);
             }
         }
+        EaElements.ToolTip {
+            text: title.uid !== "" ? Session.tooltip(title.uid) : ""
+            visible: title.uid !== "" && title.hovered && EaGlobals.Vars.showToolTips
+        }
     }
 
-    // Each column with a fixed number of decimals, so no value is cut: d and sinθ/λ to 4, F² and its su to 3.
-    function fixed(value, decimals) {
-        return value === undefined || isNaN(value) ? "" : value.toFixed(decimals);
+    // A reflection's values, each in its item's display format (edi ADR-0051); the normalised residual, no item's
+    // value, to two decimals.
+    function shown(uid, value) {
+        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
+    }
+    function residual(value) {
+        return value === undefined || isNaN(value) ? "" : value.toFixed(2);
     }
 
     objectName: "singleCrystal.reflections"
@@ -67,35 +80,35 @@ DataTable {
         }
         SortTitle {
             role: "h"
-            label: "h"
+            uid: "refln.index_h"
         }
         SortTitle {
             role: "k"
-            label: "k"
+            uid: "refln.index_k"
         }
         SortTitle {
             role: "l"
-            label: "l"
+            uid: "refln.index_l"
         }
         SortTitle {
             role: "dSpacing"
-            label: qsTr("d (Å)")
+            uid: "refln.d_spacing"
         }
         SortTitle {
             role: "sinThetaOverLambda"
-            label: qsTr("sinθ/λ")
+            uid: "refln.sin_theta_over_lambda"
         }
         SortTitle {
             role: "intensityMeas"
-            label: qsTr("F² meas")
+            uid: "refln.intensity_meas"
         }
         SortTitle {
             role: "intensityMeasSu"
-            label: qsTr("s.u.")
+            uid: "refln.intensity_meas_su"
         }
         SortTitle {
             role: "intensityCalc"
-            label: qsTr("F² calc")
+            uid: "refln.intensity_calc"
         }
         SortTitle {
             role: "residual"
@@ -104,7 +117,7 @@ DataTable {
         SortTitle {
             visible: table.timeOfFlight
             role: "wavelength"
-            label: qsTr("λ (Å)")
+            uid: "refln.wavelength"
         }
         SortTitle {
             role: "fitUse"
@@ -136,38 +149,38 @@ DataTable {
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.fixed(row.model.dSpacing, 4)
+            number: table.shown("refln.d_spacing", row.model.dSpacing)
             full: NumberText.plainFull(row.model.dSpacing)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.fixed(row.model.sinThetaOverLambda, 4)
+            number: table.shown("refln.sin_theta_over_lambda", row.model.sinThetaOverLambda)
             full: NumberText.plainFull(row.model.sinThetaOverLambda)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.fixed(row.model.intensityMeas, 3)
+            number: table.shown("refln.intensity_meas", row.model.intensityMeas)
             full: NumberText.plainFull(row.model.intensityMeas)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.fixed(row.model.intensityMeasSu, 3)
+            number: table.shown("refln.intensity_meas_su", row.model.intensityMeasSu)
             full: NumberText.plainFull(row.model.intensityMeasSu)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.fixed(row.model.intensityCalc, 3)
+            number: table.shown("refln.intensity_calc", row.model.intensityCalc)
             full: NumberText.plainFull(row.model.intensityCalc)
         }
         NumberLabel {
             horizontalAlignment: Text.AlignHCenter
-            number: table.fixed(row.model.residual, 2)
+            number: table.residual(row.model.residual)
             full: NumberText.plainFull(row.model.residual)
         }
         NumberLabel {
             visible: table.timeOfFlight
             horizontalAlignment: Text.AlignHCenter
-            number: table.fixed(row.model.wavelength, 4)
+            number: table.shown("refln.wavelength", row.model.wavelength)
             full: NumberText.plainFull(row.model.wavelength)
         }
         IconCell {
@@ -178,7 +191,7 @@ DataTable {
             objectName: `singleCrystal.reflections.fitUse.${row.index}`
             icon: used ? FitOutcomes.icon("success") : "minus-circle"
             iconColor: String(used ? EaStyle.Colors.green : EaStyle.Colors.themeForegroundMinor)
-            toolTip: used ? (isNaN(cutoff) ? qsTr("Used by the fit (no cutoff: every reflection)") : qsTr("Used by the fit: F² > %1 s.u.").arg(cutoff)) : qsTr("Left out of the fit: F² at most %1 s.u.").arg(cutoff)
+            toolTip: used ? (isNaN(cutoff) ? qsTr("Used by the fit (no cutoff: every reflection)") : qsTr("Used by the fit: F² > %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))) : qsTr("Left out of the fit: F² at most %1 s.u.").arg(Session.display("refine_ls.threshold_sigma", cutoff))
         }
     }
 }

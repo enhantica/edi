@@ -97,7 +97,7 @@ Item {
             EaElements.Label {
                 anchors.centerIn: parent
                 color: Math.abs(parent.value) >= 0.5 ? "#f5f5f5" : EaStyle.Colors.themeForeground
-                text: parent.shown ? parent.value.toFixed(2) : ""
+                text: parent.shown ? Session.display("fit_parameter_correlation.correlation", parent.value) : ""
             }
         }
     }

@@ -74,7 +74,7 @@ EaElements.StatusBar {
         showKey: bar.keysFit
         room: bar.items.indexOf(projectItem) < bar.roomFor
         keyIcon: "archive"
-        keyText: qsTr("Project")
+        keyText: Session.categoryTitle("metadata")
         valueText: bar.project ? bar.project.name : qsTr("Undefined")
         ToolTip.text: qsTr("Current project")
     }
@@ -106,8 +106,8 @@ EaElements.StatusBar {
         showKey: bar.keysFit
         room: bar.items.indexOf(calculatorItem) < bar.roomFor
         keyIcon: "calculator"
-        keyText: qsTr("Calculator")
-        valueText: "crysta"
+        keyText: Session.categoryTitle("calculator")
+        valueText: Session.optionLabel("calculator.type", "crysta")
         ToolTip.text: qsTr("Calculation engine")
     }
     StatusBarItem {
@@ -117,8 +117,8 @@ EaElements.StatusBar {
         room: bar.items.indexOf(minimizerItem) < bar.roomFor
         shown: bar.project !== null && valueText !== ""
         keyIcon: "level-down-alt"
-        keyText: qsTr("Minimizer")
-        valueText: bar.project ? bar.project.analysis.minimizerType : ""
+        keyText: Session.categoryTitle("minimizer")
+        valueText: bar.project ? Session.optionLabel("minimizer.type", bar.project.analysis.minimizerType) : ""
         ToolTip.text: qsTr("Minimization engine")
     }
     StatusBarItem {

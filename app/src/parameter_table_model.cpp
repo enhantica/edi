@@ -187,17 +187,19 @@ void ParameterFilterModel::refresh() {
             if (row.category == QLatin1String("atom_site") || row.category == QLatin1String("atom_site_aniso")) {
                 if (seen.contains(QStringLiteral("@atoms"))) continue;
                 seen.append(QStringLiteral("@atoms"));
-                add(QStringLiteral("@atoms"), tr("Atom sites"), QStringLiteral("atom"));
+                add(QStringLiteral("@atoms"), category_presentation(QStringLiteral("atom_site")).title,
+                    category_presentation(QStringLiteral("atom_site")).icon);
                 addSubset(QStringLiteral("@atoms"), QStringLiteral("@coordinates"), tr("Atomic coordinates"), QStringLiteral("map-marker-alt"));
                 addSubset(QStringLiteral("@atoms"), QStringLiteral("@occupancies"), tr("Atomic occupancies"), QStringLiteral("fill"));
-                addSubset(QStringLiteral("@atoms"), QStringLiteral("@displacement"), tr("Atomic displacement"), QStringLiteral("arrows-alt"));
+                addSubset(QStringLiteral("@atoms"), QStringLiteral("@displacement"),
+                          category_presentation(QStringLiteral("atom_site_aniso")).title,
+                          category_presentation(QStringLiteral("atom_site_aniso")).icon);
                 continue;
             }
             const auto presentation = category_presentation(row.category);
-            QString title = QString::fromUtf8(presentation.title);
-            if (row.category == QLatin1String("cell")) title = tr("Unit cell");
+            QString title = presentation.title;
             if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
-            add(row.category, title, QString::fromUtf8(presentation.icon));
+            add(row.category, title, presentation.icon);
             if (row.category == QLatin1String("peak")) {
                 addSubset(row.category, QStringLiteral("@peakBroadening"), tr("Peak broadening"), QStringLiteral("arrows-alt-h"));
                 addSubset(row.category, QStringLiteral("@peakMixing"), tr("Peak mixing"), QStringLiteral("shapes"));
@@ -209,9 +211,9 @@ void ParameterFilterModel::refresh() {
     for (const Row& row : scoped) {
         if (row.kind == QLatin1String("structure") || row.kind == QLatin1String("experiment") || categories.contains(row.category)) continue;
         const auto presentation = category_presentation(row.category);
-        QString title = QString::fromUtf8(presentation.title);
+        QString title = presentation.title;
         if (title.isEmpty()) { title = row.category; title.replace(QLatin1Char('_'), QLatin1Char(' ')); }
-        add(row.category, title, QString::fromUtf8(presentation.icon));
+        add(row.category, title, presentation.icon);
     }
     if (!categories.contains(category_filter_)) {
         beginFilterChange();

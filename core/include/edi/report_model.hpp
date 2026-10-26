@@ -187,7 +187,15 @@ struct ReportSingleCrystal {
     std::vector<double> meas, su, calc;
     /// The experiment's reliability text (reliability_text); empty with no fit.
     std::string title;
+    /// The points' series name and the axes' titles, and each point's hover text, by the dictionary (edi ADR-0051).
+    std::string name, x_title, y_title;
+    std::vector<std::string> hover;
 };
+
+/// Gives a single crystal's chart its series name and axis titles from the dictionary and each point's hover from its
+/// numbers, measured values by `su_rule` (edi ADR-0051); the numbers stay as they are. A report written before the
+/// chart carried these gets them so.
+void label_single_crystal(ReportSingleCrystal& crystal, const std::string& su_rule);
 
 struct ReportExperiment {
     std::string id;
@@ -222,8 +230,8 @@ struct ReportModel {
 };
 
 /// The reliability of the experiment at `experiment` in the project's last fit, as every pattern plot shows it:
-/// "Rwp 16.35 % · χ² 75.62", the weighted-profile R factor in per cent and the reduced χ², both with two decimals,
-/// as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
+/// "Rwp 16.35 % · reduced χ² 75.62", the weighted-profile R factor in per cent and the reduced χ², both by their
+/// dictionary labels, units and formats, as the fit results show them. A joint fit gives each bank its own Rwp. Empty when the project holds no fit.
 /// A single crystal's fit is over F²: "R(F²) 5.12 % · wR(F²) 4.25 % · χ² 9.78".
 std::string reliability_text(const Project& project, std::size_t experiment);
 

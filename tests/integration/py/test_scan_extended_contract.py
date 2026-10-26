@@ -1123,7 +1123,7 @@ def joint_options(text, tmp_path, *, selector_text=None):
     )
     require(
         producer,
-        r'fitting_mode_options_->setOptions\(modes,',
+        r'fitting_mode_options_->setItemOptions\("fitting_mode\.type", modes,',
         'Scan mode wiring: the selector receives those exact applicable modes',
     )
     rule = block(

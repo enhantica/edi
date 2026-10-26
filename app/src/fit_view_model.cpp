@@ -7,6 +7,7 @@
 #include <optional>
 
 #include "analysis_view_model.hpp"
+#include "edi/display.hpp"
 #include "edi/duration_text.hpp"
 #include "edi/edit.hpp"
 #include "edi/selectors.hpp"
@@ -16,8 +17,10 @@
 namespace edi_app {
 namespace {
 
-// The goodness-of-fit and the fit-results table show χ² as diffraction-lib's table does.
-QString chi(double value) { return QString::number(value, 'f', 2); }
+// The goodness-of-fit and the fit-results table show χ² in its dictionary format.
+QString chi(double value) { return QString::fromStdString(edi::display_text("fit_result.reduced_chi_square", value)); }
+// The goodness-of-fit's dictionary label (`reduced χ²`).
+QString chi_label() { return QString::fromStdString(edi::label("fit_result.reduced_chi_square")); }
 
 // The status a recorded result names (its exit reason, crysta's status label).
 edi::FitStatus status_of(const edi::FitResultRecord& result) {
@@ -93,7 +96,7 @@ void FitResultListModel::setRecord(const edi::Project& project) {
     row(QString(), tr("Overall status"), status_text(status), outcome_key(status));
     row(QStringLiteral("stopwatch"), tr("Fitting time"), seconds(result.fitting_time));
     row(QStringLiteral("redo"), tr("Iterations"), QString::number(result.iterations));
-    row(QStringLiteral("ruler"), tr("Goodness-of-fit (reduced χ²)"), chi(result.reduced_chi_square));
+    row(QStringLiteral("ruler"), tr("Goodness-of-fit (%1)").arg(chi_label()), chi(result.reduced_chi_square));
     setTableRows(rows);
     agreement_->setRecord(project);
 }
@@ -108,9 +111,9 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         clear();
         return;
     }
-    // crysta's R factors are fractions; the table shows them in per cent, as FullProf and diffraction-lib do.
-    const auto percent = [](const std::optional<double>& value) {
-        return value.has_value() ? QString::number(*value * 100.0, 'f', 2) : QString();
+    // crysta's R factors are fractions; each shows in its dictionary format, in per cent as FullProf prints them.
+    const auto percent = [](const char* uid, const std::optional<double>& value, std::string_view variant = {}) {
+        return value.has_value() ? QString::fromStdString(edi::display_text(uid, *value, variant)) : QString();
     };
     // The profile factors in the order FullProf prints them, then each linked structure's two (the owner,
     // 2026-10-21).
@@ -118,22 +121,28 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     const auto column = [&columns](const QString& factor, const QString& structure = QString(), int place = -1) {
         columns.append(AgreementColumn{factor, structure, place});
     };
-    // A single crystal's fit is over F²: its factors are R(F²) and wR(F²), which crysta records as the profile pair.
+    // A single crystal's fit is over F²: crysta records its R(F²) and wR(F²) as the profile pair, which the dictionary
+    // names by the sample form.
     const bool single_crystal =
         !project.experiments.empty() &&
         std::all_of(project.experiments.begin(), project.experiments.end(),
                     [](const auto& experiment) { return experiment->reflections.has_value(); });
     if (single_crystal) {
-        column(QStringLiteral("R(F²)"));
-        column(QStringLiteral("wR(F²)"));
+        const std::string form = edi::token(edi::SampleFormEnum::SINGLE_CRYSTAL);
+        column(QString::fromStdString(edi::label("fit_result.prof_r_factor", form)));
+        column(QString::fromStdString(edi::label("fit_result.prof_wr_factor", form)));
         QList<Row> rows;
         for (std::size_t i = 0; i < project.experiments.size(); ++i) {
             const edi::ExperimentBase& experiment = *project.experiments[i];
             const bool own = experiment.fit_prof_wr_factor.has_value();
             rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
                          {QString::fromStdString(experiment.name.value()), static_cast<int>(i),
-                          QStringList{percent(own ? experiment.fit_prof_r_factor : result.prof_r_factor),
-                                      percent(own ? experiment.fit_prof_wr_factor : result.prof_wr_factor)}}});
+                          QStringList{percent("fit_result.prof_r_factor",
+                                              own ? experiment.fit_prof_r_factor : result.prof_r_factor, form),
+                                      percent("fit_result.prof_wr_factor",
+                                              own ? experiment.fit_prof_wr_factor
+                                                  : std::optional<double>(result.prof_wr_factor),
+                                              form)}}});
         }
         if (columns != columns_) {
             columns_ = columns;
@@ -192,9 +201,11 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         datasets += in_fit(i) ? 1 : 0;
     }
     const QStringList blank_structures(static_cast<qsizetype>(2 * ordered.size()));
-    const QStringList global{percent(result.prof_r_factor), percent(result.prof_wr_factor),
-                             percent(result.prof_wr_expected), percent(result.prof_cr_factor),
-                             percent(result.prof_cwr_factor)};
+    const QStringList global{percent("fit_result.prof_r_factor", result.prof_r_factor),
+                             percent("fit_result.prof_wr_factor", result.prof_wr_factor),
+                             percent("fit_result.prof_wr_expected", result.prof_wr_expected),
+                             percent("fit_result.prof_cr_factor", result.prof_cr_factor),
+                             percent("fit_result.prof_cwr_factor", result.prof_cwr_factor)};
     // The global row only when it does not repeat a single dataset's own (the owner, 2026-10-21); a phase factor is
     // not defined over several datasets.
     if (datasets != 1) {
@@ -206,18 +217,18 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         }
         const edi::ExperimentBase& experiment = *project.experiments[i];
         // Without its own factors the one dataset's are the global ones.
-        QStringList values = shares ? QStringList{percent(experiment.fit_prof_r_factor),
-                                                  percent(experiment.fit_prof_wr_factor),
-                                                  percent(experiment.fit_prof_wr_expected),
-                                                  percent(experiment.fit_prof_cr_factor),
-                                                  percent(experiment.fit_prof_cwr_factor)}
+        QStringList values = shares ? QStringList{percent("fit_result_bank.prof_r_factor", experiment.fit_prof_r_factor),
+                                                  percent("fit_result_bank.prof_wr_factor", experiment.fit_prof_wr_factor),
+                                                  percent("fit_result_bank.prof_wr_expected", experiment.fit_prof_wr_expected),
+                                                  percent("fit_result_bank.prof_cr_factor", experiment.fit_prof_cr_factor),
+                                                  percent("fit_result_bank.prof_cwr_factor", experiment.fit_prof_cwr_factor)}
                                     : global;
         for (const auto& [name, place] : ordered) {
             QString bragg, f;
             for (const auto& link : experiment.linked_structures) {
                 if (structure_of(*link) == name) {
-                    bragg = percent(link->fit_bragg_r_factor);
-                    f = percent(link->fit_f_r_factor);
+                    bragg = percent("fit_result_phase.bragg_r_factor", link->fit_bragg_r_factor);
+                    f = percent("fit_result_phase.f_r_factor", link->fit_f_r_factor);
                 }
             }
             values << bragg << f;
@@ -288,7 +299,7 @@ void FitResultListModel::setScan(const ScanSummary& summary) {
             QString::number(summary.negative_points));
     }
     if (summary.fitted > 0) {
-        row(QStringLiteral("ruler"), tr("Goodness-of-fit range (reduced χ²)"), chi_range(summary));
+        row(QStringLiteral("ruler"), tr("Goodness-of-fit range (%1)").arg(chi_label()), chi_range(summary));
     }
     setTableRows(rows);
 }
