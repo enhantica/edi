@@ -887,7 +887,8 @@ refuses to write its bank rows into it.
 - **Start fitting** (Analysis, Fitting group) runs the project's fit on the worker (ADR-0020 §9) and reads **Stop
   fitting**, with a stop icon, while it runs (owner, 2026-10-05; *Cancel fitting* before): a stop keeps the partial
   result. In a scan project it follows the datasets' fits (owner, 2026-10-06; §19). While a fit runs the parameter
-  table is disabled and every edit is refused.
+  table is disabled and every edit is refused. It is drawn in the status bar's Fit button's dark colours
+  (`Components/PrimarySideBarButton.qml`; the owner, 2026-10-26); Reset fits and Follow keep the base's.
 - **Follow** sits to the right of Start fitting at the same width. It is enabled only while a scan runs and starts
   on; while on, the pattern tab shows the file being fitted. In a scan project **Reset fits** sits between them, and
   the three share the row in thirds. Reset fits and Follow show only in the sequential and independent modes;
@@ -905,11 +906,13 @@ refuses to write its bank rows into it.
   12.40 → 7.01`. One order everywhere: progress, then the counts, then time, then χ², every separator the same
   ` · ` (`FitOutcomes.separator`).
 - **The status bar's Fit button** (the owner, 2026-10-26) is the fit area's first item, shown on every page whenever
-  the Analysis page is available, so a fit can be run again after changing a value elsewhere. It reads *Fit* and does
-  what Start fitting does at that moment, with its icon: it starts or continues a fit, and while one runs it shows the
-  stop icon and a click stops it. It is as tall and as round as the progress bar, near-black with white text in light
-  mode and the other way round in dark mode (`Components/StatusBarFitButton.qml`). The outcome beside it is framed as
-  a button of the same height and shape, in the light hover colour, and darker on hover.
+  the Analysis page is available, so a fit can be run again after changing a value elsewhere. It does what Start
+  fitting does at that moment, with its icon and the short form of its text: *Fit*, *Continue* or *Stop*, which stops
+  the running fit. It is as tall and as round as the progress bar, near-black with white text in light mode and the
+  other way round in dark mode (`Components/StatusBarFitButton.qml`). The outcome beside it is framed as a button of
+  the same height and shape, in the light hover colour, and darker on hover. Both are framed fit-area items with one
+  spacing: half a font size before the icon, a little less between icon and word, a little more after the word, so
+  the three look even.
 - **One look per fit outcome** (owner, 2026-10-05), from `Globals/FitOutcomes.qml` for every place that shows one
   (the status-bar summary, the results window's Overall status row, the Experiments table's Fit column): *Success*
   (green check circle), *Max iterations* and *No step* (amber exclamation circle; the result is kept), *Stopped*

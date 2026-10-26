@@ -44,15 +44,16 @@ Control {
     visible: shown
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     padding: 0
-    // A clickable or framed item keeps its frame clear of its icon and text (the owner, 2026-10-13).
+    // A clickable or framed item keeps its frame clear of its icon and text (the owner, 2026-10-13). A framed one has
+    // less space between its icon and word and more after the word, so the three look even (the owner, 2026-10-26).
     leftPadding: clickable || framed ? Math.round(font.pixelSize * 0.5) : 0
-    rightPadding: leftPadding
+    rightPadding: framed ? Math.round(font.pixelSize * 0.65) : leftPadding
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 
     contentItem: Row {
         id: contentRow
-        spacing: control.font.pixelSize * 0.5
+        spacing: control.framed ? Math.round(control.font.pixelSize * 0.4) : control.font.pixelSize * 0.5
 
         EaElements.Label {
             id: iconLabel

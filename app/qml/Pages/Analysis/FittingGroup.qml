@@ -32,7 +32,8 @@ EaElements.GroupBox {
 
         spacing: EaStyle.Sizes.fontPixelSize
 
-        EaElements.SideBarButton {
+        // In the status bar's Fit button's dark colours (the owner, 2026-10-26); Reset fits and Follow keep the base's.
+        PrimarySideBarButton {
             objectName: "fitting.start"
             width: buttons.share
             enabled: group.fit !== null && (group.fit.running || group.fit.available)

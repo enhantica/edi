@@ -22,9 +22,9 @@ FitStatusItem {
     // Shown while it cannot start a fit too, dimmed, so its tool tip can say why.
     clickable: fit !== null && (running || fit.available)
     opacity: clickable ? 1 : 0.4
-    // The Analysis page's fit button's icons.
+    // The Analysis page's fit button's icons and the short forms of its texts (the owner, 2026-10-26).
     keyIcon: running ? "stop-circle" : "play-circle"
-    valueText: qsTr("Fit")
+    valueText: running ? qsTr("Stop") : fit !== null && fit.continuable ? qsTr("Continue") : qsTr("Fit")
     iconColor: AppColors.fitButtonForeground
     valueColor: AppColors.fitButtonForeground
     frameColor: AppColors.fitButtonBackground
