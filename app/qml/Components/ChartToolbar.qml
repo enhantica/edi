@@ -21,11 +21,16 @@ Row {
     property string pointerMode: "zoom"  // "zoom" or "pan"
     // Only the included range (edi ADR-0044), with the Excluded regions group's eraser icon.
     property bool includedOnly: false
+    // Every curve with the background subtracted (edi ADR-0017 §15; one app setting with the scan views), offered when
+    // the shown experiment has a background.
+    property bool subtractBackground: false
+    property bool backgroundAvailable: false
     // A chart without a legend or excluded regions (the single-crystal chart) leaves those buttons out.
     property bool legendAvailable: true
     property bool includedRangeAvailable: true
     signal resetClicked
     signal includedOnlyToggled
+    signal subtractBackgroundToggled
 
     spacing: AppSizes.toolbarSpacing
 
@@ -59,6 +64,15 @@ Row {
         toolTip: qsTr("Show only the included range")
         checked: toolbar.includedOnly
         onClicked: toolbar.includedOnlyToggled()
+    }
+    ChartToolButton {
+        objectName: "chart.toolbar.subtractBackground"
+        visible: toolbar.includedRangeAvailable
+        available: toolbar.backgroundAvailable
+        fontIcon: "chart-area"
+        toolTip: toolbar.backgroundAvailable ? qsTr("Subtract the background") : qsTr("Subtract the background: this pattern has no background set")
+        checked: toolbar.subtractBackground && toolbar.backgroundAvailable
+        onClicked: toolbar.subtractBackgroundToggled()
     }
     Item {
         width: EaStyle.Sizes.fontPixelSize * 0.5

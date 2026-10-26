@@ -14,6 +14,7 @@
 
 #include "background.hpp"
 #include "edi/display.hpp"
+#include "edi/presentation.hpp"
 #include "edi/scan.hpp"
 #include "edi/selectors.hpp"
 #include "scan_session.hpp"
@@ -62,6 +63,24 @@ void conversion_of(const edi::ExperimentBase& experiment, std::vector<double>& x
         if (std::isfinite(x[i]) && std::isfinite(d[i])) {
             xs.push_back(x[i]);
             ds.push_back(d[i]);
+        }
+    }
+}
+
+// An experiment's axis and its calculated background, finite pairs only; empty when it sets no background
+// (edi::has_background, fitted or not) or its computed columns are not current.
+void background_of(const edi::ExperimentBase& experiment, std::vector<double>& xs, std::vector<double>& bs) {
+    xs.clear();
+    bs.clear();
+    if (!experiment.data || !experiment.computed_current() || !edi::has_background(experiment)) {
+        return;
+    }
+    const std::vector<double>& x = experiment.data->axis();
+    const std::vector<double>& b = experiment.data->intensity_bkg.values();
+    for (std::size_t i = 0; i < x.size() && i < b.size(); ++i) {
+        if (std::isfinite(x[i]) && std::isfinite(b[i])) {
+            xs.push_back(x[i]);
+            bs.push_back(b[i]);
         }
     }
 }
@@ -174,6 +193,13 @@ void ScanViewModel::setJoint(const edi::Project* project) {
                 pattern.d = std::move(d);
             }
             every_d = every_d && xs.size() >= 2;
+            std::vector<double> bs;
+            background_of(*experiment, xs, bs);
+            if (xs.size() >= 2) {
+                for (const double x : pattern.x) {
+                    pattern.background.push_back(d_of(xs, bs, x, false));
+                }
+            }
             pattern.excluded = excluded_of(*experiment);
             next.push_back(std::move(pattern));
         }
@@ -186,7 +212,8 @@ void ScanViewModel::setJoint(const edi::Project* project) {
     };
     if (joint && joint_ && labels == row_labels_ && next.size() == patterns_.size() &&
         std::equal(next.begin(), next.end(), patterns_.begin(), [&same](const Pattern& a, const Pattern& b) {
-            return same(a.x, b.x) && same(a.intensity, b.intensity) && same(a.d, b.d) && a.excluded == b.excluded;
+            return same(a.x, b.x) && same(a.intensity, b.intensity) && same(a.d, b.d) &&
+                   same(a.background, b.background) && a.excluded == b.excluded;
         })) {
         return;
     }
@@ -414,17 +441,21 @@ void ScanViewModel::placeRows() {
 // The project's current d column against its own axis, finite pairs only, what a scan's d-spacing is read from, and the
 // template's excluded regions, which every dataset of a scan shares.
 bool ScanViewModel::readConversion(const edi::Project* project) {
-    std::vector<double> xs, ds;
+    std::vector<double> xs, ds, bx, bs;
     std::vector<std::pair<double, double>> excluded;
     if (project != nullptr && !project->experiments.empty()) {
         conversion_of(project->experiment(), xs, ds);
+        background_of(project->experiment(), bx, bs);
         excluded = excluded_of(project->experiment());
     }
-    if (xs == template_x_ && ds == template_d_ && excluded == template_excluded_) {
+    if (xs == template_x_ && ds == template_d_ && bx == template_bx_ && bs == template_bkg_ &&
+        excluded == template_excluded_) {
         return false;
     }
     template_x_ = std::move(xs);
     template_d_ = std::move(ds);
+    template_bx_ = std::move(bx);
+    template_bkg_ = std::move(bs);
     template_excluded_ = std::move(excluded);
     for (Pattern& pattern : patterns_) {
         pattern.excluded = template_excluded_;
@@ -493,6 +524,16 @@ void ScanViewModel::setRowsByIndex(bool on) {
 void ScanViewModel::placePattern(Pattern& pattern) {
     pattern.generation = ++pattern_generation_;
     pattern.excluded_shown.clear();
+    // A scan's datasets share the template's background; a joint fit's experiment keeps its own.
+    if (!joint_) {
+        pattern.background.clear();
+        if (template_bx_.size() >= 2) {
+            pattern.background.reserve(pattern.x.size());
+            for (const double x : pattern.x) {
+                pattern.background.push_back(d_of(template_bx_, template_bkg_, x, false));
+            }
+        }
+    }
     // Experiments on different native axes have no x to share until d is given: nothing is placed.
     if (!d_shown_ && !native_shared_) {
         pattern.shown.assign(pattern.x.size(), kNaN);
@@ -551,6 +592,13 @@ void ScanViewModel::placeRange() {
     publish(axis_max_, high, &ScanViewModel::xMaxChanged);
 }
 
+void ScanViewModel::publishBackground() {
+    const bool any = joint_ ? std::any_of(patterns_.begin(), patterns_.end(),
+                                          [](const Pattern& pattern) { return !pattern.background.empty(); })
+                            : template_bx_.size() >= 2;
+    publish(background_available_, any, &ScanViewModel::backgroundAvailableChanged);
+}
+
 // Every dataset on the axis shown, its range and its title.
 void ScanViewModel::placeAxis() {
     if (!joint_) {
@@ -563,6 +611,7 @@ void ScanViewModel::placeAxis() {
         placePattern(pattern);
     }
     placeRange();
+    publishBackground();
     // The axis is titled by its data item's dictionary label and units (edi ADR-0051).
     const char* const axis = d || !native_shared_                                  ? "data.d_spacing"
                              : mode_ == edi::BeamModeEnum::CONSTANT_WAVELENGTH ? "data.two_theta"
