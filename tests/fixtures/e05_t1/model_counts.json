@@ -13201,7 +13201,7 @@
       ]
     },
     {
-      "id": "sc-neut-cwl_pr2nio4-5c2_fit",
+      "id": "sc-neut-cwl_pr2nio4-5c2",
       "n_parameters": 40,
       "diffraction_lib_n_parameters": 40,
       "diffraction_lib_parameter_names": [
@@ -13485,7 +13485,7 @@
       ]
     },
     {
-      "id": "sc-neut-cwl_tb2ti2o7-heidi_fit",
+      "id": "sc-neut-cwl_tb2ti2o7-heidi",
       "n_parameters": 54,
       "diffraction_lib_n_parameters": 54,
       "diffraction_lib_parameter_names": [
@@ -13847,7 +13847,7 @@
       ]
     },
     {
-      "id": "sc-neut-tof_taurine_fit",
+      "id": "sc-neut-tof_taurine-senju",
       "n_parameters": 79,
       "diffraction_lib_n_parameters": 79,
       "diffraction_lib_parameter_names": [
@@ -14177,5 +14177,11 @@
     },
     "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
   },
-  "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)"
+  "coefficient_count_adaptation": "private polynomial declarations -> reference Chebyshev coefficient storage; explicit term_<order> IDs supplied; coefficients/free flags retained; count-only selection, no basis evaluation or fit; native polynomial and Chebyshev have one model parameter per authored coefficient (ADR-0077)",
+  "catalogue_identity_aliases": {
+    "sc-neut-cwl_tb2ti2o7-heidi_fit": "sc-neut-cwl_tb2ti2o7-heidi",
+    "sc-neut-cwl_pr2nio4-5c2_fit": "sc-neut-cwl_pr2nio4-5c2",
+    "sc-neut-tof_taurine_fit": "sc-neut-tof_taurine-senju"
+  },
+  "catalogue_identity_scope": "Case identities only; every independently captured model count/name stays unchanged."
 }
