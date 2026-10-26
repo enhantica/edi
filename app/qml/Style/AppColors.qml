@@ -18,9 +18,9 @@ QtObject {
     // The same, stronger: a framed status-bar item's hover, over its standing frame of `hoverHighlight`.
     readonly property color hoverHighlightStrong: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.18)
 
-    // The status bar's Fit button: near-black with white text in light mode, the other way round in dark mode (the
-    // owner, 2026-10-26).
-    readonly property color fitButtonBackground: EaStyle.Colors.isDarkPalette ? "#eeeeee" : "#222222"
+    // The fit buttons: dark grey with white text in light mode, light grey with dark text in dark mode, near-black and
+    // white on hover (the owner, 2026-10-26).
+    readonly property color fitButtonBackground: EaStyle.Colors.isDarkPalette ? "#e0e0e0" : "#333333"
     readonly property color fitButtonBackgroundHovered: EaStyle.Colors.isDarkPalette ? "#ffffff" : "#000000"
     readonly property color fitButtonForeground: EaStyle.Colors.isDarkPalette ? "#222222" : "#ffffff"
 
