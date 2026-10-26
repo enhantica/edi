@@ -6,6 +6,10 @@ _experiment_type.sample_form "powder"
 _experiment_type.beam_mode "constant wavelength"
 _experiment_type.radiation_probe "neutron"
 _experiment_type.scattering_type "bragg"
+_experiment_type.dimensionality 1d
+_experiment_type.polarisation unpolarised
+_instrument.name D20
+_instrument.facility ILL
 
 _peak.broad_gauss_u 0.23091065335098124(0.00783695876908294987)
 _peak.broad_gauss_v -0.5140245672916492(0.0168765310559782812)

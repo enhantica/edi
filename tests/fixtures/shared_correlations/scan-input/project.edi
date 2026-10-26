@@ -32,11 +32,6 @@ _structure_style.adp_probability 0.99
 _structure_style.atom_scale 0.3
 
 _verbosity.fit short
-_metadata.purpose "refinement"
-_metadata.dimensionality "1D"
-_metadata.instrument "D20"
-_metadata.facility "ILL"
-_metadata.polarisation "none"
 
 _metadata.created "01 Jan 2099 00:00:00"
 
