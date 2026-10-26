@@ -10,7 +10,7 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// A sidebar button in the status bar's Fit button's colours (the owner, 2026-10-26): near-black with a white icon and
+// A sidebar button in the status bar's Fit button's colours (the owner, 2026-10-26): dark grey with a white icon and
 // text in light mode, the other way round in dark mode, darker on hover and dimmed while disabled. The base button's
 // layout, with its background and content drawn in those colours; the Analysis page's fit button.
 EaElements.SideBarButton {

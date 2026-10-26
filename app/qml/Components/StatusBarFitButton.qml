@@ -8,8 +8,8 @@ import edi.app
 
 // The status bar's Fit button (the owner, 2026-10-26): from any page, what the Analysis page's fit button does at the
 // moment, with its icon, so a fit can be run again after changing a value elsewhere. A click while a fit runs stops it.
-// A framed fit-area item, so it has the fit status's padding and height; near-black with white text in light mode,
-// the other way round in dark mode.
+// A framed fit-area item, so it has the fit status's padding and height; dark grey with white text in light mode,
+// the other way round in dark mode (AppColors.fitButtonBackground).
 FitStatusItem {
     id: control
 

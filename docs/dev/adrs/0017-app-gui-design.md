@@ -909,8 +909,9 @@ refuses to write its bank rows into it.
   outcome, the values and, while a fit runs, the progress bar, shown on every page whenever the Analysis page is
   available, so a fit can be run again after changing a value elsewhere. It does what Start
   fitting does at that moment, with its icon and the short form of its text: *Fit*, *Continue* or *Stop*, which stops
-  the running fit. It is as tall and as round as the progress bar, near-black with white text in light mode and the
-  other way round in dark mode (`Components/StatusBarFitButton.qml`). The outcome beside it is framed as a button of
+  the running fit. It is as tall and as round as the progress bar, dark grey (#333333) with white text in light mode
+  and light grey (#e0e0e0) with dark text in dark mode, near-black and white on hover
+  (`Components/StatusBarFitButton.qml`, `AppColors.fitButtonBackground`). The outcome beside it is framed as a button of
   the same height and shape, in the light hover colour, and darker on hover. Both are framed fit-area items with one
   spacing: half a font size before the icon, a little less between icon and word, a little more after the word, so
   the three look even.
