@@ -29,6 +29,21 @@ Item {
             app = null;
             Preferences.resetToDefaults();
         }
+        function click(name) {
+            console.log("BACKLOG_INPUT " + name);
+            // Showing N of M text needs polish as each queued handover advances.
+            // Locate the actual exposed control without waiting for global idleness.
+            tryVerify(() => !Ui.moving(app.contentItem), 3000, "Live backlog navigation waits for actual viewport motion to stop");
+            let control;
+            tryVerify(() => {
+                control = Ui.target(Ui.control(Probe, app, name));
+                return control && control.enabled && Ui.exposed(control);
+            }, 2000, "Backlog navigation uses an enabled real control inside its actual visible viewport: " + name);
+            const point = Ui.clickPoint(control);
+            verify(point !== null, "Backlog navigation has a real unclipped pointer target");
+            mouseClick(control, point.x, point.y);
+            tryCompare(control, "checked", true, 2000, "Actual backlog navigation selects its requested page or tab");
+        }
         function settled() {
             tryVerify(() => !Ui.moving(app.contentItem), 3000, "Real navigation completes before the no-view presentation count is observed");
             app.update();
@@ -36,6 +51,7 @@ Item {
         }
         function test_backlog_identity_and_no_view() {
             Preferences.resetToDefaults();
+            Preferences.patternMeasuredStyle = "linePoints";
             app = factory.createObject(null);
             verify(app !== null, "The backlog gate opens the actual application");
             app.requestActivate();
@@ -61,6 +77,7 @@ Item {
             selector.currentIndex = index; selector.activated(index);
             compare(selector.currentText, "Every pattern, display catches up", "The selected real mode is catch-up, not fit-waits");
             tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 10000, "The initial real pattern is ready before the scientific scan");
+            tryVerify(() => PatternProof.measured(chart).length > 0, 3000, "The backlog witness positively observes actual measured marker points before starting its synchronized scan");
             ChartBackendProof.watch(app.contentItem);
             ChartBackendProof.setFrameDelay(400);
             fit.start();
@@ -70,10 +87,10 @@ Item {
             verify(fit.scanPatternUpdates > 0 && fit.scanPatternUpdates < 150, "A genuine backlog retains enough undrawn files for interrupted navigation");
             ChartBackendProof.setFrameDelay(0);
             for (const target of ["home", "correlations", "evolution"]) {
-                if (target === "home") Ui.click(test, Probe, app, "appBar.tab.home");
+                if (target === "home") click("appBar.tab.home");
                 else {
-                    Ui.click(test, Probe, app, "appBar.tab.analysis");
-                    Ui.click(test, Probe, app, "mainArea.analysis.tab." + target);
+                    click("appBar.tab.analysis");
+                    click("mainArea.analysis.tab." + target);
                 }
                 settled();
                 const before = fit.scanPatternUpdates;
@@ -84,13 +101,16 @@ Item {
                 compare(fit.scanPatternUpdates, before, "Home, Correlations and Evolution cannot count or drain queued pattern presentations");
                 verify(before < 162, "No-view navigation preserves a real nonempty queue");
             }
-            Ui.click(test, Probe, app, "mainArea.analysis.tab.fitting");
+            click("mainArea.analysis.tab.fitting");
             settled();
             tryCompare(fit, "scanPatternUpdates", 162, 90000, "Returning to the Pattern chart presents every queued file, without dropping or replaying any");
             settled();
+            verify(waitForPolish(app, 2000), "The application stops requesting polish once the queued pattern presentations are complete");
             const frames = PatternProof.followFrames();
             verify(frames.length >= 162, "Every handover has a scene-synchronized identity and measured-point observation");
-            console.log("BACKLOG_FRAMES " + JSON.stringify(frames));
+            const name = "backlog-" + Date.now() + "-" + Math.floor(Math.random() * 1000000000) + ".json";
+            verify(SettingsProof.write(Probe.repoUrl("build"), name, JSON.stringify(frames)), "The complete synchronized frame receipt is published to an owned file without console truncation");
+            console.log("BACKLOG_FRAMES_FILE " + JSON.stringify({name, count: frames.length}));
         }
     }
 }

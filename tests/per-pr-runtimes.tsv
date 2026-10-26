@@ -10,11 +10,11 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T16:07:52Z
+# measured_utc = 2026-10-26T17:27:30Z
 #
-# Recorded from: scoped source-level receipt replay; held application observations explicitly unmeasured
-# Collected tests: 17872; with a reported duration: 10269
-# Module-scoped fixture costs recorded: 88
+# Recorded from: scoped completed scene, redraw and dictionary-header replay; complete-module budgets retained
+# Collected tests: 17876; with a reported duration: 10277
+# Module-scoped fixture costs recorded: 90
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -29,10 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17872
+# inventory_python = 17876
 # inventory_cpp = 396
-# inventory_measured = 16000
-# inventory_unmeasured = 2268
+# inventory_measured = 16024
+# inventory_unmeasured = 2248
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -87,7 +87,7 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_adp_symmetry_gui.py::te
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_minimizer_is_two_rows_of_two]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_separate_adp_table_and_isotropic_controls]
 0.000	tests/integration/app/test_c13_t2_gui.py::test_each_gui_boundary_actually_executes[test_space_group_name_and_number_choose_new_default]
-0.000	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
+0.005	tests/integration/app/test_c13_t2_gui.py::test_gui_owner_decisions_pass_in_the_production_host
 0.400	tests/integration/app/test_display_fonts.py::test_display_alphabet_uses_only_packaged_rendering_fonts
 UNMEASURED:failed-in-this-run	tests/integration/app/test_e04_t12_link_licences.py::test_real_application_links_have_local_dependency_notices
 0.000	tests/integration/app/test_e04_t1_projects.py::test_each_registered_example_executes_in_the_production_host[pd-neut-cwl_cosio-d20]
@@ -8330,7 +8330,7 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_background_estimate_series_cl
 0.660	tests/system/py/test_background_term_id_actions.py::test_order_button_renames_ids_follows_references_undoes_and_reloads[chebyshev]
 0.635	tests/system/py/test_background_term_id_actions.py::test_order_button_renames_ids_follows_references_undoes_and_reloads[polynomial]
 3.473	tests/system/py/test_background_term_id_actions.py::test_position_button_retains_reference_rewriting_and_undo_with_singular_label
-UNMEASURED:app replay held pending product fixes and rebuilt passive helper	tests/system/py/test_backlogged_frames.py::test_backlogged_frames_keep_their_own_file_and_points
+0.542	tests/system/py/test_backlogged_frames.py::test_backlogged_frames_keep_their_own_file_and_points
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_beer_fit_agrees_with_every_fullprof_parameter
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_delivered_beer_project_preserves_shared_biso_and_free_set
 0.000	tests/system/py/test_beer_fullprof_agreement.py::test_fullprof_beer_reference_preserves_all_independent_variables
@@ -10556,17 +10556,17 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_a_
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_descent_reaches_the_frozen_fast_descent_regression_witness
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_variant_is_also_bound_to_the_independent_fullprof_reference
 0.000	tests/system/py/test_chart_fonts.py::test_font_inventory_covers_every_chart_and_pane
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[correlations]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[evolution]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[map]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-bragg]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-main]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-residual]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[single-f]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[single-squared]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[stacked]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-axis-letters]
-UNMEASURED:title observer interface changed; merged-head app replay held	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-labels]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[correlations]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[evolution]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[map]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-bragg]
+0.004	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-main]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[powder-residual]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[single-f]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[single-squared]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[stacked]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-axis-letters]
+0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[structure-labels]
 UNMEASURED:current named-title observer browser build and replay pending	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[correlations]
 UNMEASURED:current named-title observer browser build and replay pending	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[evolution]
 UNMEASURED:current named-title observer browser build and replay pending	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[map]
@@ -10578,10 +10578,10 @@ UNMEASURED:current named-title observer browser build and replay pending	tests/s
 UNMEASURED:current named-title observer browser build and replay pending	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[stacked]
 UNMEASURED:current named-title observer browser build and replay pending	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[structure-axis-letters]
 UNMEASURED:current named-title observer browser build and replay pending	tests/system/py/test_chart_fonts_browser.py::test_web_ticks_and_titles_share_the_app_font[structure-labels]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_handover.py::test_stale_synchronized_callback_keeps_replacement_pending[different-file-pattern]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_handover.py::test_stale_synchronized_callback_keeps_replacement_pending[different-file-selection]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_handover.py::test_stale_synchronized_callback_keeps_replacement_pending[same-file-pattern]
-UNMEASURED:failed-in-this-run	tests/system/py/test_chart_handover.py::test_stale_synchronized_callback_keeps_replacement_pending[same-file-selection]
+0.030	tests/system/py/test_chart_handover.py::test_stale_synchronized_callback_keeps_replacement_pending[different-file-pattern]
+0.040	tests/system/py/test_chart_handover.py::test_stale_synchronized_callback_keeps_replacement_pending[different-file-selection]
+0.040	tests/system/py/test_chart_handover.py::test_stale_synchronized_callback_keeps_replacement_pending[same-file-pattern]
+0.030	tests/system/py/test_chart_handover.py::test_stale_synchronized_callback_keeps_replacement_pending[same-file-selection]
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_case_only_successor_identity_changes_still_replace_queued_work[job]
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_case_only_successor_identity_changes_still_replace_queued_work[workflow]
 0.000	tests/system/py/test_ci_actions_semantics.py::test_actions_comparisons_cannot_hide_cancellation_or_replacement[case-pull_request-cancel-job]
@@ -13295,8 +13295,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_experiment_cif_refusal_app.py
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_highlight:stacked]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_hover_tooltip:map]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_hover_tooltip:stacked]
-UNMEASURED:app replay held pending product fixes and rebuilt passive helper	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_joint_exclusions_follow_placement:gpu]
-UNMEASURED:app replay held pending product fixes and rebuilt passive helper	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_joint_exclusions_follow_placement:software]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_joint_exclusions_follow_placement:gpu]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_joint_exclusions_follow_placement:software]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:analysis]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:experiment]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_pages_at_minimum:home]
@@ -13324,8 +13324,8 @@ UNMEASURED:app replay held pending product fixes and rebuilt passive helper	test
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-stacked-1200]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-stacked-420]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_toolbar:experiment-stacked-740]
-UNMEASURED:app replay held pending product fixes and rebuilt passive helper	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_wheel_reaches_last_dataset:analysis]
-UNMEASURED:app replay held pending product fixes and rebuilt passive helper	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_wheel_reaches_last_dataset:experiment]
+0.000	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_wheel_reaches_last_dataset:analysis]
+0.002	tests/system/py/test_fast_chart_redraws.py::test_chart_contract[test_wheel_reaches_last_dataset:experiment]
 0.000	tests/system/py/test_fast_chart_redraws.py::test_selection_rectangle_is_retired
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start0-free0]
 UNMEASURED:failed-in-this-run	tests/system/py/test_fcj_zero_start.py::test_completed_fit_preserves_every_fixed_fcj_coefficient[start1-free1]
@@ -13527,6 +13527,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_fit_quality_observation_cover
 0.510	tests/system/py/test_fullprof_powder_factors.py::test_fitted_lbco_factors_agree_with_the_committed_fullprof_summary
 0.570	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[scan]
 0.321	tests/system/py/test_generated_correlation_saved_output.py::test_real_fit_emits_every_pinned_single_or_template_correlation_row[single]
+0.000	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[analysis-map]
+0.000	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[analysis-stacked]
+0.000	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[experiment-map]
+0.000	tests/system/py/test_hidden_scan_redraws.py::test_hidden_scan_views_build_once_with_latest_data[experiment-stacked]
 0.300	tests/system/py/test_latest_fit_uncertainty.py::test_cli_fit_clears_fixed_uncertainty_on_disk
 0.080	tests/system/py/test_latest_fit_uncertainty.py::test_every_fit_path_clears_fixed_su_and_keeps_dependent_su[independent]
 0.090	tests/system/py/test_latest_fit_uncertainty.py::test_every_fit_path_clears_fixed_su_and_keeps_dependent_su[joint]
@@ -18312,7 +18316,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 5.172	tests/integration/app/test_about_components.py
 # module-cost: 8.987	tests/integration/app/test_background_estimate_action.py
 # module-cost: 22.933	tests/integration/app/test_background_estimate_settings_action.py
-# module-cost: 48.023	tests/integration/app/test_c13_t2_gui.py
+# module-cost: 60.895	tests/integration/app/test_c13_t2_gui.py
 # module-cost: 666.578	tests/integration/app/test_e04_t1_projects.py
 # module-cost: 23.263	tests/integration/app/test_e04_t1_runtime_escapes.py
 # module-cost: 10.317	tests/integration/app/test_legend_marks.py
@@ -18338,6 +18342,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 1.849	tests/system/py/test_app_receipt_current_inputs.py
 # module-cost: 1.669	tests/system/py/test_approved_palettes.py
 # module-cost: 2.937	tests/system/py/test_atom_position_contract.py
+# module-cost: 64.108	tests/system/py/test_backlogged_frames.py
 # module-cost: 3.785	tests/system/py/test_c09_t9_output_contract_and_cli.py
 # module-cost: 0.228	tests/system/py/test_c11_t62_native_scan_io.py
 # module-cost: 8.437	tests/system/py/test_c13_t14_fast_ci.py
@@ -18346,8 +18351,8 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
 # module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
-# module-cost: 15.254	tests/system/py/test_chart_fonts.py
-# module-cost: 3.443	tests/system/py/test_chart_handover.py
+# module-cost: 20.346	tests/system/py/test_chart_fonts.py
+# module-cost: 11.490	tests/system/py/test_chart_handover.py
 # module-cost: 3.683	tests/system/py/test_ci_native_modes.py
 # module-cost: 1.201	tests/system/py/test_correlation_selection.py
 # module-cost: 353.159	tests/system/py/test_current_row_input.py
@@ -18363,6 +18368,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 263.960	tests/system/py/test_fast_chart_redraws.py
 # module-cost: 3.929	tests/system/py/test_fit_participants_native.py
 # module-cost: 9.029	tests/system/py/test_generated_correlation_saved_output.py
+# module-cost: 119.403	tests/system/py/test_hidden_scan_redraws.py
 # module-cost: 205.663	tests/system/py/test_legend_symbols.py
 # module-cost: 216.560	tests/system/py/test_legend_visibility.py
 # module-cost: 12.618	tests/system/py/test_linear_row_admission.py

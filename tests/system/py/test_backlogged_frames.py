@@ -1,7 +1,11 @@
 """A real catch-up backlog keeps each receipt with its synchronized measured file."""
 
+import hashlib
 import json
+import math
 import os
+import re
+import time
 
 import pytest
 
@@ -12,7 +16,8 @@ FULL = ROOT / 'docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project'
 
 
 @pytest.fixture(scope='module')
-def backlog_frames():
+def backlog_frames(tmp_path_factory):
+    started = time.time_ns()
     status, output = capture(
         [
             os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'),
@@ -26,13 +31,46 @@ def backlog_frames():
     assert status == 0 and '::BackloggedFrames::test_backlog_identity_and_no_view()' in output, (
         'The real backlog and no-view actor must complete its exact case: ' + output
     )
+    assert not re.search(r'ListViewParameter\.qml[^\n]*(?:undefined|Unable to assign)', output), (
+        'The weight-fraction cell supplies defined values during backlog navigation'
+    )
     rows = [
-        json.loads(line.split('BACKLOG_FRAMES ', 1)[1])
+        json.loads(line.split('BACKLOG_FRAMES_FILE ', 1)[1])
         for line in output.splitlines()
-        if 'BACKLOG_FRAMES ' in line
+        if 'BACKLOG_FRAMES_FILE ' in line
     ]
-    assert len(rows) == 1, 'One complete synchronized backlog receipt is required'
-    return rows[0]
+    assert len(rows) == 1 and re.fullmatch(r'backlog-[0-9]+-[0-9]+\.json', rows[0]['name']), (
+        'One complete frame receipt identifies its own safe unique output filename'
+    )
+    path = ROOT / 'build' / rows[0]['name']
+    assert path.is_file() and path.stat().st_mtime_ns >= started, (
+        'The frame file is freshly published by this completed actor, not a stale receipt'
+    )
+    payload = path.read_bytes()
+    (tmp_path_factory.mktemp('backlog-receipt') / 'frames.json').write_bytes(payload)
+    path.unlink()
+    frames = json.loads(payload)
+    assert isinstance(frames, list) and len(frames) == rows[0]['count'], (
+        'The complete file agrees with the actor receipt, without dropped or truncated frames'
+    )
+    for frame in frames:
+        coordinates = frame['points']
+        assert (
+            isinstance(coordinates, list)
+            and len(coordinates) % 2 == 0
+            and all(type(value) in {int, float} and math.isfinite(value) for value in coordinates)
+        ), 'The native Qt frame wire list contains complete finite interleaved x/y pairs'
+        frame['points'] = [
+            coordinates[index : index + 2] for index in range(0, len(coordinates), 2)
+        ]
+    print(
+        'BACKLOG_FRAME_RECEIPT sha256='
+        + hashlib.sha256(payload).hexdigest()
+        + ' frames='
+        + str(len(frames)),
+        flush=True,
+    )
+    return frames
 
 
 def test_backlogged_frames_keep_their_own_file_and_points(backlog_frames):

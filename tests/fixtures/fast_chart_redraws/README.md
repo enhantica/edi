@@ -131,3 +131,22 @@ must be tinted and pixels immediately outside the corresponding extent must
 match untinted included columns away from the analytic triangle's peak. The
 expected spans never come from `rowOf`, `peakOf` or Map row extents. Pixel
 coordinates scale with the captured image, preserving DPR handling.
+
+`HiddenScanRedraws.qml` warms all four real page-owned scan views, then hides them
+through both actual page and tab navigation. It reloads both joint experiments
+from independently authored six-knot profiles twice while hidden, allowing
+completed frames after each change. Positive baseline 10 retains every point
+through the plain-data reader; plateaus 255 move from 20–30 through 35–45 to
+55–65 on the unchanged 10–80 x support, and back again in the tab case.
+Every hidden layer's `traceBuildCount` must remain unchanged. Showing just the
+target view must add exactly the dataset count, with no further increment on
+unchanged frames and no work in the other three hidden layers. No active flag
+or visibility override supplies the result. Actual input determines visibility.
+
+Current-point checks use real rendered pixels: Stacked has independently
+normalised half-height rows at full relative offset and must draw each latest
+rising edge while removing the old one; Map must move the frozen Viridis high
+and low colours to the latest and former plateau positions. The three-logical-
+pixel Stacked corridor covers its two-pixel pen and coordinate rounding, with
+RGB tolerance .09; flat Map plateaus use the frozen endpoints within 3/255 per
+channel. Both positive current ink and absence of old ink are required.

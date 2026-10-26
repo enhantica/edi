@@ -126,7 +126,7 @@ TestCase {
         verify(picker !== null && icon !== null && icon.parent === picker.contentItem, "owner 2026-10-06: atom icon sits inside the type picker without a separate column");
         verify(atoms.resolvedColumnWidths[2] < atoms.resolvedColumnWidths[3], "owner 2026-10-06: atom type column is compact beside coordinates");
         const table = reveal("structure", "basic", "atom_site_aniso", "atomSiteAdps.list");
-        compare(JSON.stringify(headers(table)), JSON.stringify(["", "id", "type", "iso/eq", "11", "22", "33", "12", "13", "23"]), "owner 2026-10-12: Atomic displacement retains its columns with iso/eq and component-index headers");
+        compare(JSON.stringify(headers(table)), JSON.stringify(["", "id", "ADP type", "iso/eq", "11", "22", "33", "12", "13", "23"]), "owner 2026-10-12: Atomic displacement retains its columns with iso/eq and component-index headers");
         const sites = Probe.rows(Session.project.currentStructure.atomSites);
         const adps = Probe.rows(Session.project.currentStructure.atomSiteAdps);
         compare(JSON.stringify(adps.map(row => row.label)), JSON.stringify(sites.map(row => row.label)), "owner 2026-10-06: ADP labels copy Atom sites in exactly the same order");

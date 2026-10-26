@@ -37,3 +37,17 @@ remains; completed frames there must neither count nor drain it. Returning to
 the Pattern chart must finish every queued presentation. The observer requires
 a rebuilt native helper; an older helper fails an explicit API guard. The actor
 has its own bounded process and performs only one real scientific fit.
+
+The backlog actor explicitly uses the normal `linePoints` measured style and
+requires actual marker points before fitting. A fresh store's band style has
+no marker source. During catch-up, real navigation checks the exposed control
+and its checked state without requiring the whole window to stop polishing:
+`statusBar.fit.showing` changes its text with each presented file. Once the
+queue drains, the actor requires the window to finish polishing, so a genuine
+perpetual polish loop cannot hide behind the live-input adaptation.
+The native helper's wire `points` list contains interleaved finite x/y numbers;
+the Python adapter validates complete pairs before applying the unchanged
+independent measured-file comparison. The full receipt is written to a unique
+owned JSON file, whose fresh publication/count are checked and whose bytes are
+retained in the test's private receipt directory. Qt console output contains
+only its safe filename and count, avoiding the console's truncation limit.
