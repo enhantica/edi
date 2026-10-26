@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T13:30:03Z
+# measured_utc = 2026-10-26T13:39:43Z
 #
-# Recorded from: measured test run (406 node(s) measured once, 15685 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (2 node(s) measured once, 16028 banked, 0 stale row(s) dropped)
 # Collected tests: 18031; with a reported duration: 10597
 # Module-scoped fixture costs recorded: 75
 #
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 18031
 # inventory_cpp = 396
-# inventory_measured = 16030
-# inventory_unmeasured = 2397
+# inventory_measured = 16028
+# inventory_unmeasured = 2399
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -374,8 +374,8 @@ UNMEASURED:failed-in-this-run	tests/integration/app/test_single_crystal_views.py
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_powder_view_retains_the_regression_pin[analysis-light]
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_powder_view_retains_the_regression_pin[experiment-dark]
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_powder_view_retains_the_regression_pin[experiment-light]
-0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_calculation_fit_and_results[calculation_after_edits_and_extinction_labels-dark]
-0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_calculation_fit_and_results[calculation_after_edits_and_extinction_labels-light]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_calculation_fit_and_results[calculation_after_edits_and_extinction_labels-dark]
+UNMEASURED:failed-in-this-run	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_calculation_fit_and_results[calculation_after_edits_and_extinction_labels-light]
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_calculation_fit_and_results[fit_lowers_objective_and_reports_single_crystal_factors-dark]
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_calculation_fit_and_results[fit_lowers_objective_and_reports_single_crystal_factors-light]
 0.000	tests/integration/app/test_single_crystal_views.py::test_real_single_crystal_calculation_fit_and_results[result_structure_names_are_complete-dark]
@@ -18481,7 +18481,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 4.741	tests/integration/app/test_scan_view_content.py
 # module-cost: 20.078	tests/integration/app/test_sequential_pattern_drawing.py
 # module-cost: 128.644	tests/integration/app/test_shared_pattern_chart.py
-# module-cost: 370.244	tests/integration/app/test_single_crystal_views.py
+# module-cost: 10.515	tests/integration/app/test_single_crystal_views.py
 # module-cost: 13.398	tests/integration/app/test_structure_toolbar.py
 # module-cost: 20.019	tests/integration/app/test_table_about_and_scan_views.py
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
