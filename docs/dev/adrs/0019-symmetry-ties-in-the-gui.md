@@ -10,6 +10,9 @@
     the same `CategoryField::refinable` flag, and the pages and the Analysis table follow it without a second rule.
   - What is refinable is read from crysta's public API, never decided in edi.
 
+**Amended by [ADR-0053](0053-what-a-fit-can-free.md):** the Analysis table lists a symmetry-tied parameter too, its
+free checkbox disabled with the reason "set by symmetry". The pages still show it disabled, with its implied value.
+
 **Amended 2026-10-05 (ADR-0024):** a parameter a declared constraint sets is the first new kind of dependent. crysta's
 relation graph marks every parameter with its dependence (`Parameter::dependence`), and a category field is refinable
 only when its mark is independent, structure and experiment alike, so a constrained parameter is disabled on its page
