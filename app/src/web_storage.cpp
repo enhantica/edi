@@ -118,6 +118,9 @@ EM_JS(int, edi_storage_install, (), {
             await writable.close();
         }
     };
+    // Only an entry proven missing counts as removed; any other refusal fails the write, so the place keeps its
+    // known files and the project stays unsaved.
+    S.missing = error => error && error.name === "NotFoundError";
     S.removePath = async (folder, path) => {
         const names = path.split("/");
         let at = folder;
@@ -127,7 +130,9 @@ EM_JS(int, edi_storage_install, (), {
             }
             await at.removeEntry(names[names.length - 1]);
         } catch (error) {
-            // Already gone.
+            if (!S.missing(error)) {
+                throw error;
+            }
         }
     };
     // The documents a project save writes in a folder and replaces there (as the app's desktop save does): the entity
@@ -139,7 +144,10 @@ EM_JS(int, edi_storage_install, (), {
             try {
                 at = await folder.getDirectoryHandle(category);
             } catch (error) {
-                continue;
+                if (S.missing(error)) {
+                    continue;
+                }
+                throw error;
             }
             for await (const [name, handle] of at.entries()) {
                 if (handle.kind === "file" && name.toLowerCase().endsWith(".edi")) {
