@@ -400,6 +400,8 @@ Item {
         // A drag zooms to the box it draws; a click shows the dataset whose row it falls in; a secondary click (a
         // touchpad's two-finger click) resets the axes, as on the pattern chart.
         MouseArea {
+            id: pointer
+
             property point start
 
             // The dataset under the pointer, named while it hovers (the owner, 2026-10-24); -1 for none.
@@ -470,8 +472,8 @@ Item {
             Item {
                 id: hoverPoint
 
-                x: parent.mouseX
-                y: parent.mouseY
+                x: pointer.mouseX
+                y: pointer.mouseY
                 width: 0
                 height: 0
 
@@ -479,11 +481,11 @@ Item {
                     id: hoverTip
 
                     readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
-                    readonly property real plotWidth: hoverPoint.parent.width
+                    readonly property real plotWidth: pointer.width
 
                     objectName: "scanView." + chart.mode + ".hover"
-                    visible: hoverPoint.parent.hovered >= 0 && hoverPoint.parent.containsMouse
-                    text: hoverPoint.parent.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(hoverPoint.parent.hovered) : ""
+                    visible: pointer.hovered >= 0 && pointer.containsMouse
+                    text: pointer.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(pointer.hovered) : ""
                     x: Math.max(-hoverPoint.x, Math.min(plotWidth - hoverPoint.x - implicitWidth, -implicitWidth / 2))
                     // Below, clear of the cross cursor.
                     y: hoverPoint.y >= implicitHeight + gap ? -implicitHeight - gap : 3 * gap
