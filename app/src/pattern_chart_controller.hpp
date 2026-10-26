@@ -24,19 +24,21 @@
 
 namespace edi_app {
 
-// One Bragg row's label (edi::BraggRowLabel): the structure's name, its colour, and the row's centre in rows from the
-// bottom. QML reads a list of them as an array.
+// One Bragg row's label (edi::BraggRowLabel): the structure's name, its colour, the row's centre in rows from the
+// bottom, and whether its ticks are hidden. QML reads a list of them as an array.
 struct BraggLabel {
     Q_GADGET
     QML_VALUE_TYPE(braggLabel)
     Q_PROPERTY(QString text MEMBER text CONSTANT)
     Q_PROPERTY(QColor color MEMBER color CONSTANT)
     Q_PROPERTY(double centre MEMBER centre CONSTANT)
+    Q_PROPERTY(bool hidden MEMBER hidden CONSTANT)
 
    public:
     QString text;
     QColor color;
     double centre = 0.0;
+    bool hidden = false;  // its ticks are hidden from the legend
     bool operator==(const BraggLabel&) const = default;
 };
 
