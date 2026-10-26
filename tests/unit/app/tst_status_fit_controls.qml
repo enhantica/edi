@@ -106,16 +106,20 @@ TestCase {
         }
         fuzzyCompare(button.mapToItem(group, button.width, 0).x, group.width, 1, "The Fit action is the last item at the status bar's right end");
     }
-    function fitState(shortText, sidebarText) {
-        compare(caption(shortcut()), shortText, "The status Fit shortcut names the actual idle, continuing or running state");
-        compare(analysisButton().text, sidebarText, "The Analysis button names the same actual fitting state");
-        compare(icon(shortcut()), icon(analysisButton()), "The status shortcut uses the sidebar icon for its actual fitting state");
-        verify(icon(shortcut()) !== "", "Each fitting state renders its sidebar action icon");
+    function fitState(shortText) {
+        compare(caption(shortcut()), shortText, "The status Fit control names the actual idle, continuing or running state");
+        compare(icon(shortcut()), shortText === "Stop" ? "stop-circle" : "play-circle", "Start and Continue use play, and the running action uses stop");
     }
-    function analysisButton() {
-        const item = findChild(Ui.page(appWindow), "fitting.start");
-        verify(item !== null, "The production Analysis fitting button supplies the action-parity control");
+    function sidebarFitActions() {
+        return View.descendants(Ui.page(appWindow)).filter(item => ["fitting.start", "fitting.reset", "fitting.follow"].includes(item.objectName) || (typeof item.clicked === "function" && /^(Start fitting|Continue fitting|Stop fitting|Follow|Reset fits)$/.test(item.text)));
+    }
+    function scanControl(name, optional = false) {
+        const item = findChild(appWindow, "statusBar.fit." + name);
+        verify(optional || item !== null, "The status bar owns the scan " + name + " control");
         return item;
+    }
+    function actionable(item) {
+        return item !== null && item.enabled && (typeof item.clickable !== "boolean" || item.clickable);
     }
     function icon(item) {
         if (typeof item.fontIcon === "string")
@@ -187,18 +191,17 @@ TestCase {
     function test_unavailable_action_matches_analysis() {
         open("calculation");
         verify(AppState.analysisPageEnabled && !Session.project.fit.available, "Calculation-only data enable Analysis while making a fit unavailable");
-        const button = shortcut(), analysis = analysisButton();
-        verify(button.visible && !button.enabled && !analysis.enabled, "The status Fit button remains shown but disabled exactly like Analysis for an unavailable fit");
+        const button = shortcut();
+        verify(button.visible && !actionable(button), "The status Fit button remains shown but disabled when the model reports an unavailable fit");
         runningSpy.clear();
         click(button);
         compare(runningSpy.count, 0, "Clicking an unavailable status shortcut cannot start a worker");
     }
     function test_status_start() {
         open("single");
-        fitState("Fit", "Start fitting");
+        fitState("Fit");
         const button = shortcut();
-        compare(button.enabled, analysisButton().enabled, "An idle status shortcut follows Analysis availability");
-        compare(icon(button), icon(analysisButton()), "The idle status shortcut shows the Analysis start icon");
+        verify(actionable(button) && Session.project.fit.available, "An idle status action follows the model availability");
         AppState.open(AppState.Page.Structure);
         runningSpy.clear();
         click(button);
@@ -221,14 +224,13 @@ TestCase {
         verify(Session.openProject(copy), "The partial scan restores its result index alongside the newly added dataset");
         tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 10000, "The restored partial scan publishes its selected dataset");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
-        verify(Session.project.fit.continuable && /Continue/.test(analysisButton().text), "The physical resume witness reaches Analysis Continue fitting");
-        fitState("Continue", "Continue fitting");
-        compare(shortcut().enabled, analysisButton().enabled, "The status shortcut follows Continue fitting availability");
-        compare(icon(shortcut()), icon(analysisButton()), "The status shortcut follows Continue fitting's icon");
+        verify(Session.project.fit.continuable, "The physical resume witness reaches the real resumable state");
+        fitState("Continue");
+        verify(actionable(shortcut()), "The resumable scan enables the status Continue action");
         click(shortcut());
         finish();
         compare(Session.project.fit.scanFitted, 2, "Status Fit continues the partial scan through the newly added measured dataset");
-        fitState("Fit", "Start fitting");
+        fitState("Fit");
     }
     function test_running_action_data() {
         return [
@@ -242,23 +244,21 @@ TestCase {
     }
     function test_running_action(data) {
         open("scan");
-        const button = data.tag === "status" ? shortcut() : analysisButton();
-        fitState("Fit", "Start fitting");
+        if (data.tag === "status")
+            AppState.open(AppState.Page.Structure);
+        const button = shortcut();
+        fitState("Fit");
         Session.project.fit.start();
         verify(Session.project.fit.running, "The actual worker enters its running state synchronously before stop input");
-        fitState("Stop", "Stop fitting");
+        fitState("Stop");
         const progress = findChild(appWindow, "statusBar.fit.progress");
         verify(progress !== null && progress.visible, "The running position witness includes the actual fit progress bar");
         rightmostFitAction();
-        if (data.tag === "status") {
-            compare(button.enabled, analysisButton().enabled, "While running the status shortcut remains enabled exactly like Analysis");
-            compare(icon(button), icon(analysisButton()), "While running the status shortcut changes to the actual Analysis stop icon");
-            verify(icon(button) !== "" && /Stop/.test(analysisButton().text), "Running-state parity is checked at Stop, not at the idle start icon");
-        }
+        verify(actionable(button), "The running status action stays available to stop the worker on either page");
         click(button);
         finish();
-        compare(Session.project.fit.outcome, "stopped", "The running status and Analysis actions both stop the actual fit worker");
-        fitState(Session.project.fit.continuable ? "Continue" : "Fit", Session.project.fit.continuable ? "Continue fitting" : "Start fitting");
+        compare(Session.project.fit.outcome, "stopped", "The status action stops the actual fit worker from Analysis and other pages");
+        fitState(Session.project.fit.continuable ? "Continue" : "Fit");
     }
     function test_button_style_data() {
         return [
@@ -312,14 +312,152 @@ TestCase {
         tryVerify(() => data.tag === "light" ? luminance(label[0].color) > .9 : luminance(label[0].color) < .25, 1500, "Fit caption ink is white in light mode and inverted in dark mode");
         const glyphs = View.textItems(button).filter(item => item.text !== "Fit");
         verify(glyphs.length > 0 && glyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The status Fit icon has the same white or inverse ink as its caption");
-        const sidebar = analysisButton(), sidebarFill = rectangle(sidebar);
-        tryVerify(() => paintedGrayMatches(sidebarFill, idleChannel), 1500, "The Analysis fit background is #333333 in light mode and #e0e0e0 in dark mode while idle");
-        const sidebarLabel = View.textItems(sidebar).filter(item => item.text === sidebar.text);
-        compare(sidebarLabel.length, 1, "The primary Analysis fit button renders its state caption");
-        tryVerify(() => data.tag === "light" ? luminance(sidebarLabel[0].color) > .9 : luminance(sidebarLabel[0].color) < .25, 1500, "The primary Analysis fit caption shares the status shortcut's white or inverse ink");
-        const sidebarGlyphs = View.textItems(sidebar).filter(item => item.text === icon(sidebar));
-        verify(sidebarGlyphs.length > 0 && sidebarGlyphs.some(item => data.tag === "light" ? luminance(item.color) > .9 : luminance(item.color) < .25), "The primary Analysis fit icon shares the status shortcut's white or inverse ink");
         rightmostFitAction();
+    }
+    function test_scan_controls_data() {
+        return ["single", "joint", "scan", "independent", "scan-single"].map(kind => ({
+                    tag: kind
+                }));
+    }
+    function test_scan_controls(data) {
+        const isScan = data.tag === "scan" || data.tag === "independent";
+        open(data.tag === "single" || data.tag === "joint" ? "single" : "scan");
+        if (data.tag === "joint") {
+            verify(Session.project.duplicateExperiment(), "A second real experiment creates the joint witness");
+            Session.project.analysis.fittingMode = "joint";
+        } else if (data.tag === "independent")
+            Session.project.analysis.fittingMode = "independent";
+        else if (data.tag === "scan-single")
+            Session.project.analysis.fittingMode = "single";
+        verify(waitForPolish(appWindow.contentItem), "The selected fitting mode settles before scan action checks");
+        const reset = scanControl("reset", !isScan), follow = scanControl("follow", !isScan), button = shortcut();
+        compare(reset !== null && reset.visible, isScan, "Reset is shown only for sequential and independent scans");
+        compare(follow !== null && follow.visible, isScan, "Follow is shown only for sequential and independent scans");
+        verify(!actionable(follow), "Follow cannot be activated before a scan runs");
+        if (!isScan)
+            return;
+        verify(reset.mapToItem(area(), reset.width, 0).x <= follow.mapToItem(area(), 0, 0).x && follow.mapToItem(area(), follow.width, 0).x <= button.mapToItem(area(), 0, 0).x, "The scan actions are ordered Reset, Follow, Fit at the right end");
+        for (const item of [reset, follow]) {
+            const fill = rectangle(item), fitFill = rectangle(button);
+            fuzzyCompare(fill.height, fitFill.height, 1, "Scan actions have Fit's framed height");
+            fuzzyCompare(fill.radius, fitFill.radius, .5, "Scan actions have Fit's corner radius");
+            fuzzyCompare(item.leftPadding, button.leftPadding, .5, "Scan actions have Fit's left padding");
+            fuzzyCompare(item.rightPadding, button.rightPadding, .5, "Scan actions have Fit's right padding");
+        }
+        let compact = false;
+        for (const width of [1000, 800, 640, 500]) {
+            appWindow.width = width;
+            verify(waitForPolish(appWindow.contentItem), "Narrow-window layout settles before checking action captions");
+            const hasCaption = item => View.textItems(item).some(label => label.text === caption(item));
+            if (!hasCaption(reset) && !hasCaption(follow) && hasCaption(button)) {
+                compact = true;
+                break;
+            }
+        }
+        verify(compact, "Reset and Follow drop their captions before Fit on a narrow status bar");
+        appWindow.width = 1300;
+        verify(waitForPolish(appWindow.contentItem), "The wide status controls are restored before worker input");
+        Session.project.fit.start();
+        verify(Session.project.fit.scanning && actionable(follow), "Follow becomes available while the actual scan runs");
+        const previous = Session.project.fit.following;
+        click(follow);
+        compare(Session.project.fit.following, !previous, "Actual status Follow input toggles the running scan's model");
+        click(follow);
+        compare(Session.project.fit.following, previous, "A second Follow click restores the real following state");
+        click(button);
+        finish();
+        dialogs().forEach(dialog => dialog.close());
+        verify(!actionable(follow), "Follow becomes unavailable when the scan stops");
+        if (!Session.project.fit.canReset) {
+            Session.project.fit.start();
+            finish();
+            dialogs().forEach(dialog => dialog.close());
+        }
+        verify(Session.project.fit.canReset && actionable(reset), "Retained real scan results enable Reset");
+        click(reset);
+        compare(Session.project.fit.scanFitted, 0, "Actual status Reset input clears the scan's fitted datasets");
+        verify(!Session.project.fit.canReset && !actionable(reset), "Reset becomes unavailable after its own results are cleared");
+    }
+    function test_disabled_style_data() {
+        return [
+            {
+                tag: "light"
+            },
+            {
+                tag: "dark"
+            }
+        ];
+    }
+    function test_disabled_style(data) {
+        open("scan");
+        Session.project.fit.start();
+        finish();
+        dialogs().forEach(dialog => dialog.close());
+        EaStyle.Colors.theme = data.tag === "light" ? EaStyle.Colors.Themes.LightTheme : EaStyle.Colors.Themes.DarkTheme;
+        const button = shortcut(), follow = scanControl("follow");
+        verify(!Session.project.fit.available && !actionable(button) && !actionable(follow), "A completed scan disables Fit and Follow for the muted-style witness");
+        mouseMove(appWindow.contentItem, 1, 1);
+        const fill = rectangle(button), other = rectangle(follow);
+        tryVerify(() => {
+            const a = paintedColor(fill), b = paintedColor(other);
+            return Math.abs(a.r - b.r) <= 1 / 255 && Math.abs(a.g - b.g) <= 1 / 255 && Math.abs(a.b - b.b) <= 1 / 255;
+        }, 1500, "Disabled Fit has the same rendered background as disabled Follow in each theme");
+        const label = View.textItems(button).find(item => item.text === caption(button));
+        const peer = View.textItems(follow).find(item => item.text === caption(follow));
+        verify(label !== undefined && peer !== undefined, "Both disabled controls render their captions");
+        tryCompare(label, "color", peer.color, 1500, "Disabled Fit uses Follow's normal caption colour");
+        tryCompare(button, "iconColor", follow.iconColor, 1500, "Disabled Fit uses Follow's normal icon colour");
+    }
+    function test_fit_tooltip_data() {
+        return [
+            {
+                tag: "on",
+                enabled: true
+            },
+            {
+                tag: "off",
+                enabled: false
+            }
+        ];
+    }
+    function test_fit_tooltip(data) {
+        open("single");
+        Preferences.toolTips = data.enabled;
+        const button = shortcut();
+        compare(button.ToolTip.text, "Fit the free parameters", "The Fit tooltip uses the owner's exact text");
+        mouseMove(appWindow.contentItem, 1, 1);
+        const point = Ui.clickPoint(button);
+        verify(point !== null, "The status Fit tooltip has a visible hover target");
+        mouseMove(button, point.x, point.y);
+        const tips = () => Probe.objectsWithProperty(button, "enterAnimationDuration").filter(tip => tip.text === "Fit the free parameters");
+        tryVerify(() => tips().length > 0, 1000, "The actual Fit control owns its tooltip popup");
+        if (data.enabled)
+            tryVerify(() => tips().some(tip => tip.visible && tip.opened && tip.opacity >= .99), 3000, "Hovering Fit displays its exact tooltip when app tooltips are enabled");
+        else {
+            verify(tips().every(tip => !tip.visible && !tip.opened), "Hovering Fit keeps its tooltip closed when app tooltips are disabled");
+            Preferences.toolTips = true;
+            tryVerify(() => tips().some(tip => tip.visible && tip.opened && tip.opacity >= .99), 3000, "The same held hover opens the real tooltip after enabling it");
+            Preferences.toolTips = false;
+            tryVerify(() => tips().every(tip => !tip.visible && !tip.opened), 1000, "Disabling tooltips closes the actual open Fit popup");
+        }
+    }
+    function test_sidebar_table_uses_available_height() {
+        open("single");
+        verify(sidebarFitActions().length === 0, "The sidebar has no Start, Stop, Continue, Follow or Reset controls");
+        const table = findChild(Ui.page(appWindow), "parameters.list"), slider = findChild(Ui.page(appWindow), "parameters.slider");
+        verify(table !== null && slider !== null && Ui.exposed(slider), "The expanded parameter table retains its visible value slider");
+        const initial = table.height;
+        appWindow.height += 160;
+        verify(waitForPolish(appWindow.contentItem), "Sidebar resizing finishes before checking table growth");
+        verify(table.height > initial + 100, "The table consumes the new sidebar height instead of leaving the old fit-button space");
+        verify(slider.mapToItem(appWindow.contentItem, 0, slider.height).y <= appWindow.contentItem.height, "The value slider remains within the resized application viewport");
+        const rows = View.descendants(table).filter(item => /^parameters.row.[0-9]+$/.test(item.objectName));
+        verify(rows.length > 2, "The table-height witness contains enough independently authored parameters for clipping");
+        const fractional = rows.some(row => {
+            let top = row.mapToItem(table, 0, 0).y, bottom = top + row.height;
+            return top >= 0 && top < table.height && bottom > table.height && (table.height - top) / row.height >= .3 && (table.height - top) / row.height <= .7;
+        });
+        verify(fractional, "About half of the next parameter row remains visible at the table's lower edge");
     }
     function test_preference_default_and_user_store() {
         open("single");
@@ -368,8 +506,9 @@ TestCase {
     function test_existing_analysis_start() {
         open("single");
         runningSpy.clear();
-        click(analysisButton());
-        verify(runningSpy.count > 0, "The unchanged Analysis button starts the real fit worker as the shortcut's control");
+        verify(sidebarFitActions().length === 0, "Analysis has no sidebar fitting controls");
+        click(shortcut());
+        verify(runningSpy.count > 0, "The status Fit action starts the real worker while Analysis is selected");
         finish();
     }
     function test_existing_completion_data() {

@@ -279,7 +279,7 @@ Item {
                 analyze(initial);
             verify(initial !== null && initial.calculation.pixels >= 40 && initial.calculation.offCurve === 0 && initial.measuredWrong === 0, "The pixel observer must positively see the initial real calculated curve at its current physical coordinates");
             const fit = Session.project.fit;
-            Ui.click(test, Probe, appWindow, "fitting.start");
+            Ui.click(test, Probe, appWindow, "statusBar.fit.button");
             verify(fit.running, "The real Start fitting button must launch the sequential worker");
             const started = Date.now();
             let last = "";
