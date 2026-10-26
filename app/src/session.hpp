@@ -256,8 +256,15 @@ class Session : public QObject {
     WebStorage::Answer webOpenAnswer(const QString& root);
     // Opens the project folder or archive the browser copied into memory at `path`, from the place `place`.
     bool openWebCopy(const QString& path, const WebPlace& place);
-    // Writes the saved project folder into `place`; `done` hears whether it was written.
-    void writeWebPlace(const WebPlace& place, const std::function<void(bool)>& done);
+    // Writes `folder` into `place`; `done` hears whether it was written.
+    void writeWebPlace(const WebPlace& place, const QString& folder, const std::function<void(bool)>& done);
+    // A Save or a moving Save as is being written to a place: another waits until it is.
+    bool web_writing_ = false;
+    // What a Save writes (round, adopt, recalculate, write), done on a copy in `folder` inside a new `root`; the open
+    // project is left as it is.
+    bool stageCopy(QString& root, QString& folder);
+    // Writes the working folder into the .zip `archive`; a refusal leaves the project unsaved.
+    bool rewriteArchive(const QString& archive);
     // A web open request: its answer replaces the project only if no later request or open came meanwhile, and the
     // project was not edited while it was read.
     std::function<bool(const WebStorageAnswer&)> openRequest(const QString& root);

@@ -5057,18 +5057,39 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     if (!adopt_saved_values(project, directory)) {
         return false;
     }
-    // A calculation would estimate a due background, which only a calculation the user asks for does (ADR-0040).
-    if (background_estimates_due(project)) {
-        return true;
-    }
     const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
         return (item->data.has_value() && !item->data->intensity_calc.empty()) ||
                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
     });
-    if (calculated) {
-        project.refresh_calculated_pattern();
-        save_project(project, directory);
+    if (!calculated) {
+        return true;
     }
+    // A due background is estimated only by a calculation the user asks for (ADR-0040): with one, the file's results
+    // are calculated on a copy, which may estimate it, and the open project keeps its own background and results.
+    if (background_estimates_due(project)) {
+        Project copy(project);
+        copy.refresh_calculated_pattern();
+        // A due bank is written with its own points, as the save wrote it (ADR-0040), not the copy's estimate.
+        for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+            const ExperimentBase& own = *project.experiments[index];
+            if (!background_estimate_due(own)) {
+                continue;
+            }
+            ExperimentBase& written = *copy.experiments[index];
+            written.background = own.background;
+            written.background_terms = own.background_terms;
+            written.background_origin = own.background_origin;
+            written.background_x_min = own.background_x_min;
+            written.background_x_max = own.background_x_max;
+            written.background_estimate_mode = own.background_estimate_mode;
+            written.background_estimate_inputs = own.background_estimate_inputs;
+            written.background_estimate_points = own.background_estimate_points;
+        }
+        save_project(copy, directory);
+        return true;
+    }
+    project.refresh_calculated_pattern();
+    save_project(project, directory);
     return true;
 }
 
