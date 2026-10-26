@@ -233,6 +233,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
     // project's directory; an empty string on success, else the core's message (also `lastError`).
     QString saveTo(const QString& directory);
+    // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
+    // (edi ADR-0052). Not a save and not an edit.
+    void workIn(const QString& folder);
+    // The model a save writes: a scan's template while a dataset is shown, else the project.
+    const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
+    // The project holds changes its place does not (the web app's kept unsaved state, reopened).
+    void markUnsaved() { setModified(true); }
+    // How many edits the project has had: a save that finishes later knows whether the project changed meanwhile.
+    quint64 revision() const { return revision_; }
+    // A save that wrote the project's own folder but not its archive or place: still unsaved, and not an edit.
+    void keepUnsaved();
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
@@ -406,6 +417,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
+    // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
+    void edited();
     void refused(const QString& message);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
     void message(const QString& text);
@@ -646,6 +659,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool pending_structural_ = false;
     bool calculating_ = false;
     bool modified_ = false;
+    quint64 revision_ = 0;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;

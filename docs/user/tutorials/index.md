@@ -57,3 +57,11 @@ lists each one with what it waits for.
 | --- | --- |
 | [Sequential fit: Co₂SiO₄, D20 temperature scan](pd-neut-cwl_cosio-d20_scan.ipynb) | Co₂SiO₄ [Pnma] · D20 @ ILL |
 | [Sequential fit: LATP, BM01](pd-xray-cwl_latp-bm01_scan.ipynb) | LATP [R-3c] / AlPO₄ [C222₁] / AlPO₄ [P6₃mc] · BM01 @ ESRF |
+
+## Single crystal
+
+| tutorial | what it shows |
+| --- | --- |
+| [Single-crystal fit: Tb₂Ti₂O₇, HEiDi](sc-neut-cwl_tb2ti2o7-heidi.ipynb) | Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II) |
+| [Single-crystal fit: Pr₂NiO₄, 5C2](sc-neut-cwl_pr2nio4-5c2.ipynb) | Pr₂NiO₄ [Fmmm] · 5C2 @ LLB |
+| [Single-crystal fit: taurine, SENJU](sc-neut-tof_taurine-senju.ipynb) | Taurine [P2₁/c] · SENJU @ J-PARC |

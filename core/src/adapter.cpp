@@ -2325,7 +2325,9 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     // the declared data_dir stays inside it; with an empty path it can do neither, so an edi save
     // silently dropped the scan inputs and the results, and the containment rule never ran on the
     // edi save path at all.
-    cproject.path = model.path;
+    // A project opened from an archive has no directory of its own: its files are carried from the folder it was
+    // unpacked into (edi ADR-0052), its reports among them.
+    cproject.path = model.path.empty() ? model.scan_data_root : model.path;
     // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
     cproject.scan_data_root = model.scan_data_root;
     // The project identity rides the delegated save. Copy the persisted metadata fields

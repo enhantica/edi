@@ -145,7 +145,14 @@ def test_c11_t4_beam_mode_matrix_defaults_and_quoted_round_trip(tmp_path: Path) 
         for line in saved_lines
         if line.startswith(tuple(dictionary_tags))
     }
-    assert saved_tag_lines == source_tag_lines
+    from tests.fixtures.report_units.iucr_reference import saved_record  # noqa: PLC0415
+
+    expected = {
+        tag: saved_record(line.encode()).decode() for tag, line in source_tag_lines.items()
+    }
+    assert saved_tag_lines == expected, (
+        'Selector round trip retains every tag and independently rounds saved numeric values'
+    )
 
 
 def test_c11_t57_formerly_reserved_cw_rungs_load_and_unknown_still_refuses(tmp_path: Path) -> None:
@@ -252,14 +259,14 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
             name: historical_single_fraction(name, without_calculator(name, data))
             for name, data in actual.items()
         }
-        from tests.fixtures.report_units.iucr_reference import rounded_record  # noqa: PLC0415
+        from tests.fixtures.report_units.iucr_reference import saved_record  # noqa: PLC0415
 
         assert actual == {
-            name: rounded_record(data) for name, data in _tree_bytes(golden).items()
+            name: saved_record(data) for name, data in _tree_bytes(golden).items()
         }, (
             'adding project identity must leave every pre-existing canonical TOF golden path '
             'and byte unchanged apart from the checked calculator block '
-            'and independent IUCr tokens and the checked unity fraction column'
+            'and independent saved tokens and the checked unity fraction column'
         )
         normalized = tree_bytes_with_normalized_project_metadata(
             destination, 'created', 'last_modified'
@@ -272,7 +279,7 @@ def require_existing_tof_writer_goldens(tmp_path: Path) -> None:
             r'_metadata\.created +<NORMALIZED-WALL-CLOCK>\n'
             r'_metadata\.last_modified +<NORMALIZED-WALL-CLOCK>\n'
             r'_metadata\.timestamp +\?\n'
-            r'_su_format\.rule iucr_19\n',
+            r'_su_format\.rule iucr_99\n',
             normalized,
         ), (
             'the new TOF golden artifact must be exactly the schema-3 default identity record; '

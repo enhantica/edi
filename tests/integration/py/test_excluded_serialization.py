@@ -10,6 +10,8 @@ import edi as library
 import numpy as np
 import pytest
 
+from tests.fixtures.project_save.reference import six_digits
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = ROOT / 'tests/fixtures/excluded_display'
 
@@ -136,9 +138,9 @@ def test_excluded_writer_keeps_real_d_and_absent_derived_values(tmp_path, kind):
             'd-spacing is a unit conversion defined at every physical '
             'observation, including exclusions'
         )
-        assert float(row['_data.d_spacing']) == pytest.approx(oracle['d'][i], rel=2e-7), (
-            'Saved d-spacing follows Bragg inversion or the nonzero quadratic TOF calibration'
-        )
+        assert float(row['_data.d_spacing']) == pytest.approx(
+            six_digits(oracle['d'][i]), rel=2e-7
+        ), 'Saved d-spacing follows Bragg inversion or the nonzero quadratic TOF calibration'
         if not oracle['included'][i]:
             for key in ('intensity_calc', 'intensity_bkg'):
                 assert row['_data.' + key] == '.', (

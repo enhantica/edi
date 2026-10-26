@@ -1555,8 +1555,16 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     publishCurrent();
     if (view.frame) {
         showFitFrame(*view.frame, std::move(view.d_frame));
-    } else if (!view.error.isEmpty()) {
-        setLastError(view.error);
+    } else {
+        if (!view.error.isEmpty()) {
+            setLastError(view.error);
+        }
+        // The chart shows the dataset the model now holds at once, its calculation not current until the next one
+        // arrives: never one file's points while the model holds another's (the template's at a scan's first swap,
+        // or an earlier followed file's when a finished scan settles on its last file, which comes with no frame).
+        if (ExperimentViewModel* experiment = currentExperiment()) {
+            experiment->capturePattern();
+        }
     }
     applied = true;
 }
@@ -2460,10 +2468,29 @@ void ProjectViewModel::syncUndo() {
 }
 
 void ProjectViewModel::setModified(bool modified) {
+    if (modified) {
+        ++revision_;
+        emit edited();
+    }
     if (modified != modified_) {
         modified_ = modified;
         emit modifiedChanged();
     }
+}
+
+void ProjectViewModel::keepUnsaved() {
+    if (!modified_) {
+        modified_ = true;
+        emit modifiedChanged();
+    }
+}
+
+
+void ProjectViewModel::workIn(const QString& folder) {
+    project_->path = folder.toStdString();
+    project_->metadata.path = project_->path;
+    project_->scan_data_root.clear();
+    emit pathChanged();
 }
 
 QString ProjectViewModel::saveTo(const QString& directory) {
@@ -2492,12 +2519,16 @@ QString ProjectViewModel::saveTo(const QString& directory) {
         project_->scan_data_root = scan_template_->scan_data_root;
     }
     // The saved project then holds what its files hold, as a reopen reads them (values and correlations rounded by
-    // the IUCr rule), and is calculated once from that: not an edit, so it stays unmodified with nothing to undo.
+    // the project's rule), calculated from that and written again (edi ADR-0052): not an edit, so it stays unmodified
+    // with nothing to undo.
     try {
-        if (edi::adopt_saved_values(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
-            if (scan_template_) {
+        edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
+        if (edi::adopt_saved_project(saved, directory.toStdString())) {
+            // A due background is estimated only by a calculation the user asks for (ADR-0040): the shown results stay.
+            const bool estimate_due = edi::background_estimates_due(saved);
+            if (!estimate_due && scan_template_) {
                 scan_template_->refresh_calculated_pattern();
-            } else {
+            } else if (!estimate_due) {
                 preview_->recalculate();
             }
             publish(false);

@@ -2099,6 +2099,11 @@
           "member": "Project::scan_data_root",
           "type": "std::string",
           "items": []
+        },
+        {
+          "member": "Project::archive",
+          "type": "std::string",
+          "items": []
         }
       ],
       "owner": "Project"
@@ -5096,6 +5101,11 @@
     },
     {
       "member": "Project::scan_data_root",
+      "type": "std::string",
+      "category": "project"
+    },
+    {
+      "member": "Project::archive",
       "type": "std::string",
       "category": "project"
     },
