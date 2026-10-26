@@ -17,6 +17,7 @@ import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const saveRouteOnly = process.argv.includes('--save-route-only');
+const exampleOnly = process.argv.includes('--example-only');
 const fileRequestsOnly = saveRouteOnly || process.argv.includes('--file-requests-only');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
@@ -28,6 +29,8 @@ const reopenControl = process.argv.find(arg => arg.startsWith('--reopen-control=
 assert(!fileRequestsOnly || !reopenControl, 'request-only checks cannot impersonate a reopen control');
 assert(!reopenControl || ['noop', 'refuse'].includes(reopenControl),
   'reopen counterfactual must be the explicit no-op or refused-open case');
+assert(!exampleOnly || (!fileRequestsOnly && !reopenControl && fileRequestCase === 'none'),
+  'The example-only scope must omit file requests, save-only and reopen controls');
 console.log(`browser ${mode}: starting`);
 assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(mode),
   'requires the produced site, an explicit thread case and a persistent output directory');
@@ -116,7 +119,13 @@ try {
   if (mode === 'singlethread') await send('Network.setBlockedURLs', { urls: ['*coi-serviceworker.js*'] });
   const evaluate = async expression => {
     const result = await send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
-    assert(!result.exceptionDetails, 'page evaluation must execute without a browser exception');
+    if (result.exceptionDetails) {
+      await writeFile(join(output, `${mode}-evaluation-error.json`), JSON.stringify({
+        expression, exceptionDetails:result.exceptionDetails,
+      }, null, 2));
+    }
+    assert(!result.exceptionDetails, 'page evaluation must execute without a browser exception: ' +
+      (result.exceptionDetails?.exception?.description || result.exceptionDetails?.text || ''));
     return result.result.value;
   };
   const frame = async () => {
@@ -195,7 +204,21 @@ try {
     const names={'Open project…':'project.open','Save project as…':'project.saveAs','Zip archive':'saveAs.zip'};
     nativeObjectName ||= names[node.name?.value];
     let x, y;
-    if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
+    const groupName=/(?:^| )Examples$/.test(node.name?.value||'')?'group.examples':
+      /Get started$/.test(node.name?.value||'')?'group.getStarted':
+      /Recent projects$/.test(node.name?.value||'')?'group.recentProjects':null;
+    if (groupName) {
+      const rect=await evaluate(`window.ediControlGeometry(${JSON.stringify(groupName)})`);
+      const model=await send('DOM.getBoxModel',{backendNodeId:node.backendDOMNodeId});
+      assert(rect?.objectName===groupName&&rect.visible===true&&rect.enabled===true&&
+        [rect.x,rect.y,rect.width,rect.height,model.model.width,model.model.height].every(Number.isFinite)&&
+        rect.width>0&&rect.height>0&&model.model.width>0&&model.model.height>0,
+        'The group header pointer must use its fresh native group origin and real button extent');
+      x=rect.x+Math.min(rect.width,model.model.width)/2;
+      y=rect.y+Math.min(rect.height,model.model.height)/2;
+      assert(x>=0&&x<1280&&y>=0&&y<768,
+        'The real group header pointer must lie inside the fixed browser viewport');
+    } else if (nativeObjectName) ({x,y} = await controlPointer(evaluate,nativeObjectName,containerName));
     else {
       const model = await send('DOM.getBoxModel', { backendNodeId: node.backendDOMNodeId });
       const q = model.model.content;
@@ -227,7 +250,7 @@ try {
     // Filter through real keyboard input so the requested row is materialised and unclipped.
     // Qt's recycled AX name remains a witness; fresh native geometry locates the actual input.
     await restoreCanvasViewport(evaluate);
-    const search = await controlPointer(evaluate, 'examples.search');
+    const search = await waitNative('examples.search');
     for (const type of ['mousePressed', 'mouseReleased'])
       await send('Input.dispatchMouseEvent', {type, ...search, button:'left', clickCount:1});
     for (const type of ['keyDown','keyUp'])
@@ -454,7 +477,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     await writeFile(join(output, `${mode}-save-route.json`), JSON.stringify({completed:true, archive, state},null,2));
     console.log(`${mode}: actual fallback Save project as download passed`);
   } else {
-  if (!fileRequestsOnly) {
+  if (!fileRequestsOnly && !exampleOnly) {
   await click(/^Analysis$/);
   await waitModal(false);
   await evaluate(`(() => {
@@ -627,7 +650,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
   await writeFile(join(output, `${mode}-reopen-roundtrip.json`), JSON.stringify({before,after},null,2));
   await click(/^Analysis$/); await waitAX(/^Start fitting$/); await shot('reopened');
   }
-  if (!reopenControl && fileRequestCase !== 'none') {
+  if (!exampleOnly && !reopenControl && fileRequestCase !== 'none') {
     const inputs = join(scratch,'routing');
     const generator = spawnSync('python', [fileURLToPath(new URL('../../fixtures/e04_t11_wasm/routing.py', import.meta.url)),inputs],
       {encoding:'utf8',timeout:10000});
@@ -831,8 +854,9 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     await writeFile(join(output,`${mode}-file-requests.json`),JSON.stringify({case:fileRequestCase,completed:true},null,2));
   }
   assert.equal(errors.length, 0, 'both browser workflows must complete without runtime exceptions');
-  await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase }, null, 2));
-  if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
+  await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase, exampleOnly }, null, 2));
+  if (exampleOnly) console.log(`${mode}: example-only opening passed; fit/save/reopen checks not run`);
+  else if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
   }
   }
