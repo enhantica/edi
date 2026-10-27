@@ -42,6 +42,21 @@ Each surface lists only its own column: the application's About window reads thi
 | ColorBrewer |  | Apache-2.0 | compiled in | compiled in | compiled in | — | the Greys scheme spread to 256 colours, one of the scan views' colour maps |
 | coi-serviceworker | 0.1.7 | MIT | — | bundled | — | — | the service worker that lets the web app use threads on a host without the needed headers |
 
+## Assistant components
+
+The desktop app carries the official runtime beside the application. Its own notices and exact source/build
+references also travel in `libexec/edi/codex/edi-licenses`. This inventory does not certify complete binary
+transitive attribution, corresponding-source delivery or platform installer qualification.
+
+| Component | Version | Licence | Desktop app | Web app | Python package | CLI | In edi |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| OpenAI Codex | 0.162.1 | Apache-2.0 | bundled | — | — | — | official app-server and code-mode host in the desktop runtime package |
+| jwt-cpp | 0.7.2 | MIT | compiled in | — | — | — | native OpenID signature validation; headers in third_party/jwt-cpp |
+| picojson | bundled with jwt-cpp 0.7.2 | BSD-2-Clause | compiled in | — | — | — | the JSON adapter included with jwt-cpp |
+| ripgrep | 15.2.0 | MIT OR Unlicense | bundled | — | — | — | the official runtime package's rg executable, used under MIT |
+| zsh | 77045ef | Zsh | bundled | — | — | — | the official runtime package's patched shell helper; source and patch in data/assistant/runtime/PROVENANCE.md |
+| bubblewrap | vendored at Codex 092d3acd | LGPL-2.0-or-later | bundled (Linux) | — | — | — | the Linux runtime package's sandbox helper; corresponding-source delivery remains a release obligation |
+
 ## HTML report libraries
 
 A saved HTML report loads these from their pinned web addresses, or carries them when the report embeds its chart
