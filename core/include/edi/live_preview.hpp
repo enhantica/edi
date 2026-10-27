@@ -58,7 +58,8 @@ class LivePreview {
     // Optional owner-local receipt: false before the operation, true immediately after
     // the closed Edit completes, before any fallible trace/hook/request publication.
     // A later exception does not turn an actual edit into a refusal.
-    void apply(const Edit& edit, bool* applied = nullptr);
+    void apply(const Edit& edit);
+    void apply(const Edit& edit, bool* applied);
     // Preowned owner-local result, populated at the closed applied boundary,
     // before Applied trace, edited hooks or publication can reenter/throw.
     void apply(const Edit& edit, bool* applied, Edit::AppliedResult* result);
