@@ -114,7 +114,7 @@ Column {
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.scale.${row.index}`
-                enabled: row.model.enabled
+                enabled: row.model.enabled && refinable
                 item: row.model.scale
             }
             // Read-only, as a parameter the scales imply: the dictionary's weight fraction, rounded by its s.u. under the

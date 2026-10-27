@@ -156,13 +156,13 @@ Column {
                 }
             }
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its
-            // tensor, is shown disabled.
+            // tensor, and a value a constraint sets are shown disabled.
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteAdp.iso.${row.index}`
                 item: row.adpIso
-                enabled: !row.anisotropic
+                enabled: !row.anisotropic && refinable
                 ToolTip.text: row.adpIso ? (row.anisotropic ? qsTr("Equivalent isotropic displacement %1, %2 (%3)") : qsTr("Isotropic displacement %1, %2 (%3)")).arg(row.adpIso.shortName).arg(row.adpIso.displayUnits).arg("_atom_site.adp_iso") : ""
                 // Help, hidden while the cell shows why its value is red.
                 helpToolTip: true
