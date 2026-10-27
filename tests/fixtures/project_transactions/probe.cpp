@@ -1164,6 +1164,13 @@ QJsonObject mixedSave(const QString& source, bool web) {
     QFile currentFile(output + "/experiments/current.edi");
     need(currentFile.open(QIODevice::ReadOnly), "The saved current bank remains readable");
     const auto currentText = QString::fromUtf8(currentFile.readAll());
+    QFile dueFile(output + "/experiments/due.edi");
+    need(dueFile.open(QIODevice::ReadOnly), "The saved due bank remains readable");
+    const auto dueText = QString::fromUtf8(dueFile.readAll());
+    auto deferred = edi::load_project(output.toStdString());
+    deferred.refresh_calculated_pattern(edi::DueEstimates::Defer);
+    const auto freshDueScience = scientificState(deferred);
+    const auto freshDueBackground = backgroundState(*namedBank(deferred, "due"));
     for (std::size_t i = 0; i < reopened.experiments.size(); ++i)
         if (reopened.experiments[i]->name.value() == "due") {
             reopened.experiments.erase_at(i);
@@ -1188,6 +1195,9 @@ QJsonObject mixedSave(const QString& source, bool web) {
             {"inputs", liveInputs},
             {"liveCurrent", liveCurrent},
             {"currentFile", currentText},
+            {"dueFile", dueText},
+            {"freshDueScience", freshDueScience},
+            {"freshDueBackground", freshDueBackground},
             {"freshCurrent", freshCurrent},
             {"fileScience", scientificState(exactFile)},
             {"freshScience", scientificState(reopened)},

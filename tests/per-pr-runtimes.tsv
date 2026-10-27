@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-27T02:35:19Z
+# measured_utc = 2026-10-27T03:58:36Z
 #
-# Recorded from: measured test run (14 node(s) measured once, 16253 banked, 0 stale row(s) dropped)
-# Collected tests: 18748; with a reported duration: 10447
+# Recorded from: measured test run (24 node(s) measured once, 16267 banked, 0 stale row(s) dropped)
+# Collected tests: 18748; with a reported duration: 10471
 # Module-scoped fixture costs recorded: 93
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 18748
 # inventory_cpp = 396
-# inventory_measured = 16267
-# inventory_unmeasured = 2877
+# inventory_measured = 16291
+# inventory_unmeasured = 2853
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -14803,30 +14803,30 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_all_save_intents_share_authority_even_when_the_picker_aliases_the_current_place[True-True-True-intents7-zip]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_all_save_intents_share_authority_even_when_the_picker_aliases_the_current_place[True-True-True-intents8-folder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_all_save_intents_share_authority_even_when_the_picker_aliases_the_current_place[True-True-True-intents8-zip]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-desktop-chebyshev]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-desktop-line-segment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-desktop-polynomial]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-web-chebyshev]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-web-line-segment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-web-polynomial]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-desktop-chebyshev]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-desktop-line-segment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-desktop-polynomial]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-web-chebyshev]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-web-line-segment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-web-polynomial]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-desktop-chebyshev]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-desktop-line-segment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-desktop-polynomial]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-web-chebyshev]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-web-line-segment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-web-polynomial]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-desktop-chebyshev]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-desktop-line-segment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-desktop-polynomial]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-web-chebyshev]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-web-line-segment]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-web-polynomial]
+0.190	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-desktop-chebyshev]
+0.160	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-desktop-line-segment]
+0.160	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-desktop-polynomial]
+0.200	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-web-chebyshev]
+0.180	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-web-line-segment]
+0.180	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-empty-web-polynomial]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-desktop-chebyshev]
+0.190	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-desktop-line-segment]
+0.180	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-desktop-polynomial]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-web-chebyshev]
+0.200	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-web-line-segment]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[absent-points-web-polynomial]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-desktop-chebyshev]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-desktop-line-segment]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-desktop-polynomial]
+0.200	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-web-chebyshev]
+0.180	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-web-line-segment]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-empty-web-polynomial]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-desktop-chebyshev]
+0.180	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-desktop-line-segment]
+0.180	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-desktop-polynomial]
+0.190	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-web-chebyshev]
+0.170	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-web-line-segment]
+0.180	tests/system/py/test_project_transactions.py::test_app_save_to_preserves_every_due_background_cell_and_publishes_only_current_arrays[stale-points-web-polynomial]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_archive_links_keep_lexical_member_identity_or_refuse_with_an_explanation
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_save_as_replaces_old_entities_and_preserves_unrelated_destination_content
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_save_waits_for_durable_success_and_preserves_refused_state
@@ -19249,7 +19249,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 64.280	tests/system/py/test_project_page_readiness.py
 # module-cost: 100.158	tests/system/py/test_project_tooltip_style.py
-# module-cost: 1.649	tests/system/py/test_project_transactions.py
+# module-cost: 1.470	tests/system/py/test_project_transactions.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 33.845	tests/system/py/test_rendering_setup.py
 # module-cost: 4.607	tests/system/py/test_report_browser_readiness.py

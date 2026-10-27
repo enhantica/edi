@@ -884,16 +884,8 @@ def test_app_save_to_preserves_every_due_background_cell_and_publishes_only_curr
     assert row['after']['pointsDigest'] == row['file']['pointsDigest'], (
         'The file and adopted live due background share the same reconciled points digest'
     )
-    for column in ('calculated', 'background'):
-        values = row['shownAfter']['due'][column]
-        absent = all(
-            value is None
-            or not math.isfinite(struct.unpack('>d', int(value, 16).to_bytes(8, 'big'))[0])
-            for value in values
-        )
-        assert absent or values == row['shownBefore']['due'][column], (
-            'The app clears or retains stale due arrays and never publishes a new due calculation'
-        )
+
+    _check_deferred_due_arrays(row, kind)
     assert row['shownBefore']['current']['calculated'], (
         'The app-array observation reaches a populated actual current-bank PatternModel'
     )
@@ -935,6 +927,78 @@ def test_app_save_to_preserves_every_due_background_cell_and_publishes_only_curr
         assert float(current['_fit_result_bank.' + key]) == pytest.approx(
             float(format(value, '.6g')), rel=1e-12
         ), 'Saved current-bank factors match independent weighted residuals of the rounded pattern'
+
+
+def _check_deferred_due_arrays(row, kind):
+    # Closed forms from the independent FullProf background reference:
+    # polynomial u=x/Bkpos-1; Chebyshev z=(2*x-lo-hi)/(hi-lo).
+    # Structure scale is zero in the authored witness, so both columns are background.
+    def number(value):
+        return struct.unpack('>d', int(value, 16).to_bytes(8, 'big'))[0]
+
+    def from_saved_points(x):
+        bank = row['file']
+        if kind == 'line-segment':
+            if not bank['points']:
+                return 0.0
+            left, right = bank['points']
+            fraction = (x - number(left['position'])) / (
+                number(right['position']) - number(left['position'])
+            )
+            return number(left['value']) + fraction * (
+                number(right['value']) - number(left['value'])
+            )
+        if not bank['terms']:
+            return 0.0
+        coordinate = (
+            x / number(bank['origin']) - 1
+            if kind == 'polynomial'
+            else (2 * x - number(bank['minimum']) - number(bank['maximum']))
+            / (number(bank['maximum']) - number(bank['minimum']))
+        )
+        assert all(term['order'] in {0, 1} for term in bank['terms']), (
+            'The saved-points reference exercises the authored constant and linear basis'
+        )
+        return math.fsum(
+            number(term['value']) * (1 if term['order'] == 0 else coordinate)
+            for term in bank['terms']
+        )
+
+    links = loop_rows(row['dueFile'], '_linked_structure')
+    assert links, 'The independent deferred witness retains its actual structure links'
+    assert all(float(link['_linked_structure.scale']) == 0 for link in links), (
+        'Zero saved structure scales make both due columns exactly their own background'
+    )
+    saved_due = loop_rows(row['dueFile'], '_data')
+    assert len(saved_due) == 4, 'The due file writes every independently authored measured row'
+    reference = [from_saved_points(float(cells['_data.two_theta'])) for cells in saved_due]
+    live_due = next(bank for bank in row['scientificAfter']['banks'] if bank['name'] == 'due')
+    fresh_due = next(bank for bank in row['freshDueScience']['banks'] if bank['name'] == 'due')
+    for column, tag in [('calculated', 'intensity_calc'), ('background', 'intensity_bkg')]:
+        published = row['shownAfter']['due'][column]
+        assert len(published) == len(reference), (
+            'A current deferred due calculation is published on every actual PatternModel row'
+        )
+        values = [number(value) for value in published]
+        assert values == pytest.approx(
+            reference, rel=32 * math.ulp(1.0), abs=32 * math.ulp(1.0)
+        ), 'Published due arrays independently evaluate their own saved points without estimation'
+        file_values = [float(cells['_data.' + tag]) for cells in saved_due]
+        assert file_values == [six_digits(value) for value in reference], (
+            'Written due columns independently round the saved-points calculation'
+        )
+        assert [six_digits(value) for value in values] == file_values, (
+            'Published due arrays and saved columns agree at the declared written precision'
+        )
+        assert published == live_due[column], (
+            'The actual PatternModel publishes the live current deferred due calculation'
+        )
+        assert published == fresh_due[column], (
+            'A fresh explicitly deferred saved-input calculation reproduces published due arrays'
+        )
+    assert row['freshDueBackground'] == row['file'], (
+        'A fresh deferred calculation keeps every due background cell and raw provenance exactly'
+    )
 
 
 @pytest.mark.parametrize('kind', ['special', 'ordinary', 'bank-normal', 'bank-exact'])
