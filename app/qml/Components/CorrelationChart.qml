@@ -68,9 +68,9 @@ Item {
     readonly property int count: labels.length
     // With the names hidden, each parameter's number in the Analysis table labels its ticks (the owner, 2026-10-27).
     readonly property var numbers: {
-        const table = Session.project ? Session.project.parameters : null;
+        const project = Session.project;
         return labels.map(label => {
-            const number = table ? table.numberOf(label) : 0;
+            const number = project ? project.parameterNumber(label) : 0;
             return number > 0 ? String(number) : "";
         });
     }

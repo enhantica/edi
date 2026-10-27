@@ -126,6 +126,17 @@ void ScanLayer::setDisabledColour(const QColor& colour) {
     syncLegend();
 }
 
+// Highlighting, the other Stacked lines recede (the owner, 2026-10-27): the disabled colour halfway to the plot's
+// background, opaque so a line crossing itself stays even, and half as wide as the shown line, at least 0.75 px.
+QColor ScanLayer::recededColour() const {
+    const auto mix = [](double ink, double paper) { return static_cast<float>((ink + paper) / 2.0); };
+    return QColor::fromRgbF(mix(disabled_colour_.redF(), background_.redF()),
+                            mix(disabled_colour_.greenF(), background_.greenF()),
+                            mix(disabled_colour_.blueF(), background_.blueF()), 1.0F);
+}
+
+double ScanLayer::recededWidth(double width) { return std::max(0.75, width / 2.0); }
+
 bool ScanLayer::hiddenAt(std::size_t dataset) const {
     return std::find(hidden_.begin(), hidden_.end(), static_cast<int>(dataset)) != hidden_.end();
 }
@@ -948,7 +959,7 @@ void ScanLayer::feedLines() {
         if (top >= 0 && static_cast<int>(d) == top) {
             colour.setAlphaF(0.0F);  // drawn by the line over the others
         } else if (top >= 0) {
-            colour = disabled_colour_;
+            colour = recededColour();
         }
         return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
     };
@@ -962,7 +973,8 @@ void ScanLayer::feedLines() {
     for (ScanLines* item : {lines_, top_}) {
         item->setYMin(y_min_);
         item->setYMax(y_max_);
-        item->setLineWidth(line_px);
+        // Highlighting, the other lines are thinner than the shown one's (the owner, 2026-10-27).
+        item->setLineWidth(item == lines_ && top >= 0 ? recededWidth(line_px) : line_px);
     }
     top_->setVisible(top >= 0);
     if (top >= 0) {
@@ -1138,6 +1150,7 @@ void ScanLayer::paint(QPainter* painter) {
     struct Line {
         QPainterPath path;
         QColor colour;
+        double width = 0.0;
         double top = 0.0, bottom = 0.0;
     };
     std::vector<Line> lines;
@@ -1165,8 +1178,10 @@ void ScanLayer::paint(QPainter* painter) {
         line.top = bounds.top() - width_px;
         line.bottom = bounds.bottom() + width_px;
         line.colour = colourOf(static_cast<int>(d));
+        line.width = width_px;
         if (top >= 0 && static_cast<int>(d) != top) {
-            line.colour = disabled_colour_;
+            line.colour = recededColour();
+            line.width = recededWidth(width_px);
         }
         lines.push_back(std::move(line));
     }
@@ -1210,7 +1225,7 @@ void ScanLayer::paint(QPainter* painter) {
                 continue;
             }
             QPen pen(line.colour);
-            pen.setWidthF(width_px * ratio);
+            pen.setWidthF(line.width * ratio);
             pen.setCosmetic(true);
             pen.setCapStyle(Qt::FlatCap);
             pen.setJoinStyle(Qt::RoundJoin);
