@@ -68,6 +68,16 @@ std::string category_icon(std::string_view id);
 std::string category_description(std::string_view id);
 /// A category's title and its `.edi` name, `Cell: _cell`, as a group's tooltip names the file's category.
 std::string category_tooltip(std::string_view id);
+/// A category's order number in crysta's dictionary, which sets the sidebar's order as it sets the files'.
+/// A category the dictionary does not hold comes last.
+int category_order(std::string_view id);
+/// Whether the program or a data file supplies a category (its dictionary mark is output) rather than the user.
+bool category_is_output(std::string_view id);
+/// A block's `.edi` text with only its input categories, as the Text tab's Editable shows it.
+std::string input_categories_text(const std::string& text);
+/// An edit of input_categories_text(full) with the output categories of `full` after it, so an apply keeps the
+/// measured data and the results the edit did not show.
+std::string with_output_categories(const std::string& edited, const std::string& full);
 
 /// What a surface shows for a parameter: a value the space group fixes as its exact fraction, a value
 /// with a nonzero s.u. as `value(su)` by the project's rule (`iucr_19` or `iucr_99`), any other by its

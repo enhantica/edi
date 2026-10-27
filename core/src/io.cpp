@@ -5244,6 +5244,15 @@ class ScratchSave {
         return fs::is_regular_file(path) ? read_file(path.string()) : std::string();
     }
 
+    // The saved project with the file at `relative` holding `text`, read back as an open reads it. The
+    // report's settings file may be one the save did not write, as the project stated none yet.
+    Project load_with(const std::string& relative, const std::string& text, const WarningSink& on_warning) const {
+        const fs::path path = root_ / "project" / relative;
+        fs::create_directories(path.parent_path());
+        std::ofstream(path, std::ios::binary | std::ios::trunc) << text;
+        return load_project((root_ / "project").string(), on_warning);
+    }
+
    private:
     fs::path root_;
 };
@@ -5276,6 +5285,20 @@ std::string block_edi_text(const Project& project, BlockKind kind, const std::st
         case BlockKind::ANALYSIS: break;
     }
     return save.text("analysis/analysis.edi");
+}
+
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const WarningSink& on_warning) {
+    const std::vector<std::string> files = saved_file_order(project);
+    if (std::find(files.begin(), files.end(), relative) == files.end()) {
+        throw IoError("the project has no file " + relative);
+    }
+    const ScratchSave save(project);
+    Project read = save.load_with(relative, text, on_warning);
+    // The copy lives where the project does, so a later save writes back to it.
+    read.path = project.path;
+    read.scan_data_root = project.scan_data_root;
+    return read;
 }
 
 std::vector<std::pair<std::string, std::string>> project_edi_files(const Project& project) {

@@ -6,8 +6,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "crysta/dictionary_items.hpp"
 #include "crysta/su_format.hpp"
@@ -132,6 +136,110 @@ std::string category_description(std::string_view id) {
 std::string category_tooltip(std::string_view id) {
     const crysta::DictionaryCategory* found = crysta::find_dictionary_category(id);
     return found != nullptr ? found->title + ": " + found->edi_name : std::string();
+}
+
+int category_order(std::string_view id) {
+    const crysta::DictionaryCategory* found = crysta::find_dictionary_category(id);
+    return found != nullptr ? found->order : std::numeric_limits<int>::max();
+}
+
+bool category_is_output(std::string_view id) {
+    const crysta::DictionaryCategory* found = crysta::find_dictionary_category(id);
+    return found != nullptr && found->output;
+}
+
+namespace {
+
+// A block's text split as crysta's writer orders it: the lines up to its `data_` line, then each item, loop (its
+// keys and rows) or multi-line value, with whether its category is an output one.
+struct TextUnits {
+    std::vector<std::string> head;
+    std::vector<std::pair<bool, std::vector<std::string>>> units;
+};
+
+TextUnits text_units(const std::string& text) {
+    TextUnits out;
+    std::istringstream in(text);
+    std::vector<std::string> lines;
+    for (std::string line; std::getline(in, line);) {
+        lines.push_back(line);
+    }
+    const auto output_of = [](const std::string& line) {
+        const std::size_t end = line.find_first_of(". \t");
+        return category_is_output(std::string_view(line).substr(0, end));
+    };
+    bool body = std::none_of(lines.begin(), lines.end(), [](const std::string& line) { return line.starts_with("data_"); });
+    bool in_text_field = false;
+    bool in_loop_keys = false;
+    for (const std::string& line : lines) {
+        if (!body) {
+            out.head.push_back(line);
+            body = line.starts_with("data_");
+            continue;
+        }
+        if (in_text_field) {
+            out.units.back().second.push_back(line);
+            in_text_field = !line.starts_with(';');
+            continue;
+        }
+        if (line.empty()) {
+            in_loop_keys = false;
+            continue;
+        }
+        if (line == "loop_") {
+            out.units.push_back({false, {}});
+            in_loop_keys = true;
+        } else if (line.starts_with('_') && in_loop_keys) {
+            if (out.units.back().second.size() == 1) {
+                out.units.back().first = output_of(line);
+            }
+        } else if (line.starts_with('_')) {
+            out.units.push_back({output_of(line), {}});
+        } else if (out.units.empty()) {
+            out.units.push_back({false, {}});
+        } else {
+            in_loop_keys = false;
+        }
+        in_text_field = line.starts_with(';');
+        out.units.back().second.push_back(line);
+    }
+    return out;
+}
+
+// The units of one kind, each after a blank line, as a save writes them.
+void append_units(std::string& out, const TextUnits& split, bool output) {
+    for (const auto& [is_output, lines] : split.units) {
+        if (is_output != output) {
+            continue;
+        }
+        if (!out.empty() && !out.ends_with("\n\n")) {
+            out += '\n';
+        }
+        for (const std::string& line : lines) {
+            out.append(line).push_back('\n');
+        }
+    }
+}
+
+}  // namespace
+
+std::string input_categories_text(const std::string& text) {
+    const TextUnits split = text_units(text);
+    std::string out;
+    for (const std::string& line : split.head) {
+        out.append(line).push_back('\n');
+    }
+    append_units(out, split, false);
+    return out;
+}
+
+std::string with_output_categories(const std::string& edited, const std::string& full) {
+    std::string out = edited;
+    if (!out.empty() && !out.ends_with('\n')) {
+        out.push_back('\n');
+    }
+    append_units(out, text_units(full), true);
+    return out;
 }
 
 std::string display_text(const Parameter& parameter, const std::string& su_rule, std::string_view variant) {
