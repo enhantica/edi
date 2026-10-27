@@ -262,7 +262,7 @@ QJsonObject rename_lifecycle(const QString& fixture, const QString& work, const 
         ++ordinal;
     }
     edi::save_project(core, input.string());
-    edi_app::Session session;
+    edi_app::Session session(nullptr);
     if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
         throw std::runtime_error(session.lastError().toStdString());
     auto& view = *session.project();
@@ -514,7 +514,7 @@ QJsonObject correlation_lifecycle(const std::string& action, const QString& fixt
             if (pair->file_path.value() == "02.xy") pair->correlation = -0.125;
         edi::save_project(core, input.string());
     }
-    edi_app::Session session;
+    edi_app::Session session(nullptr);
     if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
         throw std::runtime_error(session.lastError().toStdString());
     auto& view = *session.project();
@@ -581,7 +581,7 @@ QJsonObject loaded_correlation_save(const QString& fixture, const QString& work,
     edi::save_project(core, input.string());
     auto native = edi::load_project(input.string());
     edi::save_project_as(native, (work + "/core-copy").toStdString());
-    edi_app::Session session;
+    edi_app::Session session(nullptr);
     if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
         throw std::runtime_error(session.lastError().toStdString());
     session.project()->analysis()->setFittingMode(mode);
@@ -617,7 +617,7 @@ QJsonObject correlation_save_stability(const QString& fixture, const QString& wo
     auto core = edi::load_project(input.string());
     core.sequential_fit.template_file = later ? "02.xy" : "01.xy";
     edi::save_project(core, input.string());
-    edi_app::Session session;
+    edi_app::Session session(nullptr);
     if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
         throw std::runtime_error(session.lastError().toStdString());
     auto& view = *session.project();
@@ -715,7 +715,7 @@ QJsonObject template_persistence(const QString& fixture, const QString& work) {
     auto core = edi::load_project(input.string());
     core.sequential_fit.template_file = "01.xy";
     edi::save_project(core, input.string());
-    edi_app::Session session;
+    edi_app::Session session(nullptr);
     if (!session.openProject(QUrl::fromLocalFile(QString::fromStdString(input.string()))))
         throw std::runtime_error(session.lastError().toStdString());
     auto& view = *session.project();
@@ -952,7 +952,7 @@ int main(int argc, char** argv) {
             std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << '\n';
             return 0;
         }
-        edi_app::Session session;
+        edi_app::Session session(nullptr);
         if (!session.createProject("Scratch", ""))
             throw std::runtime_error("create project refused");
         auto& view = *session.project();
@@ -1092,7 +1092,7 @@ int main(int argc, char** argv) {
                 result["reopenedRangeRefused"] =
                     !session.project()->currentExperiment()->lastError().isEmpty();
                 result["afterReopenedRangeAttempt"] = state(*session.project());
-                edi_app::Session imported;
+                edi_app::Session imported(nullptr);
                 imported.createProject("Imported", "");
                 auto& opened = *imported.project();
                 for (const auto& entry :
@@ -1113,7 +1113,7 @@ int main(int argc, char** argv) {
                 result["ediLoadSucceeded"] =
                     load(opened, 0, fixture + "/" + beam + "/three_columns/pattern.xye");
                 result["afterEdiLoadAttempt"] = state(opened);
-                edi_app::Session live;
+                edi_app::Session live(nullptr);
                 live.createProject("Live", "");
                 auto& v = *live.project();
                 configure(v, beam, mode == "renamed");

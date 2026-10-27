@@ -3,6 +3,10 @@
 #include "session.hpp"
 #include "assistant_view_model.hpp"
 #include "assistant_native_tools.hpp"
+#include "codex_agent.hpp"
+#include <chrono>
+#include <cstdio>
+#include <type_traits>
 #include "engine_setup.hpp"
 #include "edi/io.hpp"
 #include "edi/background_estimate.hpp"
@@ -35,6 +39,20 @@
 #include <QtQml/qqmlextensionplugin.h>
 #include <QtTest/QTest>
 
+namespace edi_app {
+// One explicitly authorized friend, defined only in this tests-owned carrier.
+struct CodexAgentTestAccess {
+    static bool expiredAt(const CodexAgent& agent,qint64 now){return agent.operationExpired(now);}
+    static qint64 future(const CodexAgent& agent){return std::max(agent.operation_start_,agent.last_activity_)+std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::hours(24)).count();}
+    static Object timing(const CodexAgent& agent){return {{"active",agent.operation_start_>=0},{"total_ms",static_cast<double>(agent.total_ms_)},{"idle_ms",static_cast<double>(agent.idle_ms_)},{"expired_after_day",expiredAt(agent,future(agent))}};}
+    static void receive(CodexAgent& agent,const Object& value){agent.receive(QJsonDocument(value).toJson(QJsonDocument::Compact));}
+    static bool expireIssuedControl(CodexAgent& agent,const QString& id){
+        if(!agent.pending_.contains(id)||!agent.pending_deadlines_.contains(id))return false;
+        agent.pending_deadlines_[id]=0;agent.checkDeadline();return agent.failureActive();
+    }
+};
+}
+static_assert(!std::is_default_constructible_v<edi_app::Session>, "E11 I5 QML must resolve the prepared per-engine Session factory");
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
 // Observe actual window delivery; never replace or consume an app input.
 class UiInputObserver final:public QObject {
@@ -159,6 +177,13 @@ int main(int argc,char** argv) {
     if(engine->rootObjects().isEmpty()) return 96;
     QPointer<QQuickWindow> window=qobject_cast<QQuickWindow*>(engine->rootObjects().front());
     if(!window) return 95;
+    QQmlExpression initial_owner(qmlContext(window),window,"Session.assistant");
+    auto* actual_main_assistant=initial_owner.evaluate().value<QObject*>();
+    if(initial_owner.hasError() || singleton!=observed || actual_main_assistant!=observed->assistant()
+        || observed->parent()!=engine.get() || QJSEngine::objectOwnership(observed)!=QJSEngine::CppOwnership) {
+        std::fputs("E11 I5 prepared Session, module singleton and actual Main owner differ; refuse before bootstrap\n",stderr);
+        return 90;
+    }
     window->resize(1280,768);window->show();drain();
     auto* preferences=engine->singletonInstance<QObject*>("edi.app","Preferences");
     preferences->setProperty("assistantShown",true);
@@ -491,6 +516,55 @@ int main(int argc,char** argv) {
                 if(!composer || !composer->setProperty("text",input["text"].toString())) throw std::runtime_error("actual composer text property unavailable");
                 click(find("assistant.send"));
             } else if(op=="accept_dialog") result={{"accepted",accept_dialog()}};
+            else if(op=="transport_timing") {
+                auto* agent=observed->assistant()->findChild<edi_app::CodexAgent*>();
+                result=agent?edi_app::CodexAgentTestAccess::timing(*agent):Object{{"active",false},{"agent_present",false}};
+            }
+            else if(op=="transport_clock") {
+                if(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT").isEmpty())throw std::runtime_error("internal clock check requires the owned offline peer");
+                Object checks;auto require=[&](bool ok,const char* label){checks[label]=ok;if(!ok)throw std::runtime_error(label);};
+                const auto executable=edi_app::CodexAgent::executable();
+                const auto workspace=QFileInfo(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT")).absolutePath();
+                edi_app::CodexAgent agent;int failures=0;bool started=false;
+                QObject::connect(&agent,&edi_app::CodexAgent::started,&agent,[&]{started=true;});
+                QObject::connect(&agent,&edi_app::CodexAgent::failed,&agent,[&]{++failures;});
+                require(agent.start(executable,workspace),"clock_peer_started");
+                QElapsedTimer wait;wait.start();while(!started&&wait.elapsed()<1000)drain(1);
+                require(started&&failures==0,"clock_transport_ready");
+                const auto generation=agent.outputGeneration();
+                const QJsonValue native("clock-native"),human("clock-human"),foreign("clock-foreign");
+                edi_app::CodexAgentTestAccess::receive(agent,{{"id",native},{"method","item/tool/call"},{"params",Object{{"tool","inspect_project"},{"arguments",Object{{"purpose","finite clock role"}}}}}});
+                edi_app::CodexAgentTestAccess::receive(agent,{{"id",human},{"method","item/tool/requestUserInput"},{"params",Object{}}});
+                require(!agent.beginNativeWork(native,generation)&&!agent.beginHumanWait(human,generation),"inactive_operation_cannot_wait");
+                agent.beginOperation(0,0);
+                require(!edi_app::CodexAgentTestAccess::expiredAt(agent,edi_app::CodexAgentTestAccess::future(agent)),"active_task_has_no_day_expiry");
+                require(!agent.beginNativeWork(foreign,generation)&&!agent.beginNativeWork(native,generation+1),"native_identity_guard_retained");
+                require(agent.beginNativeWork(native,generation),"unlimited_native_work_accepted");
+                require(!agent.setNativeWorkWaiting(foreign,generation,true)&&!agent.setNativeWorkWaiting(native,generation+1,true),"native_wait_identity_guard_retained");
+                require(agent.setNativeWorkWaiting(native,generation,true),"unlimited_native_presentation_wait_accepted");
+                require(!agent.beginHumanWait(foreign,generation)&&!agent.beginHumanWait(human,generation+1),"human_identity_guard_retained");
+                require(agent.beginHumanWait(human,generation),"unlimited_human_wait_accepted");
+                require(!edi_app::CodexAgentTestAccess::expiredAt(agent,edi_app::CodexAgentTestAccess::future(agent))&&failures==0,"overlapping_unlimited_waits_do_not_expire");
+                require(agent.endHumanWait(human,generation)&&agent.setNativeWorkWaiting(native,generation,false)&&agent.endNativeWork(native,generation),"original_waits_end_normally");
+                agent.settleOperation();require(!agent.beginNativeWork(native,generation),"settled_operation_cannot_restart_wait");
+                agent.beginOperation(0,0);require(agent.beginNativeWork(native,generation),"later_unlimited_operation_usable");
+                agent.retire();require(!agent.beginNativeWork(native,generation)&&!agent.endHumanWait(human,generation),"retired_generation_cannot_resume_wait");
+                edi_app::CodexAgent control;bool control_started=false;int control_failures=0;
+                QObject::connect(&control,&edi_app::CodexAgent::started,&control,[&]{control_started=true;});
+                QObject::connect(&control,&edi_app::CodexAgent::failed,&control,[&]{++control_failures;});
+                require(control.start(executable,workspace),"control_peer_started");wait.restart();while(!control_started&&wait.elapsed()<1000)drain(1);
+                require(control_started,"control_transport_ready");
+                control.beginOperation(0,0);const auto id=control.request("initialize",Object{{"clientInfo",Object{{"name","finite-clock-control"}}}});
+                require(!id.isEmpty()&&edi_app::CodexAgentTestAccess::expireIssuedControl(control,id)&&control_failures==1&&control.failureKind()!=edi_app::CodexAgent::FailureKind::OperationDeadline,"individual_protocol_deadline_remains_bounded");
+                edi_app::CodexAgent short_clock;int short_failures=0;bool short_started=false;
+                QObject::connect(&short_clock,&edi_app::CodexAgent::failed,&short_clock,[&]{++short_failures;});
+                QObject::connect(&short_clock,&edi_app::CodexAgent::started,&short_clock,[&]{short_started=true;});
+                require(short_clock.start(executable,workspace),"short_clock_peer_started");wait.restart();while(!short_started&&wait.elapsed()<1000)drain(1);
+                require(short_started,"short_clock_transport_ready");
+                short_clock.beginOperation(5,5);drain(150);
+                require(short_failures==1&&short_clock.failureKind()==edi_app::CodexAgent::FailureKind::OperationDeadline,"explicit_short_deadline_positive_control");
+                result={{"checks",checks}};
+            }
             else if(op=="clear_ui_sequence") ui_sequence=Array{};
             else if(op=="dialog_ok") {
                 auto* dialog=find(input["name"].toString());

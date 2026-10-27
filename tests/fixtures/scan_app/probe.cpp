@@ -421,7 +421,7 @@ QJsonObject bundle(const std::string& id, const std::string& destination, bool r
     if (!readonly && !edi_app::ExampleListModel::bundledIds().contains(QString::fromStdString(id)))
         return {{"opened", false}, {"error", "Example precondition: requested scan id must be bundled"}};
     const QJsonObject original = tree_hashes(source);
-    edi_app::Session session;
+    edi_app::Session session(nullptr);
     const bool opened = readonly ? session.openProject(QUrl::fromLocalFile(source))
                                  : session.openExample(QString::fromStdString(id));
     if (!opened) return {{"opened", false}, {"error", session.lastError()}};
@@ -431,7 +431,7 @@ QJsonObject bundle(const std::string& id, const std::string& destination, bool r
     const QByteArray bytes = contents(temporary, "analysis/results.csv");
     const bool needs_save = session.needsSaveAs();
     const bool saved = session.saveAs(QUrl::fromLocalFile(QString::fromStdString(destination)));
-    edi_app::Session fresh;
+    edi_app::Session fresh(nullptr);
     const bool fresh_opened = readonly ? fresh.openProject(QUrl::fromLocalFile(source))
                                        : fresh.openExample(QString::fromStdString(id));
     const QByteArray fresh_csv =

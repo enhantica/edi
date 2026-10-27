@@ -308,7 +308,7 @@ QJsonObject overlap(const QString& source, const QString& first, const QString& 
                     bool newerFirst, bool edit, bool replacement,
                     const QString& replacementKind = "desktop") {
     QTemporaryDir temp;
-    Session session;
+    Session session(nullptr);
     need(session.openProject(QUrl::fromLocalFile(copy(source, temp.filePath("initial")))),
          "Overlap starts with an actual project");
     settle(session);
@@ -392,7 +392,7 @@ QJsonObject overlap(const QString& source, const QString& first, const QString& 
 QJsonObject browserSave(const QString& source, const QString& kind, bool ok, bool editedAgain,
                         bool moving, bool unavailable, bool discard) {
     QTemporaryDir temp;
-    Session session;
+    Session session(nullptr);
     browser = false;
     need(session.openProject(QUrl::fromLocalFile(copy(source, temp.filePath("input")))),
          "Save starts with a real project");
@@ -564,7 +564,7 @@ QJsonObject archiveLink(const QString& source, const QString& kind) {
 QJsonObject desktopSave(const QString& source, const QString& origin, const QString& target) {
     browser = false;
     QTemporaryDir temp;
-    Session session;
+    Session session(nullptr);
     QString input = copy(source, temp.filePath("input"));
     if (origin == "zip") {
         QString zip = temp.filePath("original.zip");
@@ -661,7 +661,7 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
     const bool firstOk = spec[3] == "1", secondFirst = spec[4] == "1", secondOk = spec[5] == "1",
                edit = spec[6] == "1";
     QTemporaryDir temp;
-    Session session;
+    Session session(nullptr);
     const QString input = preciseInput(source, temp.filePath("precision-input"));
     openBrowserInput(session, input, alias ? kind : QString("folder"));
     aliasPlaces = alias;
@@ -857,7 +857,7 @@ QJsonObject rollback(const QString& source, const QStringList& spec) {
     const QString route = spec[1], kind = spec[2];
     const bool dirty = spec[3] == "dirty";
     QTemporaryDir temp;
-    Session session;
+    Session session(nullptr);
     QString input = preciseInput(source, temp.filePath("precision-input"));
     browser = false;
     const bool web = route.startsWith("web-");
@@ -940,7 +940,7 @@ QJsonObject afterPublication(const QString& source, const QStringList& spec) {
     const QString route = spec[1], kind = spec[2];
     const bool web = route.startsWith("web-"), dirty = spec[3] == "dirty";
     QTemporaryDir temp;
-    Session session;
+    Session session(nullptr);
     QString input = preciseInput(source, temp.filePath("precision-input"));
     if (web)
         openBrowserInput(session, input, kind);
@@ -1214,7 +1214,7 @@ QJsonObject lateFolder(const QString& source, const QStringList& spec) {
     const bool moving = spec[1] == "move", dirty = spec[3] == "dirty";
     QTemporaryDir temp;
     browser = false;
-    Session session;
+    Session session(nullptr);
     const auto input = preciseInput(source, temp.filePath("input"));
     need(session.openProject(QUrl::fromLocalFile(input)),
          "A late refusal starts with a real project");
@@ -1277,7 +1277,7 @@ QJsonObject datasetSave(const QString& source, const QStringList& spec) {
          "The authored scan value is writable");
     structure.write(text);
     structure.close();
-    Session session;
+    Session session(nullptr);
     browser = false;
     if (web)
         openBrowserInput(session, input, "folder");
@@ -1422,7 +1422,7 @@ QJsonObject fitPublication(const QString& source, const QStringList& spec) {
                                                      : "folder";
     const bool isCopy = route.contains("copy");
     QTemporaryDir temp;
-    Session session;
+    Session session(nullptr);
     QString input = preciseInput(source, temp.filePath("precision-input"));
     browser = false;
     if (web)
