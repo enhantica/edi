@@ -419,11 +419,17 @@ OUTCOMES = [
 
 def outcome_functions(text, *, include_context=True):
     colors = {color: color for _key, _word, _icon, color in OUTCOMES}
+    colors.update(
+        themeForeground='themeForeground', statusBarIconForeground='statusBarIconForeground'
+    )
     context = 'const qsTr=x=>x; const EaStyle={Colors:' + json.dumps(colors) + '};'
     return (
         (context if include_context else '')
         + '\n'
-        + '\n'.join(block(text, 'function ' + name + '(') for name in ('word', 'icon', 'color'))
+        + '\n'.join(
+            block(text, 'function ' + name + '(')
+            for name in ('word', 'icon', 'color', 'textColor')
+        )
     )
 
 
@@ -449,7 +455,7 @@ def assert_outcome_consumers(bar, label, dialog):
     )
     context = (
         outcome_functions(source('qml/Globals/FitOutcomes.qml'))
-        + '\nconst FitOutcomes={word,icon,color};'
+        + '\nconst FitOutcomes={word,icon,color,textColor};'
     )
     icon_label = object_id(label, 'iconLabel')
     value_label = object_id(label, 'value')
@@ -472,32 +478,39 @@ def assert_outcome_consumers(bar, label, dialog):
     assignments = ','.join(
         key + ':(' + property_value(summary, key) + ')' for key in status_properties
     )
-    rows = evaluate(
-        'keys.map(outcome=>{const row={outcome,icon:"fallback",value:"17"}; '
-        'const control={'
-        + assignments
-        + '}; return [['
-        + ','.join(display_expressions)
-        + '],['
-        + ','.join(expressions)
-        + ']];})',
-        context,
-    )
-    for (_key, word, icon, color), (segments, overall) in zip(OUTCOMES, rows, strict=True):
-        assert [
-            segments[0],
-            segments[1],
-            segments[2],
-            segments[3],
-        ] == [icon, word, color, color], (
-            'Outcomes: displayed status icon and digit value use the effective tuple'
+    for stale in (False, True):
+        rows = evaluate(
+            'keys.map(key=>{const bar={fit:{outcome:key,outOfDate:'
+            + str(stale).lower()
+            + '}};const outcome=('
+            + property_value(summary, 'outcome')
+            + ');const outdated=('
+            + property_value(summary, 'outdated')
+            + ');const row={outcome,icon:"fallback",value:"17"}; '
+            'const control={'
+            + assignments
+            + '}; return [['
+            + ','.join(display_expressions)
+            + '],['
+            + ','.join(expressions)
+            + ']];})',
+            context,
         )
-        assert overall == [
-            icon,
-            color,
-            word,
-            color,
-        ], 'Outcomes: Overall status takes the outcome branch for icon, word and both colours'
+        for (_key, word, icon, color), (segments, overall) in zip(OUTCOMES, rows, strict=True):
+            neutral = color == 'themeForegroundMinor'
+            text_color = 'themeForeground' if neutral else color
+            status_icon_color = 'statusBarIconForeground' if neutral else color
+            expected = (
+                ['history', 'Outdated', 'orange', 'orange']
+                if stale
+                else [icon, word, status_icon_color, text_color]
+            )
+            assert segments == expected, (
+                'Outcomes: status uses its current outcome or the amber outdated history marker'
+            )
+            assert overall == [icon, color, word, text_color], (
+                'Outcomes: results retain their original outcome; neutral text stays readable'
+            )
     assert not re.search(r'font\.underline:\s*true', bar + label + dialog), (
         'Outcomes: clickable summaries do not underline'
     )
@@ -541,6 +554,7 @@ def status_item_declarations(text):
         body = object_id(area, identifier)
         prefix = (
             'const outcome=(' + property_value(body, 'outcome') + ');'
+            'const outdated=(' + property_value(body, 'outdated') + ');'
             if identifier == 'statusItem'
             else ''
         )
@@ -577,7 +591,7 @@ def status_item_results(text, fit):
         'statusBarIconForeground:"#666666",statusBarTextForeground:"#666666"}};'
     )
     context += outcome_functions(source('qml/Globals/FitOutcomes.qml'), include_context=False)
-    context += '\nconst FitOutcomes={word,icon,color};'
+    context += '\nconst FitOutcomes={word,icon,color,textColor};'
     for name in ('running', 'scanning', 'summary', 'scanSummary'):
         context += (
             'const '
@@ -617,7 +631,7 @@ const bar={fit:{running:true,scanning:true,ok:7,fail:2,scanOk:7,scanFailed:2,ela
 eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:12,total:24,fraction:0.5,
 
 percent:50,scanFitted:9,scanSkipped:3,scanProcessed:12,scanTotal:24,iterations:'13',outcome:'success'}};
-const fitArea={};const outcome='success';
+const fitArea={};const outcome='success';const outdated=false;
 const EaStyle={Colors:{red:'red',green:'green',themeForeground:'neutral',
 statusBarIconForeground:'neutral'}};"""
     running = property_value(area, 'running')
@@ -666,7 +680,7 @@ statusBarIconForeground:'neutral'}};"""
     state = context + "bar.fit.scanning=true;bar.fit.running=true;bar.fit.outcome='success';"
     state += (
         outcome_functions(source('qml/Globals/FitOutcomes.qml'), include_context=False)
-        + '\nconst FitPresentation={word,icon,color};'
+        + '\nconst FitPresentation={word,icon,color,textColor};'
     )
     state = state.replace("const FitOutcomes={separator:' | '};", '')
     state += '\nconst FitOutcomes=FitPresentation;'
@@ -895,7 +909,7 @@ def assert_explorer_outcomes(qml):
     ]
     context = outcome_functions(source('qml/Globals/FitOutcomes.qml'))
     context += (
-        '\nconst FitOutcomes={word,icon,color}; const keys='
+        '\nconst FitOutcomes={word,icon,color,textColor}; const keys='
         + json.dumps([key for key, _word, _icon, _color in OUTCOMES])
         + ';'
     )
