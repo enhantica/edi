@@ -44,7 +44,7 @@ class ChartLegendModel : public QAbstractListModel {
         bool bragg = false;
         double markWidth = 0.0;
         QStringList labelTexts, labelColors;
-        // The selected dataset's entry, shown bold in the accent colour.
+        // The selected dataset's entry, shown bold in its own colour.
         bool selected = false;
         // What a click on the entry hides or shows (the series' id, or a listed row's label), and whether it is hidden.
         QString key;

@@ -283,6 +283,8 @@ class ExperimentViewModel : public QObject {
     // The project's structures, whose ticks the pattern shows.
     std::size_t structureCount() const { return project_.structures.size(); }
     const std::vector<std::size_t>& colourPositions() const { return colour_positions_; }
+    // Whether it shows one dataset of a scan, coloured as one of the scan's patterns (edi::pattern_set_colour).
+    bool showsDataset() const { return colour_place_.has_value(); }
     void setColourPlace(std::optional<std::size_t> place, std::size_t count, std::vector<std::size_t> positions);
     // An edit was admitted: what the pattern shows was calculated before it. The frame stays; the pattern
     // reports stale and the chart's source reports that it no longer describes the model, until the newest

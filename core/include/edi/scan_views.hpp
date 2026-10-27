@@ -114,10 +114,10 @@ ScanColourMap scan_colour_map_or_default(std::string_view name);
 struct ScanMapColour {
     std::uint8_t r = 0, g = 0, b = 0, a = 0;
 };
-/// A map's 256 colours from its low end to its high end, as its name means them. Blue-Red runs from the chart's
-/// background through blue to red, mixed in Oklab, in the theme's colours: #FFFFFF, #3F7FBF, #C8323C in the light
-/// theme, #444444, #6AA6EA, #FC4F81 in the dark (the owner, 2026-10-26); the other maps are their tables in either
-/// theme.
+/// A map's 256 colours from its low end to its high end, as its name means them. Blue-Red runs from the plot area's
+/// colour through blue to red, mixed in Oklab, in the theme's colours: #FFFFFF, #3F7FBF, #C8323C in the light theme,
+/// #181818, #6AA6EA, #FC4F81 in the dark, whose Map plot area is black (the owner, 2026-10-27); the other maps are
+/// their tables in either theme.
 std::vector<ScanMapColour> scan_colour_map_table(ScanColourMap map, bool dark);
 /// The map's colour of `t` in the theme.
 ScanMapColour scan_map_colour(ScanColourMap map, double t, bool dark = false);

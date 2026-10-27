@@ -67,6 +67,9 @@ class ScanLayer : public QQuickPaintedItem {
     // map, every other row's band blended toward the background); without, the drawing does not depend on it.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(bool highlight MEMBER highlight_ WRITE setHighlight NOTIFY highlightChanged)
+    // Highlighting on the Stacked view, every pattern but the shown one is drawn in this colour, the theme's disabled
+    // one (the owner, 2026-10-27); the Map fades its other bands by `faded`.
+    Q_PROPERTY(QColor disabledColour MEMBER disabled_colour_ WRITE setDisabledColour NOTIFY disabledColourChanged)
     Q_PROPERTY(double faded MEMBER faded_ WRITE setFaded NOTIFY fadedChanged)
     // A fit holds the cores: the painter strokes the lines on one thread, not on every core, so the fit is not slowed.
     Q_PROPERTY(bool busy MEMBER busy_ WRITE setBusy NOTIFY busyChanged)
@@ -90,14 +93,12 @@ class ScanLayer : public QQuickPaintedItem {
     // Bumped whenever the datasets' colours (colourOf) change, for what shows them to read them again.
     Q_PROPERTY(int coloursRevision READ coloursRevision NOTIFY coloursRevisionChanged)
     // Which rows' labels show, true by dataset, while `labelled`: all while they fit; when they would come closer than
-    // `labelGap` pixels, an evenly spread share of them, the current dataset's always among them while `nameCurrent`;
-    // off, when a shown legend marks it instead, never among them. Zooming in spreads the rows, and the rest come back as they fit. Made
+    // `labelGap` pixels, an evenly spread share of them, the current dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit. Made
     // again when what it depends on changes, announced when it differs.
     Q_PROPERTY(bool labelled MEMBER labelled_ WRITE setLabelled NOTIFY labelledChanged)
-    Q_PROPERTY(bool nameCurrent MEMBER name_current_ WRITE setNameCurrent NOTIFY nameCurrentChanged)
     // The Stacked view's legend (ChartLegend; the owner, 2026-10-26): a line in each dataset's colour and its row's
-    // text, in scan order, the current dataset's marked selected while highlighting; past kFullLegend datasets only the
-    // first, the current and the last, then how many more there are.
+    // text, in scan order (highlighting, every other one in the disabled colour; not, the current one bold); past
+    // kFullLegend datasets only the first, the current and the last, then how many more there are.
     Q_PROPERTY(edi_app::ChartLegendModel* legend READ legend CONSTANT)
     Q_PROPERTY(double labelGap MEMBER label_gap_ WRITE setLabelGap NOTIFY labelGapChanged)
     Q_PROPERTY(QList<bool> shownLabels READ shownLabels NOTIFY shownLabelsChanged)
@@ -136,7 +137,11 @@ class ScanLayer : public QQuickPaintedItem {
     void setActive(bool active);
     void setSpacing(double spacing);
     void setLabelled(bool labelled);
-    void setNameCurrent(bool on);
+    void setDisabledColour(const QColor& colour);
+    // A click on the Stacked legend hides a pattern, or shows it again: a hidden one is not drawn and its legend entry
+    // is drawn disabled (the owner, 2026-10-27).
+    Q_INVOKABLE void toggleHidden(int dataset);
+    bool hiddenAt(std::size_t dataset) const;
     ChartLegendModel* legend() const { return legend_; }
     // The most datasets the legend lists in full.
     static constexpr int kFullLegend = 15;
@@ -157,8 +162,13 @@ class ScanLayer : public QQuickPaintedItem {
     Q_INVOKABLE double peakOf(int dataset) const;
     // The colour the stacked view draws a dataset's line in, by the colour choice: what its row label takes.
     Q_INVOKABLE QColor colourOf(int dataset) const;
+    // For the hover read-out (the owner, 2026-10-27): a dataset's intensity at `x` on the axis shown, as drawn (less its
+    // background when subtracting), linear between its points and NaN beyond them; where its line is drawn there on the
+    // vertical axis (on the Map, its row); and an intensity as the pattern chart's read-out writes it.
+    Q_INVOKABLE double valueAt(int dataset, double x) const;
+    Q_INVOKABLE double curveAt(int dataset, double x) const;
+    Q_INVOKABLE QString intensityText(double value) const;
     // A line's colour faded to `faded` over the background, opaque.
-    QColor fadedColour(const QColor& colour) const;
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     int coloursRevision() const { return colours_revision_; }
@@ -172,7 +182,7 @@ class ScanLayer : public QQuickPaintedItem {
    signals:
     void modelChanged();
     void labelledChanged();
-    void nameCurrentChanged();
+    void disabledColourChanged();
     void labelGapChanged();
     void shownLabelsChanged();
     void modeChanged();
@@ -277,7 +287,8 @@ class ScanLayer : public QQuickPaintedItem {
     bool active_ = true, stale_ = false;
     double spacing_ = 0.75;  // Wide
     bool labelled_ = false;
-    bool name_current_ = true;
+    QColor disabled_colour_ = QColor(0xBB, 0xBB, 0xBB);
+    std::vector<int> hidden_;
     ChartLegendModel* legend_ = nullptr;
     void syncLegend();
     // At Separate on the Stacked view each pattern spans its values in the x range shown (measure).

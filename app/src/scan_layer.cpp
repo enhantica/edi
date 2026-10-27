@@ -121,12 +121,27 @@ void ScanLayer::setLabelled(bool labelled) {
     }
 }
 
-void ScanLayer::setNameCurrent(bool on) {
-    if (on != name_current_) {
-        name_current_ = on;
-        emit nameCurrentChanged();
-        labelsMoved();
+void ScanLayer::setDisabledColour(const QColor& colour) {
+    assign(disabled_colour_, colour, &ScanLayer::disabledColourChanged);
+    syncLegend();
+}
+
+bool ScanLayer::hiddenAt(std::size_t dataset) const {
+    return std::find(hidden_.begin(), hidden_.end(), static_cast<int>(dataset)) != hidden_.end();
+}
+
+void ScanLayer::toggleHidden(int dataset) {
+    if (dataset < 0) {
+        return;
     }
+    const auto found = std::find(hidden_.begin(), hidden_.end(), dataset);
+    if (found != hidden_.end()) {
+        hidden_.erase(found);
+    } else {
+        hidden_.push_back(dataset);
+    }
+    syncLegend();
+    redraw();
 }
 
 void ScanLayer::syncLegend() {
@@ -144,12 +159,16 @@ void ScanLayer::syncLegend() {
     }
     QList<ChartLegendModel::Entry> entries;
     for (const int dataset : listed) {
+        // Highlighting, the shown pattern keeps its colour and every other is disabled-coloured; not highlighting, all
+        // keep their colours and the shown one is named in bold (the owner, 2026-10-27).
         ChartLegendModel::Entry entry;
         entry.label = model_->rowText(dataset);
-        entry.color = colourOf(dataset);
+        entry.color = highlight_ && dataset != current_ ? disabled_colour_ : colourOf(dataset);
         entry.mark = QStringLiteral("line");
         entry.markWidth = 2.0;
-        entry.selected = highlight_ && dataset == current_;
+        entry.selected = !highlight_ && dataset == current_;
+        entry.key = QString::number(dataset);
+        entry.hidden = hiddenAt(static_cast<std::size_t>(dataset));
         entries.append(entry);
     }
     if (static_cast<int>(listed.size()) < count) {
@@ -206,9 +225,7 @@ QList<bool> ScanLayer::shownLabels() const {
     while (stride < placed.size() && !apart(stride)) {
         ++stride;
     }
-    const auto current = name_current_ ? std::find_if(placed.begin(), placed.end(),
-                                                      [this](const Placed& row) { return row.index == current_; })
-                                       : placed.end();
+    const auto current = std::find_if(placed.begin(), placed.end(), [this](const Placed& row) { return row.index == current_; });
     for (std::size_t n = 0; n < placed.size(); n += stride) {
         if (current == placed.end() || std::abs(placed[n].px - current->px) >= label_gap_ || placed[n].index == current_) {
             shown[static_cast<std::size_t>(placed[n].index)] = true;
@@ -216,10 +233,6 @@ QList<bool> ScanLayer::shownLabels() const {
     }
     if (current != placed.end()) {
         shown[static_cast<std::size_t>(current_)] = true;
-    }
-    // A shown legend names the current dataset instead.
-    if (!name_current_ && current_ >= 0 && current_ < count) {
-        shown[static_cast<std::size_t>(current_)] = false;
     }
     shown_labels_.reserve(count);
     for (const bool row : shown) {
@@ -306,9 +319,7 @@ void ScanLayer::setDark(bool dark) {
 void ScanLayer::setIncludedOnly(bool on) {
     if (on != included_only_) {
         included_only_ = on;
-        if (fitsShownRange()) {
-            measure();
-        }
+        measure();  // the intensity range leaves the excluded points out, or takes them back
         emit includedOnlyChanged();
         redraw();
     }
@@ -372,7 +383,10 @@ void ScanLayer::setActive(bool active) {
 }
 
 int ScanLayer::highlighted() const {
-    return highlight_ && current_ >= 0 && static_cast<std::size_t>(current_) < reductions_.size() ? current_ : -1;
+    return highlight_ && current_ >= 0 && static_cast<std::size_t>(current_) < reductions_.size() &&
+                   !hiddenAt(static_cast<std::size_t>(current_))
+               ? current_
+               : -1;
 }
 
 void ScanLayer::setGpu(bool on) {
@@ -428,9 +442,10 @@ void ScanLayer::redraw() {
     }
 }
 
-// Every read dataset's lowest and highest value on the y scale: the ends of the intensity the views spread. At
-// Separate each stacked pattern spans its lowest to highest value in the x range shown, so its band stays filled as
-// the zoom leaves its large peaks out (the owner, 2026-10-26); one with no point in the range spans all its points.
+// Every read dataset's lowest and highest value on the y scale: the ends of the intensity the views spread, over its
+// included points only while only the included range is shown (the owner, 2026-10-27). At Separate each stacked
+// pattern spans its lowest to highest value in the x range shown, so its band stays filled as the zoom leaves its
+// large peaks out (the owner, 2026-10-26); one with no point in the range spans all its points.
 void ScanLayer::measure() {
     constexpr double kInfinity = std::numeric_limits<double>::infinity();
     double low = kInfinity, high = -low;
@@ -444,14 +459,13 @@ void ScanLayer::measure() {
             double own_low = kInfinity, own_high = -kInfinity, seen_low = kInfinity, seen_high = -kInfinity;
             for (std::size_t i = 0; i < pattern.intensity.size(); ++i) {
                 const double shown = edi::to_display(drawn_value(pattern, i, subtract_background_), scale);
-                if (!std::isfinite(shown)) {
+                const double x = i < pattern.shown.size() ? pattern.shown[i] : std::nan("");
+                if (!std::isfinite(shown) || (included_only_ && ScanViewModel::excludedAt(pattern, x))) {
                     continue;
                 }
                 own_low = std::min(own_low, shown);
                 own_high = std::max(own_high, shown);
-                const double x = i < pattern.shown.size() ? pattern.shown[i] : std::nan("");
-                const bool counted = !(included_only_ && ScanViewModel::excludedAt(pattern, x));
-                if (visible_only && x >= from && x <= to && counted) {
+                if (visible_only && x >= from && x <= to) {
                     seen_low = std::min(seen_low, shown);
                     seen_high = std::max(seen_high, shown);
                 }
@@ -537,6 +551,9 @@ int ScanLayer::datasetNear(double x, double y) const {
     int nearest = -1;
     double best = std::numeric_limits<double>::infinity();
     for (std::size_t d = 0; d < reductions_.size() && d < baselines_.size(); ++d) {
+        if (hiddenAt(d)) {
+            continue;
+        }
         const Reduction& reduction = reductions_[d];
         double low = std::numeric_limits<double>::infinity(), high = -low;
         const auto take = [&low, &high](double v) {
@@ -699,26 +716,21 @@ void ScanLayer::recolour() {
     for (const int position : taken_positions_) {
         taken.push_back(static_cast<std::size_t>(std::max(position, 0)));
     }
-    std::vector<std::size_t> positions;
-    if (positions_.size() == count) {
-        for (const int position : positions_) {
-            positions.push_back(static_cast<std::size_t>(std::max(position, 0)));
-        }
-    } else {
-        positions = edi::free_positions(scheme, edi::FigureKind::Experiment, size, taken);
-    }
+    // A joint fit's experiments keep their own positions while the palette has a colour for each; a scan's datasets,
+    // and any set larger than the palette, take the pattern set's colours (edi::pattern_set_colour).
+    const bool own = positions_.size() == count && size <= edi::kPaletteColourCount;
     std::size_t used = 0;
-    for (const std::size_t position : positions) {
-        used = std::max(used, position + 1);
-    }
-    for (const std::size_t position : taken) {
-        used = std::max(used, position + 1);
+    for (const int position : positions_) {
+        used = std::max(used, static_cast<std::size_t>(std::max(position, 0)) + 1);
     }
     for (std::size_t dataset = 0; dataset < size; ++dataset) {
         // Reversed, the last dataset takes the first colour.
         const std::size_t place = stacked_reversed_ ? size - 1 - dataset : dataset;
         if (!map) {
-            colours_[dataset] = QColor(QString::fromStdString(edi::figure_colour(scheme, positions[place], used, dark_)));
+            colours_[dataset] = QColor(QString::fromStdString(
+                own ? edi::figure_colour(scheme, static_cast<std::size_t>(std::max(positions_[static_cast<qsizetype>(place)], 0)),
+                                         used, dark_)
+                    : edi::pattern_set_colour(scheme, place, size, taken, dark_)));
             continue;
         }
         const double at = size > 1 ? static_cast<double>(place) / static_cast<double>(size - 1) : 1.0;
@@ -731,21 +743,40 @@ void ScanLayer::recolour() {
     redraw();
 }
 
-QColor ScanLayer::fadedColour(const QColor& colour) const {
-    // Blended toward the background rather than made translucent: a line crossing itself, up and down a narrow peak,
-    // stays one even colour, as the pattern chart's opaque lines do.
-    const double keep = faded_;
-    const auto mix = [keep](double ink, double paper) { return keep * ink + (1.0 - keep) * paper; };
-    return QColor::fromRgbF(static_cast<float>(mix(colour.redF(), background_.redF())),
-                            static_cast<float>(mix(colour.greenF(), background_.greenF())),
-                            static_cast<float>(mix(colour.blueF(), background_.blueF())), 1.0F);
-}
-
 QColor ScanLayer::colourOf(int dataset) const {
     if (dataset < 0 || static_cast<std::size_t>(dataset) >= colours_.size()) {
         return {};
     }
     return colours_[static_cast<std::size_t>(dataset)];
+}
+
+double ScanLayer::valueAt(int dataset, double x) const {
+    constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
+    if (!model_ || dataset < 0 || static_cast<std::size_t>(dataset) >= model_->patterns().size() || !std::isfinite(x)) {
+        return kNaN;
+    }
+    const ScanViewModel::Pattern& pattern = model_->patterns()[static_cast<std::size_t>(dataset)];
+    const std::size_t points = std::min(pattern.shown.size(), pattern.intensity.size());
+    for (std::size_t i = 0; i + 1 < points; ++i) {
+        const double xa = pattern.shown[i], xb = pattern.shown[i + 1];
+        if (!std::isfinite(xa) || !std::isfinite(xb) || x < std::min(xa, xb) || x > std::max(xa, xb)) {
+            continue;
+        }
+        const double va = drawn_value(pattern, i, subtract_background_), vb = drawn_value(pattern, i + 1, subtract_background_);
+        return xb == xa ? va : va + (vb - va) * (x - xa) / (xb - xa);
+    }
+    return kNaN;
+}
+
+double ScanLayer::curveAt(int dataset, double x) const {
+    if (mode_ == QLatin1String("map") || dataset < 0) {
+        return rowOf(dataset);
+    }
+    return stackedY(static_cast<std::size_t>(dataset), edi::to_display(valueAt(dataset, x), scale_of(scale_)));
+}
+
+QString ScanLayer::intensityText(double value) const {
+    return std::isfinite(value) ? QString::fromStdString(edi::measured_readout(value)) : QString();
 }
 
 QColor ScanLayer::mapColour(double t) const {
@@ -895,7 +926,8 @@ void ScanLayer::updatePolish() {
 // The stacked lines to the GPU: the reductions again only when one changed or the drawing order did; every frame the
 // rows, the height and the colours, which the shader takes as they are, and the excluded bands.
 void ScanLayer::feedLines() {
-    const std::vector<std::size_t> order = top_down(baselines_, std::min(reductions_.size(), model_->patterns().size()));
+    std::vector<std::size_t> order = top_down(baselines_, std::min(reductions_.size(), model_->patterns().size()));
+    std::erase_if(order, [this](std::size_t d) { return hiddenAt(d); });
     if (reduction_changes_ != lines_fed_builds_ || order != lines_order_) {
         std::vector<ScanLines::Trace> traces;
         traces.reserve(order.size());
@@ -916,7 +948,7 @@ void ScanLayer::feedLines() {
         if (top >= 0 && static_cast<int>(d) == top) {
             colour.setAlphaF(0.0F);  // drawn by the line over the others
         } else if (top >= 0) {
-            colour = fadedColour(colour);
+            colour = disabled_colour_;
         }
         return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
     };
@@ -1090,7 +1122,8 @@ void ScanLayer::paint(QPainter* painter) {
     // Stacked, painted: the excluded bands under the patterns, as on the pattern chart; then each dataset's reduced
     // trace, from the top row down.
     excluded(tint);
-    const std::vector<std::size_t> order = top_down(baselines_, std::min(count, baselines_.size()));
+    std::vector<std::size_t> order = top_down(baselines_, std::min(count, baselines_.size()));
+    std::erase_if(order, [this](std::size_t d) { return hiddenAt(d); });
     const qreal width_px = line_width(baselines_, order, y_max_ - y_min_, height());
     // Highlighted, the shown dataset is drawn last, over the others, which are faded.
     const int top = highlighted();
@@ -1133,7 +1166,7 @@ void ScanLayer::paint(QPainter* painter) {
         line.bottom = bounds.bottom() + width_px;
         line.colour = colourOf(static_cast<int>(d));
         if (top >= 0 && static_cast<int>(d) != top) {
-            line.colour = fadedColour(line.colour);
+            line.colour = disabled_colour_;
         }
         lines.push_back(std::move(line));
     }
