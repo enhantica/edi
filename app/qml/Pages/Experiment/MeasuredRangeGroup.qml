@@ -89,6 +89,9 @@ Column {
         // itself, so the Repeater, declared last, takes the last width, kept narrow.
         readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
         columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
+        // A layout of its own (the owner, 2026-10-27): the count, the status and the structures' columns fit their
+        // content, and the other numeric columns share the rest equally after their own widths.
+        spreadColumns: [1, 2, 3, 4, 5, 6, 7]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
