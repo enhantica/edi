@@ -656,6 +656,17 @@ def test_every_project_replacement_route_retains_the_owned_write_token(
 
 
 def check_replacement_authority(row):
+    assert row['replacementBefore']['name'] == 'edited-replacement-revision', (
+        'Every replacement route receives a real metadata edit while the old write is held'
+    )
+    assert row['replacementHasStructure'] is (row['replacement'] != 'new'), (
+        'New remains an empty project while the other authored replacement routes retain a cell'
+    )
+    if row['replacementHasStructure']:
+        assert any(
+            p['path'].endswith('cell.length_a') and p['value'].hex() == (1.45678901).hex()
+            for p in row['replacementBefore']['parameters']
+        ), 'Every replacement with a structure receives the exact unrounded cell edit'
     assert row['secondJobs'] == 0, (
         'Replacing a project preserves the session-owned write token against Save, '
         'moving Save as and copy, even when a new key names the same physical place'
@@ -685,6 +696,17 @@ def check_replacement_authority(row):
     assert row['durableParameters'] == row['final']['parameters'], (
         'Ordered writes leave a clean replacement equal to the actual last durable payload'
     )
+    assert [
+        name.strip('"')
+        for name in re.findall(r'(?m)^_metadata\.name[ \t]+(.+)$', row['durableRecord'])
+    ] == [row['final']['name']], (
+        'The last durable payload holds the replacement metadata even when New has no parameters'
+    )
+    if not row['replacementHasStructure']:
+        assert not row['final']['parameters'], 'An empty New project gains no invented parameters'
+        assert not any(
+            name.startswith(('structures/', 'experiments/')) for name in row['durableMembers']
+        ), 'The final empty New payload contains no stale structure or experiment files'
 
 
 @pytest.mark.parametrize(

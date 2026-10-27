@@ -638,9 +638,13 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
         settle(session);
         browser = true;
     }
+    const bool replacementHasStructure = session.project()->currentStructure() != nullptr;
     if (across) {
         session.project()->setName("edited-replacement-revision");
-        session.project()->currentStructure()->cell()->lengthA()->setValue(1.45678901);
+        if (auto* structure = session.project()->currentStructure())
+            structure->cell()->lengthA()->setValue(1.45678901);
+        else
+            need(replacement == "new", "Only an empty New replacement lacks a cell to edit");
         settle(session);
     }
     const auto replacementBefore = state(session);
@@ -693,6 +697,8 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
     const auto completed = state(session);
     const auto dropsAfterFirst = drops;
     const auto messagesAfterFirst = messages;
+    QString durableRecord;
+    QStringList durableMembers;
     const auto durableProjection = [&](const QString& directory) {
         QJsonArray parameters;
         if (!alias || !durable.contains("working")) return parameters;
@@ -703,6 +709,11 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
             QFile out(path);
             need(out.open(QIODevice::WriteOnly), "Materialize the acknowledged boundary payload");
             out.write(file.value());
+        }
+        if (directory == "durable-after-next") {
+            durableRecord = QString::fromUtf8(durable["working"].value("project.edi"));
+            durableMembers = durable["working"].keys();
+            if (!replacementHasStructure && replacement == "new") return parameters;
         }
         auto reopened = edi::load_project(root.toStdString());
         for (const auto& entry : edi::parameter_entries(reopened)) {
@@ -747,6 +758,9 @@ QJsonObject saveConflict(const QString& source, const QStringList& spec) {
             {"before", before},
             {"pending", pending},
             {"edited", edited},
+            {"replacementHasStructure", replacementHasStructure},
+            {"durableRecord", durableRecord},
+            {"durableMembers", QJsonArray::fromStringList(durableMembers)},
             {"replacementBefore", replacementBefore},
             {"afterSecond", afterSecond},
             {"secondJobs", int(secondJobs)},
