@@ -207,6 +207,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     categories_ = new CategoryListModel(this);
     syncCategories();
     connect(structure_view_options_, &StructureViewOptions::changed, this, &ProjectViewModel::keepStructureView);
+    showStructureView();  // the opened project's shown structure, as it saved its view
     render_wait_.setSingleShot(true);
     connect(&render_wait_, &QTimer::timeout, this, [this] { followRendered(false); });
     loadScan();
@@ -2627,6 +2628,17 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     }
     if (!warnings.isEmpty()) {
         return warnings.join(QLatin1Char('\n'));
+    }
+    // A block keeps its name: a rename is made on its page, where its references follow it.
+    const auto names = [](const auto& blocks) {
+        QStringList out;
+        for (const auto& block : blocks) {
+            out.append(QString::fromStdString(block->name.value()));
+        }
+        return out;
+    };
+    if (names(read->structures) != names(project_->structures) || names(read->experiments) != names(project_->experiments)) {
+        return tr("A block's name is changed on its page, not in the text");
     }
     auto before = std::make_shared<const edi::Project>(*project_);
     const QString error = apply(edi::Edit::replace_project(*project_, std::move(*read)), true);
