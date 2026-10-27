@@ -19,7 +19,10 @@ fails on:
   selector token, and a C++ string literal equal to a display
   string a user would read as one (one with a capital, a space or a non-ASCII character), so no
   surface keeps a copy of a name; the same file's "names" exceptions admit a literal that names
-  something else (a page, a preference) and says so.
+  something else (a page, a preference) and says so;
+* a QML field label (a `label:` binding) that shows an item's `.name` itself rather than asking
+  the bridge for its label, and a label, text or title that says "(default)": a name read at run
+  time is no literal, so the rule above cannot see it.
 
 The dictionary is read from crysta's source: CRYSTA_CONSUMER_SRC when set, else the pinned fetch
 in build/crysta-src.
@@ -200,6 +203,33 @@ def copied_names(root: Path, display: set[str], names: set[str]) -> list[tuple[s
     return found
 
 
+# A field label's expression, and the parts of it that only look a name up: a bridge call
+# (Session.label(...)), an index ([...]) and a template's ${...}.
+QML_LABEL = re.compile(r'^\s*label\s*:(.*)$')
+LOOKUPS = re.compile(r'Session\.\w+\([^()]*\)|\[[^\[\]]*\]|\$\{[^{}]*\}')
+QML_SHOWN = re.compile(r'^\s*(?:label|text|title)\s*:')
+
+
+def raw_labels(root: Path) -> list[str]:
+    """Each QML label showing an item's raw name, and each label saying "(default)"."""
+    found = []
+    for path in surface_files(root):
+        if path.suffix != '.qml':
+            continue
+        rel = path.relative_to(root).as_posix()
+        text = path.read_text(encoding='utf-8', errors='replace')
+        for number, raw in enumerate(text.splitlines(), 1):
+            line = code_of(raw)
+            label = QML_LABEL.match(line)
+            if label and re.search(r'\.name\b', LOOKUPS.sub('', label.group(1))):
+                found.append(f'{rel}:{number}: a field label shows a raw name: {line.strip()}')
+            if QML_SHOWN.match(line) and any(
+                '(default)' in literal for literal in QSTR.findall(line)
+            ):
+                found.append(f'{rel}:{number}: a label says "(default)": {line.strip()}')
+    return found
+
+
 def rounding_findings(root: Path, exceptions: list[dict]) -> list[str]:
     """Each rounding outside the bridge no exception admits; each exception unreasoned, unused."""
     found = []
@@ -254,7 +284,11 @@ def findings(root: Path) -> list[str]:
         exceptions, admitted = recorded['exceptions'], recorded['names']
     except (OSError, ValueError, KeyError) as error:
         return [f'cannot read {EXCEPTIONS}: {error}']
-    return rounding_findings(root, exceptions) + name_findings(root, display, names, admitted)
+    return (
+        rounding_findings(root, exceptions)
+        + name_findings(root, display, names, admitted)
+        + raw_labels(root)
+    )
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -31,7 +31,7 @@ EaElements.GroupRow {
                 id: selector
                 objectName: `scatteringSource.${item.model.name}`
                 width: item.width
-                label: item.model.isDeclared ? item.model.name : qsTr("%1 (default)").arg(item.model.name)
+                label: Session.label(`scattering_source.${item.model.name}`)
                 options: item.model.options
                 token: item.model.effectiveToken
                 onSelected: token => row.experiment.scatteringSource.select(item.model.name, token)
