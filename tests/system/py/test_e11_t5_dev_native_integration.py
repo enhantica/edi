@@ -62,7 +62,10 @@ class MainActor:
         )
 
     def configure_turns(self, turns):
-        assert not self.trace.exists(), 'Only the unstarted offline peer may be configured'
+        requests = list(map(json.loads, self.trace.read_text().splitlines())) if self.trace.exists() else []
+        assert not any(row.get('method') == 'turn/start' for row in requests), (
+            'Only an offline peer with no submitted model turn may receive its finite calls'
+        )
         path = self.folder / 'peer.json'
         value = json.loads(path.read_text(encoding='utf-8'))
         value['turns'] = turns
@@ -101,8 +104,14 @@ class MainActor:
         )
 
     def connect(self):
-        self.command('sign_in')
-        self.until(lambda row: row['ui']['connected'])
+        if not self.last['ui']['connected']:
+            if any(row['name'] == 'home.start' and row['visible'] and row['enabled']
+                   for row in self.last['ui']['controls']):
+                self.command('click', name='home.start')
+            self.until(lambda row: any(c['name'] == 'assistant.connection' and c['fully_exposed']
+                                      and c['enabled'] for c in row['ui']['controls']))
+            self.command('sign_in')
+            self.until(lambda row: row['ui']['connected'])
         self.command('accept_context')
         assert not self.last['ui']['context_consent_required'], (
             'Ordinary current context consent must be established before delegated work'
@@ -338,6 +347,10 @@ def test_refused_estimate_cannot_mutate_and_does_not_block_next_native_operation
     actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
     first, second = actor.responses()
     assert first['result']['success'] is False, 'The invalid exact target must really refuse'
+    model_visible = json.loads(first['result']['contentItems'][0]['text'])
+    assert isinstance(model_visible.get('message'), str) and model_visible['message'].strip(), (
+        'The actual model-visible refusal retains its bounded human app diagnostic, not only debug history'
+    )
     native_result(second)
     assert point_rows(actor) != original, (
         'The subsequent valid native action must actually execute'
@@ -1172,7 +1185,8 @@ def test_compound_default_estimate_refusal_preserves_and_discloses_actual_setup_
     data = tmp_path / 'one-observation.xye'
     data.write_text('34.25 17.25 .75\n')
     cif = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
-    token = actor.command('selected_begin')['reply']['token']
+    actor.connect()
+    token = qml(actor, 'Session.assistant.beginFileSelection(true)')
     assert actor.command('selected_add', token=token, paths=[str(data), str(cif)])['reply'][
         'added'
     ], 'The compound witness uses actual selected immutable inputs'
@@ -2014,4 +2028,241 @@ def test_fresh_actual_main_has_no_startup_report_capacity_failure(main_actor):
     diagnostics = {key: actor.last['ui'][key] for key in ('last_error', 'messages')}
     assert 'report_capacity' not in json.dumps(diagnostics), (
         'Optional diagnostic setup cannot emit a report-capacity failure before any assistant work'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_ordinary_empty_to_created_transition_retains_original_task_and_approved_inputs(
+    main_actor, tmp_path, show_actions
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    assert not actor.last['ui']['project'], (
+        'The ordinary manual Create continuity witness starts with the actual empty Session'
+    )
+    files = [ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif',
+             ROOT / 'tests/fixtures/background_estimate/meas-lbco-hrpt.xye']
+    actor.connect()
+    token = qml(actor, 'Session.assistant.beginFileSelection(true)')
+    assert actor.command('selected_add', token=token, paths=list(map(str, files)))['reply']['added'], (
+        'The pending original task admits its real selected inputs before ordinary project creation'
+    )
+    manifest = actor.last['ui']['selected_files']
+    assert len(manifest) == 2, 'The original task owns both selected scientific inputs'
+    cif_id = next(row['id'] for row in manifest if row['name'] == files[0].name)
+    expected_text = files[0].read_text(encoding='utf-8')
+    actor.configure_turns([[], [tool_call('read_selected_file', 'after-ordinary-create',
+        file_id=cif_id, offset=0, max_bytes=len(files[0].read_bytes()))]])
+    original = ('Create and save a new project using the attached files. One phase, NPD, '
+                'wavelength 1.49 Å. Refine the structure and show the report.')
+    actor.connect()
+    actor.request(original)
+    actor.until(lambda row: row['ui']['state'] == 'idle' and FINAL in json.dumps(row['ui']['messages']))
+    before = actor.last['ui']['messages']
+    assert original in json.dumps(before, ensure_ascii=False), (
+        'The original complete scientific objective is retained before the ordinary Create action'
+    )
+    actor.command('click', name='assistant.toggle')
+    actor.command('click', name='project.create')
+    actor.until(lambda row: any(c['name'] == 'createProject.name' and c['visible']
+                               for c in row['ui']['controls']))
+    name = 'e11_manual_create_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    actor.command('click', name='createProject.name')
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text=name)
+    actor.command('dialog_ok', name='createProject.dialog')
+    actor.until(lambda row: row['ui']['project'].get('name') == name)
+    after = actor.last['ui']
+    assert original in json.dumps(after['messages'], ensure_ascii=False), (
+        'Ordinary empty-to-created replacement retains the full prior task rather than chat decoration alone'
+    )
+    assert after['selected_files'] == manifest, (
+        'The same pending task retains its genuinely admitted attachment manifest across ordinary Create'
+    )
+    actor.command('click', name='assistant.toggle')
+    actor.request('Continue the original request.')
+    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle')
+    readback = native_result(actor.responses()[0])
+    assert any(value == expected_text for row in objects(readback) for value in row.values()
+               if isinstance(value, str)), (
+        'The actual new native Controller can read the retained approved file bytes, not just display its manifest'
+    )
+    wire = list(map(json.loads, actor.trace.read_text().splitlines()))
+    turns = [row['params'] for row in wire if row.get('method') == 'turn/start']
+    assert len(turns) == 2, 'The actual followup continues after the original task and ordinary Create'
+    if turns[0]['threadId'] != turns[1]['threadId']:
+        assert original in json.dumps(turns[1], ensure_ascii=False), (
+            'A replacement provider thread receives the original objective rather than only the word Continue'
+        )
+    visible_inputs = turns if turns[0]['threadId'] == turns[1]['threadId'] else [turns[1]]
+    actual_context = json.dumps(visible_inputs, ensure_ascii=False)
+    assert all(path.name in actual_context for path in files), (
+        'The actual provider followup can see the retained scientific input manifest after ordinary Create'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_native_fit_uses_current_statusbar_owner_from_structure_page(main_actor, tmp_path, show_actions):
+    actor = main_actor([[tool_call('run_fit', 'actual-current-status-fit')]], show_actions=show_actions)
+    path = tmp_path / 'fit-project'
+    shutil.copytree(ROOT / 'tests/fixtures/fit_quality/uncertainty', path)
+    assert actor.command('open', path=str(path))['reply']['opened'], (
+        'The independent finite polynomial fixture opens through the actual current app owner'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.command('click', name='appBar.tab.structure')
+    controls = actor.last['ui']['controls']
+    current = [row for row in controls if row['name'] == 'statusBar.fit.button']
+    assert len(current) == 1 and current[0]['visible'] and current[0]['enabled'] and current[0]['exposed'], (
+        'The one current dev status-bar Fit control is actually reachable outside the Analysis page'
+    )
+    assert not any(row['name'] == 'fitting.start' and row['visible'] for row in controls), (
+        'Native fitting must not require or restore a duplicate obsolete sidebar Fit target'
+    )
+    assert qml(actor, 'Session.project.fit.available'), (
+        'The independent fixture has real native free variables and measured observations before fitting'
+    )
+    before = actor.last['ui']['project']['parameters']
+    actor.connect()
+    actor.command('clear_ui_sequence')
+    actor.request('Fit the current independent polynomial background using its existing free parameters.')
+    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    assert qml(actor, 'Session.project.fit.canUndo'), (
+        'The current native Fit owner actually adopts one result and owns its ordinary Undo'
+    )
+    after = actor.last['ui']['project']['parameters']
+    assert any(a['value'] != b['value'] for a, b in zip(before, after, strict=True)), (
+        'The registered native Fit produces actual changed scientific values, not a control-only success'
+    )
+    if show_actions:
+        pointers = [row for row in actor.last['ui']['ui_sequence'] if row['kind'].startswith('pointer_')]
+        assert pointers and all(not row['assistant_visible'] and not row['assistant_selected'] for row in pointers), (
+            'The Show ON Fit operation exposes the real normal sidebar before current-control presentation'
+        )
+    assert not any('Local work report saved' in row['display'] for row in actor.last['ui']['texts'] if row['visible']), (
+        'Automatic diagnostics remain written without unsolicited visible chat or footer status chatter'
+    )
+    actor.command('undo')
+    assert [row['value'] for row in actor.last['ui']['project']['parameters']] == [row['value'] for row in before], (
+        'One ordinary Undo restores the exact pre-fit scientific parameter values'
+    )
+
+
+def test_internal_transport_unlimited_clock_waits_and_bounded_control_deadlines(main_actor):
+    actor = main_actor([[]])
+    checks = actor.command('transport_clock')['reply']['checks']
+    required = {'active_task_has_no_day_expiry', 'unlimited_native_work_accepted',
+                'unlimited_native_presentation_wait_accepted', 'unlimited_human_wait_accepted',
+                'native_identity_guard_retained', 'human_identity_guard_retained',
+                'overlapping_unlimited_waits_do_not_expire', 'retired_generation_cannot_resume_wait',
+                'individual_protocol_deadline_remains_bounded', 'explicit_short_deadline_positive_control'}
+    assert required <= checks.keys() and all(checks.values()), (
+        'Finite internal transport clock injection preserves unlimited active work, real wait correlation and bounded individual protocol controls'
+    )
+
+
+def test_actual_generic_submission_is_unlimited_and_stop_remains_usable(main_actor):
+    actor = main_actor([[]], hold_final=True)
+    actor.connect()
+    actor.request('Continue the delegated app task while awaiting the next actual observation.')
+    actor.until(lambda row: row['ui']['state'] == 'agent_active' and row['ui']['can_cancel'])
+    timing = actor.command('transport_timing')['reply']
+    assert timing['active'] and timing['total_ms'] == 0 and timing['idle_ms'] == 0, (
+        'The actual generic VM submission, not a manufactured transport role, uses unlimited idle and total task budgets'
+    )
+    assert not timing['expired_after_day'], (
+        'A finite future clock sample cannot expire the real held assistant task'
+    )
+    actor.command('cancel')
+    actor.until(lambda row: not row['ui']['can_cancel'] and row['ui']['state'] != 'agent_active')
+    assert actor.last['ui']['connected'], (
+        'Explicit Stop settles the actual work while preserving the same signed-in account'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_native_single_crystal_extinction_matches_current_selectors_and_direct_mm_descriptor(
+    main_actor, tmp_path, show_actions
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = tmp_path / 'sc-extinction'
+    shutil.copytree(ROOT / 'docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project', project)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'The independently published SC fixture opens through the current ordinary owner'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    before = actor.last['ui']['project']['parameters']
+    context = json.loads(actor.last['ui']['context'])['datasets'][0]
+    expected = ['none', 'becker-coppens-type-1', 'becker-coppens-type-2',
+                'becker-coppens-mixed', 'larson-isotropic', 'larson-anisotropic']
+    ordinary = qml(actor, '(function(){const m=Session.project.currentExperiment.extinctionTypeOptions;'
+                   'return Array.from({length:m.count},(_,i)=>m.tokenAt(i));})()')
+    assert context['extinction_type_options'] == ordinary == expected, (
+        'SC native context matches the unchanged ordinary six-family extinction selector contract'
+    )
+    distributions = qml(actor, '(function(){const m=Session.project.currentExperiment.mosaicDistributionOptions;'
+                        'return Array.from({length:m.count},(_,i)=>m.tokenAt(i));})()')
+    assert context['mosaic_distribution_options'] == distributions == ['gaussian', 'lorentzian'], (
+        'Native mosaic choices preserve the original ordinary SC distribution tokens'
+    )
+    experiment = context['id']
+    choices = [token for token in expected if token != context['extinction_type']]
+    actor.configure_turns([[tool_call('edit_experiment', 'sc-family-' + str(i),
+        experiment=experiment, operation='extinction_type', value=token)] for i,token in enumerate(choices)])
+    actor.connect()
+    for index, token in enumerate(choices):
+        actor.request('Select the requested supported extinction family through its ordinary app owner.')
+        actor.until(lambda row: len(actor.responses()) == index + 1 and row['ui']['state'] == 'idle')
+        native_result(actor.responses()[-1])
+        assert qml(actor, 'Session.project.currentExperiment.extinctionType') == token, (
+            'The registered SC family action changes the actual ordinary current experiment'
+        )
+        actor.command('undo')
+        actor.until(lambda row: not row['ui']['project']['calculating'])
+        assert qml(actor, 'Session.project.currentExperiment.extinctionType') == context['extinction_type'], (
+            'One ordinary Undo restores the exact original SC extinction family'
+        )
+        assert actor.last['ui']['project']['parameters'] == before, (
+            'SC family Undo preserves original parameter membership, values, free flags and eligibility'
+        )
+    # A separate actor supplies the owner-requested value as input, never as an algorithm default.
+    scalar = main_actor([[]], show_actions=show_actions)
+    assert scalar.command('open', path=str(project))['reply']['opened'], (
+        'Direct millimetre editing uses the same independent SC input through a new real owner'
+    )
+    scalar.until(lambda row: not row['ui']['project']['calculating'])
+    qml(scalar, 'Session.project.currentExperiment.extinctionType="becker-coppens-mixed"')
+    scalar.until(lambda row: not row['ui']['project']['calculating'])
+    radius = next(row for row in scalar.last['ui']['project']['parameters']
+                  if row['category'] == 'extinction' and row['field'] == 'crystal_radius')
+    assert not radius['refinable'] and not radius['free'], (
+        'The original current-dev crystal-radius descriptor remains never fitted'
+    )
+    original_distribution = qml(scalar, 'Session.project.currentExperiment.mosaicDistribution')
+    changed_distribution = next(token for token in distributions if token != original_distribution)
+    scalar.configure_turns([[
+        tool_call('edit_experiment', 'current-sc-distribution', experiment=experiment,
+                  operation='mosaic_distribution', value=changed_distribution),
+        tool_call('set_parameters', 'direct-mm-input', values=[{'path': radius['path'], 'value': 3.0}]),
+    ]])
+    scalar.connect()
+    scalar.request('Set the crystal size field directly to 3 mm and keep it fixed.')
+    scalar.until(lambda row: len(scalar.responses()) == 2 and row['ui']['state'] == 'idle')
+    for response in scalar.responses():
+        native_result(response)
+    assert qml(scalar, 'Session.project.currentExperiment.mosaicDistribution') == changed_distribution, (
+        'The native SC distribution action reaches the actual ordinary current selector'
+    )
+    actual = next(row for row in scalar.last['ui']['project']['parameters'] if row['path'] == radius['path'])
+    assert actual['value'] == 3.0 and not actual['free'] and not actual['refinable'], (
+        'The actual native ordinary descriptor setter retains direct3mm without diameter halving or fitted-flag changes'
+    )
+    scalar.command('undo')
+    restored = next(row for row in scalar.last['ui']['project']['parameters'] if row['path'] == radius['path'])
+    assert restored['value'] == radius['value'] and restored['free'] == radius['free'], (
+        'One ordinary Undo restores the original crystal descriptor exactly'
+    )
+    scalar.command('undo')
+    assert qml(scalar, 'Session.project.currentExperiment.mosaicDistribution') == original_distribution, (
+        'One separate ordinary Undo restores the original mosaic selector token'
     )
