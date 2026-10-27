@@ -219,6 +219,16 @@ TextUnits text_units(const std::string& text) {
         in_text_field = line.starts_with(';');
         out.units.back().lines.push_back(line);
     }
+    // An experiment's type is fixed once it holds measured data (the owner, 2026-10-27): its items are then not
+    // the user's to edit.
+    const bool measured = std::any_of(out.units.begin(), out.units.end(), [](const TextUnit& unit) {
+        return std::find(unit.lines.begin(), unit.lines.end(), "_data.intensity_meas") != unit.lines.end();
+    });
+    if (measured) {
+        for (TextUnit& unit : out.units) {
+            unit.output = unit.output || unit.id == "experiment_type";
+        }
+    }
     return out;
 }
 
