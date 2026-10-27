@@ -233,7 +233,7 @@ AppDialog {
             selectable: false
             sourceModel: componentRows
 
-            columnWidths: naturalWidths
+            columns: naturalWidths
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {

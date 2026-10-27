@@ -44,7 +44,11 @@ Column {
         defaultInfoText: qsTr("No atom sites defined")
         sourceModel: group.sites
 
-        columnWidths: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+        // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
+
+        equalColumns: true
+
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

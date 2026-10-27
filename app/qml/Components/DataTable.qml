@@ -43,6 +43,41 @@ EaComponents.ListView {
     cacheBuffer: 0
     readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
     property int modelRevision: 0
+    // The one column rule (ADR-0029): `columns` as the base's `columnWidths`, where every flex column (-1) but the
+    // last fits its header and its widest shown cell, so the columns start at the left and the last flex column
+    // takes the rest of the row; fixed columns, the row buttons among them, keep their widths.
+    // `equalColumns` keeps the flex columns equal instead (atom sites and atomic displacements).
+    property var columns: []
+    property bool equalColumns: false
+    property var fittedWidths: []
+    columnWidths: {
+        const fitted = fittedWidths;
+        const last = columns.lastIndexOf(-1);
+        return columns.map((w, i) => !equalColumns && w === -1 && i !== last && (fitted[i] ?? 0) > 0 ? fitted[i] : w);
+    }
+    function fitColumns() {
+        const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths : [];
+        const widths = columns.map((w, i) => (header[i] ?? 0) + autoColumnPadding);
+        for (const item of contentItem.children) {
+            const cells = item.contentRowData;
+            if (!cells)
+                continue;
+            for (let i = 0; i < cells.length && i < widths.length; ++i)
+                widths[i] = Math.max(widths[i], Math.ceil(cells[i].implicitWidth));
+        }
+        if (JSON.stringify(widths) !== JSON.stringify(fittedWidths))
+            fittedWidths = widths;
+    }
+    onColumnsChanged: Qt.callLater(fitColumns)
+    onModelRevisionChanged: Qt.callLater(fitColumns)
+    onCountChanged: Qt.callLater(fitColumns)
+    Component.onCompleted: Qt.callLater(fitColumns)
+    Connections {
+        target: table.contentItem
+        function onChildrenChanged() {
+            Qt.callLater(table.fitColumns);
+        }
+    }
     // Long IDs and paths must leave room for the numeric cells and row controls.
     property real maximumTextColumnShare: 0.25
     // Each measured role's text width per row. An update measures only the rows it names, and the column

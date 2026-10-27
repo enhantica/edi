@@ -23,7 +23,7 @@ DataTable {
     maximumTextColumnShare: 0.4
     sourceModel: analysis ? analysis.sequentialExtract : null
 
-    columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("sequential_fit_extract.id")), width * 0.3), Math.min(textColumnWidth("target", Session.label("sequential_fit_extract.target")), width * 0.4), -1, AppSizes.iconOnlyColumnWidth]
+    columns: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("sequential_fit_extract.id")), width * 0.3), Math.min(textColumnWidth("target", Session.label("sequential_fit_extract.target")), width * 0.4), -1, AppSizes.iconOnlyColumnWidth]
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

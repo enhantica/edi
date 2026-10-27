@@ -147,7 +147,7 @@ Column {
                 defaultInfoText: qsTr("No background points")
                 sourceModel: group.points
 
-                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
+                columns: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
@@ -269,7 +269,7 @@ Column {
                 defaultInfoText: qsTr("No background terms")
                 sourceModel: group.terms
 
-                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), Math.min(textColumnWidth("order", Session.label("background.order")), width * 0.25), -1, AppSizes.iconColumnWidth]
+                columns: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), Math.min(textColumnWidth("order", Session.label("background.order")), width * 0.25), -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
