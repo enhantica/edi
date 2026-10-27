@@ -2434,3 +2434,24 @@ The historical page-first/one-group scientific workflow guidance above is
 superseded: active skills and compiled instructions choose supported actions from
 actual evidence, native prerequisites and explicit user scope. FullProf source
 normalization and scientific conventions remain authoritative.
+
+### Compound fallback, latest capture and editor continuation closure
+
+A compound setup preowns its required Estimate receipt and partial terminal
+outcomes before adoption. Every exception after adoption reports the actual
+applied setup/Estimate prefix as partial, including preparation/publication and
+refresh failures; adoption alone never means complete setup. No replay or rollback
+is introduced. The ordinary estimator and explicit manual anchors are unchanged.
+
+Starting another attempt does not clear a busy/latest capture. Only admission of
+the current requested revision clears its pending latch. The report writer's
+live storage identity changes on the ordinary project path notification (and is
+checked again at capture); this retires old-root completion presentation without
+retagging or discarding conversation evidence. Already admitted writers retain
+frozen roots. Move A→B→A has a fresh root identity, copy retains its root, and old
+completion wakes the latest pending capture. ZIP reports remain in the working
+directory until ordinary Save packs them.
+
+Both parameter editor focus-loss tails recheck the original project/member/token,
+clean draft/commit state, focus and IME after publication. A successor's cursor,
+selection and draft survive even while the same editor object remains alive.

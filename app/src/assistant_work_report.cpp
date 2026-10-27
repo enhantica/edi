@@ -57,13 +57,13 @@ struct WriterCompletion {
     using Fallback=std::pair<Object,QVariantMap>;
     static constexpr std::size_t publicationCases=5,cases=2*publicationCases;
     enum Delivery { Pending,Queued,Delivering,Settled,Unavailable };
-    const QString scope;
+    const QString scope,rootIdentity;
     const std::array<Fallback,cases> fallback;
     std::atomic<unsigned> outcome{0};
     std::atomic<Delivery> delivery{Pending};
     std::atomic<bool> consumed{false};
-    WriterCompletion(QString originalScope,std::array<Fallback,cases> receipts)
-        :scope(std::move(originalScope)),fallback(std::move(receipts)) {}
+    WriterCompletion(QString originalScope,QString originalRootIdentity,std::array<Fallback,cases> receipts)
+        :scope(std::move(originalScope)),rootIdentity(std::move(originalRootIdentity)),fallback(std::move(receipts)) {}
 
     void publication(const FileResult& result) noexcept {
         const unsigned selected=std::string_view(result.disposition)=="saved" || std::string_view(result.disposition)=="committed_unverified"?3:
@@ -277,7 +277,7 @@ struct AssistantWorkReports::Control {
     Object last,activeReceipt;
     QVariantMap lastVariant;
     bool capturing=false;
-    QString activeScope,activeRoot;quint64 activeRevision=0;
+    QString activeScope,activeRoot,storageRoot,rootIdentity;quint64 activeRevision=0;
 };
 AssistantWorkReports::AssistantWorkReports(AssistantWorkReportOptions options,AssistantViewModel* owner) noexcept
     :options_(options),owner_(owner),collection_requested_(options.automatic) {}
@@ -316,6 +316,21 @@ void AssistantWorkReports::retireScope() noexcept {
         control_->last={};
         control_->attempt.clear();control_->revision=0;control_->missed=0;control_->missing=0;control_->unknown=false;changed();}catch(...){control_->exhausted=true;control_->unknown=true;}
 }
+bool AssistantWorkReports::bindStorageRoot(QStringView root) noexcept {
+    const auto state=control_;
+    if(!state)return false;
+    if(QStringView(state->storageRoot)==root && !state->rootIdentity.isEmpty())return false;
+    // Root identity also distinguishes move A→B→A from A's older frozen writer.
+    try {
+        auto nextRoot=root.toString();auto identity=newEvent();
+        if(identity.isEmpty())throw std::length_error("Report root identity exhausted");
+        state->storageRoot.swap(nextRoot);state->rootIdentity.swap(identity);
+        state->last={};state->lastVariant={};changed();return true;
+    }catch(...) {
+        state->rootIdentity.clear();state->last={};state->lastVariant={};state->exhausted=true;state->unknown=true;
+        return true;
+    }
+}
 QString AssistantWorkReports::beginAttempt(){if(!control_){unavailable_evidence_=true;return {};}const auto event=newEvent();if(event.isEmpty())return {};control_->attempt="wa/"+control_->instance+u'/'+decimal(control_->serial);changed();static const QString empty;return control_?control_->attempt:empty;}
 const QString& AssistantWorkReports::attempt() const noexcept{static const QString empty;return control_?control_->attempt:empty;}
 void AssistantWorkReports::missEvidence() noexcept {if(!control_){unavailable_evidence_=true;return;}std::uint64_t n=0;if(work_report_next_serial(control_->missing,n))control_->missing=n;else control_->unknown=true;changed();}
@@ -339,7 +354,7 @@ void AssistantWorkReports::settleCompletion(const std::shared_ptr<Control>& stat
     // Owner-thread checkpoint; clearing the cell cannot replay an accepted writer.
     if(state->completion!=cell)return;
     state->busy=false;state->activeReceipt={};state->activeRoot.clear();state->completion.reset();
-    if(state->scope==cell->scope && !state->closing) {
+    if(state->scope==cell->scope && state->rootIdentity==cell->rootIdentity && !state->closing) {
 
         const auto& fallback=cell->fallback[cell->outcome.load(std::memory_order_acquire)];
         state->last=fallback.first;state->lastVariant=fallback.second;
@@ -410,6 +425,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         retired["scope_retired"]=true;retired["coverage"]=work_report_receipt_coverage("superseded");
         return retired.toVariantMap(); // Do not present an old request on a replacement binding.
     }
+    if(!projectionBlocked)bindStorageRoot(storageRoot);
     if(projectionBlocked) {
         // A zero byte budget is not a fence: no active/saved reuse is lawful
         // until the native terminal facts are ready, even at one revision.
@@ -513,7 +529,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         coverage["extent_unknown"]=full.value("missing_extent_unknown").toBool() || state->unknown;
         receipt["coverage"]=coverage;receipt["complete_evidence"]=full.value("complete_evidence").toBool();
         receipt["phase"]="accepted";receipt["disposition"]="accepted";
-        completion=std::make_shared<WriterCompletion>(scope,completionFallbacks(receipt));
+        completion=std::make_shared<WriterCompletion>(scope,state->rootIdentity,completionFallbacks(receipt));
         const auto workerLease=std::make_shared<WriterWorkerLease>(completion);
         state->busy=true;state->activeScope=scope;state->activeRoot=projectRoot;state->activeRevision=revision;state->activeReceipt=receipt;state->completion=completion;
         const auto acceptedVariant=receipt.toVariantMap();acceptedReply=acceptedVariant;accepted=true;
@@ -557,10 +573,10 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
                     // Settled means original callback execution, never receiver
                     // delivery/consumption acknowledgement after death/throw.
                     const auto fallbackIndex=completion->outcome.load(std::memory_order_acquire)+
-                        (state->scope!=scope || state->closing?WriterCompletion::publicationCases:0);
+                        (state->scope!=scope || state->rootIdentity!=completion->rootIdentity || state->closing?WriterCompletion::publicationCases:0);
                     const auto& fallback=completion->fallback[fallbackIndex];
                     QVariantMap terminalVariant;
-                    if(!fallbackOnly)try {terminal["scope_retired"]=state->scope!=scope || state->closing;terminalVariant=terminal.toVariantMap();}
+                    if(!fallbackOnly)try {terminal["scope_retired"]=state->scope!=scope || state->rootIdentity!=completion->rootIdentity || state->closing;terminalVariant=terminal.toVariantMap();}
                         catch(...) {fallbackOnly=true;}
                     if(fallbackOnly){terminal=fallback.first;terminalVariant=fallback.second;}
                     // An unavailable old scope is never presented on a successor.
@@ -569,7 +585,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
                         state->busy=false;state->activeRoot.clear();state->activeReceipt={};state->completion.reset();
                     }
                     if(receiver) {
-                        if(state->scope==scope && !state->closing) {
+                        if(state->scope==scope && state->rootIdentity==completion->rootIdentity && !state->closing) {
 
                             state->last=terminal;state->lastVariant=terminalVariant;
                             try {emit receiver->workReportReceiptChanged();}catch(...){}

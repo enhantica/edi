@@ -51,6 +51,8 @@ public:
     bool exhausted() const noexcept;
     void changed() noexcept;
     void retireScope() noexcept;
+    // Retire only live storage identity; retain conversation evidence/attempt.
+    bool bindStorageRoot(QStringView) noexcept;
     void missEvidence() noexcept;
     void missedAutomaticCapture() noexcept;
     quint64 missedAutomaticCaptures() const noexcept;
