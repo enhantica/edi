@@ -286,6 +286,17 @@ std::vector<std::size_t> free_positions(ColourScheme scheme, FigureKind kind, st
     return out;
 }
 
+std::string pattern_set_colour(ColourScheme scheme, std::size_t place, std::size_t count,
+                               std::span<const std::size_t> taken, bool dark) {
+    const std::size_t at = std::min(place, count > 0 ? count - 1 : 0);
+    if (count <= kPaletteColourCount) {
+        const std::vector<std::size_t> positions = free_positions(scheme, FigureKind::Experiment, at + 1, taken);
+        return figure_colour(scheme, positions.back(), positions.back() + 1, dark);
+    }
+    const std::string first = figure_colour(scheme, 0, 1, dark), second = figure_colour(scheme, 1, 2, dark);
+    return mix_colours(first, second, static_cast<double>(at) / static_cast<double>(count - 1));
+}
+
 std::vector<std::size_t> colour_positions(ColourScheme scheme, std::size_t experiments, std::size_t structures) {
     std::vector<FigureItem> items(experiments, FigureItem{FigureKind::Experiment, std::nullopt});
     items.resize(experiments + structures, FigureItem{FigureKind::Structure, std::nullopt});

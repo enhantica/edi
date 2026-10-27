@@ -77,10 +77,11 @@ std::string hex_of(const ScanMapColour& colour) {
     return out;
 }
 
-// Blue-Red (the owner, 2026-10-26): the chart's background, blue and red, each half mixed in Oklab.
+// Blue-Red (the owner, 2026-10-26 and 2026-10-27): from just off the plot area's colour (white in the light theme,
+// black in the dark) through blue to red, each half mixed in Oklab.
 ColourTable blue_red(bool dark) {
     const std::array<std::string, 3> stops =
-        dark ? std::array<std::string, 3>{"#444444", "#6AA6EA", "#FC4F81"}
+        dark ? std::array<std::string, 3>{"#181818", "#6AA6EA", "#FC4F81"}
              : std::array<std::string, 3>{"#FFFFFF", "#3F7FBF", "#C8323C"};
     ColourTable out{};
     for (std::size_t i = 0; i < kMapColours; ++i) {

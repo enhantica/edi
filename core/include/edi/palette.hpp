@@ -78,6 +78,13 @@ std::vector<std::size_t> colour_positions(ColourScheme scheme, std::span<const F
 std::vector<std::size_t> free_positions(ColourScheme scheme, FigureKind kind, std::size_t count,
                                         std::span<const std::size_t> taken);
 
+/// The colour of pattern `place` of `count` a view shows together, a scan's datasets beside the project's structures
+/// at `taken` (the owner, 2026-10-27): up to the palette's eleven colours, the colour at the position free_positions
+/// gives it; more, only the palette's first two colours, from colour 1 at the first pattern to colour 2 at the last,
+/// mixed in Oklab at t = place / (count - 1).
+std::string pattern_set_colour(ColourScheme scheme, std::size_t place, std::size_t count,
+                               std::span<const std::size_t> taken, bool dark);
+
 /// The positions of a project's experiments and structures when none holds one yet: the experiments in their order,
 /// then the structures in theirs. The first `experiments` values are the experiments', the rest the structures'.
 std::vector<std::size_t> colour_positions(ColourScheme scheme, std::size_t experiments, std::size_t structures);
