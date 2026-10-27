@@ -81,6 +81,8 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       beam_mode_options_(new OptionListModel(this)),
       radiation_probe_options_(new OptionListModel(this)),
       scattering_type_options_(new OptionListModel(this)),
+      dimensionality_options_(new OptionListModel(this)),
+      polarisation_options_(new OptionListModel(this)),
       peak_type_options_(new OptionListModel(this)),
       absorption_type_options_(new OptionListModel(this)),
       extinction_type_options_(new OptionListModel(this)),
@@ -114,7 +116,9 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     for (const auto& [options, uid] : {std::pair{sample_form_options_, "experiment_type.sample_form"},
                                        std::pair{beam_mode_options_, "experiment_type.beam_mode"},
                                        std::pair{radiation_probe_options_, "experiment_type.radiation_probe"},
-                                       std::pair{scattering_type_options_, "experiment_type.scattering_type"}}) {
+                                       std::pair{scattering_type_options_, "experiment_type.scattering_type"},
+                                       std::pair{dimensionality_options_, "experiment_type.dimensionality"},
+                                       std::pair{polarisation_options_, "experiment_type.polarisation"}}) {
         options->setItemOptions(uid, option_tokens(uid));
     }
     peak_type_options_->setItemOptions("peak.type", edi::supported_peak_profiles(mode), edi::default_peak_profile(mode));
@@ -198,6 +202,21 @@ QString ExperimentViewModel::radiationProbeToken() const {
 }
 QString ExperimentViewModel::scatteringTypeToken() const {
     return QString::fromUtf8(edi::token(experiment_.experiment_type.effective_scattering_type()));
+}
+QString ExperimentViewModel::dimensionalityToken() const {
+    return QString::fromStdString(experiment_.experiment_type.effective_dimensionality());
+}
+QString ExperimentViewModel::polarisationToken() const {
+    return QString::fromStdString(experiment_.experiment_type.effective_polarisation());
+}
+// The instrument's and facility's names; an unknown one, declared `?` or left out, is empty.
+QString ExperimentViewModel::instrumentName() const {
+    const std::string& name = experiment_.instrument.name;
+    return name == "?" ? QString() : QString::fromStdString(name);
+}
+QString ExperimentViewModel::facility() const {
+    const std::string& facility = experiment_.instrument.facility;
+    return facility == "?" ? QString() : QString::fromStdString(facility);
 }
 // The declared model, now that edi computes more than one.
 ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_settings() const {

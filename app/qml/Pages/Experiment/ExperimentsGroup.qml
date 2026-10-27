@@ -280,13 +280,13 @@ EaElements.GroupBox {
                 enabled: group.project !== null
                 fontIcon: "upload"
                 text: qsTr("Load experiment")
-                ToolTip.text: qsTr("Load experiments from .edi files, each with its type, data and parameters")
+                ToolTip.text: qsTr("Load experiments from CIF or .edi files, each with its type, data and parameters")
                 // In the browser the files come through the page (edi ADR-0023).
                 onClicked: {
                     if (WebFiles.available) {
                         group.webRequestProject = group.project;
                         group.webDataExperiment = null;
-                        group.webRequest = WebFiles.openFiles(".edi", true);
+                        group.webRequest = WebFiles.openFiles(".cif,.edi", true);
                     } else {
                         loadDialog.open();
                     }
@@ -368,9 +368,9 @@ EaElements.GroupBox {
 
     FileDialog {
         id: loadDialog
-        title: qsTr("Load experiments from .edi block files")
+        title: qsTr("Load experiments from CIF or .edi files")
         fileMode: FileDialog.OpenFiles
-        nameFilters: [qsTr("edi block files (*.edi)")]
+        nameFilters: [qsTr("Experiment files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
         onAccepted: group.project.loadExperiments(selectedFiles)
     }
 

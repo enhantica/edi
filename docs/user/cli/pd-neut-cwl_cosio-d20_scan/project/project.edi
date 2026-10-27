@@ -4,8 +4,3 @@ _metadata.name pd-neut-cwl_cosio-d20_scan
 _metadata.title "Co₂SiO₄ [Pnma] · D20 @ ILL"
 _metadata.description "Cooling scan · 155 patterns from 497.4 to 52.3 K · Magnetic frames left out"
 _metadata.authors .
-_metadata.purpose "refinement"
-_metadata.dimensionality "1D"
-_metadata.instrument "D20"
-_metadata.facility "ILL"
-_metadata.polarisation "none"

@@ -622,11 +622,12 @@ bool ProjectViewModel::loadStructure(const QUrl& file) {
     // The file is read first: a file that is refused adds nothing, and what is added is one edit.
     QString error;
     try {
-        // Either loader refuses a CIF, as reading CIF files is not supported yet.
+        // A CIF or a `.edi` file, by its content; what crysta reports about a CIF is shown.
         const std::string path = file.toLocalFile().toStdString();
-        const bool cif = file.toLocalFile().endsWith(QStringLiteral(".cif"), Qt::CaseInsensitive);
-        error = apply(edi::Edit::add_structure(project, cif ? edi::load_structure_cif_file(path)
-                                                            : edi::load_structure_edi_file(path)),
+        error = apply(edi::Edit::add_structure(project, edi::load_structure_file(path,
+                                                                                  [this](const std::string& note) {
+                                                                                      emit message(QString::fromStdString(note));
+                                                                                  })),
                       true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
@@ -653,7 +654,8 @@ bool ProjectViewModel::loadExperiments(const QList<QUrl>& files) {
     // The files are read and checked as a batch first: a refused file adds nothing, and the batch is one edit.
     QString error;
     try {
-        error = apply(edi::Edit::add_experiments(project, edi::load_experiment_edi_files(project, paths)), true);
+        const auto show = [this](const std::string& note) { emit message(QString::fromStdString(note)); };
+        error = apply(edi::Edit::add_experiments(project, edi::load_experiment_edi_files(project, paths, show)), true);
     } catch (const std::exception& refusal) {
         error = QString::fromUtf8(refusal.what());
         setLastError(error);

@@ -1014,7 +1014,7 @@ class StructureFactory:
 
         diffraction-lib ``StructureFactory.from_cif_path``.
         """
-        return _structure_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'))
+        return _structure_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'), str(cif_path))
 
     @staticmethod
     def from_dict(spec):
@@ -1254,7 +1254,9 @@ class ExperimentFactory:
 
         diffraction-lib ``ExperimentFactory.from_cif_path``.
         """
-        return _experiment_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'))
+        return _experiment_from_edi_text(
+            _Path(cif_path).read_text(encoding='utf-8'), str(cif_path)
+        )
 
     @classmethod
     def from_data_path(

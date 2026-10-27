@@ -4,7 +4,3 @@ _metadata.name pd-xray-cwl_nacl_simulation
 _metadata.title "NaCl [Fm-3m] · Laboratory X-ray"
 _metadata.description "Rock salt · Simulated Cu Kα₁ pattern without measured data · Monochromator polarization"
 _metadata.authors .
-_metadata.purpose "simulation"
-_metadata.dimensionality "1D"
-_metadata.instrument ?
-_metadata.facility ?

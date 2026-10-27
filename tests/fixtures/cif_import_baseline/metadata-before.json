@@ -1,0 +1,2721 @@
+{
+  "purpose": "Pre-migration record and scientific-byte regression pins; conversion expectations follow the experiment description ADR.",
+  "baseline": "56457f29c82d0209e7845a0b4658155938cb5630",
+  "records": [
+    {
+      "path": "app/examples/pd-xray-cwl_lif/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             lif_xray\n_metadata.title \"LiF [Fm-3m] \u00b7 Calculated example\"\n_metadata.description \"Cu K\u03b1\u2081 calculated profile \u00b7 X-ray scattering factors and dispersion\"\n_metadata.purpose \"simulation\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument ?\n_metadata.facility ?\n",
+      "experiments": [
+        {
+          "path": "app/examples/pd-xray-cwl_lif/project/experiments/cu_ka.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "?",
+            "_instrument.facility": "?"
+          },
+          "scientific_sha256": "eb73b7911ff3acde8b9a8fb2184e34687903f555022d64f7215009b729b2c233"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-cwl_cosio-d20\n_metadata.title \"Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL\"\n_metadata.description \"Olivine \u00b7 Coordinates, displacements and oxygen occupancies\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D20\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_cosio-d20/project/experiments/d20.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D20",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "c8d4fdecf1deb36ac5b190425365067c4e71714c071340c7c4cc5e22a2d8f786"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             cosio_d20_scan_162f\n_metadata.title \"Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL\"\n_metadata.description \"Cooling scan \u00b7 162 patterns from 497.4 to 50.4 K\"\n_metadata.created          \"09 Sep 2026 07:33:40\"\n_metadata.last_modified    \"23 Sep 2026 14:06:27\"\n_metadata.timestamp        2026-09-09T07:34:35+00:00\n\n_rendering_plot.type auto\n\n_report.cif false\n_report.html true\n_report.tex false\n_report.pdf false\n_report.html_offline false\n\n_rendering_table.type auto\n\n_rendering_structure.type auto\n\n_structure_view.show_labels false\n_structure_view.show_moments true\n_structure_view.range_a_min 0.\n_structure_view.range_a_max 1.\n_structure_view.range_b_min 0.\n_structure_view.range_b_max 1.\n_structure_view.range_c_min 0.\n_structure_view.range_c_max 1.\n\n_structure_style.atom_view adp\n_structure_style.color_scheme jmol\n_structure_style.adp_probability 0.99\n_structure_style.atom_scale 0.3\n\n_verbosity.fit short\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D20\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D20",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             cosio_d20_scan\n_metadata.title \"Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL\"\n_metadata.description \"Cooling and warming scan \u00b7 324 patterns between 50.4 and 497.4 K\"\n_metadata.created          \"09 Sep 2026 07:33:40\"\n_metadata.last_modified    \"23 Sep 2026 14:06:27\"\n_metadata.timestamp        2026-09-09T07:34:35+00:00\n\n_rendering_plot.type auto\n\n_report.cif false\n_report.html true\n_report.tex false\n_report.pdf false\n_report.html_offline false\n\n_rendering_table.type auto\n\n_rendering_structure.type auto\n\n_structure_view.show_labels false\n_structure_view.show_moments true\n_structure_view.range_a_min 0.\n_structure_view.range_a_max 1.\n_structure_view.range_b_min 0.\n_structure_view.range_b_max 1.\n_structure_view.range_c_min 0.\n_structure_view.range_c_max 1.\n\n_structure_style.atom_view adp\n_structure_style.color_scheme jmol\n_structure_style.adp_probability 0.99\n_structure_style.atom_scale 0.3\n\n_verbosity.fit short\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D20\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D20",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "53ba4c8c28755334c633f23040fa411149d66294dc102862918ff461b09eca73"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             cosio_d20_scan\n_metadata.title \"Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL\"\n_metadata.description \"Temperature scan \u00b7 3 patterns at 52.3, 299.4 and 497.4 K\"\n_metadata.created          \"09 Sep 2026 07:33:40\"\n_metadata.last_modified    \"09 Sep 2026 07:34:27\"\n_metadata.timestamp        2026-09-09T07:34:35+00:00\n\n_rendering_plot.type auto\n\n_report.cif false\n_report.html true\n_report.tex false\n_report.pdf false\n_report.html_offline false\n\n_rendering_table.type auto\n\n_rendering_structure.type auto\n\n_structure_view.show_labels false\n_structure_view.show_moments true\n_structure_view.range_a_min 0.\n_structure_view.range_a_max 1.\n_structure_view.range_b_min 0.\n_structure_view.range_b_max 1.\n_structure_view.range_c_min 0.\n_structure_view.range_c_max 1.\n\n_structure_style.atom_view adp\n_structure_style.color_scheme jmol\n_structure_style.adp_probability 0.99\n_structure_style.atom_scale 0.3\n\n_verbosity.fit short\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D20\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D20",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "89c14df4a88f6eeedc8d42647ad4bda32c52856d2fe58e6a64f041062e5d86c7"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-cwl_cosio-d20_scan\n_metadata.title \"Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL\"\n_metadata.description \"Cooling scan \u00b7 155 patterns from 497.4 to 52.3 K \u00b7 Magnetic frames left out\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D20\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/experiments/d20.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D20",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "841aa1a1ca4c6f39c3eb82664ebc9832c47ca4fe53650da29c62a43626b54393"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             cosio_d20_s1\n_metadata.title \"Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL\"\n_metadata.description \"Olivine structure and profile refinement \u00b7 Starting model 1\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D20\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D20",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "c0ef1ce128acbcc94eda9294f6afd63fd80c059eb7f7e5f1c5981f3efb07fbca"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             cosio_d20_s4\n_metadata.title \"Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL\"\n_metadata.description \"Olivine structure and profile refinement \u00b7 Starting model 4\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D20\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D20",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "6b86e5db73f55ae128b14d5ab237595530483f4543886f7e8d4012d30e05e1be"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_hs-hrpt/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-cwl_hs-hrpt\n_metadata.title \"ZnCu\u2083(OD)\u2086Cl\u2082 [R-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Herbertsmithite \u00b7 Deuterated kagome antiferromagnet \u00b7 B\u00e9rar-Baldinozzi asymmetry\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_hs-hrpt/project/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "c2c754ec57afc404092bd505e22dce51bcc17d91f391b378c7559e969e6cd800"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd_neut_cwl_lab6_11b_echidna_basic\n_metadata.title \"LaB\u2086 [Pm-3m] \u00b7 ECHIDNA @ ANSTO\"\n_metadata.description \"\u00b9\u00b9B-enriched standard \u00b7 TCH \u00d7 FCJ \u00b7 Wavelength and sample position from a standard\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"ECHIDNA\"\n_metadata.facility \"ANSTO\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/experiments/echidna.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "ECHIDNA",
+            "_instrument.facility": "ANSTO"
+          },
+          "scientific_sha256": "f8fcbd4544ac9fca609567f985863f5fbe380c73c6968f417f54721b4089bde4"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_cwl_lab6_11b_echidna_tch_fcj\n_metadata.title \"LaB\u2086 [Pm-3m] \u00b7 ECHIDNA @ ANSTO\"\n_metadata.description \"\u00b9\u00b9B-enriched standard \u00b7 TCH \u00d7 FCJ \u00b7 Absorption and polynomial background\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"ECHIDNA\"\n_metadata.facility \"ANSTO\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "ECHIDNA",
+            "_instrument.facility": "ANSTO"
+          },
+          "scientific_sha256": "a51359be4b97bed9f488f4022c9efaba6267d954a8ca110c2ed39deb5b9c5eb6"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_cwl_lab6_echidna_fcj\n_metadata.title \"LaB\u2086 [Pm-3m] \u00b7 ECHIDNA @ ANSTO\"\n_metadata.description \"TCH pseudo-Voigt with FCJ axial divergence \u00b7 Scale-only refinement\"\n_metadata.created          \"26 Sep 2026 10:29:37\"\n_metadata.last_modified    \"26 Sep 2026 10:29:38\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"ECHIDNA\"\n_metadata.facility \"ANSTO\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "ECHIDNA",
+            "_instrument.facility": "ANSTO"
+          },
+          "scientific_sha256": "80f077806e554470a5b4943991e795c465db78266fc072a6c07f9390e8117d6b"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-cwl_lbco-hrpt\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 La and Ba sharing one site \u00b7 Profile, background, displacements\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "502941566652e6acfff532d1c9a4b5b73e7827a66d22d3fb8903078d2d310286"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "cfe9ea2b020d8ac9b8b61a7affb253787d6a8a27be10462c396091f6e96baf7e"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             lbco_hrpt_s4\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite structure and profile refinement \u00b7 Starting model 4\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "c7a093e4cdee2aeca6553b84cca81293b748caeb6270d2083b5a043724128c26"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lbco_simulation/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-cwl_lbco_simulation\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Simulated pattern without measured data\"\n_metadata.authors .\n_metadata.purpose \"simulation\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_lbco_simulation/project/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "21fadf02f63b79f1f18d78e8f0ca2af9cc017a8e429178853f7a8813a484072a"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_lmo-echidna/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-cwl_lmo-echidna\n_metadata.title \"LiNiO\u2082 [R-3m] \u00b7 ECHIDNA @ ANSTO\"\n_metadata.description \"Layered oxide \u00b7 Li/Ni site mixing \u00b7 Occupancy constraints \u00b7 TCH \u00d7 FCJ asymmetry\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"ECHIDNA\"\n_metadata.facility \"ANSTO\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_lmo-echidna/project/experiments/echidna.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "ECHIDNA",
+            "_instrument.facility": "ANSTO"
+          },
+          "scientific_sha256": "56c050bdeb4188c636ef5afbacc5d1d36353690dfb3c2689ae48b85642612d6d"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_cwl_pbso4_beba\n_metadata.title \"PbSO\u2084 [Pnma] \u00b7 D1A @ ILL\"\n_metadata.description \"Rietveld round-robin data \u00b7 B\u00e9rar-Baldinozzi asymmetry refinement\"\n_metadata.created          \"26 Sep 2026 10:28:28\"\n_metadata.last_modified    \"26 Sep 2026 10:28:29\"\n_metadata.timestamp        ?\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D1A\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D1A",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "f494c2665e6d1a9986165650e677af2214e5fa63a797ce3ad15e8599064ce2e2"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-cwl_y2o3-spodi\n_metadata.title \"Y\u2082O\u2083 [Ia-3] \u00b7 SPODI @ FRM II\"\n_metadata.description \"Anisotropic \u03b2 tensors tied by site symmetry \u00b7 Coordinates, profile and background\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SPODI\"\n_metadata.facility \"FRM II\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/experiments/spodi.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SPODI",
+            "_instrument.facility": "FRM II"
+          },
+          "scientific_sha256": "54b3966a0f3286aae339911ff388f3280f6552946e312b2ed5258542a565e346"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_cwl_y2o3_beta_adp\n_metadata.title \"Y\u2082O\u2083 [Ia-3] \u00b7 SPODI @ FRM II\"\n_metadata.description \"Symmetry-constrained anisotropic \u03b2 tensors \u00b7 Scale-only refinement\"\n_metadata.created          \"06 Oct 2026 16:43:16\"\n_metadata.last_modified    \"06 Oct 2026 16:43:17\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SPODI\"\n_metadata.facility \"FRM II\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SPODI",
+            "_instrument.facility": "FRM II"
+          },
+          "scientific_sha256": "caa9b49442b995beef7b830e8709e1b62dfd015bc140fdf7a96c4719b62ed72d"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-cwl_yalo3-al2o3-spodi\n_metadata.title \"YAlO\u2083 [Pbnm] / Al\u2082O\u2083 [R-3c] \u00b7 SPODI @ FRM II\"\n_metadata.description \"2 phases at 3 K \u00b7 Shared B\u00e9rar-Baldinozzi profile \u00b7 Cylinder absorption\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SPODI\"\n_metadata.facility \"FRM II\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/experiments/spodi.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SPODI",
+            "_instrument.facility": "FRM II"
+          },
+          "scientific_sha256": "a0a6cdf5fe6d807a7241f7e68456804c212120119e3bac264293f0c90723fc7c"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n_metadata.name pd_neut_cwl_yap_spodi_3k\n_metadata.title \"YAlO\u2083 [Pbnm] / Al\u2082O\u2083 [R-3c] \u00b7 SPODI @ FRM II\"\n_metadata.description \"2 phases at 3 K \u00b7 Shared B\u00e9rar-Baldinozzi profile \u00b7 Cylinder absorption\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SPODI\"\n_metadata.facility \"FRM II\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/experiments/spodi.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SPODI",
+            "_instrument.facility": "FRM II"
+          },
+          "scientific_sha256": "524a651bf9680b706da031ee998f1f8be52d6c1e2bf9038124ee89a5d3890279"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_cecoal-polaris/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-tof_cecoal-polaris\n_metadata.title \"CeCoAl\u2083 [Pmma] \u00b7 POLARIS @ ISIS\"\n_metadata.description \"Structure and time-of-flight profile fit \u00b7 24-term Chebyshev background\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"POLARIS\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_cecoal-polaris/project/experiments/polaris.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "POLARIS",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "f76663b87db3b3356426a1fd3be25a2e26a8b10fd808978897a4bf15b77df789"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_tof_cecoal_polaris_chebyshev\n_metadata.title \"CeCoAl\u2083 [Pmma] \u00b7 POLARIS @ ISIS\"\n_metadata.description \"Structure and TOF profile refinement \u00b7 24-term Chebyshev background\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"POLARIS\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "POLARIS",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "940231cb84abc21ad60fe760c793b603e8acbb6cb20478d94dfe858d250c33c0"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ceo2-pearl/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-tof_ceo2-pearl\n_metadata.title \"CeO\u2082 [Fm-3m] \u00b7 PEARL @ ISIS\"\n_metadata.description \"NBS SRM 674a standard \u00b7 Calibration and profile fit \u00b7 6-term polynomial background\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"PEARL\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ceo2-pearl/project/experiments/pearl.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "PEARL",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "457cf6771c73209cd11a20b4e9e3aed81f0e14fb3f4f082e20bed9248c8ab0ec"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_tof_ceo2_pearl_polynomial\n_metadata.title \"CeO\u2082 [Fm-3m] \u00b7 PEARL @ ISIS\"\n_metadata.description \"NBS SRM 674a standard \u00b7 TOF profile refinement \u00b7 6-term polynomial background\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"PEARL\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "PEARL",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "dd405b91a0eea1bcc0c82d7763a7ae7ad2987b94169b9bb4e50454a140c57efd"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_tof_diamond_dream\n_metadata.title \"Diamond [Fd-3m] \u00b7 DREAM @ ESS\"\n_metadata.description \"McStas-simulated 90\u00b0 bank \u00b7 Jorgensen profile \u00b7 Scale-only refinement\"\n_metadata.created          \"24 Sep 2026 18:42:48\"\n_metadata.last_modified    \"24 Sep 2026 18:42:49\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"DREAM\"\n_metadata.facility \"ESS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "DREAM",
+            "_instrument.facility": "ESS"
+          },
+          "scientific_sha256": "82cab19d185fb4bf3a4706995e43af5b6b60a365d1db808fda958bdaaafba249"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd_neut_tof_diamond_dream_mcstas\n_metadata.title \"Diamond [Fd-3m] \u00b7 DREAM @ ESS\"\n_metadata.description \"McStas-simulated 90\u00b0 bank \u00b7 Jorgensen profile \u00b7 Structure and profile fit\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"DREAM\"\n_metadata.facility \"ESS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/experiments/dream.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "DREAM",
+            "_instrument.facility": "ESS"
+          },
+          "scientific_sha256": "ee3efe4adef810b92dbb8e2045d5af05258007e781b919ba1fd5f5822a3f00ea"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_tof_fe_pseudo_voigt\n_metadata.title \"Iron [Im-3m] \u00b7 BEER @ ESS\"\n_metadata.description \"90\u00b0 bank \u00b7 Non-convoluted pseudo-Voigt \u00b7 Scale-only refinement\"\n_metadata.created          \"26 Sep 2026 10:28:28\"\n_metadata.last_modified    \"26 Sep 2026 10:28:29\"\n_metadata.timestamp        ?\n\n# Deliberately unsupported (edi ADR-0017 \u00a714): opening this project warns\n# `unsupported _rendering_plot.type \"plotly\" - using auto`, a third message for the app's list.\n_rendering_plot.type plotly\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"BEER\"\n_metadata.facility \"ESS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "BEER",
+            "_instrument.facility": "ESS"
+          },
+          "scientific_sha256": "830696bd336668d52a2d0358fae8748d7447a2e01fb21df34953a4475ab0607f"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-tof_ferrite-austenite-beer\n_metadata.title \"Ferrite [Im-3m] / Austenite [Fm-3m] \u00b7 BEER @ ESS\"\n_metadata.description \"Instrument calibration \u00b7 2 McStas-simulated banks fitted jointly \u00b7 Per-bank zero and resolution\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"BEER\"\n_metadata.facility \"ESS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/experiments/expt_n2.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "BEER",
+            "_instrument.facility": "ESS"
+          },
+          "scientific_sha256": "3c963915d618f98cf845e8d45b2b5171debc9628fec033e144df231355c913aa"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/experiments/expt_s2.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "BEER",
+            "_instrument.facility": "ESS"
+          },
+          "scientific_sha256": "ec5dcf452a79597dfb7d97c2ff4b3d44100dbba834c5da8b914329d5f21fe792"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n_metadata.name beer_mcstas\n_metadata.title \"Ferrite [Im-3m] / Austenite [Fm-3m] \u00b7 BEER @ ESS\"\n_metadata.description \"2 iron phases \u00b7 2 McStas-simulated banks \u00b7 Separate phase scales\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"BEER\"\n_metadata.facility \"ESS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_n2.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "BEER",
+            "_instrument.facility": "ESS"
+          },
+          "scientific_sha256": "6e8f4ac836219d4ba503ff5583823b1d12eb523f788e16c03d86b2b5d2bacdda"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_s2.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "BEER",
+            "_instrument.facility": "ESS"
+          },
+          "scientific_sha256": "948b6f720ed6d72a5d5f0c5b8b06cae3dca6159f4f9e6edd56739110a2f2290a"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-tof_lbco-si-mcstas\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] / Silicon [Fd-3m] \u00b7 McStas simulation\"\n_metadata.description \"2 phases \u00b7 Simulated TOF pattern \u00b7 Jorgensen profile\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"McStas\"\n_metadata.facility ?\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/experiments/mcstas.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "McStas",
+            "_instrument.facility": "?"
+          },
+          "scientific_sha256": "6479750462101d7af25eb5f73226347791e788535c1253abb286086e9c97dc0e"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             ncaf_wish_2bank_s3\n_metadata.title \"Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813] \u00b7 WISH @ ISIS\"\n_metadata.description \"2 banks \u00b7 Shared atomic displacement \u00b7 Jorgensen profile \u00b7 Starting model 3\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"WISH\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "053751e9274de8a61c12fe3b8b0d96dca3f88ff0748db36ecd0ab88466e4d841"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "d08b3b01b671bf5d362da48a3e73442ed91b5f52a69d9ca5955091779c58796e"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             ncaf_wish_3bank_s5\n_metadata.title \"Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813] \u00b7 WISH @ ISIS\"\n_metadata.description \"3 banks \u00b7 Structure and profile refinement \u00b7 Jorgensen\u2013Von Dreele \u00b7 Starting model 5\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"WISH\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "761e2bed99259c0c0e679bdbfa5455671422ea953774f5450ba3edff6bd2200b"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "e63425979da16bed1c0cb0061700d1855a5847fb48e5ce0477bf293284cf204e"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "bb48d4b9c197737a2d35ef406dd3257bbe20dde70a6907bec5d14c8fd2e591a1"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             ncaf_wish_5bank_s5\n_metadata.title \"Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813] \u00b7 WISH @ ISIS\"\n_metadata.description \"5 banks \u00b7 FullProf free parameters and exclusions \u00b7 Starting model 5\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"WISH\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "6893edefb924126beb3817b349dc4f263ff11308172d7cfff70dd9b003b6b67c"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "cf1953881302612f1dd7f659ac76026c2f75dfd929f6a846b7c0c822328eef19"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "58437073a03edf8861f09c22d0ddc85637268b35e189f76dc430b62068af0bfa"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "5642c0c37de594406461d2b66ef20d09c46e4cd3af26d1f92e4615714179a6ae"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "555792faa1e574fad3b12a810b6aa7dc67abad14977453c97d65a9d0b8826b3b"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             ncaf_wish_5bank_fullprof\n_metadata.title \"Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813] \u00b7 WISH @ ISIS\"\n_metadata.description \"5 banks \u00b7 Structure and profile refinement from FullProf\u2019s minimum\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"WISH\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "1daf13e94e0fde89c44822d226109b527c2bde097c33b8f20465d6e83ba7b1d5"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "7258aadc1cef7d305d237f7c5e031ee27251f0756159b61ad726cb24bfed435b"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "947f6b21e94bdfcf541ef46896b7fed26b91512da0c54084b429b75e24dbc05c"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "a0afd8a05804802f03de14361fb212c63a3549e61c6e32895fd83ee534312843"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "bf45ed7b5f511d26c9d49adf0b13224a87d06245504d377dd5cfe4d4ffadaeb7"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-tof_ncaf-wish\n_metadata.title \"Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813] \u00b7 WISH @ ISIS\"\n_metadata.description \"All five detector bank pairs fitted jointly \u00b7 Jorgensen\u2013Von Dreele profile \u00b7 Per-bank calibration\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"WISH\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_1_10.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "24dd6b5278ac7369ad528da944b324e3a5d0472cd2f448c289faeb57ec78bd27"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_2_9.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "cc447addb349b2956750e4e8d4da74e42325acd3be70163c533f2a2b76beca65"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_3_8.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "14265d219fe6a6efa50b4b074d33ac8713ad6cb7d3cd7b013f13085cb976857f"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_4_7.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "a3833fabd3d3c4b59403d5c0d995e7ece5db4e40efcdc208024d1f0fd19c8c5f"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_5_6.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "2db147368b28fac20b85d9dd62479e73cf6c1c620e3d97c7a65224f34a29836d"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_si-sepd/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-tof_si-sepd\n_metadata.title \"Silicon [Fd-3m] \u00b7 SEPD @ Argonne\"\n_metadata.description \"Silicon standard \u00b7 Jorgensen\u2013Von Dreele profile \u00b7 Time-of-flight neutron powder data\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SEPD\"\n_metadata.facility \"Argonne\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_si-sepd/project/experiments/sepd.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SEPD",
+            "_instrument.facility": "Argonne"
+          },
+          "scientific_sha256": "5720646987f9ce601cfa32532c369d2fb7e5997a7635004b856c1103dde7a6b8"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             si_sepd_s2\n_metadata.title \"Silicon [Fd-3m] \u00b7 SEPD @ Argonne\"\n_metadata.description \"Silicon standard \u00b7 Jorgensen\u2013Von Dreele profile \u00b7 Starting model 2\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SEPD\"\n_metadata.facility \"Argonne\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SEPD",
+            "_instrument.facility": "Argonne"
+          },
+          "scientific_sha256": "0b1167d3ccd41b2da642e443d5beb606932eea98580cd08364e21e51a4350152"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             si_sepd_s5\n_metadata.title \"Silicon [Fd-3m] \u00b7 SEPD @ Argonne\"\n_metadata.description \"Silicon standard \u00b7 Jorgensen\u2013Von Dreele profile \u00b7 Starting model 5\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SEPD\"\n_metadata.facility \"Argonne\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SEPD",
+            "_instrument.facility": "Argonne"
+          },
+          "scientific_sha256": "4e49721b5e31d508798e5ad56db99fa37ba83bfd324df051776713402deeffc0"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-tof_si_simulation/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-tof_si_simulation\n_metadata.title \"Silicon [Fd-3m] \u00b7 SEPD @ Argonne\"\n_metadata.description \"Silicon standard \u00b7 Simulated time-of-flight pattern without measured data\"\n_metadata.authors .\n_metadata.purpose \"simulation\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SEPD\"\n_metadata.facility \"Argonne\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-tof_si_simulation/project/experiments/sepd.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SEPD",
+            "_instrument.facility": "Argonne"
+          },
+          "scientific_sha256": "93449e1da42b2bdd244727e0d11234a906f950691f431e2e7b9e54323ba8a4f3"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-neut-xray-cwl_pbso4-d1a-lab\n_metadata.title \"PbSO\u2084 [Pnma] \u00b7 D1A @ ILL and laboratory X-ray\"\n_metadata.description \"Rietveld round-robin data \u00b7 Neutron and X-ray patterns fitted jointly\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D1A\"\n_metadata.facility \"ILL\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/d1a.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D1A",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "cfb38fa18a4b2da974a10616a789a784fdbc5fc0004107c2086fbf24bd509111"
+        },
+        {
+          "path": "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/lab.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "?",
+            "_instrument.facility": "?"
+          },
+          "scientific_sha256": "2abea9b19c44ec9b47d096c4091aeb7e6c62682ffcdfe6abffae2180698b50ff"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-xray-cwl_lam7o3-p021\n_metadata.title \"La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O\u2083 [Pnma] \u00b7 P02.1 @ PETRA III\"\n_metadata.description \"High-entropy perovskite \u00b7 Seven cations on one site \u00b7 Synchrotron X-ray\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"P02.1\"\n_metadata.facility \"PETRA III\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/experiments/p021.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "P02.1",
+            "_instrument.facility": "PETRA III"
+          },
+          "scientific_sha256": "d166c4fa0b68e1ce01791d070d96bdde27b5ed69f750a5c8bd14a1919647a01b"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd-xray-cwl_latp-bm01_scan\n_metadata.title \"LATP [R-3c] / AlPO\u2084 [C222\u2081] / AlPO\u2084 [P6\u2083mc] \u00b7 BM01 @ ESRF\"\n_metadata.description \"3 phases \u00b7 73 synchrotron patterns \u00b7 Linked displacement parameters\"\n_metadata.authors .\n_metadata.created          \"22 Oct 2026 09:50:09\"\n_metadata.last_modified    \"22 Oct 2026 14:01:42\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"BM01\"\n_metadata.facility \"ESRF\"\n_su_format.rule iucr_19\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/experiments/bm01.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "BM01",
+            "_instrument.facility": "ESRF"
+          },
+          "scientific_sha256": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd-xray-cwl_latp_scan-4f\n_metadata.title \"LATP [R-3c] / AlPO\u2084 [C222\u2081] / AlPO\u2084 [P6\u2083mc] \u00b7 BM01 @ ESRF\"\n_metadata.description \"3 phases \u00b7 4 of the 73 synchrotron patterns \u00b7 Linked displacement parameters\"\n_metadata.authors .\n_metadata.created          \"22 Oct 2026 09:50:09\"\n_metadata.last_modified    \"22 Oct 2026 14:01:42\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"BM01\"\n_metadata.facility \"ESRF\"\n_su_format.rule iucr_19\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/bm01.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "BM01",
+            "_instrument.facility": "ESRF"
+          },
+          "scientific_sha256": "b25970da46d7829c717432de06c7d1a7e9f8f914a0b1bfce54d99cfa39809bf3"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-xray-cwl_lif_single/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_xray_cwl_lif_single\n_metadata.title \"LiF [Fm-3m] \u00b7 Calculated reference\"\n_metadata.description \"Cu K\u03b1 doublet FullProf reference \u00b7 Doublet ratio and absorption refinement\"\n_metadata.created          \"02 Oct 2026 14:28:55\"\n_metadata.last_modified    \"02 Oct 2026 14:28:56\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument ?\n_metadata.facility ?\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "?",
+            "_instrument.facility": "?"
+          },
+          "scientific_sha256": "5b084a1364f4fbe8afc90fa44dc785eb0b674ad2954d8e66dce50e7a0194f9ad"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-xray-cwl_nacl_simulation/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-xray-cwl_nacl_simulation\n_metadata.title \"NaCl [Fm-3m] \u00b7 Laboratory X-ray\"\n_metadata.description \"Rock salt \u00b7 Simulated Cu K\u03b1\u2081 pattern without measured data \u00b7 Monochromator polarization\"\n_metadata.authors .\n_metadata.purpose \"simulation\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument ?\n_metadata.facility ?\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-xray-cwl_nacl_simulation/project/experiments/lab.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "?",
+            "_instrument.facility": "?"
+          },
+          "scientific_sha256": "219e05053736474497f7a37b2a16f273feef817129aa860ee9289bba4fb9fe8e"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-xray-cwl_pbso4-lab/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name pd-xray-cwl_pbso4-lab\n_metadata.title \"PbSO\u2084 [Pnma] \u00b7 Laboratory X-ray\"\n_metadata.description \"Rietveld round-robin data \u00b7 Cu K\u03b1 doublet \u00b7 B\u00e9rar-Baldinozzi asymmetry\"\n_metadata.authors .\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument ?\n_metadata.facility ?\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-xray-cwl_pbso4-lab/project/experiments/lab.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "?",
+            "_instrument.facility": "?"
+          },
+          "scientific_sha256": "ca3f995c61a0af07ffb660b5cef344a87f87ed79c7918704a595538c41662230"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_xray_cwl_pbso4_lab_round_robin\n_metadata.title \"PbSO\u2084 [Pnma] \u00b7 Laboratory X-ray\"\n_metadata.description \"Rietveld round-robin data \u00b7 K\u03b1 doublet and B\u00e9rar-Baldinozzi asymmetry refinement\"\n_metadata.created          \"13 Oct 2026 09:12:02\"\n_metadata.last_modified    \"13 Oct 2026 09:12:03\"\n_metadata.timestamp        ?\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument ?\n_metadata.facility ?\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": ".",
+            "_instrument.name": "?",
+            "_instrument.facility": "?"
+          },
+          "scientific_sha256": "d627c625dad4ae24a482d344cf706c77a94c8cdcbaa531f45ee3acbc988603a9"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_cwl_pr2nio4_5c2_basic\n_metadata.title \"Pr\u2082NiO\u2084 [Fmmm] \u00b7 Unknown instrument\"\n_metadata.description \"Single crystal \u00b7 Anisotropic \u03b2 tensors \u00b7 Scale-only fit\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument ?\n_metadata.facility ?\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/experiments/pr2nio4.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "?",
+            "_instrument.facility": "?"
+          },
+          "scientific_sha256": "f46766cc6784c097c10fa90a1763ee630032c49e3630a34eef2beab7d8554ca7"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_cwl_pr2nio4_5c2_fit\n_metadata.title \"Pr\u2082NiO\u2084 [Fmmm] \u00b7 5C2 @ LLB\"\n_metadata.description \"Single crystal \u00b7 Anisotropic displacements and coordinates from a rough start\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"5C2\"\n_metadata.facility \"LLB\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "5C2",
+            "_instrument.facility": "LLB"
+          },
+          "scientific_sha256": "ed6383986f5ce59be9f6c7f13c96178775ca5821ccbd9707bad26c58078d09c4"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_cwl_tb2ti2o7_heidi_anisotropic_adp\n_metadata.title \"Tb\u2082Ti\u2082O\u2087 [Fd-3m] \u00b7 HEiDi @ MLZ (FRM II)\"\n_metadata.description \"Single crystal \u00b7 Anisotropic \u03b2 tensors \u00b7 Scale-only fit\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HEiDi\"\n_metadata.facility \"MLZ (FRM II)\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/experiments/heidi.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HEiDi",
+            "_instrument.facility": "MLZ (FRM II)"
+          },
+          "scientific_sha256": "931f908709a0c86dbdc82d2b67e6cbd80170a948c40314cfd9ed2709d93db333"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_cwl_tb2ti2o7_heidi_basic\n_metadata.title \"Tb\u2082Ti\u2082O\u2087 [Fd-3m] \u00b7 HEiDi @ MLZ (FRM II)\"\n_metadata.description \"Single crystal \u00b7 Isotropic ADPs \u00b7 Scale-only fit\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HEiDi\"\n_metadata.facility \"MLZ (FRM II)\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/experiments/heidi.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HEiDi",
+            "_instrument.facility": "MLZ (FRM II)"
+          },
+          "scientific_sha256": "c76d9ef8b326c211d302917ed324f1385a709c9719a18fc17cb4386967256619"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_cwl_tb2ti2o7_heidi_fit\n_metadata.title \"Tb\u2082Ti\u2082O\u2087 [Fd-3m] \u00b7 HEiDi @ MLZ (FRM II)\"\n_metadata.description \"Single crystal \u00b7 Anisotropic displacements and extinction from a rough start\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HEiDi\"\n_metadata.facility \"MLZ (FRM II)\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/experiments/heidi.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HEiDi",
+            "_instrument.facility": "MLZ (FRM II)"
+          },
+          "scientific_sha256": "83d055394bed5e3e403a9c7fef9758e71101330a81749bda12d44c8967d1438a"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_cwl_tb2ti2o7_heidi_isotropic_extinction\n_metadata.title \"Tb\u2082Ti\u2082O\u2087 [Fd-3m] \u00b7 HEiDi @ MLZ (FRM II)\"\n_metadata.description \"Single crystal \u00b7 Becker-Coppens extinction \u00b7 Scale and radius fit\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HEiDi\"\n_metadata.facility \"MLZ (FRM II)\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/experiments/heidi.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HEiDi",
+            "_instrument.facility": "MLZ (FRM II)"
+          },
+          "scientific_sha256": "378511b52bc9464ed2ae3833ce6bf3bb83a00f77e6b8898a80fbae8b89c1596d"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_tof_taurine_unknown_basic\n_metadata.title \"Taurine [P2\u2081/c] \u00b7 SENJU @ J-PARC\"\n_metadata.description \"Single crystal \u00b7 Time of flight \u00b7 Isotropic ADPs \u00b7 Scale-only fit\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SENJU\"\n_metadata.facility \"J-PARC\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/experiments/senju.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "dfabd1d4faea02152f7b8c16d3a54b2745d00f11f739960f60bcc50da9598ed4"
+        }
+      ]
+    },
+    {
+      "path": "docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_tof_taurine_fit\n_metadata.title \"Taurine [P2\u2081/c] \u00b7 SENJU @ J-PARC\"\n_metadata.description \"Single crystal \u00b7 Time of flight \u00b7 Six datasets \u00b7 Anisotropic displacements\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SENJU\"\n_metadata.facility \"J-PARC\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_1.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "39035cc5318112ac8ff5546a3341bac766e0269a651ebfd092ec560d13a8f82d"
+        },
+        {
+          "path": "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_2.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "b6fcf89cf5387af7d0a9168ecd13e81710c3b66213aba0b05b9456c0a11cd119"
+        },
+        {
+          "path": "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_3.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "50c444b6ccc03e01907c24055d44bab891f3a6f32824c8732ff11c6bdfa3bcf3"
+        },
+        {
+          "path": "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_4.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "56dc2d603ec318ab9697ea9f368c0fd6690a85fed24fb223587131dd0ba4ba77"
+        },
+        {
+          "path": "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_5.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "bd8a6874ba85059564b90759f703edcd1a566d30baad0aa1985c3c06f9b0705c"
+        },
+        {
+          "path": "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_6.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "c595c707c74b08180091cf63a8afa8141f7f40a4b75c90a31e6821f2aa524328"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/fitted-auto-chebyshev/project.edi",
+      "legacy_record": "_edi.schema_version 3\n_metadata.name fitted-background-input\n_metadata.purpose fitting\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/fitted-auto-chebyshev/experiments/d20.edi",
+          "expected": {},
+          "scientific_sha256": "8dcf7ef33abc200e18ad8043cde0a073643139ce72f0832d6498c7ce6f15d6fd"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/fitted-auto-fast-chebyshev/project.edi",
+      "legacy_record": "_edi.schema_version 3\n_metadata.name fitted-background-input\n_metadata.purpose fitting\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/fitted-auto-fast-chebyshev/experiments/d20.edi",
+          "expected": {},
+          "scientific_sha256": "b9e812d3805f0b12819e8cb25ffa290b8916e0546fe2bb7a989e955c543c7eb9"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/fitted-auto-fast-line-segment/project.edi",
+      "legacy_record": "_edi.schema_version 3\n_metadata.name fitted-background-input\n_metadata.purpose fitting\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/fitted-auto-fast-line-segment/experiments/d20.edi",
+          "expected": {},
+          "scientific_sha256": "4831f0fd049046239f2346429534d8eca426a074e0434e1801ad4bac036a3687"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/fitted-auto-fast-polynomial/project.edi",
+      "legacy_record": "_edi.schema_version 3\n_metadata.name fitted-background-input\n_metadata.purpose fitting\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/fitted-auto-fast-polynomial/experiments/d20.edi",
+          "expected": {},
+          "scientific_sha256": "33b86953cad0b7bb75ddc86c1a66a554473b7ba500d79b8f91cbcdadbc0234ed"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/fitted-auto-line-segment/project.edi",
+      "legacy_record": "_edi.schema_version 3\n_metadata.name fitted-background-input\n_metadata.purpose fitting\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/fitted-auto-line-segment/experiments/d20.edi",
+          "expected": {},
+          "scientific_sha256": "a967d961d35cd7d566f38b16d0f01278f9bc0c5f1e9b44e2b53addaa8bc32681"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/fitted-auto-polynomial/project.edi",
+      "legacy_record": "_edi.schema_version 3\n_metadata.name fitted-background-input\n_metadata.purpose fitting\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/fitted-auto-polynomial/experiments/d20.edi",
+          "expected": {},
+          "scientific_sha256": "eb71831245aa68f32f1eac5d0a72d9001fdc3daae0378ce48e43b2e842930ac1"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/lifecycle-auto/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fitting\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/lifecycle-auto/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "27227c6af4d23013eb807ff308b4b0cb72d6f94baf9ee47bb080147fc3563bed"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/lifecycle-excluded/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fitting\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/lifecycle-excluded/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "882f3a13797a3dc90b14f513ae7a8264882883e399562700cc249fc7769d4e10"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/lifecycle-guided/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fitting\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/lifecycle-guided/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "fc808278c2252131a16d83256c22b39e8dc88faace65c37a69e0d281a24518e2"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/lifecycle-model/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fitting\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/lifecycle-model/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "3ebc6e24a7c3f36af4b803819feb0dc7b12fa1569224f996af2d0b4a6615e965"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/lifecycle-saved-auto/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fitting\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/lifecycle-saved-auto/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "2cfd1ab0c5b86537ee641a5a3d9c346b94611c0879a98d7e33449becaab996e0"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/lifecycle-saved-placed/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fitting\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/lifecycle-saved-placed/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "9b2ba84cf9b668ff88b08bc056a3769458712a1350c6b867fb81e4e34c174c6c"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/lifecycle-scan-independent/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title            \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description      \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fitting\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n_metadata.created          \"20 Oct 2026 10:51:13\"\n_metadata.last_modified    \"20 Oct 2026 10:51:14\"\n_metadata.timestamp        ?\n_su_format.rule iucr_19\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/lifecycle-scan-independent/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "30937ae20cf670ac3800bc159f07c4305026d88ed528d0d060569af78fc2fcce"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/background_estimate/projects/lifecycle-scan-sequential/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title            \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description      \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fitting\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n_metadata.created          \"20 Oct 2026 10:51:13\"\n_metadata.last_modified    \"20 Oct 2026 10:51:14\"\n_metadata.timestamp        ?\n_su_format.rule iucr_19\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/background_estimate/projects/lifecycle-scan-sequential/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "30937ae20cf670ac3800bc159f07c4305026d88ed528d0d060569af78fc2fcce"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/e05_t1/stop-nostep/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"CLI stop witness\"\n_metadata.description      \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"fit\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n_metadata.created          \"18 Oct 2026 08:36:48\"\n_metadata.last_modified    \"18 Oct 2026 08:36:49\"\n_metadata.timestamp        ?\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/e05_t1/stop-nostep/project/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "4c81d7e575625f9555015cd0f98a0722c2e95ed4558c1c9ad374d254e1bfa206"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/fit_quality/fcj/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             pd_neut_cwl_lab6_echidna_fcj\n_metadata.title \"LaB\u2086 [Pm-3m] \u00b7 ECHIDNA @ ANSTO\"\n_metadata.description \"TCH pseudo-Voigt with FCJ axial divergence \u00b7 Scale-only refinement\"\n_metadata.created          \"26 Sep 2026 10:29:37\"\n_metadata.last_modified    \"26 Sep 2026 10:29:38\"\n_metadata.timestamp        ?\n_metadata.purpose \"verification\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"ECHIDNA\"\n_metadata.facility \"ANSTO\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/fit_quality/fcj/experiments/echidna.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "ECHIDNA",
+            "_instrument.facility": "ANSTO"
+          },
+          "scientific_sha256": "80f077806e554470a5b4943991e795c465db78266fc072a6c07f9390e8117d6b"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/fit_tables/five/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             ncaf_wish_5bank_s5\n_metadata.title \"Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813] \u00b7 WISH @ ISIS\"\n_metadata.description \"5 banks \u00b7 FullProf free parameters and exclusions \u00b7 Starting model 5\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"WISH\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/fit_tables/five/experiments/wish_1_10.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "ad26bf9197efcf17ac7aec51a5b54b2c7c31a7c891ce7a5a7a07d1a8645f07f6"
+        },
+        {
+          "path": "tests/fixtures/fit_tables/five/experiments/wish_2_9.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "9ec0812463b615087f42e4a54ad988d872bfe87fdbe2ce47960149965a77b308"
+        },
+        {
+          "path": "tests/fixtures/fit_tables/five/experiments/wish_3_8.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "03de41bd0851f45b2648e80701f667c78f1f9bd6535d4e5629d5400526f12c50"
+        },
+        {
+          "path": "tests/fixtures/fit_tables/five/experiments/wish_4_7.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "e30f354b90b6064c96531af095c7136bcb7d914bebff73bc474b734cdab87e37"
+        },
+        {
+          "path": "tests/fixtures/fit_tables/five/experiments/wish_5_6.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "bbbd7a03d4da6b1feacd732010b2b76451618c8397588b9d7c1380f7eba18728"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/fit_tables/one/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             ncaf_wish_5bank_s5\n_metadata.title \"Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813] \u00b7 WISH @ ISIS\"\n_metadata.description \"5 banks \u00b7 FullProf free parameters and exclusions \u00b7 Starting model 5\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"WISH\"\n_metadata.facility \"ISIS\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/fit_tables/one/experiments/wish_1_10.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "WISH",
+            "_instrument.facility": "ISIS"
+          },
+          "scientific_sha256": "ad26bf9197efcf17ac7aec51a5b54b2c7c31a7c891ce7a5a7a07d1a8645f07f6"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/shared_correlations/scan-input/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             cosio_d20_scan\n_metadata.title \"Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL\"\n_metadata.description \"Temperature scan \u00b7 3 patterns at 52.3, 299.4 and 497.4 K\"\n_metadata.timestamp        2026-09-09T07:34:35+00:00\n\n_rendering_plot.type auto\n\n_report.cif false\n_report.html true\n_report.tex false\n_report.pdf false\n_report.html_offline false\n\n_rendering_table.type auto\n\n_rendering_structure.type auto\n\n_structure_view.show_labels false\n_structure_view.show_moments true\n_structure_view.range_a_min 0.\n_structure_view.range_a_max 1.\n_structure_view.range_b_min 0.\n_structure_view.range_b_max 1.\n_structure_view.range_c_min 0.\n_structure_view.range_c_max 1.\n\n_structure_style.atom_view adp\n_structure_style.color_scheme jmol\n_structure_style.adp_probability 0.99\n_structure_style.atom_scale 0.3\n\n_verbosity.fit short\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"D20\"\n_metadata.facility \"ILL\"\n_metadata.polarisation \"none\"\n\n_metadata.created \"01 Jan 2099 00:00:00\"\n\n_metadata.last_modified \"01 Jan 2099 00:00:00\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/shared_correlations/scan-input/experiments/d20.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "D20",
+            "_instrument.facility": "ILL"
+          },
+          "scientific_sha256": "89c14df4a88f6eeedc8d42647ad4bda32c52856d2fe58e6a64f041062e5d86c7"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/shared_correlations/single-input/project.edi",
+      "legacy_record": "_edi.schema_version 2\n\n_metadata.name             lbco_hrpt_s2\n_metadata.title \"La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI\"\n_metadata.description \"Cubic perovskite \u00b7 Preferred orientation \u00b7 Starting model 2\"\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"HRPT\"\n_metadata.facility \"PSI\"\n_metadata.polarisation \"none\"\n\n_metadata.created \"01 Jan 2099 00:00:00\"\n\n_metadata.last_modified \"01 Jan 2099 00:00:00\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/shared_correlations/single-input/experiments/hrpt.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "HRPT",
+            "_instrument.facility": "PSI"
+          },
+          "scientific_sha256": "5063e9ea674694f4ba201a2b7f77b985ae7a8c74111091912f6f9999e15ee2df"
+        }
+      ]
+    },
+    {
+      "path": "tests/fixtures/single_crystal/example_fits/taurine_converged/project/project.edi",
+      "legacy_record": "_edi.schema_version 3\n\n_metadata.name             sc_neut_tof_taurine_fit\n_metadata.title \"Taurine [P2\u2081/c] \u00b7 SENJU @ J-PARC\"\n_metadata.description \"Single crystal \u00b7 Time of flight \u00b7 Six datasets \u00b7 Anisotropic displacements\"\n_metadata.created          \"22 Oct 2026 18:00:00\"\n_metadata.last_modified    \"22 Oct 2026 18:00:00\"\n_metadata.timestamp        ?\n_metadata.purpose \"refinement\"\n_metadata.dimensionality \"1D\"\n_metadata.instrument \"SENJU\"\n_metadata.facility \"J-PARC\"\n_metadata.polarisation \"none\"\n",
+      "experiments": [
+        {
+          "path": "tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_1.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "5ee2c0ebedb18740a456b09809666de5c1bcd35a94ec09fe15ee196cd1712910"
+        },
+        {
+          "path": "tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_2.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "d29ee7274beb54e510b204c6b6c84a7f83956b3085e34532d2929508f6264c2f"
+        },
+        {
+          "path": "tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_3.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "3995943a84cb9f9bd4d7129da719f2a0da45e94ed02734f223d624deff73ddbb"
+        },
+        {
+          "path": "tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_4.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "5986ed046d87ca8888802f6d5f1345aac2d56fdab74ec0b91c1178fd86f0ad8c"
+        },
+        {
+          "path": "tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_5.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "94ed0c48b0a0b4c22f492eb4869d5d60e8c5b6e050864cdb829364c056aa69cd"
+        },
+        {
+          "path": "tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_6.edi",
+          "expected": {
+            "_experiment_type.dimensionality": "1d",
+            "_experiment_type.polarisation": "unpolarised",
+            "_instrument.name": "SENJU",
+            "_instrument.facility": "J-PARC"
+          },
+          "scientific_sha256": "3fb802f989059b3c5c6ac3ff3d0ae312ff7f226b7a47aa1426ecc3b8d3bee996"
+        }
+      ]
+    }
+  ],
+  "catalogue": {
+    "schema": 1,
+    "examples": {
+      "pd-neut-cwl_lbco_simulation": {
+        "samples": [
+          "La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m]"
+        ],
+        "origin": "HRPT @ PSI",
+        "detail": "Cubic perovskite \u00b7 Simulated pattern without measured data",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "simulation"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "PSI"
+          ],
+          "instruments": [
+            "HRPT"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-cwl_lbco_simulation",
+          "La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI",
+          "Cubic perovskite \u00b7 Simulated pattern without measured data"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-cwl_lbco_simulation/project/project.edi",
+          "docs/user/cli/pd-neut-cwl_lbco_simulation/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-cwl_lbco_simulation/project/experiments/hrpt.edi",
+          "docs/user/cli/pd-neut-cwl_lbco_simulation/project/structures/lbco.edi"
+        ]
+      },
+      "pd-neut-tof_si_simulation": {
+        "samples": [
+          "Silicon [Fd-3m]"
+        ],
+        "origin": "SEPD @ Argonne",
+        "detail": "Silicon standard \u00b7 Simulated time-of-flight pattern without measured data",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "time-of-flight"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "simulation"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "Argonne"
+          ],
+          "instruments": [
+            "SEPD"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-tof_si_simulation",
+          "Silicon [Fd-3m] \u00b7 SEPD @ Argonne",
+          "Silicon standard \u00b7 Simulated time-of-flight pattern without measured data"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-tof_si_simulation/project/project.edi",
+          "docs/user/cli/pd-neut-tof_si_simulation/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-tof_si_simulation/project/experiments/sepd.edi",
+          "docs/user/cli/pd-neut-tof_si_simulation/project/structures/si.edi"
+        ]
+      },
+      "pd-xray-cwl_nacl_simulation": {
+        "samples": [
+          "NaCl [Fm-3m]"
+        ],
+        "origin": "Laboratory X-ray",
+        "detail": "Rock salt \u00b7 Simulated Cu K\u03b1\u2081 pattern without measured data \u00b7 Monochromator polarization",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "xray"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "simulation"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            ""
+          ],
+          "instruments": [
+            ""
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "__not_applicable__"
+          ]
+        },
+        "searchAliases": [
+          "pd-xray-cwl_nacl_simulation",
+          "NaCl [Fm-3m] \u00b7 Laboratory X-ray",
+          "Rock salt \u00b7 Simulated Cu K\u03b1\u2081 pattern without measured data \u00b7 Monochromator polarization"
+        ],
+        "sources": [
+          "docs/user/cli/pd-xray-cwl_nacl_simulation/project/project.edi",
+          "docs/user/cli/pd-xray-cwl_nacl_simulation/project/analysis/analysis.edi",
+          "docs/user/cli/pd-xray-cwl_nacl_simulation/project/experiments/lab.edi",
+          "docs/user/cli/pd-xray-cwl_nacl_simulation/project/structures/nacl.edi"
+        ]
+      },
+      "pd-neut-cwl_lbco-hrpt": {
+        "samples": [
+          "La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m]"
+        ],
+        "origin": "HRPT @ PSI",
+        "detail": "Cubic perovskite \u00b7 La and Ba sharing one site \u00b7 Profile, background, displacements",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "PSI"
+          ],
+          "instruments": [
+            "HRPT"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-cwl_lbco-hrpt",
+          "La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] \u00b7 HRPT @ PSI",
+          "Cubic perovskite \u00b7 La and Ba sharing one site \u00b7 Profile, background, displacements"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/project.edi",
+          "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/experiments/hrpt.edi",
+          "docs/user/cli/pd-neut-cwl_lbco-hrpt/project/structures/lbco.edi"
+        ]
+      },
+      "pd-neut-cwl_hs-hrpt": {
+        "samples": [
+          "ZnCu\u2083(OD)\u2086Cl\u2082 [R-3m]"
+        ],
+        "origin": "HRPT @ PSI",
+        "detail": "Herbertsmithite \u00b7 Deuterated kagome antiferromagnet \u00b7 B\u00e9rar-Baldinozzi asymmetry",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "PSI"
+          ],
+          "instruments": [
+            "HRPT"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-cwl_hs-hrpt",
+          "ZnCu\u2083(OD)\u2086Cl\u2082 [R-3m] \u00b7 HRPT @ PSI",
+          "Herbertsmithite \u00b7 Deuterated kagome antiferromagnet \u00b7 B\u00e9rar-Baldinozzi asymmetry"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-cwl_hs-hrpt/project/project.edi",
+          "docs/user/cli/pd-neut-cwl_hs-hrpt/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-cwl_hs-hrpt/project/experiments/hrpt.edi",
+          "docs/user/cli/pd-neut-cwl_hs-hrpt/project/structures/hs.edi"
+        ]
+      },
+      "pd-neut-cwl_cosio-d20": {
+        "samples": [
+          "Co\u2082SiO\u2084 [Pnma]"
+        ],
+        "origin": "D20 @ ILL",
+        "detail": "Olivine \u00b7 Coordinates, displacements and oxygen occupancies",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "ILL"
+          ],
+          "instruments": [
+            "D20"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-cwl_cosio-d20",
+          "Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL",
+          "Olivine \u00b7 Coordinates, displacements and oxygen occupancies"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-cwl_cosio-d20/project/project.edi",
+          "docs/user/cli/pd-neut-cwl_cosio-d20/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-cwl_cosio-d20/project/experiments/d20.edi",
+          "docs/user/cli/pd-neut-cwl_cosio-d20/project/structures/cosio.edi"
+        ]
+      },
+      "pd-neut-cwl_lmo-echidna": {
+        "samples": [
+          "LiNiO\u2082 [R-3m]"
+        ],
+        "origin": "ECHIDNA @ ANSTO",
+        "detail": "Layered oxide \u00b7 Li/Ni site mixing \u00b7 Occupancy constraints \u00b7 TCH \u00d7 FCJ asymmetry",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "ANSTO"
+          ],
+          "instruments": [
+            "ECHIDNA"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-cwl_lmo-echidna",
+          "LiNiO\u2082 [R-3m] \u00b7 ECHIDNA @ ANSTO",
+          "Layered oxide \u00b7 Li/Ni site mixing \u00b7 Occupancy constraints \u00b7 TCH \u00d7 FCJ asymmetry"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-cwl_lmo-echidna/project/project.edi",
+          "docs/user/cli/pd-neut-cwl_lmo-echidna/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-cwl_lmo-echidna/project/experiments/echidna.edi",
+          "docs/user/cli/pd-neut-cwl_lmo-echidna/project/structures/lmo.edi"
+        ]
+      },
+      "pd-neut-cwl_y2o3-spodi": {
+        "samples": [
+          "Y\u2082O\u2083 [Ia-3]"
+        ],
+        "origin": "SPODI @ FRM II",
+        "detail": "Anisotropic \u03b2 tensors tied by site symmetry \u00b7 Coordinates, profile and background",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "FRM II"
+          ],
+          "instruments": [
+            "SPODI"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-cwl_y2o3-spodi",
+          "Y\u2082O\u2083 [Ia-3] \u00b7 SPODI @ FRM II",
+          "Anisotropic \u03b2 tensors tied by site symmetry \u00b7 Coordinates, profile and background"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/project.edi",
+          "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/experiments/spodi.edi",
+          "docs/user/cli/pd-neut-cwl_y2o3-spodi/project/structures/y2o3.edi"
+        ]
+      },
+      "pd-neut-cwl_yalo3-al2o3-spodi": {
+        "samples": [
+          "YAlO\u2083 [Pbnm]",
+          "Al\u2082O\u2083 [R-3c]"
+        ],
+        "origin": "SPODI @ FRM II",
+        "detail": "2 phases at 3 K \u00b7 Shared B\u00e9rar-Baldinozzi profile \u00b7 Cylinder absorption",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "FRM II"
+          ],
+          "instruments": [
+            "SPODI"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-cwl_yalo3-al2o3-spodi",
+          "YAlO\u2083 [Pbnm] / Al\u2082O\u2083 [R-3c] \u00b7 SPODI @ FRM II",
+          "2 phases at 3 K \u00b7 Shared B\u00e9rar-Baldinozzi profile \u00b7 Cylinder absorption"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/project.edi",
+          "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/experiments/spodi.edi",
+          "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/structures/Al2O3.edi",
+          "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/structures/YAlO3.edi"
+        ]
+      },
+      "pd-neut-tof_si-sepd": {
+        "samples": [
+          "Silicon [Fd-3m]"
+        ],
+        "origin": "SEPD @ Argonne",
+        "detail": "Silicon standard \u00b7 Jorgensen\u2013Von Dreele profile \u00b7 Time-of-flight neutron powder data",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "time-of-flight"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "Argonne"
+          ],
+          "instruments": [
+            "SEPD"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-tof_si-sepd",
+          "Silicon [Fd-3m] \u00b7 SEPD @ Argonne",
+          "Silicon standard \u00b7 Jorgensen\u2013Von Dreele profile \u00b7 Time-of-flight neutron powder data"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-tof_si-sepd/project/project.edi",
+          "docs/user/cli/pd-neut-tof_si-sepd/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-tof_si-sepd/project/experiments/sepd.edi",
+          "docs/user/cli/pd-neut-tof_si-sepd/project/structures/si.edi"
+        ]
+      },
+      "pd-neut-tof_cecoal-polaris": {
+        "samples": [
+          "CeCoAl\u2083 [Pmma]"
+        ],
+        "origin": "POLARIS @ ISIS",
+        "detail": "Structure and time-of-flight profile fit \u00b7 24-term Chebyshev background",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "time-of-flight"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "ISIS"
+          ],
+          "instruments": [
+            "POLARIS"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-tof_cecoal-polaris",
+          "CeCoAl\u2083 [Pmma] \u00b7 POLARIS @ ISIS",
+          "Structure and time-of-flight profile fit \u00b7 24-term Chebyshev background"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-tof_cecoal-polaris/project/project.edi",
+          "docs/user/cli/pd-neut-tof_cecoal-polaris/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-tof_cecoal-polaris/project/experiments/polaris.edi",
+          "docs/user/cli/pd-neut-tof_cecoal-polaris/project/structures/cecoal.edi"
+        ]
+      },
+      "pd-neut-tof_ceo2-pearl": {
+        "samples": [
+          "CeO\u2082 [Fm-3m]"
+        ],
+        "origin": "PEARL @ ISIS",
+        "detail": "NBS SRM 674a standard \u00b7 Calibration and profile fit \u00b7 6-term polynomial background",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "time-of-flight"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "ISIS"
+          ],
+          "instruments": [
+            "PEARL"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-tof_ceo2-pearl",
+          "CeO\u2082 [Fm-3m] \u00b7 PEARL @ ISIS",
+          "NBS SRM 674a standard \u00b7 Calibration and profile fit \u00b7 6-term polynomial background"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-tof_ceo2-pearl/project/project.edi",
+          "docs/user/cli/pd-neut-tof_ceo2-pearl/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-tof_ceo2-pearl/project/experiments/pearl.edi",
+          "docs/user/cli/pd-neut-tof_ceo2-pearl/project/structures/ceo2.edi"
+        ]
+      },
+      "pd-neut-tof_lbco-si-mcstas": {
+        "samples": [
+          "La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m]",
+          "Silicon [Fd-3m]"
+        ],
+        "origin": "McStas simulation",
+        "detail": "2 phases \u00b7 Simulated TOF pattern \u00b7 Jorgensen profile",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "time-of-flight"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            ""
+          ],
+          "instruments": [
+            "McStas"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-tof_lbco-si-mcstas",
+          "La\u2080.\u2085Ba\u2080.\u2085CoO\u2083 [Pm-3m] / Silicon [Fd-3m] \u00b7 McStas simulation",
+          "2 phases \u00b7 Simulated TOF pattern \u00b7 Jorgensen profile"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/project.edi",
+          "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/experiments/mcstas.edi",
+          "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/structures/lbco.edi",
+          "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/structures/si.edi"
+        ]
+      },
+      "pd-neut-tof_ncaf-wish": {
+        "samples": [
+          "Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813]"
+        ],
+        "origin": "WISH @ ISIS",
+        "detail": "All five detector bank pairs fitted jointly \u00b7 Jorgensen\u2013Von Dreele profile \u00b7 Per-bank calibration",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "time-of-flight"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "joint"
+          ],
+          "facilities": [
+            "ISIS"
+          ],
+          "instruments": [
+            "WISH"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-tof_ncaf-wish",
+          "Na\u2082Ca\u2083Al\u2082F\u2081\u2084 [I2\u20813] \u00b7 WISH @ ISIS",
+          "All five detector bank pairs fitted jointly \u00b7 Jorgensen\u2013Von Dreele profile \u00b7 Per-bank calibration"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi",
+          "docs/user/cli/pd-neut-tof_ncaf-wish/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_1_10.edi",
+          "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_2_9.edi",
+          "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_3_8.edi",
+          "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_4_7.edi",
+          "docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_5_6.edi",
+          "docs/user/cli/pd-neut-tof_ncaf-wish/project/structures/ncaf.edi"
+        ]
+      },
+      "pd-neut-tof_ferrite-austenite-beer": {
+        "samples": [
+          "Ferrite [Im-3m]",
+          "Austenite [Fm-3m]"
+        ],
+        "origin": "BEER @ ESS",
+        "detail": "Instrument calibration \u00b7 2 McStas-simulated banks fitted jointly \u00b7 Per-bank zero and resolution",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "time-of-flight"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "joint"
+          ],
+          "facilities": [
+            "ESS"
+          ],
+          "instruments": [
+            "BEER"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-tof_ferrite-austenite-beer",
+          "Ferrite [Im-3m] / Austenite [Fm-3m] \u00b7 BEER @ ESS",
+          "Instrument calibration \u00b7 2 McStas-simulated banks fitted jointly \u00b7 Per-bank zero and resolution"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/project.edi",
+          "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/experiments/expt_n2.edi",
+          "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/experiments/expt_s2.edi",
+          "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/structures/austenite.edi",
+          "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/structures/ferrite.edi"
+        ]
+      },
+      "pd-xray-cwl_pbso4-lab": {
+        "samples": [
+          "PbSO\u2084 [Pnma]"
+        ],
+        "origin": "Laboratory X-ray",
+        "detail": "Rietveld round-robin data \u00b7 Cu K\u03b1 doublet \u00b7 B\u00e9rar-Baldinozzi asymmetry",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "xray"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            ""
+          ],
+          "instruments": [
+            ""
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "__not_applicable__"
+          ]
+        },
+        "searchAliases": [
+          "pd-xray-cwl_pbso4-lab",
+          "PbSO\u2084 [Pnma] \u00b7 Laboratory X-ray",
+          "Rietveld round-robin data \u00b7 Cu K\u03b1 doublet \u00b7 B\u00e9rar-Baldinozzi asymmetry"
+        ],
+        "sources": [
+          "docs/user/cli/pd-xray-cwl_pbso4-lab/project/project.edi",
+          "docs/user/cli/pd-xray-cwl_pbso4-lab/project/analysis/analysis.edi",
+          "docs/user/cli/pd-xray-cwl_pbso4-lab/project/experiments/lab.edi",
+          "docs/user/cli/pd-xray-cwl_pbso4-lab/project/structures/pbso4.edi"
+        ]
+      },
+      "pd-xray-cwl_lam7o3-p021": {
+        "samples": [
+          "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O\u2083 [Pnma]"
+        ],
+        "origin": "P02.1 @ PETRA III",
+        "detail": "High-entropy perovskite \u00b7 Seven cations on one site \u00b7 Synchrotron X-ray",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "xray"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "PETRA III"
+          ],
+          "instruments": [
+            "P02.1"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "__not_applicable__"
+          ]
+        },
+        "searchAliases": [
+          "pd-xray-cwl_lam7o3-p021",
+          "La(Ti,Cr,Mn,Fe,Co,Ni,Cu)O\u2083 [Pnma] \u00b7 P02.1 @ PETRA III",
+          "High-entropy perovskite \u00b7 Seven cations on one site \u00b7 Synchrotron X-ray"
+        ],
+        "sources": [
+          "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/project.edi",
+          "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/analysis/analysis.edi",
+          "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/experiments/p021.edi",
+          "docs/user/cli/pd-xray-cwl_lam7o3-p021/project/structures/lam7o3.edi"
+        ]
+      },
+      "pd-neut-xray-cwl_pbso4-d1a-lab": {
+        "samples": [
+          "PbSO\u2084 [Pnma]"
+        ],
+        "origin": "D1A @ ILL and laboratory X-ray",
+        "detail": "Rietveld round-robin data \u00b7 Neutron and X-ray patterns fitted jointly",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron",
+            "xray"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "joint"
+          ],
+          "facilities": [
+            "ILL"
+          ],
+          "instruments": [
+            "D1A"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "__not_applicable__"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-xray-cwl_pbso4-d1a-lab",
+          "PbSO\u2084 [Pnma] \u00b7 D1A @ ILL and laboratory X-ray",
+          "Rietveld round-robin data \u00b7 Neutron and X-ray patterns fitted jointly"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/project.edi",
+          "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/d1a.edi",
+          "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/lab.edi",
+          "docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/structures/pbso4.edi"
+        ]
+      },
+      "pd-neut-cwl_cosio-d20_scan": {
+        "samples": [
+          "Co\u2082SiO\u2084 [Pnma]"
+        ],
+        "origin": "D20 @ ILL",
+        "detail": "Cooling scan \u00b7 155 patterns from 497.4 to 52.3 K \u00b7 Magnetic frames left out",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "sequential"
+          ],
+          "facilities": [
+            "ILL"
+          ],
+          "instruments": [
+            "D20"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "pd-neut-cwl_cosio-d20_scan",
+          "Co\u2082SiO\u2084 [Pnma] \u00b7 D20 @ ILL",
+          "Cooling scan \u00b7 155 patterns from 497.4 to 52.3 K \u00b7 Magnetic frames left out"
+        ],
+        "sources": [
+          "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/project.edi",
+          "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/analysis/analysis.edi",
+          "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/experiments/d20.edi",
+          "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/structures/cosio.edi"
+        ]
+      },
+      "pd-xray-cwl_latp-bm01_scan": {
+        "samples": [
+          "LATP [R-3c]",
+          "AlPO\u2084 [C222\u2081]",
+          "AlPO\u2084 [P6\u2083mc]"
+        ],
+        "origin": "BM01 @ ESRF",
+        "detail": "3 phases \u00b7 73 synchrotron patterns \u00b7 Linked displacement parameters",
+        "values": {
+          "sampleForm": [
+            "powder"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "xray"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "sequential"
+          ],
+          "facilities": [
+            "ESRF"
+          ],
+          "instruments": [
+            "BM01"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "__not_applicable__"
+          ]
+        },
+        "searchAliases": [
+          "pd-xray-cwl_latp-bm01_scan",
+          "LATP [R-3c] / AlPO\u2084 [C222\u2081] / AlPO\u2084 [P6\u2083mc] \u00b7 BM01 @ ESRF",
+          "3 phases \u00b7 73 synchrotron patterns \u00b7 Linked displacement parameters"
+        ],
+        "sources": [
+          "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/project.edi",
+          "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/analysis/analysis.edi",
+          "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/experiments/bm01.edi",
+          "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/alpo4_c2221.edi",
+          "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/alpo4_p63mc.edi",
+          "docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/structures/latp.edi"
+        ]
+      },
+      "sc-neut-cwl_tb2ti2o7-heidi_fit": {
+        "samples": [
+          "Tb\u2082Ti\u2082O\u2087 [Fd-3m]"
+        ],
+        "origin": "HEiDi @ MLZ (FRM II)",
+        "detail": "Single crystal \u00b7 Anisotropic displacements and extinction from a rough start",
+        "values": {
+          "sampleForm": [
+            "single crystal"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "MLZ (FRM II)"
+          ],
+          "instruments": [
+            "HEiDi"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "sc-neut-cwl_tb2ti2o7-heidi_fit",
+          "Tb\u2082Ti\u2082O\u2087 [Fd-3m] \u00b7 HEiDi @ MLZ (FRM II)",
+          "Single crystal \u00b7 Anisotropic displacements and extinction from a rough start"
+        ],
+        "sources": [
+          "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/project.edi",
+          "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/analysis/analysis.edi",
+          "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/experiments/heidi.edi",
+          "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/structures/tb2ti2o7.edi"
+        ]
+      },
+      "sc-neut-cwl_pr2nio4-5c2_fit": {
+        "samples": [
+          "Pr\u2082NiO\u2084 [Fmmm]"
+        ],
+        "origin": "5C2 @ LLB",
+        "detail": "Single crystal \u00b7 Anisotropic displacements and coordinates from a rough start",
+        "values": {
+          "sampleForm": [
+            "single crystal"
+          ],
+          "beamMode": [
+            "constant wavelength"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "single"
+          ],
+          "facilities": [
+            "LLB"
+          ],
+          "instruments": [
+            "5C2"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "sc-neut-cwl_pr2nio4-5c2_fit",
+          "Pr\u2082NiO\u2084 [Fmmm] \u00b7 5C2 @ LLB",
+          "Single crystal \u00b7 Anisotropic displacements and coordinates from a rough start"
+        ],
+        "sources": [
+          "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/project.edi",
+          "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/analysis/analysis.edi",
+          "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi",
+          "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/structures/pr2nio4.edi"
+        ]
+      },
+      "sc-neut-tof_taurine_fit": {
+        "samples": [
+          "Taurine [P2\u2081/c]"
+        ],
+        "origin": "SENJU @ J-PARC",
+        "detail": "Single crystal \u00b7 Time of flight \u00b7 Six datasets \u00b7 Anisotropic displacements",
+        "values": {
+          "sampleForm": [
+            "single crystal"
+          ],
+          "beamMode": [
+            "time-of-flight"
+          ],
+          "probe": [
+            "neutron"
+          ],
+          "scatteringType": [
+            "bragg"
+          ],
+          "purpose": [
+            "refinement"
+          ],
+          "fittingMode": [
+            "joint"
+          ],
+          "facilities": [
+            "J-PARC"
+          ],
+          "instruments": [
+            "SENJU"
+          ],
+          "dimensionality": [
+            "1D"
+          ],
+          "polarisation": [
+            "none"
+          ]
+        },
+        "searchAliases": [
+          "sc-neut-tof_taurine_fit",
+          "Taurine [P2\u2081/c] \u00b7 SENJU @ J-PARC",
+          "Single crystal \u00b7 Time of flight \u00b7 Six datasets \u00b7 Anisotropic displacements"
+        ],
+        "sources": [
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi",
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/analysis/analysis.edi",
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_1.edi",
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_2.edi",
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_3.edi",
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_4.edi",
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_5.edi",
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_6.edi",
+          "docs/user/cli/sc-neut-tof_taurine_fit/project/structures/taurine.edi"
+        ]
+      }
+    }
+  }
+}
