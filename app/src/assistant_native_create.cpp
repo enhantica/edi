@@ -96,7 +96,7 @@ QJsonObject native_mapped_structure_schema() {
             {"length_a","length_b","length_c","angle_alpha","angle_beta","angle_gamma"})},
         {"atom_sites",rows(shape({{"id",token},{"type_symbol",token},{"wyckoff_letter",optional},
             {"fract_x",num},{"fract_y",num},{"fract_z",num},{"occupancy",num}},
-            {"id","type_symbol","wyckoff_letter","fract_x","fract_y","fract_z","occupancy"}))},
+            {"id","type_symbol","fract_x","fract_y","fract_z","occupancy"}))},
         {"atom_site_adps",rows(Object{{"oneOf",Array{iso,aniso}}})}},
         {"name","space_group","cell","atom_sites","atom_site_adps"});
     schema["description"] = QLatin1StringView(mapped_structure_guidance.data(), static_cast<qsizetype>(mapped_structure_guidance.size()));
@@ -155,8 +155,12 @@ edi::Structure mapped_structure(const Object& source) {
     if(sites.size()!=adps.size())throw RecipeRefusal(field,RecipeReason::Fields);
     for(const auto& value:sites) {
         if(!value.isObject())throw RecipeRefusal(field,RecipeReason::ObjectRequired);
-        const auto row=value.toObject();exact(row,{"id","type_symbol","wyckoff_letter","fract_x","fract_y","fract_z","occupancy"},field);
-        auto site=std::make_shared<edi::AtomSite>();site->id=token(row,"id");site->type_symbol=token(row,"type_symbol");site->wyckoff_letter=token(row,"wyckoff_letter",true);
+        const auto row=value.toObject();
+        QSet<QString> keys{"id","type_symbol","fract_x","fract_y","fract_z","occupancy"};
+        if (row.contains("wyckoff_letter")) keys.insert("wyckoff_letter");
+        exact(row, keys, field);
+        auto site=std::make_shared<edi::AtomSite>();site->id=token(row,"id");site->type_symbol=token(row,"type_symbol");
+        if (row.contains("wyckoff_letter")) site->wyckoff_letter=token(row,"wyckoff_letter",true);
         const char* keys[]={"fract_x","fract_y","fract_z","occupancy"};auto parameters=site->parameters();
         for(std::size_t i=0;i<4;++i)edi::assign_value(*parameters[i],finite(row,keys[i]));
         result.atom_sites.push_back(std::move(site)); // original ItemVec rejects duplicate keys
