@@ -739,8 +739,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                        QStringList{structure, extras, "expand:group.scattering_length"});
         shot("preferred-orientation", open_cli_project("pd-neut-cwl_lbco-hrpt_start-2") +
                                           QStringList{experiment, extras, "expand:group.preferred_orientation"});
-        shot("reflections", start + open_example("pd-neut-cwl_y2o3-spodi") +
-                                QStringList{experiment, extras, "group.refln"});
+        shot("reflections", start + open_example("pd-neut-cwl_lbco-hrpt") +
+                                QStringList{experiment, extras, "expand:group.refln"});
         shot("fit-results", start + open_example("pd-neut-cwl_lbco-hrpt") +
                                 QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"});
         // A scan's window keeps changing while its datasets load, so its step is captured unsettled.

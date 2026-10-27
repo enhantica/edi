@@ -4858,7 +4858,23 @@ class ScratchSave {
         const fs::path path = root_ / "project" / relative;
         fs::create_directories(path.parent_path());
         std::ofstream(path, std::ios::binary | std::ios::trunc) << text;
-        return load_project((root_ / "project").string(), on_warning);
+        // A refusal or a warning names the project's own file, never the scratch folder.
+        const std::string folder = (root_ / "project").string() + "/";
+        const auto local = [&folder](std::string message) {
+            for (std::size_t at = message.find(folder); at != std::string::npos; at = message.find(folder, at)) {
+                message.erase(at, folder.size());
+            }
+            return message;
+        };
+        try {
+            return load_project((root_ / "project").string(), [&on_warning, &local](const std::string& warning) {
+                if (on_warning) {
+                    on_warning(local(warning));
+                }
+            });
+        } catch (const std::exception& refusal) {
+            throw IoError(local(refusal.what()));
+        }
     }
 
    private:
@@ -4903,10 +4919,18 @@ Project project_with_file_text(const Project& project, const std::string& relati
     }
     const ScratchSave save(project);
     Project read = save.load_with(relative, text, on_warning);
-    // The copy lives where the project does, so a later save writes back to it.
+    // The copy lives where the project does, so a later save writes back to it, and keeps what the scratch save
+    // stamped: the project's record is the project's unless the edit is of it, and its times always are.
     read.path = project.path;
-    read.metadata.path = project.metadata.path;
     read.scan_data_root = project.scan_data_root;
+    if (relative != "project.edi") {
+        read.metadata = project.metadata;
+    } else {
+        read.metadata.path = project.metadata.path;
+        read.metadata.created = project.metadata.created;
+        read.metadata.last_modified = project.metadata.last_modified;
+        read.metadata.timestamp = project.metadata.timestamp;
+    }
     return read;
 }
 

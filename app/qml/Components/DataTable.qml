@@ -52,6 +52,8 @@ EaComponents.ListView {
     // narrows them, where a number shows its short form.
     property var columns: []
     property bool equalColumns: false
+    // The one margin every fitted column has, half again the base's (the owner, 2026-10-27).
+    autoColumnPadding: EaStyle.Sizes.tableColumnSpacing * 3
     readonly property var fillColumns: [columns.lastIndexOf(-1)]
     // Each column's widest text, its header's or a shown cell's, without the margin.
     property var fittedWidths: []
@@ -81,7 +83,11 @@ EaComponents.ListView {
         // itself to the width it is given), a label by its natural width, an editor by its text (its implicit width
         // is a default, not its text).
         const padded = (cell, w) => w + (cell.leftPadding ?? 0) + (cell.rightPadding ?? 0);
-        const measure = cell => "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : cell.implicitWidth;
+        // A cell that only holds a control (a combo box in an Item) is as wide as the control, its arrow and padding
+        // included.
+        const control = child => "optionWidth" in child ? Math.max(child.optionWidth, child.implicitContentWidth + child.leftPadding + child.rightPadding) : child.implicitWidth ?? 0;
+        const held = cell => Array.from(cell.children).reduce((widest, child) => Math.max(widest, control(child)), cell.implicitWidth);
+        const measure = cell => "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : held(cell);
         // A filling column reads from the left, as its header, so its value sits next to the columns before it and
         // the space it takes is left after it (a right-aligned number would move to the row's far edge).
         const align = cells => {
