@@ -19,8 +19,12 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.fixtures.table_display import gui_base
 from tests.integration.py.ci_runner_contract import self_hosted_runners
+
+# Frozen from the published gui-components archive; ADR-0015.
+GUI_PIN = 'bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1'
+GUI_ARCHIVE_SHA256 = '4a91484651c78fcc639007b0144c349f8c5c87a9d5a98a85dfb8088947204f35'
+GUI_SOURCE_SHA256 = 'c61364b60961098a49cad8b1c1e0c8681ab2e510611f900fa7339c9b3c8984f2'
 
 ROOT = Path(__file__).resolve().parents[3]
 SCREENSHOTS = ROOT / 'docs/dev/design/app-screenshots'
@@ -235,9 +239,9 @@ def test_report_model_owner_exception_cannot_widen(escape):
 def assert_gui_pin(source):
     source = re.sub(r'#[^\n]*', '', source)
     for name, value in (
-        ('SHA', gui_base.PIN),
-        ('ARCHIVE_SHA256', gui_base.ARCHIVE_SHA256),
-        ('SRC_SHA256', gui_base.SOURCE_SHA256),
+        ('SHA', GUI_PIN),
+        ('ARCHIVE_SHA256', GUI_ARCHIVE_SHA256),
+        ('SRC_SHA256', GUI_SOURCE_SHA256),
     ):
         values = re.findall(
             r'set\s*\(\s*EDI_GUI_COMPONENTS_' + name + r'\s+([^\s)]+)\s*\)', source
@@ -271,9 +275,9 @@ def test_gui_pin_rejects_identity_digest_and_declaration_escapes(damage):
     source = (ROOT / 'cmake/EdiGuiBase.cmake').read_text()
     assert_gui_pin(source)
     selected = {
-        'commit': gui_base.PIN,
-        'archive': gui_base.ARCHIVE_SHA256,
-        'source': gui_base.SOURCE_SHA256,
+        'commit': GUI_PIN,
+        'archive': GUI_ARCHIVE_SHA256,
+        'source': GUI_SOURCE_SHA256,
     }
     if damage in selected:
         source = source.replace(selected[damage], '0' * len(selected[damage]))
@@ -282,7 +286,7 @@ def test_gui_pin_rejects_identity_digest_and_declaration_escapes(damage):
             r'(?m)^set\(EDI_GUI_COMPONENTS_SHA ', '# set(EDI_GUI_COMPONENTS_SHA ', source
         )
     else:
-        source += f'\nset(EDI_GUI_COMPONENTS_SHA {gui_base.PIN})\n'
+        source += f'\nset(EDI_GUI_COMPONENTS_SHA {GUI_PIN})\n'
     with pytest.raises(AssertionError, match='upstream GUI commit'):
         assert_gui_pin(source)
 
