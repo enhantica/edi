@@ -908,9 +908,17 @@ std::string reliability_text(const Project& project, std::size_t experiment) {
     if (project.fit_result.result_kind.empty()) {
         return {};
     }
-    // A bank with its own share shows its own Rwp; an agreement factor that was not a number is none, and left out.
+    // A bank with its own share shows its own Rwp. A record with no shares (a single fit saved before them) describes
+    // the first experiment by its pooled factors; one with shares has none for a bank it does not hold. An agreement
+    // factor that was not a number is none, and left out.
+    const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                    [](const auto& item) { return item->fit_share_held(); });
+    const bool own = experiment < project.experiments.size() && project.experiments[experiment]->fit_share_held();
+    if (shares && !own) {
+        return {};
+    }
     std::optional<double> rwp = project.fit_result.prof_wr_factor;
-    if (experiment < project.experiments.size() && project.experiments[experiment]->fit_share_held()) {
+    if (own) {
         rwp = project.experiments[experiment]->fit_prof_wr_factor;
     }
     std::vector<std::string> parts;
@@ -924,8 +932,7 @@ std::string reliability_text(const Project& project, std::size_t experiment) {
     if (experiment < project.experiments.size() && project.experiments[experiment]->reflections.has_value()) {
         const ExperimentBase& crystal = *project.experiments[experiment];
         const std::string form = token(crystal.experiment_type.effective_sample_form());
-        factor("fit_result.prof_r_factor",
-               crystal.fit_prof_r_factor ? crystal.fit_prof_r_factor : project.fit_result.prof_r_factor, form);
+        factor("fit_result.prof_r_factor", own ? crystal.fit_prof_r_factor : project.fit_result.prof_r_factor, form);
         factor("fit_result.prof_wr_factor", rwp, form);
     } else {
         factor("fit_result.prof_wr_factor", rwp, std::string());

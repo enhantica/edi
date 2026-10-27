@@ -4583,6 +4583,11 @@ std::optional<double> finite_factor(double value) {
     return std::isfinite(value) ? std::optional<double>(value) : std::nullopt;
 }
 
+// A factor over no points is none too, never the zero an empty sum gives.
+std::optional<double> factor_over(std::size_t points, double value) {
+    return points > 0 ? finite_factor(value) : std::nullopt;
+}
+
 // The fit's result as the project records it (`_fit_result`, diffraction-lib's names, each experiment's share and
 // each phase's), from what the fit returned — the same numbers the reports print — with the R factors and the
 // parameter correlations crysta computed. The status label is crysta's machine-record spelling; the profile function
@@ -4642,10 +4647,11 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
         record.background_function = *background;
     }
     record.descent = outcome.descent;  // review-1 F3: the descent that produced it
-    record.prof_r_factor = finite_factor(quality.pooled.rp);
-    record.prof_wr_expected = finite_factor(quality.pooled.rexp);
-    record.prof_cr_factor = finite_factor(quality.pooled.crp);
-    record.prof_cwr_factor = finite_factor(quality.pooled.cwrp);
+    const std::size_t pooled = quality.pooled.n_points;
+    record.prof_r_factor = factor_over(pooled, quality.pooled.rp);
+    record.prof_wr_expected = factor_over(pooled, quality.pooled.rexp);
+    record.prof_cr_factor = factor_over(pooled, quality.pooled.crp);
+    record.prof_cwr_factor = factor_over(pooled, quality.pooled.cwrp);
     const std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows = numbered_correlations(correlations);
     outcome.correlations.clear();
     for (const auto& row : rows) {
@@ -4659,20 +4665,20 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
         for (const crysta::ProfileFactors& bank : quality.experiments) {
             if (bank.experiment == experiment.name) {
                 experiment.fit_n_data_points = static_cast<int>(bank.n_points);
-                experiment.fit_prof_r_factor = finite_factor(bank.rp);
-                experiment.fit_prof_wr_factor = finite_factor(bank.rwp);
-                experiment.fit_prof_wr_expected = finite_factor(bank.rexp);
-                experiment.fit_prof_cr_factor = finite_factor(bank.crp);
-                experiment.fit_prof_cwr_factor = finite_factor(bank.cwrp);
-                experiment.fit_chi_square = finite_factor(bank.chi_square);
+                experiment.fit_prof_r_factor = factor_over(bank.n_points, bank.rp);
+                experiment.fit_prof_wr_factor = factor_over(bank.n_points, bank.rwp);
+                experiment.fit_prof_wr_expected = factor_over(bank.n_points, bank.rexp);
+                experiment.fit_prof_cr_factor = factor_over(bank.n_points, bank.crp);
+                experiment.fit_prof_cwr_factor = factor_over(bank.n_points, bank.cwrp);
+                experiment.fit_chi_square = factor_over(bank.n_points, bank.chi_square);
             }
         }
         // A bank the fit reported keeps the fit's own points, Rwp and chi-square, the numbers the report prints.
         for (const BankMetric& bank : outcome.banks) {
             if (bank.name == experiment.name) {
                 experiment.fit_n_data_points = static_cast<int>(bank.n_points);
-                experiment.fit_prof_wr_factor = finite_factor(bank.rwp);
-                experiment.fit_chi_square = finite_factor(bank.chi_square);
+                experiment.fit_prof_wr_factor = factor_over(bank.n_points, bank.rwp);
+                experiment.fit_chi_square = factor_over(bank.n_points, bank.chi_square);
             }
         }
         for (const auto& link : experiment.linked_structures) {

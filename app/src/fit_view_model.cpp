@@ -133,16 +133,23 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         const std::string form = edi::token(edi::SampleFormEnum::SINGLE_CRYSTAL);
         column(QString::fromStdString(edi::label("fit_result.prof_r_factor", form)));
         column(QString::fromStdString(edi::label("fit_result.prof_wr_factor", form)));
+        // A crystal with its own share shows its own factors; a record with no shares, its pooled ones. One with shares
+        // has none for a crystal it does not hold.
+        const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                        [](const auto& item) { return item->fit_share_held(); });
         QList<Row> rows;
         for (std::size_t i = 0; i < project.experiments.size(); ++i) {
             const edi::ExperimentBase& experiment = *project.experiments[i];
             const bool own = experiment.fit_share_held();
+            const auto shown = [own, shares](const std::optional<double>& bank, const std::optional<double>& pooled) {
+                return own ? bank : shares ? std::nullopt : pooled;
+            };
             rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
                          {QString::fromStdString(experiment.name.value()), static_cast<int>(i),
                           QStringList{percent("fit_result.prof_r_factor",
-                                              own ? experiment.fit_prof_r_factor : result.prof_r_factor, form),
+                                              shown(experiment.fit_prof_r_factor, result.prof_r_factor), form),
                                       percent("fit_result.prof_wr_factor",
-                                              own ? experiment.fit_prof_wr_factor : result.prof_wr_factor, form)}}});
+                                              shown(experiment.fit_prof_wr_factor, result.prof_wr_factor), form)}}});
         }
         if (columns != columns_) {
             columns_ = columns;
