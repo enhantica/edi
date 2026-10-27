@@ -2364,3 +2364,10 @@ continuation. Manual takeover likewise rechecks its original model/project and
 State after Draft publication. Exact native-origin/token matching preserves a
 manual or successor Draft. Applied/partial receipts are retained before disposal;
 a presentation failure neither retracts them nor invents scientific application.
+
+
+## Integration with the current application
+
+The current app and core remain the base for assistant operations. Core sources and embedded resources are declared through `cmake/edi_core_sources.cmake`, shared with the sanitizer build. Assistant parameter preparation reads the existing `refresh_fittability` marks from ADR-0053 rather than maintaining another eligibility rule. Optional raw objectives are copied from the engine progress record; missing values remain absent and cannot qualify an accepted trial. Existing fit and CIF algorithms remain unchanged. A fit job retains its completed report for observers and accepts an optional worker cancellation predicate for the assistant deadline.
+
+The current ordinary constraint editor supersedes the historical Draft/Confirm sections above. Integration uses its actual row operations and complete shared validation; the manual editor is preserved. ADR-0040 continues to own background estimation, and the current save/archive ADR continues to own folder, ZIP and copy behavior.

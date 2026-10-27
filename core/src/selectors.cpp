@@ -69,6 +69,14 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
     return field->value_or(std::string{});
 }
 
+void visit_supported_peak_profiles(BeamModeEnum mode, const std::function<void(const std::string&)>& visitor) {
+    const auto shipped = shipped_peak_profiles(mode);
+    for (const auto& token : shipped) visitor(token);
+    visit_registered_peak_types([&](const std::string& token, std::optional<BeamModeEnum> registered_mode) {
+        if (!contains(shipped, token) && registered_mode == mode) visitor(token);
+    });
+}
+
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode) {
     std::vector<std::string> profiles = shipped_peak_profiles(mode);
     for (const std::string& token : registered_peak_types()) {

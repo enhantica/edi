@@ -5,7 +5,7 @@
 # refinement boundary checks / bounds / write-back — lives in its own TUs on edi's side of the ADR-0003
 # line (core/src-private headers, the adapter_test_access.hpp shape), so the unit tier can reach it
 # without the engine; adapter.cpp keeps everything that holds a crysta type.
-find_package(crysta CONFIG REQUIRED)  # the engine, as a standalone C++ package (build-crysta.sh)
+find_package(crysta CONFIG REQUIRED GLOBAL)  # the engine, as a standalone C++ package (build-crysta.sh)
 
 # The sources and the embedded data tables, shared with the ThreadSanitizer tree (tools/ci/tsan).
 include(${CMAKE_SOURCE_DIR}/cmake/edi_core_sources.cmake)
@@ -17,6 +17,7 @@ target_include_directories(edi_core
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz
 )
 # miniz (core/third_party/miniz, edi ADR-0052) reads and writes project archives; without zlib's names it cannot

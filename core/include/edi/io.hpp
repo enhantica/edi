@@ -400,6 +400,8 @@ bool peak_type_known(const std::string& token);
 // and every registered token in the registry's order — the selector's supported-set query.
 std::optional<BeamModeEnum> peak_type_beam_mode(const std::string& token);
 std::vector<std::string> registered_peak_types();
+/// Visit registered tokens and their implemented beam modes without copying.
+void visit_registered_peak_types(const std::function<void(const std::string&, std::optional<BeamModeEnum>)>& visitor);
 
 
 
