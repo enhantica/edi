@@ -2455,3 +2455,9 @@ directory until ordinary Save packs them.
 Both parameter editor focus-loss tails recheck the original project/member/token,
 clean draft/commit state, focus and IME after publication. A successor's cursor,
 selection and draft survive even while the same editor object remains alive.
+
+The current selector owner also retains the FIRST finite absorption-catalogue
+preparation bounds used by native tool admission. The unchanged integrated
+Crysta vocabulary table is the source of the closed CW/TOF extent; this restores
+omitted declarations only. Actual option tokens still come from that vocabulary,
+with no duplicated selector list, science change or SDK pin substitution.
