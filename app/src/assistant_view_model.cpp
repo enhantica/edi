@@ -695,7 +695,7 @@ struct AssistantViewModel::State {
             // facade/Session composition can admit its lease before start.
             if(!work_reports.available() && !agent)(void)work_reports.tryInitialize();
 #endif
-            work_reports.beginAttempt();work_automatic_terminal=false;work_capture_pending=false;work_terminal.clear();work_first_cause.clear();work_clock.restart();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();}
+            work_reports.beginAttempt();work_automatic_terminal=false;work_terminal.clear();work_first_cause.clear();work_clock.restart();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();}
         catch(...){work_reports.missEvidence();}
     }
 #ifdef __EMSCRIPTEN__
@@ -888,7 +888,7 @@ struct AssistantViewModel::State {
     QVariantMap work_capture(bool automatic=false) {
         const QPointer<AssistantViewModel> receiver(&owner);
         const auto ownerLease=work_reports.releaseOwner();
-        const auto expectedScope=work_reports.scope();const auto expectedRevision=work_reports.revision();
+        const auto expectedScope=work_reports.scope();
 #ifndef __EMSCRIPTEN__
         work_complete_failure();
         if(!receiver || receiver->state_.get()!=this)return work_report_capacity_variant();
@@ -904,9 +904,17 @@ struct AssistantViewModel::State {
             if(target->project().path.size()<=Limits::message_bytes)root=target->path();
             if(!receiver || receiver->state_.get()!=this || project!=target)return work_report_capacity_variant();
         }
+        if(!projectionBlocked)work_reports.bindStorageRoot(root);
+        const auto expectedRevision=work_reports.revision();
 #ifndef __EMSCRIPTEN__
         const auto result=work_reports.capture(automatic,work_counts(),root,[this](quint64 capacity){return work_snapshot(capacity);},expectedScope,expectedRevision,projectionBlocked);
-        if(automatic && result.value("disposition").toString()=="busy")work_capture_pending=true;
+        if(automatic) {
+            const auto disposition=result.value("disposition").toString();
+            if(disposition=="busy")work_capture_pending=true;
+            else if((disposition=="accepted" || disposition=="coalesced" || disposition=="saved" || disposition=="saved_incomplete") &&
+                work_reports.scope()==expectedScope && work_reports.revision()==expectedRevision)
+                work_capture_pending=false;
+        }
         return result;
 #else
         return work_reports.capture(automatic,work_counts(),root,[](quint64){return AssistantWorkReportSnapshot{};},expectedScope,expectedRevision,projectionBlocked);
@@ -5230,6 +5238,8 @@ struct AssistantViewModel::State {
         QPointer<ProjectViewModel> completion_project;
         bool completing_existing = false;
         bool estimate_default = false;
+        std::shared_ptr<ProjectViewModel::EditOutcome> estimate_outcome;
+        std::array<Object,3> partial_outcomes;
         std::shared_ptr<edi::EmptyProjectPopulation> population;
         Object population_outcome;
         std::vector<edi::assistant::SelectedFile> selected;
@@ -7038,8 +7048,7 @@ struct AssistantViewModel::State {
                 creation->adopted = creation->population->committed();
                 std::optional<ProjectViewModel::EditOutcome> estimated;
                 if(creation->adopted && creation->estimate_default && creation->completion_project) {
-                    creation->record->estimate_receipt=std::make_shared<ProjectViewModel::EditOutcome>();
-                    estimated=creation->completion_project->estimateBackgroundOutcome(creation->record->estimate_receipt.get());
+                    estimated=creation->completion_project->estimateBackgroundOutcome(creation->estimate_outcome.get());
                 }
                 if (!receiver) return;
                 end_own_edit(edit_scope);
@@ -7054,7 +7063,7 @@ struct AssistantViewModel::State {
                 if (!result.message.isEmpty()) outcome["message"] = bounded_error(result.message);
                 if(estimated){outcome["background_estimate"]=Object{{"applied",estimated->applied},{"published",estimated->published},{"message",bounded_error(estimated->message)}};
                     if(!estimated->applied || !estimated->published){outcome["status"]="partial";outcome["complete"]=false;outcome["message"]="Setup was applied; the default native Estimate did not complete";}}
-                const bool complete=creation->adopted && result.published && (!estimated || (estimated->applied && estimated->published));
+                const bool complete=creation->adopted && result.published && (!creation->estimate_default || (estimated && estimated->applied && estimated->published));
                 release_original();
                 if (original_call()) native_finish(complete, outcome);
             } else {
@@ -7069,9 +7078,8 @@ struct AssistantViewModel::State {
                 const bool adopted = session->commitAssistantNativeModel(std::move(model), creation->epoch, current, presented);
                 std::optional<ProjectViewModel::EditOutcome> estimated;
                 if(adopted && creation->estimate_default && receiver && receiver->state_.get()==this && project && session->project()==project) {
-                    creation->record->estimate_receipt=std::make_shared<ProjectViewModel::EditOutcome>();
                     const auto scope=begin_own_edit();
-                    estimated=project->estimateBackgroundOutcome(creation->record->estimate_receipt.get());
+                    estimated=project->estimateBackgroundOutcome(creation->estimate_outcome.get());
                     if(receiver && receiver->state_.get()==this){end_own_edit(scope);if(native_call)native_refresh(*native_call);}
                 }
                 // Session observers can genuinely admit B before returning to A.
@@ -7092,7 +7100,11 @@ struct AssistantViewModel::State {
         } catch (...) {
             release_original();
             if (original_call()) {
-                if (creation->adopted) native_finish(true, creation->completing_existing ? creation->population_outcome : creation->record->outcome);
+                if (creation->adopted) {
+                    const auto& actual=creation->estimate_outcome;
+                    const auto index=actual && actual->applied ? (actual->published?2u:1u) : 0u;
+                    native_finish(false,creation->partial_outcomes[index]);
+                }
                 else native_finish(false, {{"status", "refused"}, {"adopted", false}, {"message", "The native input recipe or created-project attachment could not be completed; the original project was preserved."}});
             }
         }
@@ -7229,6 +7241,13 @@ struct AssistantViewModel::State {
         creation->selected = native_selected_bytes(*native_receipt);
         creation->epoch = session->assistantEpoch();
         creation->estimate_default=estimate_default;
+        if(estimate_default)creation->estimate_outcome=std::make_shared<ProjectViewModel::EditOutcome>();
+        // Every fallback and the required Estimate's actual receipt precede any
+        // scientific adoption. A later exception cannot relabel a prefix complete.
+        for(std::size_t at=0;at<creation->partial_outcomes.size();++at)
+            creation->partial_outcomes[at]=Object{{"status","partial"},{"adopted",true},{"complete",false},
+                {"presentation_complete",false},{"background_estimate",Object{{"required",estimate_default},{"applied",at>0},{"published",at>1}}},
+                {"message","Setup was applied; required Estimate or presentation did not complete. Inspect the actual retained state and Undo before continuing."}};
         creation->visible_setup = visible;
         creation->completion_project = project;
         creation->completing_existing = project != nullptr;
@@ -7241,6 +7260,7 @@ struct AssistantViewModel::State {
         if (!receiver || !native_call || native_call->rpc != rpc || native_call->record->call != id)
             throw std::runtime_error("The original create request changed during preparation");
         creation->receipt = native_call->receipt; creation->record = native_call->record;
+        creation->record->estimate_receipt=creation->estimate_outcome;
         try {
             track_creation_worker(creation);
             native_creation = creation;
@@ -8944,7 +8964,8 @@ struct AssistantViewModel::State {
             try {
                 if(delivered && step.target=="background.estimate") {
                     const auto receiver=run->receiver;const auto scope=begin_own_edit();
-                    auto receipt=std::make_shared<ProjectViewModel::EditOutcome>();run->call.record->estimate_receipt=receipt;
+                    const auto receipt=run->call.record->estimate_receipt;
+                    if(!receipt)throw std::runtime_error("The original required Estimate outcome is unavailable");
                     const auto estimated=run->project->estimateBackgroundOutcome(receipt.get());
                     if(!receiver || receiver->state_.get()!=this)return;
                     end_own_edit(scope);
@@ -11916,7 +11937,6 @@ struct AssistantViewModel::State {
             if(!receiver || receiver->state_.get()!=this || !work_capture_pending)return;
             // Any completed old writer releases the one writer slot. Retry the
             // latest pending current scope/root, without presenting A as B.
-            work_capture_pending=false;
             work_settled_step();
         },Qt::QueuedConnection);
     }
@@ -12566,6 +12586,16 @@ struct AssistantViewModel::State {
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<ProjectViewModel> bound_project(target);
         if (target) {
+            QObject::connect(target,&ProjectViewModel::pathChanged,&owner,[this,receiver,binding,bound_project,active] {
+                if(!receiver || receiver->state_.get()!=this || generation!=binding || (active && !*active) || !bound_project || project!=bound_project)return;
+                try {
+                    if(!work_reports.bindStorageRoot(bound_project->path()))return;
+                    if(work_reports.automatic())work_capture_pending=true;
+                    emit owner.workReportReceiptChanged();
+                    if(receiver && receiver->state_.get()==this && generation==binding && bound_project && project==bound_project)
+                        work_settled_step();
+                }catch(...){if(receiver && receiver->state_.get()==this)work_reports.missEvidence();}
+            });
             QObject::connect(target, &ProjectViewModel::projectEdited, &owner, [this, receiver, binding, bound_project, active] {
                 if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || !bound_project || project != bound_project) return;
                 auto publication = file_projection();

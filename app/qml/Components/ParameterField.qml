@@ -68,8 +68,11 @@ EaElements.ParamTextField {
             refreshCleanText();
         } else {
             const life = editorLife;
+            const originalOwner = ownerToken, originalProject = editOwner, originalItem = item;
             commit();
-            if (life.alive) cursorPosition = 0;
+            if (life.alive && ownerToken === originalOwner && editOwner === originalProject && item === originalItem &&
+                !activeFocus && draft === null && commitInProgress === null && !inputMethodComposing)
+                cursorPosition = 0;
         }
     }
     onTextChanged: if (!activeFocus)
