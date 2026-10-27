@@ -1334,6 +1334,16 @@ void ProjectViewModel::setColourScheme(const QString& scheme) {
     }
 }
 
+int ProjectViewModel::parameterNumber(const QString& uniqueName) const {
+    const std::string name = uniqueName.toStdString();
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+        if (slot.unique_name == name) {
+            return parameters_->numberOf(registry_->find(slot.parameter));
+        }
+    }
+    return 0;
+}
+
 int ProjectViewModel::colourPositionCount() const {
     int count = 1;
     for (const int position : experiment_colour_positions_ + structure_colour_positions_) {

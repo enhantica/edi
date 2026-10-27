@@ -67,8 +67,9 @@ class ScanLayer : public QQuickPaintedItem {
     // map, every other row's band blended toward the background); without, the drawing does not depend on it.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(bool highlight MEMBER highlight_ WRITE setHighlight NOTIFY highlightChanged)
-    // Highlighting on the Stacked view, every pattern but the shown one is drawn in this colour, the theme's disabled
-    // one (the owner, 2026-10-27); the Map fades its other bands by `faded`.
+    // Highlighting on the Stacked view, every pattern but the shown one is named in this colour, the theme's disabled
+    // one, and drawn thinner in it blended toward the background (the owner, 2026-10-27); the Map fades its other bands
+    // by `faded`.
     Q_PROPERTY(QColor disabledColour MEMBER disabled_colour_ WRITE setDisabledColour NOTIFY disabledColourChanged)
     Q_PROPERTY(double faded MEMBER faded_ WRITE setFaded NOTIFY fadedChanged)
     // A fit holds the cores: the painter strokes the lines on one thread, not on every core, so the fit is not slowed.
@@ -142,6 +143,8 @@ class ScanLayer : public QQuickPaintedItem {
     // is drawn disabled (the owner, 2026-10-27).
     Q_INVOKABLE void toggleHidden(int dataset);
     bool hiddenAt(std::size_t dataset) const;
+    QColor recededColour() const;
+    static double recededWidth(double width);
     ChartLegendModel* legend() const { return legend_; }
     // The most datasets the legend lists in full.
     static constexpr int kFullLegend = 15;
