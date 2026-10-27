@@ -33,6 +33,7 @@
 #include <cmath>
 #include <limits>
 #include <QFileInfo>
+#include <QJSValue>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -5237,6 +5238,9 @@ struct AssistantViewModel::State {
         quint64 epoch = 0;
         QPointer<ProjectViewModel> completion_project;
         bool completing_existing = false;
+        bool ordinary_project = false;
+        QString ordinary_name, ordinary_description, ordinary_intent, ordinary_location;
+        std::uint64_t ordinary_edit_scope = 0;
         bool estimate_default = false;
         std::shared_ptr<ProjectViewModel::EditOutcome> estimate_outcome;
         std::array<Object,3> partial_outcomes;
@@ -5703,7 +5707,7 @@ struct AssistantViewModel::State {
             const auto refreshed_scope = current_disclosure(&context);
             if(!current())return;
             const bool individual_transition = individual_disclosure_transition(call,refreshed_scope);
-            if (call.record->tool != "create_cwl_project" && !individual_transition && !same_disclosure(call.receipt->disclosure, refreshed_scope))
+            if (call.record->tool != "create_cwl_project" && call.record->tool != "create_project" && !individual_transition && !same_disclosure(call.receipt->disclosure, refreshed_scope))
                 throw std::runtime_error("The native result changed its original input disclosure");
             stage = "REFRESH_ENCODING";
             auto encoded = QJsonDocument(context).toJson(QJsonDocument::Compact);
@@ -6472,7 +6476,7 @@ struct AssistantViewModel::State {
         if (!readonly && project && (project->fit()->nativeRunning() || project->calculating())) {
             reply(false, {{"status", "busy"}, {"code", "calculation_busy"}, {"message", "The current native calculation or fit has not settled."}}); return;
         }
-        if (show_actions && !readonly && !individual_app_action(name) && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "undo_fit" && name != "add_relations" && name != "edit_relation" && name != "create_cwl_project" && name != "edit_background" && name != "estimate_background" && name != "save_project") {
+        if (show_actions && !readonly && !individual_app_action(name) && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "undo_fit" && name != "add_relations" && name != "edit_relation" && name != "create_cwl_project" && name != "create_project" && name != "edit_background" && name != "estimate_background" && name != "save_project") {
             reply(false, {{"status", "unavailable"}, {"code", "visible_unmapped"}, {"message", "This operation has no genuine visible widget workflow yet; use normal mode. Nothing was changed."}}); return;
         }
         const QPointer<CodexAgent> work_transport(agent.get());
@@ -6491,6 +6495,7 @@ struct AssistantViewModel::State {
                 (void)work_transport->endNativeWork(rpc,work_generation);
             } catch(...) {} // Deadline cleanup cannot replace the original refusal.
         });
+        if(name=="create_project"){native_start_normal_project(rpc,id,purpose,original,args);return;}
         if(individual_app_action(name)){native_start_individual(rpc,id,purpose,original,args,name);return;}
         if(name=="acquire_inputs"){native_acquire_inputs(rpc,id,purpose,original,args);return;}
         if(name=="read_selected_file"){native_read_selected_file(rpc,id,purpose,original,args);return;}
@@ -6499,7 +6504,7 @@ struct AssistantViewModel::State {
             native_start_creation(rpc, id, purpose, original, args); return;
         }
         if (!project && name != "inspect_project") {
-            reply(false, {{"status", "unavailable"}, {"code", "project_required"}, {"message", "Open a native Edi project first. Create a supported native CW project from genuine selected files first."}}); return;
+            reply(false, {{"status", "unavailable"}, {"code", "project_required"}, {"message", "Use create_project to create a normal project in this current Edi session, then continue with the normal app actions."}}); return;
         }
         if(name=="save_project") {native_start_save(rpc,id,purpose,original,args,save_stage);return;}
         if(name=="undo_fit") {native_prepare(rpc,id,name,purpose,original);native_start_fit_undo();return;}
@@ -7200,6 +7205,90 @@ struct AssistantViewModel::State {
         native_prepare(rpc,id,"save_project",purpose,original);if(!receiver || !admission.input_current() || !native_call)return;
         task->call=*native_call;native_save=task;
         try{native_start_ordinary_save(task);}catch(...){if(receiver && receiver->state_.get()==this)native_pending_save_cancelled(task);throw;}
+    }
+
+    bool normal_project_create_current(const std::shared_ptr<NativeCreation>& creation) const {
+        const auto* session=result_session();
+        return creation && creation->ordinary_project && native_creation==creation && !creation->cancelled &&
+            native_call && native_call->record==creation->record && native_call->receipt==creation->receipt &&
+            native_current(creation->receipt) && !project && session && session->emptyAssistantOwner(creation->epoch);
+    }
+    void native_apply_normal_project(const std::shared_ptr<NativeCreation>& creation) {
+        if(!normal_project_create_current(creation))return;
+        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<QQuickItem> form(widget_named("group.getStarted"));
+        bool presented=false;QVariantMap facts;
+        try {
+            QVariant defaults,answer;
+            if(!form || !QMetaObject::invokeMethod(form,"nativeCreateDefaults",Qt::DirectConnection,Q_RETURN_ARG(QVariant,defaults),
+                Q_ARG(QVariant,QVariant(creation->ordinary_name)),Q_ARG(QVariant,QVariant(creation->ordinary_description))))
+                throw std::runtime_error("The current app Create defaults are unavailable");
+            if(!normal_project_create_current(creation))return;
+            if(defaults.metaType()==QMetaType::fromType<QJSValue>())defaults=defaults.value<QJSValue>().toVariant();
+            const auto values=defaults.toMap();creation->ordinary_name=values.value("name").toString();
+            creation->ordinary_description=values.value("description").toString();creation->ordinary_location=values.value("location").toString();
+            if(!form || !QMetaObject::invokeMethod(form,"createNativeProject",Qt::DirectConnection,Q_RETURN_ARG(QVariant,answer),
+                Q_ARG(QVariant,defaults),Q_ARG(QVariant,QVariant(creation->ordinary_intent))))throw std::runtime_error("The current app Create API is unavailable");
+            if(answer.metaType()==QMetaType::fromType<QJSValue>())answer=answer.value<QJSValue>().toVariant();
+            facts=answer.toMap();presented=facts.value("success").toBool() && facts.value("current").toBool();
+        }catch(...) {} // Actual adoption was latched by the shared Session commit.
+        if(!receiver || receiver->state_.get()!=this)return;
+        if(creation->ordinary_edit_scope){end_own_edit(creation->ordinary_edit_scope);creation->ordinary_edit_scope=0;}
+        const bool original=native_call && native_call->record==creation->record && native_call->receipt==creation->receipt;
+        if(native_attachment && native_attachment->creation==creation)native_attachment.reset();
+        if(native_creation==creation)native_creation.reset();
+        if(!original)return;
+        const bool current=creation->adopted && creation->receipt->project && project==creation->receipt->project &&
+            result_session() && result_session()->project()==project;
+        if(creation->adopted) {
+            auto outcome=current && presented?creation->population_outcome:creation->partial_outcomes[0];
+            outcome["saved"]=facts.contains("saved")?QJsonValue(facts.value("saved").toBool()):QJsonValue();
+            outcome["path"]=facts.value("path").toString();outcome["name"]=creation->ordinary_name;
+            if(!facts.value("error").toString().isEmpty())outcome["message"]=facts.value("error").toString();
+            if(current && native_call){native_call->may_have_written=true;native_refresh(*native_call);}
+            if(native_call && native_call->record==creation->record)native_finish(current && presented,outcome);
+        }
+        else native_finish(false,{{"status","refused"},{"adopted",false},{"complete",false},{"message","The ordinary current-session Create did not commit; no project was replaced."}});
+    }
+    void native_start_normal_project(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original,const Object& args) {
+        auto* session=result_session();
+        if(!session || project || !session->emptyAssistantOwner(session->assistantEpoch()))
+            throw std::invalid_argument("Create requires the current empty Edi session; existing projects are preserved");
+        const QPointer<AssistantViewModel> receiver(&owner);
+        auto creation=std::make_shared<NativeCreation>();creation->ordinary_project=true;
+        creation->epoch=session->assistantEpoch();creation->ordinary_name=args.value("name").toString();
+        creation->ordinary_description=args.value("description").toString();creation->ordinary_intent=QUuid::createUuid().toString(QUuid::WithoutBraces);
+        creation->selected=native_selected_bytes(*native_receipt);
+        creation->population_outcome={{"status","created"},{"adopted",true},{"complete",true},{"presentation_complete",true},
+            {"name",creation->ordinary_name},{"message","Ordinary empty project created in the current Edi session; continue with native app actions."}};
+        creation->partial_outcomes[0]={{"status","applied_unconfirmed"},{"adopted",true},{"complete",false},
+            {"presentation_complete",false},{"message","The ordinary project was created; its presentation or original owner changed. Inspect the actual current session."}};
+        native_prepare(rpc,id,"create_project",purpose,original);
+        if(!receiver || !native_call)return;
+        creation->record=native_call->record;creation->receipt=native_call->receipt;native_creation=creation;
+        QVariant prepared;
+        if(!action_window || !QMetaObject::invokeMethod(action_window,"prepareNativeProjectCreate",Qt::DirectConnection,Q_RETURN_ARG(QVariant,prepared)) || !prepared.toBool())
+            throw std::runtime_error("The current Project page is unavailable");
+        QTimer::singleShot(500,&owner,[this,receiver,creation] {
+            if(!receiver || receiver->state_.get()!=this || !normal_project_create_current(creation))return;
+            try {
+                if(!show_actions){native_apply_normal_project(creation);return;}
+                const QPointer<QQuickItem> target(widget_named("project.create"));
+                if(!target || !widget_input)throw std::runtime_error("The ordinary current-session Create control is unavailable");
+                AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
+                auto current=[this,receiver,creation,target]{return receiver && receiver->state_.get()==this && target && normal_project_create_current(creation);};
+                request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
+                request.completed=[this,receiver,creation](bool delivered,const QString&,ControlCause){
+                    if(!receiver || receiver->state_.get()!=this || !normal_project_create_current(creation))return;
+                    if(delivered)native_apply_normal_project(creation);
+                    else {native_creation.reset();native_finish(false,{{"status","refused"},{"adopted",false},{"message","The original Create cue did not complete; nothing was created."}});}
+                };
+                control_start(*native_call,ControlField::Project,std::move(request));
+            }catch(...) {
+                if(receiver && receiver->state_.get()==this && normal_project_create_current(creation)){
+                    native_creation.reset();native_finish(false,{{"status","refused"},{"adopted",false},{"message","The normal Create control is unavailable in the current window."}});
+                }
+            }
+        });
     }
 
     void native_start_creation(const QJsonValue& rpc, const QString& id, const QString& purpose, const Object& original, const Object& args, bool visible = false) {
@@ -9957,6 +10046,7 @@ struct AssistantViewModel::State {
             {"approvalPolicy","never"},{"approvalsReviewer","user"},{"modelProvider","openai"}};
         params["developerInstructions"] = QStringLiteral(
             EDI_ASSISTANT_CONTROL_GUIDANCE
+            "Operate only in this CURRENT Edi session. From an empty window use create_project, the ordinary Create API, then load_structure/create_experiment/load_data as needed. Never discover another app/window, use desktop CUA or ask the user to create the project and reply ready. Native actions retain original consent, values and owner checks. "
             "Plan setup and refinement adaptively from the actual project, input evidence, native eligibility and scientific goals. Preserve supplied scientific values, constraints and explicit free flags. Use the native background Estimate with current saved settings by default; follow its current mode and eligibility rather than forcing manual anchors or freeing every point. Import an attached CIF unless the user requests manual entry. Required API fields describe an operation, not a compulsory scientific recipe. "
             "Choose refinement actions from the actual scientific evidence, native eligibility, genuine type/data dependencies and explicit user scope. Preserve requested independent/fixed flags and supplied calibration/chemical constraints. Fit and inspect when justified; do not impose a universal page sequence or group/pass count. "
             "Before ANY FullProf occupancy setter, establish nuclear normalization and actual site/general multiplicities m/M: qraw=OccFP*M/m; for an established common positive phase factor c, OccEDI=qraw/c for EVERY phase site/species and mapped phase scale=mapped(SFP)*c*c once. Preserve partial/shared fractions and multiplicity-weighted composition. Never copy raw PCR0.5 as chemical conversion, infer c from max occupancy, clamp, force all ones or guess unresolved c. Use the detailed verified fullprof-intake mapping and read back actual chemical occupancies, scale/profile before completion. "
@@ -12470,7 +12560,8 @@ struct AssistantViewModel::State {
 #endif
             QJsonArray choices;
             for (const auto& value : native.value("models").toArray()) {
-                const auto item = value.toObject(); choices.append(Object{{"id", item.value("id")},
+                const auto item = value.toObject(); if(!item.value("available").toBool() || item.value("hidden").toBool())continue;
+                choices.append(Object{{"id", item.value("id")},
                     {"displayName", item.value("display_name")}, {"efforts", item.value("efforts")}, {"available", item.value("available").toBool()}});
             }
 #ifndef __EMSCRIPTEN__
@@ -12753,12 +12844,20 @@ struct AssistantViewModel::State {
     }
 };
 
-bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target, const QString& intent) {
+bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target, const QString& intent, const QString& location) {
 #ifndef __EMSCRIPTEN__
     const QPointer<AssistantViewModel> receiver(this);
     auto* s = state_.get();
+    const auto normal=s->native_creation;
+    if(normal && normal->ordinary_project && normal->ordinary_intent==intent) {
+        if(!target || !s->normal_project_create_current(normal) || !edi::empty_for_population(*target->assistantProject()) ||
+            !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->description()!=normal->ordinary_description ||
+            location!=normal->ordinary_location || (!location.isEmpty() && QFileInfo::exists(location)))return false;
+        (void)s->prepare_creation_attachment(normal,target,normal->population_outcome);
+        return receiver && state_.get()==s && s->normal_project_create_current(normal);
+    }
     const auto run = s->native_create_widget;
-    if (!run || !run->ordinary || run->id != intent || !run->creating_project || !s->create_widget_current(run) ||
+    if (!location.isEmpty() || !run || !run->ordinary || run->id != intent || !run->creating_project || !s->create_widget_current(run) ||
         !s->widget_input || !s->widget_input->injecting() || !target || s->project || !edi::empty_for_population(*target->assistantProject())) return false;
     const auto recipe = (run->complete_setup?run->call.record->original.value("arguments").toObject():run->arguments).value("recipe").toObject();
     if (!target->path().isEmpty() || target->name() != recipe.value("project_name").toString() ||
@@ -12782,12 +12881,17 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
         throw;
     }
 #else
-    Q_UNUSED(target); Q_UNUSED(intent); return false;
+    Q_UNUSED(target); Q_UNUSED(intent); Q_UNUSED(location); return false;
 #endif
 }
 void AssistantViewModel::finishOrdinaryProjectCreation(ProjectViewModel* target, const QString& intent, bool committed) noexcept {
 #ifndef __EMSCRIPTEN__
-    auto* s = state_.get(); const auto run = s->native_create_widget;
+    auto* s = state_.get(); const auto normal=s->native_creation;
+    if(normal && normal->ordinary_project && normal->ordinary_intent==intent && normal->adopted && committed && target==s->project) {
+        try {normal->ordinary_edit_scope=s->begin_own_edit(true);target->assistant_save_origin_=normal->ordinary_edit_scope;}catch(...) {}
+        return;
+    }
+    const auto run = s->native_create_widget;
     if (!run || !run->ordinary || run->id != intent || !run->owner_handoff) return;
     const auto creation = run->owner_handoff;
     if (committed && run->project == target) creation->adopted = true;

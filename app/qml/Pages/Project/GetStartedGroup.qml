@@ -79,6 +79,21 @@ EaElements.GroupBox {
         if (!manual && createIntent === pending && pending !== null && pending.assistant === original)
             createDialog.close(); // Terminal original-dialog callback; may admit B.
     }
+    // Native Create reuses this actual form's remembered parent/defaults. It does
+    // not accept a dialog or synthesize a chooser selection.
+    function nativeCreateDefaults(name, description) {
+        const actualName = name.length > 0 ? name : "project";
+        const parent = createDialog.projectParentDirectory
+            ? EaLogic.Utils.urlToLocalFile(createDialog.projectParentDirectory) : createDialog.defaultProjectParentDirectory;
+        return ({name: actualName, description: description, title: createDialog.projectTitle,
+            authors: createDialog.projectAuthors, location: WebFiles.available ? "" : createDialog.joinedPath(parent, actualName),
+            suRule: Preferences.newProjectSuRule, reportLibraries: Preferences.newReportLibraries === "embedded"});
+    }
+    function createNativeProject(values, intent) {
+        if (Session.project !== null || createIntent !== null || createDialog.visible) return ({});
+        return Session.createProjectWithOutcome(values.name, values.description, values.location, values.suRule,
+            values.title, values.authors, values.reportLibraries, intent);
+    }
     function chooseCreate() {
         if (createIntent !== null || createDialog.visible) return;
         const life = createLife;

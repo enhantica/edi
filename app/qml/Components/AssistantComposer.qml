@@ -22,7 +22,7 @@ Rectangle {
     function closeChoices() { if (Qt.isQtObject(choicePopup)) choicePopup.close(); }
     readonly property bool choicesEnabled: assistant.connected && !assistant.canCancel
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
-    readonly property var effortChoices: [""].concat(assistant.availableEfforts).map(token => ({token: token, label: effortLabel(token)}))
+    readonly property var effortChoices: [""].concat(assistant.availableEfforts.slice().sort((a,b)=>effortRank(b)-effortRank(a))).map(token => ({token: token, label: effortLabel(token)}))
     readonly property int selectedModelRow: {
         for (let i=0;i<assistant.models.count;++i)
             if (assistant.models.text(i,"id")===assistant.selectedModel) return i;
@@ -30,6 +30,10 @@ Rectangle {
     }
     readonly property string modelLabel: selectedModelRow>=0 ? assistant.models.text(selectedModelRow,"displayName") : qsTr("Model")
     readonly property string selectedEffortLabel: effortChoices.some(row=>row.token===assistant.selectedEffort) ? effortLabel(assistant.selectedEffort) : qsTr("Effort")
+    function effortRank(value) {
+        const order = ["none", "low", "medium", "high", "xhigh", "max", "ultra"];
+        return order.indexOf(value);
+    }
     function effortLabel(value) {
         switch (value) {
         case "": return qsTr("Auto");
@@ -39,6 +43,7 @@ Rectangle {
         case "high": return qsTr("High");
         case "xhigh": return qsTr("Extra high");
         case "max": return qsTr("Maximum");
+        case "ultra": return qsTr("Ultra");
         default: return value;
         }
     }

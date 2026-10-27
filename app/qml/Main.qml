@@ -20,6 +20,14 @@ import edi.app
 EaComponents.ApplicationWindow {
     id: window
 
+    // Same Create API/preferences as the ordinary current-window form. Native
+    // callers pass an original Session-bound intent, never another app/window.
+    function prepareNativeProjectCreate() {
+        if (Session.project !== null) return false;
+        AppState.open(AppState.Page.Project);
+        return Session.project === null;
+    }
+
     readonly property Item assistantWorkflowPage: {
         const loaders = [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader];
         const index = appBarCentralTabs.currentIndex - 1;
