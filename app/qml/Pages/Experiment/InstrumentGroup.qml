@@ -12,6 +12,8 @@ import edi.app
 // dictionary's doublet label, which the parameter registry gives it.
 // A time-of-flight single crystal measures each reflection at its own wavelength and its calculation reads no
 // instrument parameter, so it shows only the band of its reflections' wavelengths, read-only (the owner, 2026-10-23).
+// Above them, the facility and the instrument that measured the experiment (ADR-0052), chosen from lists for an
+// experiment made from a data file and shown as its file states them otherwise (the owner, 2026-10-27).
 Column {
     id: group
 
@@ -26,6 +28,27 @@ Column {
         return low === high ? shown(low) : `${shown(low)}–${shown(high)}`;
     }
 
+    spacing: AppSizes.groupContentSpacing
+
+    EaElements.GroupRow {
+        spacing: AppSizes.inputSpacing
+        SelectorField {
+            objectName: "instrument.facility"
+            label: qsTr("Facility")
+            options: group.experiment ? group.experiment.facilityOptions : null
+            token: group.experiment ? group.experiment.facilityToken : ""
+            writable: group.experiment !== null && group.experiment.descriptionEditable
+            onSelected: token => group.experiment.facilityToken = token
+        }
+        SelectorField {
+            objectName: "instrument.name"
+            label: qsTr("Instrument")
+            options: group.experiment ? group.experiment.instrumentOptions : null
+            token: group.experiment ? group.experiment.instrumentToken : ""
+            writable: group.experiment !== null && group.experiment.descriptionEditable
+            onSelected: token => group.experiment.instrumentToken = token
+        }
+    }
     ParameterGrid {
         id: grid
 
@@ -43,22 +66,6 @@ Column {
             label: qsTr("Wavelength band")
             unit: Session.units("refln.wavelength")
             fieldValue: group.reflections ? group.band(group.reflections.wavelengthLow, group.reflections.wavelengthHigh) : ""
-        }
-    }
-    // The instrument and facility that measured the experiment (ADR-0052), as its file states them.
-    EaElements.GroupRow {
-        spacing: AppSizes.inputSpacing
-        ValueField {
-            objectName: "instrument.name"
-            editable: false
-            label: Session.label("instrument.name")
-            fieldValue: group.experiment && group.experiment.instrumentName !== "" ? group.experiment.instrumentName : qsTr("Not specified")
-        }
-        ValueField {
-            objectName: "instrument.facility"
-            editable: false
-            label: Session.label("instrument.facility")
-            fieldValue: group.experiment && group.experiment.facility !== "" ? group.experiment.facility : qsTr("Not specified")
         }
     }
 }

@@ -50,6 +50,14 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(QString polarisationToken READ polarisationToken CONSTANT)
     Q_PROPERTY(QString instrumentName READ instrumentName CONSTANT)
     Q_PROPERTY(QString facility READ facility CONSTANT)
+    // The Facility and Instrument selectors: the names held, empty for "Not specified", and their options, the
+    // instruments those of the chosen facility for the experiment's sample form. They can be chosen for an
+    // experiment made from a data file; one read from a `.edi` or `.cif` file shows what its file states.
+    Q_PROPERTY(QString facilityToken READ facilityToken WRITE setFacility NOTIFY descriptionChanged)
+    Q_PROPERTY(QString instrumentToken READ instrumentToken WRITE setInstrument NOTIFY descriptionChanged)
+    Q_PROPERTY(bool descriptionEditable READ descriptionEditable NOTIFY descriptionChanged)
+    Q_PROPERTY(edi_app::OptionListModel* facilityOptions READ facilityOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* instrumentOptions READ instrumentOptions CONSTANT)
     // Each type axis's values by their dictionary names, for the Experiment type group's selectors.
     Q_PROPERTY(edi_app::OptionListModel* sampleFormOptions READ sampleFormOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* beamModeOptions READ beamModeOptions CONSTANT)
@@ -178,6 +186,13 @@ class ExperimentViewModel : public QObject {
     QString polarisationToken() const;
     QString instrumentName() const;
     QString facility() const;
+    QString facilityToken() const { return facility_token_; }
+    QString instrumentToken() const { return instrument_token_; }
+    bool descriptionEditable() const { return description_editable_; }
+    OptionListModel* facilityOptions() const { return facility_options_; }
+    OptionListModel* instrumentOptions() const { return instrument_options_; }
+    void setFacility(const QString& facility);
+    void setInstrument(const QString& instrument);
     OptionListModel* sampleFormOptions() const { return sample_form_options_; }
     OptionListModel* beamModeOptions() const { return beam_mode_options_; }
     OptionListModel* radiationProbeOptions() const { return radiation_probe_options_; }
@@ -322,6 +337,7 @@ class ExperimentViewModel : public QObject {
     void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
+    void descriptionChanged();
     void extinctionTypeChanged();
     void mosaicDistributionChanged();
     void reflnsThresholdSigmaChanged();
@@ -384,6 +400,11 @@ class ExperimentViewModel : public QObject {
     OptionListModel* polarisation_options_;
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;
+    OptionListModel* facility_options_;
+    OptionListModel* instrument_options_;
+    QString facility_token_, instrument_token_;
+    bool description_editable_ = false;
+    void sync_description();
     OptionListModel* extinction_type_options_;
     OptionListModel* mosaic_distribution_options_;
     QString extinction_type_, mosaic_distribution_;
