@@ -355,7 +355,7 @@ TEST_CASE("E11 dev larger native context preserves actual input without a cumula
         "E11 owner856 larger read-only context does not mutate science or retained context identity");
 }
 
-TEST_CASE("E11 FIRST Responses stream accepts valid cumulative work and retains typed refusal") {
+TEST_CASE("E11 dev FIRST Responses stream accepts valid cumulative work and retains typed refusal") {
     // Literal lifecycle provenance:77ba02de tests/fixtures/assistant/response_events.py,
     // from the official Responses message lifecycle. No model/scientific answers.
     edi::assistant::OpenAiStream stream("independent-turn", "independent-request", [](const auto&) {});
