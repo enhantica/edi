@@ -18,6 +18,9 @@ TestCase {
     ProjectTextProof {
         id: proof
     }
+    TextMetrics {
+        id: fitHeaderInk
+    }
     Component {
         id: application
         Main {}
@@ -88,10 +91,18 @@ TestCase {
         const head = Render.cells(table.headerItem).filter(item => item.visible && item.width > 1);
         verify(head.length > 0, "Every reached table has real laid-out header cells");
         const equal = ["atom_site", "atom_site_aniso"].includes(category);
-        const scientific = head.filter(item => item.text && !["No.", "Fit"].includes(item.text));
-        if (equal && scientific.length > 1) {
+        const scientific = head.filter(item => category === "atom_site" ? /^atom_site\.(fract_[xyz]|occupancy)$/.test(item.uid ?? "") : /^atom_site_aniso\./.test(item.uid ?? ""));
+        if (equal) {
+            verify(scientific.length >= 2, "The equal-width exceptions reach their scientific numeric columns");
             const widths = scientific.map(item => item.width);
             verify(Math.max.apply(null, widths) - Math.min.apply(null, widths) < 1, "Atom-site and displacement tables retain equal-width scientific columns");
+        }
+        if (category === "experiments") {
+            const fit = head.find(item => item.text === "Fit");
+            verify(fit !== undefined, "The Experiments table retains its Fit column");
+            fitHeaderInk.font = fit.font;
+            fitHeaderInk.text = fit.text;
+            verify((fit.width - fitHeaderInk.advanceWidth) / 2 >= AppSizes.fieldSpacing - 1, "The Experiments Fit column keeps the shared field margin to its right");
         }
         if (!table.count)
             return;
