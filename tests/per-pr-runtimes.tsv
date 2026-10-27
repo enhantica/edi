@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-27T10:02:24Z
+# measured_utc = 2026-10-27T10:29:53Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 16295 banked, 0 stale row(s) dropped)
-# Collected tests: 18752; with a reported duration: 10479
+# Recorded from: measured test run (1 node(s) measured once, 16298 banked, 0 stale row(s) dropped)
+# Collected tests: 18752; with a reported duration: 10480
 # Module-scoped fixture costs recorded: 93
 #
 # Breaches are decided PER TIER against the table
@@ -2934,7 +2934,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_constraint_warm_context.
 0.140	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[/chosen/-renamed-/chosen/renamed]
 0.150	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[/chosen///-first-/chosen/first]
 0.130	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[C:\\chosen\\\\-first-C:\\chosen\\first]
-0.000	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
+0.130	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
 0.000	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_the_preferences_shared_control_width
 0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[experiment-Experiment/ExperimentsGroup.qml-duplicateExperiment]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[structure-Structure/StructuresGroup.qml-duplicateStructure]
