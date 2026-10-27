@@ -5,5 +5,5 @@
   ],
   "observer_switch": "EDI_TEST_OBSERVERS",
   "quiet_ms": 1200,
-  "timeout_seconds": 4.9
+  "timeout_seconds": 30
 }

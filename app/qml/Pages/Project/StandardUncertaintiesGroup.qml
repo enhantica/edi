@@ -19,8 +19,8 @@ EaElements.GroupBox {
     readonly property var rules: ["iucr_19", "iucr_99"]
 
     objectName: "group.su_format"
-    collapsed: !SideBarGroups.isOpen(openKey)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
     title: Session.categoryTitle("su_format")
     icon: "ruler-horizontal"

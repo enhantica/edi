@@ -5,7 +5,8 @@ namespace edi_app {
 
 ChartLegendModel::ChartLegendModel(QObject* parent) : QAbstractListModel(parent) {}
 
-void ListedLegendModel::setRows(const QStringList& labels, const QStringList& colors, int selected) {
+void ListedLegendModel::setRows(const QStringList& labels, const QStringList& colors, int selected,
+                                const QStringList& hidden) {
     QList<Entry> entries;
     for (qsizetype i = 0; i < labels.size(); ++i) {
         Entry entry;
@@ -14,6 +15,8 @@ void ListedLegendModel::setRows(const QStringList& labels, const QStringList& co
         entry.mark = QStringLiteral("line");
         entry.markWidth = 3.0;  // the sample's thickness, pixels
         entry.selected = i == selected;
+        entry.key = entry.label;
+        entry.hidden = hidden.contains(entry.key);
         entries.append(entry);
     }
     setEntries(entries);
@@ -51,6 +54,8 @@ QVariant ChartLegendModel::data(const QModelIndex& index, int role) const {
         case LabelTextsRole: return entry.labelTexts;
         case LabelColorsRole: return entry.labelColors;
         case SelectedRole: return entry.selected;
+        case KeyRole: return entry.key;
+        case HiddenRole: return entry.hidden;
         default: return {};
     }
 }
@@ -63,7 +68,9 @@ QHash<int, QByteArray> ChartLegendModel::roleNames() const {
             {MarkWidthRole, "markWidth"},
             {LabelTextsRole, "labelTexts"},
             {LabelColorsRole, "labelColors"},
-            {SelectedRole, "selected"}};
+            {SelectedRole, "selected"},
+            {KeyRole, "key"},
+            {HiddenRole, "hidden"}};
 }
 
 ChartBandModel::ChartBandModel(QObject* parent) : QAbstractListModel(parent) {}

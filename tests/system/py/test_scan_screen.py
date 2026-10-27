@@ -210,11 +210,26 @@ def test_extras_choice_defaults_adaptive_and_survives_host_restart(screens, back
     assert item['extras'] and item['label'] and item['selectorUsable'], (
         'Scan preferences: Extras must expose the Pattern updates during a scan selector'
     )
-    options = [option.lower() for option in item['options']]
-    assert len(options) == 4 and all(
-        any(word in option for option in options)
-        for word in ('every pattern', 'second', 'adaptive', 'end')
-    ), 'Scan preferences: the selector must offer exactly the four owner-requested modes'
+    options = item['options']
+    expected = {
+        'Adaptive',
+        'About once a second',
+        'Every pattern, fit waits for the display',
+        'Every pattern, display catches up',
+        'Only at the end',
+    }
+    assert len(options) == len(expected) and set(options) == expected, (
+        'Scan preferences: the selector offers all five distinct owner-requested modes'
+    )
+    expected_mode = {
+        'adaptive': 'Adaptive',
+        'second': 'About once a second',
+        'every': 'Every pattern, fit waits for the display',
+        'end': 'Only at the end',
+    }[mode]
+    assert item['selected'] == expected_mode, (
+        'Scan preferences: the observer selects the promised mode by its exact displayed label'
+    )
     assert 'adaptive' in item['initial'].lower(), (
         'Scan preferences: a fresh machine must default to adaptive updates'
     )

@@ -143,6 +143,8 @@ struct FitJob::State {
     // A followed scan waits after each file until its pattern is shown (`wait_for_patterns`); the worker sleeps
     // on `shown`, which `frame_shown` signals.
     std::atomic<bool> wait_patterns{false};
+    // A followed scan sends every file's pattern and never waits (`send_every_pattern`).
+    std::atomic<bool> every_pattern{false};
     std::mutex shown_mutex;
     std::condition_variable shown;
 
@@ -251,10 +253,32 @@ bool FitJob::start(const Project* scan_template) {
             std::optional<std::pair<std::string, FitFrame>> file_frame;
             FileFittedCallback on_file_fitted;
             if (self->hooks.file_frame && outcome->scan) {
-                on_file_fitted = [&self, &file_frame](const std::string& file,
-                                                      const std::function<PatternSource()>& pattern) {
-                    if (!self->following.load(std::memory_order_acquire) ||
-                        !self->frame_wanted.load(std::memory_order_acquire)) {
+                on_file_fitted = [&self, &file_frame, &token](const std::string& file,
+                                                              const std::function<PatternSource()>& pattern) {
+                    if (!self->following.load(std::memory_order_acquire)) {
+                        return;
+                    }
+                    if (self->every_pattern.load(std::memory_order_acquire)) {
+                        try {
+                            file_frame.emplace(file, FitFrame{pattern()});
+                        } catch (const std::exception&) {
+                            file_frame.reset();
+                        }
+                        return;
+                    }
+#if !EDI_WORKER_OWNER_THREAD
+                    if (self->wait_patterns.load(std::memory_order_acquire)) {
+                        // Every pattern: this file was fitted while the last one was drawn; its pattern waits here
+                        // until the last one is shown, or a second (edi ADR-0029).
+                        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
+                        std::unique_lock lock(self->shown_mutex);
+                        while (!self->frame_wanted.load(std::memory_order_acquire) && !token.cancelled() &&
+                               std::chrono::steady_clock::now() < deadline) {
+                            self->shown.wait_for(lock, std::chrono::milliseconds(20));
+                        }
+                    }
+#endif
+                    if (!self->frame_wanted.load(std::memory_order_acquire)) {
                         return;
                     }
                     try {
@@ -264,8 +288,7 @@ bool FitJob::start(const Project* scan_template) {
                     }
                 };
             }
-            const FileCompleteCallback on_file_complete = [&self, &emit, &file_frame,
-                                                           &token](const ScanFileRecord& record) {
+            const FileCompleteCallback on_file_complete = [&self, &emit, &file_frame](const ScanFileRecord& record) {
                 if (const auto observe = worker_file_observer.load(std::memory_order_acquire)) {
                     observe(record.file_name);
                 }
@@ -281,17 +304,6 @@ bool FitJob::start(const Project* scan_template) {
                             self->hooks.file_frame(file, frame);
                         }
                     });
-#if !EDI_WORKER_OWNER_THREAD
-                    if (self->wait_patterns.load(std::memory_order_acquire)) {
-                        // Every pattern: the next file starts once this one is shown, or after a second.
-                        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(1);
-                        std::unique_lock lock(self->shown_mutex);
-                        while (!self->frame_wanted.load(std::memory_order_acquire) && !token.cancelled() &&
-                               std::chrono::steady_clock::now() < deadline) {
-                            self->shown.wait_for(lock, std::chrono::milliseconds(20));
-                        }
-                    }
-#endif
                 }
                 file_frame.reset();
             };
@@ -334,6 +346,8 @@ void FitJob::frame_shown() {
 void FitJob::follow(bool on) { state_->following.store(on, std::memory_order_release); }
 
 void FitJob::wait_for_patterns(bool on) { state_->wait_patterns.store(on, std::memory_order_release); }
+
+void FitJob::send_every_pattern(bool on) { state_->every_pattern.store(on, std::memory_order_release); }
 
 bool FitJob::running() const noexcept { return state_->ticket != 0; }
 

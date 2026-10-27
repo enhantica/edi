@@ -581,8 +581,18 @@ EaElements.GroupBox {
                 stepSize: sliderRow.selected ? sliderRow.selected.sliderStep : 0
                 toolTipText: sliderRow.selected ? sliderRow.selected.fileValue : ""
                 onMoved: sliderRow.selected.value = value
-                onPressedChanged: if (!pressed)
-                    sliderRow.updateLimits()
+                // Held, the pattern charts keep their y range; let go, they fit it again (ProjectViewModel.adjusting).
+                onPressedChanged: {
+                    if (group.project)
+                        group.project.adjusting = pressed;
+                    if (!pressed)
+                        sliderRow.updateLimits();
+                }
+                // A slider gone while held (the page left) holds nothing.
+                Component.onDestruction: {
+                    if (pressed && group.project)
+                        group.project.adjusting = false;
+                }
             }
             EaElements.TextField {
                 objectName: "parameters.slider.to"

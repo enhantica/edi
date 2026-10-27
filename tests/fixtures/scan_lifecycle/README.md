@@ -31,3 +31,13 @@ completion is independently checked against every input filename and actual
 from input cardinality and terminal invariants, not engine-generated goldens.
 The controls exercise idle-only, missing-end, still-running, over-counting,
 late signal, changing elapsed text, short observation and nonfinite traces.
+
+The process wait is a liveness watchdog, not a scan-speed assertion. The app
+publishes its trace and exits only after the scan finishes and the complete
+1200 ms quiet window elapses. `timeout_seconds` allows 30 seconds for that
+receipt, including Pixi/app startup and shutdown on a loaded software-rendering
+host. It replaces the former 4.9-second near-baseline cap; it does not change
+any required signal, terminal state, quiet duration or persisted result row.
+A stuck or never-stopping app still fails at the finite cap and its owned
+process tree is stopped. Runtime observations remain separately banked by the
+canonical per-tier audit.

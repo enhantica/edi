@@ -1,4 +1,4 @@
-"""Read-only linked-structure display while the app execution tiers are disabled."""
+"""Read-only linked-structure wiring and actual display-binding execution."""
 
 import hashlib
 import re
@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.table_display import gui_base
+from tests.integration.py.test_scan_app_contract import javascript, property_value
 from tests.integration.py.test_table_display import run_functions
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -53,8 +54,34 @@ def check_cell(cell):
     assert (
         'Session.suText("linked_structure.weight_fraction", fractionValue, fractionError)' in cell
     ), 'The derived fraction must supply its uncertainty separately for the value menu'
-    assert re.search(r'"value"\s*:\s*""', cell), (
-        'An unavailable or disabled fraction retains an empty value cell'
+
+
+def check_empty_cell_text(cell):
+    # Execute the actual cell map and upstream rendered-text bindings. This is
+    # source-binding behavior, not a Qt pixel capture or a copied empty-value rule.
+    parameter = re.search(r'parameter:\s*([\s\S]*?)\n\s*color:', cell)
+    assert parameter, 'The fraction witness must execute the actual parameter map'
+    bindings = ''.join(
+        f'const {name}=({property_value(cell, name)});'
+        for name in ('known', 'fractionValue', 'fractionError')
+    )
+    control = (ROOT / 'tests/fixtures/table_display/ListViewParameter.qml').read_text()
+    observed = javascript(
+        'const Session={valueText:()=>{throw Error("Missing value was formatted")},'
+        'suText:()=>{throw Error("Missing uncertainty was formatted")}};'
+        'const result=[undefined,{}].map(weightFraction=>{const row={weightFraction};'
+        + bindings
+        + 'const parameter=('
+        + parameter[1]
+        + ');const control={value:(function()'
+        + property_value(control, 'value')
+        + ')()};return {text:('
+        + property_value(control, 'text')
+        + '),error:parameter.error};});console.log(JSON.stringify(result));'
+    )
+    assert observed == [{'text': '', 'error': ''}] * 2, (
+        'Unavailable and disabled empty fractions render empty text and uncertainty, '
+        'never an undefined value or numeric zero'
     )
 
 
@@ -65,6 +92,11 @@ def test_linked_structure_table_displays_weight_fraction_without_an_editor(fract
     )
     cell = fraction_cell(text)
     check_cell(cell)
+    check_empty_cell_text(cell)
+    broken = cell.replace(': ""', ': "missing"')
+    assert broken != cell, 'The empty-value escape reaches the actual unknown-fraction binding'
+    with pytest.raises(AssertionError):
+        check_empty_cell_text(broken)
     value = subprocess.check_output(
         [str(fraction_bridge), 'linked_structure.weight_fraction', '1', '0'], text=True
     )

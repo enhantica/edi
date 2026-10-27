@@ -712,6 +712,10 @@ function(target_link_libraries target)
   endif()
  endforeach()
 endfunction()
+function(qt_add_shaders target resource)
+ # ShaderTools compiles graphics assets, outside this example-resource inventory.
+ # Production still calls the real required Qt command without a fallback.
+endfunction()
 function(qt_add_resources target resource)
  cmake_parse_arguments(ARG "" "PREFIX;BASE" "FILES;OPTIONS" ${{ARGN}})
  foreach(file IN LISTS ARG_FILES)

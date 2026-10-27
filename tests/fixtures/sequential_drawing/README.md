@@ -54,3 +54,21 @@ application environment and a built native test host are required; an explicit
 `EDI_APP_TEST_RUNNER` can select a copied qualified host. A dirty copied host is
 useful red-first evidence but does not certify an exact source head, SDK closure,
 Windows or browser drawing. No reference values are read from a sibling product.
+
+The emitted frame's `file` field reads `FitViewModel.scanShownFile`, the last
+presented-file receipt. It does not read the current dataset, the latest fitted
+file or the worker's next file. The actor reads that receipt before the grab and
+rejects a capture if the receipt or running state changes across it. Its series
+arrays are also read on the GUI side before the grab. This guard does not latch
+the receipt to the image's scene-synchronisation event. A frame captured during
+a handover therefore needs that identity timing checked before a filename/
+measured-series mismatch establishes wrong scientific drawing. The independently
+parsed measured columns remain the reference; no oracle is switched to the
+newest fitted dataset merely to pass the handover.
+
+The separate `scan_screen` observer instead identifies a file by independently
+matching the current `PatternModel`'s measured-column hash (`modelMeasured`) and
+samples `chart.measured`'s actual points in that same `afterSynchronizing`
+callback. Its derived `file` is not this receipt. That observer can establish a
+synchronized model/chart-source mismatch without the GUI grab's receipt-phase
+ambiguity; neither gate substitutes the newest worker file for its own identity.
