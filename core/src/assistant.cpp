@@ -16,6 +16,7 @@
 #include "assistant_skills.hpp"
 #include "edi/calculation.hpp"
 #include "edi/fittability.hpp"
+#include "edi/background_estimate.hpp"
 #include "edi/categories.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/io.hpp"
@@ -96,6 +97,56 @@ std::string_view metadata_key(const ItemKey& value, std::string_view fallback) {
     return raw.empty() ? fallback : std::string_view(raw);
 }
 
+struct MeasurementFacts {
+    bool powder = false, has_axis = false;
+    std::string_view status = "absent", weighting = "unavailable", kind, unit;
+    std::size_t count = 0, intensities = 0, uncertainties = 0;
+    std::optional<double> minimum, maximum;
+};
+MeasurementFacts measurement_facts(const ExperimentBase& experiment) {
+    MeasurementFacts out;
+    out.powder = experiment.experiment_type.effective_sample_form() == SampleFormEnum::POWDER;
+    if (!out.powder) {
+        if (!experiment.reflections) return out;
+        const auto& data = *experiment.reflections;
+        out.has_axis = true; out.kind = "miller_indices"; out.unit = "dimensionless";
+        out.count = data.index_h.size(); out.intensities = data.intensity_meas.size();
+        out.uncertainties = data.intensity_meas_su.size();
+        bool valid = !experiment.data && data.rectangular();
+        for (const auto value : data.intensity_meas.get()) valid = valid && std::isfinite(value);
+        for (const auto value : data.intensity_meas_su.get()) valid = valid && std::isfinite(value) && value > 0;
+        for (const auto value : data.wavelength.get()) valid = valid && std::isfinite(value) && value > 0;
+        out.status = valid ? "present" : "invalid";
+        if (valid && out.intensities && !experiment.calculation_only)
+            out.weighting = "measured_standard_uncertainty";
+        return out;
+    }
+    if (!experiment.data) return out;
+    const auto& data = *experiment.data;
+    const auto& theta = data.two_theta.get(); const auto& tof = data.time_of_flight.get();
+    out.intensities = data.intensity_meas.size(); out.uncertainties = data.intensity_meas_su.size();
+    out.status = "invalid";
+    if (bool(theta) == bool(tof)) return out;
+    const auto& values = theta ? *theta : *tof;
+    bool valid = !experiment.reflections;
+    for (const auto value : values) valid = valid && std::isfinite(value);
+    for (const auto value : data.intensity_meas.get()) valid = valid && std::isfinite(value);
+    bool usable_su = out.uncertainties == values.size() && out.uncertainties != 0;
+    for (const auto value : data.intensity_meas_su.get()) usable_su = usable_su && std::isfinite(value) && value > 0;
+    const bool measured = out.intensities == values.size() && (out.uncertainties == 0 || usable_su);
+    const bool mode_matches = bool(theta) == (experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH);
+    const bool observations_valid = experiment.calculation_only ? out.intensities == 0 && out.uncertainties == 0 : measured;
+    if (valid && mode_matches && observations_valid) out.status = "present";
+    if (valid) {
+        out.has_axis = true; out.kind = theta ? "two_theta" : "time_of_flight";
+        out.unit = theta ? "degrees" : "µs"; out.count = values.size();
+        if (!values.empty()) {const auto bounds = std::minmax_element(values.begin(), values.end());out.minimum=*bounds.first;out.maximum=*bounds.second;}
+    }
+    if (valid && mode_matches && observations_valid && !experiment.calculation_only && usable_su)
+        out.weighting = "measured_standard_uncertainty";
+    return out;
+}
+
 std::uint64_t project_metadata_size(const Project* project) {
     if (!project) return encoded_fields({{"structures", 2}, {"datasets", 2},
         {"relations", encoded_fields({{"aliases", 2}, {"constraints", 2}})}});
@@ -112,13 +163,14 @@ std::uint64_t project_metadata_size(const Project* project) {
             {"sites", sites}, {"anisotropic_site_ids", anisotropic}});
     });
     const auto datasets = encoded_rows(project->experiments, [](const auto& experiment) {
+        const auto facts = measurement_facts(*experiment);
         std::uint64_t profile_options=2;bool profile_comma=false;
-        visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token) {
+        if (facts.powder) visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token) {
             const auto size=encoded_text(token)+(profile_comma?1:0);
             if(size>Limits::context_bytes-profile_options)refuse("resource_exhausted","Profile options exceed context capacity");
             profile_options+=size;profile_comma=true;
         });
-        const auto absorption_tokens=supported_absorption_families(experiment->effective_beam_mode());
+        const auto absorption_tokens=facts.powder ? supported_absorption_families(experiment->effective_beam_mode()) : std::vector<std::string>{};
         const auto absorption_options=encoded_rows(absorption_tokens,[](const auto& token){return encoded_text(token);});
         const auto exclusions = encoded_rows(experiment->excluded_regions, [](const auto& region) {
             return encoded_fields({{"id", encoded_text(region->id.value(), true)}, {"first", encoded_finite(region->first.get())}, {"second", encoded_finite(region->second.get())}});
@@ -131,45 +183,32 @@ std::uint64_t project_metadata_size(const Project* project) {
                 {"intensity", encoded_finite(point->intensity.value.get())}, {"uncertainty", encoded_optional(point->intensity.uncertainty.get())},
                 {"free", point->intensity.free.get() ? 4 : 5}, {"dependence", encoded_text(dependence(point->intensity.dependence))}});
         });
-        std::uint64_t axis_size = 4, intensity_count = 0, sigma_count = 0;
-        std::string_view data_status = "absent", weighting = "unavailable";
-        if (experiment->data) {
-            const auto& data = *experiment->data;
-            const auto& theta = data.two_theta.get(); const auto& tof = data.time_of_flight.get();
-            intensity_count = data.intensity_meas.get().size(); sigma_count = data.intensity_meas_su.get().size();
-            data_status = "invalid";
-            if (bool(theta) != bool(tof)) {
-                const auto& values = theta ? *theta : *tof;
-                bool valid = true;
-                for (const auto value : values) valid = valid && std::isfinite(value);
-                for (const auto value : data.intensity_meas.get()) valid = valid && std::isfinite(value);
-                bool usable_su = sigma_count == values.size() && sigma_count != 0;
-                for (const auto value : data.intensity_meas_su.get()) usable_su = usable_su && std::isfinite(value) && value > 0;
-                const bool measured = intensity_count == values.size() && (sigma_count == 0 || usable_su);
-                const bool mode_matches = bool(theta) == (experiment->effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH);
-                const bool observations_valid = experiment->calculation_only ? intensity_count == 0 && sigma_count == 0 : measured;
-                if (valid && mode_matches && observations_valid) data_status = "present";
-                if (valid) {
-                    const auto bounds = std::minmax_element(values.begin(), values.end());
-                    axis_size = encoded_fields({{"kind", encoded_text(theta ? "two_theta" : "time_of_flight")}, {"unit", encoded_text(theta ? "degrees" : "µs")},
-                        {"count", payload_size(J(static_cast<double>(values.size())))}, {"min", values.empty() ? 4 : encoded_finite(*bounds.first)},
-                        {"max", values.empty() ? 4 : encoded_finite(*bounds.second)}});
-                }
-                if (valid && mode_matches && observations_valid && !experiment->calculation_only && usable_su) weighting = "measured_standard_uncertainty";
-            }
-        }
+        const auto axis_size = facts.has_axis ? encoded_fields({{"kind",encoded_text(facts.kind)},{"unit",encoded_text(facts.unit)},
+            {"count",payload_size(J(static_cast<double>(facts.count)))},{"min",encoded_optional(facts.minimum)},{"max",encoded_optional(facts.maximum)}}) : 4;
+        const auto terms = encoded_rows(experiment->background_terms, [](const auto& term) {
+            return encoded_fields({{"id",encoded_text(term->id.value(),true)},{"order",payload_size(J(term->order.get()))},
+                {"coefficient",encoded_finite(term->coef.value.get())},{"uncertainty",encoded_optional(term->coef.uncertainty.get())},
+                {"free",term->coef.free.get()?4:5},{"dependence",encoded_text(dependence(term->coef.dependence))}});
+        });
+        const auto options = facts.powder ? background_estimate_options(*experiment) : BackgroundEstimateOptions{};
+        const auto estimate = encoded_fields({{"mode",encoded_text(facts.powder ? background_estimate_mode(*experiment) : std::string{})},{"method",encoded_text(options.method)},
+            {"width",encoded_optional(options.width)},{"smoothness",encoded_optional(options.smoothness)},{"n_points",encoded_optional(options.n_points)},
+            {"tolerance",encoded_optional(options.tolerance)},{"in_peaks",encoded_text(options.in_peaks)},
+            {"use_model",encoded_text(options.use_model)},{"max_terms",encoded_optional(options.max_terms)}});
         return encoded_fields({{"id", encoded_text(metadata_key(experiment->name, "experiment"), true)},
+            {"sample_form",encoded_text(token(experiment->experiment_type.effective_sample_form()))},
             {"beam_mode", encoded_text(token(experiment->effective_beam_mode()))}, {"probe", encoded_text(token(experiment->experiment_type.effective_radiation_probe()))},
-            {"calculation_only", experiment->calculation_only ? 4 : 5}, {"data_status", encoded_text(data_status)}, {"axis", axis_size},
-            {"observations", encoded_fields({{"intensity_count", payload_size(J(static_cast<double>(intensity_count)))},
-                {"sigma_count", payload_size(J(static_cast<double>(sigma_count)))}, {"weighting", encoded_text(weighting)}})},
-            {"peak_profile",encoded_text(effective_peak_type(*experiment))},
+            {"calculation_only", experiment->calculation_only ? 4 : 5}, {"data_status", encoded_text(facts.status)}, {"axis", axis_size},
+            {"observations", encoded_fields({{"intensity_count", payload_size(J(static_cast<double>(facts.intensities)))},
+                {"sigma_count", payload_size(J(static_cast<double>(facts.uncertainties)))}, {"weighting", encoded_text(facts.weighting)}})},
+            {"peak_profile",facts.powder ? encoded_text(effective_peak_type(*experiment)) : 4},
             {"peak_profile_options",profile_options},
-            {"absorption_type",encoded_text(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none"))},
-            {"absorption_type_options",absorption_options},{"cutoff_fwhm",encoded_finite(experiment->peak.cutoff_fwhm)},
+            {"absorption_type",facts.powder ? encoded_text(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none")) : 4},
+            {"absorption_type_options",absorption_options},{"cutoff_fwhm",facts.powder ? encoded_finite(experiment->peak.cutoff_fwhm) : 4},
             {"dataset_weight", encoded_finite(experiment->dataset_weight)}, {"excluded_regions", exclusions}, {"phases", phases},
-            {"background", encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
-                {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)}, {"anchors", anchors}})}});
+            {"background", facts.powder ? encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
+                {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)},
+                {"anchors", anchors},{"terms",terms},{"estimate",estimate}}) : 4}});
     });
     const auto aliases = encoded_rows(project->aliases, [](const auto& alias) {
         return encoded_fields({{"id", encoded_text(alias->id.value(), true)}, {"parameter_unique_name", encoded_text(alias->parameter_unique_name.value(), true)}});
@@ -212,47 +251,33 @@ J project_metadata(const Project* project) {
                 append(anchors, O{{"id", point->id.value()}, {"position", finite(point->position.get())},
                     {"intensity", finite(point->intensity.value.get())}, {"uncertainty", optional(point->intensity.uncertainty.get())},
                     {"free", point->intensity.free.get()}, {"dependence", dependence(point->intensity.dependence)}});
+            const auto facts = measurement_facts(*experiment);
             J axis;
-            std::string data_status = "absent", weighting = "unavailable";
-            std::size_t intensity_count = 0, sigma_count = 0;
-            if (experiment->data) {
-                const auto& data = *experiment->data;
-                const auto& theta = data.two_theta.get(); const auto& tof = data.time_of_flight.get();
-                intensity_count = data.intensity_meas.get().size(); sigma_count = data.intensity_meas_su.get().size();
-                data_status = "invalid";
-                if (bool(theta) != bool(tof)) {
-                    const auto& values = theta ? *theta : *tof;
-                    bool valid = true;
-                    for (const auto value : values) valid = valid && std::isfinite(value);
-                    for (const auto value : data.intensity_meas.get()) valid = valid && std::isfinite(value);
-                    bool usable_su = sigma_count == values.size() && sigma_count != 0;
-                    for (const auto value : data.intensity_meas_su.get()) usable_su = usable_su && std::isfinite(value) && value > 0;
-                    const bool measured = intensity_count == values.size() && (sigma_count == 0 || usable_su);
-                    const bool mode_matches = bool(theta) == (experiment->effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH);
-                    const bool observations_valid = experiment->calculation_only ? intensity_count == 0 && sigma_count == 0 : measured;
-                    if (valid && mode_matches && observations_valid) data_status = "present";
-                    if (valid) {
-                        const auto bounds = std::minmax_element(values.begin(), values.end());
-                        axis = O{{"kind", theta ? "two_theta" : "time_of_flight"}, {"unit", theta ? "degrees" : "µs"},
-                                 {"count", static_cast<double>(values.size())},
-                                 {"min", values.empty() ? J(nullptr) : J(*bounds.first)}, {"max", values.empty() ? J(nullptr) : J(*bounds.second)}};
-                    }
-                    if (valid && mode_matches && observations_valid && !experiment->calculation_only && usable_su) weighting = "measured_standard_uncertainty";
-                }
-            }
+            if (facts.has_axis) axis=O{{"kind",std::string(facts.kind)},{"unit",std::string(facts.unit)},
+                {"count",static_cast<double>(facts.count)},{"min",optional(facts.minimum)},{"max",optional(facts.maximum)}};
+            A terms;
+            for (const auto& term : experiment->background_terms)
+                append(terms,O{{"id",term->id.value()},{"order",term->order.get()},{"coefficient",finite(term->coef.value.get())},
+                    {"uncertainty",optional(term->coef.uncertainty.get())},{"free",term->coef.free.get()},{"dependence",dependence(term->coef.dependence)}});
+            const auto options=facts.powder ? background_estimate_options(*experiment) : BackgroundEstimateOptions{};
+            J estimate=O{{"mode",facts.powder ? background_estimate_mode(*experiment) : std::string{}},{"method",options.method},{"width",optional(options.width)},
+                {"smoothness",optional(options.smoothness)},{"n_points",optional(options.n_points)},{"tolerance",optional(options.tolerance)},
+                {"in_peaks",options.in_peaks},{"use_model",options.use_model},{"max_terms",optional(options.max_terms)}};
             A absorption_options;
-            for(const auto& token:supported_absorption_families(experiment->effective_beam_mode()))append(absorption_options,J(token));
+            if (facts.powder) for(const auto& token:supported_absorption_families(experiment->effective_beam_mode()))append(absorption_options,J(token));
             A profile_options;
-            visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token){append(profile_options,J(token));});
+            if (facts.powder) visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token){append(profile_options,J(token));});
             append(datasets, O{{"id", KeyTraits<BraggPdExperiment>::canonical(experiment->name.value())},
+                {"sample_form",token(experiment->experiment_type.effective_sample_form())},
                 {"beam_mode", token(experiment->effective_beam_mode())}, {"probe", token(experiment->experiment_type.effective_radiation_probe())},
-                {"calculation_only", experiment->calculation_only}, {"data_status", data_status}, {"axis", std::move(axis)},
-                {"observations", O{{"intensity_count", static_cast<double>(intensity_count)}, {"sigma_count", static_cast<double>(sigma_count)}, {"weighting", weighting}}},
-                {"peak_profile",effective_peak_type(*experiment)},{"peak_profile_options",std::move(profile_options)},
-                {"absorption_type",experiment->absorption.type?J(*experiment->absorption.type):J("none")},{"absorption_type_options",std::move(absorption_options)},
-                {"cutoff_fwhm",finite(experiment->peak.cutoff_fwhm)},{"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
-                {"background", O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
-                                 {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)}, {"anchors", std::move(anchors)}}}});
+                {"calculation_only", experiment->calculation_only}, {"data_status",std::string(facts.status)}, {"axis", std::move(axis)},
+                {"observations", O{{"intensity_count", static_cast<double>(facts.intensities)}, {"sigma_count", static_cast<double>(facts.uncertainties)}, {"weighting",std::string(facts.weighting)}}},
+                {"peak_profile",facts.powder ? J(effective_peak_type(*experiment)) : J(nullptr)},{"peak_profile_options",std::move(profile_options)},
+                {"absorption_type",facts.powder ? (experiment->absorption.type?J(*experiment->absorption.type):J("none")) : J(nullptr)},{"absorption_type_options",std::move(absorption_options)},
+                {"cutoff_fwhm",facts.powder ? finite(experiment->peak.cutoff_fwhm) : J(nullptr)},{"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
+                {"background",facts.powder ? J(O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
+                                 {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)},
+                                 {"anchors", std::move(anchors)},{"terms",std::move(terms)},{"estimate",std::move(estimate)}}) : J(nullptr)}});
         }
         for (const auto& alias : project->aliases) append(aliases, O{{"id", alias->id.value()}, {"parameter_unique_name", alias->parameter_unique_name.value()}});
         for (const auto& constraint : project->constraints)

@@ -228,6 +228,11 @@ class Edit {
                 const auto found = by_name.find(name);
                 if (found == by_name.end() || !seen.insert(name).second || !std::isfinite(value))
                     throw std::invalid_argument("Invalid or duplicate parameter: " + name);
+                for (const auto& experiment : project.experiments) {
+                    const auto owned = estimated_background_values(*experiment);
+                    if (std::find(owned.begin(), owned.end(), found->second) != owned.end())
+                        require_background_edit(*experiment);
+                }
                 Parameter copy = *found->second;
                 assign_value(copy, value);
                 targets.emplace_back(found->second, value);
