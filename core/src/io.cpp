@@ -34,6 +34,7 @@
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -5095,6 +5096,63 @@ bool adopt_values(Project& project, const Project& saved) {
     return changed;
 }
 
+namespace {
+
+// What a save's recalculation rewrites, as it was: the fit's agreement records, each bank's calculated columns and
+// each structure's geometry, every one as a step that puts it back.
+std::vector<std::function<void()>> hold_calculation(Project& project) {
+    std::vector<std::function<void()>> back;
+    const auto keep = [&back](auto& field) { back.emplace_back([&field, value = field] { field = value; }); };
+    FitResultRecord& result = project.fit_result;
+    keep(result.prof_wr_factor);
+    keep(result.prof_r_factor);
+    keep(result.prof_wr_expected);
+    keep(result.prof_cr_factor);
+    keep(result.prof_cwr_factor);
+    keep(result.reduced_chi_square);
+    keep(result.objective_value);
+    keep(result.n_data_points);
+    keep(result.degrees_of_freedom);
+    for (const auto& experiment : project.experiments) {
+        keep(experiment->fit_n_data_points);
+        keep(experiment->fit_prof_r_factor);
+        keep(experiment->fit_prof_wr_factor);
+        keep(experiment->fit_prof_wr_expected);
+        keep(experiment->fit_prof_cr_factor);
+        keep(experiment->fit_prof_cwr_factor);
+        keep(experiment->fit_chi_square);
+        for (const auto& link : experiment->linked_structures) {
+            keep(link->fit_bragg_r_factor);
+            keep(link->fit_f_r_factor);
+        }
+        if (experiment->data.has_value()) {
+            PdDataBase& data = *experiment->data;
+            keep(data.d_spacing);
+            keep(data.intensity_calc);
+            keep(data.intensity_bkg);
+            keep(data.calc_status);
+            keep(data.component_intensities_net);
+            keep(data.component_order);
+            keep(data.residual);
+        }
+        if (experiment->reflections.has_value()) {
+            keep(experiment->reflections->d_spacing);
+            keep(experiment->reflections->sin_theta_over_lambda);
+            keep(experiment->reflections->intensity_calc);
+        }
+        keep(experiment->refln);
+        keep(experiment->computed_source);
+        keep(experiment->carried_calculation);
+    }
+    for (const auto& structure : project.structures) {
+        keep(structure->geometry);
+        keep(structure->geometry_source);
+    }
+    return back;
+}
+
+}  // namespace
+
 bool adopt_saved_project(Project& project, const std::string& directory) {
     // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one holding
     // results, calculated here or read from its file, is calculated again from those values and written once more, so
@@ -5103,7 +5161,12 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     try {
         reopened.emplace(load_project(directory, [](const std::string&) {}));
     } catch (const IoError&) {
-        return false;
+        // The loader refuses a project without a structure, which has nothing to adopt; any other refusal to read
+        // the save back is a failed save, never "nothing changed".
+        if (project.structures.empty()) {
+            return false;
+        }
+        throw;
     }
     const bool changed = adopt_values(project, *reopened);
     const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
@@ -5121,9 +5184,19 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     }
     // Calculated again with its due background estimates deferred (ADR-0040): every other bank's results describe its
     // rounded values, in the open project and in the file, and a due bank keeps and writes its own points.
+    const std::vector<std::function<void()>> before = hold_calculation(project);
     project.refresh_calculated_pattern(DueEstimates::Defer);
     refresh_agreement_records(project);
-    save_project(project, directory);
+    try {
+        save_project(project, directory);
+    } catch (...) {
+        // The second write refused: the project holds what the first write left, the values it took with the
+        // results and records that write carried, and the save fails.
+        for (const auto& step : before) {
+            step();
+        }
+        throw;
+    }
     return changed;
 }
 

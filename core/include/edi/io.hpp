@@ -162,7 +162,8 @@ bool adopt_values(Project& project, const Project& saved);
 // adopt_saved_values, then, when the project holds results (calculated here, or read from its file), calculate
 // it from the adopted values and write it again, so the files, the open project and a reopen agree, the calculated
 // pattern and R factors included; a project without results whose values changed is written again too, so what the
-// save derives from those values follows them. Returns whether any value changed.
+// save derives from those values follows them. Returns whether any value changed. Throws IoError when the save cannot
+// be read back, unless the project has no structure (the loader refuses one; nothing is adopted).
 bool adopt_saved_project(Project& project, const std::string& directory);
 
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
