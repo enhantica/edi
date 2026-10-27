@@ -57,6 +57,9 @@ class MainActor:
             },
         )
         self.last = self.command('show_actions', enabled=show_actions)
+        (folder / 'environment.json').write_text(
+            json.dumps(self.last['ui'].get('environment', {}), indent=2) + '\n'
+        )
 
     def configure_turns(self, turns):
         assert not self.trace.exists(), 'Only the unstarted offline peer may be configured'
@@ -1896,3 +1899,87 @@ def test_on_native_parameter_target_is_revealed_from_real_virtualized_or_clipped
         row['parameter_path'] == target['path'] and row['exposed']
         for row in actor.last['ui']['controls']
     ), 'The actual native ON route realizes and exposes its originally virtualized target'
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_empty_current_session_uses_normal_create_load_and_current_save(main_actor, tmp_path, show_actions):
+    actor = main_actor([[]], show_actions=show_actions)
+    initial = actor.last['ui']
+    assert not initial['project'], (
+        'Normal app Create starts from the actual empty current Session without a seeded project'
+    )
+    environment = initial['environment']
+    documents = Path(environment['documents_root'])
+    assert documents == Path(environment['temporary_documents_root']) and documents.is_dir(), (
+        'Normal Create uses the isolated ordinary OS Documents parent without real-user writes'
+    )
+    project_name = 'e11_native_create_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    destination = documents / project_name
+    assert not destination.exists(), (
+        'The native ordinary Create action owns creating its previously absent project destination'
+    )
+    offered = {row['name']: row for row in actor.command('tool_specs')['reply']['tools']}
+    schema = offered['create_project']['inputSchema']
+    assert set(schema['required']) == {'purpose'} and set(schema['properties']) == {
+        'purpose', 'name', 'description'
+    }, 'Normal current-session Create exposes only ordinary name and description metadata'
+    cif = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    token = actor.command('selected_begin')['reply']['token']
+    assert actor.command('selected_add', token=token, paths=[str(cif)])['reply']['added'], (
+        'The empty current Session admits the genuine published selected CIF before native Create'
+    )
+    selected = actor.last['ui']['selected_files']
+    assert len(selected) == 1 and selected[0]['id'], (
+        'Native Create and subsequent import retain the actually admitted selected-input identity'
+    )
+    actor.configure_turns([[
+        tool_call('create_project', 'ordinary-empty-create', name=project_name,
+                  description='Independent ordinary Create continuation'),
+        tool_call('load_structure', 'ordinary-created-cif', file_id=selected[0]['id']),
+        tool_call('save_project', 'ordinary-created-current-save', destination='current'),
+    ]])
+    actor.connect()
+    actor.request('Create a new project, import the attached CIF and save it.')
+    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle')
+    outcomes = [native_result(response) for response in actor.responses()]
+    created = outcomes[0]
+    assert (created['status'] == 'created' and created['adopted'] and created['complete']
+            and created['presentation_complete'] and created['saved'] is True
+            and created['name'] == project_name and Path(created['path']) == destination), (
+        'Normal Create reports actual adopted current-owner completion and its immediately saved destination'
+    )
+    assert actor.last['ui']['singleton_identity'] and actor.last['ui']['engine_parent'], (
+        'Create, Load and Save retain the one actual current Main engine-owned Session'
+    )
+    owner = actor.last['ui']['project']
+    assert owner['name'] == project_name and Path(owner['path']) == destination, (
+        'Normal native Create retains its actual requested name and ordinary Documents destination'
+    )
+    assert (destination / 'project.edi').is_file(), (
+        'Native ordinary Create and current Save write the actual owned project rather than a receipt only'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    rows = actor.last['ui']['project']['structure_rows']
+    imported = [row for row in rows if row['length_a'] == 3.20927 and row['length_c'] == 5.21033]
+    assert len(imported) == 1 and imported[0]['gamma'] == 120, (
+        'The actual native CIF import preserves independent COD9008506 cell facts after normal Create'
+    )
+    assert imported[0]['sites'], 'The published native CIF contributes actual sites after ordinary Create'
+    assert actor.command('open', path=str(destination))['reply']['opened'], (
+        'Independent ordinary reopen reads the genuinely saved new current project'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    assert actor.last['ui']['project']['structure_rows'] == rows, (
+        'Normal current Save conserves the actual imported structure through independent ordinary reopen'
+    )
+
+
+def test_fresh_actual_main_has_no_startup_report_capacity_failure(main_actor):
+    actor = main_actor([[]])
+    assert not actor.last['ui']['project'], (
+        'The independent startup-report check observes the actual empty current Main Session'
+    )
+    diagnostics = {key: actor.last['ui'][key] for key in ('last_error', 'messages')}
+    assert 'report_capacity' not in json.dumps(diagnostics), (
+        'Optional diagnostic setup cannot emit a report-capacity failure before any assistant work'
+    )

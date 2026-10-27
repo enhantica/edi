@@ -14,6 +14,8 @@
 #include <QKeyEvent>
 #include <QDirIterator>
 #include <QGuiApplication>
+#include <QFile>
+#include <QDir>
 #include <QJsonValue>
 #include <QMetaMethod>
 #include <QPointer>
@@ -115,6 +117,16 @@ int main(int argc,char** argv) {
     if(!storage.isValid()) return 97;
     qputenv("XDG_DATA_HOME",storage.path().toUtf8());
     qputenv("XDG_CONFIG_HOME",storage.path().toUtf8());
+    // Isolate the normal OS Documents default; do not seed any project destination.
+    const auto temporary_documents=storage.path()+"/Documents";
+#ifdef Q_OS_LINUX
+    if(!QDir().mkpath(temporary_documents))return 94;
+    QFile user_dirs(storage.path()+"/user-dirs.dirs");
+    if(!user_dirs.open(QIODevice::WriteOnly))return 93;
+    const auto user_dirs_bytes=(QStringLiteral("XDG_DOCUMENTS_DIR=\"")+temporary_documents+"\"\n").toUtf8();
+    if(user_dirs.write(user_dirs_bytes)!=user_dirs_bytes.size())return 92;
+    user_dirs.close();
+#endif
     QGuiApplication app(argc,argv);
     QGuiApplication::setOrganizationName("EdiIndependentAcceptance");
     QGuiApplication::setApplicationName("assistant-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
@@ -268,7 +280,11 @@ int main(int argc,char** argv) {
                      {"report_embedded",observed->project()->report()->embedLibraries()},
                      {"can_undo",observed->project()->canUndo()}};
         }
-        return {{"alive",true},{"singleton_identity",singleton==observed&&qml_assistant==observed->assistant()},
+        return {{"alive",true},
+                {"environment",Object{{"documents_root",QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)},
+                    {"temporary_documents_root",temporary_documents},
+                    {"policy","Temporary XDG user-dirs Documents parent; no project destination seeded; HOME/auth untouched"}}},
+                {"singleton_identity",singleton==observed&&qml_assistant==observed->assistant()},
                 {"engine_parent",observed->parent()==engine.get()},
                 {"cpp_ownership",QJSEngine::objectOwnership(observed)==QJSEngine::CppOwnership},
                 {"connected",assistant->connected()},{"state",assistant->state()},
