@@ -129,6 +129,7 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     // Every filter back to all, and the name filter empty, in one step.
     Q_INVOKABLE void clearFilters();
     QStringList categories() const { return categories_; }
+    QString categoryFor(const ParameterItem* parameter) const; // Smallest existing offered group, same filtering predicate.
     QList<CategoryGroup> categoryGroups() const { return category_groups_; }
     Q_INVOKABLE QString text(int row, const QString& role) const;
     // The shown rows' parameters, for the table's selection (edi ADR-0017 §11): the one at a shown row (null

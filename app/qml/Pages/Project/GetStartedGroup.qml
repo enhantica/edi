@@ -30,7 +30,7 @@ EaElements.GroupBox {
             objectName: "project.create"
             fontIcon: "plus-circle"
             text: qsTr("Create a new project")
-            onClicked: AppState.afterChanges(() => EaGlobals.Vars.showProjectDescriptionDialog = true)
+            onClicked: AppState.afterChanges(() => group.chooseCreate())
         }
 
         EaElements.SideBarButton {
@@ -59,13 +59,60 @@ EaElements.GroupBox {
         }
     }
 
+    property var createLife: ({ alive: true })
+    property var createIntent: null
+    property var createOperation: null
+    property var assistantCreate: null
+    Component.onDestruction: createLife.alive = false
+    function prepareAssistantCreate(id) {
+        if (id.length === 0 || Session.project !== null || createIntent !== null || assistantCreate !== null || createDialog.visible) return false;
+        assistantCreate = { id: id, cancelled: false };
+        return assistantCreate !== null && assistantCreate.id === id && Session.project === null;
+    }
+    function retireAssistantCreate(id, manual) {
+        const original = assistantCreate;
+        if (original === null || original.id !== id) return;
+        original.cancelled = true;
+        const pending = createIntent;
+        if (manual && pending !== null && pending.assistant === original) pending.assistant = null;
+        if (assistantCreate === original) assistantCreate = null;
+        if (!manual && createIntent === pending && pending !== null && pending.assistant === original)
+            createDialog.close(); // Terminal original-dialog callback; may admit B.
+    }
+    function chooseCreate() {
+        if (createIntent !== null || createDialog.visible) return;
+        const life = createLife;
+        const original = { project: Session.project, assistant: assistantCreate };
+        createOperation = original;
+        if (!life.alive || createOperation !== original) return;
+        createIntent = original;
+        if (!life.alive || createIntent !== original || Session.project !== original.project) return;
+        EaGlobals.Vars.showProjectDescriptionDialog = true;
+    }
+
     EaComponents.ProjectDescriptionDialog {
         id: createDialog
+        objectName: "createProject.dialog"
+        readonly property string assistantIntentId: group.createIntent !== null && group.createIntent.assistant !== null ? group.createIntent.assistant.id : ""
         // The base's dialog (edi's copy joins the location cleanly), placed on whole pixels as AppDialog is.
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
         visible: EaGlobals.Vars.showProjectDescriptionDialog
-        onClosed: EaGlobals.Vars.showProjectDescriptionDialog = false
+        onClosed: {
+            const life = group.createLife;
+            const original = group.createIntent;
+            // Qt's same close/accepted signal tail retains this original token
+            // until accepted can consume it. Never clear a newer dialog intent.
+            Qt.callLater(() => {
+                if (!life.alive || group.createIntent !== original || createDialog.visible) return;
+                if (original !== null && original.assistant !== null && group.assistantCreate === original.assistant)
+                    group.assistantCreate = null;
+                if (!life.alive || group.createIntent !== original || createDialog.visible) return;
+                group.createIntent = null;
+                if (!life.alive || group.createIntent !== null || createDialog.visible) return;
+                EaGlobals.Vars.showProjectDescriptionDialog = false;
+            });
+        }
         // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
         // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
         defaultProjectParentDirectory: EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
@@ -73,12 +120,19 @@ EaElements.GroupBox {
         // reset here, not only when the dialog has closed: this page goes before its closing ends, and the new page's
         // dialog would open again on a flag still set.
         onAccepted: {
-            EaGlobals.Vars.showProjectDescriptionDialog = false;
+            const life = group.createLife, original = group.createIntent;
+            if (original === null || Session.project !== original.project || (original.assistant !== null && original.assistant.cancelled)) return;
+            group.createIntent = null;
+            if (!life.alive || group.createOperation !== original || Session.project !== original.project) return;
+            if (original.assistant !== null && group.assistantCreate === original.assistant) group.assistantCreate = null;
             const name = createDialog.projectName, description = createDialog.projectDescription;
             const location = WebFiles.available ? "" : createDialog.projectLocation;
             const title = createDialog.projectTitle, authors = createDialog.projectAuthors;
+            EaGlobals.Vars.showProjectDescriptionDialog = false;
             Qt.callLater(() => {
-                if (!Session.createProject(name, description, location, Preferences.newProjectSuRule, title, authors, Preferences.newReportLibraries === "embedded"))
+                if (!life.alive || group.createOperation !== original || Session.project !== original.project || (original.assistant !== null && original.assistant.cancelled)) return;
+                const outcome = Session.createProjectWithOutcome(name, description, location, Preferences.newProjectSuRule, title, authors, Preferences.newReportLibraries === "embedded", original.assistant !== null ? original.assistant.id : "");
+                if (!outcome.success && outcome.current && Session.creationOutcomeCurrent(outcome) && outcome.error.length > 0 && original.assistant === null)
                     AppState.createFailed();
             });
         }

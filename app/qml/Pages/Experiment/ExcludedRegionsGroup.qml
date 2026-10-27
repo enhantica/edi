@@ -60,6 +60,9 @@ Column {
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.regions
+                editIndex: row.index
                 horizontalAlignment: Text.AlignLeft
                 objectName: `excludedRegion.id.${row.index}`
                 value: row.model.id

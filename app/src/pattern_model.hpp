@@ -78,6 +78,7 @@ class PatternModel : public QAbstractListModel {
     AxisKind axisKind() const { return axis_kind_; }
     QString calculationError() const { return calculation_error_; }
     bool stale() const { return stale_; }
+    std::size_t calculatedPointCount() const noexcept { return published_calc_.size(); }
     QStringList componentNames() const { return component_names_; }
 
     int rowCount(const QModelIndex& parent = QModelIndex()) const override;

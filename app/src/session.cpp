@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "session.hpp"
+#include "../../core/src/canonical_encoding.hpp"
+#include <limits>
+#include <tuple>
+#include <bit>
+#include <QScopeGuard>
 
 #include <QCoreApplication>
 #include <QDir>
@@ -27,6 +32,39 @@
 
 namespace edi_app {
 namespace {
+struct ResultDefinition {
+    std::string model;
+    using Parameter = std::tuple<std::string, std::string, std::uint64_t,
+        std::optional<std::uint64_t>, bool, std::optional<std::uint64_t>,
+        std::optional<std::uint64_t>, edi::Dependence, const edi::ParameterSpec*,
+        std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t, std::uint64_t>;
+    std::vector<Parameter> parameters;
+    std::vector<std::tuple<std::string, std::string, std::uint64_t>> aliases;
+    std::vector<std::tuple<std::string, std::string, std::uint64_t, bool, std::uint64_t>> constraints;
+    bool operator==(const ResultDefinition&) const = default;
+};
+ResultDefinition result_definition(edi::Project& project) {
+    ResultDefinition result;
+    result.model = edi::detail::canonical_encoding(project);
+    const auto bits = [](double v) { return std::bit_cast<std::uint64_t>(v); };
+    const auto optional_bits = [&bits](std::optional<double> v) -> std::optional<std::uint64_t> {
+        return v ? std::optional{bits(*v)} : std::nullopt;
+    };
+    for (const auto& entry : edi::parameter_entries(project)) {
+        const auto& p = *entry.parameter;
+        result.parameters.emplace_back(entry.block_name, entry.path, bits(p.value.get()),
+            optional_bits(p.uncertainty.get()), p.free.get(), optional_bits(p.start_value.get()),
+            optional_bits(p.start_uncertainty.get()), p.dependence, p.spec,
+            p.value.written(), p.uncertainty.written(), p.free.written(),
+            p.start_value.written(), p.start_uncertainty.written());
+    }
+    for (const auto& a : project.aliases)
+        result.aliases.emplace_back(a->id.value(), a->parameter_unique_name.value(), a->parameter_unique_name.written());
+    for (const auto& c : project.constraints)
+        result.constraints.emplace_back(c->id.value(), c->expression.value(), c->expression.written(), c->enabled.get(), c->enabled.written());
+    return result;
+}
+
 
 const QString kExamples = QStringLiteral(":/edi/examples");
 
@@ -131,8 +169,17 @@ void WarningListModel::recount() {
 Session::Session(QObject* parent, AssistantWorkReportOptions options)
     : QObject(parent), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
     assistant_ = new AssistantViewModel(this, options);
-    connect(this, &Session::projectAboutToChange, this, [this] { assistant_->setProject(nullptr); });
-    connect(this, &Session::projectChanged, this, [this] { assistant_->setProject(project_); });
+    initializeSession();
+}
+#ifndef __EMSCRIPTEN__
+Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject* parent,AssistantWorkReportOptions options)
+    : QObject(parent),examples_(new ExampleListModel(this)),warnings_(new WarningListModel(this)) {
+    assistant_=new AssistantViewModel(std::move(dependencies),this,options);
+    initializeSession();
+}
+#endif
+void Session::initializeSession() {
+    connect(assistant_, &AssistantViewModel::conversationRetired, this, &Session::retireAssistantIntent);
     // crysta's warnings reach Messages, never only the terminal (the owner, 2026-10-23).
     edi::collect_engine_warnings();
     // What a crash left in the temporary directory (edi ADR-0052).
@@ -603,9 +650,41 @@ bool Session::openExampleNamed(const QString& exampleId) {
     return open(target, exampleId);
 }
 
+struct Session::ProjectCreationOutcome {
+    QPointer<ProjectViewModel> owner;
+    quint64 replacement = 0;
+    bool has_owner = false;
+    QString error;
+};
 bool Session::createProject(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
-                            bool reportLibraries) {
+                            bool reportLibraries, const QString& assistantIntent) {
+    return createProjectImpl(name, description, location, suRule, title, authors, reportLibraries, assistantIntent, nullptr);
+}
+QVariantMap Session::createProjectWithOutcome(const QString& name, const QString& description, const QString& location,
+                            const QString& suRule, const QString& title, const QString& authors,
+                            bool reportLibraries, const QString& assistantIntent) {
+    const QPointer<Session> receiver(this);
+    ProjectCreationOutcome outcome;
+    const bool success = createProjectImpl(name, description, location, suRule, title, authors,
+                                          reportLibraries, assistantIntent, &outcome);
+    if (!receiver) return {};
+    const bool current = (!outcome.has_owner || outcome.owner) && project_ == outcome.owner &&
+        replacement_generation_ == outcome.replacement;
+    return {{"success", success}, {"current", current}, {"error", outcome.error},
+        {"owner", QVariant::fromValue(static_cast<QObject*>(outcome.owner.data()))},
+        {"has_owner", outcome.has_owner}, {"replacement", QString::number(outcome.replacement)}};
+}
+bool Session::creationOutcomeCurrent(const QVariantMap& outcome) const {
+    const auto original = outcome.value("owner").value<QObject*>();
+    return (!outcome.value("has_owner").toBool() || original) && project_ == original &&
+        outcome.value("replacement").toString() == QString::number(replacement_generation_);
+}
+bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
+                            const QString& suRule, const QString& title, const QString& authors,
+                            bool reportLibraries, const QString& assistantIntent, ProjectCreationOutcome* outcome) {
+    const QPointer<Session> receiver(this);
+    if (outcome) { outcome->owner = project_; outcome->has_owner = project_ != nullptr; outcome->replacement = replacement_generation_; }
     ProjectViewModel* created = nullptr;
     try {
         edi::Project project = edi::empty_project(name.toStdString(), description.toStdString());
@@ -619,24 +698,47 @@ bool Session::createProject(const QString& name, const QString& description, con
         project.report_html_offline = reportLibraries;
         created = new ProjectViewModel(std::move(project), this);
     } catch (const std::exception& refusal) {
-        setLastError(QString::fromUtf8(refusal.what()));
+        const auto failure = QString::fromUtf8(refusal.what());
+        if (outcome) outcome->error = failure;
+        if (receiver) setLastError(failure);
         return false;
     }
-    replaceProject(created, {}, {});
+    const QPointer<ProjectViewModel> originalCreated(created);
+    const bool assistantCreation = !assistantIntent.isEmpty();
+    try {
+        if (assistantCreation && (!location.isEmpty() || !assistant_->prepareOrdinaryProjectCreation(created, assistantIntent))) {
+            if (originalCreated) originalCreated->deleteLater();
+            return false;
+        }
+    } catch (const std::exception&) {
+        if (originalCreated) originalCreated->deleteLater();
+        return false; // Original native receipt retains the failure; never use B's error.
+    }
+    if (!receiver || !originalCreated) return false;
+    bool committed = false;
+    quint64 committedReplacement = 0;
+    const bool presented = replaceProject(created, {}, {}, assistantCreation, &committed, &committedReplacement);
+    if (outcome && committed) {
+        outcome->owner = originalCreated; outcome->has_owner = true; outcome->replacement = committedReplacement;
+    }
+    if (receiver && assistantCreation) assistant_->finishOrdinaryProjectCreation(originalCreated, assistantIntent, committed);
+    const auto current = [&] { return receiver && originalCreated && project_ == originalCreated &&
+        committed && replacement_generation_ == committedReplacement; };
+    if (!presented || !current()) return false;
     if (location.isEmpty()) {
         return true;
     }
-    const QString before = project_->path();
-    const QString error = project_->saveTo(location);
+    const QString error = originalCreated->saveTo(location);
+    if (outcome) outcome->error = error;
+    if (!current()) return false;
     setLastError(error);
-    // Refused after its write, the project works where it was written, unsaved: the place follows it.
-    if (!error.isEmpty() && project_->path() == before) {
-        return false;
-    }
+    if (!current() || !error.isEmpty()) return false;
     emit projectLocationChanged();
+    if (!current()) return false;
     emit needsSaveAsChanged();
+    if (!current()) return false;
     emit projectDirectoryUsed(QFileInfo(location).absoluteFilePath());
-    return error.isEmpty();
+    return true;
 }
 
 void Session::closeProject() { replaceProject(nullptr, {}, {}); }
@@ -764,7 +866,13 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-void Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement) {
+    const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
+    const bool hasTarget=project!=nullptr;
+    if(replacement_generation_==UINT64_MAX)throw std::length_error("Session replacement identity is exhausted");
+    const auto replacement=++replacement_generation_;
+    auto current=[&]{return receiver && replacement_generation_==replacement && (!hasTarget || target);};
+    retireAssistantIntent(); if(!current())return false;
     keep_timer_->stop();
     // A web open still being read no longer replaces anything.
     ++open_request_;
@@ -786,11 +894,24 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // the new state of the others; then each property signals only if it changed.
     ProjectViewModel* previous = project_;
     const QString previous_example = opened_example_;
-    emit projectAboutToChange();
-    project_ = project;
+    const bool previous_idle=previous==nullptr || (previous->publication_depth_==0 && !previous->editing_);
+    if(previous){disconnect(previous,nullptr,this,nullptr);previous->retire();}
+    if(!nativePrepared){emit projectAboutToChange();if(!current())return false;}
+    if(nativePrepared && !assistant_->commitNativeProject(target))return false;
+    project_ = target;
+    if(committed)*committed=true;
+    if(committedReplacement)*committedReplacement=replacement;
+    if(!nativePrepared && !assistant_->attachProject(target,false))return false;
+    if(!current() || project_!=target)return false;
     opened_example_ = example;
     warnings_->setMessages(warnings);
+    if(!current() || project_!=target)return false;
     if (project_ != nullptr) {
+        connect(project_, &ProjectViewModel::projectEdited, this, [this] {
+            auto* source=qobject_cast<ProjectViewModel*>(sender());
+            if(source!=project_ || assistant_->ordinarySaveNotification(source))return;
+            retireAssistantIntent();
+        });
         connect(project_, &ProjectViewModel::refused, this, &Session::setLastError);
         connect(project_, &ProjectViewModel::recalculated, this, &Session::syncCalculationMessages);
         // A load's or a removal's account: each one listed as its own message.
@@ -802,7 +923,9 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         });
     }
     syncCalculationMessages();  // the new project calculated before it was connected
+    if(!current() || project_!=target)return false;
     setLastError({});
+    if(!current() || project_!=target)return false;
     if ((previous != nullptr) != (project_ != nullptr)) {
         emit hasProjectChanged();
     }
@@ -810,12 +933,16 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         emit openedExampleChanged();
     }
     emit projectChanged();
+    if(!current() || project_!=target)return false;
     emit projectLocationChanged();
+    if(!current() || project_!=target)return false;
     emit locationTextChanged();
+    if(!current() || project_!=target)return false;
     emit needsSaveAsChanged();
+    if(!current() || project_!=target)return false;
     // The replaced project's temporary folder goes with it, once it is gone.
     const QString previous_folder = std::exchange(temporary_folder_, QString());
-    if (previous != nullptr) {
+    if (previous != nullptr && previous_idle) {
         previous->deleteLater();
         // Free the replaced project's view-models, and the page items the views released for them,
         // now rather than at the next event-loop turn: projects opened back to back (a script, a
@@ -828,6 +955,7 @@ void Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     if (!previous_web_copy.isEmpty()) {
         QDir(previous_web_copy).removeRecursively();
     }
+    return current() && project_==target;
 }
 
 // ---- The web app's places (edi ADR-0052 §9) ---------------------------------------------------------
@@ -1225,3 +1353,87 @@ QString Session::suText(const QString& uid, double value, double su) const {
 }
 
 }  // namespace edi_app
+
+void edi_app::Session::retireAssistantIntent() noexcept {
+    if(assistant_epoch_==UINT64_MAX)assistant_epoch_exhausted_=true;else ++assistant_epoch_;
+    if(assistant_save_choice_){const auto token=assistant_save_choice_->token;try{cancelAssistantSaveAs(token);}catch(...) {}}
+}
+bool edi_app::Session::emptyAssistantOwner(quint64 epoch) const noexcept {
+    return !assistant_epoch_exhausted_ && assistant_epoch_==epoch && !project_;
+}
+namespace edi_app {
+std::unique_ptr<ProjectViewModel> Session::prepareAssistantNativeModel(edi::Project project, quint64 epoch,
+                                                               const std::function<bool()>& current) {
+    if (!emptyAssistantOwner(epoch) || !current()) return {};
+    project.path.clear(); project.metadata.path.clear();
+    // Same semantic-definition boundary as captured result adoption: moving
+    // ItemVec generations is initialization, changing science is not.
+    const auto definition = result_definition(project);
+    const auto source = edi::work_stamps(project);
+    auto model = std::make_unique<ProjectViewModel>(std::move(project), this);
+    const auto final = edi::work_stamps(*model->assistantProject());
+    if (definition != result_definition(*model->assistantProject()) ||
+        source.experiment_inputs != final.experiment_inputs || source.structure_inputs != final.structure_inputs ||
+        source.experiments != final.experiments || source.structures != final.structures ||
+        source.aliases != final.aliases || source.constraints != final.constraints || source.edits != final.edits || source.edits_at != final.edits_at)
+        throw std::runtime_error("Native creation changed during host model preparation");
+    if (!emptyAssistantOwner(epoch) || !current()) return {};
+    model->setModified(true);
+    return model;
+}
+bool Session::commitAssistantNativeModel(std::unique_ptr<ProjectViewModel> model, quint64 epoch,
+                                        const std::function<bool()>& current, bool& presentationComplete) {
+    presentationComplete = false;
+    if (!model || !emptyAssistantOwner(epoch) || !current()) return false;
+    const QPointer<ProjectViewModel> adopted(model.get());
+    if (replacement_generation_ == UINT64_MAX) throw std::length_error("Session replacement identity is exhausted");
+    const auto replacement = replacement_generation_ + 1;
+    bool committed = false;
+    try {
+        const bool published = replaceProject(adopted, {}, {}, true, &committed);
+        if (!committed) return false; // Still a genuinely local, unexposed candidate.
+        model.release(); // May already have been retired/deleted by a later observer.
+        presentationComplete = published && adopted && project_ == adopted && replacement_generation_ == replacement;
+        return true; // Real adoption, independently of later presentation/current owner.
+    } catch (...) {
+        if (committed) {
+            model.release();
+            if (replacement_generation_ == replacement && adopted && project_ == adopted)
+                try { setLastError(tr("The native project opened, but some presentation did not complete.")); } catch (...) {}
+            return true;
+        }
+        throw;
+    }
+}
+
+}
+
+namespace edi_app {
+bool Session::assistantSaveAsCurrent(const QString& token) const {
+    const auto* choice=assistant_save_choice_.get();
+    return choice && choice->token==token && choice->owner && choice->owner==project_ &&
+        choice->epoch==assistant_epoch_ && !assistant_epoch_exhausted_ && choice->current && choice->current();
+}
+QUrl Session::assistantSaveAsTarget(const QString& token,bool zip) const {
+    const auto ordinary=suggestedSaveTarget(zip);
+    if(!assistantSaveAsCurrent(token) || assistant_save_choice_->suggestion.isEmpty())return ordinary;
+    return QUrl::fromLocalFile(QFileInfo(ordinary.toLocalFile()).dir().filePath(assistant_save_choice_->suggestion+(zip?QStringLiteral(".zip"):QString())));
+}
+bool Session::requestAssistantSaveAs(const QString& token,const QString& name,ProjectViewModel* owner,quint64 epoch,
+    std::function<bool()> current,std::function<bool(const QUrl&,bool,bool)> accepted,std::function<void()> cancelled) {
+    if(token.isEmpty() || assistant_save_choice_ || !owner || project_!=owner || assistant_epoch_exhausted_ || assistant_epoch_!=epoch || !current || !current())return false;
+    auto choice=std::make_unique<AssistantSaveChoice>();choice->token=token;choice->suggestion=name;choice->owner=owner;choice->epoch=epoch;
+    choice->current=std::move(current);choice->accepted=std::move(accepted);choice->cancelled=std::move(cancelled);assistant_save_choice_=std::move(choice);
+    emit assistantSaveAsRequested(token);return true;
+}
+void Session::cancelAssistantSaveAs(const QString& token) {
+    if(!assistant_save_choice_ || assistant_save_choice_->token!=token)return;
+    auto choice=std::move(assistant_save_choice_);
+    if(choice->cancelled)choice->cancelled();
+}
+bool Session::completeAssistantSaveAs(const QString& token,const QUrl& target,bool zip,bool copy) {
+    if(!assistantSaveAsCurrent(token))return false;
+    auto choice=std::move(assistant_save_choice_);
+    return choice->accepted && choice->accepted(target,zip,copy);
+}
+}

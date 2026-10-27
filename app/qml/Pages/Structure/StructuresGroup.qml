@@ -12,8 +12,8 @@ import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 // Structures (N) (easydiffractionbeta Pages/Model/SideBarBasic/Models.qml): the project's structures,
-// one current; a structure enters only from a `.edi` block file, while the project holds none — an
-// edi project holds one structure.
+// one current. The original Load accepts native .edi and the already supported
+// single-structure CIF vocabulary; all additions use the same editor/Undo.
 EaElements.GroupBox {
     id: group
 
@@ -82,6 +82,9 @@ EaElements.GroupBox {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    editMember: row
+                    editModel: group.project ? group.project.structures : null
+                    editIndex: row.index
                     horizontalAlignment: Text.AlignLeft
                     objectName: `structures.name.${row.index}`
                     value: row.name
@@ -147,10 +150,42 @@ EaElements.GroupBox {
         }
     }
 
-    // This page's browser file request and the project it was made for: only its own answer is used, and only
-    // while that project is still open.
+    property var pickerLife: ({ alive: true })
+    Component.onDestruction: pickerLife.alive = false
     property int webRequest: 0
-    property var webRequestProject: null
+    property var webIntent: null
+    function chooseStructure() {
+        const life = pickerLife;
+        const originalProject = project;
+        if (!life.alive || project !== originalProject || Session.project !== originalProject) return false;
+        if (project === null || Session.project !== project || webIntent !== null || loadDialog.intent !== null || loadDialog.visible) return false;
+        const original = { project: project };
+        if (WebFiles.available) {
+            webIntent = original;
+            if (!life.alive || webIntent !== original) return false;
+            if (project !== original.project || Session.project !== original.project) { webIntent = null; return false; }
+            const request = WebFiles.openFiles(".edi,.cif", false);
+            if (!life.alive || webIntent !== original) return false;
+            if (request === 0 || project !== original.project || Session.project !== original.project) { webIntent = null; return false; }
+            webRequest = request;
+        } else {
+            loadDialog.intent = original;
+            if (!life.alive || loadDialog.intent !== original) return false;
+            if (project !== original.project || Session.project !== original.project) { loadDialog.intent = null; return false; }
+            loadDialog.open();
+        }
+        return true;
+    }
+    function takeWebIntent(request) {
+        if (request !== webRequest || webIntent === null) return null;
+        const life = pickerLife;
+        const original = webIntent;
+        webRequest = 0;
+        if (!life.alive || webIntent !== original) return null;
+        webIntent = null; // Consume before any scientific callback or reentry.
+        if (!life.alive || webIntent !== null || project !== original.project || Session.project !== original.project) return null;
+        return original;
+    }
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {

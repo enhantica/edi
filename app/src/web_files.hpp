@@ -79,7 +79,8 @@ class WebFiles : public QObject {
    private:
     // A new directory under the app's temporary space in memory.
     static QString freshDirectory(const QString& kind);
-    // Starts a request, cancelling the active one, and returns its id.
+    // Starts a request, cancelling the active one; zero refuses if cancellation
+    // deleted the receiver or admitted a newer request, or IDs are exhausted.
     int begin();
     // Ends `request` if it is the active one; false when it is not (superseded or already answered).
     bool finish(int request);

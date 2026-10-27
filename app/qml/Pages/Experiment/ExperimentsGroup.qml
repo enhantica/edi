@@ -152,6 +152,9 @@ EaElements.GroupBox {
                 // The datablock name, editable: a refused rename returns the cell to the stored name and shows why.
                 // Editing a name also makes its row current, as a click on the row does.
                 TextCell {
+                    editMember: row
+                    editModel: group.project ? group.project.experiments : null
+                    editIndex: row.index
                     objectName: `experiments.name.${row.index}`
                     horizontalAlignment: Text.AlignLeft
                     value: row.name
@@ -216,7 +219,48 @@ EaElements.GroupBox {
                             cursorShape: Qt.PointingHandCursor
                         }
                         TapHandler {
-                            onTapped: loadData.clicked()
+                            readonly property var assistantGesture: ({ current: null })
+
+                            function sameGesture(point) {
+                                const retained = assistantGesture.current;
+                                return retained !== null && retained.device === point.device && retained.id === point.id && retained.press === point.pressTimestamp;
+                            }
+                            function discardGesture(point) {
+                                if (sameGesture(point)) {
+                                    assistantGesture.current.closed = true;
+                                    assistantGesture.current.proof = null;
+                                }
+                            }
+                            onGrabChanged: (transition, eventPoint) => {
+                                if (transition === PointerDevice.GrabPassive || transition === PointerDevice.GrabExclusive) {
+                                    if (sameGesture(eventPoint))
+                                        return; // Passive/exclusive transitions cannot rearm this press.
+                                    if (eventPoint.state !== EventPoint.Pressed)
+                                        return;
+                                    const original = { device: eventPoint.device, id: eventPoint.id, press: eventPoint.pressTimestamp, proof: null, closed: false };
+                                    const holder = assistantGesture;
+                                    holder.current = original; // No QML notification before capture/cancellation.
+                                    const proof = Session.assistant.beginManualControlInput(loadData, eventPoint, row.experiment);
+                                    if (holder.current === original && !original.closed)
+                                        original.proof = proof; // An old callback cannot overwrite a newer grab.
+                                } else if (transition === PointerDevice.UngrabPassive || transition === PointerDevice.UngrabExclusive || transition === PointerDevice.CancelGrabPassive || transition === PointerDevice.CancelGrabExclusive) {
+                                    discardGesture(eventPoint);
+                                }
+                            }
+                            onCanceled: eventPoint => {
+                                if (sameGesture(eventPoint))
+                                    discardGesture(eventPoint);
+                            }
+                            onTapped: eventPoint => {
+                                if (!sameGesture(eventPoint) || assistantGesture.current.closed)
+                                    return;
+                                const original = assistantGesture.current;
+                                const proof = original.proof;
+                                original.closed = true;
+                                original.proof = null; // Consume BEFORE validation/action and any reentry.
+                                if (Session.assistant.completeManualControlInput(loadData, eventPoint, row.experiment, proof))
+                                    loadData.clicked();
+                            }
                         }
                         EaElements.ToolTip {
                             text: qsTr("Load another data file in place of this one")
@@ -384,14 +428,13 @@ EaElements.GroupBox {
         title: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? qsTr("Load measured reflections from FullProf's .int or a plain h k l F² su file (.hkl, .dat or any other)") : qsTr("Load measured data from a plain two- or three-column file")
         nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
         onAccepted: {
-            if (dataDialog.project !== null && dataDialog.project === group.project)
-                group.project.loadDataInto(dataDialog.experiment, dataDialog.selectedFile);
-            dataDialog.project = null;
-            dataDialog.experiment = null;
+            const life = group.pickerLife;
+            const original = intent;
+            const file = selectedFile;
+            intent = null;
+            if (life.alive && intent === null && original !== null && group.project === original.project && Session.project === original.project)
+                original.project.loadDataInto(original.experiment, file);
         }
-        onRejected: {
-            dataDialog.project = null;
-            dataDialog.experiment = null;
-        }
+        onRejected: intent = null
     }
 }

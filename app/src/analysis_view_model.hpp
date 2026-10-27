@@ -92,6 +92,7 @@ class ConstraintListModel : public RowTableModel {
 
    public:
     ConstraintListModel(edi::Project& project, ProjectEditor& editor, QObject* parent);
+    ProjectEditor::RelationOutcome appendComplete(const QString& id, const QString& expression, bool enabled);
     void sync();
     Q_INVOKABLE bool setText(int row, const QString& role, const QString& value);
     Q_INVOKABLE bool setEnabled(int row, bool enabled);

@@ -6,7 +6,9 @@
 #include <QString>
 #include <QVariant>
 #include <functional>
+#include <memory>
 #include <string>
+#include <variant>
 
 #include "edi/background_estimate.hpp"
 #include "edi/edit.hpp"
@@ -40,11 +42,55 @@ inline bool has_measured_data(const edi::Project& project) {
 class ProjectEditor {
    public:
     virtual ~ProjectEditor() = default;
-    // Empty on success; the core's refusal message otherwise, with nothing changed.
+    // Empty after an actual edit (a later presentation failure remains a held app
+    // warning); nonempty only for a refusal before the core operation writes.
+    // Native callers use ProjectViewModel's explicit applied/published outcome.
     virtual QString apply(const edi::Edit& change, bool structural) = 0;
+    // The same closed typed writes used by genuine parameter widgets. A native
+    // recorded-input scope may own their Undo without replacing widget events.
+    virtual QString assign_parameter_value(edi::Parameter& parameter, double value) {
+        return apply(edi::Edit::value(parameter, value), false);
+    }
+    struct BackgroundOutcome { bool applied = false, published = false; QString message; };
+    virtual BackgroundOutcome edit_background_point(edi::ExperimentBase&, const edi::BackgroundPointInput&) {
+        return {false, false, QStringLiteral("Defined background editing is unavailable for this editor")};
+    }
+    virtual QString rename_background_point(edi::ExperimentBase&, edi::LineSegment& point, const std::string& id) {
+        return apply(edi::Edit::background_id(point, id), true);
+    }
+    virtual QString assign_parameter_free(edi::Parameter& parameter, bool free) {
+        return apply(edi::Edit::assign(parameter.free, free), false);
+    }
     // An edit of the declared relations (edi ADR-0024): applied as `apply` does, and recorded, so the
     // app bar's Undo restores the rows and every parameter state it changed.
+    struct RelationAction {
+        enum class Kind { Other, AliasAppend, AliasId, AliasParameter, ConstraintAppend, ConstraintId, ConstraintExpression, ConstraintEnabled, AliasRemove, ConstraintRemove };
+        Kind kind = Kind::Other;
+        const void* row = nullptr;
+        QString text;
+        bool enabled = false;
+        QString expression;
+    };
+    struct RelationOutcome { bool applied = false, published = false; QString message; const edi::ParameterConstraint* constraint = nullptr; };
+    virtual RelationOutcome append_constraint(edi::Project&, edi::ParameterConstraint&&, const RelationAction&) {
+        return {false, false, QStringLiteral("Constraint append is unavailable for this editor")};
+    }
     virtual QString apply_relation_edit(const edi::Edit& change) = 0;
+    virtual QString apply_relation_control(const edi::Edit& change, const RelationAction&) {
+        return apply_relation_edit(change);
+    }
+    // Original creation-row controls expose finite semantic metadata, just as
+    // the original alias/constraint controls do. No provider callable/edit exists.
+    struct CreationAction {
+        enum class Kind { ExperimentAppend, ExperimentType, ExperimentName, PeakProfile, AbsorptionType, CutoffFwhm, DatasetWeight, ExclusionAppend, ExclusionStart, ExclusionEnd, ExclusionRemove, StructureAppend, StructureName, SpaceGroupName, SpaceGroupNumber, SpaceGroupSetting, AtomAppend, AtomText, AtomRemove, AtomAdpType, PhaseAppend, PhaseRetarget, PhaseEnabled, PhaseRemove };
+        Kind kind;
+        const void* row = nullptr;
+        QString field, text;
+        double number = 0;
+    };
+    virtual QString apply_creation_control(const edi::Edit& change, bool structural, const CreationAction&) {
+        return apply(change, structural);
+    }
     // An edit of a setting of the whole project (its fitting mode, its minimizer settings, its name), applied as
     // `apply` does. In a scan project it changes the template as it is: it never makes a shown dataset the template.
     virtual QString apply_setting(const edi::Edit& change) { return apply(change, false); }

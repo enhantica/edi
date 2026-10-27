@@ -3,6 +3,7 @@
 #define EDI_APP_SESSION_HPP
 
 #include <QObject>
+#include <QPointer>
 #include <QString>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -105,6 +106,9 @@ class Session : public QObject {
     explicit Session(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
     static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
     AssistantViewModel* assistant() const { return assistant_; }
+#ifndef __EMSCRIPTEN__
+    Session(edi::assistant::native::NativeDependencies, QObject* parent=nullptr, AssistantWorkReportOptions options={});
+#endif
     ~Session() override;
 
     ProjectViewModel* project() const { return project_; }
@@ -131,7 +135,9 @@ class Session : public QObject {
     // the new project's `_report.html_offline` (ADR-0036 §7); no other project takes the preference.
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
                                    const QString& suRule = QStringLiteral("iucr_99"), const QString& title = QString(),
-                                   const QString& authors = QString(), bool reportLibraries = false);
+                                   const QString& authors = QString(), bool reportLibraries = false, const QString& assistantIntent = QString());
+    Q_INVOKABLE QVariantMap createProjectWithOutcome(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&);
+    Q_INVOKABLE bool creationOutcomeCurrent(const QVariantMap&) const;
     Q_INVOKABLE void closeProject();
     // The open project's calculation refusals into the message list, after each recalculation (§14).
     void syncCalculationMessages();
@@ -153,6 +159,10 @@ class Session : public QObject {
     // name (the project's name for one with neither), `.zip` for an archive, in the folder the project is in, else in
     // the user's documents.
     Q_INVOKABLE QUrl suggestedSaveTarget(bool zip) const;
+    Q_INVOKABLE bool assistantSaveAsCurrent(const QString& token) const;
+    Q_INVOKABLE QUrl assistantSaveAsTarget(const QString& token, bool zip) const;
+    Q_INVOKABLE bool completeAssistantSaveAs(const QString& token, const QUrl& target, bool zip, bool copy);
+    Q_INVOKABLE void cancelAssistantSaveAs(const QString& token);
 
     // The web app (edi ADR-0052 §9). Every project there has a place: the browser's own storage, or in Chrome and Edge
     // a folder or a .zip on the disk; Save writes into it, never a download.
@@ -196,6 +206,7 @@ class Session : public QObject {
     // Just before the open project is replaced (or closed): the pages let go of it first (edi ADR-0052).
     void projectAboutToChange();
     void projectChanged();
+    void assistantSaveAsRequested(const QString& token);
     void projectDirectoryUsed(const QString& path);
     void hasProjectChanged();
     void openedExampleChanged();
@@ -226,7 +237,7 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source, const QString& target, const QString& example);
-    void replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example);
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr);
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
     bool saveInto(const QString& folder);
@@ -234,6 +245,29 @@ class Session : public QObject {
     void leaveTemporaryOrigin();
     bool saveCopy(const QString& target, bool zip);
 
+    void initializeSession();
+    struct ProjectCreationOutcome;
+    bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*);
+    friend class AssistantViewModel;
+    quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
+    bool emptyAssistantOwner(quint64 epoch) const noexcept;
+    void retireAssistantIntent() noexcept;
+    std::unique_ptr<ProjectViewModel> prepareAssistantNativeModel(edi::Project, quint64, const std::function<bool()>&);
+    bool commitAssistantNativeModel(std::unique_ptr<ProjectViewModel>, quint64, const std::function<bool()>&, bool&);
+    quint64 assistant_epoch_=0, replacement_generation_=0;
+    bool assistant_epoch_exhausted_=false;
+    std::uint64_t assistant_save_origin_=0;
+    struct AssistantSaveChoice {
+        QString token, suggestion;
+        QPointer<ProjectViewModel> owner;
+        quint64 epoch=0;
+        std::function<bool()> current;
+        std::function<bool(const QUrl&,bool,bool)> accepted;
+        std::function<void()> cancelled;
+    };
+    std::unique_ptr<AssistantSaveChoice> assistant_save_choice_;
+    bool requestAssistantSaveAs(const QString&, const QString&, ProjectViewModel*, quint64,
+        std::function<bool()>, std::function<bool(const QUrl&,bool,bool)>, std::function<void()>);
     friend void configure_engine(QQmlEngine&, std::unique_ptr<Session>);
     bool engine_bound_ = false;
     AssistantViewModel* assistant_ = nullptr;

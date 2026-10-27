@@ -111,9 +111,9 @@ EaComponents.ListViewParameter {
     readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
 
     onActiveFocusChanged: {
-        if (activeFocus && text === value) {
-            text = editText;
-        } else if (!activeFocus) {
+        if (activeFocus) {
+            refreshCleanText();
+        } else {
             commit();
             cursorPosition = 0;
         }
@@ -157,7 +157,41 @@ EaComponents.ListViewParameter {
         visible: cell.warned && (cell.hovered || cell.activeFocus)
     }
 
-    onValueChanged: typedRefusal = ""
+    onValueChanged: {
+        typedRefusal = "";
+        refreshCleanText();
+    }
+    onEditTextChanged: refreshCleanText()
+    onItemChanged: {
+        if (manualEditing && manualItem !== item)
+            typedRefusal = qsTr("This draft belongs to a different parameter. Escape cancels it without applying it.");
+        else
+            refreshCleanText();
+    }
+    onInputMethodComposingChanged: {
+        if (inputMethodComposing && !assistantEditing) {
+            if (!manualEditing)
+                manualItem = item;
+            manualEditing = true;
+            // Do not assign text here: that would destroy the IME preedit.
+        }
+    }
+    // textEdited is real text input, unlike focus formatting or model publication.
+    onTextEdited: {
+        if (assistantEditing)
+            return;
+        if (!manualEditing)
+            manualItem = item;
+        manualEditing = true;
+        // TextInput editing can retain a QML binding. Detach only the genuine
+        // user draft so unrelated publication cannot replace what was typed.
+        const draft = text;
+        text = draft;
+    }
+    Keys.onEscapePressed: event => {
+        resetEditorText();
+        event.accepted = true;
+    }
     onAccepted: commit()
     onEditingFinished: commit()
 
