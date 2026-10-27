@@ -5157,18 +5157,15 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one holding
     // results, calculated here or read from its file, is calculated again from those values and written once more, so
     // its calculated pattern and R factors describe the values beside them.
-    std::optional<Project> reopened;
-    try {
-        reopened.emplace(load_project(directory, [](const std::string&) {}));
-    } catch (const IoError&) {
-        // The loader refuses a project without a structure, which has nothing to adopt; any other refusal to read
-        // the save back is a failed save, never "nothing changed".
-        if (project.structures.empty()) {
-            return false;
-        }
-        throw;
+    // The loader refuses a project without a structure, or with an experiment that has no data yet, by its own rules:
+    // such a project has nothing to adopt. Any other refusal to read the save back is a failed save.
+    if (project.structures.empty() ||
+        std::any_of(project.experiments.begin(), project.experiments.end(),
+                    [](const auto& item) { return !item->data.has_value() && !item->reflections.has_value(); })) {
+        return false;
     }
-    const bool changed = adopt_values(project, *reopened);
+    const Project reopened = load_project(directory, [](const std::string&) {});
+    const bool changed = adopt_values(project, reopened);
     const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
         return item->carried_calculation || (item->data.has_value() && !item->data->intensity_calc.empty()) ||
                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
