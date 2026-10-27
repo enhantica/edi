@@ -22,8 +22,8 @@ EaElements.GroupBox {
 
     property ProjectViewModel project: null
     property ParameterItem selected: null
-    // Some experiment holds measured data: without any, the free toggles and the free header are disabled, as Start
-    // fitting is (edi ADR-0046); values stay editable.
+    // Some experiment holds measured data: without any, nothing can be fitted (edi ADR-0046), so the free column, its
+    // header menu and the free or fixed filter are hidden (the owner, 2026-10-27); values stay editable.
     readonly property bool measured: project !== null && project.fit.measured
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
     property int selectedRow: -1
@@ -287,6 +287,7 @@ EaElements.GroupBox {
                         currentIndex = Qt.binding(() => parameterFilter.variability);
                     }
                     objectName: "parameters.variability"
+                    visible: group.measured
                     width: filters.third
                     model: titles
                     currentIndex: parameterFilter.variability
@@ -348,7 +349,7 @@ EaElements.GroupBox {
             currentRow: group.selectedRow
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
-            columnWidths: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3, group.freeColumnWidth]
+            columns: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3].concat(group.measured ? [group.freeColumnWidth] : [])
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -384,6 +385,7 @@ EaElements.GroupBox {
                 EaComponents.ListViewLabel {
                     id: freeTitle
                     objectName: "parameters.freeHeader"
+                    visible: group.measured
                     horizontalAlignment: Text.AlignHCenter
                     rightPadding: freeArrow.width + group.freeGap
                     color: group.freeTitleColor
@@ -495,6 +497,7 @@ EaElements.GroupBox {
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
                 // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053).
                 Item {
+                    visible: group.measured
                     property int horizontalAlignment: Text.AlignHCenter
                     height: parent.height
 

@@ -30,7 +30,7 @@ DataTable {
     defaultInfoText: qsTr("No reflections")
     sourceModel: experiment ? experiment.reflections : null
 
-    columnWidths: [numberColumnWidth, -1, -1, -1, -1]
+    columns: [numberColumnWidth, -1, -1, -1, -1]
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

@@ -17,22 +17,41 @@ CategoryPresentation category_presentation(const QString& id) {
     struct Place {
         T tier;
         bool extras_part = false;
+        bool needs_data = false;
+        bool extras_needs_data = false;
     };
     static const QHash<QString, Place> places{
         {QStringLiteral("metadata"), {T::Basic}},         {QStringLiteral("space_group"), {T::Basic}},
         {QStringLiteral("cell"), {T::Basic}},             {QStringLiteral("atom_site"), {T::Basic}},
         {QStringLiteral("atom_site_aniso"), {T::Basic}},  {QStringLiteral("experiment_type"), {T::Basic}},
         {QStringLiteral("data_range"), {T::Basic}},       {QStringLiteral("instrument"), {T::Basic}},
-        {QStringLiteral("peak"), {T::Basic, true}},       {QStringLiteral("background"), {T::Basic, true}},
-        {QStringLiteral("linked_structure"), {T::Basic}}, {QStringLiteral("excluded_region"), {T::Basic}},
+        {QStringLiteral("peak"), {T::Basic, true}},
+        {QStringLiteral("background"), {T::Basic, true, false, true}},
+        {QStringLiteral("linked_structure"), {T::Basic}},
+        {QStringLiteral("excluded_region"), {T::Basic, false, true}},
         {QStringLiteral("extinction"), {T::Basic}},
+        // What only a fit uses: hidden without measured data (the owner, 2026-10-27).
+        {QStringLiteral("minimizer"), {T::Extras, false, true}},
+        {QStringLiteral("fitting_mode"), {T::Extras, false, true}},
+        {QStringLiteral("refine_ls"), {T::Extras, false, true}},
+        {QStringLiteral("joint_fit"), {T::Extras, false, true}},
+        {QStringLiteral("sequential_fit"), {T::Extras, false, true}},
+        {QStringLiteral("sequential_fit_extract"), {T::Extras, false, true}},
+        {QStringLiteral("fit_parameter"), {T::Extras, false, true}},
     };
     const Place place = places.value(id, {T::Extras});
     const std::string key = id.toStdString();
     const QString icon = QString::fromStdString(edi::category_icon(key));
-    return {place.tier, QString::fromStdString(edi::category_label(key)),
-            icon.isEmpty() ? QStringLiteral("question") : icon, place.extras_part,
-            QString::fromStdString(edi::category_tooltip(key))};
+    // Extra's peak group holds only the cutoff, so it is not read as a second profile group.
+    const QString extras_title = id == QStringLiteral("peak") ? QObject::tr("Peak cutoff") : QString();
+    return {place.tier,
+            QString::fromStdString(edi::category_label(key)),
+            icon.isEmpty() ? QStringLiteral("question") : icon,
+            place.extras_part,
+            QString::fromStdString(edi::category_tooltip(key)),
+            place.needs_data,
+            place.extras_needs_data,
+            extras_title};
 }
 
 namespace {
@@ -164,6 +183,9 @@ QVariant CategoryListModel::data(const QModelIndex& index, int role) const {
         case AdmittedRole: return row.admitted;
         case ExtrasPartRole: return presentation.extras_part;
         case ToolTipRole: return presentation.tool_tip;
+        case NeedsDataRole: return presentation.needs_data;
+        case ExtrasNeedsDataRole: return presentation.extras_needs_data;
+        case ExtrasTitleRole: return presentation.extras_title;
         default: return {};
     }
 }
@@ -171,7 +193,8 @@ QVariant CategoryListModel::data(const QModelIndex& index, int role) const {
 QHash<int, QByteArray> CategoryListModel::roleNames() const {
     return {{CategoryIdRole, "categoryId"}, {TierRole, "tier"},           {TitleRole, "title"},
             {IconRole, "icon"},             {ItemCountRole, "itemCount"}, {IsLoopRole, "isLoop"},
-            {AdmittedRole, "admitted"}, {ExtrasPartRole, "extrasPart"}, {ToolTipRole, "toolTip"}};
+            {AdmittedRole, "admitted"}, {ExtrasPartRole, "extrasPart"}, {ToolTipRole, "toolTip"},
+            {NeedsDataRole, "needsData"},   {ExtrasNeedsDataRole, "extrasNeedsData"}, {ExtrasTitleRole, "extrasTitle"}};
 }
 
 }  // namespace edi_app

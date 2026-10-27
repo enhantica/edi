@@ -32,7 +32,10 @@ class CategoryListModel : public QAbstractListModel {
         IsLoopRole,
         AdmittedRole,
         ExtrasPartRole,
-        ToolTipRole
+        ToolTipRole,
+        NeedsDataRole,
+        ExtrasNeedsDataRole,
+        ExtrasTitleRole
     };
 
     explicit CategoryListModel(QObject* parent = nullptr);
@@ -70,6 +73,11 @@ struct CategoryPresentation {
     QString icon;
     bool extras_part = false;
     QString tool_tip;  // the title and the `.edi` name, from the dictionary
+    // Only of use with measured data: hidden while its block has none (the owner, 2026-10-27). `extras_needs_data`
+    // is the same for a Basic category's Extras part.
+    bool needs_data = false;
+    bool extras_needs_data = false;
+    QString extras_title;  // the Extras part's own title, when it differs from the category's
 };
 CategoryPresentation category_presentation(const QString& id);
 

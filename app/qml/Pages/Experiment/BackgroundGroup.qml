@@ -27,6 +27,9 @@ Column {
     // In auto estimation mode the estimate owns the points or terms: the table stays scrollable but reads only,
     // and the buttons below it are disabled until the mode is manual (the owner, 2026-10-20).
     readonly property bool automatic: experiment !== null && experiment.backgroundEstimateMode === "auto"
+    // Estimate works on the measured pattern: without one it is disabled, its tooltip saying why (the owner, 2026-10-27).
+    readonly property bool measured: experiment !== null && !experiment.calculationOnly
+    readonly property string needsDataTip: qsTr("Estimate needs measured data: load data into this experiment first")
     // A background type's content by token: a new type needs only its layout here.
     readonly property var layouts: ({
             "line-segment": lineSegmentLayout,
@@ -147,7 +150,7 @@ Column {
                 defaultInfoText: qsTr("No background points")
                 sourceModel: group.points
 
-                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
+                columns: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
@@ -245,10 +248,10 @@ Column {
                 EaElements.SideBarButton {
                     objectName: "background.estimate"
                     width: pointButtons.buttonWidth
-                    enabled: group.experiment !== null && !group.automatic
+                    enabled: group.measured && !group.automatic
                     fontIcon: "magic"
                     text: qsTr("Estimate")
-                    ToolTip.text: qsTr("Estimate the points from the measured pattern, with the settings in Extras")
+                    ToolTip.text: group.measured ? qsTr("Estimate the points from the measured pattern, with the settings in Extras") : group.needsDataTip
                     onClicked: Session.project.estimateBackground()
                 }
             }
@@ -269,7 +272,7 @@ Column {
                 defaultInfoText: qsTr("No background terms")
                 sourceModel: group.terms
 
-                columnWidths: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), Math.min(textColumnWidth("order", Session.label("background.order")), width * 0.25), -1, AppSizes.iconColumnWidth]
+                columns: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("background.id")), width * 0.25), Math.min(textColumnWidth("order", Session.label("background.order")), width * 0.25), -1, AppSizes.iconColumnWidth]
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
@@ -367,10 +370,10 @@ Column {
                 EaElements.SideBarButton {
                     objectName: "background.estimate"
                     width: termButtons.buttonWidth
-                    enabled: group.experiment !== null && !group.automatic
+                    enabled: group.measured && !group.automatic
                     fontIcon: "magic"
                     text: qsTr("Estimate")
-                    ToolTip.text: qsTr("Estimate the terms from the measured pattern, with the settings in Extras")
+                    ToolTip.text: group.measured ? qsTr("Estimate the terms from the measured pattern, with the settings in Extras") : group.needsDataTip
                     onClicked: Session.project.estimateBackground()
                 }
             }

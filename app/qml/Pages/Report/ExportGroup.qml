@@ -28,11 +28,20 @@ EaElements.GroupBox {
     // A save under way, from its start until its files are written or refused. The page keeps the report built and
     // the preview's figures drawn meanwhile, even when another page is shown: a PDF takes those figures.
     property bool saving: false
+    // A save asked for before the project had a place of its own, made once Save as gives it one.
+    property bool afterSaveAs: false
 
     // Writes the ticked formats; with the PDF ticked, once the preview's figures are grabbed. While the project
     // calculates, the report is not yet its outcome, so the save waits for it.
     function saveReport() {
         const report = group.report;
+        // A project that cannot be written back (an example, a read-only .zip) asks where to keep it first, as Save
+        // does; its report is saved once it has a place (the owner, 2026-10-27).
+        if (!group.inBrowser && Session.needsSaveAs) {
+            group.afterSaveAs = true;
+            AppState.saveAsRequested();
+            return;
+        }
         if (report.calculating) {
             group.savePending = true;
             return;
@@ -44,6 +53,11 @@ EaElements.GroupBox {
         const write = () => {
             try {
                 report.saveReport(EaStyle.Fonts.fontFamily);
+                const refusal = Session.writeBackReports();
+                if (refusal !== "") {
+                    saveError.message = refusal;
+                    saveError.open();
+                }
             } finally {
                 group.saving = false;
             }
@@ -194,12 +208,24 @@ EaElements.GroupBox {
             enabled: group.report !== null && !group.savePending && !group.saving && (group.report.writesHtml || group.report.writesPdf || group.report.writesCif)
             fontIcon: "download"
             text: qsTr("Save report")
-            ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder")
+            ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder, inside its .zip when it is one")
             onClicked: group.saveReport()
         }
     }
 
     // A report that could not be saved says why, as a project that could not.
+    Connections {
+        target: Session
+        function onNeedsSaveAsChanged() {
+            if (group.afterSaveAs && !Session.needsSaveAs) {
+                group.afterSaveAs = false;
+                group.saveReport();
+            }
+        }
+        function onProjectChanged() {
+            group.afterSaveAs = false;
+        }
+    }
     Connections {
         target: group.report
         function onCalculatingChanged() {

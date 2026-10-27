@@ -27,7 +27,7 @@ Column {
         defaultInfoText: qsTr("No aliases")
         sourceModel: group.aliases
 
-        columnWidths: [numberColumnWidth, textColumnWidth("id", Session.label("alias.id")), -1, AppSizes.iconColumnWidth]
+        columns: [numberColumnWidth, textColumnWidth("id", Session.label("alias.id")), -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
