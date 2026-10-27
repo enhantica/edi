@@ -98,8 +98,13 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
         core_ids_ = ids;
         generated_.clear();
         const std::string saved = text();
-        // The bond settings get a designed group of their own later, and the type is shown elsewhere.
-        static const char* const kNotGenerated[] = {"geom", "experiment_type"};
+        // Only what a user sets or reads gets a group (the owner, 2026-10-27): not the file header, the Cartesian
+        // transform, the calculator (there is one), the curves' presentation order, the block list or the
+        // correlations, which the Correlations tab shows. The bond settings get a designed group of their own later,
+        // and the type is shown elsewhere.
+        static const char* const kNotGenerated[] = {"geom",     "experiment_type",           "edi",
+                                                    "calculator", "atom_sites_cartn_transform", "pd_calc_overall",
+                                                    "pd_block", "fit_parameter_correlation"};
         for (const std::string& id : edi::text_category_ids(saved)) {
             const bool excluded =
                 std::find(std::begin(kNotGenerated), std::end(kNotGenerated), id) != std::end(kNotGenerated);
