@@ -5185,13 +5185,13 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     // Calculated again with its due background estimates deferred (ADR-0040): every other bank's results describe its
     // rounded values, in the open project and in the file, and a due bank keeps and writes its own points.
     const std::vector<std::function<void()>> before = hold_calculation(project);
-    project.refresh_calculated_pattern(DueEstimates::Defer);
-    refresh_agreement_records(project);
     try {
+        project.refresh_calculated_pattern(DueEstimates::Defer);
+        refresh_agreement_records(project);
         save_project(project, directory);
     } catch (...) {
-        // The second write refused: the project holds what the first write left, the values it took with the
-        // results and records that write carried, and the save fails.
+        // The recalculation, the records or the second write refused: the project holds what the first write
+        // left, the values it took with the results and records that write carried, and the save fails.
         for (const auto& step : before) {
             step();
         }
