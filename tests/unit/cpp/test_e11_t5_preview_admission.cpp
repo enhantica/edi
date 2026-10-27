@@ -8,8 +8,18 @@
 #include "edi/live_preview.hpp"
 
 namespace {
+edi::Project protocol_project() {
+    // The public native constructor contains one default bank and structure.
+    // This protocol-only seam stages a COMPLETE zero-row result instead.
+    edi::Project project;project.structures.clear();project.experiments.clear();return project;
+}
 edi::CalculationResult result_for(edi::WorkSnapshot& snapshot,const edi::work::CancelToken& token) {
     edi::CalculationResult result;result.stamps=snapshot.stamps;result.cancelled=token.cancelled();return result;
+}
+void bounded_drain(e04_t9::OwnerQueue& queue) {
+    for(int step=0;step<16 && queue.try_one();++step) {}
+    CHECK_MESSAGE(queue.pending()==0,
+        "E11 preview test pump stops with an observed failure if callbacks keep reowing work");
 }
 struct Events {
     std::mutex mutex;
@@ -22,7 +32,12 @@ struct Events {
 };
 }
 TEST_CASE("E11 preview queued FIFO settles actual generations and cancellation without replay") {
-    edi::Project project;e04_t9::OwnerQueue queue;e04_t9::Barrier started;
+    auto project=protocol_project();
+    auto fixture_snapshot=edi::snapshot_for_work(project);
+    auto fixture_result=result_for(fixture_snapshot,edi::work::CancelToken{});
+    REQUIRE_MESSAGE(edi::publish(project,std::move(fixture_result))==edi::PublishOutcome::Published,
+        "E11 preview seam supplies a complete result under the unchanged public publication contract");
+    e04_t9::OwnerQueue queue;e04_t9::Barrier started;
     Events events;std::atomic<int> calculations=0;
     edi::work::Worker worker([&](auto delivery){queue.post(std::move(delivery));},
         {{},[&](const auto& e){events.add(e);}});
@@ -45,7 +60,7 @@ TEST_CASE("E11 preview queued FIFO settles actual generations and cancellation w
     started.release();
 #endif
     for(int step=0;preview.busy() && step<16;++step)queue.one();
-    queue.drain();
+    bounded_drain(queue);
     CHECK_MESSAGE((!preview.busy() && preview.newest_request()==2),
         " E11 F2 queued preview settles with the actual newest generation");
     CHECK_MESSAGE((calculations==2 && published==std::vector<std::uint64_t>{2}),
@@ -57,13 +72,13 @@ TEST_CASE("E11 preview queued FIFO settles actual generations and cancellation w
     CHECK_MESSAGE((events.ids(edi::work::EventKind::Started)==std::vector<std::uint64_t>{1,2}),
         " E11 F2 the worker starts exactly the two admitted jobs once");
     preview.recalculate();
-    for(int step=0;preview.busy() && step<8;++step)queue.one();queue.drain();
+    for(int step=0;preview.busy() && step<8;++step)queue.one();bounded_drain(queue);
     CHECK_MESSAGE((!preview.busy() && calculations==3 && published==std::vector<std::uint64_t>{2,3}),
         " E11 F2 later submission completes once without replaying stale queued work");
 }
 #if EDI_WORKER_OWNER_THREAD
 TEST_CASE("E11 preview immediate FIFO Post publishes before submit returns without phantom busy") {
-    edi::Project project;int posts=0,calculations=0;
+    auto project=protocol_project();int posts=0,calculations=0;
     edi::work::Worker worker([&](auto delivery){
         if(++posts>48)throw std::runtime_error("bounded immediate Post recursion witness");
         delivery();
@@ -85,7 +100,7 @@ TEST_CASE("E11 preview immediate FIFO Post publishes before submit returns witho
 TEST_CASE("E11 preview scheduling Post failure leaves no unowned job for later submission") {
     for(bool retain_before_throw:{false,true}) {
         INFO(retain_before_throw);
-        edi::Project project;std::deque<edi::work::Delivery> queue;
+        auto project=protocol_project();std::deque<edi::work::Delivery> queue;
         bool reject=true;int calculations=0;
         edi::work::Worker worker([&](auto delivery){
             if(reject){reject=false;if(retain_before_throw)queue.push_back(std::move(delivery));
@@ -153,7 +168,7 @@ TEST_CASE("E11 preview inline Post then throw retains actual admission and once 
             if(fail)throw std::runtime_error("actual inline scheduling delivered before throw");
         });
         if(use_preview) {
-            edi::Project project;std::vector<std::uint64_t> published;
+            auto project=protocol_project();std::vector<std::uint64_t> published;
             edi::LivePreview preview(project,worker,{{},[&](const auto& r){published.push_back(r.generation);}},
                 {[&](auto& snapshot,const auto& token){++jobs;return result_for(snapshot,token);}});
             CHECK_NOTHROW_MESSAGE(preview.recalculate(),"E11 G4 already entered inline work retains its real admission despite a later Post throw");
