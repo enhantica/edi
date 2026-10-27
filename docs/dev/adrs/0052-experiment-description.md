@@ -25,7 +25,11 @@ and converts the retired tags in one place, `legacy_project_metadata`.
 3. **Python.** `ExperimentType.dimensionality` and `.polarisation`, and the instrument's `name` and `facility`, read the
    effective values and set a declared one (deviation D90).
 4. **The app.** The experiment-type group shows the dimensionality and the polarisation, each with its one admitted
-   value, and the instrument group shows the instrument and facility. The example facets are read from the
+   value. The instrument group starts with two selectors, Facility and Instrument, each listing "Not specified" first,
+   then the facilities of edi's and diffraction-lib's examples and a Laboratory entry, and the instruments of the chosen
+   facility for the experiment's sample form. For an experiment made from a data file they can be chosen, and "Not
+   specified" is written `?`; for one read from a `.edi` or `.cif` file they show what the file states and cannot be
+   changed. A name the file states that the lists lack is shown as written. The example facets are read from the
    experiments: the instruments and facilities are the list over a project's experiments, the dimensionality and
    polarisation are mapped as the conversion maps them (`1D` to `1d`, shown as "1D"; `none` to `unpolarised`), and the
    purpose is "refinement" when any experiment has measured data, else "simulation".
@@ -36,4 +40,5 @@ and converts the retired tags in one place, `legacy_project_metadata`.
 
 - Amends ADR-0031: the descriptive tags no longer live in the project record, and the purpose is derived.
 - Amends ADR-0048: the bundle leaves out the registry's verification projects by its flag.
-- The app shows the instrument and facility but does not edit them yet; a script sets them through Python.
+- The app sets the instrument and facility only for an experiment made from a data file; a script sets them for any
+  experiment through Python.
