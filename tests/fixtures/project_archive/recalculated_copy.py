@@ -34,6 +34,51 @@ def input_bytes(body):
     return re.sub(rb'(?m)^_edi.schema_version [34]$', b'_edi.schema_version <3-or-4>', head)
 
 
+def reflection_input_bytes(body):
+    lines = body.splitlines(keepends=True)
+    header = b'_refln.intensity_calc\n'
+    if header in lines:
+        index = lines.index(header)
+        require(
+            index + 1 < len(lines) and not lines[index + 1].startswith(b'_'),
+            'The renewed reflection column is the last declared loop column',
+        )
+        del lines[index]
+        while index < len(lines) and lines[index].strip():
+            row = lines[index]
+            if row.startswith((b'_', b'loop_', b'data_')):
+                break
+            match = re.fullmatch(rb'(.*\S)[ \t]+\S+(\r?\n)?', row)
+            require(match is not None, 'Each calculated reflection retains its original input row')
+            lines[index] = match[1] + (match[2] or b'')
+            index += 1
+    return re.sub(
+        rb'(?m)^_edi.schema_version [34]$', b'_edi.schema_version <3-or-4>', b''.join(lines)
+    )
+
+
+def check_reflections(body, expected):
+    block = gemmi.cif.read_string(body.decode()).sole_block()
+    values = list(block.find_values('_refln.intensity_calc'))
+    require(
+        bool(values) and len(values) == len(expected),
+        'Every calculated single-crystal reflection is written exactly once',
+    )
+    for text, value in zip(values, expected, strict=True):
+        require(
+            not math.isinf(float(value)),
+            'The calculated copy witness has no infinite unit requiring uncomputed storage',
+        )
+        if math.isnan(float(value)):
+            require(text == '.', 'A reflection not calculated remains an inapplicable dot')
+        else:
+            require(
+                float(text).hex() == six_digits(float(value)).hex(),
+                'Each saved reflection equals independent six-digit spelling of a fresh '
+                'calculation from the unchanged written model',
+            )
+
+
 def close_saved(token, value):
     require(
         math.isclose(float(token), six_digits(float(value)), rel_tol=5e-12, abs_tol=1e-14),
@@ -112,6 +157,18 @@ def compare_members(before, after, directory, engine):
         path.write_bytes(body)
     fresh = engine.Project.load(source)
     fresh.analysis.calculate()
+    calculated = {}
+    for name, body in before.items():
+        if not (name.startswith('experiments/') and name.endswith('.edi')):
+            continue
+        block = gemmi.cif.read_string(body.decode()).sole_block()
+        if (
+            gemmi.cif.as_string(block.find_value('_experiment_type.sample_form'))
+            != 'single crystal'
+        ):
+            continue
+        bank = fresh.experiments[name.rsplit('/', 1)[-1][:-4]]
+        calculated[name] = np.asarray(bank.refln.intensity_calc).copy()
     fresh.save_as(output)
     for name, body in before.items():
         actual = after[name]
@@ -126,5 +183,15 @@ def compare_members(before, after, directory, engine):
                 '(round-trip representation invariant)',
             )
             check_geometry(actual)
+        elif name in calculated:
+            require(
+                reflection_input_bytes(body) == reflection_input_bytes(actual),
+                'A recalculated copy retains every non-derived single-crystal byte',
+            )
+            check_reflections(actual, calculated[name])
+            require(
+                actual == (output / name).read_bytes(),
+                'Copied reflection files equal the independently calculated representation',
+            )
         else:
             require(actual == body, 'A copy retains every unrelated member byte: ' + name)
