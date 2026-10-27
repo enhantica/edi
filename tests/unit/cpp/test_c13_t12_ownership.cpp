@@ -35,7 +35,7 @@ void before_allocation() {
 }
 }  // namespace c13_t12_fault
 void* operator new(std::size_t size) {
-    c34_t28_fault::before_allocation();
+    c34_t28_fault::before_allocation(size);
     c13_t12_fault::before_allocation();
     if (void* p = std::malloc(size ? size : 1)) return p;
     throw std::bad_alloc();

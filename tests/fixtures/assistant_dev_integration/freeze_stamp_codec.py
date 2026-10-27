@@ -27,6 +27,33 @@ text = text.replace(
 )
 text = text.replace("namespace edi {\nnamespace {", "namespace edi {\nnamespace {\n" + slots)
 text = text.replace("detail::kPeakSlots", "kPrechangePeakSlots")
+binding = '''
+// Independent prior-dev cell-name/source binding used by the alias witnesses.
+// This is a deliberately finite reference, not today's production name walker.
+// Non-cell aliases fail closed so this reference cannot silently omit a source.
+std::vector<NamedParameter> e11_prechange_relation_sources(const Project& project) {
+    std::vector<NamedParameter> out;
+    for (const auto& structure : project.structures) {
+        const auto prefix = structure->name.value() + ".cell.";
+        out.push_back({prefix + "length_a", &structure->cell.length_a});
+        out.push_back({prefix + "length_b", &structure->cell.length_b});
+        out.push_back({prefix + "length_c", &structure->cell.length_c});
+        out.push_back({prefix + "angle_alpha", &structure->cell.angle_alpha});
+        out.push_back({prefix + "angle_beta", &structure->cell.angle_beta});
+        out.push_back({prefix + "angle_gamma", &structure->cell.angle_gamma});
+    }
+    for (const auto& alias : project.aliases) {
+        const auto found = std::find_if(out.begin(), out.end(), [&](const auto& row) {
+            return row.unique_name == alias->parameter_unique_name.value();
+        });
+        if (found == out.end())
+            throw std::invalid_argument("Unsupported frozen alias-source fixture");
+    }
+    return out;
+}
+'''
+text = text.replace("namespace detail {", "namespace detail {\n" + binding)
+text = text.replace("named_parameters(*project)", "e11_prechange_relation_sources(*project)")
 # Keep the original codec body. Its explicit model-template instantiations are
 # already supplied by edi_core and are unrelated to the frozen byte reference.
 text = text.split("// ADR-0018: the table view", 1)[0]

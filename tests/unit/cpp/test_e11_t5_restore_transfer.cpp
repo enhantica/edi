@@ -81,19 +81,29 @@ void optional_lifetime(Family& live,Members members) {
         slot->category.point_at(live.row);
         auto* held=&*slot;
         const auto retired_image=*held;
-        Family absent=live; (absent.*member).reset();
-        Prepared removal(live,std::move(absent)); transfer(removal);
+        { Family absent=live; (absent.*member).reset();
+          Prepared removal(live,std::move(absent)); transfer(removal); }
         CHECK_MESSAGE((!slot && held->is_detached()),
             " E11 F1 removal retires the exact held coefficient cell");
         same(*held,retired_image);
-        Family incoming=live; (incoming.*member).emplace();
-        seed(*(incoming.*member),38.75);
-        const auto wanted=*(incoming.*member);
-        Prepared addition(live,std::move(incoming)); transfer(addition);
+        edi::Parameter wanted;seed(wanted,38.75);
+        { Family incoming=live; (incoming.*member)=wanted;
+          Prepared addition(live,std::move(incoming)); transfer(addition); }
         REQUIRE_MESSAGE(slot.has_value()," E11 F1 absent-to-present restoration actually admits its slot");
         CHECK_MESSAGE((&*slot!=held && slot->is_attached() && held->is_detached()),
             " E11 F1 reintroduced slots use new live cells and never resurrect retired handles");
         same(*slot,wanted); same(*held,retired_image);
+        // Neither the removed/admitted images nor their Prepared owners remain.
+        // Later family changes must still leave the original detached cell alive.
+        for(int change=0;change<3;++change) {
+            { Family absent=live;(absent.*member).reset();
+              Prepared removal(live,std::move(absent));transfer(removal); }
+            { Family next=live;(next.*member).emplace();seed(*(next.*member),51.25+change);
+              Prepared addition(live,std::move(next));transfer(addition); }
+            CHECK_MESSAGE((&*slot!=held && held->is_detached()),
+                "E11 G3 original detached handles survive destruction of transaction owners and later family changes");
+            same(*held,retired_image);
+        }
     }
 }
 }
@@ -147,6 +157,24 @@ TEST_CASE("E11 restore absorption transfers metadata even when scientific values
             " E11 F1 retained absorption coefficient keeps its attached handle");}
     CHECK_MESSAGE(live.type==wanted.type," E11 F1 absorption family selector restores exactly");
     optional_lifetime<edi::AbsorptionBase,edi::detail::PreparedAbsorptionRestore>(live,absorption);
+}
+TEST_CASE("E11 restore full-state-equal absorption preserves each current written identity") {
+    edi::AbsorptionBase live;
+    for(auto member:absorption){(live.*member).emplace();seed(*(live.*member),19.25);}
+    const auto ids=[](const edi::Parameter& p){return std::array{
+        p.value.written(),p.uncertainty.written(),p.free.written(),
+        p.start_value.written(),p.start_uncertainty.written(),p.epoch.value()};};
+    std::vector<std::array<std::uint64_t,6>> before;
+    for(auto member:absorption)before.push_back(ids(*(live.*member)));
+    { auto wanted=live;edi::detail::PreparedAbsorptionRestore prepared(live,std::move(wanted));transfer(prepared); }
+    std::size_t i=0;
+    for(auto member:absorption)CHECK_MESSAGE(ids(*(live.*member))==before[i++],
+        "E11 G3 complete equal absorption state is not a scalar or parameter write");
+    const auto written=live.abscor1->value.written();
+    { auto changed=live;changed.abscor1->value=22.75;
+      edi::detail::PreparedAbsorptionRestore prepared(live,std::move(changed));transfer(prepared); }
+    CHECK_MESSAGE((live.abscor1->value.get()==22.75 && live.abscor1->value.written()!=written),
+        "E11 G3 an actual changed restored value still renews its native written identity");
 }
 TEST_CASE("E11 restore actual experiment control Undo retains exact saved scientific state") {
     auto project=edi::load_project("docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project");

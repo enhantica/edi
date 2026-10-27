@@ -356,6 +356,31 @@ void put_structure(std::string& out, const Structure& structure, Scope scope) {
 
 namespace e11_prechange_codec {
 
+// Independent prior-dev cell-name/source binding used by the alias witnesses.
+// This is a deliberately finite reference, not today's production name walker.
+// Non-cell aliases fail closed so this reference cannot silently omit a source.
+std::vector<NamedParameter> e11_prechange_relation_sources(const Project& project) {
+    std::vector<NamedParameter> out;
+    for (const auto& structure : project.structures) {
+        const auto prefix = structure->name.value() + ".cell.";
+        out.push_back({prefix + "length_a", &structure->cell.length_a});
+        out.push_back({prefix + "length_b", &structure->cell.length_b});
+        out.push_back({prefix + "length_c", &structure->cell.length_c});
+        out.push_back({prefix + "angle_alpha", &structure->cell.angle_alpha});
+        out.push_back({prefix + "angle_beta", &structure->cell.angle_beta});
+        out.push_back({prefix + "angle_gamma", &structure->cell.angle_gamma});
+    }
+    for (const auto& alias : project.aliases) {
+        const auto found = std::find_if(out.begin(), out.end(), [&](const auto& row) {
+            return row.unique_name == alias->parameter_unique_name.value();
+        });
+        if (found == out.end())
+            throw std::invalid_argument("Unsupported frozen alias-source fixture");
+    }
+    return out;
+}
+
+
 std::string canonical_encoding(const Project& project) {
     std::string out;
     out.reserve(4096);
@@ -539,7 +564,7 @@ std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
     // in any block or bank. Each one's value and last write are inputs of whatever the relations reach.
     if (const Project* project = aliases.host(); project != nullptr && !aliases.empty()) {
         std::map<std::string, const Parameter*> by_name;
-        for (const NamedParameter& named : named_parameters(*project)) {
+        for (const NamedParameter& named : e11_prechange_relation_sources(*project)) {
             by_name.emplace(named.unique_name, named.parameter);
         }
         for (const auto& alias : aliases) {

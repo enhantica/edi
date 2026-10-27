@@ -3,6 +3,7 @@
 #include <deque>
 #include <mutex>
 #include <vector>
+#include <utility>
 #include "e04_t9_support.hpp"
 #include "edi/live_preview.hpp"
 
@@ -101,6 +102,12 @@ TEST_CASE("E11 preview scheduling Post failure leaves no unowned job for later s
             " E11 F2 rejected scheduling has executed and published no calculation");
         CHECK_NOTHROW_MESSAGE(preview.recalculate(),
             " E11 F2 an actual new request can retry after Post admission refusal");
+        if(retain_before_throw) {
+            REQUIRE_MESSAGE(queue.size()==2,"E11 G4 refused and valid scheduling callbacks are independently queued");
+            auto retired=std::move(queue.front());queue.pop_front();retired();
+            CHECK_MESSAGE((calculations==0 && published.empty() && preview.busy() && queue.size()==1),
+                "E11 G4 a rejected retained callback alone cannot consume the queued successor");
+        }
         for(int step=0;!queue.empty() && step<24;++step){auto delivery=std::move(queue.front());queue.pop_front();delivery();}
         CHECK_MESSAGE((queue.empty() && !preview.busy() && preview.newest_request()==2 && calculations==1 &&
             published==std::vector<std::uint64_t>{2} && begin==published && end==published),
@@ -123,11 +130,46 @@ TEST_CASE("E11 preview Worker scheduling refusal and explicit cancellation retai
         const auto ticket=worker.submit("accepted",[&](const auto& token,const auto&){
             ++valid;cancelled=token.cancelled();return edi::work::Delivery([&]{++delivered;});});
         worker.cancel(ticket);
+        if(retain_before_throw) {
+            REQUIRE_MESSAGE(queue.size()==2,"E11 G4 public Worker retains separately observable callback identities");
+            auto retired=std::move(queue.front());queue.pop_front();retired();
+            CHECK_MESSAGE((orphan==0 && valid==0 && delivered==0 && queue.size()==1 &&
+                events.ids(edi::work::EventKind::Started).empty()),
+                "E11 G4 rejected callback does not start a valid later ticket before its own callback");
+        }
         for(int step=0;!queue.empty() && step<16;++step){auto delivery=std::move(queue.front());queue.pop_front();delivery();}
         CHECK_MESSAGE((queue.empty() && orphan==0 && valid==1 && delivered==1 && cancelled),
             " E11 F2 failed scheduling never replays and the later real token still cancels cooperatively");
         CHECK_MESSAGE(events.ids(edi::work::EventKind::Started)==std::vector<std::uint64_t>{ticket},
             " E11 F2 only the successfully returned ticket owns a started job");
+    }
+}
+TEST_CASE("E11 preview inline Post then throw retains actual admission and once settlement") {
+    for(bool use_preview:{false,true}) {
+        INFO(use_preview);
+        bool throw_once=true;int jobs=0,deliveries=0;
+        edi::work::Worker worker([&](auto delivery){
+            const bool fail=std::exchange(throw_once,false);delivery();
+            if(fail)throw std::runtime_error("actual inline scheduling delivered before throw");
+        });
+        if(use_preview) {
+            edi::Project project;std::vector<std::uint64_t> published;
+            edi::LivePreview preview(project,worker,{{},[&](const auto& r){published.push_back(r.generation);}},
+                {[&](auto& snapshot,const auto& token){++jobs;return result_for(snapshot,token);}});
+            CHECK_NOTHROW_MESSAGE(preview.recalculate(),"E11 G4 already entered inline work retains its real admission despite a later Post throw");
+            CHECK_MESSAGE((jobs==1 && !preview.busy() && published==std::vector<std::uint64_t>{1}),
+                "E11 G4 inline-then-throw completes the actual first generation without phantom busy");
+            preview.recalculate();
+            CHECK_MESSAGE((jobs==2 && !preview.busy() && published==std::vector<std::uint64_t>{1,2}),
+                "E11 G4 a later preview request never replays already entered inline work");
+        } else {
+            edi::work::Ticket first=0;
+            CHECK_NOTHROW_MESSAGE(first=worker.submit("actual",[&](const auto&,const auto&){++jobs;return edi::work::Delivery([&]{++deliveries;});}),
+                "E11 G4 Worker returns the actual entered ticket after inline scheduling throws");
+            CHECK_MESSAGE((first!=0 && jobs==1 && deliveries==1),"E11 G4 actual inline admission and final delivery are retained exactly once");
+            const auto second=worker.submit("later",[&](const auto&,const auto&){++jobs;return edi::work::Delivery([&]{++deliveries;});});
+            CHECK_MESSAGE((second>first && jobs==2 && deliveries==2),"E11 G4 later Worker admission preserves ordering without replay");
+        }
     }
 }
 #endif

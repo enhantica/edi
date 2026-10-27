@@ -7,7 +7,11 @@
 #include "edi/io.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
+#include "../../../../core/src/assistant_skills.hpp"
+#include <new>
 #include <QDesktopServices>
+#include <QInputMethodEvent>
+#include <QKeyEvent>
 #include <QDirIterator>
 #include <QGuiApplication>
 #include <QJsonValue>
@@ -88,6 +92,14 @@ Object text_observation(QObject* object) {
             {"ancestry",QJsonArray::fromStringList(ancestry)},
             {"width",item?item->width():0},{"height",item?item->height():0}};
 }
+QRectF exposed_rect(QQuickItem* item) {
+    if(!item || !item->isVisible())return {};
+    QRectF rect=item->boundingRect();
+    for(auto* parent=item->parentItem();parent;parent=parent->parentItem())
+        if(parent->clip())rect=rect.intersected(item->mapRectFromItem(parent,parent->boundingRect()));
+    if(item->window())rect=rect.intersected(item->mapRectFromScene(QRectF(QPointF(),item->window()->size())));
+    return rect;
+}
 Array model_rows(edi_app::RowTableModel* model) {
     Array result;
     for(int row=0;row<model->count();++row) {
@@ -125,6 +137,9 @@ int main(int argc,char** argv) {
     preferences->setProperty("assistantShown",true);
     Array disclosures;
     Array action_transitions;
+    QMetaObject::Connection publication_fault;
+    int publication_fault_hits=0;
+    bool publication_undo_seen=false;
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::showingActionsChanged,
         [&] {action_transitions.push_back(observed->assistant()->showingActions());});
     auto find=[&](const QString& name)->QObject* {
@@ -179,7 +194,11 @@ int main(int argc,char** argv) {
             if(auto* item=qobject_cast<QQuickItem*>(object);item&&!object->objectName().isEmpty())
                 controls.push_back(Object{{"name",object->objectName()},{"visible",item->isVisible()},
                     {"enabled",item->isEnabled()},{"width",item->width()},{"height",item->height()},
-                    {"x",item->mapToScene(QPointF()).x()},{"y",item->mapToScene(QPointF()).y()}});
+                    {"x",item->mapToScene(QPointF()).x()},{"y",item->mapToScene(QPointF()).y()},
+                    {"exposed",!exposed_rect(item).isEmpty()},
+                    {"fully_exposed",exposed_rect(item).contains(item->boundingRect())},
+                    {"parameter_path",object->property("item").value<QObject*>()?
+                        object->property("item").value<QObject*>()->property("path").toString():QString()}});
         }
         auto* assistant=observed->assistant();
         Object project;
@@ -220,7 +239,9 @@ int main(int argc,char** argv) {
                     {"expression",QString::fromStdString(constraint->expression.get())},
                     {"enabled",constraint->enabled.get()}});
             for(const auto& bank:model.experiments) {
-                Array points;
+                Array points,input_rows;
+                if(bank->data)for(std::size_t i=0;i<std::min<std::size_t>(bank->data->axis().size(),4);++i)
+                    input_rows.push_back(Array{bank->data->axis()[i],bank->data->intensity_meas[i],bank->data->intensity_meas_su[i]});
                 for(const auto& point:bank->background)
                     points.push_back(Object{{"id",QString::fromStdString(point->id.value())},
                         {"position",point->position.get()},{"intensity",point->intensity.value.get()},
@@ -231,6 +252,9 @@ int main(int argc,char** argv) {
                     {"reflection_count",bank->reflections?static_cast<double>(bank->reflections->size()):0.0},
                     {"reflection_sigma_count",bank->reflections?static_cast<double>(bank->reflections->intensity_meas_su.size()):0.0},
                     {"has_data",bank->data.has_value()},{"points",points}});
+                auto row=backgrounds.last().toObject();
+                row["input_count"]=bank->data?static_cast<double>(bank->data->axis().size()):0.0;
+                row["input_first"]=input_rows;backgrounds[backgrounds.size()-1]=row;
             }
             project={{"name",QString::fromStdString(model.metadata.name)},
                      {"path",observed->project()->path()},
@@ -298,6 +322,98 @@ int main(int argc,char** argv) {
             else if(op=="accept_context") observed->assistant()->signIn();
             else if(op=="refresh_usage") observed->assistant()->refreshUsage();
             else if(op=="tool_specs") result={{"tools",edi_app::assistant_native_tool_specs()}};
+            else if(op=="embedded_skills") {
+                Array resources;
+                for(const auto& skill:edi::assistant::detail::skill_resource_data())
+                    resources.push_back(Object{{"id",QString::fromUtf8(skill.id.data(),skill.id.size())},
+                        {"sha256",QString::fromUtf8(skill.sha256.data(),skill.sha256.size())},
+                        {"content",QString::fromUtf8(skill.content.data(),skill.content.size())}});
+                const auto index=edi::assistant::detail::skill_index_data();
+                result={{"index",QJsonDocument::fromJson(QByteArray(index.data(),index.size())).object()},
+                    {"resources",resources}};
+            }
+            else if(op=="evaluate") {
+                QQmlExpression expression(qmlContext(window),window,input["expression"].toString());
+                const auto value=expression.evaluate();
+                if(expression.hasError())throw std::runtime_error(expression.error().toString().toStdString());
+                result={{"value",QJsonValue::fromVariant(value)}};
+            } else if(op=="manual_key") {
+                const auto key=input["key"].toString();
+                if(key=="select_all")QTest::keyClick(window,Qt::Key_A,Qt::ControlModifier);
+                else if(key=="return")QTest::keyClick(window,Qt::Key_Return);
+                else if(key=="escape")QTest::keyClick(window,Qt::Key_Escape);
+                else if(key=="tab")QTest::keyClick(window,Qt::Key_Tab);
+                else throw std::invalid_argument("unsupported finite manual key");
+            } else if(op=="manual_text") {
+                for(const QChar character:input["text"].toString()) {
+                    QKeyEvent press(QEvent::KeyPress,0,Qt::NoModifier,QString(character));
+                    QKeyEvent release(QEvent::KeyRelease,0,Qt::NoModifier,QString(character));
+                    QCoreApplication::sendEvent(window,&press);QCoreApplication::sendEvent(window,&release);
+                }
+            } else if(op=="manual_ime") {
+                auto* focus=QGuiApplication::focusObject();
+                if(!focus)throw std::runtime_error("actual focused input is missing");
+                QInputMethodEvent event(input["preedit"].toString(),{});
+                event.setCommitString(input["commit"].toString());
+                QCoreApplication::sendEvent(focus,&event);
+            } else if(op=="focused_input") {
+                auto* focus=QGuiApplication::focusObject();
+                result={{"name",focus?focus->objectName():QString()},
+                    {"text",focus?focus->property("text").toString():QString()},
+                    {"preedit",focus?focus->property("preeditText").toString():QString()}};
+            } else if(op=="ui_property") {
+                auto* object=find(input["name"].toString());
+                if(!object)throw std::runtime_error("actual requested control is absent");
+                if(input.contains("value") && !object->setProperty(input["property"].toString().toUtf8().constData(),input["value"].toVariant()))
+                    throw std::runtime_error("actual control property is not writable");
+                result={{"value",QJsonValue::fromVariant(object->property(input["property"].toString().toUtf8().constData()))}};
+            } else if(op=="file_answer") {
+                bool found=false;
+                for(auto* object:objects(window)) {
+                    if(!object->property("visible").toBool() || !object->property("selectedFile").isValid())continue;
+                    if(input["reject"].toBool()) {
+                        if(!QMetaObject::invokeMethod(object,"reject"))throw std::runtime_error("ordinary file dialog rejection unavailable");
+                    } else {
+                        if(!object->setProperty("selectedFile",QUrl::fromLocalFile(input["path"].toString())) ||
+                           !QMetaObject::invokeMethod(object,"accept"))throw std::runtime_error("ordinary file dialog selection/acceptance unavailable");
+                    }
+                    found=true;break;
+                }
+                result={{"answered",found}};
+            } else if(op=="arm_estimate_publication") {
+                QObject::disconnect(publication_fault);publication_fault_hits=0;publication_undo_seen=false;
+                auto* owner=observed->project();
+                if(!owner)throw std::runtime_error("publication fixture requires current actual project");
+                const auto mode=input["mode"].toString();
+                const auto minimum=input["minimum_points"].toInt();
+                const auto replacement=input["replacement"].toString();
+                publication_fault=QObject::connect(owner,&edi_app::ProjectViewModel::projectEdited,owner,[&,mode,owner,minimum,replacement] {
+                    if(minimum && (owner->project().experiments.empty() || owner->project().experiment().background.size()<static_cast<std::size_t>(minimum)))return;
+                    if(publication_fault_hits++)return;
+                    publication_undo_seen=owner->canUndo();
+                    if(mode=="retire")observed->closeProject();
+                    else if(mode=="replace")observed->openProject(QUrl::fromLocalFile(replacement));
+                    else if(mode=="bad_alloc")throw std::bad_alloc();
+                    else throw std::runtime_error("independent actual postwrite publication failure");
+                },Qt::DirectConnection);
+            } else if(op=="publication_fault") {
+                result={{"hits",publication_fault_hits},{"undo_seen",publication_undo_seen}};
+            } else if(op=="estimate_outcome") {
+                const auto receipt=observed->project()->estimateBackgroundOutcome();
+                result={{"applied",receipt.applied},{"published",receipt.published},{"message",receipt.message}};
+            } else if(op=="capture_sequence") {
+                Array receipts;
+                receipts.push_back(QJsonObject::fromVariantMap(observed->assistant()->captureWorkReport()));
+                if(input["move"].isString())
+                    result["moved"]=observed->saveProjectAs(QUrl::fromLocalFile(input["move"].toString()),false,false);
+                if(input["successor"].isString()) {
+                    result["opened"]=observed->openProject(QUrl::fromLocalFile(input["successor"].toString()));
+                    observed->assistant()->signIn();
+                    observed->assistant()->send(input["text"].toString());
+                }
+                receipts.push_back(QJsonObject::fromVariantMap(observed->assistant()->captureWorkReport()));
+                result["receipts"]=receipts;
+            }
             else if(op=="show_actions") observed->assistant()->setShowActions(input["enabled"].toBool());
             else if(op=="selected_begin") result={{"token",observed->assistant()->beginFileSelection()}};
             else if(op=="selected_add") {

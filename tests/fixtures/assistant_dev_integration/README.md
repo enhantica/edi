@@ -17,3 +17,16 @@ The resource gate checks the published skill index against actual shipped bytes.
 Its expected-red baseline is the absent assistant skill bundle on unported dev;
 the preservation cases are positive controls. It does not infer tool execution,
 model intelligence, research entitlement or scientific success from prose.
+
+The stamp codec freezes the prior dev geometry/calculation byte traversal and
+peak field order. Its relation fixture binds declared `.edi` cell names directly
+to native cell fields, with no call to the current naming producer. This finite
+alias reference rejects unsupported non-cell targets rather than silently
+omitting them; it does not claim a complete independent name catalogue. Current
+native model field types and the opaque editor-record API remain shared inputs.
+
+The pre-growth witness uses the unit carrier's existing ordinary new/new[]
+instrumentation to observe input-sized row containers, source strings and alias
+naming scratch, with an actual allocating positive control for each. It does not
+define a process-wide allocator/RSS guarantee or require allocation-free refusal
+diagnostics. Every observed fixture is prepared before instrumentation is armed.
