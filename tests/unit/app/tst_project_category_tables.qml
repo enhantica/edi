@@ -333,4 +333,67 @@ TestCase {
             verify(reached > 0, "Each relevant page actually shows the constrained value instead of silently omitting it");
         }
     }
+    function test_reference_projects_expose_every_carried_category_data() {
+        return [
+            {
+                tag: "lbco",
+                project: "pd-neut-cwl_lbco-hrpt"
+            },
+            {
+                tag: "wish-five-banks",
+                project: "pd-neut-tof_ncaf-wish-5bank_start-5"
+            },
+            {
+                tag: "scan",
+                project: "pd-neut-cwl_cosio-d20_scan-3f"
+            },
+            {
+                tag: "taurine",
+                project: "sc-neut-tof_taurine_fit"
+            },
+            {
+                tag: "two-structures",
+                project: "pd-neut-tof_ferrite-austenite-beer"
+            }
+        ];
+    }
+    function test_reference_projects_expose_every_carried_category(data) {
+        Session.closeProject();
+        verify(Session.openProject(Probe.repoUrl("docs/user/cli/" + data.project + "/project")), "Each required reference project opens through the production application: " + Session.lastError);
+        for (const page of ["project", "structure", "experiment", "analysis", "report"]) {
+            click("appBar.tab." + page);
+            const count = page === "structure" ? Session.project.structures.count : page === "experiment" ? Session.project.experiments.count : 1;
+            verify(count > 0, "Every reference page reaches at least one actual datablock");
+            for (let index = 0; index < count; ++index) {
+                if (page === "structure")
+                    Session.project.currentStructureIndex = index;
+                if (page === "experiment")
+                    Session.project.currentExperimentIndex = index;
+                click("sideBar.tab.text");
+                const current = Ui.page(appWindow);
+                const editor = findChild(current, "text.view");
+                verify(editor !== null, "Each reference datablock has a real Text editor");
+                const show = Render.descendants(current).find(item => typeof item.textAt === "function" && item.count === 2 && item.textAt(0) === "Editable");
+                verify(show !== undefined, "Each reference Text tab offers the declared category filter");
+                show.currentIndex = 1;
+                show.activated(1);
+                tryCompare(editor, "readOnly", true, 1000, "Reference category discovery uses the complete read-only view");
+                const carried = new Set((editor.text.match(/^_[A-Za-z0-9_]+\./gm) ?? []).map(tag => tag.slice(1, -1)));
+                verify(carried.size > 0, "Every reference block contributes actual categories to the app census");
+                const found = new Set();
+                for (const tier of ["basic", "extras"]) {
+                    const button = Ui.find(current, "sideBar.tab." + tier);
+                    if (!button || !button.enabled)
+                        continue;
+                    click("sideBar.tab." + tier);
+                    tryVerify(() => !Ui.moving(current), 2000, "The real reference sidebar reaches its selected pane");
+                    for (const group of Render.descendants(current).filter(item => item.objectName.startsWith("group.") && item.titleArea && Ui.inPane(item)))
+                        found.add(group.categoryId ?? group.objectName.slice(6));
+                }
+                for (const id of carried)
+                    if (id !== "geom")
+                        verify(found.has(id), "Every category carried by every reference block has a group on its page: " + id);
+            }
+        }
+    }
 }

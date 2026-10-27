@@ -21,6 +21,10 @@ def project(destination):
         .replace('data_structure', 'data_zz_second')
         .replace('4.026700', '5.137900')
     )
+    experiment = destination / 'experiments/experiment.edi'
+    experiment.write_text(
+        experiment.read_text().replace('structure 0.01\n', 'structure 0.01\nzz_second 0.02\n')
+    )
     analysis = destination / 'analysis/analysis.edi'
     analysis.parent.mkdir(parents=True, exist_ok=True)
     analysis.write_text(

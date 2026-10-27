@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 PROJECTS = [
     'pd-neut-cwl_lbco-hrpt',
     'pd-neut-tof_ncaf-wish-5bank_start-5',
-    'pd-neut-cwl_cosio-d20_scan',
+    'pd-neut-cwl_cosio-d20_scan-3f',
     'sc-neut-tof_taurine_fit',
     'pd-neut-tof_ferrite-austenite-beer',
 ]

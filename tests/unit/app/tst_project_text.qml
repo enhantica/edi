@@ -160,6 +160,7 @@ Item {
             }
         }
         function test_everything_is_read_only() {
+            tryCompare(Session.project, "calculating", false, 5000, "The calculated-data witness finishes its real model calculation");
             const editor = openText(Session.project.currentExperiment), apply = applyButton(), show = showChoice();
             const reference = proof.dictionary();
             verify(reference.categories && reference.categories.length > 0, "The filter reference reads the selected SDK YAML independently");
@@ -168,6 +169,12 @@ Item {
             choose(show, 1);
             tryCompare(editor, "readOnly", true, 1000, "Everything is view-only");
             verify(/_data\.intensity_meas\b/.test(editor.text), "Everything includes the actual measured data");
+            for (const tag of ["_data.d_spacing", "_data.intensity_calc", "_data.intensity_bkg", "_data.calc_status", "_pd_calc.component_intensities_net"])
+                verify(editor.text.includes(tag), "Everything exposes every required calculated-data column and both structure curves");
+            const points = Probe.rows(Session.project.currentExperiment.pattern);
+            verify(points.length > 0, "The measured-data table has real calculated rows");
+            for (const point of points)
+                verify(Math.abs(point.residual - (point.intensityMeas - point.intensityCalc)) <= 1e-12 * Math.max(1, Math.abs(point.intensityCalc)), "The measured-data residual is the observed intensity less the calculated intensity");
             const everythingCategories = new Set((editor.text.match(/^_[A-Za-z0-9_]+\./gm) ?? []).map(tag => tag.slice(1, -1)));
             for (const row of reference.categories) {
                 if (!everythingCategories.has(row.id))
@@ -266,6 +273,23 @@ Item {
             compare(appearance(), first, "The first structure's full appearance survives reopen");
             Session.project.currentStructureIndex = 1;
             compare(appearance(), second, "The second structure's full appearance survives reopen");
+        }
+        function test_scattering_lengths_save_only_user_overrides() {
+            Session.project.currentStructureIndex = 0;
+            const lengths = Session.project.currentStructure.scatteringLengths;
+            compare(lengths.count, 0, "Built-in scattering tables create no user override rows");
+            lengths.append();
+            verify(lengths.setTypeSymbol(0, "Li"), "The override witness chooses an actual element");
+            verify(lengths.setLengthFm(0, 12.3456), "The override witness supplies a nondefault value in femtometres");
+            verify(Session.save(), "The normal project save persists user scattering overrides");
+            Session.closeProject();
+            verify(Session.openProject(proof.project()), "The ordinary reader reopens the saved scattering override");
+            const rows = Probe.rows(Session.project.currentStructure.scatteringLengths);
+            compare(rows.length, 1, "Only the one user override is written rather than the built-in table");
+            compare(rows[0].typeSymbol, "Li", "The override retains its declared element");
+            compare(rows[0].lengthFm, 12.3456, "The user override survives save and reopen in femtometres");
+            Session.project.currentStructureIndex = 1;
+            compare(Session.project.currentStructure.scatteringLengths.count, 0, "A scattering override belongs only to its structure");
         }
         function test_exact_classic_archive_opens_and_saves() {
             const archive = proof.classicArchive();
