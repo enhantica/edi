@@ -207,6 +207,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
             return text;
         },
         this);
+    categories_ = new CategoryListModel(this);
+    syncCategories();
     render_wait_.setSingleShot(true);
     connect(&render_wait_, &QTimer::timeout, this, [this] { followRendered(false); });
     loadScan();
@@ -2706,16 +2708,31 @@ void ProjectViewModel::undo() {
     syncUndo();
 }
 
+void ProjectViewModel::syncCategories() {
+    // The standard uncertainties have their designed group here, the report's settings theirs on the Report page.
+    categories_->setCategories({edi::Category{"su_format"}, edi::Category{"report"}},
+                               [this] { return metadata_text_->text().toStdString(); });
+}
+
 QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     // A scan's datasets read their data from its files, which a project read from text does not carry.
     if (scan_) {
         return tr("A scan project is edited on its pages, not as text");
     }
+    // What the reader only warns about (an item it does not know, a value it reads in another way) is not applied
+    // either: the text is applied only as it is read.
     std::optional<edi::Project> read;
+    QStringList warnings;
     try {
-        read = edi::project_with_file_text(*project_, file.toStdString(), text.toStdString());
+        read = edi::project_with_file_text(*project_, file.toStdString(), text.toStdString(),
+                                           [&warnings](const std::string& warning) {
+                                               warnings.append(QString::fromStdString(warning));
+                                           });
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
+    }
+    if (!warnings.isEmpty()) {
+        return warnings.join(QLatin1Char('\n'));
     }
     auto before = std::make_shared<const edi::Project>(*project_);
     const QString error = apply(edi::Edit::replace_project(*project_, std::move(*read)), true);

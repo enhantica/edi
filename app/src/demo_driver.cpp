@@ -782,6 +782,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"latp-4-curves-off", {"chart.toolbar.structureCurves"}});
         steps_.push_back({"latp-5-reset", {"chart.toolbar.reset"}});
     }
+    // The Text tab on LBCO's structure, Editable and Everything, in both themes. Run only when asked
+    // (`--demo-only texttab-`).
+    if (only.startsWith(QLatin1String("texttab-"))) {
+        steps_.push_back({"texttab-1-editable-light", QStringList{"resize:1280x960", "theme:light"} + start +
+                                                          open_example("pd-neut-cwl_lbco-hrpt") +
+                                                          QStringList{"appBar.tab.structure", text}});
+        steps_.push_back({"texttab-2-editable-dark", {"theme:dark"}});
+        steps_.push_back({"texttab-3-everything-dark", {"text.show", "choose:Everything"}});
+        steps_.push_back({"texttab-4-everything-light", {"theme:light"}});
+        steps_.push_back({"texttab-5-editable-again", {"text.show", "choose:Editable"}});
+    }
     // The excluded ranges on Stacked and the Map, shown and hidden (the owner, 2026-10-27): NCAF's five banks. Run only
     // when asked (`--demo-only excluded-`).
     if (only.startsWith(QLatin1String("excluded-"))) {
