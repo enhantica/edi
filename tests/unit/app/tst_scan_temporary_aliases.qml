@@ -6,6 +6,31 @@ import ReportBoundaryAcceptance 1.0
 Item {
     TestCase {
         name: "ScanTemporaryAliases"
+        function test_all_optional_restore_payloads_data() {
+            const cases=[];
+            for(let mask=0;mask<16;++mask)cases.push({tag:String(mask),mask:mask});
+            return cases;
+        }
+        function test_all_optional_restore_payloads(data) {
+            const facts=BoundaryProof.scanTemporary(SettingsProof.emptyDirectory(),SettingsProof.emptyDirectory(),
+                "putFilesMask:"+data.mask,"none",false,0,false);
+            verify(facts.setupError===undefined,"E11 scan restore reaches the actual ordinary file owner");
+            compare(facts.refusal,"","E11 scan restore admits its valid authored optional-file state");
+            compare(JSON.stringify(facts.publishedAfter),JSON.stringify(facts.wanted),
+                "E11 scan restore installs every wanted byte and removes only deliberately absent outputs");
+            compare(JSON.stringify(facts.after),JSON.stringify(facts.before),
+                "E11 scan restore preserves every unrelated outside byte");
+            verify(facts.carried,"E11 scan restore preserves carried artifacts for every optional payload shape");
+        }
+        function test_taken_restore_preserves_exact_original_files() {
+            const facts=BoundaryProof.scanTemporary(SettingsProof.emptyDirectory(),SettingsProof.emptyDirectory(),
+                "takeFiles","none",false,0,false);
+            verify(facts.setupError===undefined,"E11 taken scan restoration reaches the actual ordinary owner");
+            compare(facts.refusal,"","E11 taken scan restoration succeeds before consuming recovery data");
+            compare(JSON.stringify(facts.publishedAfter),JSON.stringify(facts.publishedBefore),
+                "E11 taken scan restoration returns every original result and provenance byte");
+            verify(facts.carried,"E11 taken restoration retains carried artifacts");
+        }
         function test_all_scan_file_helpers_detach_temporary_entries_data() {
             const cases = [];
             for (const route of ["writeRun", "putFiles", "putRunFile", "swapRunFile", "takeFiles", "restoreRunFile", "dropRunFile", "removeRunFile"])
