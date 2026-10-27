@@ -139,6 +139,9 @@ class ScanLayer : public QQuickPaintedItem {
     Q_INVOKABLE QColor colourOf(int dataset) const;
     // A line's colour faded to `faded` over the background, opaque.
     QColor fadedColour(const QColor& colour) const;
+    // A stacked line's colour, with `top` the highlighted dataset (-1 for none).
+    QColor lineColour(int dataset, int top) const;
+    QColor blendedColour(const QColor& colour, double keep) const;
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     int coloursRevision() const { return colours_revision_; }

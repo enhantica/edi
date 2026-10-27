@@ -583,10 +583,18 @@ void ScanLayer::recolour() {
     redraw();
 }
 
-QColor ScanLayer::fadedColour(const QColor& colour) const {
+QColor ScanLayer::fadedColour(const QColor& colour) const { return blendedColour(colour, faded_); }
+
+QColor ScanLayer::lineColour(int dataset, int top) const {
+    // Every line at 75 % (the owner, 2026-10-27), the faded ones fainter still; the highlighted one in full.
+    constexpr double kLineOpacity = 0.75;
+    const QColor colour = colourOf(dataset);
+    return dataset == top ? colour : blendedColour(colour, kLineOpacity * (top >= 0 ? faded_ : 1.0));
+}
+
+QColor ScanLayer::blendedColour(const QColor& colour, double keep) const {
     // Blended toward the background rather than made translucent: a line crossing itself, up and down a narrow peak,
     // stays one even colour, as the pattern chart's opaque lines do.
-    const double keep = faded_;
     const auto mix = [keep](double ink, double paper) { return keep * ink + (1.0 - keep) * paper; };
     return QColor::fromRgbF(static_cast<float>(mix(colour.redF(), background_.redF())),
                             static_cast<float>(mix(colour.greenF(), background_.greenF())),
@@ -663,8 +671,8 @@ std::vector<std::size_t> top_down(const std::vector<double>& rows, std::size_t c
     return order;
 }
 
-// As wide as the pattern chart's measured line, 2 px (the owner, 2026-10-22), narrowing toward 1 px where
-// neighbouring rows are closer than six pixels, so the lines of a dense scan never merge.
+// 1.5 px (the owner, 2026-10-27), narrowing toward 1 px where neighbouring rows are closer than 4.5 pixels, so the
+// lines of a dense scan never merge.
 double line_width(const std::vector<double>& rows, const std::vector<std::size_t>& order, double y_span, double height) {
     double step_px = std::numeric_limits<double>::infinity();
     for (std::size_t k = 1; k < order.size(); ++k) {
@@ -673,7 +681,7 @@ double line_width(const std::vector<double>& rows, const std::vector<std::size_t
             step_px = std::min(step_px, gap);
         }
     }
-    return std::clamp(step_px / 3.0, 1.0, 2.0);
+    return std::clamp(step_px / 3.0, 1.0, 1.5);
 }
 
 // The pattern chart's tint of an excluded region (edi::pattern_style_table's `excluded`).
@@ -764,11 +772,9 @@ void ScanLayer::feedLines() {
     const auto style_of = [this, top](std::size_t d) {
         const double span = highs_[d] - lows_[d];
         const double scaled = span > 0.0 ? pattern_height_ / span : 0.0;
-        QColor colour = colourOf(static_cast<int>(d));
+        QColor colour = lineColour(static_cast<int>(d), top);
         if (top >= 0 && static_cast<int>(d) == top) {
             colour.setAlphaF(0.0F);  // drawn by the line over the others
-        } else if (top >= 0) {
-            colour = fadedColour(colour);
         }
         return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
     };
@@ -983,10 +989,7 @@ void ScanLayer::paint(QPainter* painter) {
         const QRectF bounds = line.path.boundingRect();
         line.top = bounds.top() - width_px;
         line.bottom = bounds.bottom() + width_px;
-        line.colour = colourOf(static_cast<int>(d));
-        if (top >= 0 && static_cast<int>(d) != top) {
-            line.colour = fadedColour(line.colour);
-        }
+        line.colour = lineColour(static_cast<int>(d), top);
         lines.push_back(std::move(line));
     }
     // Stroked in horizontal tiles, one per thread: every core, one while a fit runs; EDI_SCAN_PAINT_THREADS sets the
