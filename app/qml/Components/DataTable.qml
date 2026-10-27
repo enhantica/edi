@@ -46,20 +46,36 @@ EaComponents.ListView {
     // The one column rule (ADR-0029): `columns` as the base's `columnWidths`, where every flex column (-1) but the
     // last fits its header and its widest shown cell, so the columns start at the left and the last flex column,
     // aligned left, takes the rest of the row; fixed columns, the row buttons among them, keep their widths.
-    // `equalColumns` keeps the flex columns equal instead (atom sites and atomic displacements).
+    // `equalColumns` keeps the flex columns equal instead (atom sites and atomic displacements). A fitted column has
+    // the header's margin while the row has room for it, less when it has not, and only a row too narrow for the
+    // texts themselves narrows them, where a number shows its short form.
     property var columns: []
     property bool equalColumns: false
+    // Each column's widest text, its header's or a shown cell's, without the margin.
     property var fittedWidths: []
     columnWidths: {
         const fitted = fittedWidths;
         const last = columns.lastIndexOf(-1);
-        return columns.map((w, i) => !equalColumns && w === -1 && i !== last && (fitted[i] ?? 0) > 0 ? fitted[i] : w);
+        const fits = columns.map((w, i) => !equalColumns && w === -1 && i !== last && (fitted[i] ?? 0) > 0);
+        const count = fits.filter(Boolean).length;
+        if (count === 0)
+            return columns;
+        const fixed = columns.reduce((sum, w) => sum + (w > 0 ? w : 0), 0);
+        const texts = fitted.reduce((sum, w, i) => sum + (fits[i] ? w : 0), 0);
+        const lastText = last >= 0 ? (fitted[last] ?? 0) : 0;
+        const room = width - fixed - lastText - EaStyle.Sizes.tableColumnSpacing * (columns.length - 1) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2;
+        const margin = Math.max(0, Math.min(autoColumnPadding, (room - texts) / count));
+        const scale = texts > room && texts > 0 ? Math.max(0, room) / texts : 1;
+        return columns.map((w, i) => fits[i] ? Math.floor(fitted[i] * scale + margin) : w);
     }
     function fitColumns() {
         const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths : [];
-        const widths = columns.map((w, i) => (header[i] ?? 0) + autoColumnPadding);
-        // An editor's implicit width is a default, not its text: a cell is measured by its text where it has one.
-        const measure = cell => "contentWidth" in cell ? cell.contentWidth + (cell.leftPadding ?? 0) + (cell.rightPadding ?? 0) : cell.implicitWidth;
+        const widths = columns.map((w, i) => header[i] ?? 0);
+        // A cell is measured by its whole text: a number cell by the number it would show if it fitted (it shortens
+        // itself to the width it is given), a label by its natural width, an editor by its text (its implicit width
+        // is a default, not its text).
+        const padded = (cell, w) => w + (cell.leftPadding ?? 0) + (cell.rightPadding ?? 0);
+        const measure = cell => "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : cell.implicitWidth;
         // The filling column reads from the left, as its header, so its value sits next to the columns before it and
         // the space it takes is left after it (a right-aligned number would move to the row's far edge).
         const fill = equalColumns ? -1 : columns.lastIndexOf(-1);
@@ -67,8 +83,12 @@ EaComponents.ListView {
             if (fill >= 0 && fill < cells.length && "horizontalAlignment" in cells[fill])
                 cells[fill].horizontalAlignment = Text.AlignLeft;
         };
-        // The cells as the base sizes them: a row's visual children, in order.
-        const cellsOf = row => row && row.contentRowData ? Array.from(row.contentRowData).filter(cell => cell instanceof Item) : null;
+        // The cells as the base sizes them: the children of the row's inner Row, in order, so a Repeater's cells
+        // (placed before the Repeater) line up with their columns.
+        const cellsOf = row => {
+            const first = row && row.contentRowData ? Array.from(row.contentRowData).find(cell => cell instanceof Item) : null;
+            return first && first.parent ? Array.from(first.parent.children) : null;
+        };
         if (cellsOf(headerItem))
             align(cellsOf(headerItem));
         for (const item of contentItem.children) {
@@ -150,6 +170,8 @@ EaComponents.ListView {
         target: table.model
         ignoreUnknownSignals: true
         function onDataChanged(topLeft, bottomRight) {
+            // A value arriving later (a calculated curve) can widen its column.
+            Qt.callLater(table.fitColumns);
             let changed = false;
             for (const role in table.rowWidths) {
                 const widths = table.rowWidths[role];

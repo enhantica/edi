@@ -664,8 +664,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             }
         }
     }
-    // The Structure page's tables, the current structure's row marked, in both themes. Run only when asked
-    // (`--demo-only tables-`).
+    // The Structure, Report and Experiment pages' tables, the current structure's row marked, in both themes. Run only
+    // when asked (`--demo-only tables-`).
     if (only.startsWith(QLatin1String("tables-"))) {
         steps_.push_back({"tables-1-structure-light",
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
@@ -674,6 +674,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"tables-3-report-dark", {"appBar.tab.report"}});
         steps_.push_back({"tables-4-report-light", {"theme:light"}});
         steps_.push_back({"tables-5-report-again", {"theme:light"}});
+        // The Experiment page's measured data and background tables.
+        steps_.push_back({"tables-6-data-light", {"appBar.tab.experiment", extras, "expand:group.data"}});
+        steps_.push_back({"tables-7-data-dark", {"theme:dark"}});
+        steps_.push_back({"tables-8-background-dark", {"expand:group.background"}});
+        steps_.push_back({"tables-9-background-light", {"theme:light"}});
     }
     // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
     // data table with a column per structure. Run only when asked (`--demo-only curves-`).
