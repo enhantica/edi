@@ -35,3 +35,10 @@ writer, saved HTML browser observer and PDF image observer. Their initial
 runtime proof is pending this workspace's app build; unexecuted nodes remain
 explicitly unmeasured in the runtime table. Formatting and collection do not
 attest their runtime behaviour.
+
+`generate_bragg.py` generates the native boundary fixture from `owner.json`
+and the independent OKLab observer. With one experiment, structures start at
+position 2 in Earth and position 1 in the other palettes (ADR-0038). The boundary
+still checks every Bragg tick, public colour lookup and label identity; its old
+five-colour structure gradient is replaced by the shared eleven-colour palette
+and the ADR's overflow shades.

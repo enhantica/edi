@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T21:26:54Z
+# measured_utc = 2026-10-27T03:50:45Z
 #
-# Recorded from: focused base-replay.txt; unexecuted app actors remain unmeasured
-# Collected tests: 18355; with a reported duration: 10282
+# Recorded from: /home/andrewsazonov/runs/e04-t37/tests-seq2-native.log
+# Collected tests: 18331; with a reported duration: 10281
 # Module-scoped fixture costs recorded: 91
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 17959
-# inventory_cpp = 396
-# inventory_measured = 16031
+# inventory_python = 17936
+# inventory_cpp = 395
+# inventory_measured = 16007
 # inventory_unmeasured = 2324
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -7059,34 +7059,11 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract
 0.180	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 0.010	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
 0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[acton]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[batlow]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[blues]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-gouldian]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-l06]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-l08]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-l17]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-l18]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[deep]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[dense]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[devon]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[gnbu]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[haline]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[ice]
+0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[greys]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[inferno]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[lajolla]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[lapaz]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[magma]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[oslo]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[plasma]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[pubu]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[purples]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[tempo]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[thermal]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[turbo]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[viridis]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[ylgnbu]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[ylorrd]
 0.000	tests/integration/py/test_scan_map_sources.py::test_light_ended_candidates_are_offered_without_fixing_their_names
 0.000	tests/integration/py/test_scan_map_sources.py::test_scan_retains_all_owner_selected_candidate_maps
 0.340	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_accepts_valid_all_skipped_resume[False-human]
@@ -16771,8 +16748,7 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_integer_domain.cpp::Rep
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains existing presentation and drawing outputs at nontrivial seams
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite values as null
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report options retain section order and an explicitly fixed UTC timestamp
-0.010	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure count retains its approved Bragg colour
-0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure palette entry and wraparound retains its Bragg colour
+0.011	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure count retains its approved Bragg colour
 0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Static report borders every filled and empty correlation cell
 0.000	tests/unit/cpp/test_scan_visible_range.cpp::A resolved scan range retains its measured samples without a full-range envelope
 0.001	tests/unit/cpp/test_scan_visible_range.cpp::Visible scan columns retain every in-range minimum and maximum
