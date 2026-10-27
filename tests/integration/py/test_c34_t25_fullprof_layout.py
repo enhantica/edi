@@ -459,7 +459,13 @@ def test_no_unaccounted_project_homes_or_invented_instruments():
     catalogue = json.loads(
         (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
     )['cases']
-    catalogue_verification = {row['id'] for row in catalogue}
+    single_crystal = {row['id'] for row in catalogue if row['group'] == 'Single crystal'}
+    assert single_crystal == {
+        'sc-neut-cwl_tb2ti2o7-heidi',
+        'sc-neut-cwl_pr2nio4-5c2',
+        'sc-neut-tof_taurine-senju',
+    }, 'The FullProf inventory must include the three owner-selected single-crystal fitting homes'
+    catalogue_verification = {row['id'] for row in catalogue if row['id'] not in single_crystal}
     catalogue_fitting = {
         row['id'] for row in catalogue if row['group'] != 'Calculations without data'
     }

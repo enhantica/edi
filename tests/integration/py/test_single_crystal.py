@@ -10,6 +10,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from tests.fixtures.project_save.reference import (
+    declared_rule,
+    require_saved_parameters,
+    saved_parameters,
+)
+
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/single_crystal'
 REFERENCE = json.loads((FIXTURE / 'fullprof.json').read_text())['cases']
@@ -148,11 +154,14 @@ def test_project_round_trip_retains_reflections_and_model(tmp_path, case):
             err_msg='An omitted extinction category must calculate like its explicit defaults',
         )
     before = columns(model.experiments[0], tof='tof' in case)
-    first_calc = calculated(model)
+    calculated(model)
+    expected = saved_parameters(model, declared_rule(model.metadata.path))
     previous = None
     for generation in range(2):
         destination = tmp_path / f'saved-{generation}'
         model.save_as(destination)
+        require_saved_parameters(model.parameters, expected)
+        saved_calc = calculated(model)
         scientific = {
             str(p.relative_to(destination)): p.read_bytes()
             for folder in ('structures', 'experiments')
@@ -170,10 +179,10 @@ def test_project_round_trip_retains_reflections_and_model(tmp_path, case):
         )
         np.testing.assert_allclose(
             calculated(model),
-            first_calc,
+            saved_calc,
             rtol=1e-12,
             atol=1e-12,
-            err_msg='Single-crystal save/load must preserve the forward model',
+            err_msg='Single-crystal reopen reproduces the adopted saved model forward calculation',
         )
 
 

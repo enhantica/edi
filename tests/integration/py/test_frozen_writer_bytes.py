@@ -5,12 +5,15 @@ Native serialization, input archive extraction and filesystem work are exercised
 here under the integration runtime bound; the unit limit remains unchanged.
 """
 
+import json
 import os
 import shutil
 from types import SimpleNamespace
 
 import pytest
 
+from tests.fixtures.project_archive.recalculated_copy import check_geometry
+from tests.fixtures.project_save.computed_columns import check as check_computed
 from tests.fixtures.weight_fractions.single_phase_bytes import COLUMN
 from tests.unit.py import test_c11_t4_cw_selection as cw
 from tests.unit.py import test_c11_t56_project_identity as identity
@@ -81,4 +84,7 @@ def test_c11_t56_datablock_bytes_match_pre_fix_regression_pins(
     record_property('weight_fraction_before', 'absent column in immutable datablock hashes')
     record_property('weight_fraction_after', 'checked unity column; original hashes retained')
     identity.require_datablock_regression_pins(tmp_path / 'control')
+    saved = tmp_path / 'control/saved'
+    record_property('carried_computed_columns', json.dumps(check_computed(saved, identity.edi)))
+    check_geometry((saved / 'structures/si.edi').read_bytes())
     comparison_escapes(identity.require_datablock_regression_pins, identity, tmp_path, monkeypatch)

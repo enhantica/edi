@@ -76,7 +76,7 @@ Column {
             options: group.experiment ? group.experiment.backgroundEstimateModes : null
             token: group.experiment ? group.experiment.backgroundEstimateMode : ""
             onSelected: token => group.experiment.backgroundEstimateMode = token
-            ToolTip.visible: hovered && EaGlobals.Vars.showToolTips && refusal === ""
+            helpToolTip: true
             ToolTip.text: qsTr("Manual: the background is yours to edit, and Estimate replaces it when you ask. Auto: the background is estimated again whenever the measured data or the settings in Extra change, so the table only shows it; choose manual to edit it.")
         }
         ValueField {

@@ -46,7 +46,11 @@ def historical_analysis(source, saved):
 def _historical_weights(source):
     names = []
     for path in sorted((source / 'experiments').glob('*.edi')):
-        cells = shlex.split(path.read_text())
+        # Only the declared block key is needed here. Stop the same STAR lexer
+        # at that key instead of tokenizing thousands of irrelevant data rows.
+        cells = shlex.shlex(path.read_text(), posix=True)
+        cells.whitespace_split = True
+        cells.commenters = ''
         block = next(cell[5:] for cell in cells if cell.startswith('data_'))
         assert re.fullmatch(r'[A-Za-z0-9_-]+', block), (
             'Historical-weight projection requires an unambiguous declared experiment key'

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include <memory>
+#include <QDebug>
 #include <QAnimationDriver>
 #include <QElapsedTimer>
 #include <QPdfWriter>
@@ -16,9 +17,13 @@
 #include <QTemporaryDir>
 #include <QDirIterator>
 #include <QScreen>
+#include <QSet>
 #include <QGuiApplication>
 #include <QJSValue>
 #include <QKeyEvent>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDropEvent>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QtTest/qtestkeyboard.h>
@@ -35,6 +40,7 @@
 #include <QFileInfo>
 #include <QFile>
 #include <QTextStream>
+#include <QTextLayout>
 #include <QSettings>
 #include <QUrl>
 #include <QVariantMap>
@@ -79,6 +85,35 @@ class ReportSettingsProof : public QObject {
     Q_PROPERTY(bool webAvailable READ webAvailable CONSTANT)
     Q_PROPERTY(QString webExportError READ webExportError)
 public:
+    // Public Qt text layout, using the rendered label's own font and available width.
+    // The QML gate checks its line count against the actual label before reading line text.
+    Q_INVOKABLE QVariantList tooltipTextLines(QObject* label, bool word, bool anywhere) const {
+        QVariantList result;
+        if (label == nullptr || !label->property("font").canConvert<QFont>()) {
+            return result;
+        }
+        const QString text = label->property("text").toString();
+        QTextLayout layout(text, label->property("font").value<QFont>());
+        QTextOption option;
+        option.setWrapMode(word && anywhere ? QTextOption::WrapAtWordBoundaryOrAnywhere
+                           : word ? QTextOption::WordWrap
+                           : anywhere ? QTextOption::WrapAnywhere : QTextOption::NoWrap);
+        option.setUseDesignMetrics(true);
+        layout.setTextOption(option);
+        layout.beginLayout();
+        for (;;) {
+            QTextLine line = layout.createLine();
+            if (!line.isValid()) {
+                break;
+            }
+            line.setLineWidth(label->property("width").toDouble() - label->property("leftPadding").toDouble()
+                              - label->property("rightPadding").toDouble());
+            result.append(QVariantMap{{QStringLiteral("text"), text.mid(line.textStart(), line.textLength()).trimmed()},
+                                      {QStringLiteral("width"), line.naturalTextWidth()}});
+        }
+        layout.endLayout();
+        return result;
+    }
     using QObject::QObject;
     bool webAvailable() const { return true; }
     QString webExportError() const { return web_export_error_; }
@@ -117,6 +152,50 @@ public:
         object->setParent(parent);
         QQmlEngine::setObjectOwnership(object, QQmlEngine::JavaScriptOwnership);
         if (auto* item = qobject_cast<QQuickItem*>(object)) item->setParentItem(parent);
+        return object;
+    }
+    Q_INVOKABLE QVariantList tooltipObjects(QObject* root) const {
+        QVariantList result;
+        QSet<QObject*> visited;
+        std::vector<QObject*> pending{root};
+        while (!pending.empty()) {
+            auto* object = pending.back();
+            pending.pop_back();
+            if (!object || visited.contains(object)) continue;
+            visited.insert(object);
+            if (object->property("opened").isValid()) result.append(QVariant::fromValue(object));
+            for (auto* child : object->children()) pending.push_back(child);
+            if (auto* item = qobject_cast<QQuickItem*>(object))
+                for (auto* child : item->childItems()) pending.push_back(child);
+            if (auto* window = qobject_cast<QQuickWindow*>(object)) pending.push_back(window->contentItem());
+        }
+        return result;
+    }
+    Q_INVOKABLE bool tooltipOwnedBy(QObject* tooltip, QObject* source) const {
+        if (!tooltip || !source) return false;
+        for (auto* owner = tooltip->parent(); owner; owner = owner->parent())
+            if (owner == source) return true;
+        return false;
+    }
+    Q_INVOKABLE QObject* tooltipPlatformMain(QQuickItem* context, bool web, bool disk) const {
+        auto* engine = context ? qmlEngine(context) : nullptr;
+        if (!engine) return nullptr;
+        const QUrl origin("qrc:/qt/qml/edi/app/qml/Main.qml");
+        QFile file(":/qt/qml/edi/app/qml/Main.qml");
+        if (!file.open(QIODevice::ReadOnly)) return nullptr;
+        auto source = file.readAll();
+        // Availability operands alone select the real dialog's platform branches.
+        source.replace("WebFiles.available", web ? "true" : "false");
+        source.replace("WebStorage.diskAccess", disk ? "true" : "false");
+        QQmlComponent component(engine);
+        component.setData(source, origin);
+        auto* object = component.createWithInitialProperties({{"visible", true}, {"width", 1280}, {"height", 720}}, engine->rootContext());
+        if (!object) {
+            for (const auto& error : component.errors()) qWarning().noquote() << error.toString();
+            return nullptr;
+        }
+        object->setParent(context);
+        QQmlEngine::setObjectOwnership(object, QQmlEngine::JavaScriptOwnership);
         return object;
     }
     Q_INVOKABLE QVariantMap htmlFigureFacts(const QString& html) const {
@@ -426,6 +505,86 @@ public:
     }
     Q_INVOKABLE bool remove(const QUrl& project, const QString& relative) const {
         return QFile::remove(QDir(project.toLocalFile()).filePath(relative));
+    }
+    Q_INVOKABLE QUrl copyProjectArchive(const QUrl& source, bool readOnly = false) {
+        const QUrl root = emptyDirectory();
+        const QString path = QDir(root.toLocalFile()).filePath("opened.zip");
+        if (!QFile::copy(source.toLocalFile(), path)) return {};
+        if (readOnly) {
+            const auto read = QFile::ReadOwner | QFile::ReadGroup | QFile::ReadOther;
+            if (!QFile::setPermissions(path, read) ||
+                !QFile::setPermissions(root.toLocalFile(),
+                                       read | QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther))
+                return {};
+        }
+        return QUrl::fromLocalFile(path);
+    }
+    Q_INVOKABLE bool archiveLocationWritable(const QUrl& archive) const {
+        return QFileInfo(archive.toLocalFile()).isWritable() ||
+               QFileInfo(QFileInfo(archive.toLocalFile()).absolutePath()).isWritable();
+    }
+    Q_INVOKABLE QVariantList projectFileDialogs(QObject* root, bool folder) const {
+        QVariantList result;
+        if (!root) return result;
+        const char* selected = folder ? "selectedFolder" : "selectedFile";
+        for (auto* object : root->findChildren<QObject*>())
+            if (object->inherits(folder ? "QQuickFolderDialog" : "QQuickFileDialog") &&
+                object->metaObject()->indexOfProperty(selected) >= 0 &&
+                object->property("visible").toBool())
+                result.append(QVariant::fromValue(object));
+        return result;
+    }
+    Q_INVOKABLE QVariantMap projectDialogFacts(QObject* dialog) const {
+        if (!dialog) return {};
+        return {{"type", QString::fromLatin1(dialog->metaObject()->className())},
+                {"systemFolder", dialog->inherits("QQuickFolderDialog")},
+                {"systemFile", dialog->inherits("QQuickFileDialog")},
+                {"acceptLabel", dialog->property("acceptLabel")},
+                {"options", dialog->property("options")},
+                {"fileMode", dialog->property("fileMode")}};
+    }
+    Q_INVOKABLE bool chooseProjectLocation(QObject* dialog, const QUrl& location,
+                                           bool folder) const {
+        if (!dialog || !dialog->property("visible").toBool()) return false;
+        const char* selected = folder ? "selectedFolder" : "selectedFile";
+        if (!dialog->setProperty(selected, location) ||
+            dialog->property(selected).toUrl() != location)
+            return false;
+        const bool accepted = QMetaObject::invokeMethod(dialog, "accepted", Qt::DirectConnection);
+        QMetaObject::invokeMethod(dialog, "close", Qt::DirectConnection);
+        return accepted;
+    }
+    Q_INVOKABLE bool dropProject(QObject* object, const QUrl& location) const {
+        auto* window = qobject_cast<QQuickWindow*>(object);
+        if (!window) return false;
+        QMimeData mime;
+        mime.setUrls({location});
+        const QPoint point(window->width() / 2, window->height() / 2);
+        QDragEnterEvent enter(point, Qt::CopyAction, &mime, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &enter);
+        if (!enter.isAccepted()) return false;
+        QDropEvent drop(QPointF(point), Qt::CopyAction, &mime, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(window, &drop);
+        return drop.isAccepted();
+    }
+    Q_INVOKABLE QString projectArchiveBytes(const QUrl& location) const {
+        QFile file(location.toLocalFile());
+        return file.open(QIODevice::ReadOnly) ? QString::fromLatin1(file.readAll().toBase64())
+                                              : QString();
+    }
+    Q_INVOKABLE QVariantMap projectFolderBytes(const QUrl& location) const {
+        QVariantMap result;
+        QDir root(location.toLocalFile());
+        QDirIterator files(root.absolutePath(), QDir::Files | QDir::Hidden,
+                           QDirIterator::Subdirectories);
+        while (files.hasNext()) {
+            const QString name = files.next();
+            QFile file(name);
+            if (!file.open(QIODevice::ReadOnly)) return {};
+            result.insert(root.relativeFilePath(name),
+                          QString::fromLatin1(file.readAll().toBase64()));
+        }
+        return result;
     }
     Q_INVOKABLE QString localPath(const QUrl& location) const { return location.toLocalFile(); }
     Q_INVOKABLE QVariantMap palette(bool safe) const { return paletteForScheme(safe ? "colourBlindSafe" : "default"); }

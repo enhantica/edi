@@ -109,6 +109,12 @@ def build_parser() -> argparse.ArgumentParser:
         help='refine without writing: leave the project tree byte-identical (the default writes '
         'the refined project back into its own directory)',
     )
+    fit.add_argument(
+        '--output',
+        metavar='DIR',
+        help='save the project into DIR and write the results there; a .zip project is written '
+        'back only this way: an input archive is never written as the output',
+    )
     # The forward calculation, mirroring `crysta <project-dir> calc`. The output is the
     # versioned record=calc machine record, byte-comparable with crysta's by construction
     # (both render through crysta's own emitter).
@@ -139,6 +145,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="which channel to print: 'machine' (the default) is the versioned record=calc "
         "byte-comparable with `crysta <dir> calc`; 'human' is the readable view",
     )
+    calc.add_argument(
+        '--output',
+        metavar='DIR',
+        help='save the project into DIR and write the results there; a .zip project is written '
+        'back only this way: an input archive is never written as the output',
+    )
+    export = subcommands.add_parser(
+        'export', help='write a project folder as one .zip archive (edi ADR-0052)'
+    )
+    export.add_argument('project', help='project directory, its project.edi, or a .zip')
+    export.add_argument('-o', '--output', required=True, metavar='FILE', help='the .zip to write')
     undo = subcommands.add_parser('undo', help='undo the last fit of a project directory')
     undo.add_argument('project', help='project directory previously fitted (and saved)')
     undo.add_argument(
@@ -248,7 +265,7 @@ def run_fit(args: argparse.Namespace) -> int:
     # and the save below is skipped under --dry. The reports carry numbers and status, never
     # paths; the human header's project name is taken from the original argument.
     with contextlib.ExitStack() as stack:
-        project = edi.Project.load(args.project)
+        project = _open(args)
         if args.dry and _is_scan(project):
             project._dry_run_into(
                 stack.enter_context(tempfile.TemporaryDirectory(prefix='edi-dry-'))
@@ -596,6 +613,32 @@ def _run_machine(project: edi.Project, verbosity, *, stream: bool) -> int:
 _CALC_MARKER = '# --- calculated series (crysta calc; regenerated on every run) ---'
 
 
+def _open(args: argparse.Namespace) -> edi.Project:
+    """Load the command's project; with --output, save it there first, so every write lands there.
+
+    A .zip project (edi ADR-0052) is never a command's output: without --output nothing is written
+    back, as under --dry, and its archive is left as it was (Project.save() in Python rewrites it).
+    """
+    project = edi.Project.load(args.project)
+    if getattr(args, 'output', None) and not args.dry:
+        project._save_as_silent(args.output)
+        args.project = args.output
+    elif Path(args.project).suffix.lower() == '.zip' and not args.dry:
+        print(
+            f'edi {args.command}: {args.project} is an archive; nothing is written back '
+            '(give --output DIR to keep the results)',
+            file=sys.stderr,
+        )
+        args.dry = True
+    return project
+
+
+def run_export(args: argparse.Namespace) -> int:
+    """Write the project's folder as one .zip archive, the same archive every surface writes."""
+    edi.Project.load(args.project).export_zip(args.output)
+    return 0
+
+
 def _calc_target(directory: str, experiment) -> Path:
     """The experiment document a calc writes back into.
 
@@ -640,14 +683,19 @@ def run_calc(args: argparse.Namespace) -> int:
     # experiment's data.intensity_calc), never computed alongside, so the record and the
     # written series can only describe what the facade actually did.
     started = time.perf_counter()
-    project = edi.Project.load(args.project)
+    project = _open(args)
     # Every experiment's target is resolved (and refused by name when its name cannot be
     # persisted) BEFORE anything is calculated or written, so a refusal leaves the project
     # tree -- and any path outside it -- unchanged.
+    # A single crystal's calculated intensities are written with its reflections by the save
+    # below, never as a _data_calc block.
     targets = (
         []
         if args.dry
-        else [_calc_target(args.project, experiment) for experiment in project.experiments]
+        else [
+            _calc_target(args.project, experiment) if experiment.data is not None else None
+            for experiment in project.experiments
+        ]
     )
     # ADR-0040: an experiment in auto background mode estimates its points or terms first when
     # its data or settings changed; the estimate, with what it came from, is saved with the
@@ -656,9 +704,17 @@ def run_calc(args: argparse.Namespace) -> int:
     project.analysis.calculate()
     if not args.dry and estimating:
         project.save()
+    elif not args.dry and any(experiment.data is None for experiment in project.experiments):
+        project._save_silent()
     total_points = 0
     checksum = 0.0
     for index, experiment in enumerate(project.experiments):
+        if experiment.data is None:
+            calculated = experiment.refln.intensity_calc
+            total_points += len(calculated)
+            for value in calculated:
+                checksum += value
+            continue
         calculated = experiment.data.intensity_calc
         total_points += len(calculated)
         # Accumulated value-by-value in experiment order, exactly as crysta's run_calc folds it —
@@ -762,11 +818,13 @@ def main(argv: list[str] | None = None) -> int:
     # gets a well-formed "this run produced no fit" rather than silence it cannot distinguish
     # from a crash.
     args = build_parser().parse_args(argv)
-    if args.command == 'report':
+    # The commands without a fit record: an error is one stderr line beside the non-zero exit.
+    plain = {'report': run_report, 'export': run_export}
+    if args.command in plain:
         try:
-            return run_report(args)
+            return plain[args.command](args)
         except (edi.IoError, ValueError, OSError) as error:
-            print(f'edi report: {error}', file=sys.stderr)
+            print(f'edi {args.command}: {error}', file=sys.stderr)
             return 1
     try:
         if args.command == 'undo':

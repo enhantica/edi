@@ -752,13 +752,9 @@ def test_existing_projects_oracle_covers_the_registry_without_filters():
         (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
     )['cases']
     expected_app_ids = [row['id'] for row in selection]
-    app_only_ids = [
-        'sc-neut-cwl_tb2ti2o7-heidi_fit',
-        'sc-neut-cwl_pr2nio4-5c2_fit',
-        'sc-neut-tof_taurine_fit',
-    ]
+    app_only_ids = []
     assert oracle['app_only_ids'] == app_only_ids, (
-        'The app oracle must retain exactly the declared single-crystal app-only list'
+        'The catalogue form retires every former single-crystal app-only entry'
     )
     assert [row['id'] for row in registry['projects'] if row.get('app-only')] == app_only_ids, (
         'The registry must refuse every app-only entry outside the declared list'

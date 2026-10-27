@@ -12,6 +12,7 @@ from tests.conftest import corpus_case_dir
 from tests.fixtures.background_estimate.lifecycle import persisted_points
 from tests.fixtures.background_estimate.relation_order import relation_input, scan_files
 from tests.fixtures.background_estimate.settings import points
+from tests.fixtures.project_save.reference import six_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = corpus_case_dir('lbco-hrpt-s2') / 'project'
@@ -111,8 +112,9 @@ def test_auto_refresh_matches_the_explicitly_relation_applied_nonzero_control(
     assert len(expected) == len(explicit), (
         'A normalized entry must retain the explicitly estimated post-relation anchor count'
     )
-    assert np.allclose(expected, explicit, rtol=2e-12, atol=1e-9), (
-        'A normalized entry must match explicit estimation after declared and symmetry application'
+    persisted = [(x, six_digits(y)) for x, y in explicit] if entry.startswith('cli-') else explicit
+    assert np.allclose(expected, persisted, rtol=2e-12, atol=1e-9), (
+        'A normalized entry matches explicit post-relation estimation, rounded only on CLI save'
     )
     actual = run_entry(paths[0], entry)
     assert len(actual) == len(expected), (

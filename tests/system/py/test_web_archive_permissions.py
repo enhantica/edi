@@ -61,8 +61,13 @@ def archives(tmp_path_factory):
 
 
 def expected(method):
-    prefix = 'project/' if method == 'pack' else ''
-    return {prefix + name: data for name, data in FILES.items()}
+    # Folder archives use the shared root-relative format and omit hidden/cache files.
+    # Explicit packFiles members remain opaque, including the hidden binary witness.
+    return {
+        name: data
+        for name, data in FILES.items()
+        if method != 'pack' or not any(part.startswith('.') for part in Path(name).parts)
+    }
 
 
 @pytest.mark.parametrize('method', ['pack', 'packFiles'])

@@ -8,6 +8,7 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+#include "edi/project_archive.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
@@ -34,6 +35,7 @@
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
+#include <functional>
 #include <fstream>
 #include <iostream>
 #include <limits>
@@ -1301,6 +1303,10 @@ void validate_experiment_selectors(const Block& block, const std::string& peak_t
         }
         const Loop* position_loop = block.loop_with("_background.position");
         const Loop* intensity_loop = block.loop_with("_background.intensity");
+        // No point loop at all is an empty background, as crysta writes and reads one.
+        if (position_loop == nullptr && intensity_loop == nullptr) {
+            return;
+        }
         if (position_loop == nullptr || intensity_loop == nullptr) {
             fail_schema(where, "background-loop-incomplete",
                         "line-segment background requires a loop declaring both "
@@ -2282,6 +2288,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         }
         experiment.excluded_regions.assign(std::move(regions));
     }
+
+    experiment.carried_calculation =
+        block_has_tag(block, "_data.intensity_calc") || block_has_tag(block, "_refln.intensity_calc");
 
     // The file's reflections, kept as read (model.hpp ExperimentBase::carried_reflections).
     if (const Loop* refln = block.loop_with("_refln.id"); refln != nullptr) {
@@ -3282,7 +3291,10 @@ std::vector<std::string> registered_peak_types() {
     return tokens;
 }
 
-Project load_project(const std::string& directory, const WarningSink& on_warning) {
+// `whole` holds the loader's rules for a project as a whole: one structure or more, one experiment or more, each
+// declaring what it computes over and linking structures the project holds. A save's readback lifts them, since a save
+// writes a project still being built too, and its values must still be adopted (edi ADR-0052).
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3305,7 +3317,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     for (const std::string& path : hidden) {
         warn(kCifReport + path + " not read: " + fs::path(path).stem().string() + ".edi in the same folder is read");
     }
-    if (structure_files.empty()) {
+    if (structure_files.empty() && whole) {
         throw IoError("project has no structures/*.edi: " + directory);
     }
     Project project;
@@ -3371,13 +3383,16 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
         // (declaring both already refused inside the parser).
-        if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
+        if (!experiment.data.has_value() && !experiment.reflections.has_value() && whole) {
             throw IoError("project " + directory + ": experiment '" + experiment.name +
                           "' (" + file.string() +
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
                           "project must say what it computes over");
         }
-        require_held_links(project, experiment, "project " + directory + ": ", file.string());
+        // A save's readback lifts this rule with the others (edi ADR-0052).
+        if (whole) {
+            require_held_links(project, experiment, "project " + directory + ": ", file.string());
+        }
         project.experiments.push_back(std::move(experiment));
     }
 
@@ -3657,25 +3672,24 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
             result.message = text("_fit_result.message");
             result.iterations = count("_fit_result.iterations");
             result.fitting_time = number("_fit_result.fitting_time");
-            result.reduced_chi_square = number("_fit_result.reduced_chi_square");
+            // An agreement factor is absent when it was not a number, or in a result written before it.
+            const auto factor = [&block, &number](const char* tag) {
+                return block.find(tag) != nullptr ? std::optional<double>(number(tag)) : std::nullopt;
+            };
+            result.reduced_chi_square = factor("_fit_result.reduced_chi_square");
             result.objective_name = text("_fit_result.objective_name");
-            result.objective_value = number("_fit_result.objective_value");
+            result.objective_value = factor("_fit_result.objective_value");
             result.n_data_points = count("_fit_result.n_data_points");
             result.n_parameters = count("_fit_result.n_parameters");
             result.n_free_parameters = count("_fit_result.n_free_parameters");
             result.degrees_of_freedom = count("_fit_result.degrees_of_freedom");
             result.covariance_available = flag("_fit_result.covariance_available");
             result.exit_reason = text("_fit_result.exit_reason");
-            result.prof_wr_factor = number("_fit_result.prof_wr_factor");
-            // Absent in a result written before them.
-            for (const auto& [tag, field] : {std::pair{"_fit_result.prof_r_factor", &result.prof_r_factor},
-                                             std::pair{"_fit_result.prof_wr_expected", &result.prof_wr_expected},
-                                             std::pair{"_fit_result.prof_cr_factor", &result.prof_cr_factor},
-                                             std::pair{"_fit_result.prof_cwr_factor", &result.prof_cwr_factor}}) {
-                if (block.find(tag) != nullptr) {
-                    *field = number(tag);
-                }
-            }
+            result.prof_wr_factor = factor("_fit_result.prof_wr_factor");
+            result.prof_r_factor = factor("_fit_result.prof_r_factor");
+            result.prof_wr_expected = factor("_fit_result.prof_wr_expected");
+            result.prof_cr_factor = factor("_fit_result.prof_cr_factor");
+            result.prof_cwr_factor = factor("_fit_result.prof_cwr_factor");
             result.profile_function = text("_fit_result.profile_function");
             result.background_function = text("_fit_result.background_function");
             result.descent = text("_fit_result.descent");
@@ -3710,8 +3724,8 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
                         }
                         bank->fit_n_data_points = static_cast<int>(value);
                     }
-                    bank->fit_prof_wr_factor =
-                        to_double(loop_cell(*banks, row, "_fit_result_bank.prof_wr_factor", where), where);
+                    loop_cell(*banks, row, "_fit_result_bank.prof_wr_factor", where);
+                    bank->fit_prof_wr_factor = cell(*banks, row, "_fit_result_bank.prof_wr_factor");
                     bank->fit_chi_square = cell(*banks, row, "_fit_result_bank.chi_square");
                     bank->fit_prof_r_factor = cell(*banks, row, "_fit_result_bank.prof_r_factor");
                     bank->fit_prof_wr_expected = cell(*banks, row, "_fit_result_bank.prof_wr_expected");
@@ -3852,7 +3866,7 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
     // finite values, positive sigma — was enforced during parsing) or a declared calculation
     // grid. A project with no experiments at all declares neither, so it refuses here for the
     // same reason.
-    if (project.experiments.empty()) {
+    if (project.experiments.empty() && whole) {
         throw IoError("project has no experiments/*.edi: " + directory);
     }
 
@@ -4169,6 +4183,27 @@ Project load_project(const std::string& directory, const WarningSink& on_warning
         warn("crysta.domain.unfittable_free_ignored: " + note);
     }
     return project;
+}
+
+Project load_project(const std::string& path, const WarningSink& on_warning) {
+    // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
+    std::error_code error;
+    const fs::path given(path);
+    if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
+        const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");
+        return load_project_folder(folder.string(), on_warning);
+    }
+    if (is_project_archive(path)) {
+        const std::string folder = unpack_project_archive(read_file(path), fresh_archive_directory("open"));
+        Project project = load_project_folder(folder, on_warning);
+        // The unpacked folder is temporary: the project has no directory of its own until it is saved somewhere, and
+        // reads its scan data from the unpacked folder meanwhile.
+        project.scan_data_root = folder;
+        project.path.clear();
+        project.metadata.path.clear();
+        return project;
+    }
+    return load_project_folder(path, on_warning);
 }
 
 double parse_edi_double(const std::string& text, const std::string& where) {
@@ -4488,16 +4523,23 @@ void save_project_as(Project& project, const std::string& directory) {
     project.scan_data_root.clear();
 }
 
+namespace {
+
+// What a save wrote to `directory`, read as a reopen reads it, a project still being built included. The reopen's
+// warnings were the save's own concern.
+Project read_saved_project(const std::string& directory) {
+    return load_project_folder(directory, [](const std::string&) {}, false);
+}
+
+}  // namespace
+
 bool adopt_saved_values(Project& project, const std::string& directory) {
-    // The reopen's warnings were the save's own concern; a project the loader refuses, such as one saved before it
-    // has a structure, keeps its values as they are.
-    std::optional<Project> reopened;
-    try {
-        reopened.emplace(load_project(directory, [](const std::string&) {}));
-    } catch (const IoError&) {
-        return false;
-    }
-    const Project& saved = *reopened;
+    return adopt_values(project, read_saved_project(directory));
+}
+
+bool adopt_values(Project& project, const Project& saved) {
+    // Every bank's values round like any other's, a bank whose background estimate is due included; its estimate is
+    // not run (ADR-0040).
     bool changed = false;
     std::map<std::string, const Parameter*> held;
     for (const auto& slot : parameter_slots(saved)) {
@@ -4527,6 +4569,17 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
                  experiment->background_estimate_points != held->background_estimate_points)) {
                 experiment->background_estimate_inputs = held->background_estimate_inputs;
                 experiment->background_estimate_points = held->background_estimate_points;
+                changed = true;
+            }
+        }
+    }
+    // A time-of-flight bank angle is a setting, not a fit parameter: the project takes the six digits its file holds.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& held : saved.experiments) {
+            Parameter& bank = experiment->instrument.setup_twotheta_bank;
+            const double written = held->instrument.setup_twotheta_bank.value.get();
+            if (held->name.value() == experiment->name.value() && bank.value.get() != written) {
+                bank.value = written;
                 changed = true;
             }
         }
@@ -4566,6 +4619,187 @@ bool adopt_saved_values(Project& project, const std::string& directory) {
             project.fit_result.scan_results.erase(table);
             changed = true;
         }
+    }
+    // The fit's agreement records the save recomputed from the rounded values: each bank's, its phases' and every
+    // bank's together.
+    for (const auto& experiment : project.experiments) {
+        for (const auto& written : saved.experiments) {
+            if (written->name.value() != experiment->name.value()) {
+                continue;
+            }
+            const auto record = std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor,
+                                         experiment->fit_prof_wr_factor, experiment->fit_prof_wr_expected,
+                                         experiment->fit_prof_cr_factor, experiment->fit_prof_cwr_factor,
+                                         experiment->fit_chi_square);
+            const auto kept = std::tie(written->fit_n_data_points, written->fit_prof_r_factor,
+                                       written->fit_prof_wr_factor, written->fit_prof_wr_expected,
+                                       written->fit_prof_cr_factor, written->fit_prof_cwr_factor,
+                                       written->fit_chi_square);
+            if (record != kept) {
+                std::tie(experiment->fit_n_data_points, experiment->fit_prof_r_factor, experiment->fit_prof_wr_factor,
+                         experiment->fit_prof_wr_expected, experiment->fit_prof_cr_factor,
+                         experiment->fit_prof_cwr_factor, experiment->fit_chi_square) = kept;
+                changed = true;
+            }
+            const std::size_t links = std::min(experiment->linked_structures.size(), written->linked_structures.size());
+            for (std::size_t index = 0; index < links; ++index) {
+                LinkedStructure& link = *experiment->linked_structures[index];
+                const LinkedStructure& held_link = *written->linked_structures[index];
+                if (link.fit_bragg_r_factor != held_link.fit_bragg_r_factor ||
+                    link.fit_f_r_factor != held_link.fit_f_r_factor) {
+                    link.fit_bragg_r_factor = held_link.fit_bragg_r_factor;
+                    link.fit_f_r_factor = held_link.fit_f_r_factor;
+                    changed = true;
+                }
+            }
+        }
+    }
+    FitResultRecord& result = project.fit_result;
+    const FitResultRecord& kept = saved.fit_result;
+    const auto pooled = std::tie(result.prof_wr_factor, result.prof_r_factor, result.prof_wr_expected,
+                                 result.prof_cr_factor, result.prof_cwr_factor, result.reduced_chi_square,
+                                 result.objective_value, result.n_data_points, result.degrees_of_freedom);
+    const auto pooled_kept = std::tie(kept.prof_wr_factor, kept.prof_r_factor, kept.prof_wr_expected, kept.prof_cr_factor,
+                                      kept.prof_cwr_factor, kept.reduced_chi_square, kept.objective_value,
+                                      kept.n_data_points, kept.degrees_of_freedom);
+    if (!result.result_kind.empty() && pooled != pooled_kept) {
+        std::tie(result.prof_wr_factor, result.prof_r_factor, result.prof_wr_expected, result.prof_cr_factor,
+                 result.prof_cwr_factor, result.reduced_chi_square, result.objective_value, result.n_data_points,
+                 result.degrees_of_freedom) = pooled_kept;
+        changed = true;
+    }
+    return changed;
+}
+
+namespace {
+
+// What a save's recalculation rewrites, as it was: the fit's agreement records, each bank's calculated columns and
+// each structure's geometry, every one as a step that puts it back.
+std::vector<std::function<void()>> hold_calculation(Project& project) {
+    std::vector<std::function<void()>> back;
+    const auto keep = [&back](auto& field) { back.emplace_back([&field, value = field] { field = value; }); };
+    FitResultRecord& result = project.fit_result;
+    keep(result.prof_wr_factor);
+    keep(result.prof_r_factor);
+    keep(result.prof_wr_expected);
+    keep(result.prof_cr_factor);
+    keep(result.prof_cwr_factor);
+    keep(result.reduced_chi_square);
+    keep(result.objective_value);
+    keep(result.n_data_points);
+    keep(result.degrees_of_freedom);
+    for (const auto& experiment : project.experiments) {
+        keep(experiment->fit_n_data_points);
+        keep(experiment->fit_prof_r_factor);
+        keep(experiment->fit_prof_wr_factor);
+        keep(experiment->fit_prof_wr_expected);
+        keep(experiment->fit_prof_cr_factor);
+        keep(experiment->fit_prof_cwr_factor);
+        keep(experiment->fit_chi_square);
+        for (const auto& link : experiment->linked_structures) {
+            keep(link->fit_bragg_r_factor);
+            keep(link->fit_f_r_factor);
+        }
+        if (experiment->data.has_value()) {
+            PdDataBase& data = *experiment->data;
+            keep(data.d_spacing);
+            keep(data.intensity_calc);
+            keep(data.intensity_bkg);
+            keep(data.calc_status);
+            keep(data.component_intensities_net);
+            keep(data.component_order);
+            keep(data.residual);
+        }
+        if (experiment->reflections.has_value()) {
+            keep(experiment->reflections->d_spacing);
+            keep(experiment->reflections->sin_theta_over_lambda);
+            keep(experiment->reflections->intensity_calc);
+        }
+        keep(experiment->refln);
+        keep(experiment->computed_source);
+        keep(experiment->carried_calculation);
+    }
+    for (const auto& structure : project.structures) {
+        keep(structure->geometry);
+        keep(structure->geometry_source);
+    }
+    return back;
+}
+
+// Whether a calculation left an infinite value in the experiment's calculated columns. No file number spells one, so
+// the save writes the experiment uncomputed (edi ADR-0052); a NaN is a point not calculated.
+bool holds_infinite(const ExperimentBase& experiment) {
+    const auto infinite = [](const ComputedColumn<double>& column) {
+        return std::any_of(column.begin(), column.end(), [](double value) { return std::isinf(value); });
+    };
+    if (experiment.data.has_value()) {
+        const PdDataBase& data = *experiment.data;
+        if (infinite(data.d_spacing) || infinite(data.intensity_calc) || infinite(data.intensity_bkg) ||
+            infinite(data.component_intensities_net) || infinite(data.residual)) {
+            return true;
+        }
+    }
+    if (experiment.reflections.has_value()) {
+        const auto& reflections = *experiment.reflections;
+        if (infinite(reflections.d_spacing) || infinite(reflections.sin_theta_over_lambda) ||
+            infinite(reflections.intensity_calc)) {
+            return true;
+        }
+    }
+    const PowderReflnDataBase& refln = experiment.refln;
+    return infinite(refln.d_spacing) || infinite(refln.sin_theta_over_lambda) || infinite(refln.f_calc) ||
+           infinite(refln.f_squared_calc) || infinite(refln.position);
+}
+
+}  // namespace
+
+bool adopt_saved_project(Project& project, const std::string& directory) {
+    // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one holding
+    // results, calculated here or read from its file, is calculated again from those values and written once more, so
+    // its calculated pattern and R factors describe the values beside them.
+    // A project still being built (no structure yet, or an experiment without data) is read back too: its values are
+    // adopted like any other's. A save that cannot be read back is a failed save.
+    const bool changed = adopt_values(project, read_saved_project(directory));
+    const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
+        return item->carried_calculation || (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+               (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
+    });
+    if (!calculated) {
+        // Written once more from the values it took, so what a save derives from them (weight fractions, the
+        // isotropic mirror of an anisotropic ADP) is derived from what the files hold, and the next save writes the
+        // same bytes.
+        if (changed) {
+            save_project(project, directory);
+        }
+        return changed;
+    }
+    // Calculated again with its due background estimates deferred (ADR-0040): every other bank's results describe its
+    // rounded values, in the open project and in the file, and a due bank keeps and writes its own points.
+    const std::vector<std::function<void()>> before = hold_calculation(project);
+    try {
+        project.refresh_calculated_pattern(DueEstimates::Defer);
+        // An experiment whose calculation holds an infinity is written uncomputed, and held so, as a reopen reads it.
+        for (const auto& experiment : project.experiments) {
+            if (holds_infinite(*experiment)) {
+                if (experiment->data.has_value()) {
+                    experiment->data->clear_computed();
+                }
+                if (experiment->reflections.has_value()) {
+                    experiment->reflections->clear_computed();
+                }
+                experiment->refln.clear();
+                experiment->computed_source.reset();
+            }
+        }
+        refresh_agreement_records(project);
+        save_project(project, directory);
+    } catch (...) {
+        // The recalculation, the records or the second write refused: the project holds what the first write
+        // left, the values it took with the results and records that write carried, and the save fails.
+        for (const auto& step : before) {
+            step();
+        }
+        throw;
     }
     return changed;
 }

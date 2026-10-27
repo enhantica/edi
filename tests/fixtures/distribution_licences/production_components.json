@@ -14,6 +14,12 @@
       ]
     },
     {
+      "components": [
+        "miniz"
+      ],
+      "witness": "cmake/edi_core_sources.cmake compiles core/third_party/miniz/miniz.c into edi's core, which reads and writes project .zip archives (edi ADR-0052) in the app, the Python package and the web app."
+    },
+    {
       "witness": "app/CMakeLists.txt and cmake/EdiGuiBase.cmake link or embed the Qt modules and the shared QML components. The web kit embeds its C/C++ runtime; tools/ci/wasm-build.sh supplies its service worker.",
       "components": [
         "Qt",

@@ -33,7 +33,7 @@ def rounded_pair(value, uncertainty, rule='iucr_19'):
         return float(shown), float(digits * quantum)
 
 
-def rounded_token(match):
+def rounded_token(match, rule='iucr_19'):
     value, bracket = match.group(1).decode(), match.group(2).decode()
     number = Decimal(value)
     decimals = max(0, -number.as_tuple().exponent)
@@ -42,7 +42,7 @@ def rounded_token(match):
         uncertainty *= Decimal(1).scaleb(-decimals)
     if not uncertainty:
         return match.group()
-    rounded_value, rounded_su = rounded_pair(float(value), float(uncertainty))
+    rounded_value, rounded_su = rounded_pair(float(value), float(uncertainty), rule)
     with localcontext() as context:
         context.prec = 800
         su = Decimal(str(rounded_su))
@@ -50,7 +50,9 @@ def rounded_token(match):
         while True:
             quantum = Decimal(1).scaleb(exponent)
             digits = su / quantum
-            if digits == digits.to_integral_value() and 2 <= digits <= 19:
+            if digits == digits.to_integral_value() and (
+                10 <= digits <= 99 if rule == 'iucr_99' else 2 <= digits <= 19
+            ):
                 break
             exponent -= 1
         if number and not number.quantize(quantum, rounding=ROUND_HALF_UP):
@@ -68,7 +70,7 @@ def rounded_token(match):
         return (format(shown, 'f') + '(' + bracket_text + ')').encode()
 
 
-def rounded_record(contents):
+def rounded_record(contents, rule='iucr_19', *, six=False):
     """Forward parameter s.u. and coefficient tokens; keep every other byte pinned."""
 
     numeric = re.compile(
@@ -86,12 +88,48 @@ def rounded_record(contents):
         b'_preferred_orientation',
         b'_absorption',
         b'_scattering_source',
+        *({b'_extinction'} if six else set()),
     }
     identities = {b'id', b'type_symbol', b'wyckoff_letter', b'adp_type', b'structure_id', b'type'}
 
     def parameter(tag):
         category, _, field = tag.partition(b'.')
-        return category in categories and field not in identities
+        fitted = category in categories and field not in identities
+        if category == b'_background':
+            # Anchor abscissae and series basis constants are exact configuration,
+            # independently declared as non-Parameter fields in the dictionary.
+            fitted = field in {b'intensity', b'coef'}
+        return fitted or (
+            six
+            and (
+                (
+                    category == b'_fit_result'
+                    and field
+                    in {
+                        b'fitting_time',
+                        b'reduced_chi_square',
+                        b'objective_value',
+                        b'prof_wr_factor',
+                    }
+                )
+                or (
+                    category == b'_fit_result_bank'
+                    and field not in {b'experiment_id', b'n_data_points'}
+                )
+                or (
+                    category in {b'_data', b'_refln'}
+                    and field
+                    in {
+                        b'd_spacing',
+                        b'sin_theta_over_lambda',
+                        b'f_calc',
+                        b'f_squared_calc',
+                        b'intensity_calc',
+                        b'intensity_bkg',
+                    }
+                )
+            )
+        )
 
     tags = []
     in_rows = False
@@ -111,7 +149,9 @@ def rounded_record(contents):
             else:
                 tags = []
                 if parameter(word.split()[0]):
-                    line = numeric.sub(rounded_token, line)
+                    line = numeric.sub(lambda match: rounded_token(match, rule), line)
+                    if six:
+                        line = six_digit_scalar(line)
         elif tags and word and not word.startswith(b'#'):
             in_rows = True
             cells = list(token.finditer(line))
@@ -127,12 +167,50 @@ def rounded_record(contents):
                             + (
                                 rounded_correlation(cell.group().decode()).encode()
                                 if tags[index] == b'_fit_parameter_correlation.correlation'
-                                else numeric.sub(rounded_token, cell.group())
+                                else (
+                                    six_digit_token(
+                                        numeric.sub(
+                                            lambda match: rounded_token(match, rule), cell.group()
+                                        )
+                                    )
+                                    if six
+                                    else numeric.sub(
+                                        lambda match: rounded_token(match, rule), cell.group()
+                                    )
+                                )
                             )
                             + line[cell.end() :]
                         )
         out.append(line)
     return b''.join(out)
+
+
+def six_digit_scalar(line):
+    return re.sub(
+        rb'^(\s*_\S+\s+)(\S+)(\s*)$',
+        lambda match: match[1] + six_digit_token(match[2]) + match[3],
+        line,
+    )
+
+
+def six_digit_token(token):
+    """Round only bare or no-positive-su numeric cells, preserving free-marker presence."""
+    match = re.fullmatch(
+        rb'([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)(\((?:0(?:\.0*)?)?\))?', token
+    )
+    if not match:
+        return token
+    with localcontext() as context:
+        context.prec = 800
+        value = Decimal(match[1].decode())
+        quantum = Decimal(1).scaleb(value.copy_abs().adjusted() - 5)
+        value = value.quantize(quantum, rounding=ROUND_HALF_UP)
+        return format(float(value), '.6g').encode() + (match[2] or b'')
+
+
+def saved_record(contents, rule='iucr_99'):
+    """Independent save-token projection; the original archived bytes remain immutable."""
+    return rounded_record(contents, rule, six=True)
 
 
 def rounded_correlation(value):
@@ -161,9 +239,9 @@ def without_default_rule(name, contents):
     """Check the new default declaration before comparing historical project bytes."""
     if name != 'project.edi':
         return contents
-    declaration = b'_su_format.rule iucr_19\n'
+    declaration = b'_su_format.rule iucr_99\n'
     assert contents.count(declaration) == 1, (
-        'Saved projects require exactly one canonical default IUCr declaration'
+        'Saved projects require exactly one canonical two-digit default declaration'
     )
     assert len(re.findall(rb'(?m)^_su_format\.', contents)) == 1, (
         'The historical-byte comparison cannot hide an extra or unsupported s.u. setting'
