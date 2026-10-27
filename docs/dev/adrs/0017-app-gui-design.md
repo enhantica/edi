@@ -270,6 +270,15 @@ and `stepMaximum`.
   `WorkflowPage` lets the base's tab view reach the sidebar's bottom instead of stopping above Continue (a
   binding on the view's `anchors.bottomMargin`; the other tabs keep the base's). The view never gets shorter
   than 5 font units. This replaces fixed height plus the window's growth.
+- **Every category of a file has a group** (the owner, 2026-10-25 and 2026-10-27). A category a block's file
+  carries with no designed group gets one in Extras, made from crysta's dictionary and the block's text
+  (`GeneratedCategory`, `GeneratedGroup.qml`): a loop as the shared table, single items as labelled fields with their
+  units, the dictionary's title and labels; read-only for output categories and for the items the program writes
+  (the project's times and location); an edit is the block's text with the value, applied as the Text tab applies
+  an edit. Only what a user sets or reads gets one: not the file header, the calculator, the Cartesian transform,
+  the curves' presentation order, the block list or the correlation pairs, and not the bond settings, which get a
+  designed group. The Project page shows `project.edi`'s categories this way, and the Structure view's settings are
+  each structure's own, saved with it (`_structure_view`).
 - **The Text tab is coloured, editable and applied** (the owner, 2026-10-25 and 2026-10-27). The
   text takes easydiffraction's colours as theme tokens, each readable on both themes: datablock names orange
   (`textDatablock`), item names blue (`textItem`), loop column names green (`textLoopColumn`) and `loop_` grey
@@ -282,9 +291,11 @@ and `stepMaximum`.
   did not show added back, and the folder opened with every check an open runs (`edi::project_with_file_text`).
   A refused edit changes nothing, stays in the view, and the reason shows under the controls. An applied edit
   replaces the project in one Undo step. Under Everything ✓ is disabled and its tooltip says to switch Show to
-  Editable. Leaving an unapplied edit (another block, page or Show choice) asks "Discard changes?": Discard drops
-  it; Cancel keeps it, and the block shows it again when it is shown again. A scan project is edited on its
-  pages only.
+  Editable. Leaving an unapplied edit (another block, page or Show choice) asks "Discard changes?": Apply applies it
+  as ✓ does and leaves, a refused apply staying on the text; Don't apply drops it; Cancel keeps it and returns to it.
+  ✓ is red with a white check while enabled, and Show and ✓ float over the text's top right. One category's items
+  follow each other without blank lines, one blank line between categories. A scan project is edited on its pages
+  only.
 - **Continue is a pill** (the owner, 2026-09-29), on every page and tab that shows it: the base button's own
   background (`themeBackground`, hovered `themeBackgroundHovered1`) and 1-px border (`appBarComboBoxBorder`)
   shown, fully rounded ends (radius half its height, `sideBarButtonHeight`), as wide as its icon and text plus

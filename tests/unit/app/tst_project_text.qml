@@ -284,7 +284,17 @@ Item {
         }
         function appearance() {
             const o = options();
-            return JSON.stringify([o.atomView, o.atomScale, o.adpProbability, o.colorScheme, o.showLabels, o.atoms, o.bonds, o.cell, o.axes]);
+            return JSON.stringify({
+                atomView: o.atomView,
+                atomScale: o.atomScale,
+                adpProbability: o.adpProbability,
+                colorScheme: o.colorScheme,
+                showLabels: o.showLabels,
+                atoms: o.atoms,
+                bonds: o.bonds,
+                cell: o.cell,
+                axes: o.axes
+            });
         }
         function test_per_structure_appearance() {
             Session.project.currentStructureIndex = 0;
@@ -301,9 +311,12 @@ Item {
             verify(Session.save(), "The normal save persists per-structure appearance");
             Session.closeProject();
             verify(Session.openProject(proof.project()), "The normal reader reopens the saved appearances");
-            compare(appearance(), first, "The first structure's full appearance survives reopen");
+            const initiallyShown = appearance();
             Session.project.currentStructureIndex = 1;
             compare(appearance(), second, "The second structure's full appearance survives reopen");
+            Session.project.currentStructureIndex = 0;
+            compare(appearance(), first, "Reselecting the first structure restores its saved appearance");
+            compare(initiallyShown, first, "The first structure's full appearance survives reopen before any reselection");
         }
         function test_scattering_lengths_save_only_user_overrides() {
             Session.project.currentStructureIndex = 0;

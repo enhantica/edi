@@ -30,7 +30,7 @@ the results that Editable does not show are kept.
 - Under Everything, ✓ is disabled. Switch Show to Editable to edit the text.
 
 If you leave an edit you have not applied (another structure or experiment, another page, or another Show choice),
-edi asks "Discard changes?". Discard drops the edit. Cancel keeps it: the edited text is still there when you come
-back to that block.
+edi asks "Discard changes?". Apply applies it as ✓ does, and if edi cannot read it you stay on the text with the
+reason. Don't apply drops the edit. Cancel keeps it and takes you back to it.
 
 A scan project's datasets come from the scan's files, so a scan is edited on its pages, not as text.
