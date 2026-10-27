@@ -1232,7 +1232,10 @@ struct Parameter {
 // clearing or replacing the field keeps the old cell, detached, for as long as the field lives: a handle
 // to a removed slot keeps its last values and refuses writes, as a removed row's does, and never points
 // at storage a later value reuses. It reads like std::optional<Parameter>.
+namespace detail { struct PreparedPeakRestore; struct PreparedAbsorptionRestore; }
 class OptionalParameter {
+    friend struct detail::PreparedPeakRestore;
+    friend struct detail::PreparedAbsorptionRestore;
    public:
     using value_type = Parameter;
     OptionalParameter() = default;
@@ -3451,6 +3454,10 @@ struct PeakBase {
     OptionalParameter asym_beba_a0, asym_beba_b0, asym_beba_a1, asym_beba_b1;
     OptionalParameter asym_beba_limit;  // FullProf AsyLim, deg; default 180
 
+    // FIRST peak field walk, shared by public parameters and narrow Undo.
+    static constexpr std::array fixed_parameter_members{&PeakBase::rise_alpha_0,&PeakBase::rise_alpha_1,&PeakBase::decay_beta_0,&PeakBase::decay_beta_1,&PeakBase::broad_gauss_sigma_0,&PeakBase::broad_gauss_sigma_1,&PeakBase::broad_gauss_sigma_2,&PeakBase::broad_gauss_size,&PeakBase::broad_gauss_strain,&PeakBase::broad_lorentz_gamma_0,&PeakBase::broad_lorentz_gamma_1,&PeakBase::broad_lorentz_gamma_2,&PeakBase::broad_lorentz_size,&PeakBase::broad_lorentz_strain};
+    static constexpr std::array optional_parameter_members{&PeakBase::broad_gauss_u,&PeakBase::broad_gauss_v,&PeakBase::broad_gauss_w,&PeakBase::broad_lorentz_x,&PeakBase::broad_lorentz_y,&PeakBase::mixing_eta_0,&PeakBase::mixing_eta_1,&PeakBase::asym_fcj_1,&PeakBase::asym_fcj_2,&PeakBase::asym_beba_a0,&PeakBase::asym_beba_b0,&PeakBase::asym_beba_a1,&PeakBase::asym_beba_b1,&PeakBase::asym_beba_limit};
+
     PeakBase();  // attaches the parameter specs (inline below)
 
     // The block's parameters in field order, present optionals included (R18).
@@ -3462,6 +3469,50 @@ struct PeakBase {
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
 };
+
+namespace detail {
+// Narrow FIRST peak Undo transfer: no general OptionalParameter assignment policy.
+// All cells, detached memberships and retired-owner vectors precede any live write.
+struct PreparedPeakRestore {
+    PeakBase* target;
+    PeakBase image;
+    struct Retirement {
+        OptionalParameter* slot;
+        std::shared_ptr<Membership> detached;
+        std::vector<std::shared_ptr<OptionalParameter::ParameterCell>> retired;
+    };
+    std::vector<Retirement> retirements;
+    PreparedPeakRestore(PeakBase& into,PeakBase before):target(&into),image(std::move(before)) {
+        retirements.reserve(PeakBase::optional_parameter_members.size());
+        for(auto member:PeakBase::optional_parameter_members) {
+            auto& current=into.*member;auto& incoming=image.*member;
+            if(current.live_ && !incoming.live_) {
+                auto retired=current.retired_;retired.push_back(current.live_);
+                retirements.push_back({&current,std::make_shared<Membership>(),std::move(retired)});
+            }
+        }
+    }
+    void commit() noexcept {
+        target->type.swap(image.type);target->cutoff_fwhm=image.cutoff_fwhm;
+        for(auto member:PeakBase::fixed_parameter_members)target->*member=image.*member;
+        for(auto member:PeakBase::optional_parameter_members) {
+            auto& current=target->*member;auto& incoming=image.*member;
+            if(current.live_ && incoming.live_)current.live_->parameter=incoming.live_->parameter;
+            else if(!current.live_ && incoming.live_) {
+                current.live_.swap(incoming.live_);
+                current.live_->parameter.category.point_at(target->row);
+            } else if(current.live_) {
+                // The exact live owner to retire was retained during preparation.
+                auto found=std::find_if(retirements.begin(),retirements.end(),[&](const auto& row){return row.slot==&current;});
+                auto& link=current.live_->removed;link.link(found->detached);link.unlink();
+                current.live_->parameter.category.point_at(link);
+                current.retired_.swap(found->retired);current.live_.reset();
+            }
+        }
+        target->epoch=Epoch();
+    }
+};
+} // namespace detail
 
 // The instrument category: the 4-term d<->TOF calibration (it is crysta's instrument[3] and
 // diffraction-lib's TofPdInstrument.calib_d_to_tof_reciprocal), the bank take-off angle
@@ -3538,6 +3589,7 @@ struct AbsorptionBase {
     OptionalParameter mu_r;
     std::optional<std::string> type;  // `_absorption.type`, e.g. "cylinder" / "none"
 
+    static constexpr std::array optional_parameter_members{&AbsorptionBase::abscor1,&AbsorptionBase::abscor2,&AbsorptionBase::mu_r};
     std::vector<Parameter*> parameters();  // the present family body, in order (R18)
     // Whether a collection holds the row this belongs to; that collection sets it.
     detail::RowLink row;
@@ -3546,6 +3598,59 @@ struct AbsorptionBase {
     // ADR-0018: the row of this object's non-loop categories.
     detail::CategoryRow table_row;
 };
+
+namespace detail {
+// Absorption uses the FIRST peak detached-cell transfer; all family construction
+// and retirement owners exist before commit, preserving retained coefficient IDs.
+struct PreparedAbsorptionRestore {
+    AbsorptionBase* target;
+    AbsorptionBase image;
+    struct Retirement {
+        OptionalParameter* slot;
+        std::shared_ptr<Membership> detached;
+        std::vector<std::shared_ptr<OptionalParameter::ParameterCell>> retired;
+    };
+    std::vector<Retirement> retirements;
+    PreparedAbsorptionRestore(AbsorptionBase& into,AbsorptionBase before):target(&into),image(std::move(before)) {
+        retirements.reserve(AbsorptionBase::optional_parameter_members.size());
+        for(auto member:AbsorptionBase::optional_parameter_members) {
+            auto& current=into.*member;auto& incoming=image.*member;
+            if(current.live_ && !incoming.live_) {
+                auto retired=current.retired_;retired.push_back(current.live_);
+                retirements.push_back({&current,std::make_shared<Membership>(),std::move(retired)});
+            }
+        }
+    }
+    void commit() noexcept {
+        static_assert(std::is_nothrow_copy_assignable_v<Parameter>);
+        static_assert(std::is_nothrow_swappable_v<std::optional<std::string>>);
+        target->type.swap(image.type);
+        for(auto member:AbsorptionBase::optional_parameter_members) {
+            auto& current=target->*member;auto& incoming=image.*member;
+            if(current.live_ && incoming.live_) {
+                auto& held=current.live_->parameter;const auto& wanted=incoming.live_->parameter;
+                // Family selection retains unchanged coefficients, including
+                // their written identities; Undo restores only differing state.
+                const bool equal=held.value.get()==wanted.value.get() && held.uncertainty.get()==wanted.uncertainty.get() &&
+                    held.free.get()==wanted.free.get() && held.start_value.get()==wanted.start_value.get() &&
+                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence;
+                if(!equal)held=wanted;
+            }
+            else if(!current.live_ && incoming.live_) {
+                current.live_.swap(incoming.live_);
+                current.live_->parameter.category.point_at(target->row);
+            } else if(current.live_) {
+                // The exact live owner to retire was retained during preparation.
+                auto found=std::find_if(retirements.begin(),retirements.end(),[&](const auto& row){return row.slot==&current;});
+                auto& link=current.live_->removed;link.link(found->detached);link.unlink();
+                current.live_->parameter.category.point_at(link);
+                current.retired_.swap(found->retired);current.live_.reset();
+            }
+        }
+        target->epoch=Epoch();
+    }
+};
+} // namespace detail
 
 // A single crystal's isotropic Becker-Coppens extinction (edi ADR-0049): the type (`none`,
 // `becker-coppens-type-1`, `-type-2` or `-mixed`) and the items of that type alone: the mosaic
@@ -5096,6 +5201,9 @@ void rename_scan_results(FitResultRecord& record, const Renamed& renamed) {
 
 // A background row's parameter is named by the row's id (`<experiment>.background.<id>.intensity`, or `.coef` for
 // a polynomial or Chebyshev term), so a rename carries every alias, and the fit's correlations, to the new id.
+inline std::string background_parameter_name(const ExperimentBase& experiment, const std::string& id, bool term = false) {
+    return datablock_key(experiment.name.value(), "experiment") + ".background." + id + (term ? ".coef" : ".intensity");
+}
 inline void follow_background_aliases(Project& project, const ItemKey& key, const std::string& next) {
     for (const auto& experiment : project.experiments) {
         const char* field = nullptr;
@@ -5106,9 +5214,8 @@ inline void follow_background_aliases(Project& project, const ItemKey& key, cons
             if (&term->id == &key) field = ".coef";
         }
         if (field == nullptr) continue;
-        const auto root = datablock_key(experiment->name.value(), "experiment") + ".background.";
-        const auto from = root + key.value() + field;
-        const auto to = root + next + field;
+        const auto from = background_parameter_name(*experiment, key.value(), std::string_view(field) == ".coef");
+        const auto to = background_parameter_name(*experiment, next, std::string_view(field) == ".coef");
         std::vector<std::pair<ParameterAlias*, std::string>> changes;
         for (const auto& alias : project.aliases) {
             if (alias->parameter_unique_name.value() == from) changes.emplace_back(alias.get(), to);
@@ -5750,27 +5857,13 @@ inline std::vector<Parameter*> Structure::parameters() {
 }
 inline std::vector<Parameter*> Structure::free_parameters() { return detail::free_of(parameters()); }
 inline std::vector<Parameter*> PeakBase::parameters() {
-    std::vector<Parameter*> out = {
-        &rise_alpha_0,          &rise_alpha_1,          &decay_beta_0,       &decay_beta_1,
-        &broad_gauss_sigma_0,   &broad_gauss_sigma_1,   &broad_gauss_sigma_2, &broad_gauss_size,
-        &broad_gauss_strain,    &broad_lorentz_gamma_0, &broad_lorentz_gamma_1,
-        &broad_lorentz_gamma_2, &broad_lorentz_size,    &broad_lorentz_strain};
-    detail::push_optional(out, broad_gauss_u);
-    detail::push_optional(out, broad_gauss_v);
-    detail::push_optional(out, broad_gauss_w);
-    detail::push_optional(out, broad_lorentz_x);
-    detail::push_optional(out, broad_lorentz_y);
-    detail::push_optional(out, mixing_eta_0);
-    detail::push_optional(out, mixing_eta_1);
-    detail::push_optional(out, asym_fcj_1);
-    detail::push_optional(out, asym_fcj_2);
-    detail::push_optional(out, asym_beba_a0);
-    detail::push_optional(out, asym_beba_b0);
-    detail::push_optional(out, asym_beba_a1);
-    detail::push_optional(out, asym_beba_b1);
-    detail::push_optional(out, asym_beba_limit);
+    std::vector<Parameter*> out;
+    out.reserve(fixed_parameter_members.size()+std::count_if(optional_parameter_members.begin(),optional_parameter_members.end(),[this](auto member){return bool(this->*member);}));
+    for(auto member:fixed_parameter_members)out.push_back(&(this->*member));
+    for(auto member:optional_parameter_members)detail::push_optional(out,this->*member);
     return out;
 }
+
 inline std::vector<Parameter*> InstrumentBase::parameters() {
     std::vector<Parameter*> out = {&calib_d_to_tof_offset, &calib_d_to_tof_linear,
                                    &calib_d_to_tof_quadratic, &calib_d_to_tof_reciprocal,
@@ -5799,9 +5892,8 @@ inline std::vector<Parameter*> ExtinctionBase::parameters() {
 }
 inline std::vector<Parameter*> AbsorptionBase::parameters() {
     std::vector<Parameter*> out;
-    detail::push_optional(out, abscor1);
-    detail::push_optional(out, abscor2);
-    detail::push_optional(out, mu_r);  // The CW body; never present beside the TOF pair
+    // Same FIRST field order, also used by the narrow prepared family transfer.
+    for(auto member:optional_parameter_members)detail::push_optional(out,this->*member);
     return out;
 }
 // The blocks in category order (peak, instrument, linked_structure, absorption), then the
@@ -5861,10 +5953,12 @@ inline const LinkedStructure& ExperimentBase::linked_structure() const {
 // dropped or read as another profile's.
 // The profile an experiment's peak declares: its type, or the beam mode's default when it names none
 // (the TCH pseudo-Voigt for constant wavelength, Jorgensen for time of flight).
+inline std::string_view effective_peak_type_view(const ExperimentBase& experiment) {
+    if(experiment.peak.type)return *experiment.peak.type;
+    return experiment.effective_beam_mode()==BeamModeEnum::CONSTANT_WAVELENGTH?"cwl-tch-pseudo-voigt":"tof-jorgensen";
+}
 inline std::string effective_peak_type(const ExperimentBase& experiment) {
-    return experiment.peak.type.value_or(
-        experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH ? "cwl-tch-pseudo-voigt"
-                                                                              : "tof-jorgensen");
+    return std::string(effective_peak_type_view(experiment));
 }
 
 namespace detail {

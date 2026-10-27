@@ -6,6 +6,8 @@
 #include <cstdint>
 #include <cstdio>
 #include <map>
+#include <limits>
+#include <stdexcept>
 #include <optional>
 #include <string>
 #include <vector>
@@ -30,17 +32,44 @@ namespace {
 // Deliberately TOTAL over the whole Project — including `experiments` and `fitting_mode`, which the
 // single-bank handle never reads. Failing closed on an unrelated edit is the conservative direction;
 // missing a field is not. Adding a field to edi::Project REQUIRES extending this.
-void put_u64(std::string& out, std::uint64_t value) {
-    char buffer[17];
-    std::snprintf(buffer, sizeof(buffer), "%016llx", static_cast<unsigned long long>(value));
-    out.append(buffer, 16);
+class EncodingSize {
+ public:
+    explicit EncodingSize(std::size_t limit) : limit_(limit) {}
+    void clear() noexcept { used_ = 0; }
+    std::size_t size() const noexcept { return used_; }
+    void append(const char*, std::size_t count) {
+        if (count > limit_ - used_) throw std::length_error("Scientific stamp encoding exceeds capacity");
+        used_ += count;
+    }
+    EncodingSize& operator+=(std::string_view value) { append(nullptr, value.size()); return *this; }
+    EncodingSize& operator+=(char) { append(nullptr, 1); return *this; }
+ private:
+    std::size_t limit_, used_ = 0;
+};
+
+void write_u64(char* target, std::uint64_t value) noexcept {
+    // Same sixteen lowercase hexadecimal bytes as the canonical source codec.
+    // Writing a prepared slot must not call a formatter or allocate.
+    constexpr char digits[] = "0123456789abcdef";
+    for (unsigned i = 0; i < 16; ++i) {
+        target[15 - i] = digits[value & 0xf];
+        value >>= 4;
+    }
+}
+template<class Output>
+void put_u64(Output& out, std::uint64_t value) {
+    char buffer[16];
+    write_u64(buffer, value);
+    out.append(buffer, sizeof buffer);
 }
 
-void put_double(std::string& out, double value) {
+template<class Output>
+void put_double(Output& out, double value) {
     put_u64(out, std::bit_cast<std::uint64_t>(value));
 }
 
-void put_text(std::string& out, const std::string& value) {
+template<class Output>
+void put_text(Output& out, std::string_view value) {
     put_u64(out, value.size());
     out += value;
     out += '\x1e';
@@ -53,9 +82,11 @@ enum class Scope { Everything, CalculationInputs };
 
 // A bare number is never a parameter here: an implicit Parameter(double) temporary would carry a
 // fresh identity (detail::Epoch) on every call, so no two encodings could ever be equal.
-void put_parameter(std::string& out, double value, Scope scope) = delete;
+template<class Output>
+void put_parameter(Output& out, double value, Scope scope) = delete;
 
-void put_parameter(std::string& out, const Parameter& parameter, Scope scope) {
+template<class Output>
+void put_parameter(Output& out, const Parameter& parameter, Scope scope) {
     put_double(out, parameter.value);
     if (scope == Scope::CalculationInputs) {
         put_u64(out, parameter.epoch.value());  // review 9 F1: every admitted write
@@ -66,13 +97,15 @@ void put_parameter(std::string& out, const Parameter& parameter, Scope scope) {
     }
 }
 
-void put_optional_parameter(std::string& out, const OptionalParameter& parameter,
+template<class Output>
+void put_optional_parameter(Output& out, const OptionalParameter& parameter,
                             Scope scope) {
     out += parameter ? 'P' : '-';  // presence encoded distinctly from a 0 value
     if (parameter) put_parameter(out, *parameter, scope);
 }
 
-void put_experiment(std::string& out, const ExperimentBase& experiment, Scope scope) {
+template<class Output>
+void put_experiment(Output& out, const ExperimentBase& experiment, Scope scope) {
     for (const auto& slot : detail::kPeakSlots) {
         put_text(out, slot.first);
         put_parameter(out, slot.second(const_cast<ExperimentBase&>(experiment)), scope);
@@ -87,7 +120,7 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     put_u64(out, experiment.background.size());
     for (const auto& point_item : experiment.background) {
         const LineSegment& point = *point_item;
-        put_text(out, point.id);
+        put_text(out, point.id.value());
         put_double(out, point.position);  // NOT a Parameter, but it moves the background
         put_parameter(out, point.intensity, scope);
     }
@@ -147,7 +180,7 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     // The preferred-orientation rows — key, fit pair and fixed axis all move P.
     put_u64(out, experiment.preferred_orientation.size());
     for (const auto& row : experiment.preferred_orientation) {
-        put_text(out, row->structure_id);
+        put_text(out, row->structure_id.value());
         put_parameter(out, row->march_r, scope);
         put_parameter(out, row->march_random_fract, scope);
         put_u64(out, static_cast<std::uint64_t>(static_cast<std::int64_t>(row->index_h)));
@@ -156,7 +189,7 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     }
     out += experiment.absorption.type ? 'T' : '-';
     if (experiment.absorption.type) put_text(out, *experiment.absorption.type);
-    put_text(out, experiment.name);
+    put_text(out, experiment.name.value());
     // The scattering-source selectors choose the form factors, dispersion and scattering
     // lengths a calculation reads.
     for (const auto* selector : {&experiment.xray_form_factor, &experiment.xray_dispersion,
@@ -204,7 +237,7 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     // Each link's structure, and whether it takes part (written only when it can differ from
     // the one link of a single-phase experiment).
     for (const auto& link : experiment.linked_structures) {
-        put_text(out, link->structure_id);
+        put_text(out, link->structure_id.value());
         if (experiment.linked_structures.size() > 1 || !link->enabled.get()) {
             put_text(out, link->enabled.get() ? "enabled" : "disabled");
         }
@@ -214,7 +247,7 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
     }
     put_u64(out, experiment.excluded_regions.size());
     for (const auto& region : experiment.excluded_regions) {
-        put_text(out, region->id);
+        put_text(out, region->id.value());
         put_double(out, region->first);
         put_double(out, region->second);
     }
@@ -252,7 +285,8 @@ void put_experiment(std::string& out, const ExperimentBase& experiment, Scope sc
 
 // The bond cutoffs, presence included (an unset one and its default are different models: only a
 // declared one is saved).
-void put_geom(std::string& out, const Geom& geom) {
+template<class Output>
+void put_geom(Output& out, const Geom& geom) {
     for (const std::optional<double>* value :
          {&geom.min_bond_distance_cutoff.get(), &geom.bond_distance_inc.get()}) {
         out += value->has_value() ? 'G' : '-';
@@ -264,17 +298,20 @@ void put_geom(std::string& out, const Geom& geom) {
 
 // A geometry input with the identity of its last write. The identity alone would do: no two
 // writes share one. The value stays in the encoding so that it reads as what it is.
-void put_written(std::string& out, const detail::Written<double>& field) {
+template<class Output>
+void put_written(Output& out, const detail::Written<double>& field) {
     put_double(out, field.get());
     put_u64(out, field.written());
 }
-void put_written(std::string& out, const detail::WrittenText& field) {
+template<class Output>
+void put_written(Output& out, const detail::WrittenText& field) {
     put_text(out, field.value());
     put_u64(out, field.written());
 }
 
-void put_structure(std::string& out, const Structure& structure, Scope scope) {
-    put_text(out, structure.name);
+template<class Output>
+void put_structure(Output& out, const Structure& structure, Scope scope) {
+    put_text(out, structure.name.value());
     put_text(out, structure.space_group.name_h_m);
     // The code changes the resolved setting
     put_text(out, structure.space_group.coord_system_code);
@@ -290,7 +327,7 @@ void put_structure(std::string& out, const Structure& structure, Scope scope) {
     put_u64(out, structure.atom_sites.size());
     for (const auto& site_item : structure.atom_sites) {
         const AtomSite& site = *site_item;
-        put_text(out, site.id);
+        put_text(out, site.id.value());
         put_text(out, site.type_symbol);
         put_text(out, site.wyckoff_letter);
         put_text(out, site.adp_type);  // An input of F and the pattern
@@ -304,8 +341,8 @@ void put_structure(std::string& out, const Structure& structure, Scope scope) {
     put_u64(out, structure.atom_site_aniso.size());
     for (const auto& tensor_item : structure.atom_site_aniso) {
         AtomSiteAniso& tensor = *tensor_item;
-        put_text(out, tensor.id);
-        for (const Parameter* component : tensor.parameters()) {
+        put_text(out, tensor.id.value());
+        for (const Parameter* component : {&tensor.adp_11, &tensor.adp_22, &tensor.adp_33, &tensor.adp_12, &tensor.adp_13, &tensor.adp_23}) {
             put_parameter(out, *component, scope);
         }
     }
@@ -351,7 +388,7 @@ std::string canonical_encoding(const Project& project) {
     put_text(out, project.sequential_fit.reverse ? "1" : "0");
     put_u64(out, project.sequential_fit.extract.size());
     for (const auto& rule : project.sequential_fit.extract) {
-        put_text(out, rule->id);
+        put_text(out, rule->id.value());
         put_text(out, rule->target);
         put_text(out, rule->pattern);
         put_text(out, rule->required ? "1" : "0");
@@ -359,7 +396,8 @@ std::string canonical_encoding(const Project& project) {
     return out;
 }
 
-std::string geometry_inputs(const Structure& structure) {
+template<class Output>
+void geometry_inputs_write(Output& out, const Structure& structure) {
     // Crysta's geometry inputs and no other field: the space group, the six cell values, the site
     // rows with each site's id, type symbol, Wyckoff letter, ADP type, coordinates, occupancy and
     // ADP, and `geom`. The letter is one because a geometry read applies the relations, and the
@@ -373,8 +411,7 @@ std::string geometry_inputs(const Structure& structure) {
     // a whole-object assignment, and removing a row and adding the same object back each leave a
     // different encoding. No object identity is encoded: an object's identity also renews on
     // writes to its non-input fields.
-    std::string out;
-    out.reserve(1024);
+    out.clear();
     put_written(out, structure.space_group.name_h_m);
     put_written(out, structure.space_group.coord_system_code);
     for (const Parameter* cell :
@@ -386,7 +423,7 @@ std::string geometry_inputs(const Structure& structure) {
     put_u64(out, structure.atom_sites.generation());
     for (const auto& site_item : structure.atom_sites) {
         const AtomSite& site = *site_item;
-        put_text(out, site.id);
+        put_text(out, site.id.value());
         put_u64(out, site.id.written());
         put_written(out, site.type_symbol);
         put_written(out, site.wyckoff_letter);
@@ -401,22 +438,34 @@ std::string geometry_inputs(const Structure& structure) {
     put_u64(out, structure.atom_site_aniso.generation());
     for (const auto& tensor_item : structure.atom_site_aniso) {
         AtomSiteAniso& tensor = *tensor_item;
-        put_text(out, tensor.id);
+        put_text(out, tensor.id.value());
         put_u64(out, tensor.id.written());
-        for (const Parameter* component : tensor.parameters()) {
+        for (const Parameter* component : {&tensor.adp_11, &tensor.adp_22, &tensor.adp_33, &tensor.adp_12, &tensor.adp_13, &tensor.adp_23}) {
             put_written(out, component->value);
         }
     }
     put_geom(out, structure.geom);
     put_u64(out, structure.geom.min_bond_distance_cutoff.written());
     put_u64(out, structure.geom.bond_distance_inc.written());
+
+}
+
+void geometry_inputs_into(std::string& out, const Structure& structure) { geometry_inputs_write(out, structure); }
+std::size_t geometry_inputs_size(const Structure& structure, std::size_t limit) {
+    EncodingSize out(limit); geometry_inputs_write(out, structure); return out.size();
+}
+
+std::string geometry_inputs(const Structure& structure) {
+    std::string out;
+    out.reserve(1024);
+    geometry_inputs_into(out, structure);
     return out;
 }
 
-std::string calculation_inputs(const ItemVec<Structure>& structures,
-                               const ExperimentBase& experiment) {
-    std::string out;
-    out.reserve(4096);
+template<class Output>
+void calculation_inputs_write(Output& out, const ItemVec<Structure>& structures,
+                             const ExperimentBase& experiment) {
+    out.clear();
     put_u64(out, structures.size());
     for (const auto& structure_item : structures) {
         put_structure(out, *structure_item, Scope::CalculationInputs);
@@ -433,6 +482,8 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
     // only, never saved.
     const auto put_values = [&out](const std::vector<double>& values) {
         put_u64(out, values.size());
+        if (values.size() > std::numeric_limits<std::size_t>::max() / sizeof(double))
+            throw std::length_error("Scientific column size overflows");
         out.append(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(double));
     };
     out += experiment.data ? 'D' : '-';
@@ -483,13 +534,33 @@ std::string calculation_inputs(const ItemVec<Structure>& structures,
         put_u64(out, experiment.data->epoch.value());
         put_u64(out, experiment.data->written.value());
     }
-    return out;
+
 }
 
 
+void calculation_inputs_into(std::string& out, const ItemVec<Structure>& structures, const ExperimentBase& experiment) {
+    calculation_inputs_write(out, structures, experiment);
+}
+std::size_t calculation_inputs_size(const ItemVec<Structure>& structures, const ExperimentBase& experiment, std::size_t limit) {
+    EncodingSize out(limit); calculation_inputs_write(out, structures, experiment); return out.size();
+}
+
+std::string calculation_inputs(const ItemVec<Structure>& structures, const ExperimentBase& experiment) {
+    std::string out;
+    out.reserve(4096);
+    calculation_inputs_into(out, structures, experiment);
+    return out;
+}
+
 std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
                             const ItemVec<ParameterConstraint>& constraints) {
-    std::string out;
+    return relation_inputs(aliases, constraints, nullptr);
+}
+template<class Output>
+void relation_inputs_write(Output& out, const ItemVec<ParameterAlias>& aliases,
+                           const ItemVec<ParameterConstraint>& constraints, std::vector<RelationValueSlot>* values) {
+    if (values) { values->clear(); values->reserve(aliases.size()); }
+    out.clear();
     put_u64(out, aliases.generation());
     put_u64(out, aliases.size());
     for (const auto& alias : aliases) {
@@ -515,11 +586,30 @@ std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
             const auto found = by_name.find(alias->parameter_unique_name.value());
             put_u64(out, found != by_name.end() ? 1 : 0);
             if (found != by_name.end()) {
+                if (values) values->push_back({found->second, out.size()});
                 put_written(out, found->second->value);
             }
         }
     }
-    return out;
+}
+
+std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
+                            const ItemVec<ParameterConstraint>& constraints,
+                            std::vector<RelationValueSlot>* values) {
+    std::string out; relation_inputs_write(out, aliases, constraints, values); return out;
+}
+std::size_t relation_inputs_size(const ItemVec<ParameterAlias>& aliases,
+                                const ItemVec<ParameterConstraint>& constraints, std::size_t limit) {
+    EncodingSize out(limit); relation_inputs_write(out, aliases, constraints, nullptr); return out.size();
+}
+
+void refresh_relation_values(std::string& encoding,
+                              const std::vector<RelationValueSlot>& values) noexcept {
+    for (const auto& slot : values) {
+        auto* target = encoding.data() + slot.offset;
+        write_u64(target, std::bit_cast<std::uint64_t>(slot.parameter->value.get()));
+        write_u64(target + 16, slot.parameter->value.written());
+    }
 }
 
 }  // namespace detail
