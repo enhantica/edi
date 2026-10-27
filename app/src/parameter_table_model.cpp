@@ -69,9 +69,9 @@ void ParameterTableModel::sync() {
     }
 }
 
-int ParameterTableModel::numberOf(const QString& path) const {
-    for (int row = 0; row < count(); ++row) {
-        if (text(row, QStringLiteral("path")) == path) {
+int ParameterTableModel::numberOf(const ParameterItem* parameter) const {
+    for (int row = 0; parameter != nullptr && row < count(); ++row) {
+        if (keyAt(row) == parameter) {
             return row + 1;
         }
     }
