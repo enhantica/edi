@@ -1,0 +1,13 @@
+{
+  "schema": "edi.tests.dev-integration-baseline/1",
+  "source_commit": "e782d2d84a984c8d9df86e6e6c4df361baf89f2c",
+  "provenance": "git show <source_commit>:<path>; frozen before assistant port, 2026-10-27",
+  "preserved_files": {
+    "docs/dev/adrs/0037-exact-fractions-and-constrained-values-on-screen.md": "023232a450d90b576159e3dc040abde59941a8134a9bdb0195ef4eff50178c98",
+    "docs/dev/adrs/0038-colour-schemes-and-their-rules.md": "310772512c75ba9847054a813cc4d82191ada53a39abff62121d4585fd85f958",
+    "docs/dev/adrs/0041-scan-pattern-views.md": "ec76d8c0d6ce16c8bfb90fe756604560ed7a2363cf9c4c6c90be3f374219515d",
+    "core/include/edi/background_estimate.hpp": "a4aeb2902b2455a479908be47257e5f10a02a6feb05cb58b70b7c685ff59c9f0"
+  },
+  "gui_commit": "bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1",
+  "sdk_tag": "build-405b4f477371bee24f3c4f410ad2157701bf52cc"
+}
