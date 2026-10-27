@@ -188,13 +188,12 @@ void give_members_unix_modes(std::string& archive) {
     const std::size_t end = archive.size() - kEndRecord;
     std::uint64_t entries = u16(end + 10);
     std::uint64_t at = u32(end + 16);
-    if (entries == 0xFFFFU || at == 0xFFFFFFFFU) {
-        // A ZIP64 archive (more members, or a larger directory, than the end record holds): the full count and offset
-        // are in the ZIP64 end record, which its locator, just before the end record, names.
-        constexpr std::size_t kLocator = 20;
-        if (end < kLocator || u32(end - kLocator) != 0x07064b50U) {
-            throw IoError("cannot finish the archive: no locator of its ZIP64 end record");
-        }
+    // A ZIP64 archive (more members, or a larger directory, than the end record holds) keeps the full count and
+    // offset in the ZIP64 end record, which its locator, just before the end record, names. A maximal value alone is
+    // no proof: a classic archive of exactly 65,535 members holds 0xFFFF there, with no locator.
+    constexpr std::size_t kLocator = 20;
+    const bool locator = end >= kLocator && u32(end - kLocator) == 0x07064b50U;
+    if ((entries == 0xFFFFU || at == 0xFFFFFFFFU) && locator) {
         const std::uint64_t record = u64(end - kLocator + 8);
         if (record + 56 > end || u32(record) != 0x06064b50U) {
             throw IoError("cannot finish the archive: its ZIP64 end record does not read");
