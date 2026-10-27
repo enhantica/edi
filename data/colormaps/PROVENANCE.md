@@ -9,10 +9,12 @@ and `edi::scan_colour_map_table()` reads them. A map's name means its colours in
 
 ## Blue-Red
 
-The chart's background, then blue, then red, each half mixed in Oklab (Björn Ottosson, 2020) as ADR-0038's gradients
-are: `#FFFFFF`, `#3F7FBF`, `#C8323C` in the light theme and `#444444`, `#6AA6EA`, `#FC4F81` in the dark, the dark red
-matching the dark theme's calculated curve. Colour i of 256 is at t = 2i / 255 along the first half, then along the
-second. Designed for edi and approved by the owner on 2026-10-26.
+Just off the plot area's colour, then blue, then red, each half mixed in Oklab (Björn Ottosson, 2020) as ADR-0038's
+gradients are: `#FFFFFF`, `#3F7FBF`, `#C8323C` in the light theme and `#181818`, `#6AA6EA`, `#FC4F81` in the dark, whose
+Map plot area is black; the dark red matches the dark theme's calculated curve. Colour i of 256 is at t = 2i / 255
+along the first half, then along the second. Designed for edi and approved by the owner on 2026-10-26; the dark start
+`#181818` on 2026-10-27, which in Oklab gives dark mode about the step from empty to the lowest data that light mode
+has.
 
 ## `viridis.tsv`, `inferno.tsv`
 
