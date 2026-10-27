@@ -282,7 +282,10 @@ TEST_CASE("E11 dev context retains manual and automatic point and series backgro
             CHECK(row.at("sample_form").string("sample_form") == "powder");
             const auto& background = row.at("background");
             CHECK(background.at("type").string("type") == kind);
-            const auto& estimate = background.at("estimate");
+            const auto& estimate = background.get("estimate");
+            const bool has_estimate = std::holds_alternative<O>(estimate.data);
+            CHECK(has_estimate);
+            if (has_estimate) {
             CHECK(estimate.at("mode").string("mode") == mode);
             CHECK(estimate.at("method").string("method") == native.method);
             CHECK(estimate.at("in_peaks").string("in_peaks") == native.in_peaks);
@@ -296,6 +299,7 @@ TEST_CASE("E11 dev context retains manual and automatic point and series backgro
             check_optional("n_points", native.n_points);
             check_optional("tolerance", native.tolerance);
             check_optional("max_terms", native.max_terms);
+            }
             const auto& points = background.at("anchors").array("anchors");
             REQUIRE(points.size() == experiment.background.size());
             for (std::size_t i = 0; i < points.size(); ++i) {
@@ -304,7 +308,11 @@ TEST_CASE("E11 dev context retains manual and automatic point and series backgro
                 CHECK(points[i].at("intensity").number("intensity") == experiment.background[i]->intensity.value.get());
                 CHECK(points[i].at("free").boolean("free") == experiment.background[i]->intensity.free.get());
             }
-            const auto& terms = background.at("terms").array("terms");
+            const auto& term_value = background.get("terms");
+            const bool has_terms = std::holds_alternative<A>(term_value.data);
+            CHECK(has_terms);
+            if (has_terms) {
+            const auto& terms = term_value.array("terms");
             REQUIRE(terms.size() == experiment.background_terms.size());
             for (std::size_t i = 0; i < terms.size(); ++i) {
                 const auto& term = *experiment.background_terms[i];
@@ -315,6 +323,7 @@ TEST_CASE("E11 dev context retains manual and automatic point and series backgro
                 if (term.coef.uncertainty.get())
                     CHECK(terms[i].at("uncertainty").number("uncertainty") == *term.coef.uncertainty.get());
                 else CHECK(terms[i].at("uncertainty").is_null());
+            }
             }
             }
         }
