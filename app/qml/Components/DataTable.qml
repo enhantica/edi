@@ -43,28 +43,34 @@ EaComponents.ListView {
     cacheBuffer: 0
     readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
     property int modelRevision: 0
-    // The one column rule (ADR-0029): `columns` as the base's `columnWidths`, where every flex column (-1) but the
-    // last fits its header and its widest shown cell, so the columns start at the left and the last flex column,
-    // aligned left, takes the rest of the row; fixed columns, the row buttons among them, keep their widths.
-    // `equalColumns` keeps the flex columns equal instead (atom sites and atomic displacements). A fitted column has
-    // the header's margin while the row has room for it, less when it has not, and only a row too narrow for the
-    // texts themselves narrows them, where a number shows its short form.
+    // The one column rule (ADR-0029; the owner, 2026-10-27): the row-number column and every flex column (-1) but the
+    // last fit their header and their widest shown cell, each with the same margin, so the columns start at the left
+    // and every two neighbours sit as far apart; the last data column, aligned left, takes the rest of the row: a
+    // text there stretches, a number leaves the space after it empty. No column before another data column fills.
+    // Fixed columns, the row buttons among them, keep their widths, at the right. `equalColumns` keeps the flex
+    // columns equal instead (atom sites and atomic displacements). Only a row too narrow for the texts themselves
+    // narrows them, where a number shows its short form.
     property var columns: []
     property bool equalColumns: false
+    readonly property var fillColumns: [columns.lastIndexOf(-1)]
     // Each column's widest text, its header's or a shown cell's, without the margin.
     property var fittedWidths: []
     columnWidths: {
         const fitted = fittedWidths;
-        const last = columns.lastIndexOf(-1);
-        const fits = columns.map((w, i) => !equalColumns && w === -1 && i !== last && (fitted[i] ?? 0) > 0);
-        const count = fits.filter(Boolean).length;
-        if (count === 0)
+        // Before the first fit every flex column shares the row, as the base lays it out.
+        if (equalColumns || fitted.length !== columns.length)
             return columns;
-        const fixed = columns.reduce((sum, w) => sum + (w > 0 ? w : 0), 0);
+        const fits = columns.map((w, i) => (w === -1 || (i === 0 && w === numberColumnWidth)) && !fillColumns.includes(i));
+        const fitting = fits.filter(Boolean).length;
+        if (fitting === 0)
+            return columns;
+        const fixed = columns.reduce((sum, w, i) => sum + (w > 0 && !fits[i] ? w : 0), 0);
         const texts = fitted.reduce((sum, w, i) => sum + (fits[i] ? w : 0), 0);
-        const lastText = last >= 0 ? (fitted[last] ?? 0) : 0;
-        const room = width - fixed - lastText - EaStyle.Sizes.tableColumnSpacing * (columns.length - 1) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2;
-        const margin = Math.max(0, Math.min(autoColumnPadding, (room - texts) / count));
+        const filling = fillColumns.reduce((sum, i) => sum + (fitted[i] ?? 0), 0);
+        // The filling columns give up their room first; the others narrow only when their texts alone do not fit, as
+        // a number's short form is not always narrower.
+        const room = width - fixed - EaStyle.Sizes.tableColumnSpacing * (columns.length - 1) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2;
+        const margin = Math.max(0, Math.min(autoColumnPadding, (room - texts - filling) / fitting));
         const scale = texts > room && texts > 0 ? Math.max(0, room) / texts : 1;
         return columns.map((w, i) => fits[i] ? Math.floor(fitted[i] * scale + margin) : w);
     }
@@ -76,12 +82,13 @@ EaComponents.ListView {
         // is a default, not its text).
         const padded = (cell, w) => w + (cell.leftPadding ?? 0) + (cell.rightPadding ?? 0);
         const measure = cell => "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : cell.implicitWidth;
-        // The filling column reads from the left, as its header, so its value sits next to the columns before it and
+        // A filling column reads from the left, as its header, so its value sits next to the columns before it and
         // the space it takes is left after it (a right-aligned number would move to the row's far edge).
-        const fill = equalColumns ? -1 : columns.lastIndexOf(-1);
         const align = cells => {
-            if (fill >= 0 && fill < cells.length && "horizontalAlignment" in cells[fill])
-                cells[fill].horizontalAlignment = Text.AlignLeft;
+            for (const fill of equalColumns ? [] : fillColumns) {
+                if (fill >= 0 && fill < cells.length && "horizontalAlignment" in cells[fill])
+                    cells[fill].horizontalAlignment = Text.AlignLeft;
+            }
         };
         // The cells as the base sizes them: the children of the row's inner Row, in order, so a Repeater's cells
         // (placed before the Repeater) line up with their columns.
@@ -103,12 +110,25 @@ EaComponents.ListView {
             fittedWidths = widths;
     }
     onColumnsChanged: Qt.callLater(fitColumns)
+    onFillColumnsChanged: Qt.callLater(fitColumns)
     onModelRevisionChanged: Qt.callLater(fitColumns)
     onCountChanged: Qt.callLater(fitColumns)
     Component.onCompleted: Qt.callLater(fitColumns)
     Connections {
         target: table.contentItem
         function onChildrenChanged() {
+            Qt.callLater(table.fitColumns);
+        }
+    }
+    // A header whose cells change after it was made (a column per structure arriving with the calculation) has
+    // them sized and the columns fitted again.
+    Connections {
+        target: table.headerItem
+        ignoreUnknownSignals: true
+        function onImplicitColumnWidthsChanged() {
+            const first = table.headerItem && table.headerItem.contentRowData ? Array.from(table.headerItem.contentRowData).find(cell => cell instanceof Item) : null;
+            if (first && first.parent)
+                table.applyWidths(first.parent);
             Qt.callLater(table.fitColumns);
         }
     }

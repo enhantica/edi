@@ -190,8 +190,11 @@ Column {
                 ring: status === "pending"
                 toolTip: status === "incl" ? Session.optionLabel("data.calc_status", "incl") : status === "excl" ? Session.optionLabel("data.calc_status", "excl") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
             }
+            // One cell per structure on every row, an empty one where the point has no curve (an excluded point, or
+            // before a calculation): the base centres a row's cells, so a row with fewer would sit apart from the
+            // header.
             Repeater {
-                model: row.model.componentIntensities
+                model: table.componentNames.map((name, i) => (row.model.componentIntensities ?? [])[i] ?? NaN)
                 delegate: EaComponents.ListViewLabel {
                     required property var modelData
                     horizontalAlignment: Text.AlignHCenter

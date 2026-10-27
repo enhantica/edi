@@ -3,6 +3,7 @@ import QtQuick
 import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
+import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Components as EaComponents
 
@@ -116,6 +117,38 @@ EaComponents.ContentPage {
         }
     }
 
+    // The Text tab knows whether it is shown and which block the page shows, so leaving an edit not yet applied asks
+    // first; kept, the page, the tab and the block come back (edi ADR-0017 §7).
+    property int pageIndex: -1
+    onCurrentChanged: {
+        if (current)
+            page.pageIndex = EaGlobals.Vars.appBarCurrentIndex;
+    }
+    Binding {
+        target: textLoader.item
+        property: "shown"
+        value: page.current && textLoader.SwipeView.isCurrentItem
+        when: textLoader.item !== null
+    }
+    Binding {
+        target: textLoader.item
+        property: "blockIndex"
+        value: page.blockIndex
+        when: textLoader.item !== null
+    }
+    Connections {
+        target: textLoader.item
+        ignoreUnknownSignals: true
+        function onStayRequested() {
+            if (page.pageIndex >= 0)
+                EaGlobals.Vars.appBarCurrentIndex = page.pageIndex;
+            textTabButton.TabBar.tabBar.currentIndex = textTabButton.TabBar.index;
+        }
+        function onBlockRequested(index) {
+            page.blockActivated(index);
+        }
+    }
+
     mainView: EaComponents.MainContent {
         id: mainContent
 
@@ -158,6 +191,7 @@ EaComponents.ContentPage {
                 enabled: page.extrasEnabled
             },
             EaElements.TabButton {
+                id: textTabButton
                 objectName: "sideBar.tab.text"
                 text: qsTr("Text")
                 enabled: page.textEnabled
@@ -176,10 +210,11 @@ EaComponents.ContentPage {
             Loader {
                 id: extrasLoader
             },
-            // Text is loaded only while its tab is shown: a block's text can be the whole data loop.
+            // Text is loaded only while its tab is shown, a block's text can be the whole data loop, or while it
+            // holds an edit not yet applied, until the user discards it.
             Loader {
                 id: textLoader
-                active: SwipeView.isCurrentItem
+                active: SwipeView.isCurrentItem || (item !== null && item.dirty === true)
             },
             Loader {
                 id: settingsLoader

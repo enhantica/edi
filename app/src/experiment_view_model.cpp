@@ -165,7 +165,8 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       scattering_source_(new ScatteringSourceViewModel(experiment, editor, this)),
       measured_range_(new RangeViewModel(experiment, this)),
       pattern_(new PatternModel(experiment, this)),
-      text_(new BlockText([saved, &experiment] { return saved(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); }, this)) {
+      text_(new BlockText([saved, &experiment] { return saved(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); }, this,
+                          [&experiment] { return std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string(); })) {
     capturePattern();  // the measured data shows before the first calculation is published
     // The options follow the experiment's type, which is read-only, so they are set once.
     const edi::BeamModeEnum mode = experiment_.effective_beam_mode();
