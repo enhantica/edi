@@ -501,7 +501,7 @@ EaComponents.ApplicationWindow {
         parent: Overlay.overlay.parent
         z: Overlay.overlay.z + 1
         enabled: false
-        color: "red"
+        color: EaStyle.Colors.themeForegroundHighlight
         Accessible.ignored: true
     }
     Connections {

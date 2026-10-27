@@ -762,7 +762,7 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
     const auto release=qScopeGuard([self,previous]{if(self)self->widget_input_executing_=previous;});
     if(input){input->consumed=true;widget_input_executing_=true;}
     using Kind=CreationAction::Kind;
-    const bool scalar_control=actual.kind==Kind::AbsorptionType || actual.kind==Kind::CutoffFwhm || actual.kind==Kind::DatasetWeight;
+    const bool scalar_control=actual.kind==Kind::AbsorptionType || actual.kind==Kind::ExtinctionType || actual.kind==Kind::MosaicDistribution || actual.kind==Kind::CutoffFwhm || actual.kind==Kind::DatasetWeight;
     const bool phase_control=actual.kind==Kind::PhaseAppend || actual.kind==Kind::PhaseRetarget ||
         actual.kind==Kind::PhaseEnabled || actual.kind==Kind::PhaseRemove;
     const bool experiment_control=phase_control || scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend ||
@@ -812,6 +812,8 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
         const bool equal=actual.kind==Kind::PhaseRetarget?link && edi::KeyTraits<edi::LinkedStructure>::canonical(link->structure_id.value())==actual.text.toStdString():
             actual.kind==Kind::PhaseEnabled?link && link->enabled.get()==bool(actual.number):
             actual.kind==Kind::AbsorptionType?(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none"))==actual.text.toStdString():
+            actual.kind==Kind::ExtinctionType?experiment->extinction.type.value_or("none")==actual.text.toStdString():
+            actual.kind==Kind::MosaicDistribution?experiment->extinction.mosaic_distribution.value_or("")==actual.text.toStdString():
             actual.kind==Kind::CutoffFwhm?experiment->peak.cutoff_fwhm==actual.number:
             actual.kind==Kind::DatasetWeight?experiment->dataset_weight==actual.number:
             actual.kind==Kind::PeakProfile?edi::effective_peak_type(*experiment)==actual.text.toStdString():
@@ -820,6 +822,7 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
         if(equal)return {};
         auto before=phase_control?edi::capture_experiment_links(*project_,*experiment):scalar_control?edi::capture_experiment_scalar(*project_,*experiment,
             actual.kind==Kind::AbsorptionType?edi::ExperimentScalarControl::Absorption:
+            actual.kind==Kind::ExtinctionType || actual.kind==Kind::MosaicDistribution?edi::ExperimentScalarControl::Extinction:
             actual.kind==Kind::CutoffFwhm?edi::ExperimentScalarControl::CutoffFwhm:edi::ExperimentScalarControl::DatasetWeight):
             edi::capture_experiment_controls(*project_,*experiment,actual.kind==Kind::PeakProfile);
         undo_history_.reserve(undo_history_.size()+1);undo_history_.emplace_back(std::move(before));

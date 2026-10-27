@@ -423,6 +423,7 @@ Popup {
                                     || original.state !== "connecting" || !original.canCancel) return;
                                 original.cancel();
                             } else if (connectionButton.accountView) accountDialog.open();
+                            else if (panel.assistant.resumeConnection()) { /* Original approved session owns reconnection. */ }
                             else {
                                 const component = panel, original = panel.assistant, dialog = connectionDialog;
                                 const offer = dialog.beginOffer();

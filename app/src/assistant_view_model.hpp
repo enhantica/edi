@@ -108,6 +108,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void send(const QString& text);
     /// Submit on the owner thread; return its admitted row ID, or empty on refusal. Durable completed status alone acknowledges it.
     Q_INVOKABLE QString submitDraft(const QString& text);
+    Q_INVOKABLE QString workReportDocument();
     Q_INVOKABLE bool openReport(const QString& rowId, const QString& link);
     Q_INVOKABLE void selectSkill(const QString& id);
     Q_INVOKABLE void approvePlan(const QString& id);
@@ -118,6 +119,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool completeManualControlInput(QQuickItem* control, const QEventPoint& point,
                                               QObject* actionOwner, const QVariant& proof);
     Q_INVOKABLE void cancel();
+    Q_INVOKABLE bool resumeConnection();
     Q_INVOKABLE void signIn();
     Q_INVOKABLE void signOut();
     Q_INVOKABLE void clearHistory();

@@ -209,7 +209,7 @@ bool CodexAgent::finishHumanWait() {
     return true;
 }
 bool CodexAgent::beginHumanWait(const QJsonValue& originalRequestId, quint64 originalGeneration) {
-    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0 || !idle_ms_)return false;
+    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0)return false;
     const auto key=idKey(originalRequestId);
     const auto found=server_requests_.constFind(key);
     if(key.isEmpty() || found==server_requests_.cend())return false;
@@ -227,7 +227,7 @@ bool CodexAgent::endHumanWait(const QJsonValue& originalRequestId, quint64 origi
     return finishHumanWait();
 }
 bool CodexAgent::beginNativeWork(const QJsonValue& originalRequestId, quint64 originalGeneration) {
-    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0 || !idle_ms_)return false;
+    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0)return false;
     const auto key=idKey(originalRequestId);
     const auto found=server_requests_.constFind(key);
     if(key.isEmpty() || found==server_requests_.cend())return false;
@@ -239,7 +239,7 @@ bool CodexAgent::beginNativeWork(const QJsonValue& originalRequestId, quint64 or
     return true;
 }
 bool CodexAgent::setNativeWorkWaiting(const QJsonValue& originalRequestId, quint64 originalGeneration, bool waiting) {
-    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0 || !idle_ms_)return false;
+    if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0)return false;
     const auto found=server_requests_.constFind(native_work_id_);
     if(native_work_id_.isEmpty() || found==server_requests_.cend() || found.value()!=originalRequestId)return false;
     if(native_work_waiting_==waiting)return true;
@@ -361,7 +361,7 @@ QString CodexAgent::executable() {
     const auto parsed = QJsonDocument::fromJson(manifest.read(static_cast<qint64>(Limits::http_json_bytes) + 1), &error);
     if (error.error != QJsonParseError::NoError || !parsed.isObject()) return {};
     const auto metadata = parsed.object();
-    if (metadata.value("layoutVersion") != 1 || metadata.value("version") != "0.162.1" ||
+    if (metadata.value("layoutVersion") != 1 || metadata.value("version") != QString::fromLatin1(EDI_CODEX_RUNTIME_VERSION) ||
         metadata.value("target") != QString::fromUtf8(EDI_CODEX_RUNTIME_TARGET) ||
         metadata.value("variant") != "codex-app-server" || metadata.value("entrypoint") != "bin/codex-app-server" ||
         metadata.value("resourcesDir") != "codex-resources" || metadata.value("pathDir") != "codex-path") return {};
@@ -399,7 +399,15 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         process->setArguments({QStringLiteral("--listen"), QStringLiteral("stdio://"),
             QStringLiteral("-c"), QStringLiteral("sandbox_mode=\"read-only\""),
             QStringLiteral("-c"), QStringLiteral("approval_policy=\"never\""),
-            QStringLiteral("-c"), QStringLiteral("features.shell_zsh_fork=false")});
+            QStringLiteral("-c"), QStringLiteral("features.shell_zsh_fork=false"),
+            QStringLiteral("-c"), QStringLiteral("features.shell_tool=false"),
+            QStringLiteral("-c"), QStringLiteral("features.view_image=false"),
+            QStringLiteral("-c"), QStringLiteral("features.stable_environment_tools=false"),
+            QStringLiteral("-c"), QStringLiteral("features.apps=false"),
+            QStringLiteral("-c"), QStringLiteral("features.plugins=false"),
+            QStringLiteral("-c"), QStringLiteral("features.remote_plugin=false"),
+            QStringLiteral("-c"), QStringLiteral("features.multi_agent=false"),
+            QStringLiteral("-c"), QStringLiteral("orchestrator.mcp.enabled=false")});
         process->setWorkingDirectory(workspace);
         process->setProcessChannelMode(QProcess::SeparateChannels);
         // The runtime owns its ordinary profile and managed login. Never assign

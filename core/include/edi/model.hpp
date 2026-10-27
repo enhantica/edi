@@ -1232,10 +1232,11 @@ struct Parameter {
 // clearing or replacing the field keeps the old cell, detached, for as long as the field lives: a handle
 // to a removed slot keeps its last values and refuses writes, as a removed row's does, and never points
 // at storage a later value reuses. It reads like std::optional<Parameter>.
-namespace detail { struct PreparedPeakRestore; struct PreparedAbsorptionRestore; }
+namespace detail { struct PreparedPeakRestore; struct PreparedAbsorptionRestore; struct PreparedExtinctionRestore; }
 class OptionalParameter {
     friend struct detail::PreparedPeakRestore;
     friend struct detail::PreparedAbsorptionRestore;
+    friend struct detail::PreparedExtinctionRestore;
    public:
     using value_type = Parameter;
     OptionalParameter() = default;
@@ -3666,12 +3667,68 @@ struct ExtinctionBase {
     OptionalParameter coefficient;  // Larson's (type larson-isotropic)
     // Larson's anisotropic tensor (type larson-anisotropic): x11, x22, x33, x12, x13, x23.
     OptionalParameter coefficient_11, coefficient_22, coefficient_33, coefficient_12, coefficient_13, coefficient_23;
+    inline static constexpr std::array optional_parameter_members{
+        &ExtinctionBase::domain_radius,&ExtinctionBase::mosaic_spread,&ExtinctionBase::crystal_radius,&ExtinctionBase::coefficient,
+        &ExtinctionBase::coefficient_11,&ExtinctionBase::coefficient_22,&ExtinctionBase::coefficient_33,
+        &ExtinctionBase::coefficient_12,&ExtinctionBase::coefficient_13,&ExtinctionBase::coefficient_23};
 
     std::vector<Parameter*> parameters();
     detail::RowLink row;
     detail::Epoch epoch;
     detail::CategoryRow table_row;
 };
+
+namespace detail {
+struct PreparedExtinctionRestore {
+    ExtinctionBase* target;
+    ExtinctionBase image;
+    struct Retirement {
+        OptionalParameter* slot;
+        std::shared_ptr<Membership> detached;
+        std::vector<std::shared_ptr<OptionalParameter::ParameterCell>> retired;
+    };
+    std::vector<Retirement> retirements;
+    PreparedExtinctionRestore(ExtinctionBase& into,ExtinctionBase before):target(&into),image(std::move(before)) {
+        retirements.reserve(ExtinctionBase::optional_parameter_members.size());
+        for(auto member:ExtinctionBase::optional_parameter_members) {
+            auto& current=into.*member;auto& incoming=image.*member;
+            if(current.live_ && !incoming.live_) {
+                auto retired=current.retired_;retired.push_back(current.live_);
+                retirements.push_back({&current,std::make_shared<Membership>(),std::move(retired)});
+            }
+        }
+    }
+    void commit() noexcept {
+        static_assert(std::is_nothrow_move_assignable_v<Parameter>);
+        static_assert(std::is_nothrow_swappable_v<std::optional<std::string>>);
+        target->type.swap(image.type);
+        target->mosaic_distribution.swap(image.mosaic_distribution);
+        for(auto member:ExtinctionBase::optional_parameter_members) {
+            auto& current=target->*member;auto& incoming=image.*member;
+            if(current.live_ && incoming.live_) {
+                auto& held=current.live_->parameter;const auto& wanted=incoming.live_->parameter;
+                // Family selection retains unchanged coefficients, including
+                // their written identities; Undo restores only differing state.
+                const bool equal=held.value.get()==wanted.value.get() && held.uncertainty.get()==wanted.uncertainty.get() &&
+                    held.free.get()==wanted.free.get() && held.start_value.get()==wanted.start_value.get() &&
+                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle;
+                if(!equal)held=std::move(incoming.live_->parameter);
+            }
+            else if(!current.live_ && incoming.live_) {
+                current.live_.swap(incoming.live_);
+                current.live_->parameter.category.point_at(target->row);
+            } else if(current.live_) {
+                // The exact live owner to retire was retained during preparation.
+                auto found=std::find_if(retirements.begin(),retirements.end(),[&](const auto& row){return row.slot==&current;});
+                auto& link=current.live_->removed;link.link(found->detached);link.unlink();
+                current.live_->parameter.category.point_at(link);
+                current.retired_.swap(found->retired);current.live_.reset();
+            }
+        }
+        target->epoch=Epoch();
+    }
+};
+} // namespace detail
 
 // A single crystal's reflections (diffraction-lib `ReflnDataBase`, the `refln` category of a single
 // crystal): the measured Miller indices, F² and its su, the wavelength of each reflection for time of

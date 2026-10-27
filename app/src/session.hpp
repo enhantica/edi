@@ -104,7 +104,7 @@ class Session : public QObject {
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
 
    public:
-    explicit Session(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
+    explicit Session(QObject* parent, AssistantWorkReportOptions options = {});
     static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
     AssistantViewModel* assistant() const { return assistant_; }
     bool assistantWorkReportsAutomatic() const { return work_report_options_.automatic; }
