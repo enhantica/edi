@@ -8948,6 +8948,7 @@ struct AssistantViewModel::State {
                     const auto estimated=run->project->estimateBackgroundOutcome(receipt.get());
                     if(!receiver || receiver->state_.get()!=this)return;
                     end_own_edit(scope);
+                    if(!create_widget_owned(run))return;
                     if(estimated.applied){++run->completed_steps;run->step_counted=true;native_call->may_have_written=true;}
                     if(!estimated.applied || !estimated.published)throw std::runtime_error("The native Estimate did not complete; actual setup/estimate effects and Undo are retained");
                     native_refresh(*native_call);create_widget_advance(run);return;
