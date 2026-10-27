@@ -1185,8 +1185,7 @@ def test_compound_default_estimate_refusal_preserves_and_discloses_actual_setup_
     data = tmp_path / 'one-observation.xye'
     data.write_text('34.25 17.25 .75\n')
     cif = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
-    actor.connect()
-    token = qml(actor, 'Session.assistant.beginFileSelection(true)')
+    token = actor.command('selected_begin')['reply']['token']
     assert actor.command('selected_add', token=token, paths=[str(data), str(cif)])['reply'][
         'added'
     ], 'The compound witness uses actual selected immutable inputs'
@@ -1940,7 +1939,8 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
         'purpose', 'name', 'description'
     }, 'Normal current-session Create exposes only ordinary name and description metadata'
     cif = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
-    token = actor.command('selected_begin')['reply']['token']
+    actor.connect()
+    token = qml(actor, 'Session.assistant.beginFileSelection(true)')
     assert actor.command('selected_add', token=token, paths=[str(cif)])['reply']['added'], (
         'The empty current Session admits the genuine published selected CIF before native Create'
     )
