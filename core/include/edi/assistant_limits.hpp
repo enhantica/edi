@@ -3,7 +3,9 @@
 #include <cstdint>
 
 namespace edi::assistant {
-/// Finite inclusive payload policy, independent of provider entitlement (ADR-0054).
+/// Working-record, protocol/identity and presentation constants (ADR-0054/0056).
+/// Historical work totals are not task/output/history/admission quotas; actual
+/// streaming and retained once evidence must not abort merely by growing.
 struct Limits final {
     static constexpr std::uint64_t message_bytes = 1048576;
     static constexpr std::uint64_t json_depth = 64;

@@ -21,8 +21,8 @@ struct HttpRequest {
     QUrl url;
     HttpHeaders headers;
     QByteArray body;
-    std::uint64_t body_limit_bytes;
-    std::uint64_t timeout_ms;
+    std::uint64_t body_limit_bytes; // Zero: streaming work has no cumulative body quota.
+    std::uint64_t timeout_ms; // Zero: active work has no operation expiry.
 };
 struct HttpCallbacks {
     std::function<void(int status, HttpHeaders headers)> headers;

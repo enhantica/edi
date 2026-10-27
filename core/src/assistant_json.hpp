@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
+#include <optional>
 
 #include <algorithm>
 #include <charconv>
@@ -82,8 +83,8 @@ inline bool utf8(std::string_view text) {
     }
     return true;
 }
-inline J parse(const std::string& text, std::uint64_t limit = Limits::message_bytes) {
-    if (text.size() > limit || !utf8(text)) refuse("invalid_json", "Invalid UTF-8 or oversized message");
+inline J parse(const std::string& text, std::optional<std::uint64_t> limit = std::nullopt) {
+    if ((limit && text.size() > *limit) || !utf8(text)) refuse("invalid_json", "Invalid UTF-8 or unsupported record size");
     std::uint64_t depth = 0;
     bool quoted = false, escaped = false;
     for (char c : text) {

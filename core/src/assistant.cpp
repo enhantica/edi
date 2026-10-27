@@ -49,8 +49,7 @@ J parameters(Project& project) {
                             {"uncertainty", p.uncertainty.get() ? J(*p.uncertainty.get()) : J(nullptr)},
                             {"free", p.free.get()}, {"dependence", dependence(p.dependence)},
                             {"unit", p.spec ? p.spec->units : "dimensionless"}};
-        const auto growth = payload_size(row, Limits::context_bytes) + (rows.empty() ? 0 : 1);
-        if (growth > Limits::context_bytes - bytes) refuse("resource_exhausted", "Project parameter context exceeds limit");
+        const auto growth = payload_size(row) + (rows.empty() ? 0 : 1);
         bytes += growth; rows.push_back(std::move(row));
     }
     return rows;
@@ -59,7 +58,7 @@ J parameters(Project& project) {
 std::uint64_t encoded_text(std::string_view text, bool identity = false) {
     if ((identity && text.size() > Limits::id_bytes) || !utf8(text))
         refuse(identity && text.size() > Limits::id_bytes ? "resource_exhausted" : "invalid_argument", "Invalid or oversized project metadata text");
-    try { return json::encoded_string_size(text, Limits::context_bytes); }
+    try { return json::encoded_string_size(text); }
     catch (const std::length_error&) { refuse("resource_exhausted", "Project metadata text exceeds context capacity"); }
 }
 std::uint64_t encoded_fields(std::initializer_list<std::pair<std::string_view, std::uint64_t>> fields) {
@@ -67,8 +66,6 @@ std::uint64_t encoded_fields(std::initializer_list<std::pair<std::string_view, s
     bool comma = false;
     for (const auto& [key, value] : fields) {
         const auto prefix = encoded_text(key) + 1 + (comma ? 1 : 0);
-        if (prefix > Limits::context_bytes - total || value > Limits::context_bytes - total - prefix)
-            refuse("resource_exhausted", "Project metadata object exceeds context capacity");
         total += prefix + value; comma = true;
     }
     return total;
@@ -80,15 +77,13 @@ std::uint64_t encoded_rows(const Range& rows, Size size) {
     for (const auto& row : rows) {
         const auto value = size(row);
         const std::uint64_t prefix = comma ? 1 : 0;
-        if (prefix > Limits::context_bytes - total || value > Limits::context_bytes - total - prefix)
-            refuse("resource_exhausted", "Project metadata array exceeds context capacity");
         total += prefix + value; comma = true;
     }
     return total;
 }
 std::uint64_t encoded_finite(double value) {
     if (!std::isfinite(value)) refuse("invalid_argument", "Project metadata contains a nonfinite scientific value");
-    return payload_size(J(value), Limits::context_bytes);
+    return payload_size(J(value));
 }
 std::uint64_t encoded_optional(const std::optional<double>& value) { return value ? encoded_finite(*value) : 4; }
 std::string_view metadata_key(const ItemKey& value, std::string_view fallback) {
@@ -167,7 +162,6 @@ std::uint64_t project_metadata_size(const Project* project) {
         std::uint64_t profile_options=2;bool profile_comma=false;
         if (facts.powder) visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token) {
             const auto size=encoded_text(token)+(profile_comma?1:0);
-            if(size>Limits::context_bytes-profile_options)refuse("resource_exhausted","Profile options exceed context capacity");
             profile_options+=size;profile_comma=true;
         });
         const auto absorption_tokens=facts.powder ? supported_absorption_families(experiment->effective_beam_mode()) : std::vector<std::string>{};
@@ -544,16 +538,14 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         auto complete = metadata_bytes;
         const auto member_size = [&](std::string_view key, std::uint64_t size) {
             const auto prefix = encoded_text(key) + 2; // comma + colon
-            if (prefix > Limits::context_bytes - complete || size > Limits::context_bytes - complete - prefix)
-                refuse("resource_exhausted", "Project context exceeds the assistant limit");
             complete += prefix + size;
         };
         member_size("schema", encoded_text("edi.assistant.context/1")); member_size("project", project_bytes);
-        member_size("parameters", payload_size(parameter_context, Limits::context_bytes));
-        member_size("diagnostics", payload_size(diagnostic_context, Limits::context_bytes));
-        member_size("selected_files", payload_size(*selection_value, Limits::context_bytes));
+        member_size("parameters", payload_size(parameter_context));
+        member_size("diagnostics", payload_size(diagnostic_context));
+        member_size("selected_files", payload_size(*selection_value));
         member_size("skills", 0);
-        auto workflow = skill_context(selected_id, manifest(), Limits::context_bytes - complete);
+        auto workflow = skill_context(selected_id, manifest(), Limits::context_bytes);
         auto result = project_metadata(live);
         J project;
         if (live) project = O{{"id", version.project_id}, {"revision", revision_text}, {"name", live->metadata.name}, {"fitting_mode", live->fitting_mode}};
@@ -613,9 +605,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         for (const auto& file : added) rows.push_back(selected_descriptor(file));
         J next_manifest = O{{"collection_id", collection_id}, {"generation", std::to_string(generation)}, {"files", std::move(rows)}};
         const auto prospective_context = context(&next_manifest);
-        bounded(prospective_context, Limits::context_bytes);
+        (void)payload_size(prospective_context);
         auto reply = success(next_manifest);
-        if (reply.value.size() > Limits::message_bytes) refuse("resource_exhausted", "Selected-file reply exceeds limit");
         SelectedFiles next{std::move(collection_id), generation, {}};
         next.files.reserve(kept.size() + added.size());
         // All throwing validation, metadata, context, reply and storage allocation precedes this first live move.
@@ -638,7 +629,6 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         fields.emplace_back("project_id", scope ? scope->at("project_id") : J(version.project_id));
         fields.emplace_back("revision", scope ? scope->at("revision") : J(std::to_string(version.revision)));
         const auto wire = json::write(fields);
-        if (wire.size() > Limits::message_bytes) refuse("resource_exhausted", "Assistant event exceeds the complete message limit");
         hooks.event(wire);
     }
     template <typename Fields>
@@ -663,18 +653,8 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     std::uint64_t held_history() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.history; return n; }
     std::uint64_t held_cache() const { std::uint64_t n = 0; for (const auto& row : holds) n += row.second.cache; return n; }
     void check_history(std::initializer_list<const J*> items, std::uint64_t future = 0, const std::string& settling = {}) const {
-        auto bytes = history_used; auto count = history.array("history").size();
-        for (const auto& item : items) {
-            const auto size = payload_size(*item, Limits::history_bytes);
-            const auto growth = size + (count ? 1 : 0);
-            if (growth > Limits::history_bytes - bytes) refuse("resource_exhausted", "Conversation history limit exceeded");
-            bytes += growth; ++count;
-        }
-        const auto own = holds.find(settling);
-        const auto released = own == holds.end() ? 0 : own->second.history;
-        if (held_history() - released + future > Limits::history_bytes - bytes ||
-            count + holds.size() - (own == holds.end() ? 0 : 1) + (future ? 1 : 0) > Limits::history_entries)
-            refuse("resource_exhausted", "Conversation terminal capacity is unavailable");
+        (void)future;(void)settling;
+        for(const auto* item:items)(void)payload_size(*item); // Actual data validation, no cumulative work reservation.
     }
     void history_item(J item) {
         check_history({&item});
@@ -718,31 +698,23 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     }
     void preflight(const Reply& result, bool pending = false) {
         if (admitting_call.empty()) return;
-        if (result.value.size() > Limits::message_bytes) refuse("resource_exhausted", "Tool result exceeds the assistant payload limit");
         const auto call_row = invocation(admitting_event);
         const auto reply_row = result_row(admitting_call, result, pending, &admitting_event);
-        bounded(reply_row, Limits::message_bytes);
+        (void)payload_size(reply_row);
         const auto cache = cache_size(admitting_event, result) + (calls.empty() ? 0 : 1);
-        if (calls.size() + 1 > Limits::completed_calls || cache + held_cache() > Limits::completed_call_bytes - cache_used)
-            refuse("resource_exhausted", "Completed-call capacity is unavailable");
+
         std::uint64_t reserve = 0;
         if (pending) {
             reserve = Limits::message_bytes + 1;
         }
         check_history({&call_row, &reply_row}, reserve);
-        if (pending) {
-            const auto final_cache = terminal_cache_capacity(admitting_event);
-            const auto growth = final_cache > cache ? final_cache - cache : 0;
-            if (cache + growth + held_cache() > Limits::completed_call_bytes - cache_used)
-                refuse("resource_exhausted", "Completed terminal capacity is unavailable");
-        }
         Admission prepared;
         prepared.result = result;
         prepared.history = history;
         auto& next_rows = std::get<A>(prepared.history.data);
         next_rows.reserve(next_rows.size() + 2);
         next_rows.push_back(call_row); next_rows.push_back(reply_row);
-        prepared.history_bytes = payload_size(prepared.history, Limits::history_bytes);
+        prepared.history_bytes = payload_size(prepared.history);
         prepared.cache_bytes = cache_used + cache;
         CallMap staged_call;
         staged_call.emplace(admitting_call, Cached{json::write(canonical(admitting_event)), result});
@@ -759,10 +731,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             const auto interrupted = failure("interrupted", "The question was interrupted before an answer");
             prepared.interrupted_history = prepared.history;
             std::get<A>(prepared.interrupted_history.data).push_back(result_row(admitting_call, interrupted, false, &admitting_event));
-            prepared.interrupted_history_bytes = payload_size(prepared.interrupted_history, Limits::history_bytes);
+            prepared.interrupted_history_bytes = payload_size(prepared.interrupted_history);
             prepared.interrupted_cache_bytes = cache_used + cache_size(admitting_event, interrupted) + (calls.empty() ? 0 : 1);
-            if (prepared.interrupted_cache_bytes + held_cache() > Limits::completed_call_bytes)
-                refuse("resource_exhausted", "Interrupted-question capacity is unavailable");
+
             CallMap staged_interrupted;
             staged_interrupted.emplace(admitting_call, Cached{json::write(canonical(admitting_event)), interrupted});
             prepared.interrupted_call = staged_interrupted.extract(admitting_call);
@@ -786,7 +757,6 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             prospective.emplace_back("pending_result", reply_row);
             prospective.emplace_back("activity", std::move(activity));
             const auto input = json::write(prospective);
-            if (input.size() > Limits::message_bytes) refuse("resource_exhausted", "Complete prospective activity exceeds the assistant limit");
             std::unique_ptr<TerminalRetention> lease;
             try { lease = hooks.reserve_terminal(input); }
             catch (...) { refuse("resource_exhausted", "The host could not reserve complete terminal capacity"); }
@@ -822,14 +792,12 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (old == calls.end()) return false;
         const auto hold = holds.find(call);
         if (hold == holds.end()) return true; // A completed outcome cannot be replaced by interruption.
-        const auto event = parse(old->second.binding, Limits::completed_call_bytes);
+        const auto event = parse(old->second.binding, old->second.binding.size());
         auto row = result_row(call, result, false, &event);
-        bounded(row, Limits::message_bytes);
+        (void)payload_size(row);
         const auto previous = cache_size(event, old->second.reply), next = cache_size(event, result);
         const auto used = cache_used - previous;
-        const auto other_cache = held_cache() - hold->second.cache;
-        if (next + other_cache > Limits::completed_call_bytes - used)
-            refuse("resource_exhausted", "Completed tool outcome exceeds reserved capacity");
+
         check_history({&row}, 0, call);
         Reply prepared = result;
         auto& rows = std::get<A>(history.data);
@@ -1038,13 +1006,13 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     J request_payload(const std::string& next_turn, const std::string& next_request,
                       const std::string& next_conversation, const std::string& next_text,
                       const std::string& next_model, const std::string& next_effort, const J& next_history) const {
-        const auto project_context = context(); bounded(project_context, Limits::context_bytes);
+        const auto project_context = context(); (void)payload_size(project_context);
         O out{{"schema", "edi.assistant/1"}, {"type", "request"}, {"connection_id", connection},
               {"turn_id", next_turn}, {"request_id", next_request}, {"conversation_id", next_conversation},
               {"model", next_model}, {"text", next_text}, {"attachments", A{}},
               {"context", project_context}, {"history", next_history}, {"tools", manifest()}};
         if (!next_effort.empty()) out.emplace_back("effort", next_effort);
-        bounded(out, Limits::request_bytes); return out;
+        (void)payload_size(out); return out;
     }
     bool dispatch_request(const JsonText& outgoing) noexcept {
         try {
@@ -1418,7 +1386,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             if (string(question_record, "connection_id") != connection || string(question_record, "project_id", true) != version.project_id || detail::revision(question_record) != version.revision)
                 refuse("invalid_argument", "Question scope changed");
             const auto result = success(O{{"question_id", question}, {"answer", answer}, {"selected_option_id", selected ? J(answer) : J(nullptr)}});
-            if (answers.size() >= Limits::completed_calls) refuse("resource_exhausted", "Answered-question capacity is unavailable");
+
             AnswerMap staged; staged.emplace(question, std::make_pair(answer, result));
             user_scope_committed = true;
             pending_answer = staged.extract(question);
@@ -1519,7 +1487,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 rows.back().get("turn_id").string("turn_id") == turn && rows.back().get("request_id").string("request_id") == request) {
                 const auto& previous = rows.back().at("text").string("text");
                 const auto growth = payload_size(J(delta)) - 2;
-                if (growth + held_history() > Limits::history_bytes - history_used) refuse("resource_exhausted", "Conversation text limit exceeded");
+
                 J next = rows.back(); set(next, "text", previous + delta); rows.back() = std::move(next); history_used += growth;
             } else history_item(O{{"type", "message"}, {"role", "assistant"}, {"text", delta}, {"turn_id", turn}, {"request_id", request}});
             emit("message_delta", {{"text", delta}}); return success();
@@ -1674,7 +1642,7 @@ Reply Controller::provider_event(const JsonText& event) {
 }
 JsonText Controller::state() const { return json::write(state_->state()); }
 JsonText Controller::context() const {
-    try { const auto context = state_->context(); bounded(context, Limits::context_bytes); return json::write(context); }
+    try { const auto context = state_->context(); (void)payload_size(context); return json::write(context); }
     catch (const Refusal& error) { return json::write(O{{"schema", "edi.assistant.context/1"}, {"error", O{{"code", "edi.assistant." + error.code}, {"message", error.code == "resource_exhausted" ? "Project context exceeds the assistant limit." : "Project context contains invalid or unsupported metadata."}}}}); }
     catch (...) { return json::write(O{{"schema", "edi.assistant.context/1"}, {"error", O{{"code", "edi.assistant.resource_exhausted"}, {"message", "Project context exceeds the assistant limit."}}}}); }
 }

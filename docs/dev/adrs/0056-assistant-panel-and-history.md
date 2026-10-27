@@ -3050,3 +3050,51 @@ and fallback/native refusals use this same exact byte/materialized-wire contract
 independent code field remains ordinary data. Project-required refusal records its actual stage,
 and local retention refusal uses the already declared retention_blocked code, without changing
 validation/admission ordering or replaying any action.
+
+## 2026-10-27: ordinary metadata, continuous work and recoverable diagnostics
+
+Owner decision 85655dc41 supersedes the earlier cumulative work/history capacity policies in this
+ADR. The FIRST owners remain the ordinary ProjectDescriptionDialog/Create defaults, Session,
+ExperimentViewModel type editor, public history archive, typed event decoder and report projection.
+
+Native create_project offers optional name, title and description. Delegated setup supplies useful
+metadata from the actual objective; omission retains normal preferences/defaults. Before OFF/ON
+paths diverge, the original name field's actual validator checks the literal requested basename:
+2–31 ASCII characters, letter first, then letters/digits/underscore/dash/dot. Invalid explicit
+names refuse before any write with target createProject.name and PROJECT_NAME_VALIDATION; they
+are never silently renamed. This adapter rule does not narrow the core filesystem/rename APIs.
+ON enters all three original fields and presses the ordinary OK; OFF supplies the same metadata
+to Session. Success returns actual current name/title/description/path and saved facts. Those
+informational Result fields have one projection owner and matching borrowed-byte/wire counts.
+
+The ordinary set_experiment_type action also exposes sampleForm using actual offered native
+choices. Its existing no-measured-data restriction, factory resets, replacement experiment ID,
+currentness and Undo remain authoritative. A caller follows datasets[0].id after a type change;
+single crystal is an ordinary sample-form token, not a new scientific setup recipe.
+
+Valid work has no artificial cumulative stream-byte/event/item/call/history/context/output quota
+that aborts science or disconnects the account. Typed JSON/Unicode/nesting, IDs, actual arithmetic
+overflow, authorization, selected-file/skill boundaries, scientific validity and original-owner
+checks remain. Individual connection/authentication/protocol deadlines remain separate from an
+unlimited task. Transport drains fixed-size chunks and uses existing write backpressure; complete
+actual records are measured rather than pre-reserving a hypothetical maximum future response.
+History is written through the existing atomic QSaveFile archive one row at a time. Failed local
+history/report publication records an evidence gap and retains actual rows; maintenance never
+requires Clear before valid science. Bounded optional report snapshots disclose omitted evidence.
+No larger arbitrary quota, new shadow history store or invented protocol allowance replaces the
+removed work gates.
+
+Connection and disclosure are separate from uncertain-mutation reconciliation. Local retention
+flags do not disable Connect or same-identity thread/resume; a successful connection preserves
+existing once receipts and does not replay uncertain edits. Scientific mutations remain fenced
+until an actually delivered inspect_project receipt reconciles unchanged authoritative state.
+Explicit Clear, sign-out, account change and unrelated project boundaries still retire authority.
+
+Typed EVENT failures persist fixed method/first_stage/first_class facts as observed values in the
+existing workEvidence.event_failure, including an error row when no native call exists. First
+local-request and event causes survive later evidence refresh, final capture and reconnect. No raw
+provider payload, secret or arbitrary exception text is copied. A local allocation/capacity failure
+in observation is not authentication revocation; genuine invalid protocol can retire its channel
+while preserving lawful same-project recovery. The owner's screenshot's exact trigger is not
+inferred from this correction. Source, native runtime, live science, CI and release qualification
+remain separate; this decision does not certify any pending gate or platform.

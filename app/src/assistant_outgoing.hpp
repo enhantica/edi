@@ -12,6 +12,7 @@
 #include <string_view>
 #include <string>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 
 namespace edi_app::outgoing {
@@ -101,7 +102,7 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Fit: { ROWS(T("status"),B("converged"),N("reduced_chi_square"),N("iterations"),B("objective_unavailable")); }
     case Role::ReaderFacts: { ROWS(N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma")); }
     case Role::SelectedText: { ROWS(T("file_id"),T("collection_id"),T("generation"),T("encoding"),T("text"),N("total_bytes"),N("start"),N("end"),N("next_offset"),B("eof"),B("complete")); }
-    case Role::Result: { ROWS(T("message"),T("target"),T("stage"),T("page"),B("shown"),B("generated"),T("phase_id"),T("relation_id"),T("peak_profile"),T("exclusion_id"),O("excluded_region",Region),T("atom_id"),B("removed"),O("selected_text",SelectedText),T("status"),Field{"fit_reason",Type::FitReason},T("background_id"),Field{"action_error",Type::ActionError},Field{"action_field",Type::ActionField},Field{"refusal_field",Type::RecipeField},Field{"refusal_reason",Type::RecipeReason},Field{"refusal_guidance",Type::RecipeGuidance},N("minimum_items"),N("maximum_items"),B("applied"),B("published"),B("adopted"),B("committed"),B("reopened"),B("active"),B("complete"),B("atomic"),B("presentation_complete"),B("request_retired"),B("calculation_pending"),B("completed_existing"),B("saved"),B("converged"),B("objective_unavailable"),B("uncertain"),N("steps_completed"),N("iterations"),N("reduced_chi_square"),N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma"),N("files_count"),N("supported_count"),N("unsupported_count"),N("discovered"),N("admitted"),N("ignored"),T("scope_id"),A("files",File),A("parameters",Parameter),A("diagnostics",Diagnostic),O("fit",Fit),O("reader_facts",ReaderFacts),O("project",Project),A("structures",Structure),A("datasets",Dataset),O("relations",Relations),O("selected_files",Selection),A("skills",Skill),Field{"native_actions",Type::TextArray},O("native_state",NativeState),O("input_scopes",InputScopes)); }
+    case Role::Result: { ROWS(T("name"),T("title"),T("description"),T("path"),T("message"),T("target"),T("stage"),T("page"),B("shown"),B("generated"),T("phase_id"),T("relation_id"),T("peak_profile"),T("exclusion_id"),O("excluded_region",Region),T("atom_id"),B("removed"),O("selected_text",SelectedText),T("status"),Field{"fit_reason",Type::FitReason},T("background_id"),Field{"action_error",Type::ActionError},Field{"action_field",Type::ActionField},Field{"refusal_field",Type::RecipeField},Field{"refusal_reason",Type::RecipeReason},Field{"refusal_guidance",Type::RecipeGuidance},N("minimum_items"),N("maximum_items"),B("applied"),B("published"),B("adopted"),B("committed"),B("reopened"),B("active"),B("complete"),B("atomic"),B("presentation_complete"),B("request_retired"),B("calculation_pending"),B("completed_existing"),B("saved"),B("converged"),B("objective_unavailable"),B("uncertain"),N("steps_completed"),N("iterations"),N("reduced_chi_square"),N("points"),N("skipped"),N("nonpositive"),N("duplicates"),N("reordered"),N("derived_sigma"),N("files_count"),N("supported_count"),N("unsupported_count"),N("discovered"),N("admitted"),N("ignored"),T("scope_id"),A("files",File),A("parameters",Parameter),A("diagnostics",Diagnostic),O("fit",Fit),O("reader_facts",ReaderFacts),O("project",Project),A("structures",Structure),A("datasets",Dataset),O("relations",Relations),O("selected_files",Selection),A("skills",Skill),Field{"native_actions",Type::TextArray},O("native_state",NativeState),O("input_scopes",InputScopes)); }
     }
 #undef ROWS
 #undef T
@@ -112,11 +113,11 @@ inline const Field* fields(Role role, std::size_t& count) {
     throw std::invalid_argument("Outgoing role is unavailable");
 }
 inline void add(quint64& size, quint64 growth) {
-    if(size>edi::assistant::Limits::context_bytes || growth>edi::assistant::Limits::context_bytes-size)throw std::length_error("Outgoing projection exceeds capacity");size+=growth;
+    if(growth>std::numeric_limits<quint64>::max()-size)throw std::overflow_error("Outgoing byte count overflow");size+=growth;
 }
 inline quint64 scalar_size(const QJsonValue& value) {
     quint64 size=0;
-    if(!codex_encoded_size(value,edi::assistant::Limits::context_bytes,size))throw std::length_error("Outgoing scalar exceeds capacity");
+    if(!codex_measured_size(value,size))throw std::length_error("Outgoing scalar exceeds capacity");
     return size;
 }
 // Count the same closed walk before constructing even the output JSON owners.

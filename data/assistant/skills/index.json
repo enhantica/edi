@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.7.0",
+      "version": "1.8.0",
       "title": "Work with the displayed Edi project",
       "summary": "Work with the current native project, genuine CIF/data inputs, Estimate, ordinary saves and public scientific research.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "29598a1d4410e417eb8decc9b8906d7dc63046348e941655e825292fc87d3435",
+      "sha256": "3835d24ebd6437f4fc68cf46d8c7fdc86955500f879ed2762767cb6521ac609e",
       "requires": [],
       "capabilities": [
         "inspect_project",
