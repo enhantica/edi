@@ -34,7 +34,8 @@
 #include "edi/scan.hpp"
 #include "adapter_test_access.hpp"  // edi::detail conversion seam (core/src only; test-only, not installed)
 #include "number_token.hpp"
-#include "canonical_encoding.hpp"  // edi-only logic: core/src-private, never installed
+#include "canonical_encoding.hpp"
+#include "assistant_project_io.hpp"  // edi-only logic: core/src-private, never installed
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
@@ -4206,6 +4207,19 @@ void Project::publish_calculation(DueEstimates due) {
 }
 // --- (edi ADR-0020 §1): the publication transaction -------------------------------
 
+namespace {
+void capture_work_memberships(const Project& live,WorkStamps& stamps) {
+    stamps.experiments = live.experiments.record();
+    stamps.structures = live.structures.record();
+    stamps.experiments_generation = live.experiments.generation();
+    stamps.structures_generation = live.structures.generation();
+    stamps.edits = live.edits_.record();
+    stamps.edits_at = live.edits_.record()->epoch.value();
+    stamps.aliases = live.aliases.record();
+    stamps.constraints = live.constraints.record();
+}
+}
+
 WorkStamps work_stamps(const Project& live) {
     WorkStamps stamps;
     stamps.experiment_inputs.reserve(live.experiments.size());
@@ -4216,15 +4230,39 @@ WorkStamps work_stamps(const Project& live) {
     for (const auto& structure_item : live.structures) {
         stamps.structure_inputs.push_back(detail::geometry_inputs(*structure_item));
     }
-    stamps.experiments = live.experiments.record();
-    stamps.structures = live.structures.record();
-    stamps.experiments_generation = live.experiments.generation();
-    stamps.structures_generation = live.structures.generation();
-    stamps.edits = live.edits_.record();
-    stamps.edits_at = live.edits_.record()->epoch.value();
-    stamps.aliases = live.aliases.record();
-    stamps.constraints = live.constraints.record();
+    capture_work_memberships(live,stamps);
     stamps.relations = detail::relation_inputs(live.aliases, live.constraints);
+    return stamps;
+}
+
+WorkStamps work_stamps(const Project& live,std::size_t construction_bytes) {
+    std::size_t used=0;
+    const auto charge=[&](std::size_t bytes){if(bytes>construction_bytes-used)throw std::length_error("Scientific stamp capture exceeds capacity");used+=bytes;};
+    charge(sizeof(WorkStamps));
+    for(const auto count:{live.experiments.size(),live.structures.size()}) {
+        if(count>(construction_bytes-used)/sizeof(std::string))throw std::length_error("Scientific stamp rows exceed capacity");
+        charge(count*sizeof(std::string));
+    }
+    if(!live.aliases.empty())charge(detail::relation_name_preparation_bytes(live,construction_bytes-used));
+    // Count and write share the original canonical traversals. No scientific
+    // model is copied and no callback can alter the source between these passes.
+    for(const auto& experiment:live.experiments){charge(detail::calculation_inputs_size(live.structures,*experiment,construction_bytes-used));charge(1);}
+    for(const auto& structure:live.structures){charge(detail::geometry_inputs_size(*structure,construction_bytes-used));charge(1);}
+    charge(detail::relation_inputs_size(live.aliases,live.constraints,construction_bytes-used));charge(1);
+    WorkStamps stamps;
+    stamps.experiment_inputs.reserve(live.experiments.size());
+    for(const auto& experiment:live.experiments) {
+        std::string inputs;inputs.reserve(detail::calculation_inputs_size(live.structures,*experiment,construction_bytes));
+        detail::calculation_inputs_into(inputs,live.structures,*experiment);stamps.experiment_inputs.push_back(std::move(inputs));
+    }
+    stamps.structure_inputs.reserve(live.structures.size());
+    for(const auto& structure:live.structures) {
+        std::string inputs;inputs.reserve(detail::geometry_inputs_size(*structure,construction_bytes));
+        detail::geometry_inputs_into(inputs,*structure);stamps.structure_inputs.push_back(std::move(inputs));
+    }
+    stamps.relations.reserve(detail::relation_inputs_size(live.aliases,live.constraints,construction_bytes));
+    detail::relation_inputs_into(stamps.relations,live.aliases,live.constraints);
+    capture_work_memberships(live,stamps);
     return stamps;
 }
 

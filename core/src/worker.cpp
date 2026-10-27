@@ -2,6 +2,7 @@
 #include "edi/worker.hpp"
 
 #include <chrono>
+#include <algorithm>
 #include <condition_variable>
 #include <deque>
 #include <map>
@@ -97,15 +98,16 @@ struct Worker::State {
 
     // The owner thread (EDI_WORKER_OWNER_THREAD): the oldest job, once. One call is posted per submission,
     // so the calls and the jobs pair up in order.
-    void run_next() {
+    void run_next(Ticket ticket) {
         Pending next;
         {
             const std::lock_guard<std::mutex> lock(mutex);
             if (stopping || queue.empty()) {
                 return;
             }
-            next = std::move(queue.front());
-            queue.pop_front();
+            const auto found=std::find_if(queue.begin(),queue.end(),[&](const auto& pending){return pending.ticket==ticket;});
+            if(found==queue.end())return;
+            next=std::move(*found);queue.erase(found);
         }
         run_one(next);
     }
@@ -185,11 +187,22 @@ Ticket Worker::submit(const std::string& channel, Job job) {
         throw;
     }
 #if EDI_WORKER_OWNER_THREAD
-    state_->post([state = state_, keep = state_->open] {
-        if (keep->load(std::memory_order_acquire)) {
-            state->run_next();
+    try {
+        state_->post([state = state_, keep = state_->open, ticket] {
+            if (keep->load(std::memory_order_acquire)) state->run_next(ticket);
+        });
+    } catch (...) {
+        // A Post may retain its callback and then throw. Its ticket-specific
+        // callback must never consume a later submission after this rollback.
+        const std::lock_guard<std::mutex> lock(state_->mutex);
+        const auto queued=std::find_if(state_->queue.begin(),state_->queue.end(),[&](const auto& pending){return pending.ticket==ticket;});
+        if(queued!=state_->queue.end()) {
+            queued->token.flag_->store(true,std::memory_order_release);
+            state_->queue.erase(queued);state_->tokens.erase(ticket);throw;
         }
-    });
+        // An immediate owner Post already entered this real job. Reporting a
+        // nonadmission now would permit a duplicate; return its actual ticket.
+    }
 #else
     state_->wake.notify_one();
 #endif

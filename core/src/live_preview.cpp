@@ -80,16 +80,18 @@ struct LivePreview::State {
                 }
                 return [self, result, generation] { deliver(self, generation, *result); };
             };
-        // Snapshot, callable and Worker queue admission may allocate. Until submit
-        // returns, owed remains true and no real in-flight ticket is published.
-        const work::Ticket ticket = self->worker.submit(kChannel, std::move(job));
-        self->ticket = ticket;
-        self->in_flight = generation;
-        self->owed = false;
-        if (!self->open) {
-            // Retirement during admission must cancel the ACTUAL returned job,
-            // not discard its ticket as though preparation never admitted it.
-            try { self->worker.cancel(ticket); } catch (...) { /* Worker teardown still owns this cancelled/retired job. */ }
+        // Post may deliver inline. Publish generation/owed before admission can
+        // call any observer; only that still-live generation may take the ticket.
+        self->in_flight=generation;self->ticket=0;self->owed=false;
+        work::Ticket ticket=0;
+        try {ticket=self->worker.submit(kChannel,std::move(job));}
+        catch(...) {
+            if(self->in_flight==generation && self->ticket==0){self->in_flight=0;self->owed=true;}
+            throw;
+        }
+        if(self->in_flight==generation && self->ticket==0)self->ticket=ticket;
+        if(!self->open || (self->in_flight==generation && self->owed)) {
+            try{self->worker.cancel(ticket);}catch(...) {}
         }
     }
 
