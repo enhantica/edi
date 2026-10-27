@@ -40,6 +40,17 @@ EaElements.ComboBox {
         else
             list.positionViewAtIndex(Math.max(0, control.currentIndex), ListView.Contain);
     }
+    // In a table, as wide as its widest option (or what it shows), a small gap and the arrow, the arrow right after
+    // the text (the owner, 2026-10-27); a wider column keeps the space after it.
+    readonly property real fittedWidth: {
+        let widest = optionMetrics.advanceWidth(displayText);
+        for (let index = 0; index < count; ++index)
+            widest = Math.max(widest, optionMetrics.advanceWidth(textAt(index)));
+        // What the shown content draws besides its text: the label's padding, or an icon before the text.
+        const label = contentItemLabel ? contentItemLabel.leftPadding + contentItemLabel.rightPadding : 0;
+        const besides = contentItem ? contentItem.implicitWidth - optionMetrics.advanceWidth(displayText) : label;
+        return Math.ceil(widest + Math.max(label, besides)) + leftPadding + rightPadding;
+    }
     readonly property real optionWidth: {
         let widest = 0;
         for (let index = 0; index < count; ++index)

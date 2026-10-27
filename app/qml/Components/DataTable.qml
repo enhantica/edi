@@ -85,7 +85,7 @@ EaComponents.ListView {
         const padded = (cell, w) => w + (cell.leftPadding ?? 0) + (cell.rightPadding ?? 0);
         // A cell that only holds a control (a combo box in an Item) is as wide as the control, its arrow and padding
         // included.
-        const control = child => "optionWidth" in child ? Math.max(child.optionWidth, child.implicitContentWidth + child.leftPadding + child.rightPadding) : child.implicitWidth ?? 0;
+        const control = child => "fittedWidth" in child ? child.fittedWidth : child.implicitWidth ?? 0;
         const held = cell => Array.from(cell.children).reduce((widest, child) => Math.max(widest, control(child)), cell.implicitWidth);
         const measure = cell => "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : held(cell);
         // A filling column reads from the left, as its header, so its value sits next to the columns before it and

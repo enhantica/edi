@@ -73,6 +73,9 @@ std::string category_tooltip(std::string_view id);
 int category_order(std::string_view id);
 /// Whether the program or a data file supplies a category (its dictionary mark is output) rather than the user.
 bool category_is_output(std::string_view id);
+/// Whether the program writes an item of an input category (the project's times and location), so no user edits
+/// it: `_metadata.created`, for example.
+bool item_is_set_by_program(std::string_view tag);
 /// A block's `.edi` text with only its input categories, as the Text tab's Editable shows it.
 std::string input_categories_text(const std::string& text);
 /// An edit of input_categories_text(full) with the output categories of `full` after it, so an apply keeps the
