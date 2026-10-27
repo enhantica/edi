@@ -1,0 +1,12 @@
+_edi.schema_version 3
+_fitting_mode.type single
+_minimizer.type crysta
+loop_
+_alias.id
+_alias.parameter_unique_name
+li structure.atom_site.Li1.adp_iso
+f structure.atom_site.F1.adp_iso
+loop_
+_constraint.id
+_constraint.expression
+f "f = 1.5 * li"
