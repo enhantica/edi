@@ -1,0 +1,5 @@
+// SPDX-License-Identifier: BSD-3-Clause
+#include <string_view>
+namespace edi::assistant::detail {
+std::string_view openai_capabilities_data() { return R"edi_cap(@EDI_OPENAI_CAPABILITIES@)edi_cap"; }
+}
