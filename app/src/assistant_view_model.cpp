@@ -1348,7 +1348,16 @@ struct AssistantViewModel::State {
             for(qsizetype i=0;i<next.size();++i) {
                 auto row=next[i].toObject();if(row.value("id")!=rowId)continue;
                 if(!work_eligible(row) && !newlyCommitted)return;
-                for(auto field=fields.begin();field!=fields.end();++field)row[field.key()]=field.value();
+                for(auto field=fields.begin();field!=fields.end();++field) {
+                    if(field.key()==QStringLiteral("workEvidence") && field.value().isObject()) {
+                        auto evidence=field.value().toObject();
+                        const auto first=row.value("workEvidence").toObject().value("local_request_failure");
+                        // Later reply/settlement observations refresh this same
+                        // role, but cannot erase or replace its original cause.
+                        if(first.isObject())evidence["local_request_failure"]=first;
+                        row[field.key()]=std::move(evidence);
+                    } else row[field.key()]=field.value();
+                }
                 next[i]=row;found=true;break;
             }
             if(!found || !history_fits(next) || !write_archive(QJsonDocument(next).toJson(QJsonDocument::Compact))) {
