@@ -29,6 +29,13 @@ if(EXISTS "${_edi_crysta_manifest}")
         set(EDI_APP_CRYSTA_COMMIT "unreadable SDK manifest")
     endif()
 endif()
+set(EDI_APP_SDK_SOURCE_KIND "unknown")
+string(LENGTH "${EDI_APP_CRYSTA_COMMIT}" _edi_sdk_source_length)
+if(_edi_sdk_source_length EQUAL 40 AND EDI_APP_CRYSTA_COMMIT MATCHES "^[0-9a-f]+$")
+    set(EDI_APP_SDK_SOURCE_KIND "manifest")
+elseif(EDI_APP_CRYSTA_COMMIT STREQUAL "a local build (no SDK manifest)")
+    set(EDI_APP_SDK_SOURCE_KIND "local_without_manifest")
+endif()
 configure_file(src/app_build_info.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/app_build_info.hpp @ONLY)
 
 # Singletons are marked before the module is declared: qt_add_qml_module reads the property then.
@@ -45,6 +52,12 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/assistant_view_model.hpp src/assistant_view_model.cpp
+        src/assistant_widget_input.hpp src/assistant_widget_input.cpp
+        src/assistant_result.hpp src/assistant_result.cpp
+        src/assistant_file_primitives.hpp src/assistant_file_primitives.cpp
+        src/assistant_work_report.hpp src/assistant_work_report.cpp
+        src/assistant_markdown.hpp src/assistant_markdown.cpp
         src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
         src/demo_driver.hpp src/demo_driver.cpp
@@ -91,6 +104,15 @@ qt_add_qml_module(edi_app_module
         qml/Main.qml
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
+        qml/Components/AssistantPanel.qml
+        qml/Components/AssistantWorking.qml
+        qml/Components/AssistantMessage.qml
+        qml/Components/AssistantComposer.qml
+        qml/Components/AssistantPlan.qml
+        qml/Components/AssistantQuestion.qml
+        qml/Components/AssistantTrial.qml
+        qml/Components/AssistantSkillsDialog.qml
+        qml/Components/AssistantConnectionDialog.qml
         qml/Components/BlockSelector.qml
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
@@ -218,6 +240,8 @@ qt_add_qml_module(edi_app_module
         qml/Style/AppSizes.qml
     RESOURCES
         resources/logo/App.svg
+        resources/logo/AssistantWorking.svg
+        resources/logo/AssistantSpinner.svg
 )
 # The Stacked view's line shader (edi ADR-0041), compiled for every graphics API Qt Quick runs on.
 qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" FILES shaders/scan_line.vert shaders/scan_line.frag)
@@ -404,3 +428,18 @@ set_target_properties(edi_app_tests PROPERTIES AUTOMOC ON WIN32_EXECUTABLE FALSE
 include(GNUInstallDirs)
 install(TARGETS edi_app RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR})
+
+if(TARGET edi_assistant_native)
+    target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
+endif()
+if(NOT EMSCRIPTEN)
+    target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp
+        src/assistant_native_tools.hpp src/assistant_native_tools.cpp
+        src/assistant_native_create.hpp src/assistant_native_create.cpp)
+    file(GLOB_RECURSE EDI_RUNTIME_SKILL_FILES CONFIGURE_DEPENDS
+         ${PROJECT_SOURCE_DIR}/data/assistant/skills/*)
+    qt_add_resources(edi_app_module edi_runtime_skills PREFIX "/edi/assistant/skills"
+        BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
+    include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
+    edi_bundle_assistant_runtime()
+endif()

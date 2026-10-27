@@ -21,6 +21,11 @@ EaComponents.ContentPage {
     // shown stays loaded, laid out and visible beside the shown one, clipped out of the view, so `visible`
     // does not say it: what the page draws only for the eye (its chart) follows this instead.
     property bool current: false
+    // Popup visibility includes its exit; manual controls resume only after the sheet closes.
+    property bool assistantCovered: false
+    // Retained offscreen pages keep their tree/state but cannot acquire input focus.
+    enabled: current
+    readonly property Item assistantOverlayHost: sideBar.parent
     property alias mainTabs: mainContent.tabs
     property alias mainItems: mainContent.items
     property alias basicItem: basicLoader.sourceComponent
@@ -52,6 +57,12 @@ EaComponents.ContentPage {
     property bool blockCurrentTemplate: false
     signal blockActivated(int index)
 
+    function showSidebarTab(extra) {
+        const index = extra ? 1 : 0;
+        if (index < sideBar.tabs.length && sideBar.tabs[index].enabled)
+            sideBar.tabs[index].checked = true;
+    }
+
     // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
     // The main area's shown tab.
     readonly property int mainTabIndex: mainContent.children.length > 0 ? mainContent.children[0].currentIndex : 0
@@ -64,6 +75,8 @@ EaComponents.ContentPage {
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
     // names it nowhere, so it is found as the SideBar's child with a gradient.
     Component.onCompleted: {
+        sideBar.parent.objectName = "workflow." + page.pageName + ".sidebarHost";
+        mainContent.parent.objectName = "workflow." + page.pageName + ".mainContent";
         for (let i = 0; i < sideBar.children.length; ++i) {
             const child = sideBar.children[i];
             if (child.gradient)
@@ -185,6 +198,9 @@ EaComponents.ContentPage {
 
     sideBar: EaComponents.SideBar {
         id: sideBar
+        objectName: "workflow." + page.pageName + ".manualSidebar"
+        // Remain painted at full theme colors under the sliding sheet. Popup's
+        // local input shield and actual strip focus guard own covered input.
 
         tabs: [
             EaElements.TabButton {

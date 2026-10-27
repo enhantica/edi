@@ -20,6 +20,108 @@ import edi.app
 EaComponents.ApplicationWindow {
     id: window
 
+    readonly property Item assistantWorkflowPage: {
+        const loaders = [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader];
+        const index = appBarCentralTabs.currentIndex - 1;
+        return index >= 0 && index < loaders.length ? loaders[index].item : null;
+    }
+    readonly property Item activeAssistantHost: assistantWorkflowPage ? assistantWorkflowPage.assistantOverlayHost : assistantFallbackHost
+    readonly property Item assistantCurrentPage: assistantWorkflowPage || homePage
+    property Item assistantPreviousFocus: null
+    property Item assistantPreviousPage: null
+    property Item assistantPreviousHost: null
+    property var assistantPreviousProject: null
+    property int assistantFocusEpoch: 0
+    property var assistantManualTakeoverProject: null
+    property bool assistantEmptyManualTakeover: false
+    readonly property bool assistantManualTakeover: assistantEmptyManualTakeover && Session.project === null
+        || assistantManualTakeoverProject !== null && assistantManualTakeoverProject === Session.project
+
+    function containsAssistantItem(ancestor, item) {
+        for (let current = item; current; current = current.parent)
+            if (current === ancestor)
+                return true;
+        return false;
+    }
+    function rehostAssistant() {
+        ++assistantFocusEpoch;
+        if (!activeAssistantHost || !assistantPanel)
+            return;
+        const previous = activeFocusItem;
+        const restoreChatFocus = containsAssistantItem(assistantPanel.contentItem, previous);
+        // The active page identifies focus/currentness; its SwipeView transform
+        // must not move the independent fixed sidebar sheet during navigation.
+        assistantPanel.parent = assistantFallbackHost;
+        const epoch = assistantFocusEpoch;
+        const host = activeAssistantHost;
+        const project = Session.project;
+        if (restoreChatFocus) {
+            Qt.callLater(() => {
+                if (epoch === assistantFocusEpoch && host === activeAssistantHost && project === Session.project && assistantPanel.visible && assistantPanel.shown && previous && previous.visible && previous.enabled && containsAssistantItem(assistantPanel.contentItem, previous))
+                    previous.forceActiveFocus();
+            });
+        }
+    }
+    function focusAssistantOpener() {
+        if (assistantToggle.enabled) assistantToggle.forceActiveFocus();
+        else if (appBarCentralTabs.currentItem) appBarCentralTabs.currentItem.forceActiveFocus();
+    }
+    function retireAssistantFocus() {
+        ++assistantFocusEpoch;
+        // Establish a safe current window focus before Qt's Popup exit restoration.
+        focusAssistantOpener();
+    }
+    function restoreAssistantFocus() {
+        const previous = assistantPreviousFocus;
+        const page = assistantPreviousPage;
+        const host = assistantPreviousHost;
+        const project = assistantPreviousProject;
+        const epoch = assistantFocusEpoch;
+        assistantPreviousFocus = null;
+        assistantPreviousPage = null;
+        assistantPreviousHost = null;
+        assistantPreviousProject = null;
+        if (assistantManualTakeover) return; // Never redirect a genuine manual event/focus.
+        Qt.callLater(() => {
+            if (epoch !== assistantFocusEpoch || assistantPanel.shown || assistantPanel.visible)
+                return;
+            if (page === assistantCurrentPage && host === activeAssistantHost && project === Session.project && previous && previous.visible && previous.enabled && (containsAssistantItem(page, previous) || previous === assistantToggle))
+                previous.forceActiveFocus();
+            else
+                focusAssistantOpener();
+        });
+    }
+    // This binding observes the complete target/ancestor and strip geometry, including movement
+    // without a focus change. A partly exposed control remains usable in its uncovered portion.
+    readonly property bool assistantHomeFocusCovered: {
+        const item = activeFocusItem;
+        if (!assistantPanel || !assistantPanel.visible || !item || !containsAssistantItem(assistantCurrentPage, item))
+            return false;
+        for (let current = item; current; current = current.parent) {
+            const geometry = [current.x, current.y, current.width, current.height, current.scale, current.rotation];
+            if (!geometry.every(Number.isFinite))
+                return false;
+        }
+        const stripGeometry = [assistantPanel.x, assistantPanel.y, activeAssistantHost.x, activeAssistantHost.y, activeAssistantHost.width, activeAssistantHost.height, window.width, window.height];
+        if (!stripGeometry.every(Number.isFinite))
+            return false;
+        const rectangle = item.mapToItem(assistantPanel.contentItem, 0, 0, item.width, item.height);
+        return rectangle.width > 0 && rectangle.height > 0 && rectangle.x >= 0 && rectangle.y >= 0 && rectangle.x + rectangle.width <= assistantPanel.contentItem.width && rectangle.y + rectangle.height <= assistantPanel.contentItem.height;
+    }
+    function enforceAssistantHomeFocus() {
+        if (assistantManualTakeover) return;
+        if (assistantHomeFocusCovered) {
+            if (assistantPanel.shown)
+                assistantPanel.focusComposer();
+            else
+                focusAssistantOpener();
+        }
+    }
+    onAssistantHomeFocusCoveredChanged: Qt.callLater(enforceAssistantHomeFocus)
+    onActiveAssistantHostChanged: rehostAssistant()
+    onActiveFocusItemChanged: Qt.callLater(enforceAssistantHomeFocus)
+
+
     // The supported minimum (AppSizes): the window cannot be made smaller than every page is made for.
     minimumWidth: AppSizes.minimumAppWidth
     minimumHeight: AppSizes.minimumAppHeight
@@ -71,6 +173,75 @@ EaComponents.ApplicationWindow {
     ]
 
     appBarRightButtons: [
+        EaElements.ToolButton {
+            id: assistantToggle
+            KeyNavigation.tab: assistantPanel.visible && assistantPanel.shown ? assistantPanel.firstFocusItem : null
+            objectName: "assistant.toggle"
+            readonly property bool assistantSelected: assistantPanel.shown || (Session.assistant.showingActions && Preferences.assistantShown)
+            fontIcon: assistantSelected ? "columns" : "robot"
+            readonly property bool rotateRobot: Session.assistant.state === "agent_active"
+                && EaStyle.Times.translationChange > 0
+            contentItem: Item {
+                implicitWidth: Math.max(assistantRobot.implicitWidth, assistantColumns.implicitWidth)
+                implicitHeight: Math.max(assistantRobot.implicitHeight, assistantColumns.implicitHeight)
+                EaElements.Label {
+                    id: assistantRobot
+                    anchors.centerIn: parent
+                    visible: !assistantToggle.assistantSelected
+                    text: "robot"
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: assistantToggle.font.pixelSize * 1.25
+                    color: assistantToggle.foregroundColor()
+                    Accessible.ignored: true
+                }
+                EaElements.Label {
+                    id: assistantColumns
+                    anchors.centerIn: parent
+                    visible: assistantToggle.assistantSelected
+                    text: "columns"
+                    font.family: EaStyle.Fonts.iconsFamily
+                    font.pixelSize: assistantToggle.font.pixelSize * 1.25
+                    color: assistantToggle.foregroundColor()
+                    Accessible.ignored: true
+                }
+            }
+            RotationAnimator {
+                target: assistantRobot
+                running: assistantToggle.rotateRobot
+                onStopped: if (!assistantToggle.rotateRobot) assistantRobot.rotation = 0
+                loops: Animation.Infinite
+                from: 0
+                to: 360 * 6
+                duration: 2000
+                easing.type: Easing.OutInElastic
+                easing.amplitude: 1
+                easing.period: 0.3
+            }
+            enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
+            ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason
+                : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages")
+                : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
+            Accessible.name: assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
+            Accessible.description: ApplicationInfo.assistantUnavailableReason
+            onClicked: {
+                if (!assistantToggle.enabled)
+                    return;
+                if (window.assistantManualTakeover) {
+                    window.assistantManualTakeoverProject = null;
+                    window.assistantEmptyManualTakeover = false;
+                    Preferences.assistantShown = true;
+                    return;
+                }
+                if (!Preferences.assistantShown) {
+                    ++window.assistantFocusEpoch;
+                    window.assistantPreviousFocus = window.activeFocusItem;
+                    window.assistantPreviousPage = window.assistantCurrentPage;
+                    window.assistantPreviousHost = window.activeAssistantHost;
+                    window.assistantPreviousProject = Session.project;
+                }
+                Preferences.assistantShown = !Preferences.assistantShown;
+            }
+        },
         EaElements.ToolButton {
             objectName: "appBar.button.preferences"
             fontIcon: "cog"
@@ -216,7 +387,10 @@ EaComponents.ApplicationWindow {
     }
 
     contentArea: [
-        HomePage {},
+        HomePage {
+            id: homePage
+            objectName: "workflow.home.mainContent"
+        },
         Loader {
             id: projectLoader
 
@@ -226,6 +400,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ProjectPage {
                     current: projectLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         },
@@ -238,6 +413,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         },
@@ -250,6 +426,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         },
@@ -262,6 +439,7 @@ EaComponents.ApplicationWindow {
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
+                    assistantCovered: assistantPanel.visible
                 }
             }
         },
@@ -285,6 +463,95 @@ EaComponents.ApplicationWindow {
     }
 
     AppPreferencesDialog {}
+
+    Item {
+        id: assistantFallbackHost
+        objectName: "workflow.home.sidebarHost"
+        parent: window.contentItem
+        anchors.top: parent.top
+        anchors.topMargin: EaStyle.Sizes.appBarHeight
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: EaStyle.Sizes.statusBarHeight
+        width: EaStyle.Sizes.sideBarWidth
+        x: Preferences.sideBarOnLeft ? 0 : parent.width - width
+        clip: true
+        z: 20
+    }
+    Binding {
+        target: Session.assistant
+        property: "actionWindow"
+        value: window
+    }
+    EaElements.RemotePointer {
+        id: assistantPointer
+        objectName: "assistant.actionPointer"
+        moveDuration: 500
+        pressDuration: 100
+        clickRelaxation: 500
+        showHideDuration: 500
+        parent: Overlay.overlay.parent
+        z: Overlay.overlay.z + 1
+        enabled: false
+        color: EaStyle.Colors.themeAccent
+        Accessible.ignored: true
+    }
+    Connections {
+        target: Session.assistant
+        function onActionPageRequested(page, extra) {
+            const project = Session.project;
+            if (!project) return;
+            let target = null;
+            let destination = -1;
+            if (page === "analysis" && AppState.analysisPageEnabled) {
+                target = analysisLoader.item; destination = AppState.Page.Analysis;
+            } else if (page === "experiment" && AppState.experimentPageEnabled) {
+                target = experimentLoader.item; destination = AppState.Page.Experiment;
+            } else if (page === "structure" && AppState.structurePageEnabled) {
+                target = structureLoader.item; destination = AppState.Page.Structure;
+            }
+            if (!target || destination < 0) return;
+            AppState.open(destination);
+            if (Session.project === project && target === window.assistantWorkflowPage)
+                target.showSidebarTab(extra);
+        }
+        function onActionPointerShown() { assistantPointer.show(); }
+        function onActionPointerMoved(position) { const local = assistantPointer.parent.mapFromItem(null, position.x, position.y); assistantPointer.move(local.x, local.y); }
+        function onActionPointerPressed() { assistantPointer.click(); }
+        function onActionPointerHidden() { assistantPointer.hide(); }
+        function onActionManualTakeover() {
+            // Synchronous marker only: the sidebar is already exposed. Keep it
+            // so until the user explicitly chooses to reopen the assistant.
+            window.assistantManualTakeoverProject = Session.project;
+            window.assistantEmptyManualTakeover = Session.project === null;
+        }
+    }
+    AssistantPanel {
+        id: assistantPanel
+        parent: assistantFallbackHost
+        assistant: Session.assistant
+        shown: Preferences.assistantShown && !Session.assistant.showingActions && !window.assistantManualTakeover && window.assistantWorkflowPage !== null
+        toggleControl: assistantToggle
+        onAboutToHide: window.retireAssistantFocus()
+        onOpened: focusComposer()
+        onClosed: window.restoreAssistantFocus()
+    }
+
+    Repeater {
+        model: [false, true]
+        delegate: Rectangle {
+            required property bool modelData
+            parent: window.contentItem
+            visible: assistantPanel.visible && window.assistantWorkflowPage !== null
+            x: Preferences.sideBarOnLeft ? 0 : window.contentItem.width - width
+            y: modelData ? window.contentItem.height - EaStyle.Sizes.statusBarHeight
+                         : EaStyle.Sizes.appBarHeight - height
+            width: activeAssistantHost ? activeAssistantHost.width : 0
+            height: EaStyle.Sizes.borderThickness
+            z: 100
+            color: EaStyle.Colors.appBorder
+        }
+    }
+
 
     // Below the supported minimum, which only the browser's page can reach (the owner, 2026-10-25): the empty view's
     // background and a request for more room, over everything, dialogs included. Nothing beneath is torn down, so
@@ -783,6 +1050,7 @@ EaComponents.ApplicationWindow {
     }
     Connections {
         target: Session
+        function onProjectChanged() { window.assistantEmptyManualTakeover = false; }
         function onLoadFailed(message) {
             refusal.title = qsTr("The project was not opened");
             refusal.message = message;

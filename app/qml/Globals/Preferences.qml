@@ -20,6 +20,8 @@ QtObject {
     id: preferences
 
     property bool dialogShown: false
+    property bool assistantShown: false
+    property real assistantWidth: AppSizes.assistantDefaultWidth
 
     property bool toolTips: true
     property bool autoCollapse: true
@@ -61,6 +63,7 @@ QtObject {
 
     // ADR-0031 §5: every preference back to its default, as Preferences' Reset does; the open project is untouched.
     function resetToDefaults() {
+        preferences.assistantWidth = AppSizes.assistantDefaultWidth;
         preferences.toolTips = true;
         preferences.autoCollapse = true;
         preferences.sideBarSide = "Right";
@@ -109,6 +112,12 @@ QtObject {
         property alias colourScheme: preferences.colourScheme
         // After colourScheme: the settings load in this order, so the earlier patterns' choice wins once.
         property alias patternColourScheme: preferences.patternColourScheme
+    }
+
+    property Settings assistantSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "Assistant"
+        property alias width: preferences.assistantWidth
     }
 
     property Settings projectsSettings: Settings {
