@@ -2405,8 +2405,10 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     std::vector<bool> current;
     current.reserve(model.experiments.size());
     for (const auto& item : model.experiments) {
-        current.push_back(item->data.has_value() && !item->data->intensity_calc.empty() &&
-                          item->computed_current());
+        // A powder bank's calculation is in its data, a single crystal's in its reflections.
+        const bool calculated = (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+                                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
+        current.push_back(calculated && item->computed_current());
     }
     if (std::find(current.begin(), current.end(), true) != current.end()) {
         // A save writes edi's points: the engine calculates with due estimates deferred, so a bank whose estimate is
