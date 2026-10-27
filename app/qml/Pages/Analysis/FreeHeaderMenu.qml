@@ -14,6 +14,7 @@ import edi.app
 // never a choice. Rows that can never be fitted (a fixed setting, a coordinate the symmetry fixes) are not counted.
 EaElements.Menu {
     id: menu
+    objectName: "parameters.freeHeader.menu"
 
     property ProjectViewModel project: null
     property ParameterFilterModel filter: null
@@ -88,7 +89,7 @@ EaElements.Menu {
     parent: Overlay.overlay
     x: Math.round((parent.width - width) / 2)
     y: Math.round((parent.height - height) / 2)
-    anchors.centerIn: Controls.Overlay.overlay
+    anchors.centerIn: Overlay.overlay
     width: layout.implicitWidth
     verticalPadding: 0
 

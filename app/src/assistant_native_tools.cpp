@@ -234,6 +234,12 @@ QString assistant_native_purpose(const Object& args) {
 }
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
+    if(name=="estimate_background") {
+        shape(args,{"purpose","experiment"});
+        if(!args.value("experiment").isString() || args.value("experiment").toString().isEmpty())
+            throw ActionRefusal("target_unavailable","experiment");
+        return;
+    }
     if(individual_app_action(name)) {
         if((name=="load_structure" || name=="load_data") && (!args.value("file_id").isString() || args.value("file_id").toString().isEmpty()))
             throw ActionRefusal("input_required","file_id");

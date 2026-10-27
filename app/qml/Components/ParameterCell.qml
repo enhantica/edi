@@ -114,8 +114,9 @@ EaComponents.ListViewParameter {
         if (activeFocus) {
             refreshCleanText();
         } else {
+            const life = editorLife;
             commit();
-            cursorPosition = 0;
+            if (life.alive) cursorPosition = 0;
         }
     }
     onTextChanged: if (!activeFocus)
@@ -157,60 +158,151 @@ EaComponents.ListViewParameter {
         visible: cell.warned && (cell.hovered || cell.activeFocus)
     }
 
-    onValueChanged: {
-        typedRefusal = "";
-        refreshCleanText();
-    }
-    onEditTextChanged: refreshCleanText()
+    readonly property var editOwner: Session.project
+    property var ownerToken: ({})
+    property var draft: null
+    property var commitInProgress: null
+    property var editorLife: ({ alive: true })
+    property bool assistantEditing: false
+    property bool assistantCommitReady: false
+    readonly property bool manualEditing: draft !== null && draft.kind === "manual"
+    readonly property ParameterItem manualItem: manualEditing ? draft.item : null
+    readonly property ParameterItem manualDraftParameter: manualItem
+    readonly property bool assistantManualDraft: inputMethodComposing ||
+        (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
+    onEditOwnerChanged: ownerToken = ({})
+    onObjectNameChanged: ownerToken = ({})
+    Component.onDestruction: editorLife.alive = false
     onItemChanged: {
-        if (manualEditing && manualItem !== item)
-            typedRefusal = qsTr("This draft belongs to a different parameter. Escape cancels it without applying it.");
+        ownerToken = ({});
+        if (draft !== null)
+            typedRefusal = qsTr("This draft belongs to a different parameter. Escape cancels it.");
         else
             refreshCleanText();
     }
-    onInputMethodComposingChanged: {
-        if (inputMethodComposing && !assistantEditing) {
-            if (!manualEditing)
-                manualItem = item;
-            manualEditing = true;
-            // Do not assign text here: that would destroy the IME preedit.
-        }
+    Binding {
+        target: cell
+        property: "text"
+        value: cell.activeFocus ? cell.editText : cell.value
+        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady &&
+              cell.commitInProgress === null && !cell.inputMethodComposing
+        restoreMode: Binding.RestoreNone
     }
-    // textEdited is real text input, unlike focus formatting or model publication.
-    onTextEdited: {
-        if (assistantEditing)
+    function refreshCleanText() {
+        // The binding follows raw precision as well as display formatting, and
+        // detaches without assigning text while IME or a draft owns the editor.
+        if (draft !== null || commitInProgress !== null || inputMethodComposing ||
+            assistantEditing || assistantCommitReady) return;
+        text = activeFocus ? editText : value;
+    }
+    function rememberManualDraft() {
+        if (assistantEditing && draft !== null && draft.kind === "assistant" && draft.owner === ownerToken)
             return;
-        if (!manualEditing)
-            manualItem = item;
-        manualEditing = true;
-        // TextInput editing can retain a QML binding. Detach only the genuine
-        // user draft so unrelated publication cannot replace what was typed.
-        const draft = text;
-        text = draft;
+        const life = editorLife;
+        const context = ownerToken;
+        const original = { owner: draft !== null ? draft.owner : ownerToken,
+                           item: draft !== null ? draft.item : item, kind: "manual" };
+        draft = original;
+        if (!life.alive || draft !== original || ownerToken !== context) return;
+        assistantCommitReady = false;
+        if (!life.alive || draft !== original || ownerToken !== context) return;
+        assistantEditing = false;
+    }
+    onTextEdited: rememberManualDraft()
+    onInputMethodComposingChanged: if (inputMethodComposing) rememberManualDraft()
+    onValueChanged: if (draft === null && commitInProgress === null && !inputMethodComposing) typedRefusal = ""
+    onEditTextChanged: refreshCleanText()
+    function beginAssistantEdit() {
+        if (commitInProgress !== null || draft !== null || assistantManualDraft) return;
+        const life = editorLife;
+        const originalOwner = ownerToken;
+        const original = { owner: originalOwner, item: item, kind: "assistant" };
+        draft = original;
+        if (!life.alive || ownerToken !== originalOwner || draft !== original) return;
+        assistantEditing = true;
+        if (!life.alive || ownerToken !== originalOwner || draft !== original) return;
+        assistantCommitReady = false;
+    }
+    function allowAssistantCommit() {
+        if (commitInProgress !== null || inputMethodComposing || draft === null ||
+            draft.kind !== "assistant" || draft.owner !== ownerToken || draft.item !== item) return;
+        const life = editorLife;
+        const original = draft;
+        assistantCommitReady = true;
+        if (!life.alive || draft !== original || original.owner !== ownerToken) return;
+        assistantEditing = false;
+    }
+    function resetEditorText() {
+        if (commitInProgress !== null || inputMethodComposing) return;
+        const life = editorLife;
+        const original = draft;
+        const context = ownerToken;
+        assistantCommitReady = false;
+        if (!life.alive || draft !== original || ownerToken !== context) return;
+        assistantEditing = false;
+        if (!life.alive || draft !== original || ownerToken !== context) return;
+        typedRefusal = "";
+        if (!life.alive || draft !== original || ownerToken !== context) return;
+        draft = null;
+    }
+    function cancelAssistantEdit() {
+        if (draft !== null && draft.kind === "assistant" && draft.owner === ownerToken && draft.item === item)
+            resetEditorText();
     }
     Keys.onEscapePressed: event => {
-        resetEditorText();
+        if (commitInProgress !== null || inputMethodComposing) return;
         event.accepted = true;
+        resetEditorText();
     }
-    onAccepted: commit()
+    // editingFinished owns Return as well as focus loss; accepted is the same
+    // Return's second signal and cannot acquire a successor draft.
     onEditingFinished: commit()
-
-    // Return and leaving the cell both commit; the second of the two finds nothing new. Text left as shown, rounded or
-    // in full, changes nothing.
     function commit() {
-        if (item === null)
-            return;
-        if (locked) {
-            text = Qt.binding(() => cell.value);
+        if (commitInProgress !== null || inputMethodComposing || locked) return;
+        if (assistantEditing) { cancelAssistantEdit(); return; }
+        if (draft === null && !assistantCommitReady) return;
+        if (draft === null || draft.owner !== ownerToken || draft.item !== item || item === null) {
+            typedRefusal = qsTr("This draft no longer belongs to the displayed parameter. Escape cancels it.");
             return;
         }
-        if (text !== cell.value && text !== cell.editText) {
-            typedRefusal = TypedInput.refusal(text, "number");
-            if (typedRefusal === "") {
-                item.value = Number(text);
+        const life = editorLife;
+        const originalOwner = ownerToken;
+        const originalProject = editOwner;
+        const originalDraft = draft;
+        const originalItem = item;
+        const originalText = text;
+        const original = {};
+        const current = () => life.alive && cell.ownerToken === originalOwner &&
+            cell.editOwner === originalProject && cell.item === originalItem &&
+            cell.draft === originalDraft && cell.commitInProgress === original;
+        const clearing = () => life.alive && cell.ownerToken === originalOwner &&
+            cell.editOwner === originalProject && cell.item === originalItem &&
+            cell.draft === null && cell.commitInProgress === original;
+        commitInProgress = original;
+        try {
+            if (!current()) return;
+            let message = "";
+            if (originalText !== value && originalText !== editText) {
+                message = TypedInput.refusal(originalText, "number");
+                if (!current()) return;
+                if (message === "") {
+                    originalItem.value = Number(originalText);
+                    if (!current()) return;
+                    message = originalItem.lastError;
+                    if (!current()) return;
+                }
             }
+            assistantCommitReady = false;
+            if (!current()) return;
+            assistantEditing = false;
+            if (!current()) return;
+            draft = null;
+            if (!clearing()) return;
+            typedRefusal = message;
+        } finally {
+            if (life.alive && cell.commitInProgress === original)
+                cell.commitInProgress = null;
         }
-        text = Qt.binding(() => cell.value);
     }
     onFitToggled: checked => {
         if (item !== null)

@@ -167,13 +167,13 @@ void WarningListModel::recount() {
 // ---- Session ------------------------------------------------------------------------------------
 
 Session::Session(QObject* parent, AssistantWorkReportOptions options)
-    : QObject(parent), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
+    : QObject(parent), work_report_options_(options), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
     assistant_ = new AssistantViewModel(this, options);
     initializeSession();
 }
 #ifndef __EMSCRIPTEN__
 Session::Session(edi::assistant::native::NativeDependencies dependencies,QObject* parent,AssistantWorkReportOptions options)
-    : QObject(parent),examples_(new ExampleListModel(this)),warnings_(new WarningListModel(this)) {
+    : QObject(parent),work_report_options_(options),examples_(new ExampleListModel(this)),warnings_(new WarningListModel(this)) {
     assistant_=new AssistantViewModel(std::move(dependencies),this,options);
     initializeSession();
 }

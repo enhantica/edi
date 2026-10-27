@@ -1542,38 +1542,59 @@ bool ProjectViewModel::namePointsByPosition() {
     return true;
 }
 
-bool ProjectViewModel::estimateBackground() {
-    if (current_experiment_ < 0 || current_experiment_ >= static_cast<int>(project_->experiments.size())) {
-        return false;
-    }
-    edi::ExperimentBase& experiment = *project_->experiments[static_cast<std::size_t>(current_experiment_)];
-    const edi::BackgroundEstimateOptions options = edi::background_estimate_options(experiment);
-    edi::BackgroundEstimate estimate;
+bool ProjectViewModel::estimateBackground() { return estimateBackgroundOutcome().applied; }
+
+ProjectViewModel::EditOutcome ProjectViewModel::estimateBackgroundOutcome(EditOutcome* receipt) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    EditOutcome local;
+    EditOutcome& result=receipt?*receipt:local;
+    result={false,false,tr("The native Estimate was refused before changing the background")};
+    const QString applied_warning=tr("The background was estimated and Undo retained; presentation was incomplete");
+    const auto original_receipt=estimate_receipt_;
+    estimate_receipt_=&result;
+    const auto release=qScopeGuard([self,original_receipt]{if(self)self->estimate_receipt_=original_receipt;});
+    bool history_owned=false;
     try {
-        estimate = edi::estimate_background(experiment, options);
-    } catch (const std::exception& error) {
-        emit refused(QString::fromUtf8(error.what()));
-        return false;
+        if(const auto refusal=editReadinessRefusal(false);!refusal.isEmpty()){result.message=refusal;return result;}
+        if(fit_ && fit_->running()){result.message=tr("The project cannot be edited while a fit is running");return result;}
+        if(current_experiment_<0 || current_experiment_>=static_cast<int>(project_->experiments.size()))return result;
+        const auto member=project_->experiments[static_cast<std::size_t>(current_experiment_)];
+        const auto revision=revision_;
+        const auto current=[&]{return self && !retired_ && revision_==revision && current_experiment_>=0 &&
+            current_experiment_<static_cast<int>(project_->experiments.size()) && project_->experiments[static_cast<std::size_t>(current_experiment_)]==member;};
+        const auto options=edi::background_estimate_options(*member);
+        auto estimate=edi::estimate_background(*member,options);
+        const auto summary=QString::fromStdString(estimate.summary);
+        const auto reason=options.use_model=="auto"?estimate.model_reason:std::string();
+        for(const auto& warning:estimate.warnings){emit message(QString::fromStdString(warning));if(!current())return result;}
+        if(estimate.points.empty() && estimate.terms.empty())return result;
+        BackgroundPoints record{member.get(),edi::capture_background(*member)};
+        const auto edit=edi::Edit::background_estimate(*member,std::move(estimate),options);
+        undo_history_.reserve(undo_history_.size()+1);
+        if(!current())return result;
+        undo_history_.emplace_back(std::move(record));history_owned=true;
+        // LivePreview pins result.applied before any scientific publication callback.
+        const auto applied=applyEdit(edit,true);
+        result=applied;
+        if(!self || retired_){if(result.applied){result.published=false;result.message=applied_warning;}return result;}
+        if(!result.applied){undo_history_.pop_back();history_owned=false;return result;}
+        syncUndo();
+        if(!self || retired_){result.published=false;result.message=applied_warning;return result;}
+        emit message(summary);
+        if(!self || retired_){result.published=false;result.message=applied_warning;return result;}
+        postAutoModelReason(member->name,reason);
+        if(!self || retired_){result.published=false;result.message=applied_warning;return result;}
+        return result;
+    } catch(...) {
+        if(result.applied){result.published=false;result.message=applied_warning;}
+        else {
+            if(self && history_owned)undo_history_.pop_back();
+            try{throw;}catch(const std::exception& error){try{result.message=QString::fromUtf8(error.what());}catch(...) {}}catch(...) {}
+        }
+        if(self && !retired_)try{if(result.applied)holdPublicationFailure(result.message);else emit refused(result.message);}catch(...) {}
+        return result;
     }
-    for (const std::string& warning : estimate.warnings) {
-        emit message(QString::fromStdString(warning));
-    }
-    if (estimate.points.empty() && estimate.terms.empty()) {
-        return false;  // nothing measured to estimate from: the background stays
-    }
-    BackgroundPoints record{&experiment, edi::capture_background(experiment)};
-    const std::string summary = estimate.summary;
-    const std::string reason = options.use_model == "auto" ? estimate.model_reason : std::string();
-    const QString error = apply(edi::Edit::background_estimate(experiment, std::move(estimate), options), true);
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
-    }
-    undo_history_.emplace_back(std::move(record));
-    syncUndo();
-    emit message(QString::fromStdString(summary));
-    postAutoModelReason(experiment.name, reason);
-    return true;
 }
 
 void ProjectViewModel::postAutoModelReason(const std::string& experiment, const std::string& reason) {
@@ -1592,13 +1613,18 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
     const bool previous = widget_input_executing_;
     const auto release = qScopeGuard([self, previous] { if(self)self->widget_input_executing_=previous; });
     if (input) {
-        if(input->field!=WidgetParameterInput::Field::FreeGroup || input->consumed || input->free!=free ||
-            input->members.size()!=static_cast<std::size_t>(parameters.size()))return false;
-        for(qsizetype i=0;i<parameters.size();++i) {
-            const auto* item=parameters[i];
-            if(!registry_->items().contains(const_cast<ParameterItem*>(item)) || !item->isFittable() || !item->isRefinable() ||
+        if(input->field!=WidgetParameterInput::Field::FreeGroup || input->consumed || input->free!=free)return false;
+        std::size_t expected=0;
+        for(const auto* member:input->members) {
+            const auto* item=registry_->find(member);
+            if(!item || std::count(input->members.begin(),input->members.end(),member)!=1)return false;
+            if(free?item->isFittable():item->isFree())++expected;
+        }
+        if(expected!=static_cast<std::size_t>(parameters.size()))return false;
+        for(const auto* item:parameters) {
+            if(!item || registry_->find(item->parameter())!=item ||
                 std::count(input->members.begin(),input->members.end(),item->parameter())!=1 ||
-                std::count(parameters.begin(),parameters.end(),item)!=1)return false;
+                std::count(parameters.begin(),parameters.end(),item)!=1 || (free?!item->isFittable():!item->isFree()))return false;
         }
         input->consumed=true;widget_input_executing_=true;
     }
@@ -1622,6 +1648,7 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
         flags.emplace_back(found->second, free);
     }
     if (flags.empty()) {
+        if(input)input->outcome={false,true,{}};
         return true;
     }
     const EditOutcome result = applyRecordedEdit(edi::Edit::set_free(*project_, std::move(flags)), false);
@@ -2909,7 +2936,7 @@ std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepar
     if(members.empty())throw std::invalid_argument("The original free-header set is empty");
     for(const auto* member:members) {
         const auto* item=registry_->find(member);
-        if(!item || !item->isFittable() || !item->isRefinable() || std::count(members.begin(),members.end(),member)!=1)
+        if(!item || (free && (!item->isFittable() || !item->isRefinable())) || std::count(members.begin(),members.end(),member)!=1)
             throw std::invalid_argument("The original free-header member changed");
     }
     auto input=std::make_shared<WidgetParameterInput>();input->field=WidgetParameterInput::Field::FreeGroup;
@@ -3016,7 +3043,7 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
         : file_input && file_input->consumed ? &file_input->outcome.applied
         : relation_input && relation_input->consumed ? &relation_input->outcome.applied
         : background_input && background_input->consumed ? &background_input->outcome.applied
-        : parameter_input && parameter_input->consumed ? &parameter_input->outcome.applied : &result.applied;
+        : parameter_input && parameter_input->consumed ? &parameter_input->outcome.applied : estimate_receipt_ ? &estimate_receipt_->applied : &result.applied;
     try {
         preview_->apply(change, applied, applied_result);
         result.applied = *applied;

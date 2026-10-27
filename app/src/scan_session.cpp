@@ -537,6 +537,7 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files, b
         for (int which = 0; which < kResultFileCount; ++which) {
             if (const std::optional<std::string>& text = *slot(wanted, which)) {
                 const fs::path path = directory / (std::string(kResultFiles[which]) + ".edi-staged");
+                staged.push_back(which);
                 if (!crysta::output::write_temporary_file(path, *text)) {
                     throw std::runtime_error("cannot write " + path.string());
                 }

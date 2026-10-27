@@ -67,8 +67,9 @@ EaElements.ParamTextField {
         if (activeFocus) {
             refreshCleanText();
         } else {
+            const life = editorLife;
             commit();
-            cursorPosition = 0;
+            if (life.alive) cursorPosition = 0;
         }
     }
     onTextChanged: if (!activeFocus)
@@ -92,121 +93,151 @@ EaElements.ParamTextField {
         visible: field.hint !== "" && !field.warned && field.hovered && EaGlobals.Vars.showToolTips
     }
 
-    onValueChanged: {
-        typedRefusal = "";
-        refreshCleanText();
-    }
-    onEditTextChanged: refreshCleanText()
+    readonly property var editOwner: Session.project
+    property var ownerToken: ({})
+    property var draft: null
+    property var commitInProgress: null
+    property var editorLife: ({ alive: true })
+    property bool assistantEditing: false
+    property bool assistantCommitReady: false
+    readonly property bool manualEditing: draft !== null && draft.kind === "manual"
+    readonly property ParameterItem manualItem: manualEditing ? draft.item : null
+    readonly property ParameterItem manualDraftParameter: manualItem
+    readonly property bool assistantManualDraft: inputMethodComposing ||
+        (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
+    onEditOwnerChanged: ownerToken = ({})
+    onObjectNameChanged: ownerToken = ({})
+    Component.onDestruction: editorLife.alive = false
     onItemChanged: {
-        if (manualEditing && manualItem !== item)
-            typedRefusal = qsTr("This draft belongs to a different parameter. Escape cancels it without applying it.");
+        ownerToken = ({});
+        if (draft !== null)
+            typedRefusal = qsTr("This draft belongs to a different parameter. Escape cancels it.");
         else
             refreshCleanText();
     }
-    onInputMethodComposingChanged: {
-        if (inputMethodComposing && !assistantEditing) {
-            if (!manualEditing)
-                manualItem = item;
-            manualEditing = true;
-            // Do not assign text here: that would destroy the IME preedit.
-        }
+    Binding {
+        target: field
+        property: "text"
+        value: field.activeFocus ? field.editText : field.value
+        when: field.draft === null && !field.assistantEditing && !field.assistantCommitReady &&
+              field.commitInProgress === null && !field.inputMethodComposing
+        restoreMode: Binding.RestoreNone
     }
-    // textEdited is real text input, unlike focus formatting or model publication.
-    onTextEdited: {
-        if (assistantEditing)
-            return;
-        if (!manualEditing)
-            manualItem = item;
-        manualEditing = true;
-        // TextInput editing can retain a QML binding. Detach only the genuine
-        // user draft so unrelated publication cannot replace what was typed.
-        const draft = text;
-        text = draft;
-    }
-    Keys.onEscapePressed: event => {
-        resetEditorText();
-        event.accepted = true;
-    }
-    onAccepted: commit()
-    onEditingFinished: commit()
-
-    // Return and leaving the field both commit; the second of the two finds nothing new. Text left as shown, rounded or
-    // in full, changes nothing.
-    // Host-owned cancellation restores the current committed model binding,
-    // never the old pre-animation number or a newer manual model edit.
-    property bool assistantEditing: false
-    property bool assistantCommitReady: false
-    property bool manualEditing: false
-    property ParameterItem manualItem: null
-    readonly property bool assistantManualDraft: manualEditing || inputMethodComposing
-    // The Analysis slider uses the exact draft owner, including a recycled cell.
-    readonly property ParameterItem manualDraftParameter: manualEditing ? manualItem : null
-    property bool committing: false
     function refreshCleanText() {
-        if (manualEditing || inputMethodComposing || assistantEditing || assistantCommitReady)
-            return;
-        // Raw editText changes refresh a clean focused spelling, even when its
-        // rounded display is unchanged. No live binding can replace IME preedit.
-        if (activeFocus)
-            text = editText;
-        else
-            text = Qt.binding(() => field.value);
+        // The binding follows raw precision as well as display formatting, and
+        // detaches without assigning text while IME or a draft owns the editor.
+        if (draft !== null || commitInProgress !== null || inputMethodComposing ||
+            assistantEditing || assistantCommitReady) return;
+        text = activeFocus ? editText : value;
     }
-    function resetEditorText() {
-        manualEditing = false;
-        manualItem = null;
+    function rememberManualDraft() {
+        if (assistantEditing && draft !== null && draft.kind === "assistant" && draft.owner === ownerToken)
+            return;
+        const life = editorLife;
+        const context = ownerToken;
+        const original = { owner: draft !== null ? draft.owner : ownerToken,
+                           item: draft !== null ? draft.item : item, kind: "manual" };
+        draft = original;
+        if (!life.alive || draft !== original || ownerToken !== context) return;
         assistantCommitReady = false;
-        // Keep the assistant partial-text guard until the authoritative binding
-        // is back. This never writes an old pre-slider value to science.
-        if (activeFocus)
-            text = editText;
-        else
-            text = Qt.binding(() => field.value);
-        typedRefusal = "";
-        deselect();
-        if (!activeFocus)
-            cursorPosition = 0;
+        if (!life.alive || draft !== original || ownerToken !== context) return;
         assistantEditing = false;
     }
+    onTextEdited: rememberManualDraft()
+    onInputMethodComposingChanged: if (inputMethodComposing) rememberManualDraft()
+    onValueChanged: if (draft === null && commitInProgress === null && !inputMethodComposing) typedRefusal = ""
+    onEditTextChanged: refreshCleanText()
     function beginAssistantEdit() {
+        if (commitInProgress !== null || draft !== null || assistantManualDraft) return;
+        const life = editorLife;
+        const originalOwner = ownerToken;
+        const original = { owner: originalOwner, item: item, kind: "assistant" };
+        draft = original;
+        if (!life.alive || ownerToken !== originalOwner || draft !== original) return;
         assistantEditing = true;
+        if (!life.alive || ownerToken !== originalOwner || draft !== original) return;
         assistantCommitReady = false;
-        const draft = text;
-        text = draft;
     }
     function allowAssistantCommit() {
+        if (commitInProgress !== null || inputMethodComposing || draft === null ||
+            draft.kind !== "assistant" || draft.owner !== ownerToken || draft.item !== item) return;
+        const life = editorLife;
+        const original = draft;
         assistantCommitReady = true;
+        if (!life.alive || draft !== original || original.owner !== ownerToken) return;
         assistantEditing = false;
     }
+    function resetEditorText() {
+        if (commitInProgress !== null || inputMethodComposing) return;
+        const life = editorLife;
+        const original = draft;
+        const context = ownerToken;
+        assistantCommitReady = false;
+        if (!life.alive || draft !== original || ownerToken !== context) return;
+        assistantEditing = false;
+        if (!life.alive || draft !== original || ownerToken !== context) return;
+        typedRefusal = "";
+        if (!life.alive || draft !== original || ownerToken !== context) return;
+        draft = null;
+    }
     function cancelAssistantEdit() {
-        // An original real manual event may already own this editor. A late
-        // assistant cleanup never clears that new user's genuine draft.
-        if (!manualEditing)
+        if (draft !== null && draft.kind === "assistant" && draft.owner === ownerToken && draft.item === item)
             resetEditorText();
     }
+    Keys.onEscapePressed: event => {
+        if (commitInProgress !== null || inputMethodComposing) return;
+        event.accepted = true;
+        resetEditorText();
+    }
+    // editingFinished owns Return as well as focus loss; accepted is the same
+    // Return's second signal and cannot acquire a successor draft.
+    onEditingFinished: commit()
     function commit() {
-        if (committing || inputMethodComposing)
-            return;
-        // Focus loss while paced typing is not permission to commit a partial number.
+        if (commitInProgress !== null || inputMethodComposing) return;
         if (assistantEditing) { cancelAssistantEdit(); return; }
-        // Clean full-precision display is never a user edit, even if the model
-        // changed after focus (slider/fit/Undo/SU refresh).
-        if (!manualEditing && !assistantCommitReady) { refreshCleanText(); return; }
-        if (item === null || (manualEditing && manualItem !== item)) {
+        if (draft === null && !assistantCommitReady) return;
+        if (draft === null || draft.owner !== ownerToken || draft.item !== item || item === null) {
             typedRefusal = qsTr("This draft no longer belongs to the displayed parameter. Escape cancels it.");
             return;
         }
-        committing = true;
+        const life = editorLife;
+        const originalOwner = ownerToken;
+        const originalProject = editOwner;
+        const originalDraft = draft;
+        const originalItem = item;
+        const originalText = text;
+        const original = {};
+        const current = () => life.alive && field.ownerToken === originalOwner &&
+            field.editOwner === originalProject && field.item === originalItem &&
+            field.draft === originalDraft && field.commitInProgress === original;
+        const clearing = () => life.alive && field.ownerToken === originalOwner &&
+            field.editOwner === originalProject && field.item === originalItem &&
+            field.draft === null && field.commitInProgress === original;
+        commitInProgress = original;
         try {
-            if (text !== field.value && text !== field.editText) {
-                typedRefusal = TypedInput.refusal(text, "number");
-                if (typedRefusal === "")
-                    item.value = Number(text);
+            if (!current()) return;
+            let message = "";
+            if (originalText !== value && originalText !== editText) {
+                message = TypedInput.refusal(originalText, "number");
+                if (!current()) return;
+                if (message === "") {
+                    originalItem.value = Number(originalText);
+                    if (!current()) return;
+                    message = originalItem.lastError;
+                    if (!current()) return;
+                }
             }
-            const refusal = typedRefusal;
-            resetEditorText();
-            typedRefusal = refusal;
-        } finally { committing = false; }
+            assistantCommitReady = false;
+            if (!current()) return;
+            assistantEditing = false;
+            if (!current()) return;
+            draft = null;
+            if (!clearing()) return;
+            typedRefusal = message;
+        } finally {
+            if (life.alive && field.commitInProgress === original)
+                field.commitInProgress = null;
+        }
     }
     onFitToggled: checked => {
         if (item !== null)

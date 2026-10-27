@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.6.0. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
+Version: 1.6.1. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
 
 ## Inputs and setup
 
@@ -37,6 +37,6 @@ Respect once/current-owner protections. Normal mode uses validated native operat
 
 Use save_project for the settled current project. Omitted destination uses its genuine current Session location when owned; a fresh Save As uses the existing folder/ZIP/copy chooser and the user's destination. A name is a suggestion, not path authority. Both modes use ordinary Session save methods; Show actions adds the existing Save cue. A successful ordinary save is reported plainly. Preserve genuine failure/owner-change/uncertainty and do not claim a separate reopen that did not occur. Before quoting final fitted numbers, inspect current saved/adopted values and disclose any actually observed rounding or unresolved uncertainty.
 
-Useful project-local work reports are automatic after settled operations/research and at final completion. They reuse actual history, native facts and source attribution; /work-report is optional. A busy writer catches up to the latest snapshot and an accepted attempt root stays fixed. Report-writing failure never vetoes science or creates a separate permission requirement.
+Useful project-local work reports are automatic after settled operations/research and at final completion. They reuse actual history, native facts and source attribution; /work-report is optional. A busy writer catches up to the latest snapshot and each admitted write retains its original root while later captures follow the current saved project location. Report-writing failure never vetoes science or creates a separate permission requirement.
 
 The final assessment explains useful results, assumptions, rejected alternatives and remaining limits, with citations where research informed a decision. Include concrete recommendations for improving the relevant skill, tool or app when the work exposed a gap. These recommendations belong in ordinary assistant text and the copyable project report; do not require a special reporting command.

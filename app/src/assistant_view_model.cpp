@@ -685,7 +685,6 @@ struct AssistantViewModel::State {
     AssistantWorkReports work_reports;
     QString work_terminal,work_first_cause;
     bool work_scope_bound=false,work_automatic_terminal=false,work_capture_pending=false;
-    QString work_storage_root,work_storage_scope;
     QElapsedTimer work_clock;
     Object work_registration;
     void work_begin() noexcept {
@@ -696,7 +695,7 @@ struct AssistantViewModel::State {
             // facade/Session composition can admit its lease before start.
             if(!work_reports.available() && !agent)(void)work_reports.tryInitialize();
 #endif
-            work_reports.beginAttempt();work_automatic_terminal=false;work_capture_pending=false;work_storage_root.clear();work_storage_scope.clear();work_terminal.clear();work_first_cause.clear();work_clock.restart();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();}
+            work_reports.beginAttempt();work_automatic_terminal=false;work_capture_pending=false;work_terminal.clear();work_first_cause.clear();work_clock.restart();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();}
         catch(...){work_reports.missEvidence();}
     }
 #ifdef __EMSCRIPTEN__
@@ -805,7 +804,7 @@ struct AssistantViewModel::State {
             if(i<firstEvidence){++omitted;gap("history","capacity");continue;}
             const auto id=row.value("id").toString();const auto stamp=row.value("workScope").toObject();
             const auto payloadType=row.value("payload").toObject().value("type").toString();
-            if(row.value("kind")=="activity" && payloadType!="dynamicToolCall") {++omitted;gap("history","not_observed",id);continue;}
+            if(row.value("kind")=="activity" && payloadType!="dynamicToolCall" && payloadType!="webSearch") {++omitted;gap("history","not_observed",id);continue;}
             if(payloadType=="dynamicToolCall" && work_native_payload(row.value("payload").toObject())!=row.value("payload").toObject())gap("row_supplement","not_observed",id);
             const auto attempt=stamp.value("attempt_id").toString();
             bool sawAttempt=false;for(const auto& turn:turns)if(turn.toObject().value("attempt_id")==attempt){sawAttempt=true;break;}
@@ -900,14 +899,12 @@ struct AssistantViewModel::State {
         const bool projectionBlocked=false;
 #endif
         QString root;
-        if(work_storage_scope==expectedScope)root=work_storage_root;
-        if(root.isEmpty() && !projectionBlocked && project) {
+        if(!projectionBlocked && project) {
             const QPointer<ProjectViewModel> target(project);
             if(target->project().path.size()<=Limits::message_bytes)root=target->path();
             if(!receiver || receiver->state_.get()!=this || project!=target)return work_report_capacity_variant();
         }
 #ifndef __EMSCRIPTEN__
-        if(!root.isEmpty() && work_storage_root.isEmpty()){work_storage_root=root;work_storage_scope=expectedScope;}
         const auto result=work_reports.capture(automatic,work_counts(),root,[this](quint64 capacity){return work_snapshot(capacity);},expectedScope,expectedRevision,projectionBlocked);
         if(automatic && result.value("disposition").toString()=="busy")work_capture_pending=true;
         return result;
@@ -2146,6 +2143,7 @@ struct AssistantViewModel::State {
         QString key, thread, turn, call, tool, purpose, row;
         Object original, canonical, outcome, response, terminal;
         std::shared_ptr<NativeFitUndo> fit_undo;
+        std::shared_ptr<ProjectViewModel::EditOutcome> estimate_receipt;
         ControlDiagnostic control_diagnostic;
         bool control_capacity = false;
             bool reserved = true, retired = false, discarded = false, completed = false, answered = false;
@@ -2524,10 +2522,10 @@ struct AssistantViewModel::State {
         walk(action_window->contentItem());
         return items;
     }
-    QQuickItem* widget_named(const QString& name) const {
+    QQuickItem* widget_named(const QString& name, bool visualOnlySave=false) const {
         if (!widget_input) return nullptr;
         for (auto* item : widget_items())
-            if (item->objectName() == name && widget_input->usableTarget(*item)) return item;
+            if (item->objectName() == name && widget_input->usableTarget(*item,visualOnlySave)) return item;
         return nullptr;
     }
     bool manual_request_current() const noexcept {
@@ -2957,7 +2955,7 @@ struct AssistantViewModel::State {
                     auto next=run->parameter_at;
                     while(next<run->parameter_entries.size() && member(run->parameter_entries[next]))++next;
                     if(next==run->parameter_at)actual=false;
-                    const bool settled=delivered && input && input->consumed && input->outcome.applied && input->outcome.published && actual;
+                    const bool settled=delivered && input && input->consumed && input->outcome.published && actual;
                     run->parameter_uncertain=input && input->outcome.applied;
                     if(delivered && !settled)control_failure(run,ControlCause::Commit);
                     widget_sequence_retain(run);
@@ -3533,7 +3531,9 @@ struct AssistantViewModel::State {
         std::size_t eligible=0;
         for(int row=0;row<filter->rowCount();++row) {
             auto* item=filter->parameterAt(row);
-            if(!item || !item->isFittable() || !item->isRefinable())continue;
+            // Free touches the shown fittable set; Fixed also clears free
+            // flags whose current native eligibility has become blocked.
+            if(!item || (entry->free ? !item->isFittable() : (!item->isFittable() && !item->isFree())))continue;
             std::size_t matches=0;
             for(std::size_t at=range.first;at<range.second;++at) {
                 const auto& expected=run->parameter_entries[at];
@@ -3971,14 +3971,17 @@ struct AssistantViewModel::State {
     void native_apply_estimate() {
         if(!native_call || !project)return;
         const auto original=*native_call;const QPointer<AssistantViewModel> receiver(&owner);const QPointer<ProjectViewModel> target(project);
-        const auto scope=begin_own_edit();native_call->may_have_written=true;
-        bool applied=false;try{applied=target->estimateBackground();}catch(...) {}
+        auto receipt=std::make_shared<ProjectViewModel::EditOutcome>();original.record->estimate_receipt=receipt;
+        const auto scope=begin_own_edit();
+        const auto result=target->estimateBackgroundOutcome(receipt.get());
         if(!receiver || receiver->state_.get()!=this)return;
         end_own_edit(scope);
         if(!native_call || native_call->record!=original.record || native_call->receipt!=original.receipt)return;
-        if(applied && target && project==target)native_refresh(*native_call);
-        native_finish(applied,{{"status",applied?"completed":"refused"},{"complete",applied},{"atomic",true},{"steps_completed",applied?1:0},
-            {"message",applied?"Background estimated with current native settings":"The native Estimate refused the current measured data/settings"}});
+        native_call->may_have_written=result.applied;
+        if(result.applied && target && project==target)native_refresh(*native_call);
+        native_finish(result.applied && result.published,{{"status",result.applied?(result.published?"completed":"applied_unconfirmed"):"refused"},
+            {"applied",result.applied},{"published",result.published},{"complete",result.applied && result.published},{"atomic",true},
+            {"steps_completed",result.applied?1:0},{"message",bounded_error(result.message)}});
     }
     void widget_estimate_background(const std::shared_ptr<NativeWidget>& run) {
         if(!widget_current(run) || !widget_input){widget_refuse(run,widget_outcome_error);return;}
@@ -5797,7 +5800,10 @@ struct AssistantViewModel::State {
         }
         return typed ? NativeUndoFacts::Typed : NativeUndoFacts::Applied;
     }
-    void native_finish(bool success, const Object& outcome) noexcept {
+    void native_finish(bool success, const Object& proposed_outcome) noexcept {
+        const Object& outcome=proposed_outcome;
+        if(native_call && native_call->record->estimate_receipt && native_call->record->estimate_receipt->applied)
+            native_call->may_have_written=true;
         if (!native_call || native_call->finishing) return;
         const auto undo_facts = native_retain_fit_undo(*native_call, &outcome, success);
         native_call->finishing = true; // Sequential/reentrant publication belongs to this original call only.
@@ -5824,6 +5830,11 @@ struct AssistantViewModel::State {
             // The original record already owns every known Undo effect before
             // a weaker generic result can be selected, stored or answered.
             auto actual = undo_facts == NativeUndoFacts::Applied ? record->outcome : outcome;
+            if(record->estimate_receipt && record->estimate_receipt->applied) {
+                actual["applied"]=true;
+                if(!actual.contains("published"))actual["published"]=record->estimate_receipt->published;
+                if(actual.value("status")=="refused" || actual.value("status")=="cancelled")actual["status"]="applied_unconfirmed";
+            }
             if(!success && undo_facts!=NativeUndoFacts::Applied)control_append(actual,record);
             if (undo_facts == NativeUndoFacts::Applied || (undo_facts == NativeUndoFacts::Typed &&
                 !actual.value(QLatin1StringView("complete")).toBool())) success = false;
@@ -6451,7 +6462,7 @@ struct AssistantViewModel::State {
         if (!readonly && project && (project->fit()->nativeRunning() || project->calculating())) {
             reply(false, {{"status", "busy"}, {"code", "calculation_busy"}, {"message", "The current native calculation or fit has not settled."}}); return;
         }
-        if (show_actions && !readonly && !individual_app_action(name) && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "undo_fit" && name != "add_relations" && name != "edit_relation" && name != "create_cwl_project" && name != "edit_background" && name != "save_project") {
+        if (show_actions && !readonly && !individual_app_action(name) && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "undo_fit" && name != "add_relations" && name != "edit_relation" && name != "create_cwl_project" && name != "edit_background" && name != "estimate_background" && name != "save_project") {
             reply(false, {{"status", "unavailable"}, {"code", "visible_unmapped"}, {"message", "This operation has no genuine visible widget workflow yet; use normal mode. Nothing was changed."}}); return;
         }
         const QPointer<CodexAgent> work_transport(agent.get());
@@ -7025,8 +7036,11 @@ struct AssistantViewModel::State {
                     throw;
                 }
                 creation->adopted = creation->population->committed();
-                if(creation->adopted && creation->estimate_default && creation->completion_project)
-                    (void)creation->completion_project->estimateBackground();
+                std::optional<ProjectViewModel::EditOutcome> estimated;
+                if(creation->adopted && creation->estimate_default && creation->completion_project) {
+                    creation->record->estimate_receipt=std::make_shared<ProjectViewModel::EditOutcome>();
+                    estimated=creation->completion_project->estimateBackgroundOutcome(creation->record->estimate_receipt.get());
+                }
                 if (!receiver) return;
                 end_own_edit(edit_scope);
                 if (original_call()) native_call->may_have_written = creation->adopted;
@@ -7038,8 +7052,11 @@ struct AssistantViewModel::State {
                 outcome["presentation_complete"] = result.published;
                 outcome["calculation_pending"] = creation->completion_project && creation->completion_project->calculating();
                 if (!result.message.isEmpty()) outcome["message"] = bounded_error(result.message);
+                if(estimated){outcome["background_estimate"]=Object{{"applied",estimated->applied},{"published",estimated->published},{"message",bounded_error(estimated->message)}};
+                    if(!estimated->applied || !estimated->published){outcome["status"]="partial";outcome["complete"]=false;outcome["message"]="Setup was applied; the default native Estimate did not complete";}}
+                const bool complete=creation->adopted && result.published && (!estimated || (estimated->applied && estimated->published));
                 release_original();
-                if (original_call()) native_finish(creation->adopted && result.published, outcome);
+                if (original_call()) native_finish(complete, outcome);
             } else {
                 auto* session = result_session();
                 const auto current = [this, receiver, creation] { return receiver && receiver->state_.get() == this && native_creation_current(creation); };
@@ -7050,9 +7067,11 @@ struct AssistantViewModel::State {
                 installed_attachment = prepare_creation_attachment(creation, model.get(), outcome);
                 bool presented = false;
                 const bool adopted = session->commitAssistantNativeModel(std::move(model), creation->epoch, current, presented);
+                std::optional<ProjectViewModel::EditOutcome> estimated;
                 if(adopted && creation->estimate_default && receiver && receiver->state_.get()==this && project && session->project()==project) {
+                    creation->record->estimate_receipt=std::make_shared<ProjectViewModel::EditOutcome>();
                     const auto scope=begin_own_edit();
-                    try{(void)project->estimateBackground();}catch(...) {}
+                    estimated=project->estimateBackgroundOutcome(creation->record->estimate_receipt.get());
                     if(receiver && receiver->state_.get()==this){end_own_edit(scope);if(native_call)native_refresh(*native_call);}
                 }
                 // Session observers can genuinely admit B before returning to A.
@@ -7063,7 +7082,10 @@ struct AssistantViewModel::State {
                     if (!adopted) native_finish(false, {{"status", "refused"}, {"adopted", false}, {"message", "The original empty Session changed; no project was replaced."}});
                     else {
                         outcome["presentation_complete"] = presented;
-                        native_finish(true, outcome);
+                        const bool complete=!creation->estimate_default || (estimated && estimated->applied && estimated->published);
+                        if(estimated)outcome["background_estimate"]=Object{{"applied",estimated->applied},{"published",estimated->published},{"message",bounded_error(estimated->message)}};
+                        if(!complete){outcome["status"]="partial";outcome["complete"]=false;outcome["message"]="Setup was applied; the default native Estimate did not complete";}
+                        native_finish(complete, outcome);
                     }
                 }
             }
@@ -7143,10 +7165,10 @@ struct AssistantViewModel::State {
     }
     void native_start_ordinary_save(const std::shared_ptr<NativeSave>& task) {
         if(!show_actions){if(task->ordinary_current)(void)native_execute_save(task);else native_choose_save_destination(task);return;}
-        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<QQuickItem> target(widget_named("appBar.button.save"));
+        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<QQuickItem> target(widget_named("appBar.button.save",true));
         const QPointer<QQuickWindow> window(action_window);
         if(!target || !window || !widget_input)throw std::runtime_error("The ordinary Save control is unavailable");
-        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
+        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;request.visualOnlyDisabledTarget=true;
         auto current=[this,receiver,task,target,window]{return receiver && receiver->state_.get()==this && target && window && action_window==window && target->window()==window && native_save_current(task);};
         request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
         request.completed=[this,receiver,task](bool delivered,const QString&,ControlCause){if(!receiver || receiver->state_.get()!=this)return;if(!delivered || !native_save_current(task)){native_pending_save_cancelled(task);return;}try{if(task->ordinary_current)(void)native_execute_save(task);else native_choose_save_destination(task);}catch(...){native_pending_save_cancelled(task);}};
@@ -8167,7 +8189,9 @@ struct AssistantViewModel::State {
                 else {
                     run->measurement_path=path;run->measurement_origin=origin;
                     run->input_snapshot=native_input_snapshot();
-                    run->measurement_reader_path=native_snapshot_file(*run->input_snapshot,*run->measurement_source,QStringLiteral("measurement.xye"));
+                    const auto captured_name=QFileInfo(run->measurement_path.toLocalFile()).suffix().compare(QStringLiteral("int"),Qt::CaseInsensitive)==0
+                        ?QStringLiteral("measurement.int"):QStringLiteral("measurement.xye");
+                    run->measurement_reader_path=native_snapshot_file(*run->input_snapshot,*run->measurement_source,captured_name);
                 }
             }
             if(!create_widget_current(run))throw ActionRefusal("operation_superseded","project");
@@ -8905,6 +8929,7 @@ struct AssistantViewModel::State {
         auto captured_current = [this, run] { return create_widget_current(run); };
         auto captured_restoreCurrent = [this, run] { return run->receiver && run->receiver->state_.get() == this && run->project && project == run->project && action_window == run->window; };
         auto captured_prepareCommit = [this,run,step,target] {
+            if(step.target=="background.estimate")return create_widget_current(run);
             if(step.structure_action || step.kind==AssistantWidgetInput::Kind::Text || step.kind==AssistantWidgetInput::Kind::Value)return true;
             return create_widget_prepare_control(run,step,target);
         };
@@ -8919,11 +8944,12 @@ struct AssistantViewModel::State {
             try {
                 if(delivered && step.target=="background.estimate") {
                     const auto receiver=run->receiver;const auto scope=begin_own_edit();
-                    const bool applied=run->project->estimateBackground();
+                    auto receipt=std::make_shared<ProjectViewModel::EditOutcome>();run->call.record->estimate_receipt=receipt;
+                    const auto estimated=run->project->estimateBackgroundOutcome(receipt.get());
                     if(!receiver || receiver->state_.get()!=this)return;
                     end_own_edit(scope);
-                    if(!applied)throw std::runtime_error("The native Estimate refused the current data/settings");
-                    ++run->completed_steps;run->step_counted=true;native_call->may_have_written=true;
+                    if(estimated.applied){++run->completed_steps;run->step_counted=true;native_call->may_have_written=true;}
+                    if(!estimated.applied || !estimated.published)throw std::runtime_error("The native Estimate did not complete; actual setup/estimate effects and Undo are retained");
                     native_refresh(*native_call);create_widget_advance(run);return;
                 }
                 if(delivered && (step.structure_action || step.kind==AssistantWidgetInput::Kind::Text || step.kind==AssistantWidgetInput::Kind::Value)) {
@@ -9910,7 +9936,7 @@ struct AssistantViewModel::State {
         params["developerInstructions"] = QStringLiteral(
             EDI_ASSISTANT_CONTROL_GUIDANCE
             "Plan setup and refinement adaptively from the actual project, input evidence, native eligibility and scientific goals. Preserve supplied scientific values, constraints and explicit free flags. Use the native background Estimate with current saved settings by default; follow its current mode and eligibility rather than forcing manual anchors or freeing every point. Import an attached CIF unless the user requests manual entry. Required API fields describe an operation, not a compulsory scientific recipe. "
-            "For authorized refinement ONLY after ALL requested Structure setup is complete and ONLY THEN ALL requested Experiment setup is complete: in Analysis release ONE scientifically justified parameter group, run the actual fit, then inspect its status/adopted/converged facts, comparable objective, parameter/uncertainty and physical validity BEFORE choosing the next group. Retain good stages. If an actual adopted stage is undesired, restore only through an actually offered ordinary Undo that still refers to that fit; verify the restored owner/state/free flags before changing groups. An unadopted refusal is NOT a reason to undo earlier science. Unknown/partial/uncertain effects require inspection, not replay. If suitable Undo/restore is unavailable, report that recovery limit and do not claim a rollback or continue candidates from an unrestored rejected state. Reassess actual state and flags before another justified group; no blind retry/spin or promise of a perfect fit. A fill-only request/source flags do not authorize fitting. Explicit user constraints, known-wavelength anchors and incoming arrays remain authoritative. "
+            "Choose refinement actions from the actual scientific evidence, native eligibility, genuine type/data dependencies and explicit user scope. Preserve requested independent/fixed flags and supplied calibration/chemical constraints. Fit and inspect when justified; do not impose a universal page sequence or group/pass count. "
             "Before ANY FullProf occupancy setter, establish nuclear normalization and actual site/general multiplicities m/M: qraw=OccFP*M/m; for an established common positive phase factor c, OccEDI=qraw/c for EVERY phase site/species and mapped phase scale=mapped(SFP)*c*c once. Preserve partial/shared fractions and multiplicity-weighted composition. Never copy raw PCR0.5 as chemical conversion, infer c from max occupancy, clamp, force all ones or guess unresolved c. Use the detailed verified fullprof-intake mapping and read back actual chemical occupancies, scale/profile before completion. "
             "For create_cwl_project mapped-input refusals, read returned refusal_guidance as the current code-owned canonical schema. Preserve the task objective and admitted inputs; inspect_project, correct the complete request shape from that schema and continue with a fresh lawful call only if the same no-project/scientifically empty owner and input authority still hold and no partial or uncertain effect occurred. A schema refusal is not setup completion or an unsupported-science conclusion. Ask only for genuinely missing scientific facts; never guess values, accept aliases, replay uncertain work or automatically retry a mutation. For a complete single-Structure powder/CW/neutron setup in no project or the same scientifically empty owner, prefer the actually offered create_cwl_project complete action once the admitted inputs and scientifically mapped target are ready. Its CIF and mapped_structure alternatives prevalidate the final target/recipe overrides and execute the same app-owned group order; recipe arrays are request shapes, not inspect_project output wrappers. Background rows are exact position/intensity, exclusions first/second, initial_parameters path/value; do not copy standalone free/id/enabled fields into them; mapped targets reuse the ordinary initial atom. Interpret/map chemical occupancies and phase scale BEFORE supplying the target. It completes setup only: required source relations/free flags remain separate subsequent actions, with authorized Analysis stages afterward; no fit/save or full-source reconstruction is implied. Existing partial projects, broader experiments and explicit one-off edits retain their original offered actions and caller semantics. "
             "You are Edi's native scientific assistant. Use the actually offered code-owned Edi actions for scientific project operations; their current schemas, options and returned facts are the capability authority. Skills provide strategy, not a separate action inventory or capability ceiling. Edi production is C++/QML; do not invoke or request Python, an edi Python module, a source checkout or a CLI installation. create_cwl_project can create a new single-phase powder CW neutron project with no project open, or populate the SAME scientifically empty current project while preserving its name/metadata/settings/path/identity and adding one scientific Undo. It uses an actual selected CIF ID OR a complete mapped_structure, an actual selected data ID and the original explicit typed recipe; recipe project_name/description apply only to no-project creation. Current-empty completion is modified/unsaved and must not be reported as saved. save_project defaults to that same genuine already-owned directory when destination is omitted; an unused fresh name is ignored and the actual name/path are preserved. Explicit destination=current also saves that owned directory without name/path. Preserve explicit source/user values and the current accepted native state. For unspecified optional numerical starts, retain the actual native app defaults; inspect offered native values/options instead of importing online, tutorial, sample-specific or remembered experiment constants or inventing a starting offset/profile coefficient. If a complete recipe requires an explicit unsupplied default, use only an actual default established through offered native context/actions; otherwise use supported individual setup or report the missing default rather than invent one. Required measurement/calibration facts, including a required wavelength, must come from genuine admitted input, calibration or the user; an arbitrary factory placeholder is not such evidence. Later changes may follow this experiment's actual authorized refinement/calibration evidence; cite the actual observation/result and distinguish a proposed change from an observed or fitted fact. Do not overwrite a supplied or genuinely fitted value merely because it matches an example. Keep a supplied known wavelength anchored unless the authorized calibration has a supported independent anchor. Honor supplied scientific values and distinguish native defaults from actual measurement/calibration evidence. Scientific refinement order is separate from GUI setup order: before detailed profile/structural fitting establish peak-position/cell/two-theta agreement with a physically justified scale unless valid calibration/alignment already holds. Do not impose scale-only then lattice then zero: when peaks disagree, inspect alignment and retain/recover justified scale while choosing supported identifiable position corrections; inspect each adopted stage and use eligible ordinary fit Undo for a harmful collapse. Keep known wavelength and justified fixed/dependent terms; choose from the source-grounded refinement-strategy alternatives using actual evidence and offered operations, not an inflexible release list. Unsupported conversion/report generation is not registered: state that limit honestly rather than substituting shell/Python. save_project saves the current settled single/joint project: omitted destination or explicit destination=current preserves its actual owned directory, while explicit destination=fresh starts the original one-operation Save As chooser and fresh-name form before writing. Omitted destination on a project without an owned directory uses that same fresh flow and requires a basename. Current owned saving calls the same ordinary app Save as the manual toolbar. For successful ordinary saved=true and active=true without failure or uncertainty, report 'Project saved.' Do not turn presentation_complete=false or reopened=false into unrequested UI-completion/reopen caveats, repeated saving or a calculation wait. Report genuine failure, uncertainty, owner change and explicitly requested verification truthfully. Fresh Save As retains its verified export/adoption. Before quoting final fitted numbers after save, inspect authoritative current parameter values/uncertainties through offered native inspection and compare the relevant accepted pre-save state. Disclose material rounding or an undetermined parameter only when actually observed; if readback is unavailable, qualify the scientific numbers instead of inventing verification. This does not invalidate a successful ordinary Save or require a reopen, repeated save or a warning solely for presentation/reopen flags. "
@@ -10356,7 +10382,6 @@ struct AssistantViewModel::State {
                 }
             }
             const bool retained = generic_present(row);
-            if(retained && completed && type!="agentMessage" && type!="dynamicToolCall")work_settled_step();
             if (!publication.input_current()) return;
             if (!retained) { generic_fail(storage_error); return; }
                 return;
@@ -10495,6 +10520,7 @@ struct AssistantViewModel::State {
             }
             stage = "ITEM_HISTORY"; role = "HISTORY"; bound = Limits::ui_history_bytes;
             const bool retained = generic_present(row);
+            if(retained && completed && type!="agentMessage" && type!="dynamicToolCall")work_settled_step();
             if (!publication.input_current()) return false;
             if (!retained) {
                 if (type == "dynamicToolCall" && native_records.contains(native_key(generic_thread, generic_turn, id))) {
@@ -11885,9 +11911,10 @@ struct AssistantViewModel::State {
     void initialize_reports(AssistantWorkReportOptions) noexcept {
         (void)work_reports.tryInitialize();
         QObject::connect(&owner,&AssistantViewModel::workReportFinished,&owner,[this](const QVariantMap& receipt){
-            if(!work_capture_pending)return;
-            const auto scope=receipt.value("scope_id").toMap().value("value").toString();
-            if(scope!=work_reports.scope() || scope!=work_storage_scope)return;
+            const QPointer<AssistantViewModel> receiver(&owner);
+            if(!receiver || receiver->state_.get()!=this || !work_capture_pending)return;
+            // Any completed old writer releases the one writer slot. Retry the
+            // latest pending current scope/root, without presenting A as B.
             work_capture_pending=false;
             work_settled_step();
         },Qt::QueuedConnection);

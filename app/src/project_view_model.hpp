@@ -400,6 +400,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // `_background_estimate` settings (edi::estimate_background, ADR-0040), numbered and fixed, as one edit with
     // one Undo step. The summary and any warning go to the messages.
     Q_INVOKABLE bool estimateBackground();
+    /// The same ordinary estimator with actual application/publication and preowned Undo.
+    EditOutcome estimateBackgroundOutcome(EditOutcome* receipt = nullptr);
     Q_INVOKABLE void removeExperiment(int index);
     // A new experiment without data (edi::simulation_experiment), selected: powder, constant wavelength,
     // neutron, Bragg, linked to every structure. One undoable step, as a load of experiments is.
@@ -920,6 +922,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     RecordedEdit* recording_ = nullptr; // stack owner, detached before any UI observer
     void finishRecordedEdit() noexcept;
+    EditOutcome* estimate_receipt_ = nullptr;
     EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
     QString editReadinessRefusal(bool restoring) const;
     bool calculating_ = false;

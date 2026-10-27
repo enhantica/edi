@@ -21,6 +21,8 @@ import edi.app
 // file in its place. Create, Load and Load data are each one undoable step.
 EaElements.GroupBox {
     id: group
+    property var pickerLife: ({ alive: true })
+    Component.onDestruction: pickerLife.alive = false
 
     property ProjectViewModel project: null
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
@@ -369,6 +371,8 @@ EaElements.GroupBox {
             group.webDataExperiment = experiment;
             group.webRequest = WebFiles.openFiles(group.dataFilter, false);
         } else {
+            if (dataDialog.visible) return;
+            dataDialog.intent = { project: group.project, experiment: experiment };
             dataDialog.experiment = experiment;
             dataDialog.project = group.project;
             dataDialog.open();
@@ -423,6 +427,7 @@ EaElements.GroupBox {
     // is still the open one.
     FileDialog {
         id: dataDialog
+        property var intent: null
         property var experiment: null
         property var project: null
         title: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? qsTr("Load measured reflections from FullProf's .int or a plain h k l F² su file (.hkl, .dat or any other)") : qsTr("Load measured data from a plain two- or three-column file")
@@ -432,7 +437,7 @@ EaElements.GroupBox {
             const original = intent;
             const file = selectedFile;
             intent = null;
-            if (life.alive && intent === null && original !== null && group.project === original.project && Session.project === original.project)
+            if (life.alive && intent === null && original !== null && original.experiment !== null && group.project === original.project && Session.project === original.project)
                 original.project.loadDataInto(original.experiment, file);
         }
         onRejected: intent = null

@@ -28,6 +28,9 @@ EaElements.ParamComboBox {
     // A help text set as `ToolTip.text` shows in the app's tooltip on hover, unless a refusal is shown.
     property bool helpToolTip: false
     signal selected(string token)
+    property var editorLife: ({ alive: true })
+    property var activation: null
+    Component.onDestruction: editorLife.alive = false
 
     // Shares the row's width with its siblings at the input spacing, as ParamTextField does (the base's
     // ParamComboBox assumes a wider gap).

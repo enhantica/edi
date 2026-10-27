@@ -95,10 +95,10 @@ bool AliasListModel::setText(int row, const QString& role, const QString& value)
     }
     const std::string text = value.toStdString();
     if (role == QLatin1String("id")) {
-        return editor_.apply_relation_edit(edi::Edit::rename_alias(*alias, text)).isEmpty();
+        return editor_.apply_relation_control(edi::Edit::rename_alias(*alias, text), {ProjectEditor::RelationAction::Kind::AliasId,alias,value}).isEmpty();
     }
     if (role == QLatin1String("parameter")) {
-        return editor_.apply_relation_edit(edi::Edit::assign(alias->parameter_unique_name, text)).isEmpty();
+        return editor_.apply_relation_control(edi::Edit::assign(alias->parameter_unique_name, text), {ProjectEditor::RelationAction::Kind::AliasParameter,alias,value}).isEmpty();
     }
     return false;
 }
@@ -118,7 +118,7 @@ void AliasListModel::append() {
             break;
         }
     }
-    editor_.apply_relation_edit(edi::Edit::append(project.aliases, std::move(alias)));
+    editor_.apply_relation_control(edi::Edit::append(project.aliases, std::move(alias)), {ProjectEditor::RelationAction::Kind::AliasAppend});
 }
 
 void AliasListModel::duplicate(int row) {
@@ -137,7 +137,7 @@ void AliasListModel::remove(int row) {
         return;
     }
     edi::Project& project = project_;
-    editor_.apply_relation_edit(edi::Edit::erase(project.aliases, static_cast<std::size_t>(row)));
+    editor_.apply_relation_control(edi::Edit::erase(project.aliases, static_cast<std::size_t>(row)), {ProjectEditor::RelationAction::Kind::AliasRemove,keyAt(row)});
 }
 
 // ---- ConstraintListModel ------------------------------------------------------------------------
@@ -169,10 +169,10 @@ bool ConstraintListModel::setText(int row, const QString& role, const QString& v
     }
     const std::string text = value.toStdString();
     if (role == QLatin1String("id")) {
-        return editor_.apply_relation_edit(edi::Edit::rename_constraint(*constraint, text)).isEmpty();
+        return editor_.apply_relation_control(edi::Edit::rename_constraint(*constraint, text), {ProjectEditor::RelationAction::Kind::ConstraintId,constraint,value}).isEmpty();
     }
     if (role == QLatin1String("expression")) {
-        return editor_.apply_relation_edit(edi::Edit::assign(constraint->expression, text)).isEmpty();
+        return editor_.apply_relation_control(edi::Edit::constraint_expression(project_, *constraint, text), {ProjectEditor::RelationAction::Kind::ConstraintExpression,constraint,value}).isEmpty();
     }
     return false;
 }
@@ -183,7 +183,7 @@ bool ConstraintListModel::setEnabled(int row, bool enabled) {
     if (constraint == nullptr) {
         return false;
     }
-    return editor_.apply_relation_edit(edi::Edit::assign(constraint->enabled, enabled)).isEmpty();
+    return editor_.apply_relation_control(edi::Edit::constraint_enabled(project_, *constraint, enabled), {ProjectEditor::RelationAction::Kind::ConstraintEnabled,constraint,{},enabled}).isEmpty();
 }
 
 void ConstraintListModel::append() {
@@ -223,7 +223,7 @@ void ConstraintListModel::remove(int row) {
         return;
     }
     edi::Project& project = project_;
-    editor_.apply_relation_edit(edi::Edit::erase(project.constraints, static_cast<std::size_t>(row)));
+    editor_.apply_relation_control(edi::Edit::erase(project.constraints, static_cast<std::size_t>(row)), {ProjectEditor::RelationAction::Kind::ConstraintRemove,keyAt(row)});
 }
 
 // ---- FitStartListModel --------------------------------------------------------------------------
