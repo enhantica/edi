@@ -77,6 +77,12 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0052](0052-project-folders-archives-and-opening.md) | Project folders, archives and opening | Proposed | 🟡 | High | a project is one folder; every surface opens a folder, its `project.edi` or a `.zip` and writes the same archive through the core; a zip-opened project saves where the user chooses; every save adopts what it wrote and recalculates; pages build in the background after a project opens |
 | [0053](0053-what-a-fit-can-free.md) | What a fit can free comes from crysta's one rule | Accepted | ✅ | High | every surface reads one mark per parameter, set from crysta's rule for the experiments the fitting mode fits: Python raises for a descriptor, an undeterminable value or one crysta cannot vary and warns for a dependent; the loader loads such a free mark fixed with a note; the fit refuses it; the Analysis table lists every numerical input with the reason on its disabled checkbox |
 
+| [0054](0054-assistant-controller-and-tools.md) | Assistant controller and native tools | Accepted | 🟡 | High | project-bound assistant protocol, validated operations, sequential trials and honest partial outcomes through current core APIs |
+| [0055](0055-subscription-provider-connections.md) | Subscription provider connections | Accepted | 🟡 | High | provider-owned desktop authentication and streaming adapters with explicit platform prerequisites |
+| [0056](0056-assistant-panel-and-history.md) | Assistant panel, history and local diagnostics | Accepted | 🟡 | High | persistent themed conversation, selected inputs, native action presentation and protected project-local reports |
+| [0057](0057-assistant-product-skills.md) | Assistant product skills | Accepted | 🟡 | Medium | versioned bundled and selected guidance, tied to actual executable native capabilities |
+| [0058](0058-defined-background-editing.md) | Defined background editing | Accepted | 🟡 | Medium | explicit manual anchor edits through ordinary native validation and Undo, alongside ADR-0040 Estimate |
+
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.

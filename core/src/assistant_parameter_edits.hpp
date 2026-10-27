@@ -3,6 +3,7 @@
 #include "assistant_json.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/io.hpp"
+#include "edi/fittability.hpp"
 #include "edi/selectors.hpp"
 #include <map>
 #include <set>
@@ -15,6 +16,7 @@ template<class T>
 Edit prepare_parameter_edit(Project& project, const std::vector<std::pair<std::string, T>>& requested,
                             const std::set<std::string>* allowed = nullptr,
                             std::vector<std::pair<std::string, bool>>* before_flags = nullptr) {
+    refresh_fittability(project);
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names.emplace(slot.parameter, slot.unique_name);
     std::map<std::string, ParameterEntry> metadata;
@@ -28,7 +30,7 @@ Edit prepare_parameter_edit(Project& project, const std::vector<std::pair<std::s
         const auto& entry = found->second;
         if (entry.parameter->dependence != Dependence::Independent) refuse("out_of_scope", "Dependent parameter: " + path);
         if constexpr (std::is_same_v<T, bool>) {
-            if (value && (!entry.refinable || !entry.fittable || !entry.used_by_profile))
+            if (value && (!entry.refinable || entry.parameter->fit_blocker != FitBlocker::None))
                 refuse("out_of_scope", "The parameter is not independently fittable in this profile");
         } else if (!std::isfinite(value)) refuse("invalid_argument", "Parameter value must be finite");
         if constexpr (std::is_same_v<T, bool>)

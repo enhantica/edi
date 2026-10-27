@@ -8,6 +8,7 @@
 // rules unchanged (owner, 2026-09-27); where a rule is shared the function below reproduces it and a
 // parity test holds the two equal.
 
+#include <functional>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -91,6 +92,8 @@ std::string scattering_source_value(const ExperimentBase& experiment, Scattering
 // The peak profiles an experiment of this beam mode can use: the shipped ones in their `.edi` order,
 // then any registered extension for the mode.
 std::vector<std::string> supported_peak_profiles(BeamModeEnum mode);
+/// Visit the same supported profile catalog without copying its tokens.
+void visit_supported_peak_profiles(BeamModeEnum mode, const std::function<void(const std::string&)>& visitor);
 // The profile a new experiment of this beam mode gets: the TCH pseudo-Voigt for constant wavelength.
 std::string default_peak_profile(BeamModeEnum mode);
 // The absorption families of a beam mode, as a file spells them: CW none / cylinder-hewat /

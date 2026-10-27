@@ -15,6 +15,7 @@
 #include "assistant_capabilities.hpp"
 #include "assistant_skills.hpp"
 #include "edi/calculation.hpp"
+#include "edi/fittability.hpp"
 #include "edi/categories.hpp"
 #include "edi/fit_job.hpp"
 #include "edi/io.hpp"
@@ -162,7 +163,7 @@ std::uint64_t project_metadata_size(const Project* project) {
             {"calculation_only", experiment->calculation_only ? 4 : 5}, {"data_status", encoded_text(data_status)}, {"axis", axis_size},
             {"observations", encoded_fields({{"intensity_count", payload_size(J(static_cast<double>(intensity_count)))},
                 {"sigma_count", payload_size(J(static_cast<double>(sigma_count)))}, {"weighting", encoded_text(weighting)}})},
-            {"peak_profile",encoded_text(effective_peak_type_view(*experiment))},
+            {"peak_profile",encoded_text(effective_peak_type(*experiment))},
             {"peak_profile_options",profile_options},
             {"absorption_type",encoded_text(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none"))},
             {"absorption_type_options",absorption_options},{"cutoff_fwhm",encoded_finite(experiment->peak.cutoff_fwhm)},
@@ -856,7 +857,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             fields.emplace_back("candidate_adopted", adopted); fields.emplace_back("live_adopted", false);
             fields.emplace_back("converged", report.result && report.result->converged);
             fields.emplace_back("objective_name", "chi_square");
-            fields.emplace_back("objective", adopted ? J(record.objective_value) : J(nullptr));
+            fields.emplace_back("objective", adopted && record.objective_value ? J(*record.objective_value) : J(nullptr));
             fields.emplace_back("baseline_objective", std::isfinite(candidate->baseline) ? J(candidate->baseline) : J(nullptr));
             fields.emplace_back("reduced_chi_square", report.result ? J(report.result->reduced_chi_square) : J(nullptr));
             fields.emplace_back("rwp", report.result ? J(report.result->rwp) : J(nullptr));
@@ -1178,6 +1179,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             auto next = std::make_shared<Trial>();
             next->id = id("trial"); next->group = group; next->project = std::make_shared<Project>(*live);
             refresh_relations(*next->project);
+            refresh_fittability(*next->project);
             const auto candidate_paths = paths(*next->project);
             const auto group_paths = plan->groups.at(group);
             std::map<std::string, ParameterEntry> metadata;
@@ -1188,7 +1190,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 if (row.parameter->dependence != Dependence::Independent)
                     refuse("out_of_scope", "The selected group contains a dependent parameter");
                 // Editable approved setup values need not be optimizer variables.
-                if (row.refinable && row.fittable && row.used_by_profile)
+                if (row.refinable && row.parameter->fit_blocker == FitBlocker::None)
                     candidate_paths.at(path).first->free = true;
             }
             next->accepted = std::make_shared<Project>(*live);
@@ -1295,7 +1297,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             !unchanged_since(*candidate->project, candidate->fitted_stamps) || edi::detail::inputs_of(*candidate->project) != candidate->fitted_inputs)
             refuse("stale_revision", "The fit evidence no longer describes the accepted and candidate states");
         const auto& record = candidate->project->fit_result;
-        const double objective = record.objective_value;
+        const double objective = record.objective_value.value_or(std::numeric_limits<double>::quiet_NaN());
         accepted = accepted && record.held() && record.objective_name == "chi_square" && std::isfinite(objective);
         if (std::isfinite(candidate->baseline))
             accepted = accepted && objective < candidate->baseline - std::max(plan->absolute, std::abs(candidate->baseline) * plan->relative);

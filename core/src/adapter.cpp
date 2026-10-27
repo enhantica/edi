@@ -4501,7 +4501,8 @@ namespace {
 // keeps the public surface engine-free and independently compilable.
 edi::IterationRecord to_edi(const crysta::IterationRecord& record) {
     return {record.iteration, record.rwp, record.reduced_chi_square, record.elapsed_ms,
-            record.unevaluable_trials};
+            record.unevaluable_trials, {},
+            std::isfinite(record.chi_square) ? std::optional<double>(record.chi_square) : std::nullopt};
 }
 
 std::vector<edi::IterationRecord> to_edi(const std::vector<crysta::IterationRecord>& history) {
@@ -4553,7 +4554,8 @@ crysta::IterationCallback to_engine_callback(const IterationCallback& subscriber
                                       std::chrono::steady_clock::now() - started)
                                       .count();
         IterationRecord record{progress.iteration, progress.rwp, progress.chi_square / dof, elapsed_ms,
-                               progress.unevaluable_trials};
+                               progress.unevaluable_trials, {},
+                               std::isfinite(progress.chi_square) ? std::optional<double>(progress.chi_square) : std::nullopt};
         if (progress.parameters.size() == paths.size()) {
             for (std::size_t index = 0; index < paths.size(); ++index) {
                 if (!paths[index].empty()) {
@@ -5072,7 +5074,8 @@ FitResultBase Project::fit(const std::vector<double>& grid, const std::vector<do
             const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
             const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
                                           crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
-                                          crysta_pre_fit.unevaluable_trials};
+                                          crysta_pre_fit.unevaluable_trials, {},
+                                          std::isfinite(crysta_pre_fit.chi_square) ? std::optional<double>(crysta_pre_fit.chi_square) : std::nullopt};
             // Preamble: fired ONCE here — after the provider is built (so the counts are
             // known) and the pre-fit is evaluated, BEFORE the LM loop. Empty callback => no host
             // crossing. Single-bank path: `banks` empty, mode single (mirrors crysta).
@@ -5871,7 +5874,8 @@ FitResultBase Project::fit_joint(const std::vector<PdDataBase>& patterns,
             const crysta::IterationRecord crysta_pre_fit = crysta::pre_fit_record(provider, dof);
             const IterationRecord pre_fit{crysta_pre_fit.iteration, crysta_pre_fit.rwp,
                                           crysta_pre_fit.reduced_chi_square, crysta_pre_fit.elapsed_ms,
-                                          crysta_pre_fit.unevaluable_trials};
+                                          crysta_pre_fit.unevaluable_trials, {},
+                                          std::isfinite(crysta_pre_fit.chi_square) ? std::optional<double>(crysta_pre_fit.chi_square) : std::nullopt};
             // Preamble: fired ONCE before the loop with the joint bank names + counts.
             if (on_start) {
                 std::vector<std::string> bank_names;

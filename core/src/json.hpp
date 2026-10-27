@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
+#include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -45,6 +47,9 @@ struct Value {
 };
 
 std::string write(const Value& value);
+std::uint64_t encoded_size(const Value& value, std::uint64_t limit = UINT64_MAX);
+// Same writer byte rules, borrowing string bytes for pre-copy admission.
+std::uint64_t encoded_string_size(std::string_view text, std::uint64_t limit = UINT64_MAX);
 Value parse(const std::string& text);
 
 }  // namespace edi::json
