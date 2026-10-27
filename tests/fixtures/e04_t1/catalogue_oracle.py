@@ -14,7 +14,12 @@ def selected_ids():
 def refresh_paths():
     # The four-pattern LATP fixture was deliberately rebuilt from the selected template.
     return {
-        f'docs/user/cli/{case}/project' for case in [*selected_ids(), 'pd-xray-cwl_latp_scan-4f']
+        f'docs/user/cli/{case}/project'
+        for case in [
+            *selected_ids(),
+            'pd-xray-cwl_latp_scan-4f',
+            *json.loads((SELECTION.parent / 'single-crystal-renames.json').read_text())['ids'],
+        ]
     }
 
 

@@ -18,6 +18,7 @@ from tests.fixtures.background_estimate.settings import (
     saved_points,
     write_settings,
 )
+from tests.fixtures.project_save.reference import six_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -50,8 +51,8 @@ def test_auto_cli_and_python_calculate_the_same_reference_points(tmp_path):
     shutil.copytree(source, cli)
     run_cli(cli, 'calc')
     require_reference(expected, 'snip')
-    assert saved_points(cli) == expected, (
-        'CLI calculation and Python must persist identical automatic points from the same project'
+    assert saved_points(cli) == [(x, six_digits(y)) for x, y in expected], (
+        'CLI saves the independent six-digit projection of Python automatic points'
     )
     assert read_settings(cli) == DEFAULTS, (
         'CLI calculation must preserve saved settings and derived blanks'
@@ -83,8 +84,8 @@ def test_auto_estimation_precedes_cli_and_python_fit(tmp_path):
     assert [row[:2] for row in points(project)] == expected, (
         'A fit must resolve automatic background points before changing fit parameters'
     )
-    assert saved_points(cli, experiment='hrpt') == expected, (
-        'CLI and Python fits must start with the same data-only automatic points'
+    assert saved_points(cli, experiment='hrpt') == [(x, six_digits(y)) for x, y in expected], (
+        'CLI fit saves the independent six-digit projection of its data-only automatic points'
     )
 
 
@@ -118,8 +119,8 @@ def test_new_default_policy_and_exact_count_agree_in_cli_and_python(tmp_path, me
     cli = tmp_path / 'cli'
     shutil.copytree(source, cli)
     run_cli(cli, 'calc')
-    assert saved_points(cli) == expected, (
-        'Existing CLI and Python calculations must apply the same blank-tolerance move policy'
+    assert saved_points(cli) == [(x, six_digits(y)) for x, y in expected], (
+        'CLI saves the six-digit projection of Python points with the same move policy'
     )
     assert read_settings(cli) == settings, (
         'CLI saving must preserve the blank tolerance, exact count and data-only move settings'

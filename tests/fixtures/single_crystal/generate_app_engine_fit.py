@@ -9,7 +9,7 @@ import crysta
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
-SOURCE = ROOT / 'docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project'
+SOURCE = ROOT / 'docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project'
 
 
 def main():
