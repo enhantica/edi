@@ -3714,7 +3714,10 @@ std::vector<std::string> registered_peak_types() {
     return tokens;
 }
 
-static Project load_project_folder(const std::string& directory, const WarningSink& on_warning) {
+// `whole` holds the loader's rules for a project as a whole: one structure or more, one experiment or more, each
+// declaring what it computes over and linking structures the project holds. A save's readback lifts them, since a save
+// writes a project still being built too, and its values must still be adopted (edi ADR-0052).
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3730,7 +3733,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // crysta's rule: each `.edi`; any other file is passed over.
     const std::vector<std::string> structure_files =
         detail::project_structure_files((root / "structures").string());
-    if (structure_files.empty()) {
+    if (structure_files.empty() && whole) {
         throw IoError("project has no structures/*.edi: " + directory);
     }
     Project project;
@@ -3795,7 +3798,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         // (its postconditions were proven during parsing), a `_data_range` grid means a
         // generated axis. Declaring neither is a load-time error naming the offending file
         // (declaring both already refused inside the parser).
-        if (!experiment.data.has_value() && !experiment.reflections.has_value()) {
+        if (!experiment.data.has_value() && !experiment.reflections.has_value() && whole) {
             throw IoError("project " + directory + ": experiment '" + experiment.name +
                           "' (" + file.string() +
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
@@ -3808,7 +3811,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             const std::string wanted = spelled(link->structure_id.value());
             const bool held = std::any_of(project.structures.begin(), project.structures.end(),
                                           [&](const auto& structure) { return spelled(structure->name.value()) == wanted; });
-            if (!held) {
+            if (!held && whole) {
                 throw IoError("project " + directory + ": experiment '" + experiment.name + "' (" + file.string() +
                               ") links the structure '" + detail::printable_id(wanted) +
                               "', which the project does not hold");
@@ -4287,7 +4290,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // finite values, positive sigma — was enforced during parsing) or a declared calculation
     // grid. A project with no experiments at all declares neither, so it refuses here for the
     // same reason.
-    if (project.experiments.empty()) {
+    if (project.experiments.empty() && whole) {
         throw IoError("project has no experiments/*.edi: " + directory);
     }
 
@@ -4949,16 +4952,18 @@ void save_project_as(Project& project, const std::string& directory) {
     project.scan_data_root.clear();
 }
 
+namespace {
+
+// What a save wrote to `directory`, read as a reopen reads it, a project still being built included. The reopen's
+// warnings were the save's own concern.
+Project read_saved_project(const std::string& directory) {
+    return load_project_folder(directory, [](const std::string&) {}, false);
+}
+
+}  // namespace
+
 bool adopt_saved_values(Project& project, const std::string& directory) {
-    // The reopen's warnings were the save's own concern; a project the loader refuses, such as one saved before it
-    // has a structure, keeps its values as they are.
-    std::optional<Project> reopened;
-    try {
-        reopened.emplace(load_project(directory, [](const std::string&) {}));
-    } catch (const IoError&) {
-        return false;
-    }
-    return adopt_values(project, *reopened);
+    return adopt_values(project, read_saved_project(directory));
 }
 
 bool adopt_values(Project& project, const Project& saved) {
@@ -5181,15 +5186,9 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     // edi ADR-0052: the save sequence after its first write. The project takes what its files hold; one holding
     // results, calculated here or read from its file, is calculated again from those values and written once more, so
     // its calculated pattern and R factors describe the values beside them.
-    // The loader refuses a project without a structure, or with an experiment that has no data yet, by its own rules:
-    // such a project has nothing to adopt. Any other refusal to read the save back is a failed save.
-    if (project.structures.empty() ||
-        std::any_of(project.experiments.begin(), project.experiments.end(),
-                    [](const auto& item) { return !item->data.has_value() && !item->reflections.has_value(); })) {
-        return false;
-    }
-    const Project reopened = load_project(directory, [](const std::string&) {});
-    const bool changed = adopt_values(project, reopened);
+    // A project still being built (no structure yet, or an experiment without data) is read back too: its values are
+    // adopted like any other's. A save that cannot be read back is a failed save.
+    const bool changed = adopt_values(project, read_saved_project(directory));
     const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
         return item->carried_calculation || (item->data.has_value() && !item->data->intensity_calc.empty()) ||
                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());

@@ -151,8 +151,8 @@ void save_project_as(Project& project, const std::string& directory);
 // After a save, the open project takes what its saved files hold, exactly what a reopen of `directory` reads: each
 // parameter's value and s.u., which the IUCr rule rounds, and the coefficients of the correlation rows the save wrote,
 // rounded too; a scan's template then reads its pairs from those rows. Nothing is recalculated; whether anything
-// changed. A report saved next stays current after the project is reopened. A project the loader refuses (one
-// without a structure) is left as it is.
+// changed. A report saved next stays current after the project is reopened. A project still being built (no
+// structure yet, or an experiment without data) is read back as written; a save that cannot be read back throws IoError.
 bool adopt_saved_values(Project& project, const std::string& directory);
 // The same from `saved`, a project already holding what the files hold (a staged save's copy), with the fit's
 // agreement records: no file is read or written. Whether anything changed.
@@ -162,8 +162,8 @@ bool adopt_values(Project& project, const Project& saved);
 // adopt_saved_values, then, when the project holds results (calculated here, or read from its file), calculate
 // it from the adopted values and write it again, so the files, the open project and a reopen agree, the calculated
 // pattern and R factors included; a project without results whose values changed is written again too, so what the
-// save derives from those values follows them. Returns whether any value changed. Throws IoError when the save cannot
-// be read back, unless the project has no structure (the loader refuses one; nothing is adopted).
+// save derives from those values follows them. Returns whether any value changed. A project still being built is
+// adopted the same way. Throws IoError when the save cannot be read back.
 bool adopt_saved_project(Project& project, const std::string& directory);
 
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
