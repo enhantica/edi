@@ -31,3 +31,16 @@ run must identify the production head, actual runner/module and engine/runtime
 inputs. In particular, the separately elected local unchanged Crysta development
 source does not become the declared pinned SDK or CI/release qualification. Old
 assistant binaries/results are historical and cannot qualify the new dev app.
+
+The finite review-6 gates reuse `edi_tests` with filter
+`--test-case='E11 restore*,E11 bounded*,E11 preview*'`. The same graph adds
+`assistant_owner_preview_probe`, using the same doctest main and current core
+adapter, with only worker/preview translation units compiled in their supported
+`EDI_WORKER_OWNER_THREAD=1` mode. Run it with `--test-case='E11 preview*'`.
+Its effective commands must prove mode 1, and the ordinary carrier must prove
+mode 0. This is a native diagnostic of that mode, not a browser build witness.
+The frozen stamp codec comes from committed pre-integration dev e782; its visible
+generator records the original SHA-256 and relocates exports without changing
+the byte traversal. It is independent of the new bounded-capture implementation.
+No scheduling-exception contract is inferred for asynchronous threaded delivery;
+throwing scheduling Post cases belong to the supported owner-thread mode.
