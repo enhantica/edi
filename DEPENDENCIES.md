@@ -56,6 +56,9 @@ transitive attribution, corresponding-source delivery or platform installer qual
 | ripgrep | 15.2.0 | MIT OR Unlicense | bundled | — | — | — | the official runtime package's rg executable, used under MIT |
 | zsh | 77045ef | Zsh | bundled | — | — | — | the official runtime package's patched shell helper; source and patch in data/assistant/runtime/PROVENANCE.md |
 | bubblewrap | vendored at Codex 092d3acd | LGPL-2.0-or-later | bundled (Linux) | — | — | — | the Linux runtime package's sandbox helper; corresponding-source delivery remains a release obligation |
+| rusty-V8 | 150.4.0 | MIT | bundled | — | — | — | Deno Rust bindings embedded in the code-mode host |
+| V8 (Codex code-mode host) | ac1e2398 | BSD-3-Clause AND additional notices | bundled | — | — | — | the V8 engine embedded in the code-mode host; distinct from Qt V8 |
+| ICU data (deno_core_icudata) | 0.77.0 / ee5f27ad | Unicode-3.0 AND additional notices | bundled | — | — | — | the ICU data embedded in the code-mode host via deno_core_icudata |
 
 ## HTML report libraries
 
