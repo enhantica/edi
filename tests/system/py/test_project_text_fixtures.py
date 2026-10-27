@@ -6,6 +6,13 @@ import zipfile
 from tests.fixtures.project_text.generate import classic_zip, invalid_texts, project
 
 
+def test_project_generator_copies_only_model_inputs(tmp_path):
+    source = project(tmp_path / 'project')
+    assert {path.suffix for path in source.rglob('*') if path.is_file()} == {'.edi'}, (
+        'The project witness contains model inputs without unrelated fixture programs or prose'
+    )
+
+
 def test_classic_zip_witness_has_exactly_the_classic_limit(tmp_path):
     source = project(tmp_path / 'project')
     archive = classic_zip(tmp_path / 'classic.zip', source)

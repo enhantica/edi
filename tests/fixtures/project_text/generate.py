@@ -10,11 +10,10 @@ ROOT = Path(__file__).resolve().parents[3]
 
 def project(destination):
     destination = Path(destination)
-    shutil.copytree(
-        ROOT / 'tests/fixtures/table_display',
-        destination,
-        ignore=shutil.ignore_patterns('*.py', '*.json', '*.zip', '__pycache__'),
-    )
+    for relative in ('project.edi', 'structures/structure.edi', 'experiments/experiment.edi'):
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / 'tests/fixtures/table_display' / relative, target)
     original = destination / 'structures/structure.edi'
     (original.parent / 'zz_second.edi').write_text(
         original
@@ -22,7 +21,9 @@ def project(destination):
         .replace('data_structure', 'data_zz_second')
         .replace('4.026700', '5.137900')
     )
-    (destination / 'analysis/analysis.edi').write_text(
+    analysis = destination / 'analysis/analysis.edi'
+    analysis.parent.mkdir(parents=True, exist_ok=True)
+    analysis.write_text(
         '_edi.schema_version 3\n_fitting_mode.type single\n_minimizer.type crysta\n'
         'loop_\n_alias.id\n_alias.parameter_unique_name\n'
         'li structure.atom_site.Li1.adp_iso\nf structure.atom_site.F1.adp_iso\n'
