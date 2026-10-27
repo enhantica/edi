@@ -2878,6 +2878,9 @@ struct Structure : std::enable_shared_from_this<Structure> {
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).
     // A loop category held in one cell; written whole or with `modify`.
     detail::Written<std::map<std::string, double>> scattering_lengths_fm;
+    // How the Structure view shows this structure (`_structure_view`, by item name: atom_view, atom_scale, ...),
+    // saved with it; empty: the view's defaults. No calculation reads it.
+    std::map<std::string, std::string> view;
 
     // The cell's parameters, then every site's, in collection order.
     std::vector<Parameter*> parameters();
@@ -2918,6 +2921,7 @@ inline Structure::Structure(const Structure& other)
       atom_sites(other.atom_sites),
       atom_site_aniso(other.atom_site_aniso),
       scattering_lengths_fm(other.scattering_lengths_fm),
+      view(other.view),
       epoch(other.epoch),
       geom(other.geom),
       geometry(other.geometry),

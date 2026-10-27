@@ -206,6 +206,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         this);
     categories_ = new CategoryListModel(this);
     syncCategories();
+    connect(structure_view_options_, &StructureViewOptions::changed, this, &ProjectViewModel::keepStructureView);
     render_wait_.setSingleShot(true);
     connect(&render_wait_, &QTimer::timeout, this, [this] { followRendered(false); });
     loadScan();
@@ -580,6 +581,7 @@ void ProjectViewModel::publishCurrent() {
     }
     if (currentStructure() != published_structure_) {
         published_structure_ = currentStructure();
+        showStructureView();
         emit currentStructureChanged();
     }
     if (currentExperiment() != published_experiment_) {
@@ -2577,10 +2579,39 @@ void ProjectViewModel::syncCategories() {
                                [this] { return metadata_text_->text().toStdString(); });
 }
 
+void ProjectViewModel::showStructureView() {
+    // The view shows each structure as that structure saved it (the owner, 2026-10-10): its options come from
+    // the structure, and a change is saved with it.
+    const StructureViewModel* shown = currentStructure();
+    showing_view_ = true;
+    structure_view_options_->setFromView(shown != nullptr ? shown->structure()->view : std::map<std::string, std::string>{});
+    showing_view_ = false;
+}
+
+void ProjectViewModel::keepStructureView() {
+    if (showing_view_ || current_structure_ < 0 || static_cast<std::size_t>(current_structure_) >= project_->structures.size()) {
+        return;
+    }
+    edi::Structure& shown = *project_->structures[static_cast<std::size_t>(current_structure_)];
+    std::map<std::string, std::string> view = structure_view_options_->toView();
+    if (view != shown.view) {
+        shown.view = std::move(view);
+        saved_files_.reset();
+        invalidateTexts();
+        setModified(true);
+    }
+}
+
 QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     // A scan's datasets read their data from its files, which a project read from text does not carry.
     if (scan_) {
         return tr("A scan project is edited on its pages, not as text");
+    }
+    // A category the dictionary does not hold is a mistake, which the reader would pass over.
+    for (const std::string& id : edi::text_category_ids(text.toStdString())) {
+        if (edi::category_label(id).empty()) {
+            return tr("Unknown category '_%1'").arg(QString::fromStdString(id));
+        }
     }
     // What the reader only warns about (an item it does not know, a value it reads in another way) is not applied
     // either: the text is applied only as it is read.
@@ -2842,6 +2873,7 @@ void ProjectViewModel::publish(bool structural) {
     if (structural) {
         registry_->rebuild(*project_);
         syncBlocks();
+        showStructureView();  // an apply or an undo can change what the structure saved
     }
     registry_->publish(*project_);
     for (StructureViewModel* structure : structure_models_) {

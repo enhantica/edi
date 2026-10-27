@@ -608,6 +608,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     BlockText* metadata_text_;
     CategoryListModel* categories_ = nullptr;
     void syncCategories();
+    // The Structure view's options are the shown structure's: set from it when it is shown, saved to it on a change.
+    void showStructureView();
+    void keepStructureView();
+    bool showing_view_ = false;
     BlockText* report_text_ = nullptr;
     BlockText* project_text_;
     ReportViewModel* report_;
