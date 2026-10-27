@@ -26,7 +26,9 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("atom_site_aniso"), {T::Basic}},  {QStringLiteral("experiment_type"), {T::Basic}},
         {QStringLiteral("data_range"), {T::Basic}},       {QStringLiteral("instrument"), {T::Basic}},
         {QStringLiteral("peak"), {T::Basic, true}},
-        {QStringLiteral("background"), {T::Basic, true, false, true}},
+        {QStringLiteral("background"), {T::Basic}},
+        // The estimate's settings, of use only with measured data (the owner, 2026-10-27).
+        {QStringLiteral("background_estimate"), {T::Extras, false, true}},
         {QStringLiteral("linked_structure"), {T::Basic}},
         {QStringLiteral("excluded_region"), {T::Basic, false, true}},
         {QStringLiteral("extinction"), {T::Basic}},
@@ -55,12 +57,10 @@ CategoryPresentation category_presentation(const QString& id) {
 }
 
 namespace {
-// The sidebar's order where it differs from the core's page order (edi ADR-0017 §3): each first id is shown
-// directly before the second. Presentation only: the core's order (the Analysis table, the files) stands.
-// A category shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer.
+// The sidebar's order is the dictionary's order number, the files' order, so the app
+// keeps no order of its own; categories the dictionary does not order keep the core's order, last. A category
+// shown elsewhere has no sidebar group: the experiment type is edited in the Experiments explorer.
 std::vector<const edi::Category*> presentation_order(const std::vector<edi::Category>& categories) {
-    static const std::pair<const char*, const char*> kShownBefore[] = {{"background", "instrument"},
-                                                                       {"excluded_region", "linked_structure"}};
     static const char* const kShownElsewhere[] = {"experiment_type"};
     std::vector<const edi::Category*> ordered;
     for (const edi::Category& category : categories) {
@@ -68,21 +68,9 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
             ordered.push_back(&category);
         }
     }
-    const auto position = [&ordered](const char* id) {
-        for (std::size_t i = 0; i < ordered.size(); ++i) {
-            if (ordered[i]->id == id) {
-                return static_cast<std::ptrdiff_t>(i);
-            }
-        }
-        return static_cast<std::ptrdiff_t>(-1);
-    };
-    for (const auto& [moved, anchor] : kShownBefore) {
-        const std::ptrdiff_t from = position(moved);
-        const std::ptrdiff_t to = position(anchor);
-        if (from > to && to >= 0) {
-            std::rotate(ordered.begin() + to, ordered.begin() + from, ordered.begin() + from + 1);
-        }
-    }
+    std::stable_sort(ordered.begin(), ordered.end(), [](const edi::Category* a, const edi::Category* b) {
+        return edi::category_order(a->id) < edi::category_order(b->id);
+    });
     return ordered;
 }
 }  // namespace
@@ -95,6 +83,11 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
         const edi::Category& category = *shown;
         target.push_back({QString::fromStdString(category.id), static_cast<int>(category.rows), category.is_loop,
                           category.admitted});
+        // An experiment's background carries its estimate settings (`_background_estimate`), a category of its own
+        // with its own group; the core lists them with the background.
+        if (category.id == "background") {
+            target.push_back({QStringLiteral("background_estimate"), 0, false, true});
+        }
     }
     const std::size_t before = rows_.size();
     const auto find = [](const std::vector<Row>& rows, const QString& id, std::size_t from) {
