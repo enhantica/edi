@@ -44,8 +44,8 @@ EaComponents.ListView {
     readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
     property int modelRevision: 0
     // The one column rule (ADR-0029): `columns` as the base's `columnWidths`, where every flex column (-1) but the
-    // last fits its header and its widest shown cell, so the columns start at the left and the last flex column
-    // takes the rest of the row; fixed columns, the row buttons among them, keep their widths.
+    // last fits its header and its widest shown cell, so the columns start at the left and the last flex column,
+    // aligned left, takes the rest of the row; fixed columns, the row buttons among them, keep their widths.
     // `equalColumns` keeps the flex columns equal instead (atom sites and atomic displacements).
     property var columns: []
     property bool equalColumns: false
@@ -58,12 +58,26 @@ EaComponents.ListView {
     function fitColumns() {
         const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths : [];
         const widths = columns.map((w, i) => (header[i] ?? 0) + autoColumnPadding);
+        // An editor's implicit width is a default, not its text: a cell is measured by its text where it has one.
+        const measure = cell => "contentWidth" in cell ? cell.contentWidth + (cell.leftPadding ?? 0) + (cell.rightPadding ?? 0) : cell.implicitWidth;
+        // The filling column reads from the left, as its header, so its value sits next to the columns before it and
+        // the space it takes is left after it (a right-aligned number would move to the row's far edge).
+        const fill = equalColumns ? -1 : columns.lastIndexOf(-1);
+        const align = cells => {
+            if (fill >= 0 && fill < cells.length && "horizontalAlignment" in cells[fill])
+                cells[fill].horizontalAlignment = Text.AlignLeft;
+        };
+        // The cells as the base sizes them: a row's visual children, in order.
+        const cellsOf = row => row && row.contentRowData ? Array.from(row.contentRowData).filter(cell => cell instanceof Item) : null;
+        if (cellsOf(headerItem))
+            align(cellsOf(headerItem));
         for (const item of contentItem.children) {
-            const cells = item.contentRowData;
+            const cells = cellsOf(item);
             if (!cells)
                 continue;
+            align(cells);
             for (let i = 0; i < cells.length && i < widths.length; ++i)
-                widths[i] = Math.max(widths[i], Math.ceil(cells[i].implicitWidth));
+                widths[i] = Math.max(widths[i], Math.ceil(measure(cells[i])));
         }
         if (JSON.stringify(widths) !== JSON.stringify(fittedWidths))
             fittedWidths = widths;

@@ -24,6 +24,14 @@ QtObject {
     readonly property color fitButtonBackground: EaStyle.Colors.isDarkPalette ? "#ffffff" : "#000000"
     readonly property color fitButtonForeground: EaStyle.Colors.isDarkPalette ? "#000000" : "#ffffff"
 
+    // The Text tab's `.edi` colours, as easydiffraction's coloured CIF (the owner, 2026-10-25): datablock names
+    // orange, item names blue, a loop's column names green and `loop_` grey, each at least 4.5:1 on the text view's
+    // background in its theme.
+    readonly property color textDatablock: EaStyle.Colors.isDarkPalette ? "#F2A65A" : "#B3540B"
+    readonly property color textItem: EaStyle.Colors.isDarkPalette ? "#79AEF2" : "#1C5DB8"
+    readonly property color textLoopColumn: EaStyle.Colors.isDarkPalette ? "#82C886" : "#2B7A30"
+    readonly property color textLoop: EaStyle.Colors.isDarkPalette ? "#A6A6A6" : "#6E6E6E"
+
     // A block's colour from the figure palette (edi ADR-0038): the palette's colour at the block's position, which the
     // open project holds (a block keeps its position; a new one takes the next free). `dark` picks the dark theme's
     // colour; without it, the app's theme decides (a PDF's figure asks for the light one).
