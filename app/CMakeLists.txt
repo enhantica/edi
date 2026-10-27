@@ -56,6 +56,7 @@ qt_add_qml_module(edi_app_module
         src/parameter_registry.hpp src/parameter_registry.cpp
         src/option_list_model.hpp src/option_list_model.cpp
         src/block_text.hpp src/block_text.cpp
+        src/edi_text_highlighter.hpp src/edi_text_highlighter.cpp
         src/category_list_model.hpp src/category_list_model.cpp
         src/structure_view_model.hpp src/structure_view_model.cpp
         src/structure_view_options.hpp src/structure_view_options.cpp

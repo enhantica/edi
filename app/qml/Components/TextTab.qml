@@ -66,6 +66,15 @@ EaComponents.SideBarColumn {
                 selectedTextColor: EaStyle.Colors.themeBackground
                 text: !tab.source ? "" : tab.source.error !== "" ? tab.source.error : tab.source.text
             }
+            // The `.edi` text in the theme's colours; a writer's refusal stays plain.
+            EdiTextHighlighter {
+                objectName: "text.highlighter"
+                document: tab.source && tab.source.error === "" ? textEdit.textDocument : null
+                datablockColor: AppColors.textDatablock
+                itemColor: AppColors.textItem
+                loopColumnColor: AppColors.textLoopColumn
+                loopColor: AppColors.textLoop
+            }
         }
     }
 }
