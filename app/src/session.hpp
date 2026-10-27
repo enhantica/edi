@@ -137,6 +137,10 @@ class Session : public QObject {
     // .zip keeps the archive as its location and every later Save rewrites it. With `copy` the project is written
     // there as it stands and stays where it is: a copy. False, with `lastError` saying why, when it cannot be written.
     Q_INVOKABLE bool saveProjectAs(const QUrl& target, bool zip, bool copy);
+    // A project opened from or saved as a .zip keeps its reports inside it: after Save report wrote them into the folder
+    // the project works in, the archive is rewritten from that folder (the owner, 2026-10-27). Nothing to do for a
+    // folder project. An empty string, else why the archive could not be written.
+    Q_INVOKABLE QString writeBackReports();
     Q_INVOKABLE void clearError();
     // Where Save project as starts, with the name filled in (owner, 2026-10-25): the project's own folder or .zip
     // name (the project's name for one with neither), `.zip` for an archive, in the folder the project is in, else in
