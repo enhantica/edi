@@ -588,8 +588,12 @@ void PatternChartController::setIncludedOnly(bool on) {
     if (on != included_only_) {
         stopAnimation();
         included_only_ = on;
+        // Both ranges start over: the intensity then spans the included points only, or all of them again (the owner,
+        // 2026-10-27).
         x_min_.reset();
         x_max_.reset();
+        y_min_.reset();
+        y_max_.reset();
         emit includedOnlyChanged();
         invalidate();
     }

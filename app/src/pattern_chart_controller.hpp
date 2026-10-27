@@ -77,7 +77,7 @@ class PatternChartController : public QObject {
     // Whether the shown experiment has a current d column: until a calculation gives one, d cannot be chosen.
     Q_PROPERTY(bool dAvailable READ dAvailable NOTIFY dAvailableChanged)
     // Only the included range (edi ADR-0044): the x range runs from the first to the last included point, and the
-    // excluded regions show no measured points or ticks. A change starts the x range over.
+    // excluded regions show no measured points or ticks. A change starts both ranges over.
     Q_PROPERTY(bool includedOnly READ includedOnly WRITE setIncludedOnly NOTIFY includedOnlyChanged)
     // Every curve with the background subtracted (edi::PatternView::subtract_background; off by default, an app setting
     // shared with the scan views), and whether the shown experiment declares a background to subtract
