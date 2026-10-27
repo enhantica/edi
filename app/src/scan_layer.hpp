@@ -215,6 +215,8 @@ class ScanLayer : public QQuickPaintedItem {
     struct Reduction {
         std::uint64_t generation = 0;  // the dataset's ScanViewModel::Pattern::generation it was made from; 0: none
         std::vector<float> x, v;
+        // Stacked, with the excluded ranges shown: the trace's stretches inside them, drawn dimmed (x, v as above).
+        std::vector<float> excluded_x, excluded_v;
     };
     bool lines_on_gpu() const { return gpu_ && mode_ == QLatin1String("stacked"); }
     // Asks for this frame's drawing: the reductions and the GPU lines at the polish, the painting after it.
