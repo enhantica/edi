@@ -19,9 +19,12 @@ pending = {}
 calls = []
 turn_number = 0
 cursor = {'position': 0, 'sequence': 0, 'pending_final': False}
+native_ids = {}
 
 
 def emit(value):
+    with trace.with_suffix('.sent.jsonl').open('a', encoding='utf-8') as output:
+        output.write(json.dumps(value) + '\n')
     print(json.dumps(value, ensure_ascii=False), flush=True)
 
 
@@ -35,6 +38,16 @@ def notify(method, params):
 
 def turn(status):
     return {'id': turn_id, 'items': [], 'status': status}
+
+
+def operands(value):
+    if isinstance(value, dict):
+        if set(value) == {'created_structure_parameter'}:
+            return native_ids['structure'] + '.' + value['created_structure_parameter']
+        return {key: operands(child) for key, child in value.items()}
+    if isinstance(value, list):
+        return [operands(child) for child in value]
+    return value
 
 
 def advance():
@@ -54,6 +67,7 @@ def advance():
         notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
         return
     spec = calls[cursor['position']]
+    spec = {**spec, 'arguments': operands(spec['arguments'])}
     cursor['position'] += 1
     cursor['sequence'] += 1
     call_id = spec.get('call_id', 'integration-call-' + str(cursor['sequence']))
@@ -93,6 +107,10 @@ for line in sys.stdin:
     if 'method' not in request:
         original = pending.pop(request['id'])
         result = request.get('result', {})
+        if original['item']['tool'] == 'create_structure' and result.get('success'):
+            result_value = json.loads(result['contentItems'][0]['text'])
+            assert len(result_value['structures']) == 1
+            native_ids['structure'] = result_value['structures'][0]['id']
         item = {
             **original['item'],
             'status': 'completed' if result.get('success') else 'failed',

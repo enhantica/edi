@@ -5,6 +5,8 @@
 #include "assistant_native_tools.hpp"
 #include "engine_setup.hpp"
 #include "edi/io.hpp"
+#include "edi/background_estimate.hpp"
+#include "edi/parameter_walk.hpp"
 #include <QDesktopServices>
 #include <QDirIterator>
 #include <QGuiApplication>
@@ -183,7 +185,39 @@ int main(int argc,char** argv) {
         Object project;
         if(observed->project()) {
             const auto& model=observed->project()->project();
-            Array backgrounds;
+            Array backgrounds,structures,parameters,aliases,constraints;
+            for(const auto& structure:model.structures) {
+                Array sites;
+                for(const auto& site:structure->atom_sites)
+                    sites.push_back(Object{{"id",QString::fromStdString(site->id.value())},
+                        {"type",QString::fromStdString(site->type_symbol.get())},
+                        {"wyckoff",QString::fromStdString(site->wyckoff_letter.get())},
+                        {"x",site->fract_x.value.get()},{"y",site->fract_y.value.get()},
+                        {"z",site->fract_z.value.get()},{"occupancy",site->occupancy.value.get()}});
+                structures.push_back(Object{{"id",QString::fromStdString(structure->name.value())},
+                    {"length_a",structure->cell.length_a.value.get()},
+                    {"length_b",structure->cell.length_b.value.get()},
+                    {"length_c",structure->cell.length_c.value.get()},
+                    {"gamma",structure->cell.angle_gamma.value.get()},
+                    {"sites",static_cast<int>(structure->atom_sites.size())},{"atom_rows",sites}});
+            }
+            for(const auto& entry:edi::parameter_entries(const_cast<edi::Project&>(model))) {
+                const auto& p=*entry.parameter;
+                parameters.push_back(Object{{"path",QString::fromStdString(entry.path)},
+                    {"category",QString::fromStdString(entry.category)},
+                    {"field",QString::fromStdString(entry.name)},
+                    {"value",p.value.get()},{"free",p.free.get()},{"refinable",entry.refinable},
+                    {"fit_blocker",static_cast<int>(p.fit_blocker)},
+                    {"fit_reason",QString::fromStdString(p.fit_reason)},
+                    {"dependence",static_cast<int>(p.dependence)}});
+            }
+            for(const auto& alias:model.aliases)
+                aliases.push_back(Object{{"id",QString::fromStdString(alias->id.value())},
+                    {"parameter",QString::fromStdString(alias->parameter_unique_name.get())}});
+            for(const auto& constraint:model.constraints)
+                constraints.push_back(Object{{"id",QString::fromStdString(constraint->id.value())},
+                    {"expression",QString::fromStdString(constraint->expression.get())},
+                    {"enabled",constraint->enabled.get()}});
             for(const auto& bank:model.experiments) {
                 Array points;
                 for(const auto& point:bank->background)
@@ -192,11 +226,16 @@ int main(int argc,char** argv) {
                         {"free",point->intensity.free.get()}});
                 backgrounds.push_back(Object{{"id",QString::fromStdString(bank->name.value())},
                     {"type",QString::fromStdString(bank->background_type)},
+                    {"mode",QString::fromStdString(edi::background_estimate_mode(*bank))},
+                    {"reflection_count",bank->reflections?static_cast<double>(bank->reflections->size()):0.0},
+                    {"reflection_sigma_count",bank->reflections?static_cast<double>(bank->reflections->intensity_meas_su.size()):0.0},
                     {"has_data",bank->data.has_value()},{"points",points}});
             }
             project={{"name",QString::fromStdString(model.metadata.name)},
                      {"path",observed->project()->path()},
                      {"structures",static_cast<int>(model.structures.size())},
+                     {"structure_rows",structures},{"parameters",parameters},
+                     {"aliases",aliases},{"constraints",constraints},
                      {"backgrounds",backgrounds},
                      {"calculating",observed->project()->calculating()},
                      {"cell_a",model.structures.empty()?QJsonValue():QJsonValue(model.structure().cell.length_a.value.get())},
@@ -385,6 +424,7 @@ int main(int argc,char** argv) {
             else result=fixture.dispatch(input);
             drain();
             auto output=fixture.snapshot();output["reply"]=result;output["ui"]=ui_snapshot();
+            output["test_storage"]=storage.path();
             output["state"]=observed ? Object{{"last_error",observed->assistant()->lastError()}} : QJsonValue();
             output["image_requests"]=urls.image_requests;output["activated_urls"]=urls.activated;
             output["image_url"]=QString("http://127.0.0.1:%1/untrusted.png").arg(urls.images.serverPort());
