@@ -290,7 +290,9 @@ for line in sys.stdin:
         assert not pending
         turn_number += 1
         turn_id = '019a0290-0000-7000-8000-' + f'{turn_number + 1:012d}'
-        calls = config['turns'][turn_number - 1]
+        # The finite test may configure calls after account bootstrap, before its first turn.
+        current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
+        calls = current['turns'][turn_number - 1]
         cursor['position'] = 0
         reply(request, {'turn': turn('inProgress')})
         notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
