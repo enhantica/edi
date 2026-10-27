@@ -91,7 +91,8 @@ EaComponents.ListView {
         // Before the first fit every flex column shares the row, as the base lays it out.
         if (equalColumns || fitted.length !== columns.length)
             return columns;
-        const fits = columns.map((w, i) => w === -1 || (i === 0 && w === numberColumnWidth));
+        // The row-number column keeps the width of its widest number, whichever rows are drawn.
+        const fits = columns.map(w => w === -1);
         const fitting = fits.filter(Boolean).length;
         const fixed = columns.reduce((sum, w, i) => sum + (w > 0 && !fits[i] ? w : 0), 0);
         const texts = fitted.reduce((sum, w, i) => sum + (fits[i] ? w : 0), 0);
@@ -111,25 +112,40 @@ EaComponents.ListView {
     // The spare width the last data column holds after its content, as empty space before the row buttons: its
     // cells keep their text where it fits, a right-aligned number by its neighbours.
     property real fillerWidth: 0
-    // Each padded cell's own right padding, by cell.
+    // Each padded cell's own paddings and alignment kind, by cell.
     property var basePaddings: new Map()
+    property var cellKinds: new Map()
+    // A cell's padding: its own, a spacing more on the side it aligns to, so a right-aligned number and a
+    // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it.
     function padForFiller(cell, column) {
-        if (!("rightPadding" in cell))
+        if (!("rightPadding" in cell) || "keepsAlignment" in cell)
             return;
         if (!basePaddings.has(cell))
-            basePaddings.set(cell, cell.rightPadding);
-        cell.rightPadding = basePaddings.get(cell) + (column === fillerIndex ? fillerWidth : 0);
+            basePaddings.set(cell, {
+                "left": cell.leftPadding,
+                "right": cell.rightPadding
+            });
+        const base = basePaddings.get(cell);
+        const kind = cellKinds.get(cell) ?? "";
+        const gap = EaStyle.Sizes.tableColumnSpacing;
+        cell.leftPadding = base.left + (kind === "text" ? gap : 0);
+        cell.rightPadding = base.right + (kind === "number" || kind === "check" ? gap : 0) + (column === fillerIndex ? fillerWidth : 0);
     }
     // A cell's kind, which sets how it aligns: a number, an icon or button, or text.
     function kindOf(cell) {
+        if ("checked" in cell && "horizontalAlignment" in cell)
+            return "check";
         if ("ring" in cell || "fontIcon" in cell)
             return "icon";
-        if ("number" in cell || "columnAlignment" in cell || ("numeric" in cell && cell.numeric))
+        if ("number" in cell || "columnAlignment" in cell || "item" in cell || ("numeric" in cell && cell.numeric))
             return "number";
         return "text";
     }
     function alignCell(cell, kind) {
-        const alignment = kind === "number" ? Text.AlignRight : kind === "icon" ? Text.AlignHCenter : Text.AlignLeft;
+        if ("keepsAlignment" in cell)
+            return;
+        cellKinds.set(cell, kind);
+        const alignment = kind === "number" || kind === "check" ? Text.AlignRight : kind === "icon" ? Text.AlignHCenter : Text.AlignLeft;
         if ("columnAlignment" in cell)
             cell.columnAlignment = alignment;
         else if ("horizontalAlignment" in cell)
