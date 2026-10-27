@@ -783,6 +783,16 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"latp-4-curves-off", {"chart.toolbar.structureCurves"}});
         steps_.push_back({"latp-5-reset", {"chart.toolbar.reset"}});
     }
+    // The excluded ranges on Stacked and the Map, shown and hidden (the owner, 2026-10-27): NCAF's five banks. Run only
+    // when asked (`--demo-only excluded-`).
+    if (only.startsWith(QLatin1String("excluded-"))) {
+        steps_.push_back({"excluded-1-stacked-shown", QStringList{"resize:1280x960", "theme:light"} + start +
+                                                          open_example("pd-neut-tof_ncaf-wish") +
+                                                          QStringList{"appBar.tab.experiment", "mainArea.experiment.tab.stacked"}});
+        steps_.push_back({"excluded-2-stacked-hidden", {"scanView.stacked.toolbar.includedRange"}});
+        steps_.push_back({"excluded-3-map-hidden", {"mainArea.experiment.tab.map"}});
+        steps_.push_back({"excluded-4-map-shown", {"scanView.map.toolbar.includedRange"}});
+    }
     // The owner's stray structure fill: ncaf's five banks, one structure, on log and square-root y with each
     // structure's curve off, then on and off again. Run only when asked (`--demo-only ncaf-`).
     if (only.startsWith(QLatin1String("ncaf-"))) {
