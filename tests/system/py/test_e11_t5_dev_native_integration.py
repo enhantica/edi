@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import time
+from operator import itemgetter
 from pathlib import Path
 
 import pytest
@@ -889,3 +890,146 @@ def test_actual_native_outgoing_context_keeps_published_single_crystal_measureme
         assert row['axis']['count'] == bank['reflection_count']
         assert row['peak_profile_options'] == [] and row['absorption_type_options'] == []
         assert row['background'] is None, 'SC context cannot advertise a powder background'
+
+
+def copied_point_project(tmp_path, mode):
+    project = tmp_path / 'structural-background-native'
+    shutil.copytree(
+        ROOT / 'tests/fixtures/background_estimate/projects/fitted-auto-line-segment', project
+    )
+    if mode == 'manual':
+        experiment = project / 'experiments/d20.edi'
+        text = experiment.read_text(encoding='utf-8')
+        assert text.count('_background_estimate.mode auto') == 1, (
+            'The independent saved fixture must expose its actual declared automatic mode'
+        )
+        experiment.write_text(
+            text.replace('_background_estimate.mode auto', '_background_estimate.mode manual'),
+            encoding='utf-8',
+        )
+    return project
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+@pytest.mark.parametrize('mode', ['auto', 'manual'])
+@pytest.mark.parametrize('operation', ['add', 'update', 'remove'])
+def test_native_point_operations_respect_automatic_owner_and_keep_free_flag_continuation(
+    main_actor,
+    tmp_path,
+    show_actions,
+    mode,
+    operation,
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = copied_point_project(tmp_path, mode)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    original = actor.last['ui']['project']
+    bank = original['backgrounds'][0]
+    assert bank['mode'] == mode and bank['type'] == 'line-segment'
+    points = bank['points']
+    assert len(points) >= 3, 'The saved fixture supplies removable interior points'
+    target = points[len(points) // 2]
+    arguments = {
+        'purpose': 'Exercise current native structural background ownership',
+        'experiment': bank['id'],
+        'operation': operation,
+    }
+    if operation == 'remove':
+        arguments['id'] = target['id']
+    elif operation == 'update':
+        arguments.update(
+            id=target['id'],
+            position=target['position'],
+            intensity=target['intensity'] + 0.375,
+            free=not target['free'],
+        )
+    else:
+        arguments.update(
+            id='explicit_added_point',
+            position=(points[0]['position'] + points[1]['position']) / 2,
+            intensity=points[0]['intensity'] + 0.375,
+            free=True,
+        )
+    flag = next(
+        row
+        for row in original['parameters']
+        if row['category'] == 'background'
+        and row['field'] == 'intensity'
+        and row['row_label'] == points[0]['id']
+    )
+    calls = [
+        {
+            'tool': 'edit_background',
+            'call_id': 'structural-native-' + operation,
+            'arguments': arguments,
+        },
+        {
+            'tool': 'set_free',
+            'call_id': 'allowed-free-after-structural-result',
+            'arguments': {
+                'purpose': 'Retain separately permitted ordinary free-flag semantics',
+                'flags': [{'path': flag['path'], 'free': not flag['free']}],
+            },
+        },
+        {
+            'tool': 'set_free',
+            'call_id': 'restore-permitted-free-flag',
+            'arguments': {
+                'purpose': 'Restore the original native flag through the same allowed operation',
+                'flags': [{'path': flag['path'], 'free': flag['free']}],
+            },
+        },
+        {
+            'tool': 'inspect_project',
+            'call_id': 'inspect-after-structural-and-flags',
+            'arguments': {'purpose': 'Continue with actual current native state'},
+        },
+    ]
+    actor.configure_turns([calls])
+    actor.connect()
+    actor.request('Respect the current automatic owner and retain allowed free-flag operations.')
+    actor.until(
+        lambda row: (
+            len(actor.responses()) == len(calls)
+            and row['ui']['state'] == 'idle'
+            and not row['ui']['project']['calculating']
+        )
+    )
+    responses = actor.responses()
+    for response in responses[1:]:
+        native_result(response)
+    current = actor.last['ui']['project']
+    assert current['structure_rows'] == original['structure_rows']
+    assert current['backgrounds'][0]['mode'] == mode
+
+    def unaffected(rows):
+        return {row['path']: row for row in rows if row['category'] != 'background'}
+
+    assert unaffected(current['parameters']) == unaffected(original['parameters'])
+    if mode == 'auto':
+        assert responses[0]['result']['success'] is False, (
+            'Automatic ownership must refuse native add/update/remove before any structural write'
+        )
+        assert current['backgrounds'] == original['backgrounds']
+        assert current['parameters'] == original['parameters']
+        for _ in range(2):
+            actor.command('undo')
+        actor.until(lambda row: not row['ui']['project']['calculating'])
+        assert actor.last['ui']['project']['can_undo'] == original['can_undo'], (
+            'After undoing the two real flag edits, a refused structural operation adds no Undo'
+        )
+        assert actor.last['ui']['project']['backgrounds'] == original['backgrounds']
+    else:
+        native_result(responses[0])
+        expected = [dict(row) for row in points]
+        if operation in {'update', 'remove'}:
+            expected = [row for row in expected if row['id'] != target['id']]
+        if operation != 'remove':
+            expected.append({
+                key: arguments[key] for key in ('id', 'position', 'intensity', 'free')
+            })
+        expected.sort(key=itemgetter('position'))
+        assert current['backgrounds'][0]['points'] == expected, (
+            'Manual native structural edits retain exact explicit operands and all unaffected rows'
+        )

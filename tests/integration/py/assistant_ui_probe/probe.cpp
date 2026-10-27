@@ -206,6 +206,7 @@ int main(int argc,char** argv) {
                 parameters.push_back(Object{{"path",QString::fromStdString(entry.path)},
                     {"category",QString::fromStdString(entry.category)},
                     {"field",QString::fromStdString(entry.name)},
+                    {"row_label",QString::fromStdString(entry.row_label)},
                     {"value",p.value.get()},{"free",p.free.get()},{"refinable",entry.refinable},
                     {"fit_blocker",static_cast<int>(p.fit_blocker)},
                     {"fit_reason",QString::fromStdString(p.fit_reason)},
