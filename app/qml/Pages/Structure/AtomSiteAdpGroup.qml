@@ -61,7 +61,7 @@ Column {
         }
         // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
         equalColumns: true
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), isoWidth, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
