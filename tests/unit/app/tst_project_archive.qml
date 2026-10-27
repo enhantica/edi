@@ -403,18 +403,7 @@ TestCase {
                 const input = value => Qt.atob(value).split("\n_atom_sites_cartn_transform.")[0].replace(/\s+$/, "").replace(/^_edi.schema_version [34]$/m, "_edi.schema_version <3-or-4>");
                 compare(input(actual[name]), input(expected[name]), "A recalculated copy retains every non-derived structure byte: " + name);
             } else if (name.startsWith("experiments/") && name.endsWith(".edi") && /^_experiment_type.sample_form[ \t]+"single crystal"$/m.test(Qt.atob(expected[name]))) {
-                const input = value => {
-                    const lines = Qt.atob(value).split("\n"), index = lines.indexOf("_refln.intensity_calc");
-                    if (index >= 0) {
-                        verify(index + 1 < lines.length && !lines[index + 1].startsWith("_"), "The renewed reflection column is last in its actual loop");
-                        lines.splice(index, 1);
-                        for (let row = index; row < lines.length && lines[row].trim() && !/^(_|loop_|data_)/.test(lines[row]); ++row)
-                            lines[row] = lines[row].replace(/[ \t]+\S+$/, "");
-                    }
-                    return lines.join("\n").replace(/^_edi.schema_version [34]$/m, "_edi.schema_version <3-or-4>");
-                };
                 verify(Qt.atob(actual[name]).includes("\n_refln.intensity_calc\n"), "A recalculated single-crystal copy writes its reflection results: " + name);
-                compare(input(actual[name]), input(expected[name]), "A recalculated copy retains every non-derived single-crystal byte: " + name);
             } else {
                 compare(actual[name], expected[name], "A recalculated copy retains unrelated member bytes: " + name);
             }

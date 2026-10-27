@@ -1,8 +1,8 @@
-"""Check a copy's renewed geometry with physical forms and a fresh-calculation invariant.
+"""Check renewed copy geometry and single-crystal results independently.
 
 The fresh engine calculation checks representation identity, not absolute physics.
-Cell transforms, operation membership, expanded positions and bond lengths below
-are checked independently from the written cell and atom coordinates.
+Cell metrics, geometry, observed thresholds and R factors also use explicit
+physical forms from the written inputs and ADR-0050.
 """
 
 import math
@@ -34,30 +34,38 @@ def input_bytes(body):
     return re.sub(rb'(?m)^_edi.schema_version [34]$', b'_edi.schema_version <3-or-4>', head)
 
 
+# Derived single-crystal units and reporting fields: ADR-0050.
+REFLECTION_COLUMNS = ('d_spacing', 'sin_theta_over_lambda', 'intensity_calc', 'include_status')
+REFLECTION_SCALARS = (
+    '_reflns.threshold_expression',
+    '_reflns.number_total',
+    '_reflns.number_gt',
+    '_refine_ls.number_reflns',
+    '_refine_ls.R_factor_all',
+    '_refine_ls.R_factor_gt',
+    '_refine_ls.wR_factor_all',
+    '_refine_ls.wR_factor_gt',
+    '_refine_ls.wR_factor_ref',
+)
+
+
 def reflection_input_bytes(body):
-    lines = body.splitlines(keepends=True)
-    header = b'_refln.intensity_calc\n'
-    if header in lines:
-        index = lines.index(header)
-        require(
-            index + 1 < len(lines) and not lines[index + 1].startswith(b'_'),
-            'The renewed reflection column is the last declared loop column',
-        )
-        del lines[index]
-        while index < len(lines) and lines[index].strip():
-            row = lines[index]
-            if row.startswith((b'_', b'loop_', b'data_')):
-                break
-            match = re.fullmatch(rb'(.*\S)[ \t]+\S+(\r?\n)?', row)
-            require(match is not None, 'Each calculated reflection retains its original input row')
-            lines[index] = match[1] + (match[2] or b'')
-            index += 1
-    return re.sub(
-        rb'(?m)^_edi.schema_version [34]$', b'_edi.schema_version <3-or-4>', b''.join(lines)
-    )
+    block = gemmi.cif.read_string(body.decode()).sole_block()
+    block.set_pair('_edi.schema_version', '4')
+    for tag in REFLECTION_SCALARS:
+        item = block.find_pair_item(tag)
+        if item is not None:
+            item.erase()
+    loop = block.find_mmcif_category('_refln.').loop
+    require(loop is not None, 'A single-crystal copy retains its actual reflection loop')
+    for key in REFLECTION_COLUMNS:
+        tag = '_refln.' + key
+        if tag in loop.tags:
+            loop.remove_column(tag)
+    return block.as_string().encode()
 
 
-def check_reflections(body, expected):
+def check_reflections(body, expected, *, cell=None, cutoff=None):  # noqa: PLR0914 - independent physical operands
     block = gemmi.cif.read_string(body.decode()).sole_block()
     values = list(block.find_values('_refln.intensity_calc'))
     require(
@@ -78,11 +86,78 @@ def check_reflections(body, expected):
                 'calculation from the unchanged written model',
             )
 
+    if cell is not None:
+        data = rows(block, '_refln')
+        for row in data:
+            indices = [int(row['_refln.index_' + axis]) for axis in 'hkl']
+            distance = cell.calculate_d(indices)
+            close_saved(row['_refln.d_spacing'], distance)
+            close_saved(row['_refln.sin_theta_over_lambda'], 1 / (2 * distance))
+        measured = np.array([number(row['_refln.intensity_meas']) for row in data])
+        sigma = np.array([number(row['_refln.intensity_meas_su']) for row in data])
+        require(
+            np.all(sigma > 0), 'The reporting witness has strictly positive measured uncertainties'
+        )
+        multiple = block.find_value('_reflns.threshold_sigma')
+        multiple = number(multiple) if multiple else 2
+        basis = (
+            gemmi.cif.as_string(block.find_value('_reflns.threshold_basis') or '') or 'intensity'
+        )
+        require(
+            basis in {'intensity', 'amplitude'}, 'The observed threshold has its declared basis'
+        )
+        observed = measured > (multiple if basis == 'intensity' else multiple / 2) * sigma
+        fitted = np.ones(len(data), dtype=bool) if cutoff is None else measured > cutoff * sigma
+        require(
+            [row['_refln.include_status'] for row in data]
+            == ['o' if value else '<' for value in observed],
+            'Every include status follows the independent declared observed threshold',
+        )
+        counts = {
+            '_reflns.number_total': len(data),
+            '_reflns.number_gt': int(observed.sum()),
+            '_refine_ls.number_reflns': int(fitted.sum()),
+        }
+        for tag, value in counts.items():
+            require(
+                int(block.find_value(tag)) == value,
+                'Every reflection count follows measured rows and the independent cutoff',
+            )
+        symbol = 'I' if basis == 'intensity' else 'F'
+        expression = f'{symbol}>{multiple:g}u({symbol})'
+        require(
+            gemmi.cif.as_string(block.find_value('_reflns.threshold_expression')) == expression,
+            'The saved threshold expression states the actual reporting choice',
+        )
+        calculated = np.asarray(expected)
+        for suffix, used in [
+            ('all', np.ones(len(data), dtype=bool)),
+            ('gt', observed),
+            ('ref', fitted),
+        ]:
+            obs, calc, uncertainty = measured[used], calculated[used], sigma[used]
+            amplitude = np.sqrt(np.maximum(obs, 0))
+            denominator = np.sum(amplitude)
+            r_factor = (
+                np.sum(np.abs(amplitude - np.sqrt(np.maximum(calc, 0)))) / denominator
+                if denominator
+                else 0
+            )
+            denominator = np.sum((obs / uncertainty) ** 2)
+            wr_factor = (
+                np.sqrt(np.sum(((obs - calc) / uncertainty) ** 2) / denominator)
+                if denominator
+                else 0
+            )
+            if suffix != 'ref':
+                close_saved(block.find_value('_refine_ls.R_factor_' + suffix), r_factor)
+            close_saved(block.find_value('_refine_ls.wR_factor_' + suffix), wr_factor)
+
 
 def close_saved(token, value):
     require(
         math.isclose(float(token), six_digits(float(value)), rel_tol=5e-12, abs_tol=1e-14),
-        'Written geometry follows the independent cell/coordinate form at six saved digits',
+        'Written derived values follow the independent physical form at six saved digits',
     )
 
 
@@ -186,9 +261,36 @@ def compare_members(before, after, directory, engine):
         elif name in calculated:
             require(
                 reflection_input_bytes(body) == reflection_input_bytes(actual),
-                'A recalculated copy retains every non-derived single-crystal byte',
+                'A recalculated copy retains every non-derived single-crystal field and row',
             )
-            check_reflections(actual, calculated[name])
+            block = gemmi.cif.read_string(actual.decode()).sole_block()
+            links = list(block.find_values('_linked_structure.structure_id'))
+            require(
+                len(links) == 1, 'The independent reflection metric has one declared structure'
+            )
+            structure = gemmi.cif.read_string(
+                after['structures/' + links[0] + '.edi'].decode()
+            ).sole_block()
+            cell = gemmi.UnitCell(
+                *(
+                    number(structure.find_value('_cell.' + key))
+                    for key in (
+                        'length_a',
+                        'length_b',
+                        'length_c',
+                        'angle_alpha',
+                        'angle_beta',
+                        'angle_gamma',
+                    )
+                )
+            )
+            analysis = gemmi.cif.read_string(
+                'data_analysis\n' + before['analysis/analysis.edi'].decode()
+            ).sole_block()
+            cutoff = analysis.find_value('_refine_ls.threshold_sigma')
+            check_reflections(
+                actual, calculated[name], cell=cell, cutoff=number(cutoff) if cutoff else None
+            )
             require(
                 actual == (output / name).read_bytes(),
                 'Copied reflection files equal the independently calculated representation',

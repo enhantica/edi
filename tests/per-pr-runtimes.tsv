@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-27T04:45:58Z
+# measured_utc = 2026-10-27T05:43:34Z
 #
-# Recorded from: measured test run (12 node(s) measured once, 16279 banked, 0 stale row(s) dropped)
-# Collected tests: 18748; with a reported duration: 10471
+# Recorded from: measured test run (4 node(s) measured once, 16291 banked, 0 stale row(s) dropped)
+# Collected tests: 18748; with a reported duration: 10475
 # Module-scoped fixture costs recorded: 93
 #
 # Breaches are decided PER TIER against the table
@@ -31,8 +31,8 @@
 # measurement nobody took and which passes every tier threshold.
 # inventory_python = 18748
 # inventory_cpp = 396
-# inventory_measured = 16291
-# inventory_unmeasured = 2853
+# inventory_measured = 16295
+# inventory_unmeasured = 2849
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
@@ -14412,10 +14412,10 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_
 1.920	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_project_actions]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:pd-neut-cwl_cosio-d20_scan-3f-folder]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:pd-neut-cwl_cosio-d20_scan-3f-zip]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-cwl_tb2ti2o7-heidi_basic-folder]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-cwl_tb2ti2o7-heidi_basic-zip]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-tof_taurine-senju-folder]
-UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-tof_taurine-senju-zip]
+3.500	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-cwl_tb2ti2o7-heidi_basic-folder]
+3.560	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-cwl_tb2ti2o7-heidi_basic-zip]
+4.520	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-tof_taurine-senju-folder]
+3.920	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_copy:sc-neut-tof_taurine-senju-zip]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_dialog_layout]
 2.840	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_folder_choice]
 1.200	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_save_pending]
