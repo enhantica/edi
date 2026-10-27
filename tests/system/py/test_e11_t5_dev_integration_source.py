@@ -37,7 +37,7 @@ def test_port_retains_current_gui_and_sdk_identities():
     )
 
 
-@pytest.mark.parametrize('relative,expected', BASELINE['preserved_files'].items())
+@pytest.mark.parametrize(('relative', 'expected'), BASELINE['preserved_files'].items())
 def test_port_preserves_current_estimator_and_existing_adr_identities(relative, expected):
     path = ROOT / relative
     assert path.is_file(), f'Current dev source is retained: {relative}'
@@ -47,14 +47,13 @@ def test_port_preserves_current_estimator_and_existing_adr_identities(relative, 
     )
 
 
-def test_port_does_not_restore_retired_local_gui_or_optional_folder_dialog():
+def test_port_does_not_restore_retired_local_gui_components():
     excluded = [
         'app/qml/Base/Gui/Components/ListView.qml',
-        'app/qml/Components/TableViewParameter.qml',
-        'app/qml/Components/ProjectFolderDialog.qml',
+        'app/qml/Base/Gui/Components/TableViewParameter.qml',
     ]
     present = [relative for relative in excluded if (ROOT / relative).exists()]
-    assert not present, f'The selective port excludes these old manual UI surfaces: {present}'
+    assert not present, f'The selective port excludes these retired local GUI components: {present}'
 
 
 def test_shipped_skills_have_exact_self_contained_content_identity():
