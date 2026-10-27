@@ -8,6 +8,8 @@
 #include <QRegularExpression>
 #include <algorithm>
 
+#include "edi/display.hpp"
+
 namespace edi_app {
 namespace {
 const QString unknown = QStringLiteral("__unknown__");
@@ -27,11 +29,11 @@ QString normalize(const QString& text) {
 QString label(const QString& value) {
     if (value == unknown) return ExampleListModel::tr("Not specified");
     if (value == QLatin1String("__not_applicable__"))
-        return ExampleListModel::tr("Not applicable");
+        return QString::fromStdString(edi::option_label("experiment_type.polarisation", "."));
     if (value == QLatin1String("refinement")) return ExampleListModel::tr("Fitting");
     if (value == QLatin1String("simulation")) return ExampleListModel::tr("Simulation");
-    // The dimensionality token's display name.
-    if (value == QLatin1String("1d")) return QStringLiteral("1D");
+    if (value == QLatin1String("1d"))
+        return QString::fromStdString(edi::option_label("experiment_type.dimensionality", "1d"));
     QString result = value;
     if (!result.isEmpty()) result[0] = result[0].toUpper();
     return result;
@@ -155,15 +157,6 @@ void ExampleListModel::setFilterValue(const QString& value) {
     refresh();
     emit filterValueChanged();
 }
-QString ExampleListModel::titleOf(const QString& id) const {
-    for (const auto& entry : entries_) {
-        if (entry.id == id) {
-            return entry.sample + QStringLiteral(" · ") + entry.origin;
-        }
-    }
-    return {};
-}
-
 void ExampleListModel::refresh() {
     const auto words = normalize(search_text_)
                            .split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);

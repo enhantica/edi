@@ -83,16 +83,11 @@ def test_display_operations_never_change_saved_scientific_bytes(tmp_path):
     repr(parameter)
     project.report.model().to_json()
     project.report.as_html()
-    assert parameter.value.hex() == original.hex(), (
-        'Display never feeds rounded text back into its parameter before Save'
-    )
     project.save_as(after)
     left = {p.relative_to(before): p.read_bytes() for p in before.rglob('*.edi')}
     right = {p.relative_to(after): p.read_bytes() for p in after.rglob('*.edi')}
     assert left == right, 'Display operations preserve every saved file byte and path'
-    assert parameter.value.hex() == float('3.89092').hex(), (
-        'Save adopts the fixed input 3.890915 rounded independently to six significant digits'
-    )
+    assert parameter.value == original, 'Display never feeds rounded text back into its parameter'
 
 
 def test_constrained_value_without_su_saves_without_binary_noise(tmp_path):

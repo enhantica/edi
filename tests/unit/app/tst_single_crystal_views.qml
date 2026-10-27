@@ -541,8 +541,8 @@ TestCase {
         const scale = Session.project.currentExperiment.scale;
         verify(scale.free, "The normal app fit must see the authored free scale parameter");
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
-        const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
-        verify(start !== null && start.enabled, "A measured single-crystal project with a free parameter must enable Start fitting");
+        const start = Ui.control(Probe, appWindow, "statusBar.fit.button");
+        verify(start !== null && start.clickable, "A measured single-crystal project with a free parameter must enable Start fitting");
         Ui.scrollIntoView(start);
         verify(waitForPolish(appWindow.contentItem), "The real Start fitting action must finish layout before input");
         const target = Ui.clickPoint(start);
@@ -764,8 +764,8 @@ TestCase {
         transientWarnings = 0;
         initialFitWarnings = Probe.rows(Session.loadWarnings).map(row => row.message);
         project.fit.patternUpdates = 1;
-        const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
-        verify(start !== null && start.enabled, "The loaded compound exercise must enable the real Start fitting action");
+        const start = Ui.control(Probe, appWindow, "statusBar.fit.button");
+        verify(start !== null && start.clickable, "The loaded compound exercise must enable the real Start fitting action");
         Ui.scrollIntoView(start);
         verify(waitForPolish(appWindow.contentItem), "The compound fit action must finish layout before input");
         const point = Ui.clickPoint(start);
@@ -988,8 +988,8 @@ TestCase {
         const project = Session.project;
         project.currentExperiment.scale.free = true;
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
-        const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
-        verify(start !== null && start.enabled, "The report witness must fit actual single-crystal reflections through Start fitting");
+        const start = Ui.control(Probe, appWindow, "statusBar.fit.button");
+        verify(start !== null && start.clickable, "The report witness must fit actual single-crystal reflections through Start fitting");
         Ui.scrollIntoView(start);
         verify(waitForPolish(appWindow.contentItem), "The report witness's fit action must settle before input");
         const point = Ui.clickPoint(start);

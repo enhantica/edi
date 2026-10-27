@@ -15,12 +15,9 @@ A scan is compared on its template file's single fit, as FullProf's reference is
 Bérar-Baldinozzi asymmetry differs in form between the programs has a FullProf fit with the
 asymmetry fixed at 0 beside its reference (``asymmetry-off/``): the full model is compared on
 R_wp and the number of free parameters only, and every shared value on the ``asymmetry-off``
-variant. A single-crystal case's record gives FullProf's values in edi's report labels and units
-(``report_values``, ``tools/cli_projects/catalogue_sc_references.py``), each compared within two of
-edi's uncertainties; a case whose model differs from FullProf's keeps edi's result as regression
-pins only, so a difference is never shown as agreement. A simulation pins the point count and the
-checksum ``python -m edi calc`` reports. A dropped example with no FullProf fit keeps edi's result
-as regression pins. The run's seconds are printed for ``runtimes.tsv``.
+variant. A simulation pins the point count and the checksum ``python -m edi calc`` reports. A
+dropped example with no FullProf fit keeps edi's result as regression pins. The run's seconds are
+printed for ``runtimes.tsv``.
 """
 
 from __future__ import annotations
@@ -208,19 +205,6 @@ def asymmetry_off_variant(case: str, start: Path, notes: list[str]) -> tuple[dic
     return {ASYMMETRY_OFF: block}, seconds
 
 
-def report_values(record: dict, machine: dict[str, str], case: str, notes: list[str]) -> dict:
-    """A single-crystal record's values, each within two of edi's uncertainties."""
-    quantities = {}
-    for label, reference in record['report_values'].items():
-        su = float(machine.get(f'param.{label}.uncertainty', 'nan'))
-        if not su > 0:
-            raise SystemExit(f'{case}: {label} has no edi uncertainty')
-        spec = quantity(reference['value'], 'reference', SIGMA_MULTIPLE * su, None)
-        quantities[f'param.{label}.value'] = spec
-        check(case, f'param.{label}.value', spec, float(machine[f'param.{label}.value']), notes)
-    return quantities
-
-
 def fitted(case: str, start: Path, notes: list[str]) -> tuple[dict, dict, float]:
     """The record's quantities and variants, and the seconds the fits took.
 
@@ -231,16 +215,6 @@ def fitted(case: str, start: Path, notes: list[str]) -> tuple[dict, dict, float]
     machine, seconds = machine_run(project)
     if not (FULLPROF / case / 'reference.json').exists():
         return pins_only(machine), {}, seconds
-    record = json.loads((FULLPROF / case / 'reference.json').read_text(encoding='utf-8'))
-    if 'models_differ' in record:
-        return pins_only(machine), {}, seconds
-    if 'report_values' in record:
-        quantities = n_free(case, record, machine, notes)
-        quantities['rwp'] = quantity(record['r_wp'], 'reference', None, RWP_TOLERANCE)
-        check(case, 'rwp', quantities['rwp'], float(machine['rwp']), notes)
-        quantities.update(report_values(record, machine, case, notes))
-        quantities.update(pins(machine))
-        return quantities, {}, seconds
     record, shared = references(case)
     quantities = n_free(case, record, machine, notes)
     quantities['rwp'] = quantity(record['r_wp'], 'reference', None, RWP_TOLERANCE)
@@ -283,20 +257,12 @@ def write(case: str, notes: list[str]) -> float:
             if scan:
                 fit_template_only(project)
             quantities, variants, seconds = fitted(case, project, notes)
-            reference = FULLPROF / case / 'reference.json'
-            differs = (
-                json.loads(reference.read_text(encoding='utf-8')).get('models_differ')
-                if reference.exists()
-                else None
-            )
-            referenced = reference.exists() and not differs
+            referenced = (FULLPROF / case / 'reference.json').exists()
             document = {
                 'schema': 1,
                 'source': {
                     'engine': 'FullProf 8.40 (references); edi (regression pins)'
                     if referenced
-                    else f'edi (regression pins; FullProf fits another model: {differs})'
-                    if differs
                     else 'edi (regression pins; no FullProf fit of this start)',
                     'artifact': f'../../../../knowledge/fitting/fullprof/{case}/reference.json'
                     if referenced

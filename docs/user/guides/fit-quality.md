@@ -40,10 +40,6 @@ counts are below 1, its factors carry that rounding.
   Al₂O₃, the PbSO₄ joint fit and the LATP scan) the factors below compare the full models, and each example's
   `expected.json` compares every other fitted value on a second fit of both programs with the asymmetry fixed at 0.
 - **Scans:** a scan is compared on its template file's single fit, the file the scan starts from.
-- **Single crystal:** the single-crystal examples fit structure factors, not a profile, so they have no rows here.
-  Each one's `expected.json` compares its fitted values with FullProf's fit from the same start, except
-  Tb₂Ti₂O₇: FullProf has no Becker-Coppens extinction, so the models differ and that example keeps edi's result
-  as regression pins.
 - **LATP:** the measured σ are small, so reduced χ² is of order 10⁸ and R<sub>exp</sub> rounds to 0.00 % in all
   programs.
 

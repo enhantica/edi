@@ -12,6 +12,8 @@
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
 
+#include "edi/palette.hpp"
+
 // What the app says about itself — its name, version and links. The only source of the identity the user
 // sees; the base's own fallback (gui-components ProjectConfig.js) is never shown.
 class ApplicationInfo : public QObject {
@@ -121,40 +123,60 @@ class ApplicationInfo : public QObject {
     // edi::element_of(typeSymbol) in `scheme` ("jmol" or "vesta", the structure view's) — or `fallback` for an
     // element the table does not have. The app holds no element colour of its own.
     QStringList elementSymbols() const;
-    // The experiment or structure at `place` among `count`, in the colour scheme `scheme` (a token of
-    // edi::colour_scheme_from_name, data/palettes; an unknown one reads as the default) and the theme:
-    // edi::pattern_colour and edi::structure_colour.
-    Q_INVOKABLE QColor patternColour(const QString& scheme, int place, int count, bool dark) const;
+    // The colour at `position` in the palette `scheme` (a token of edi::colour_scheme_from_name, data/palettes; another
+    // reads as edi::colour_scheme_or_default does), `count` one past the last position in use, in the theme:
+    // edi::figure_colour. The calculated curve's colour in the palette and theme: edi::role_colour.
+    Q_INVOKABLE QColor figureColour(const QString& scheme, int position, int count, bool dark) const;
+    Q_INVOKABLE QColor calculationColour(const QString& scheme, bool dark) const;
+    // How many colours a palette lists (edi::kPaletteColourCount), and whether it keeps its first two for experiments.
+    Q_PROPERTY(int paletteColourCount READ paletteColourCount CONSTANT)
+    int paletteColourCount() const { return static_cast<int>(edi::kPaletteColourCount); }
+    Q_INVOKABLE bool reservesExperimentColours(const QString& scheme) const;
     // A local file's path as the app shows it, and the URL of the folder it is in (the Preferences' settings file).
     Q_INVOKABLE QString localPath(const QUrl& file) const { return QDir::toNativeSeparators(file.toLocalFile()); }
     Q_INVOKABLE QUrl folderOf(const QUrl& file) const {
         return QUrl::fromLocalFile(QFileInfo(file.toLocalFile()).absolutePath());
     }
-    Q_INVOKABLE QColor structureColour(const QString& scheme, int place, int count, bool dark) const;
-    // The colour schemes' tokens and their titles, in the order Preferences lists them (edi::colour_scheme_names), and
-    // the token a stored preference stands for: itself, or the default's for an unknown or removed one.
+    // The palettes' tokens and their titles, in the order Preferences lists them (edi::colour_scheme_names), and the
+    // token a stored preference stands for (edi::colour_scheme_or_default).
     Q_PROPERTY(QStringList colourSchemes READ colourSchemes CONSTANT)
     Q_PROPERTY(QStringList colourSchemeTitles READ colourSchemeTitles CONSTANT)
     QStringList colourSchemes() const;
     QStringList colourSchemeTitles() const;
     Q_INVOKABLE QString colourSchemeOrDefault(const QString& scheme) const;
-    // A scan map's colour maps (edi::scan_colour_map_names, edi ADR-0041), and the one a stored name stands for: itself
-    // when listed, else viridis.
+    // The scan views' colour maps (edi::scan_colour_map_names, edi ADR-0041), and the one a stored name stands for:
+    // itself when listed, else Blue-Red.
     Q_PROPERTY(QStringList scanColourMaps READ scanColourMaps CONSTANT)
     QStringList scanColourMaps() const;
     Q_INVOKABLE QString scanColourMapOrDefault(const QString& name) const;
-    // The ramps from the chart's background to each colour scheme's first measured colour (`ramp:<scheme>`, in the
-    // schemes' order), which both scan views offer beside their own colours, and a colour choice's title: a scheme's, a
-    // map's with its source (edi::scan_colour_map_title), or "<scheme title> shades" for a ramp.
-    Q_PROPERTY(QStringList scanColourRamps READ scanColourRamps CONSTANT)
-    QStringList scanColourRamps() const;
+    // A colour choice's title: a palette's or a map's (edi::scan_colour_map_title).
     Q_INVOKABLE QString scanColourTitle(const QString& choice) const;
+    // The Map's directions (edi::scan_map_direction_names) and their titles, the one a stored name stands for (Auto for
+    // another), and whether `map` is drawn inverted in `direction` on `background` in the theme
+    // (edi::scan_map_inverted).
+    Q_PROPERTY(QStringList scanMapDirections READ scanMapDirections CONSTANT)
+    Q_PROPERTY(QStringList scanMapDirectionTitles READ scanMapDirectionTitles CONSTANT)
+    QStringList scanMapDirections() const;
+    QStringList scanMapDirectionTitles() const;
+    Q_INVOKABLE QString scanMapDirectionOrDefault(const QString& name) const;
+    Q_INVOKABLE bool scanMapInverted(const QString& map, const QString& direction, const QColor& background,
+                                     bool dark) const;
+    // The Stacked spacing steps (edi::stacked_spacing_names) and their titles, and a step's s (Wide's for another
+    // name).
+    Q_PROPERTY(QStringList stackedSpacings READ stackedSpacings CONSTANT)
+    Q_PROPERTY(QStringList stackedSpacingTitles READ stackedSpacingTitles CONSTANT)
+    QStringList stackedSpacings() const;
+    QStringList stackedSpacingTitles() const;
+    Q_INVOKABLE double stackedSpacingShare(const QString& name) const;
+    // `stops` colours sampled evenly along a map in the theme, from its low end to its high end, inverted when
+    // `inverted`: a colour bar's gradient.
+    Q_INVOKABLE QList<QColor> scanColourStops(const QString& map, bool dark, bool inverted, int stops = 16) const;
     // Where a window of `width` x `height` kept at `x`, `y` opens: there when that point is on a connected screen, else
     // centred on the primary screen's available area (a screen unplugged since).
     Q_INVOKABLE QPoint onScreenPosition(int x, int y, int width, int height) const;
     Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
                                     const QString& scheme = QStringLiteral("jmol")) const;
-    // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 3:1 contrast on each, its hue kept (edi
+    // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 2:1 contrast on each, its hue kept (edi
     // ADR-0047).
     Q_INVOKABLE QColor readableColour(const QColor& colour, const QList<QColor>& backgrounds) const;
 };

@@ -13,7 +13,6 @@ from tests.fixtures.background_estimate.settings import (
     require_reference,
     write_settings,
 )
-from tests.fixtures.project_save.reference import six_digits
 
 ROUNDTRIPS = [
     {**DEFAULTS, 'mode': 'manual', 'method': 'auto', 'use_model': 'subtract'},
@@ -181,10 +180,7 @@ def test_auto_point_flags_toggle_but_values_need_manual_before_calculation(tmp_p
         'An explicit Manual selection must persist with the permitted point edit'
     )
     project.analysis.calculate()
-    expected = [(x, six_digits(y), free) for x, y, free in edited]
-    assert points(project) == expected, (
-        'After Save a calculation retains the independently rounded Manual edit and flags'
-    )
+    assert points(project) == edited, 'A later calculation must retain the permitted Manual edit'
 
 
 def test_legacy_authored_settings_leave_new_optional_items_undeclared(tmp_path):

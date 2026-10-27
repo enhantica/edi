@@ -1209,6 +1209,10 @@ struct Parameter {
     // fittable).
     FitBlocker fit_blocker = FitBlocker::None;
     std::string fit_reason;
+    // Set with them: no enabled link reads the value (a disabled link's scale and texture, a structure no enabled link
+    // names). Its free flag is kept for when a link reads it again, so a fit leaves it out and neither a fit nor a load
+    // refuses or clears it.
+    bool fit_idle = false;
 
     Parameter() = default;
     Parameter(double value_, std::optional<double> esd_ = 0.0, bool free_ = false)
@@ -2761,7 +2765,6 @@ struct RowSchema<edi::AtomSite> {
     static constexpr const char* name = "_atom_site";
     static constexpr auto fields = std::tuple{&edi::AtomSite::id, &edi::AtomSite::type_symbol, &edi::AtomSite::wyckoff_letter, &edi::AtomSite::adp_type, &edi::AtomSite::fract_x, &edi::AtomSite::fract_y, &edi::AtomSite::fract_z, &edi::AtomSite::occupancy, &edi::AtomSite::adp_iso};
     static constexpr std::array items{"id", "type_symbol", "wyckoff_letter", "adp_type", "fract_x", "fract_y", "fract_z", "occupancy", "adp_iso"};
-    static constexpr std::array cif{"_atom_site_label", "_atom_site_type_symbol", "_atom_site_Wyckoff_symbol", "_atom_site_fract_x", "_atom_site_fract_y", "_atom_site_fract_z", "_atom_site_occupancy", "_atom_site_B_iso_or_equiv", "_atom_site_U_iso_or_equiv", "_atom_site_adp_type"};
 };
 
 // The columns of the `_atom_site_aniso` table.
@@ -2770,7 +2773,6 @@ struct RowSchema<edi::AtomSiteAniso> {
     static constexpr const char* name = "_atom_site_aniso";
     static constexpr auto fields = std::tuple{&edi::AtomSiteAniso::id, &edi::AtomSiteAniso::adp_11, &edi::AtomSiteAniso::adp_22, &edi::AtomSiteAniso::adp_33, &edi::AtomSiteAniso::adp_12, &edi::AtomSiteAniso::adp_13, &edi::AtomSiteAniso::adp_23};
     static constexpr std::array items{"id", "adp_11", "adp_22", "adp_33", "adp_12", "adp_13", "adp_23"};
-    static constexpr std::array cif{"_atom_site_aniso_label", "_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33", "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23", "_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33", "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23", "_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33", "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"};
 };
 }  // namespace crysta
 
@@ -3119,7 +3121,7 @@ struct RowSchema<edi::LineSegment> {
     static constexpr auto fields = std::tuple{&edi::LineSegment::id, &edi::LineSegment::position, &edi::LineSegment::intensity};
     static constexpr std::array items{"id", "position", "intensity"};
     static constexpr std::array legacy{"_pd_background", "_easydiffraction_background"};
-    static constexpr std::array cif{"_pd_background_line_segment_X", "_pd_background_line_segment_intensity"};
+    static constexpr std::array cif{"_pd_background_line_segment_intensity"};
     // The `_background.type` this table serves.
     static constexpr std::array variants{"line-segment"};
 };
@@ -4655,10 +4657,8 @@ inline void validate_sequential_data_dir(const std::string& data_dir, const std:
 // The top-level user object. calculate(tof_grid) runs the edi model through the crysta adapter and
 // returns the calculated intensity on the supplied TOF grid (len == tof_grid.size()); the grid is
 // the caller's argument (no measured data needed for a pure forward calculation).
-// The s.u. rule of a project that states none: always two digits (`iucr_99`).
-inline constexpr const char* kDefaultSuRule = "iucr_99";
-// The rule a report and its CIF round by, whatever the project's own: IUCr recommendation 12 (`iucr_19`).
-inline constexpr const char* kReportSuRule = "iucr_19";
+// The s.u. rule of a project that states none: IUCr recommendation 12 (`iucr_19`).
+inline constexpr const char* kDefaultSuRule = "iucr_19";
 
 class Project : public detail::ProjectAnchor {
    public:
@@ -4829,8 +4829,8 @@ class Project : public detail::ProjectAnchor {
     ItemVec<BraggPdExperiment> experiments;
     std::string fitting_mode;
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
-    // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
-    // recommendation 12), by crysta's rule.
+    // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits), by crysta's
+    // rule.
     std::string su_rule = kDefaultSuRule;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
@@ -4855,9 +4855,6 @@ class Project : public detail::ProjectAnchor {
     // so scan data are read in place and never copied. Forwarded to crysta's
     // Project::scan_data_root; never persisted.
     std::string scan_data_root;
-    // The .zip a project opened from an archive works for (edi ADR-0052): Python's `save()` writes `path` (the
-    // unpacked folder) and then rewrites this archive from it; empty for a project in a folder. Never persisted.
-    std::string archive;
     // diffraction-lib `Project.metadata` / `Project.name`: plain data, mirrored on crysta.
     // `load_project` and the binding's `save_as` keep metadata.path in step.
     ProjectMetadata metadata;
@@ -5248,7 +5245,6 @@ struct CellCategory {
     static constexpr const char* name = "_cell";
     static constexpr auto columns = std::tuple{&Cell::length_a, &Cell::length_b, &Cell::length_c, &Cell::angle_alpha, &Cell::angle_beta, &Cell::angle_gamma};
     static constexpr std::array items{"length_a", "length_b", "length_c", "angle_alpha", "angle_beta", "angle_gamma"};
-    static constexpr std::array cif{"_cell_length_a", "_cell_length_b", "_cell_length_c", "_cell_angle_alpha", "_cell_angle_beta", "_cell_angle_gamma"};
 };
 static_assert(detail::one_entry_per_column(CellCategory::columns, CellCategory::items));
 
@@ -5257,7 +5253,6 @@ struct SpaceGroupCategory {
     static constexpr const char* name = "_space_group";
     static constexpr auto columns = std::tuple{&SpaceGroup::name_h_m, &SpaceGroup::coord_system_code, &SpaceGroup::it_number};
     static constexpr std::array items{"name_h_m", "coord_system_code", "it_number"};
-    static constexpr std::array cif{"_space_group_name_H-M_alt", "_symmetry_space_group_name_H-M"};
 };
 static_assert(detail::one_entry_per_column(SpaceGroupCategory::columns, SpaceGroupCategory::items));
 
@@ -5266,7 +5261,6 @@ struct GeomCategory {
     static constexpr const char* name = "_geom";
     static constexpr auto columns = std::tuple{&Geom::min_bond_distance_cutoff, &Geom::bond_distance_inc};
     static constexpr std::array items{"min_bond_distance_cutoff", "bond_distance_inc"};
-    static constexpr std::array cif{"_geom_min_bond_distance_cutoff", "_geom_bond_distance_incr"};
 };
 static_assert(detail::one_entry_per_column(GeomCategory::columns, GeomCategory::items));
 
@@ -5521,8 +5515,8 @@ static_assert(detail::one_entry_per_column(MetadataCategory::columns, MetadataCa
 struct ProjectStateCategory {
     using Owner = Project;
     static constexpr const char* name = "project";
-    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root, &Project::archive};
-    static constexpr std::array items{"", "", ""};
+    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root};
+    static constexpr std::array items{"", ""};
 };
 static_assert(detail::one_entry_per_column(ProjectStateCategory::columns, ProjectStateCategory::items));
 

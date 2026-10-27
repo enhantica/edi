@@ -66,7 +66,7 @@ EaComponents.ApplicationWindow {
             fontIcon: "backspace"
             ToolTip.text: qsTr("Reset to initial state without project, model and data")
             Accessible.name: ToolTip.text
-            onClicked: AppState.afterChanges(() => AppState.reset())
+            onClicked: AppState.reset()
         }
     ]
 
@@ -103,21 +103,15 @@ EaComponents.ApplicationWindow {
             ToolTip.text: qsTr("Home page")
         },
         WorkflowTabButton {
-            id: projectTab
             objectName: "appBar.tab.project"
-            page: projectLoader
-            pageWanted: AppState.projectPageEnabled
-            enabled: AppState.projectPageEnabled && !preparing
+            enabled: AppState.projectPageEnabled
             fontIcon: "archive"
             text: qsTr("Project")
             ToolTip.text: qsTr("Project description page")
         },
         WorkflowTabButton {
-            id: structureTab
             objectName: "appBar.tab.structure"
-            page: structureLoader
-            pageWanted: AppState.structurePageEnabled
-            enabled: AppState.structurePageEnabled && !preparing
+            enabled: AppState.structurePageEnabled
             fontIcon: "layer-group"
             text: qsTr("Structure")
             ToolTip.text: qsTr("Crystal structure page")
@@ -125,104 +119,33 @@ EaComponents.ApplicationWindow {
         WorkflowTabButton {
             id: experimentTab
             objectName: "appBar.tab.experiment"
-            page: experimentLoader
-            pageWanted: AppState.experimentPageReached
-            enabled: AppState.experimentPageEnabled && !preparing
+            enabled: AppState.experimentPageEnabled
             fontIcon: "microscope"
             text: qsTr("Experiment")
             ToolTip.text: qsTr("Experimental settings and measured data page")
         },
         WorkflowTabButton {
-            id: analysisTab
             objectName: "appBar.tab.analysis"
-            page: analysisLoader
-            pageWanted: AppState.analysisPageReached
-            enabled: AppState.analysisPageEnabled && !preparing
+            enabled: AppState.analysisPageEnabled
             fontIcon: "calculator"
             text: qsTr("Analysis")
             ToolTip.text: qsTr("Simulation and fitting page")
         },
         WorkflowTabButton {
-            id: reportTab
             objectName: "appBar.tab.report"
-            page: reportLoader
-            pageWanted: AppState.reportPageReached
-            enabled: AppState.reportPageEnabled && !preparing
+            enabled: AppState.reportPageEnabled
             fontIcon: "clipboard-list"
             text: qsTr("Report")
             ToolTip.text: qsTr("Report of the work done")
         }
     ]
 
-    // edi ADR-0052: an opened project shows at once and its pages follow. Each page is built afresh for each project, in
-    // the background (asynchronous loaders, in time slices between frames), one after another in the order Project,
-    // Structure, Experiment, Analysis, Report; each tab is enabled once its page is ready. The pages let go of a project
-    // before it is replaced, so opening another one meanwhile drops what was being built for the first.
-    property bool pagesStarted: true
-    readonly property var pageLoaders: [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader]
-    // The opening's progress, which the status bar shows until every page is built.
-    readonly property int pagesWanted: Session.hasProject ? pageLoaders.filter(loader => loader.wanted).length : 0
-    readonly property int pagesBuilt: Session.hasProject ? pageLoaders.filter(loader => loader.wanted && loader.status === Loader.Ready).length : 0
-    function pageTurn(loader) {
-        return pagesStarted && pageLoaders.slice(0, pageLoaders.indexOf(loader)).every(earlier => !earlier.wanted || earlier.status === Loader.Ready);
-    }
-    Connections {
-        target: Session
-        function onProjectAboutToChange() {
-            window.pagesStarted = false;
-            // A page past Project is rebuilt later; its tab is disabled meanwhile, so the window shows Project.
-            if (window.appBarCentralTabs.currentIndex > 1)
-                window.appBarCentralTabs.setCurrentIndex(1);
-        }
-        function onProjectChanged() {
-            pagesStart.restart();
-        }
-    }
-    Timer {
-        id: pagesStart
-        interval: 0
-        onTriggered: window.pagesStarted = true
-    }
-
-    // A disabled tab takes no hover, so the preparing tabs' tooltip comes from here, over the whole tab bar.
-    Item {
-        id: tabBarOverlay
-
-        parent: window.appBarCentralTabs
-        anchors.fill: parent
-        z: 10
-
-        HoverHandler {
-            id: tabBarHover
-        }
-        readonly property WorkflowTabButton preparingTab: {
-            if (!tabBarHover.hovered)
-                return null;
-            for (const tab of [projectTab, structureTab, experimentTab, analysisTab, reportTab]) {
-                const point = tab.mapFromItem(tabBarOverlay, tabBarHover.point.position.x, tabBarHover.point.position.y);
-                if (tab.preparing && tab.contains(point))
-                    return tab;
-            }
-            return null;
-        }
-
-        // The app's own tooltip, as every other one (owner, 2026-10-25).
-        EaElements.ToolTip {
-            objectName: "appBar.preparingToolTip"
-            parent: tabBarOverlay.preparingTab !== null ? tabBarOverlay.preparingTab : tabBarOverlay
-            visible: tabBarOverlay.preparingTab !== null && EaGlobals.Vars.showToolTips
-            text: qsTr("Preparing this page…")
-        }
-    }
-
     contentArea: [
         HomePage {},
         Loader {
             id: projectLoader
 
-            readonly property bool wanted: AppState.projectPageEnabled
-            active: wanted && window.pageTurn(projectLoader)
-            asynchronous: true
+            active: AppState.projectPageEnabled
             sourceComponent: Component {
                 ProjectPage {
                     current: projectLoader.SwipeView.isCurrentItem
@@ -232,9 +155,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: structureLoader
 
-            readonly property bool wanted: AppState.structurePageEnabled
-            active: wanted && window.pageTurn(structureLoader)
-            asynchronous: true
+            active: AppState.structurePageEnabled
             sourceComponent: Component {
                 StructurePage {
                     current: structureLoader.SwipeView.isCurrentItem
@@ -244,9 +165,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: experimentLoader
 
-            readonly property bool wanted: AppState.experimentPageReached
-            active: wanted && window.pageTurn(experimentLoader)
-            asynchronous: true
+            active: AppState.experimentPageReached
             sourceComponent: Component {
                 ExperimentPage {
                     current: experimentLoader.SwipeView.isCurrentItem
@@ -256,9 +175,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: analysisLoader
 
-            readonly property bool wanted: AppState.analysisPageReached
-            active: wanted && window.pageTurn(analysisLoader)
-            asynchronous: true
+            active: AppState.analysisPageReached
             sourceComponent: Component {
                 AnalysisPage {
                     current: analysisLoader.SwipeView.isCurrentItem
@@ -268,9 +185,7 @@ EaComponents.ApplicationWindow {
         Loader {
             id: reportLoader
 
-            readonly property bool wanted: AppState.reportPageReached
-            active: wanted && window.pageTurn(reportLoader)
-            asynchronous: true
+            active: AppState.reportPageReached
             sourceComponent: Component {
                 ReportPage {
                     current: reportLoader.SwipeView.isCurrentItem
@@ -279,10 +194,7 @@ EaComponents.ApplicationWindow {
         }
     ]
 
-    statusBar: StatusBar {
-        pagesBuilt: window.pagesBuilt
-        pagesWanted: window.pagesWanted
-    }
+    statusBar: StatusBar {}
 
     AppPreferencesDialog {}
 
@@ -321,15 +233,24 @@ EaComponents.ApplicationWindow {
             window.saveProjectAs();
             return;
         }
-        // Where the browser keeps nothing, Save says so itself (webStorageUnavailable) with no error of its own.
-        if (!Session.save() && Session.lastError !== "")
+        if (!Session.save())
             saveError.open();
+        else if (WebFiles.available)
+            WebFiles.downloadProject(Session.project.path);
     }
-    // Save project as asks first, on every surface (edi ADR-0052 §6, §9). A browser that cannot write the disk offers
-    // only a copy as a .zip download (owner, 2026-10-25).
+    // In the browser (edi ADR-0023) a project saves into the page's memory under its name and goes to the
+    // user as a .zip download: no folder on the user's disk is reachable from the page.
     function saveProjectAs() {
-        if (Session.project !== null)
-            saveAsChoice.open();
+        if (Session.project === null)
+            return;
+        if (!WebFiles.available) {
+            saveFolder.open();
+            return;
+        }
+        if (Session.saveAs(WebFiles.saveLocation(Session.project.name)))
+            WebFiles.downloadProject(Session.project.path);
+        else
+            saveError.open();
     }
 
     // The sidebar reaches from the window's edge to the Experiment button's centre in the top bar (the owner,
@@ -355,211 +276,12 @@ EaComponents.ApplicationWindow {
         }
     }
 
-    // Unsaved changes are saved or discarded before the project is replaced, closed or the app quits (edi ADR-0052): a
-    // project's temporary folder goes with it.
-    property bool quitting: false
-    onClosing: close => {
-        if (!quitting && Session.project !== null && Session.project.modified) {
-            close.accepted = false;
-            AppState.afterChanges(() => {
-                window.quitting = true;
-                window.close();
-            });
-        }
-    }
-    Connections {
-        target: AppState
-        function onChangesQuestion(action) {
-            unsavedChanges.action = action;
-            unsavedChanges.open();
-        }
-    }
-    AppDialog {
-        id: unsavedChanges
-        objectName: "unsavedChanges"
-        property var action: null
-        title: qsTr("Save the changes?")
-        standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
-        // As wide as its line (owner, 2026-10-25).
-        contentWidth: unsavedRow.implicitWidth
-        contentHeight: unsavedRow.implicitHeight
-        // Save writes in place; a project with nowhere to write yet opens Save as, and the action waits for the user to
-        // ask again. In the web app the place is written after Save returns: the action waits until it is, and is
-        // dropped if it is not (the window says why).
-        property var afterSave: null
-        onAccepted: {
-            if (Session.needsSaveAs) {
-                window.saveProjectAs();
-            } else if (Session.save()) {
-                if (WebFiles.available)
-                    afterSave = action;
-                else
-                    Qt.callLater(action);
-            } else if (Session.lastError !== "") {
-                saveError.open();
-            }
-        }
-        Connections {
-            target: Session
-            function onWebSaveFinished(saved) {
-                const waiting = unsavedChanges.afterSave;
-                unsavedChanges.afterSave = null;
-                // An edit made while the place was written is asked about again.
-                if (saved && waiting !== null)
-                    AppState.afterChanges(waiting);
-            }
-        }
-        onDiscarded: {
-            close();
-            Session.discardKeptChanges();
-            Qt.callLater(action);
-        }
-
-        // The app's warning icon, then the project's name in bold (owner, 2026-10-25).
-        Row {
-            id: unsavedRow
-            spacing: EaStyle.Sizes.fontPixelSize * 0.5
-
-            EaElements.Label {
-                anchors.verticalCenter: parent.verticalCenter
-                font.family: EaStyle.Fonts.iconsFamily
-                color: EaStyle.Colors.orange
-                text: "exclamation-triangle"
-            }
-            EaElements.Label {
-                id: unsavedText
-                anchors.verticalCenter: parent.verticalCenter
-                textFormat: Text.StyledText
-                text: qsTr("The current project <b>%1</b> has unsaved changes.").arg(Session.project !== null ? Session.project.name.replace(/&/g, "&amp;").replace(/</g, "&lt;") : "")
-            }
-        }
-    }
-
-    // Save as (edi ADR-0052): first the format and whether to keep working where the project is (a copy), then the
-    // system's dialog for the folder or the .zip.
-    AppDialog {
-        id: saveAsChoice
-        objectName: "saveAs.choice"
-        enterAccepts: true
-        property bool zip: false
-        property bool copy: false
-        // A browser without the File System Access API writes no folder and moves no project onto the disk: a copy
-        // as a .zip download is all it offers.
-        readonly property bool diskWritable: !WebFiles.available || WebStorage.diskAccess
-        title: qsTr("Save project as")
-        standardButtons: Dialog.Ok | Dialog.Cancel
-        // About half the usual dialog width, never narrower than its content (owner, 2026-10-25).
-        contentWidth: Math.max(saveAsChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
-        contentHeight: saveAsChoiceColumn.implicitHeight
-        onAboutToShow: {
-            zip = !diskWritable;
-            copy = !diskWritable;
-        }
-        onAccepted: {
-            if (!diskWritable)
-                Session.downloadWebProject();
-            else if (WebFiles.available)
-                Session.saveWebProjectAs(zip ? "zip" : "folder", copy);
-            else if (zip)
-                saveZip.openAt(Session.suggestedSaveTarget(true));
-            else
-                saveFolder.openAt(Session.suggestedSaveTarget(false));
-        }
-
-        Column {
-            id: saveAsChoiceColumn
-
-            // Folder and Zip archive: one group, rows closer than the usual spacing, no heading (owner, 2026-10-25).
-            // A disabled button takes no hover, so its tooltip comes from the item around it.
-            Item {
-                implicitWidth: saveAsFolder.implicitWidth
-                implicitHeight: saveAsFolder.implicitHeight
-
-                ChoiceRadioButton {
-                    id: saveAsFolder
-                    objectName: "saveAs.folder"
-                    enabled: saveAsChoice.diskWritable
-                    text: qsTr("Folder")
-                    checked: !saveAsChoice.zip
-                    onClicked: saveAsChoice.zip = false
-                }
-                HoverHandler {
-                    id: saveAsFolderHover
-                }
-                EaElements.ToolTip {
-                    Component.onCompleted: contentItem.objectName = "saveAs.folderTooltip"
-                    text: saveAsChoice.diskWritable ? "" : qsTr("This browser cannot write a folder on your disk; Chrome and Edge can")
-                    visible: text !== "" && saveAsFolderHover.hovered && EaGlobals.Vars.showToolTips
-                }
-            }
-            ChoiceRadioButton {
-                objectName: "saveAs.zip"
-                text: qsTr("Zip archive")
-                checked: saveAsChoice.zip
-                onClicked: saveAsChoice.zip = true
-            }
-            // Set apart from the format.
-            Item {
-                width: 1
-                height: EaStyle.Sizes.fontPixelSize
-            }
-            EaElements.CheckBox {
-                objectName: "saveAs.copy"
-                enabled: saveAsChoice.diskWritable
-                text: qsTr("Save a copy")
-                checked: saveAsChoice.copy
-                onToggled: saveAsChoice.copy = checked
-                // The check box draws the app's tooltip from this text itself.
-                ToolTip.text: qsTr("Write the project there and keep working where it is")
-            }
-        }
-    }
-
-    // The project's folder by its name, as a file is named: the dialog is filled with the project's own name, in the
-    // folder it is in (owner, 2026-10-25); the folder is made if it is new.
-    FileDialog {
+    FolderDialog {
         id: saveFolder
-        function openAt(target) {
-            currentFolder = target.toString().substring(0, target.toString().lastIndexOf("/"));
-            selectedFile = target;
-            open();
-        }
-        title: saveAsChoice.copy ? qsTr("Save a copy of the project as a folder") : qsTr("Save the project as a folder")
-        fileMode: FileDialog.SaveFile
-        acceptLabel: qsTr("Save")
+        title: qsTr("Save the project into a directory")
         onAccepted: {
-            if (!Session.saveProjectAs(selectedFile, false, saveAsChoice.copy))
+            if (!Session.saveAs(selectedFolder))
                 saveError.open();
-        }
-    }
-
-    FileDialog {
-        id: saveZip
-        function openAt(target) {
-            currentFolder = target.toString().substring(0, target.toString().lastIndexOf("/"));
-            selectedFile = target;
-            open();
-        }
-        title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
-        fileMode: FileDialog.SaveFile
-        defaultSuffix: "zip"
-        nameFilters: [qsTr("Zip archives (*.zip)")]
-        acceptLabel: qsTr("Save")
-        onAccepted: {
-            if (!Session.saveProjectAs(selectedFile, true, saveAsChoice.copy))
-                saveError.open();
-        }
-    }
-
-    // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052).
-    DropArea {
-        anchors.fill: parent
-        onDropped: drop => {
-            if (drop.hasUrls && drop.urls.length > 0) {
-                drop.accept();
-                const url = drop.urls[0];
-                AppState.afterChanges(() => Session.openProject(url));
-            }
         }
     }
 
@@ -569,117 +291,6 @@ EaComponents.ApplicationWindow {
         function onFailed(request, message) {
             webFilesError.message = message;
             webFilesError.open();
-        }
-    }
-    // The web app's saves (edi ADR-0052 §9): where the project went, and what a failed write says.
-    Connections {
-        target: Session
-        // The first save of a project into the browser's storage warns in a dialog, later ones in the short notice
-        // (owner, 2026-10-25).
-        function onWebSaved(kind) {
-            if (kind !== "browser")
-                return;
-            if (browserSaved.warnedFor !== Session.project) {
-                browserSaved.warnedFor = Session.project;
-                browserSaved.kept = true;
-                browserSaved.open();
-            } else {
-                webNotice.show(qsTr("Saved in this browser only."));
-            }
-        }
-        function onWebStorageUnavailable() {
-            browserSaved.kept = false;
-            browserSaved.open();
-        }
-        // Handed to the browser, which may still ask whether to allow it: never "downloaded". Replacing the original
-        // is said only for a project opened from a file (owner, 2026-10-25).
-        function onWebDownloaded(name, fromFile) {
-            let text = qsTr("%1 was handed to the browser to download.").arg(name);
-            if (fromFile)
-                text += " " + qsTr("To replace the original file, have the browser ask where to save downloads and choose that file.");
-            webNotice.show(text);
-        }
-        function onWebSaveFailed(message) {
-            webFilesError.message = message;
-            webFilesError.open();
-        }
-    }
-    // Where a save into the browser's storage leaves the project: kept there, which the browser may clear, or, where it
-    // keeps nothing, only in this tab. Save project as… is the way onto the disk.
-    AppDialog {
-        id: browserSaved
-        objectName: "webStorageWarning"
-        enterAccepts: true
-        property var warnedFor: null
-        property bool kept: true
-        parent: Overlay.overlay
-        title: kept ? qsTr("Saved in this browser only") : qsTr("Not saved")
-        standardButtons: Dialog.Apply | Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: browserSavedRow.implicitHeight
-        Component.onCompleted: {
-            standardButton(Dialog.Apply).text = qsTr("Save project as…");
-            standardButton(Dialog.Apply).objectName = "webStorageWarning.saveAs";
-            standardButton(Dialog.Ok).objectName = "webStorageWarning.ok";
-        }
-        onApplied: {
-            close();
-            window.saveProjectAs();
-        }
-
-        Row {
-            id: browserSavedRow
-            spacing: EaStyle.Sizes.fontPixelSize * 0.5
-
-            // Centred on the text, however many lines it wraps to (owner, 2026-10-25).
-            EaElements.Label {
-                objectName: "webStorageWarning.icon"
-                anchors.verticalCenter: parent.verticalCenter
-                font.family: EaStyle.Fonts.iconsFamily
-                color: EaStyle.Colors.orange
-                text: "exclamation-triangle"
-            }
-            EaElements.Label {
-                objectName: "webStorageWarning.text"
-                width: browserSaved.contentWidth - x
-                wrapMode: Text.Wrap
-                // The way out in bold (owner, 2026-10-25).
-                textFormat: Text.StyledText
-                text: browserSaved.kept ? qsTr("Saved in this browser only. The browser may clear what it keeps; use <b>Save project as…</b> to keep a copy on your disk.") : qsTr("This browser keeps nothing for the app here (a private window, for example), so the project is only in this tab. Use <b>Save project as…</b> to keep it on your disk.")
-            }
-        }
-    }
-
-    // A short notice at the foot of the window, gone after a few seconds or on a click.
-    Popup {
-        id: webNotice
-        objectName: "webNotice"
-        property string text
-        function show(message) {
-            text = message;
-            open();
-            webNoticeTimer.restart();
-        }
-        parent: Overlay.overlay
-        x: Math.round((parent.width - width) / 2)
-        y: parent.height - height - EaStyle.Sizes.fontPixelSize * 3
-        width: Math.min(parent.width - EaStyle.Sizes.fontPixelSize * 4, EaStyle.Sizes.fontPixelSize * 40)
-        padding: EaStyle.Sizes.fontPixelSize
-        closePolicy: Popup.CloseOnPressOutside | Popup.CloseOnEscape
-        background: Rectangle {
-            color: EaStyle.Colors.dialogBackground
-            border.color: EaStyle.Colors.appBarBorder
-            radius: 2
-        }
-        contentItem: EaElements.Label {
-            objectName: "webNotice.text"
-            wrapMode: Text.Wrap
-            text: webNotice.text
-        }
-        Timer {
-            id: webNoticeTimer
-            interval: 8000
-            onTriggered: webNotice.close()
         }
     }
     AppDialog {
@@ -693,34 +304,9 @@ EaComponents.ApplicationWindow {
 
         EaElements.Label {
             id: webFilesErrorText
-            objectName: "webFiles.error.message"
             width: webFilesError.contentWidth
             wrapMode: Text.Wrap
             text: webFilesError.message
-        }
-    }
-
-    // A created project that could not be saved at its location stays open, unsaved; this says why. Here, not on the
-    // Project page, which the new project replaces.
-    Connections {
-        target: AppState
-        function onCreateFailed() {
-            createError.open();
-        }
-    }
-    AppDialog {
-        id: createError
-        objectName: "create.error"
-        title: qsTr("The project was not saved")
-        standardButtons: Dialog.Ok
-        contentWidth: AppSizes.messagesDialogContentWidth
-        contentHeight: createErrorText.implicitHeight
-
-        EaElements.Label {
-            id: createErrorText
-            width: createError.contentWidth
-            wrapMode: Text.Wrap
-            text: Session.lastError
         }
     }
 
@@ -797,13 +383,16 @@ EaComponents.ApplicationWindow {
             refusal.open();
         }
     }
+    // A finished fit opens its results unless the preferences say not to; the status bar's fit status opens them then.
     Connections {
         target: Session.project ? Session.project.fit : null
         function onFinished() {
-            fitResults.open();
+            if (Preferences.showFitResults)
+                fitResults.open();
         }
         function onScanFinished() {
-            fitResults.open();
+            if (Preferences.showFitResults)
+                fitResults.open();
         }
         function onRefused(message) {
             fitError.message = message;

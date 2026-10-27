@@ -116,19 +116,7 @@
           ]
         }
       ],
-      "row": "AtomSite",
-      "cif": [
-        "_atom_site_label",
-        "_atom_site_type_symbol",
-        "_atom_site_Wyckoff_symbol",
-        "_atom_site_fract_x",
-        "_atom_site_fract_y",
-        "_atom_site_fract_z",
-        "_atom_site_occupancy",
-        "_atom_site_B_iso_or_equiv",
-        "_atom_site_U_iso_or_equiv",
-        "_atom_site_adp_type"
-      ]
+      "row": "AtomSite"
     },
     {
       "name": "_atom_site_aniso",
@@ -229,28 +217,7 @@
           ]
         }
       ],
-      "row": "AtomSiteAniso",
-      "cif": [
-        "_atom_site_aniso_label",
-        "_atom_site_aniso_U_11",
-        "_atom_site_aniso_U_22",
-        "_atom_site_aniso_U_33",
-        "_atom_site_aniso_U_12",
-        "_atom_site_aniso_U_13",
-        "_atom_site_aniso_U_23",
-        "_atom_site_aniso_B_11",
-        "_atom_site_aniso_B_22",
-        "_atom_site_aniso_B_33",
-        "_atom_site_aniso_B_12",
-        "_atom_site_aniso_B_13",
-        "_atom_site_aniso_B_23",
-        "_atom_site_aniso_beta_11",
-        "_atom_site_aniso_beta_22",
-        "_atom_site_aniso_beta_33",
-        "_atom_site_aniso_beta_12",
-        "_atom_site_aniso_beta_13",
-        "_atom_site_aniso_beta_23"
-      ]
+      "row": "AtomSiteAniso"
     },
     {
       "name": "structure",
@@ -314,7 +281,6 @@
         "_easydiffraction_background"
       ],
       "cif": [
-        "_pd_background_line_segment_X",
         "_pd_background_line_segment_intensity"
       ],
       "variants": [
@@ -831,15 +797,7 @@
           ]
         }
       ],
-      "owner": "Cell",
-      "cif": [
-        "_cell_length_a",
-        "_cell_length_b",
-        "_cell_length_c",
-        "_cell_angle_alpha",
-        "_cell_angle_beta",
-        "_cell_angle_gamma"
-      ]
+      "owner": "Cell"
     },
     {
       "name": "_space_group",
@@ -867,11 +825,7 @@
           ]
         }
       ],
-      "owner": "SpaceGroup",
-      "cif": [
-        "_space_group_name_H-M_alt",
-        "_symmetry_space_group_name_H-M"
-      ]
+      "owner": "SpaceGroup"
     },
     {
       "name": "_geom",
@@ -892,11 +846,7 @@
           ]
         }
       ],
-      "owner": "Geom",
-      "cif": [
-        "_geom_min_bond_distance_cutoff",
-        "_geom_bond_distance_incr"
-      ]
+      "owner": "Geom"
     },
     {
       "name": "_experiment_type",
@@ -928,6 +878,20 @@
           "type": "std::optional<ScatteringTypeEnum>",
           "items": [
             "scattering_type"
+          ]
+        },
+        {
+          "member": "ExperimentType::dimensionality",
+          "type": "std::string",
+          "items": [
+            "dimensionality"
+          ]
+        },
+        {
+          "member": "ExperimentType::polarisation",
+          "type": "std::string",
+          "items": [
+            "polarisation"
           ]
         }
       ],
@@ -1278,6 +1242,20 @@
           "type": "OptionalParameter",
           "items": [
             "setup_wavelength_2_to_1_ratio"
+          ]
+        },
+        {
+          "member": "InstrumentBase::name",
+          "type": "std::string",
+          "items": [
+            "name"
+          ]
+        },
+        {
+          "member": "InstrumentBase::facility",
+          "type": "std::string",
+          "items": [
+            "facility"
           ]
         }
       ],
@@ -2099,11 +2077,6 @@
           "member": "Project::scan_data_root",
           "type": "std::string",
           "items": []
-        },
-        {
-          "member": "Project::archive",
-          "type": "std::string",
-          "items": []
         }
       ],
       "owner": "Project"
@@ -2815,6 +2788,11 @@
       "not_storage": "a parameter: the cells of one parameter column bundle"
     },
     {
+      "member": "Parameter::fit_idle",
+      "type": "bool",
+      "not_storage": "a parameter: the cells of one parameter column bundle"
+    },
+    {
       "member": "OptionalParameter::live_",
       "type": "std::shared_ptr<ParameterCell>",
       "not_storage": "one optional parameter, kept detached once removed (ADR-0012)"
@@ -3495,6 +3473,16 @@
       "category": "_experiment_type"
     },
     {
+      "member": "ExperimentType::dimensionality",
+      "type": "std::string",
+      "category": "_experiment_type"
+    },
+    {
+      "member": "ExperimentType::polarisation",
+      "type": "std::string",
+      "category": "_experiment_type"
+    },
+    {
       "member": "ExperimentType::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
@@ -3802,6 +3790,16 @@
     {
       "member": "InstrumentBase::setup_wavelength_2_to_1_ratio",
       "type": "OptionalParameter",
+      "category": "_instrument"
+    },
+    {
+      "member": "InstrumentBase::name",
+      "type": "std::string",
+      "category": "_instrument"
+    },
+    {
+      "member": "InstrumentBase::facility",
+      "type": "std::string",
       "category": "_instrument"
     },
     {
@@ -5115,11 +5113,6 @@
       "category": "project"
     },
     {
-      "member": "Project::archive",
-      "type": "std::string",
-      "category": "project"
-    },
-    {
       "member": "Project::metadata",
       "type": "ProjectMetadata",
       "holds": [
@@ -5253,15 +5246,6 @@
     "_easydiffraction_absorption": [
       "_absorption"
     ],
-    "_easydiffraction_background": [
-      "_background"
-    ],
-    "_easydiffraction_excluded_region": [
-      "_excluded_region"
-    ],
-    "_easydiffraction_experiment_type": [
-      "_experiment_type"
-    ],
     "_easydiffraction_extinction": [
       "_extinction"
     ],
@@ -5281,9 +5265,6 @@
       "_excluded_region"
     ],
     "_experiment_type": [
-      "_experiment_type"
-    ],
-    "_expt_type": [
       "_experiment_type"
     ],
     "_extinction": [
@@ -5337,21 +5318,8 @@
     "_pd_calib": [
       "_instrument"
     ],
-    "_pd_data": [
-      "_data"
-    ],
-    "_pd_meas": [
-      "_data_range",
-      "_data"
-    ],
-    "_pd_phase_block": [
-      "_linked_structure"
-    ],
     "_pd_pref_orient_March_Dollase": [
       "_preferred_orientation"
-    ],
-    "_pd_proc": [
-      "_data"
     ],
     "_peak": [
       "_peak"

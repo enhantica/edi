@@ -114,3 +114,57 @@ preserves adjacent project diagnostics and malformed lookalikes. Pure boundary
 cases exercise those refusals; actual startup values still come from the
 independent Qt observer. Sidebar gates use the actual selected tab and settled
 view, rather than accepting an empty filter for the former tab count.
+
+
+The wheel gate uses real input on the page-owned Stacked chart on Experiment and
+Analysis. Twelve independently authored triangles at 50% fixed height and 100%
+offset have baselines `i / 2` and top `6`. The wheel must move a span-one viewport
+from `[0, 1]` to `[5, 6]`, allow actual selection of the last triangle, and return
+to `[0, 1]` without resizing the traces.
+
+The joint-exclusion gate uses the saved two-bank joint project with independently
+specified TOF calibrations and disjoint native exclusions `[1213, 1513]` and
+`[5481, 6231]`. It checks both forced Stacked GPU and painter paths under Qt's
+normal capture API. At offset/height 100%/20% the vertical spans are `[0, .2]`
+and `[.2, .4]`; at 50%/40% they are `[0, .4]` and `[.2, .6]`. Interior pixels
+must be tinted and pixels immediately outside the corresponding extent must
+match untinted included columns away from the analytic triangle's peak. The
+expected spans never come from `rowOf`, `peakOf` or Map row extents. Pixel
+coordinates scale with the captured image, preserving DPR handling.
+
+`HiddenScanRedraws.qml` warms all four real page-owned scan views, then hides them
+through both actual page and tab navigation. It reloads both joint experiments
+from independently authored six-knot profiles twice while hidden, allowing
+completed frames after each change. Positive baseline 10 retains every point
+through the plain-data reader; plateaus 255 move from 20–30 through 35–45 to
+55–65 on the unchanged 10–80 x support, and back again in the tab case.
+Every hidden layer's `traceBuildCount` must remain unchanged. Showing just the
+target view must add exactly the dataset count, with no further increment on
+unchanged frames and no work in the other three hidden layers. No active flag
+or visibility override supplies the result. Actual input determines visibility.
+
+Current-point checks use real rendered pixels: Stacked has independently
+normalised half-height rows at full relative offset and must draw each latest
+rising edge while removing the old one; Map must move the frozen Viridis high
+and low colours to the latest and former plateau positions. The three-logical-
+pixel Stacked corridor covers its two-pixel pen and coordinate rounding, with
+RGB tolerance .09; flat Map plateaus use the frozen endpoints within 3/255 per
+channel. Both positive current ink and absence of old ink are required.
+
+The inactive-request matrix independently covers both pages, Stacked GPU,
+Stacked painter and Map, through three work-entry channels. It changes actual
+measured data while shown, proves Qt has queued polish without consuming it,
+and changes the real application page index in the same GUI turn before a
+frame can run; `ensurePolished()` then exercises any outstanding work. This
+uses the real page binding rather than assigning the layer's activity flag.
+The other channels switch both renderer directions and the public chart mode,
+issue direct update and QPainter requests while inactive, and resize the hidden
+view through actual window geometry changes before restoring its extent.
+
+Both `traceBuildCount` and `redrawCount` must remain unchanged while inactive.
+The latter observes GPU-line scene updates as well as the painted path. The
+existing passive `paintedInk` helper must positively see a shown painter/Map,
+then obtain zero ink when directly calling its real paint entry while inactive.
+Activation must add exactly one reduction per dataset, actually draw the latest
+independent shape, and leave both work counts unchanged on later unchanged
+frames. Requested activity values never supply the expected work result.

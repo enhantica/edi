@@ -554,9 +554,9 @@ class Report:
     ``save`` take the same keywords, each None keeping the stored setting and a given one
     replacing it for that call only; none of them
     changes a setting. Two more keywords are choices of the call alone, as the app makes them
-    from its Preferences and its Analysis page: ``colour_scheme``, a scheme's token as the app's
-    Preferences list them (by default ``'ediNatural'``; ``'ediCoast'``, ``'ediGarden'``,
-    ``'ediStudio'`` and ``'ediContrast'``, ``data/palettes/PROVENANCE.md``), and
+    from its Preferences and its Analysis page: ``colour_scheme``, a figure palette's token
+    (by default ``'earth'``; ``'classic'``, ``'soft'``, ``'natural'`` and ``'colourBlindSafe'``,
+    ``data/palettes/PROVENANCE.md``), and
     ``correlation_experiment``, the name of the experiment whose parameters the correlation chart
     shows in a fit of several (by default the first). ``check`` judges every saved report with
     those defaults, so a report is out of date only when the project changed.
@@ -1254,7 +1254,9 @@ class ExperimentFactory:
 
         diffraction-lib ``ExperimentFactory.from_cif_path``.
         """
-        return _experiment_from_edi_text(_Path(cif_path).read_text(encoding='utf-8'), str(cif_path))
+        return _experiment_from_edi_text(
+            _Path(cif_path).read_text(encoding='utf-8'), str(cif_path)
+        )
 
     @classmethod
     def from_data_path(

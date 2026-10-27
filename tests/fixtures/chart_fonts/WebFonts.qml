@@ -61,7 +61,7 @@ Window {
     }
     function snapshot() {
         let title;
-        if (currentCase.kind === "single") title = texts(chart).find(item => item.text === chart.quantity + " calc");
+        if (currentCase.kind === "single") title = named(chart, "singleCrystal.title.x");
         else if (currentCase.mode === "structure" || currentCase.kind === "correlations") title = named(reference, "chart.title.x");
         else title = named(chart, currentCase.kind === "powder" ? "chart.title.x" : currentCase.mode === "evolution" ? "evolution.title.x" : "scanView." + currentCase.mode + ".title.x");
         if (!title || !title.text) throw new Error("The actual axis-title reference is absent");
@@ -79,7 +79,9 @@ Window {
             const view = graph();
             fields.push(font(view.theme.axisXLabelFont, "x-theme"), font(view.theme.axisYLabelFont, "y-theme"));
             add(texts(view).filter(item => /[0-9]/.test(item.text)), "ticks");
-            add(texts(chart).filter(item => /(?:^chart|^evolution|^scanView\.[^.]+)\.title\./.test(item.objectName) || currentCase.kind === "single" && [chart.quantity + " calc", chart.quantity + " meas"].includes(item.text)), "titles");
+            const titles = currentCase.kind === "single" ? ["x", "y"].map(axis => named(chart, "singleCrystal.title." + axis)) : texts(chart).filter(item => /(?:^chart|^evolution|^scanView\.[^.]+)\.title\./.test(item.objectName));
+            if (titles.length < 2 || titles.some(item => !item || !item.visible || !(item.width > 0) || !(item.height > 0) || typeof item.text !== "string" || !item.text.length)) throw new Error("Each chart's own axis titles must be populated and actually shown");
+            add(titles, "titles");
             if (currentCase.pane === "bragg") {
                 const rows = objects(chart).filter(item => item.objectName === "chart.bragg.label" && item.visible);
                 counts.structures = rows.length;

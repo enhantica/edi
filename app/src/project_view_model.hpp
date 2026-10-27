@@ -201,6 +201,23 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // ADR-0017 §16: the structure view's options, one object for the open project, shared by the toolbar, the
     // Appearance group and every structure's view; a new project starts at the defaults.
     Q_PROPERTY(edi_app::StructureViewOptions* structureViewOptions READ structureViewOptions CONSTANT)
+    // ADR-0038: the palette the project's experiments and structures take their colours from (a token of
+    // edi::colour_scheme_from_name, the app's Preferences), and each block's position in it (edi::colour_positions):
+    // kept while the block exists, a new block taking the next free one, a loaded project's experiments first. The
+    // count is one past the last position in use, at least 1.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
+    Q_PROPERTY(QList<int> experimentColourPositions READ experimentColourPositions NOTIFY
+                   experimentColourPositionsChanged)
+    Q_PROPERTY(QList<int> structureColourPositions READ structureColourPositions NOTIFY
+                   structureColourPositionsChanged)
+    Q_PROPERTY(int colourPositionCount READ colourPositionCount NOTIFY colourPositionCountChanged)
+    // ADR-0031, ADR-0041: the scan views' settings a project keeps (the owner, 2026-10-26), in the app's settings keyed
+    // by its folder as its selection is, so it reopens with them: the Stacked spacing (a name of
+    // edi::stacked_spacing_names, Wide when none is kept) and the Map's direction (a name of
+    // edi::scan_map_direction_names, Auto when none is kept; the choice, never the direction it resolves to). A project
+    // not saved yet keeps them from its first save.
+    Q_PROPERTY(QString stackedSpacing READ stackedSpacing WRITE setStackedSpacing NOTIFY stackedSpacingChanged)
+    Q_PROPERTY(QString mapDirection READ mapDirection WRITE setMapDirection NOTIFY mapDirectionChanged)
 
    public:
     ProjectViewModel(edi::Project project, QObject* parent);
@@ -238,17 +255,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
     // project's directory; an empty string on success, else the core's message (also `lastError`).
     QString saveTo(const QString& directory);
-    // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
-    // (edi ADR-0052). Not a save and not an edit.
-    void workIn(const QString& folder);
-    // The model a save writes: a scan's template while a dataset is shown, else the project.
-    const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
-    // The project holds changes its place does not (the web app's kept unsaved state, reopened).
-    void markUnsaved() { setModified(true); }
-    // How many edits the project has had: a save that finishes later knows whether the project changed meanwhile.
-    quint64 revision() const { return revision_; }
-    // A save that wrote the project's own folder but not its archive or place: still unsaved, and not an edit.
-    void keepUnsaved();
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
@@ -281,6 +287,17 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool adjusting() const { return adjusting_; }
     void setAdjusting(bool adjusting);
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
+    QList<int> experimentColourPositions() const { return experiment_colour_positions_; }
+    QList<int> structureColourPositions() const { return structure_colour_positions_; }
+    int colourPositionCount() const;
+    // The experiments' positions, then the structures'.
+    std::vector<std::size_t> colourPositions() const;
+    QString stackedSpacing() const { return stacked_spacing_; }
+    void setStackedSpacing(const QString& spacing);
+    QString mapDirection() const { return map_direction_; }
+    void setMapDirection(const QString& direction);
     const QList<StructureViewModel*>& structureModels() const { return structure_models_; }
     const QList<ExperimentViewModel*>& experimentModels() const { return experiment_models_; }
     const edi::Project& project() const { return *project_; }
@@ -437,8 +454,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
-    // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
-    void edited();
     void refused(const QString& message);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
     void message(const QString& text);
@@ -457,6 +472,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void colourSchemeChanged();
+    void experimentColourPositionsChanged();
+    void structureColourPositionsChanged();
+    void colourPositionCountChanged();
+    // Any of the three changed: what the report and the experiments follow.
+    void colourPositionsChanged();
+    void stackedSpacingChanged();
+    void mapDirectionChanged();
     void calculationFinished();
 
    private:
@@ -595,8 +618,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void adoptScanFileResult(const std::string& file, const std::shared_ptr<const edi::ScanFileResult>& result);
     // The Correlations tab follows the last fit and the shown experiment.
     void syncCorrelations();
-    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's).
+    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's) and the positions
+    // its chart's style table takes.
     void syncPatternColours();
+    // Every block's position in the palette, after the blocks or the palette changed.
+    void syncColourPositions();
+    QString colour_scheme_ = QStringLiteral("earth");
+    QHash<const QObject*, std::size_t> colour_positions_;  // by the block's view-model
+    QList<int> experiment_colour_positions_, structure_colour_positions_;
+    // The scan views' kept settings: read when the project opens, written when changed and at every save.
+    void restoreViewSettings();
+    void storeViewSettings() const;
+    QString stacked_spacing_ = QStringLiteral("wide");
+    QString map_direction_ = QStringLiteral("auto");
     QStringList scan_columns_;
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;
@@ -629,6 +663,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Set at the start of the frame that takes a followed file's points; the render thread clears it once that frame is
     // synchronised, and the receipt follows on this thread.
     std::atomic<bool> render_synced_{false};
+    // The hand-over that frame takes: the receipt carries it and counts only while it is still the current one.
+    std::atomic<std::uint64_t> render_token_{0};
     QTimer render_wait_;
     QMetaObject::Connection render_connection_;
     QMetaObject::Connection render_sync_connection_;
@@ -688,7 +724,6 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool calculating_ = false;
     bool adjusting_ = false;
     bool modified_ = false;
-    quint64 revision_ = 0;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;

@@ -1,9 +1,0 @@
-{
-  "authority": "Catalogue identifiers for the three single-crystal examples",
-  "before_commit": "2d46f441",
-  "ids": {
-    "sc-neut-cwl_tb2ti2o7-heidi_fit": "sc-neut-cwl_tb2ti2o7-heidi",
-    "sc-neut-cwl_pr2nio4-5c2_fit": "sc-neut-cwl_pr2nio4-5c2",
-    "sc-neut-tof_taurine_fit": "sc-neut-tof_taurine-senju"
-  }
-}

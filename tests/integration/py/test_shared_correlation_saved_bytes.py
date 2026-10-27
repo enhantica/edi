@@ -7,7 +7,7 @@ import shutil
 import edi
 import pytest
 
-from tests.fixtures.report_units.iucr_reference import rounded_record, saved_record
+from tests.fixtures.report_units.iucr_reference import rounded_record
 from tests.fixtures.shared_correlations.freeze_saved import HERE, hashes, loop_bytes
 
 PROVENANCE = json.loads((HERE / 'saved-provenance.json').read_text())
@@ -57,11 +57,11 @@ def test_pre_change_correlation_bytes_survive_unchanged_reload(tmp_path, case):
     for name in ['once', 'twice']:
         destination = tmp_path / name
         loaded.save_as(destination)
-        assert (destination / 'analysis/analysis.edi').read_bytes() == saved_record(
+        assert (destination / 'analysis/analysis.edi').read_bytes() == rounded_record(
             analysis.read_bytes()
         ), (
-            'Saved real values, parameter s.u. and correlation '
-            'tokens receive the independent save spelling; all other bytes stay pinned'
+            'Before exact pre-change spelling; after only parameter s.u. and correlation '
+            'tokens receive independently calculated IUCr spelling; all other bytes stay pinned'
         )
         loaded = edi.Project.load(destination)
 

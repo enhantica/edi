@@ -72,7 +72,7 @@ def test_converged_artifacts_and_parameter_conventions_are_independent():
 def test_actual_taurine_fit_matches_all_fullprof_parameters_and_uncertainties(tmp_path):  # noqa: PLR0914
     record = json.loads((REFERENCE / 'reference.json').read_text())
     source = (
-        ROOT / 'docs/user/cli/sc-neut-tof_taurine-senju/project'
+        ROOT / 'docs/user/cli/sc-neut-tof_taurine_fit/project'
         if BACKEND == 'edi'
         else ROOT / 'tests/fitting' / CASE / 'project'
     )

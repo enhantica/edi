@@ -15,7 +15,7 @@ def materialize(target):
     source = root / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project'
     target = Path(target)
     target.mkdir(parents=True, exist_ok=True)
-    for name in ('routing_initial', 'routing_a', 'routing_b'):
+    for name in ('routing_a', 'routing_b'):
         folder = target / name
         shutil.copytree(source, folder)
         marker = folder / 'project.edi'

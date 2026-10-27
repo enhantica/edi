@@ -25,7 +25,6 @@ Each surface lists only its own column: the application's About window reads thi
 | llvm-openmp | 23.1.2 | Apache-2.0 WITH LLVM-exception | linked | — | linked | — | the LLVM OpenMP runtime (macOS) |
 | nanobind | 2.13.0 | BSD-3-Clause | — | — | compiled in | — | the Python bindings, compiled into the Python extension |
 | robin-map |  | MIT | — | — | compiled in | — | the hash map inside nanobind, compiled into the Python extension |
-| miniz | 3.0.2 | MIT | compiled in | compiled in | compiled in | — | reads and writes project .zip archives, compiled into edi's core |
 | Emscripten runtime | 4.0.7 | MIT AND Apache-2.0 WITH LLVM-exception | — | compiled in | — | — | the C and C++ runtime of the web build (Emscripten's libc from musl, libc++ and libc++abi from LLVM) |
 
 ## Application framework
@@ -38,11 +37,8 @@ Each surface lists only its own column: the application's About window reads thi
 | Qt Shader Tools | 6.11.2 | GPL-3.0-only | linked | compiled in | — | — | the shader tooling Qt Quick 3D uses; GPL-3.0 (COPYING) |
 | EasyScience gui-components |  | BSD-3-Clause | compiled in | compiled in | — | — | the base QML components and styles of the application |
 | pymatgen |  | MIT | compiled in | compiled in | compiled in | — | VESTA element colours and Shannon ionic radii in the element table, compiled into edi |
-| Scientific colour maps |  | MIT | compiled in | compiled in | compiled in | — | Fabio Crameri's batlow, oslo, lajolla, acton, devon and lapaz, candidates for the scan map's colours |
-| cmocean |  | MIT | compiled in | compiled in | compiled in | — | thermal, haline, deep, dense, ice and tempo, candidates for the scan map's colours |
-| Turbo |  | Apache-2.0 | compiled in | compiled in | compiled in | — | Google's Turbo colour map, a candidate for the scan map's colours |
-| ColorBrewer |  | Apache-2.0 | compiled in | compiled in | compiled in | — | the YlGnBu, PuBu, GnBu, Blues, Purples and YlOrRd schemes spread to 256 colours, candidates for the scan map's colours |
-| CET colour maps |  | CC-BY-4.0 | compiled in | compiled in | compiled in | — | Peter Kovesi's perceptually uniform maps L20, L08, L06, L17 and L18, candidates for the scan map's colours |
+| Scientific colour maps |  | MIT | compiled in | compiled in | compiled in | — | Fabio Crameri's batlow and lapaz, two of the scan views' colour maps |
+| ColorBrewer |  | Apache-2.0 | compiled in | compiled in | compiled in | — | the Greys scheme spread to 256 colours, one of the scan views' colour maps |
 | coi-serviceworker | 0.1.7 | MIT | — | bundled | — | — | the service worker that lets the web app use threads on a host without the needed headers |
 
 ## HTML report libraries

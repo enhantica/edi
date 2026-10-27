@@ -87,7 +87,6 @@
     "app/qml/Components/AppPreferencesDialog.qml",
     "app/qml/Components/SelectorField.qml",
     "app/qml/Globals/FitOutcomes.qml",
-    "app/qml/Globals/RecentProjects.qml",
     "app/qml/Pages/Analysis/FreeHeaderMenu.qml",
     "app/qml/Pages/Home/AboutDialog.qml",
     "app/qml/Pages/Project/BlockNames.qml",
@@ -347,25 +346,12 @@
   {
    "char": "…",
    "code": "U+2026",
-   "font": "PT Mono",
-   "sites": [
-    "app/qml/Components/StatusBar.qml"
-   ],
-   "drawn_by": "PT Mono",
-   "weight": 400
-  },
-  {
-   "char": "…",
-   "code": "U+2026",
    "font": "PT Sans",
    "sites": [
-    "app/qml/Components/StatusBar.qml",
-    "app/qml/Main.qml",
     "app/qml/Pages/Experiment/ExperimentsGroup.qml",
     "app/qml/Pages/Project/BlockNames.qml",
     "app/qml/Pages/Project/GetStartedGroup.qml",
-    "app/src/project_view_model.cpp",
-    "app/src/session.cpp"
+    "app/src/project_view_model.cpp"
    ],
    "drawn_by": "PT Sans",
    "weight": 400

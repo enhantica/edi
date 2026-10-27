@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "BSD-3-Clause"
 # The licences of the components the package carries (DEPENDENCIES.md), written by tools/licences/sync.py.
-license-files = ["LICENSE", "licenses/crysta-LICENSE", "licenses/SLEEF-LICENSE", "licenses/Eigen-LICENSE", "licenses/libgomp-LICENSE", "licenses/llvm-openmp-LICENSE", "licenses/nanobind-LICENSE", "licenses/robin-map-LICENSE", "licenses/miniz-LICENSE", "licenses/pymatgen-LICENSE", "licenses/Scientific-colour-maps-LICENSE", "licenses/cmocean-LICENSE", "licenses/Turbo-LICENSE", "licenses/ColorBrewer-LICENSE", "licenses/CET-colour-maps-LICENSE"]
+license-files = ["LICENSE", "licenses/crysta-LICENSE", "licenses/SLEEF-LICENSE", "licenses/Eigen-LICENSE", "licenses/libgomp-LICENSE", "licenses/llvm-openmp-LICENSE", "licenses/nanobind-LICENSE", "licenses/robin-map-LICENSE", "licenses/pymatgen-LICENSE", "licenses/Scientific-colour-maps-LICENSE", "licenses/ColorBrewer-LICENSE"]
 authors = [{ name = "Enhantica contributors" }]
 
 [tool.hatch.build.targets.wheel]

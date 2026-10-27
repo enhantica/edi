@@ -16,12 +16,7 @@ add_library(edi::core ALIAS edi_core)
 target_include_directories(edi_core
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniz
 )
-# miniz (core/third_party/miniz, edi ADR-0052) reads and writes project archives; without zlib's names it cannot
-# clash with the zlib Qt links.
-target_compile_definitions(edi_core PRIVATE MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
 # crysta's public headers use C++20 (e.g. <numbers>), so the core (which consumes them through the
 # adapter) compiles as C++20; the edi model surface itself stays plain value types.
 target_compile_features(edi_core PUBLIC cxx_std_20)

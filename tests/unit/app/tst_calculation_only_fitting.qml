@@ -85,7 +85,7 @@ TestCase {
         verify(waitForPolish(appWindow.contentItem), "The real Analysis table finishes layout");
     }
     function control(name) {
-        const item = Ui.find(Ui.page(appWindow), name, true);
+        const item = name.startsWith("statusBar.") ? Ui.control(Probe, appWindow, name) : Ui.find(Ui.page(appWindow), name, true);
         verify(item !== null, "The actual Analysis page exposes " + name);
         return item;
     }
@@ -133,11 +133,12 @@ TestCase {
     }
     function test_start(data) {
         open(false);
-        const fit = Session.project.fit, button = control("fitting.start");
+        const fit = Session.project.fit, button = control("statusBar.fit.button");
         if (data.route === "disabled") {
-            verify(!button.enabled && !fit.available, "A project without measured data disables both Start fitting and its application command");
+            verify(!button.clickable && !fit.available, "A project without measured data disables both Start fitting and its application command");
         } else if (data.route === "tooltip") {
-            verify(/measur/i.test(button.ToolTip.text) && /data/i.test(button.ToolTip.text), "Disabled Start fitting explains that a fit needs measured data");
+            compare(button.ToolTip.text, "Fit the free parameters", "The disabled status Fit retains the exact owner tooltip");
+            verify(/measur/i.test(fit.unavailableReason) && /data/i.test(fit.unavailableReason), "The unavailable model still explains the measured-data requirement");
         } else if (data.route === "hover-tooltip") {
             Ui.scrollIntoView(button);
             verify(waitForPolish(appWindow.contentItem), "The disabled fitting hover target completes its actual layout");
@@ -146,7 +147,7 @@ TestCase {
             const point = Ui.clickPoint(button);
             verify(point !== null, "The disabled fitting button remains reachable for its explanatory hover");
             mouseMove(button, point.x, point.y);
-            tryVerify(() => Probe.objectsWithProperty(button, "enterAnimationDuration").some(tip => tip.visible && tip.opened && tip.opacity >= 0.99 && View.textItems(tip.contentItem).some(item => /measur/i.test(item.text) && /data/i.test(item.text))), 3000, "Hovering disabled Start fitting actually displays the measured-data explanation");
+            tryVerify(() => Probe.objectsWithProperty(button, "enterAnimationDuration").some(tip => tip.visible && tip.opened && tip.opacity >= 0.99 && View.textItems(tip.contentItem).some(item => item.text === "Fit the free parameters")), 3000, "Hovering disabled Start fitting displays the owner tooltip when preferences enable it");
         } else {
             running.clear();
             const status = fit.status;
@@ -157,7 +158,7 @@ TestCase {
                     Ui.scrollIntoView(button);
                     appWindow.requestActivate();
                     button.forceActiveFocus();
-                    tryVerify(() => !button.enabled || button.activeFocus, 1000, "An enabled fitting button receives focus before the independent keyboard attempt");
+                    tryVerify(() => !button.clickable || button.activeFocus, 1000, "An enabled fitting button receives focus before the independent keyboard attempt");
                     verify(SettingsProof.key(button, Qt.Key_Space), "The fitting keyboard attempt sends Space to the actual application window");
                 } else
                     input(button);
@@ -284,7 +285,7 @@ TestCase {
         verify(capture.openGL && capture.saved, "The editable calculation-only pattern retains a real OpenGL capture");
     }
     function measuredControls(edit) {
-        verify(control("fitting.start").enabled && Session.project.fit.available, "At least one measured experiment enables Start fitting without a restart");
+        verify(control("statusBar.fit.button").clickable && Session.project.fit.available, "At least one measured experiment enables Start fitting without a restart");
         scaleRow();
         verify(control("parameters.free.0").enabled && control("parameters.freeHeader").interactionEnabled === true, "Measured data enables both the free column and its bulk header");
         if (!edit)
@@ -330,7 +331,7 @@ TestCase {
             verify(project.currentExperiment.calculationOnly, "Removing the last measured experiment leaves only a calculation-only experiment");
         } else
             return;
-        verify(!control("fitting.start").enabled && !project.fit.available, "Removing the last measured data disables fitting again in the same application project");
+        verify(!control("statusBar.fit.button").clickable && !project.fit.available, "Removing the last measured data disables fitting again in the same application project");
         scaleRow();
         verify(!control("parameters.free.0").enabled && control("parameters.freeHeader").interactionEnabled === false, "Removing the last measured data disables free edits again without a restart");
     }
@@ -340,7 +341,7 @@ TestCase {
         verify(Session.project.createExperiment(), "The mixed control adds a real calculation-only experiment beside measured data");
         ready();
         verify(Session.project.currentExperiment.calculationOnly, "The mixed witness selects its calculation-only experiment");
-        verify(control("fitting.start").enabled && Session.project.fit.available, "Measured data anywhere in the project enables fitting even when the selected experiment is calculation-only");
+        verify(control("statusBar.fit.button").clickable && Session.project.fit.available, "Measured data anywhere in the project enables fitting even when the selected experiment is calculation-only");
         Session.project.currentExperimentIndex = 0;
         ready();
         running.clear();

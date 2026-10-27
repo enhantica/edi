@@ -14,10 +14,10 @@
 
 include(FetchContent)
 
-set(EDI_GUI_COMPONENTS_SHA b008de4eab7a753d281c663c74419302dc9cbeb6)  # head of the edi branch, ADR-0015
-set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 d8c70a7deae7f1beef8fa69cd7c6ecdb7142f006ba1d67661b7eca20aa62a095)
+set(EDI_GUI_COMPONENTS_SHA bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1)  # head of the edi branch, ADR-0015
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 4a91484651c78fcc639007b0144c349f8c5c87a9d5a98a85dfb8088947204f35)
 # Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
-set(EDI_GUI_COMPONENTS_SRC_SHA256 5585836fccc7cb02f1582ffac42c10ba861cfd897f7ffe284a8c0c172091d1c9)
+set(EDI_GUI_COMPONENTS_SRC_SHA256 c61364b60961098a49cad8b1c1e0c8681ab2e510611f900fa7339c9b3c8984f2)
 
 if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
     message(STATUS "gui-components: fetching the pinned archive ${EDI_GUI_COMPONENTS_SHA} (8 MB, once per build tree)")
@@ -25,7 +25,9 @@ endif()
 FetchContent_Declare(gui_components
     URL https://github.com/easyscience/gui-components/archive/${EDI_GUI_COMPONENTS_SHA}.tar.gz
     URL_HASH SHA256=${EDI_GUI_COMPONENTS_ARCHIVE_SHA256}
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    # Extracted files take the extraction time, not the archive's: after a pin move an existing build tree then embeds
+    # and compiles the new QML, where older times left its resources holding the previous files.
+    DOWNLOAD_EXTRACT_TIMESTAMP FALSE
     INACTIVITY_TIMEOUT 60
     TIMEOUT 600
     SOURCE_SUBDIR no-cmake-build  # upstream has no CMakeLists.txt; the modules are declared below
@@ -75,8 +77,8 @@ set(EDI_GUI_BASE_DIR ${gui_components_SOURCE_DIR}/src/EasyApplication)
 
 # One base module: its QML types, singletons and JavaScript files, all read from the pinned tree, except
 # the names in REPLACED, which edi builds from app/qml/Base/<subdir>/ in their place (Style/Fonts for edi's font set,
-# Style/Sizes for a sidebar width the app window sets, Elements/TextInput for its focused colour, Elements/ToolTip for
-# its wrapped text; ADR-0015 §10, ADR-0029).
+# Style/Sizes for a sidebar width the app window sets, Elements/TextInput for its focused colour; ADR-0015 §10,
+# ADR-0029).
 function(edi_gui_base_module target uri subdir)
     cmake_parse_arguments(ARG "" "" "TYPES;SINGLETONS;SCRIPTS;REPLACED" ${ARGN})
     set(files)
@@ -131,7 +133,7 @@ edi_gui_base_module(edi_gui_elements EasyApplication.Gui.Elements Gui/Elements
           MenuItem ParamComboBox Parameter ParamTextField RadioButton RemotePointer RunningLabel
           ScrollBar ScrollIndicator SideBarButton Slider SliderHandle SpinBox StatusBar
           StatusBarItem TabBar TabButton TextArea TextField TextInput ToolButton ToolTip ToolTipShadow
-    REPLACED ParamTextField TextInput ToolTip)
+    REPLACED ParamTextField TextInput)
 # Left out of Components: BasicReport (QtWebEngine), GuideWindow and GuideWindowContainer (they need a
 # host `Gui.Globals` module), JsonListModel (the dict/JSON model edi does not use).
 edi_gui_base_module(edi_gui_components EasyApplication.Gui.Components Gui/Components

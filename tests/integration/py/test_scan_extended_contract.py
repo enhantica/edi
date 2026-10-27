@@ -552,7 +552,6 @@ def assert_stale_marker(consumer, results=None):
 
 
 def test_old_scan_results_are_retained_with_out_of_date_state():
-    assert_stale_marker(item(source('qml/Components/StatusBar.qml'), 'statusBar.fit'))
     assert_stale_marker(evolution_component())
 
 
@@ -596,39 +595,11 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
         'Working-copy wiring: each copied destination preserves the path '
         'beneath the opened target',
     )
-    qml = source('qml/Main.qml')
-    action = block(qml, 'function saveProjectAs(')
-    require(
-        action,
-        r'saveAsChoice\.open\(\)',
-        'Save As wiring: every platform first opens the actual format dialog',
-    )
-    choice = item(qml, 'saveAs.choice')
-    accepted = block(choice, 'onAccepted:')
-    for route in (
-        r'Session\.downloadWebProject\(\)',
-        r'Session\.saveWebProjectAs\(',
-        r'saveZip\.openAt\(Session\.suggestedSaveTarget\(true\)\)',
-        r'saveFolder\.openAt\(Session\.suggestedSaveTarget\(false\)\)',
-    ):
-        require(
-            accepted,
-            route,
-            'Save As wiring: acceptance must reach each declared platform destination',
-        )
     saver = block(session, 'bool Session::saveAs(')
     require(
         saver,
-        r'saveInto\(directory\.toLocalFile\(\)\)',
-        (
-            'Save As wiring: the actual action passes the selected directory '
-            'through the common writer'
-        ),
-    )
-    require(
-        block(session, 'bool Session::saveInto('),
-        r'project_->saveTo\(folder\)',
-        'Save As wiring: the common writer saves the current working project',
+        r'project_->saveTo\(directory\.toLocalFile\(\)\)',
+        'Save As wiring: the actual action saves the current working project',
     )
     model = block(source('src/project_view_model.cpp'), 'QString ProjectViewModel::saveTo(')
     require(
@@ -740,6 +711,10 @@ function(target_link_libraries target)
    endif()
   endif()
  endforeach()
+endfunction()
+function(qt_add_shaders target resource)
+ # ShaderTools compiles graphics assets, outside this example-resource inventory.
+ # Production still calls the real required Qt command without a fallback.
 endfunction()
 function(qt_add_resources target resource)
  cmake_parse_arguments(ARG "" "PREFIX;BASE" "FILES;OPTIONS" ${{ARGN}})

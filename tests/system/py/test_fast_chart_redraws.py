@@ -13,6 +13,8 @@ CASES = [
     'test_gpu_backend',
     'test_adaptive_is_retained',
     *[f'test_placement:{count}' for count in (1, 3, 324)],
+    *[f'test_wheel_reaches_last_dataset:{page}' for page in ('experiment', 'analysis')],
+    *[f'test_joint_exclusions_follow_placement:{mode}' for mode in ('gpu', 'software')],
     *[f'test_highlight:{mode}' for mode in ('stacked', 'map')],
     *[f'test_hover_tooltip:{mode}' for mode in ('stacked', 'map')],
     *[

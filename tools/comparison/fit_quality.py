@@ -123,24 +123,18 @@ def read_prf(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
 
 
 def measured_cases(root: Path) -> list[str]:
-    """The catalogue's powder cases with measured data, in registry order.
-
-    A single-crystal case fits structure factors, not a profile; its ``expected.json`` compares it
-    with FullProf's fit from the same start instead.
-    """
+    """The catalogue's cases with measured data (an experiment with a data loop), in order."""
     rows = yaml.safe_load((root / REGISTRY).read_text(encoding='utf-8'))['projects']
     cases = []
     for row in rows:
         if row.get('user-facing') is not True:
             continue
-        project = root / REGISTRY.parent / row['id'] / 'project'
-        if re.search(
-            r'(?m)^_experiment_type\.sample_form "single crystal"$',
-            ''.join(path.read_text('utf-8') for path in (project / 'experiments').glob('*.edi')),
+        experiments = (root / REGISTRY.parent / row['id'] / 'project' / 'experiments').glob(
+            '*.edi'
+        )
+        if any(
+            re.search(r'(?m)^_(data|refln)\.', path.read_text('utf-8')) for path in experiments
         ):
-            continue
-        text = (project / 'project.edi').read_text('utf-8')
-        if not re.search(r'(?m)^_metadata\.purpose "?simulation"?$', text):
             cases.append(str(row['id']))
     return cases
 

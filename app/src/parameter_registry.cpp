@@ -210,8 +210,21 @@ void ParameterRegistry::refreshFittability(edi::Project& project) {
             continue;
         }
         const edi::Parameter& parameter = *item->parameter();
+        // The show-filters' groups (edi ADR-0053 §7). A value crysta cannot vary yet goes with those this fit's data
+        // cannot determine: symmetry allows both, and only this fit keeps them fixed.
+        const int group = [&parameter] {
+            switch (parameter.fit_blocker) {
+                case edi::FitBlocker::Data:
+                case edi::FitBlocker::Capability: return ParameterItem::NotMeasured;
+                case edi::FitBlocker::Symmetry: return ParameterItem::BySymmetry;
+                case edi::FitBlocker::Constraint: return ParameterItem::ByConstraint;
+                case edi::FitBlocker::Descriptor: return ParameterItem::FixedSetting;
+                case edi::FitBlocker::None: break;
+            }
+            return ParameterItem::NoGroup;
+        }();
         item->setFittability(parameter.fit_blocker == edi::FitBlocker::None,
-                             QString::fromStdString(parameter.fit_reason));
+                             QString::fromStdString(parameter.fit_reason), group);
     }
 }
 

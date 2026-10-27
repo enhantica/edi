@@ -646,10 +646,7 @@ CASES = {
         'result': (
             'From this start edi converges in 12 iterations to reduced χ² 1.33 over the 220 '
             'reflections (R(F²) 2.42 %), with the scale 5.899(35), the domain radius 3.0(18) μm '
-            'and the mosaic spread 2732(93) rad⁻¹. FullProf 8.40 from the same start has no '
-            'Becker-Coppens model and fits its own empirical extinction instead: 15 cycles to χ² '
-            '1.41, RF2w 2.98 %, the scale 6.00(4). The models differ, so its values are a '
-            'comparison, not a reference.'
+            'and the mosaic spread 2732(93) rad⁻¹.'
         ),
     },
     'sc-neut-cwl_pr2nio4-5c2': {
@@ -691,9 +688,8 @@ CASES = {
         ],
         'result': (
             'From this start edi converges in 11 iterations to reduced χ² 9.75 over the 198 '
-            'reflections, with the scale 4.022(28). FullProf 8.40 from the same start, with β '
-            'tensors, converges in 14 cycles to χ² 9.69 and the scale 4.022(28) on this occupancy '
-            "scale; all 23 values agree within 0.01 of edi's s.u."
+            "reflections, with the scale 4.022(28). FullProf's fit of the same reflections with "
+            'β tensors reports χ² 9.96 and the scale 4.031(36) on this occupancy scale.'
         ),
     },
     'sc-neut-tof_taurine-senju': {
@@ -752,11 +748,11 @@ CASES = {
         ],
         'result': (
             'From this start edi converges in 8 iterations to reduced χ² 30.27, wR(F²) 12.2 %, '
-            'over the same 947 reflections FullProf fits (FullProf 8.40 from the same start, '
-            'converged in 40 cycles: χ² 30.1, RF2w 12.2 %). Every one of the 135 parameters is '
-            "within 0.6 of edi's s.u. of FullProf's value (positions within 0.41, betas 0.38, "
-            'scales 0.58, extinction 0.46): x11 0.0584(36), x22 0.0139(15) and x33 0.0076(15) '
-            "against FullProf's 0.0567, 0.0135 and 0.0071, and scales "
+            'over the same 947 reflections FullProf fits (FullProf, converged at its cycle 52 '
+            'with Eps 0.01: χ² 30.1, RF2w 12.2 %). Every one of the 135 parameters is within 0.6 '
+            "of edi's s.u. of FullProf's value (positions within 0.41, betas 0.38, scales 0.58, "
+            'extinction 0.44): x11 0.0584(36), x22 0.0139(15) and x33 0.0076(15) against '
+            "FullProf's 0.0568(38), 0.0135(16) and 0.0071(15) with its 0.20 undone, and scales "
             "2.80(6), 3.87(9), 3.25(6), 2.84(7), 2.78(6) and 2.97(6) against FullProf's 2.78, "
             '3.85, 3.23, 2.83, 2.74 and 2.96.'
         ),

@@ -27,10 +27,24 @@ hovering over it shows the reason.
 - **When the project changes,** for example when you remove the powder pattern that let a single crystal's cell be
   fitted, a value you freed stays free. Its checkbox stays enabled so you can clear it, and starting a fit says which
   value cannot be fitted and why.
+- **When you disable a link,** its scale and texture, and a structure that no enabled link uses, keep their free
+  marks. The fit leaves them out until a link uses them again, and opening the project keeps them free.
 - **In Python,** setting `free = True` on such a value raises an error with the reason. On a value that symmetry or a
   constraint sets, it is ignored with a warning.
 
 ## Filters and counts
 
-The variability filter above the table shows all rows, the free ones, the fixed ones a fit could vary, or the ones that
-cannot be fitted. The Parameters entry in the status bar counts the values a fit can vary.
+The table always lists the values a fit can vary and every value marked free. Four boxes in the **Parameters shown**
+group on the Analysis page's **Settings** tab add the values that cannot be fitted, one group each, and count them:
+
+- **Not measured in this fit:** this fit's data cannot determine the value, or the fit cannot vary it yet. Shown by
+  default.
+- **Fixed by symmetry:** the space group sets the value. Hidden by default.
+- **Set by a constraint:** one of your constraints computes the value. Hidden by default.
+- **Setup values:** values that describe the setup, which no fit ever varies, and the values that are not
+  parameters. Shown by default.
+
+The app remembers your choice. It is not saved in the project, and Python and the command line are not filtered.
+
+The variability filter above the table shows all listed rows, the free ones, the fixed ones a fit could vary, or the
+ones that cannot be fitted. The Parameters entry in the status bar counts the values a fit can vary.

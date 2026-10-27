@@ -6,7 +6,7 @@ cmake_minimum_required(VERSION 3.21)
 # (`pixi run core-build`); the app host is built only when EDI_BUILD_APP=ON and Qt6 is
 # present. The app surface waits on gui-components G01–G04 (ADR-0005 / D4), so E01 does not
 # build it — this is reviewable scaffolding that activates at E04 (desktop) / E07 (WASM).
-project(edi LANGUAGES C CXX)
+project(edi LANGUAGES CXX)
 
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "" FORCE)

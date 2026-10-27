@@ -92,14 +92,14 @@ EaElements.GroupBox {
                 Accessible.role: Accessible.Button
                 Accessible.name: `${row.exampleId}: ${row.sample} · ${row.origin}`
                 Accessible.description: row.detail
-                Accessible.onPressAction: AppState.afterChanges(() => Session.openExample(row.exampleId))
+                Accessible.onPressAction: Session.openExample(row.exampleId)
                 MouseArea {
                     parent: row
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
                         row.activated();
-                        AppState.afterChanges(() => Session.openExample(row.exampleId));
+                        Session.openExample(row.exampleId);
                     }
                 }
                 EaComponents.ListViewLabel {

@@ -6,10 +6,6 @@ independent of the registry, metadata generator, app bundle and documentation.
 into `comparison-bounds.json`. These are tolerance-policy retention pins: every
 other bound stays exact when the six decided LATP values become
 labelled regression pins. FullProf still supplies the correctness values.
-The three single-crystal cases freeze their first committed comparison bounds
-at `fe080a38`, separately from the older powder disposition. Their values are
-checked against the F-squared FullProf reports and independent beta/occupancy
-unit conversions; Tb's different extinction model supplies regression pins.
 `capture_retention.py` freezes the original project and expected-result bytes;
 `retained-projects.json` is checked without needing historical Git objects in CI.
 

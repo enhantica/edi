@@ -123,39 +123,13 @@ extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_control_geometry(const char* obj
     QJsonObject state;
     if (shown.size() == 1) {
         const QRectF rect = shown.constFirst()->mapRectToScene(shown.constFirst()->boundingRect());
-        QQuickItem* item = shown.constFirst();
-        state = {{QStringLiteral("objectName"), item->objectName()},
+        state = {{QStringLiteral("objectName"), shown.constFirst()->objectName()},
                  {QStringLiteral("x"), rect.x()},
                  {QStringLiteral("y"), rect.y()},
                  {QStringLiteral("width"), rect.width()},
                  {QStringLiteral("height"), rect.height()},
                  {QStringLiteral("visible"), true},
-                 {QStringLiteral("enabled"), item->isEnabled()}};
-        // What it says: its own text, else its visible descendants' texts in order (a tooltip's column of labels).
-        if (item->metaObject()->indexOfProperty("text") >= 0) {
-            state[QStringLiteral("text")] = item->property("text").toString();
-        } else {
-            QStringList texts;
-            const std::function<void(QQuickItem*)> collect = [&](QQuickItem* parent) {
-                for (QQuickItem* child : parent->childItems()) {
-                    if (!child->isVisible()) {
-                        continue;
-                    }
-                    if (child->metaObject()->indexOfProperty("text") >= 0) {
-                        texts.append(child->property("text").toString());
-                    } else {
-                        collect(child);
-                    }
-                }
-            };
-            collect(item);
-            if (!texts.isEmpty()) {
-                state[QStringLiteral("text")] = texts.join(QLatin1Char('\n'));
-            }
-        }
-        if (item->metaObject()->indexOfProperty("checkable") >= 0 && item->property("checkable").toBool()) {
-            state[QStringLiteral("checked")] = item->property("checked").toBool();
-        }
+                 {QStringLiteral("enabled"), shown.constFirst()->isEnabled()}};
     } else {
         const QString why = matches.isEmpty() ? QStringLiteral("no item is named '%1'")
                             : shown.isEmpty() ? QStringLiteral("no visible item is named '%1'")

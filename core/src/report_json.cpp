@@ -319,7 +319,7 @@ ReportSingleCrystal single_crystal_of(const Value& value) {
     // as a report makes them, by the dictionary and the report's IUCr rule.
     const Value& hover = value.get("hover");
     if (hover.is_null()) {
-        label_single_crystal(crystal, kReportSuRule);
+        label_single_crystal(crystal, kDefaultSuRule);
     } else {
         crystal.name = value.at("name").string("name");
         crystal.x_title = value.at("x_title").string("x_title");

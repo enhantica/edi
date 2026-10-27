@@ -1298,7 +1298,7 @@
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     },
-    "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project": {
+    "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project": {
       "input_sha256": {
         "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
         "experiments/llb_5c2.edi": "a92015e243b6538c0eaf975cdd4913c79b69ecb4ec53d599a0ab97e3454ebc5a",
@@ -1325,7 +1325,7 @@
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     },
-    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project": {
+    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project": {
       "input_sha256": {
         "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
         "experiments/heidi.edi": "7515df473fe501d8a4ab63e720787a790090fa55ae510bf0b198a2f02f9216d3",
@@ -1352,7 +1352,7 @@
       },
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     },
-    "repo:docs/user/cli/sc-neut-tof_taurine-senju/project": {
+    "repo:docs/user/cli/sc-neut-tof_taurine_fit/project": {
       "input_sha256": {
         "analysis/analysis.edi": "eab6b12c24befbdd69b87e22904a912821737ea75285ff4afaf63eb1ad49f259",
         "experiments/taurine.edi": "30dd7a3b44fb68fbfb13ef9df850236630867bf1d6d7346892e017db4954e8cb",
@@ -1362,10 +1362,5 @@
       "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
     }
   },
-  "source_commit": "f3ea7afea400639f2a66d6acb8d922163f1ef128",
-  "catalogue_identity_aliases": {
-    "sc-neut-cwl_tb2ti2o7-heidi_fit": "sc-neut-cwl_tb2ti2o7-heidi",
-    "sc-neut-cwl_pr2nio4-5c2_fit": "sc-neut-cwl_pr2nio4-5c2",
-    "sc-neut-tof_taurine_fit": "sc-neut-tof_taurine-senju"
-  }
+  "source_commit": "f3ea7afea400639f2a66d6acb8d922163f1ef128"
 }

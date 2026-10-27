@@ -207,7 +207,8 @@ Rectangle {
         ToolbarComboBox {
             objectName: "structure.toolbar.colors"
             toolTip: qsTr("Colour scheme (adjusted for contrast in labels and tables)")
-            model: ["jmol", "vesta"]
+            // The schemes' names as their authors spell them; the options keep diffraction-lib's tokens.
+            model: ["Jmol", "VESTA"]
             shownIndex: view.options && view.options.colorScheme === "vesta" ? 1 : 0
             onActivated: index => view.options.colorScheme = index === 1 ? "vesta" : "jmol"
         }

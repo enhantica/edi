@@ -4,7 +4,6 @@ import math
 
 import pytest
 
-from tests.fixtures.project_save.reference import six_digits
 from tests.integration.py.test_anisotropic_adps import (
     load_project,
     loop_rows,
@@ -66,16 +65,9 @@ def test_isotropic_tensor_preserves_exact_zeros_and_oblique_values(
     if route == 'change':
         project.structure.atom_sites[0].adp_iso.uncertainty = 0.031
         project.structure.atom_sites[0].adp_type = target
-    expected_tensor = closed_tensor(cell, target)
-    for suffix, expected in zip(SUFFIXES, expected_tensor, strict=True):
-        assert getattr(
-            project.structure.atom_site_aniso[0], 'adp_' + suffix
-        ).value == pytest.approx(expected, rel=2e-14, abs=0), (
-            'Before Save every tensor component follows the exact reciprocal-cell closed form'
-        )
     output = saved(project, tmp_path / 'output')
     row = loop_rows(output, '_atom_site_aniso')[0]
-    for suffix, expected in zip(SUFFIXES, expected_tensor, strict=True):
+    for suffix, expected in zip(SUFFIXES, closed_tensor(cell, target), strict=True):
         token = row['_atom_site_aniso.adp_' + suffix]
         component = getattr(project.structure.atom_site_aniso[0], 'adp_' + suffix)
         actual = component.value
@@ -87,11 +79,9 @@ def test_isotropic_tensor_preserves_exact_zeros_and_oblique_values(
             )
             assert '(' not in token, 'A symmetry-exact zero must carry no numerical uncertainty'
         else:
-            assert actual.hex() == six_digits(expected).hex(), (
-                'Save adopts independently rounded six-digit nonzero tensor components'
-            )
-            assert float(token.split('(')[0]).hex() == six_digits(expected).hex(), (
-                'Written tensor components follow the same independently rounded closed form'
+            assert actual == pytest.approx(expected, rel=2e-14, abs=0), (
+                'Oblique components and tensor units must agree with the reciprocal-cell '
+                'closed form'
             )
     if cell_name == 'monoclinic':
         assert closed_tensor(cell, target)[4] != 0, (

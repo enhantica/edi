@@ -50,9 +50,3 @@ excluded:
     unblocked_by: sequential-scan-tutorial
   - notebook: pd-xray-cwl_latp-bm01_scan.ipynb
     unblocked_by: sequential-scan-tutorial
-  - notebook: sc-neut-cwl_tb2ti2o7-heidi.ipynb
-    unblocked_by: tutorial-runner
-  - notebook: sc-neut-cwl_pr2nio4-5c2.ipynb
-    unblocked_by: tutorial-runner
-  - notebook: sc-neut-tof_taurine-senju.ipynb
-    unblocked_by: tutorial-runner

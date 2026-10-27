@@ -84,13 +84,11 @@ qt_add_qml_module(edi_app_module
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
-        src/web_storage.hpp src/web_storage.cpp
     QML_FILES
         qml/Main.qml
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
-        qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
@@ -105,6 +103,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
         qml/Components/ChartToolbar.qml
+        qml/Components/ColourMapBar.qml
+        qml/Components/ColourMapComboBox.qml
         qml/Components/IconCell.qml
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
@@ -113,6 +113,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
+        qml/Components/PaletteStrip.qml
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
@@ -124,6 +125,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
+        qml/Components/StatusBarButton.qml
+        qml/Components/StatusBarFitButton.qml
         qml/Components/StatusBarItem.qml
         qml/Components/StructureScene.qml
         qml/Components/StructureToolbar.qml
@@ -154,7 +157,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/AnalysisPage.qml
         qml/Pages/Analysis/ConstraintsGroup.qml
         qml/Pages/Analysis/FitStartGroup.qml
-        qml/Pages/Analysis/FittingGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml
         qml/Pages/Analysis/FreeHeaderMenu.qml
         qml/Pages/Analysis/JointFitGroup.qml
@@ -164,6 +166,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/RefinementGroup.qml
         qml/Pages/Analysis/SequentialExtractGroup.qml
         qml/Pages/Analysis/SequentialFitGroup.qml
+        qml/Pages/Analysis/ShownParametersGroup.qml
         qml/Pages/Experiment/AbsorptionGroup.qml
         qml/Pages/Experiment/ExtinctionGroup.qml
         qml/Pages/Experiment/ObservedThresholdRow.qml
