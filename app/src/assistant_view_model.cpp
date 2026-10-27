@@ -9634,7 +9634,9 @@ struct AssistantViewModel::State {
                             if(i)add(Kind::FileLoadCue,"atomSites.append",{},row,Action::Kind::AtomAppend);
                             add(Kind::FileLoadCue,QString("atomSite.label.%1").arg(row),QString::fromStdString(site.id.value()),row,Action::Kind::AtomText,"label");
                             add(Kind::FileLoadCue,QString("atomSite.typeSymbol.%1").arg(row),QString::fromStdString(site.type_symbol.value()),row,Action::Kind::AtomText,"typeSymbol");
-                            add(Kind::FileLoadCue,QString("atomSite.wyckoffLetter.%1").arg(row),QString::fromStdString(site.wyckoff_letter.value()),row,Action::Kind::AtomText,"wyckoffLetter");
+                            const auto supplied = args.value("mapped_structure").toObject().value("atom_sites").toArray();
+                            if (i < static_cast<std::size_t>(supplied.size()) && supplied.at(static_cast<qsizetype>(i)).toObject().contains("wyckoff_letter"))
+                                add(Kind::FileLoadCue,QString("atomSite.wyckoffLetter.%1").arg(row),QString::fromStdString(site.wyckoff_letter.value()),row,Action::Kind::AtomText,"wyckoffLetter");
                         }
                         const auto fields=site.parameters();for(std::size_t field=0;field<4;++field)value(fields[field]);
                     }
