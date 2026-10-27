@@ -294,6 +294,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     int colourPositionCount() const;
     // The experiments' positions, then the structures'.
     std::vector<std::size_t> colourPositions() const;
+    // A parameter's number in the Analysis table, from 1, by its unique name, as a correlation names it
+    // (`tb2ti2o7.atom_site.O1.fract_x`); 0 when the table does not list it. The correlation chart labels its ticks by
+    // these when the names are hidden (the owner, 2026-10-27).
+    Q_INVOKABLE int parameterNumber(const QString& uniqueName) const;
     QString stackedSpacing() const { return stacked_spacing_; }
     void setStackedSpacing(const QString& spacing);
     QString mapDirection() const { return map_direction_; }
