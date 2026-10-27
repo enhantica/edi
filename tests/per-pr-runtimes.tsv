@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-27T09:41:40Z
+# measured_utc = 2026-10-27T10:02:24Z
 #
-# Recorded from: measured test run (1 node(s) measured once, 16294 banked, 0 stale row(s) dropped)
-# Collected tests: 18748; with a reported duration: 10475
+# Recorded from: measured test run (4 node(s) measured once, 16295 banked, 0 stale row(s) dropped)
+# Collected tests: 18752; with a reported duration: 10479
 # Module-scoped fixture costs recorded: 93
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 18748
+# inventory_python = 18752
 # inventory_cpp = 396
-# inventory_measured = 16295
+# inventory_measured = 16299
 # inventory_unmeasured = 2849
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -14384,6 +14384,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_powder_r_factors.py::test_pow
 0.490	tests/system/py/test_project_archive.py::test_python_opens_each_project_route_and_preserves_model_values[zip-sc-neut-tof_taurine-senju]
 0.000	tests/system/py/test_project_archive_app.py::test_opening_measurement_declares_both_targets_for_every_real_route
 0.970	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_cancel]
+3.480	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_create_completion:enter]
+3.410	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_create_completion:ok]
 2.910	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-folder]
 2.260	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-record]
 2.050	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-zip]
@@ -14403,6 +14405,8 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_
 1.400	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-folder]
 1.120	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-record]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-zip]
+4.330	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_choice_completion:enter]
+4.820	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_choice_completion:ok]
 2.740	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-folder]
 2.350	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-zip]
 2.280	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-cwl_tb2ti2o7-heidi_basic-folder]
