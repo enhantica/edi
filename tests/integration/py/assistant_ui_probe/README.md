@@ -8,9 +8,13 @@ The offline stdio peer supplies pinned Codex 0.162.1 protocol events and observe
 actual returned tool results; it never supplies scientific state or runs a model.
 
 Target `assistant_real_owner_probe` belongs in the one implementation-owned kit.
-Its CMake file can be added after the app target in the ordinary root configure;
-the historical standalone wrapper remains available when configuring that same
-kit through this directory. Tests do not create another environment or build.
+Its CMake file is added after the app target in the ordinary root configure;
+the current dev source assembly requires the product root as CMAKE_SOURCE_DIR.
+It refuses standalone configuration and omits this native target for Emscripten.
+Tests do not create another environment or build.
+Its library dependencies follow the ordinary current app through `edi_app_module`
+and the actual exported `crysta::crysta` target; the historical private
+`crysta::process_defaults` target is not an installed SDK contract.
 Use `EDI_ASSISTANT_UI_PROBE` for the exact binary and `EDI_APP_TEST_RUNNER` for
 existing ordinary dev actors. Tests fail loudly when the required binary is absent.
 
