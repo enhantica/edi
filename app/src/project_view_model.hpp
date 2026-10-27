@@ -259,6 +259,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The project takes a published staged save: `staged` is the staged copy, which already wrote `directory`. It works
     // there and holds the staged values and results, and a scan the listing `scan` read. Reads and writes no file.
     void takeStaged(const QString& directory, const edi::Project& staged, StagedScan scan);
+    // After a save adopted the template: a dataset read in flight took its values before, so it is dropped and the
+    // selected dataset read again over the adopted template; `shown` when the shown one was not built again already.
+    void viewAfterSave(bool shown);
     // The model a save writes: a scan's template while a dataset is shown, else the project.
     const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
     // The project holds changes its place does not (the web app's kept unsaved state, reopened).

@@ -383,7 +383,11 @@ bool Session::saveAs(const QUrl& directory) {
         setLastError(QStringLiteral("cannot save to %1: only local directories (file: URLs)").arg(directory.toString()));
         return false;
     }
-    if (!saveInto(directory.toLocalFile())) {
+    // A save refused before its write leaves the project where it was; one refused after it (reading it back) leaves it
+    // working where it was written, unsaved, and the place follows it.
+    const QString before = project_->path();
+    const bool saved = saveInto(directory.toLocalFile());
+    if (!saved && project_->path() == before) {
         return false;
     }
     archive_location_.clear();
@@ -393,7 +397,7 @@ bool Session::saveAs(const QUrl& directory) {
     emit needsSaveAsChanged();
     emit locationTextChanged();
     emit projectDirectoryUsed(QFileInfo(directory.toLocalFile()).absoluteFilePath());
-    return true;
+    return saved;
 }
 
 bool Session::saveInto(const QString& folder) {
@@ -602,15 +606,17 @@ bool Session::createProject(const QString& name, const QString& description, con
     if (location.isEmpty()) {
         return true;
     }
+    const QString before = project_->path();
     const QString error = project_->saveTo(location);
     setLastError(error);
-    if (!error.isEmpty()) {
+    // Refused after its write, the project works where it was written, unsaved: the place follows it.
+    if (!error.isEmpty() && project_->path() == before) {
         return false;
     }
     emit projectLocationChanged();
     emit needsSaveAsChanged();
     emit projectDirectoryUsed(QFileInfo(location).absoluteFilePath());
-    return true;
+    return error.isEmpty();
 }
 
 void Session::closeProject() { replaceProject(nullptr, {}, {}); }

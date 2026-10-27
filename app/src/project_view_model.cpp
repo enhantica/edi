@@ -2698,6 +2698,21 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
     invalidateTexts();
     report_->refresh();
     setModified(false);
+    // The shown dataset was built again above; a read still in flight is dropped and read again.
+    viewAfterSave(false);
+}
+
+void ProjectViewModel::viewAfterSave(bool shown) {
+    if (!scan_ || !scan_template_) {
+        return;
+    }
+    // The newest selection is read again: its values are taken from the template when that read starts, so after the
+    // save, and the read already in flight, which took them before, delivers nothing.
+    if (view_applied_ != view_request_ && view_wanted_ >= 0) {
+        viewDataset(view_wanted_, true);
+    } else if (shown && current_dataset_ >= 0) {
+        viewDataset(current_dataset_, true);
+    }
 }
 
 QString ProjectViewModel::adoptSave(const QString& directory, const edi::ProjectMetadata& metadata) {
@@ -2734,13 +2749,14 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
             published(edi::PreviewResult{});
         }
     } catch (const std::exception& error) {
-        // The write succeeded, so the project works where it was written, with the metadata it wrote; it keeps its
-        // own values, which the files round, and stays unsaved.
+        // The first write succeeded, so the project works where it was written, with the metadata it wrote. What it
+        // holds may differ from those files (unread, or adopted and not written again): it is unsaved.
         const QString message =
             tr("The project was saved, but reading it back failed: %1").arg(QString::fromUtf8(error.what()));
         setLastError(message);
         emit pathChanged();
         publishMetadata();
+        setModified(true);
         return message;
     }
     setLastError({});
@@ -2764,6 +2780,8 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
     invalidateTexts();
     report_->refresh();
     setModified(false);
+    // The shown dataset is built again over the template the save adopted (a dataset view is not an edit).
+    viewAfterSave(true);
     return {};
 }
 
