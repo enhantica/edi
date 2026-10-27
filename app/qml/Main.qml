@@ -24,7 +24,8 @@ EaComponents.ApplicationWindow {
     // callers pass an original Session-bound intent, never another app/window.
     function prepareNativeProjectCreate() {
         if (Session.project !== null) return false;
-        AppState.open(AppState.Page.Project);
+        if (Session.assistant.showActions) AppState.open(AppState.Page.Project);
+        else AppState.reached = Math.max(AppState.reached, AppState.Page.Project);
         return Session.project === null;
     }
 
@@ -199,8 +200,6 @@ EaComponents.ApplicationWindow {
             objectName: "assistant.toggle"
             readonly property bool assistantSelected: assistantPanel.shown || (Session.assistant.showingActions && Preferences.assistantShown)
             fontIcon: assistantSelected ? "columns" : "robot"
-            readonly property bool rotateRobot: Session.assistant.state === "agent_active"
-                && EaStyle.Times.translationChange > 0
             contentItem: Item {
                 implicitWidth: Math.max(assistantRobot.implicitWidth, assistantColumns.implicitWidth)
                 implicitHeight: Math.max(assistantRobot.implicitHeight, assistantColumns.implicitHeight)
@@ -224,18 +223,6 @@ EaComponents.ApplicationWindow {
                     color: assistantToggle.foregroundColor()
                     Accessible.ignored: true
                 }
-            }
-            RotationAnimator {
-                target: assistantRobot
-                running: assistantToggle.rotateRobot
-                onStopped: if (!assistantToggle.rotateRobot) assistantRobot.rotation = 0
-                loops: Animation.Infinite
-                from: 0
-                to: 360 * 6
-                duration: 2000
-                easing.type: Easing.OutInElastic
-                easing.amplitude: 1
-                easing.period: 0.3
             }
             enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
             ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason
@@ -512,7 +499,7 @@ EaComponents.ApplicationWindow {
         parent: Overlay.overlay.parent
         z: Overlay.overlay.z + 1
         enabled: false
-        color: EaStyle.Colors.themeAccent
+        color: "red"
         Accessible.ignored: true
     }
     Connections {
@@ -537,7 +524,12 @@ EaComponents.ApplicationWindow {
         function onActionPointerShown() { assistantPointer.show(); }
         function onActionPointerMoved(position) { const local = assistantPointer.parent.mapFromItem(null, position.x, position.y); assistantPointer.move(local.x, local.y); }
         function onActionPointerPressed() { assistantPointer.click(); }
-        function onActionPointerHidden() { assistantPointer.hide(); }
+        function onActionPointerHidden() {
+            if (Session.assistant.state !== "agent_active") assistantPointer.hide();
+        }
+        function onStateChanged() {
+            if (Session.assistant.state !== "agent_active") assistantPointer.hide();
+        }
         function onActionManualTakeover() {
             // Synchronous marker only: the sidebar is already exposed. Keep it
             // so until the user explicitly chooses to reopen the assistant.
