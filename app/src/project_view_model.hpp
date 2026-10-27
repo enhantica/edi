@@ -26,6 +26,7 @@
 
 #include "analysis_view_model.hpp"
 #include "block_text.hpp"
+#include "category_list_model.hpp"
 #include "edi/edit.hpp"
 #include "edi/live_preview.hpp"
 #include "edi/background_estimate.hpp"
@@ -158,6 +159,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Start fitting, its progress and its result.
     Q_PROPERTY(edi_app::FitViewModel* fit READ fit CONSTANT)
     Q_PROPERTY(edi_app::BlockText* metadataText READ metadataText CONSTANT)
+    // `project.edi`'s categories with no designed group, each with a group made from the dictionary on the Project
+    // page's Extras (CategoryListModel).
+    Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0036 §7).
     Q_PROPERTY(edi_app::BlockText* reportText READ reportText CONSTANT)
     Q_PROPERTY(edi_app::BlockText* projectText READ projectText CONSTANT)
@@ -292,6 +296,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     AnalysisViewModel* analysis() const { return analysis_; }
     FitViewModel* fit() const { return fit_; }
     BlockText* metadataText() const { return metadata_text_; }
+    CategoryListModel* categories() const { return categories_; }
     BlockText* reportText() const { return report_text_; }
     BlockText* projectText() const { return project_text_; }
     ReportViewModel* report() const { return report_; }
@@ -641,6 +646,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool can_undo_ = false;
     void syncUndo();
     BlockText* metadata_text_;
+    CategoryListModel* categories_ = nullptr;
+    void syncCategories();
     BlockText* report_text_ = nullptr;
     BlockText* project_text_;
     ReportViewModel* report_;

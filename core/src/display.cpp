@@ -151,11 +151,22 @@ bool category_is_output(std::string_view id) {
 namespace {
 
 // A block's text split as crysta's writer orders it: the lines up to its `data_` line, then each item, loop (its
-// keys and rows) or multi-line value, with whether its category is an output one.
+// keys and rows) or multi-line value, with its category's id and whether that category is an output one.
+struct TextUnit {
+    bool output = false;
+    std::string id;
+    std::vector<std::string> lines;
+};
 struct TextUnits {
     std::vector<std::string> head;
-    std::vector<std::pair<bool, std::vector<std::string>>> units;
+    std::vector<TextUnit> units;
 };
+
+// The category id of an item line, `_cell.length_a 5` giving `cell`.
+std::string category_of(const std::string& line) {
+    const std::size_t end = line.find_first_of(". \t");
+    return line.substr(1, end == std::string::npos ? std::string::npos : end - 1);
+}
 
 TextUnits text_units(const std::string& text) {
     TextUnits out;
@@ -164,10 +175,6 @@ TextUnits text_units(const std::string& text) {
     for (std::string line; std::getline(in, line);) {
         lines.push_back(line);
     }
-    const auto output_of = [](const std::string& line) {
-        const std::size_t end = line.find_first_of(". \t");
-        return category_is_output(std::string_view(line).substr(0, end));
-    };
     bool body = std::none_of(lines.begin(), lines.end(), [](const std::string& line) { return line.starts_with("data_"); });
     bool in_text_field = false;
     bool in_loop_keys = false;
@@ -178,7 +185,7 @@ TextUnits text_units(const std::string& text) {
             continue;
         }
         if (in_text_field) {
-            out.units.back().second.push_back(line);
+            out.units.back().lines.push_back(line);
             in_text_field = !line.starts_with(';');
             continue;
         }
@@ -187,41 +194,217 @@ TextUnits text_units(const std::string& text) {
             continue;
         }
         if (line == "loop_") {
-            out.units.push_back({false, {}});
+            out.units.push_back({});
             in_loop_keys = true;
         } else if (line.starts_with('_') && in_loop_keys) {
-            if (out.units.back().second.size() == 1) {
-                out.units.back().first = output_of(line);
+            if (out.units.back().lines.size() == 1) {
+                out.units.back().id = category_of(line);
+                out.units.back().output = category_is_output(out.units.back().id);
             }
         } else if (line.starts_with('_')) {
-            out.units.push_back({output_of(line), {}});
+            const std::string id = category_of(line);
+            out.units.push_back({category_is_output(id), id, {}});
         } else if (out.units.empty()) {
-            out.units.push_back({false, {}});
+            out.units.push_back({});
         } else {
             in_loop_keys = false;
         }
         in_text_field = line.starts_with(';');
-        out.units.back().second.push_back(line);
+        out.units.back().lines.push_back(line);
     }
     return out;
 }
 
-// The units of one kind, each after a blank line, as a save writes them.
-void append_units(std::string& out, const TextUnits& split, bool output) {
-    for (const auto& [is_output, lines] : split.units) {
-        if (is_output != output) {
-            continue;
-        }
-        if (!out.empty() && !out.ends_with("\n\n")) {
-            out += '\n';
-        }
-        for (const std::string& line : lines) {
-            out.append(line).push_back('\n');
-        }
+// A unit after `previous` as a save writes it: one category's items one after another, one blank line between
+// categories and around each loop (the owner, 2026-10-27).
+void append_unit(std::string& out, const TextUnit* previous, const TextUnit& unit) {
+    const bool loop = !unit.lines.empty() && unit.lines.front() == "loop_";
+    const bool together = previous != nullptr && !loop && !previous->lines.empty() &&
+                          previous->lines.front() != "loop_" && previous->id == unit.id && !unit.id.empty();
+    if (!out.empty() && !together && !out.ends_with("\n\n")) {
+        out += '\n';
+    }
+    for (const std::string& line : unit.lines) {
+        out.append(line).push_back('\n');
     }
 }
 
+// The units of one kind.
+void append_units(std::string& out, const TextUnits& split, bool output) {
+    const TextUnit* previous = nullptr;
+    for (const TextUnit& unit : split.units) {
+        if (unit.output != output) {
+            continue;
+        }
+        append_unit(out, previous, unit);
+        previous = &unit;
+    }
+}
+
+// A line's values: words, a quoted text (its quotes removed) or a bracketed list, each one value.
+std::vector<std::string> line_values(const std::string& line) {
+    std::vector<std::string> values;
+    std::size_t i = 0;
+    while (i < line.size()) {
+        if (line[i] == ' ' || line[i] == '\t') {
+            ++i;
+            continue;
+        }
+        std::size_t end = i;
+        if (line[i] == '\'' || line[i] == '"') {
+            end = line.find(line[i], i + 1);
+            end = end == std::string::npos ? line.size() : end;
+            values.push_back(line.substr(i + 1, end - i - 1));
+            i = end + 1;
+            continue;
+        }
+        if (line[i] == '[') {
+            int depth = 0;
+            for (; end < line.size(); ++end) {
+                depth += line[end] == '[' ? 1 : line[end] == ']' ? -1 : 0;
+                if (depth == 0) {
+                    break;
+                }
+            }
+            end = std::min(end + 1, line.size());
+        } else {
+            end = line.find_first_of(" \t", i);
+            end = end == std::string::npos ? line.size() : end;
+        }
+        values.push_back(line.substr(i, end - i));
+        i = end;
+    }
+    return values;
+}
+
+// A value as the writer spells one: quoted when it is empty or holds a space or a quote.
+std::string written_value(const std::string& value) {
+    if (!value.empty() && value.find_first_of(" \t'\"") == std::string::npos) {
+        return value;
+    }
+    return (value.find('"') == std::string::npos ? "\"" : "'") + value + (value.find('"') == std::string::npos ? "\"" : "'");
+}
+
 }  // namespace
+
+std::vector<std::string> text_category_ids(const std::string& text) {
+    std::vector<std::string> ids;
+    for (const TextUnit& unit : text_units(text).units) {
+        if (!unit.id.empty() && std::find(ids.begin(), ids.end(), unit.id) == ids.end()) {
+            ids.push_back(unit.id);
+        }
+    }
+    return ids;
+}
+
+TextCategory text_category(const std::string& text, std::string_view id) {
+    TextCategory out;
+    for (const TextUnit& unit : text_units(text).units) {
+        if (unit.id != id || unit.lines.empty()) {
+            continue;
+        }
+        if (unit.lines.front() == "loop_") {
+            out.loop = true;
+            std::vector<std::string> values;
+            for (std::size_t k = 1; k < unit.lines.size(); ++k) {
+                const std::string& line = unit.lines[k];
+                if (line.starts_with('_') && values.empty()) {
+                    out.names.push_back(line.substr(line.find('.') + 1));
+                } else {
+                    const std::vector<std::string> more = line_values(line);
+                    values.insert(values.end(), more.begin(), more.end());
+                }
+            }
+            for (std::size_t k = 0; !out.names.empty() && k + out.names.size() <= values.size(); k += out.names.size()) {
+                out.rows.emplace_back(values.begin() + static_cast<std::ptrdiff_t>(k),
+                                      values.begin() + static_cast<std::ptrdiff_t>(k + out.names.size()));
+            }
+            continue;
+        }
+        // One item: its name, then its value on the line, or the lines of a text field after it.
+        const std::string& line = unit.lines.front();
+        const std::size_t dot = line.find('.');
+        const std::size_t end = line.find_first_of(" \t");
+        out.names.push_back(line.substr(dot + 1, end == std::string::npos ? std::string::npos : end - dot - 1));
+        std::string value;
+        if (unit.lines.size() > 1 && unit.lines[1].starts_with(';')) {
+            // A field opening with `;\` is folded, as crysta writes a long description: a line ending in `\`
+            // goes on without a line break.
+            const bool folded = unit.lines[1] == ";\\";
+            bool joined = folded;
+            value = folded ? std::string() : unit.lines[1].substr(1);
+            for (std::size_t k = 2; k + 1 < unit.lines.size(); ++k) {
+                std::string line = unit.lines[k];
+                const bool fold = folded && !line.empty() && line.back() == '\\';
+                if (fold) {
+                    line.pop_back();
+                }
+                value += (joined ? "" : "\n") + line;
+                joined = fold;
+            }
+        } else {
+            const std::vector<std::string> values = line_values(end == std::string::npos ? std::string() : line.substr(end));
+            value = values.empty() ? std::string() : values.front();
+        }
+        if (out.rows.empty()) {
+            out.rows.emplace_back();
+        }
+        out.rows.front().push_back(value);
+    }
+    return out;
+}
+
+std::string with_text_value(const std::string& text, std::string_view id, std::size_t row, std::string_view name,
+                            const std::string& value) {
+    TextUnits split = text_units(text);
+    const std::string tag = "_" + std::string(id) + "." + std::string(name);
+    for (TextUnit& unit : split.units) {
+        if (unit.id != id || unit.lines.empty()) {
+            continue;
+        }
+        if (unit.lines.front() != "loop_") {
+            if (unit.lines.front() == tag || unit.lines.front().starts_with(tag + " ") ||
+                unit.lines.front().starts_with(tag + "\t")) {
+                unit.lines = {tag + " " + written_value(value)};
+            }
+            continue;
+        }
+        const TextCategory category = text_category(std::string("data_x\n") + [&unit] {
+            std::string lines;
+            for (const std::string& line : unit.lines) {
+                lines.append(line).push_back('\n');
+            }
+            return lines;
+        }(), id);
+        const auto column = std::find(category.names.begin(), category.names.end(), name);
+        if (column == category.names.end() || row >= category.rows.size()) {
+            continue;
+        }
+        std::vector<std::vector<std::string>> rows = category.rows;
+        rows[row][static_cast<std::size_t>(column - category.names.begin())] = value;
+        unit.lines = {"loop_"};
+        for (const std::string& key : category.names) {
+            unit.lines.push_back("_" + std::string(id) + "." + key);
+        }
+        for (const std::vector<std::string>& values : rows) {
+            std::string line;
+            for (const std::string& v : values) {
+                line += (line.empty() ? "" : " ") + (v.starts_with('[') ? v : written_value(v));
+            }
+            unit.lines.push_back(line);
+        }
+    }
+    std::string out;
+    for (const std::string& line : split.head) {
+        out.append(line).push_back('\n');
+    }
+    const TextUnit* previous = nullptr;
+    for (const TextUnit& unit : split.units) {
+        append_unit(out, previous, unit);
+        previous = &unit;
+    }
+    return out;
+}
 
 std::string input_categories_text(const std::string& text) {
     const TextUnits split = text_units(text);

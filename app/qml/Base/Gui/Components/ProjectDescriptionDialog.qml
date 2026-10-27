@@ -10,6 +10,8 @@ import QtCore
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Elements as EaElements
+
+import edi.app
 import EasyApplication.Gui.Logic as EaLogic
 
 EaElements.Dialog {
@@ -125,15 +127,13 @@ EaElements.Dialog {
                 text: qsTr("Description")
             }
 
-            EaElements.TextField {
+            // Several lines, as long a description as the project needs (the owner, 2026-10-27).
+            MultiLineField {
                 id: projectDescriptionField
 
+                objectName: "createProject.description"
                 implicitWidth: dialog.inputFieldWidth
-                horizontalAlignment: TextInput.AlignLeft
                 placeholderText: qsTr("Enter project description here")
-
-                Keys.onReturnPressed: dialog.accept()
-                Keys.onEnterPressed: dialog.accept()
             }
         }
 

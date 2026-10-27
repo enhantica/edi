@@ -120,6 +120,9 @@ EaComponents.ContentPage {
     // The Text tab knows whether it is shown and which block the page shows, so leaving an edit not yet applied asks
     // first; kept, the page, the tab and the block come back (edi ADR-0017 §7).
     property int pageIndex: -1
+    // The Text tab's edit is not yet applied: its loader stays active until the user discards it. Set from the tab's
+    // signal, so the loader's `active` never reads its own item.
+    property bool textDirty: false
     onCurrentChanged: {
         if (current)
             page.pageIndex = EaGlobals.Vars.appBarCurrentIndex;
@@ -139,6 +142,9 @@ EaComponents.ContentPage {
     Connections {
         target: textLoader.item
         ignoreUnknownSignals: true
+        function onDirtyChanged() {
+            page.textDirty = textLoader.item.dirty;
+        }
         function onStayRequested() {
             if (page.pageIndex >= 0)
                 EaGlobals.Vars.appBarCurrentIndex = page.pageIndex;
@@ -214,7 +220,8 @@ EaComponents.ContentPage {
             // holds an edit not yet applied, until the user discards it.
             Loader {
                 id: textLoader
-                active: SwipeView.isCurrentItem || (item !== null && item.dirty === true)
+                active: SwipeView.isCurrentItem || page.textDirty
+                onItemChanged: page.textDirty = item !== null && item.dirty === true
             },
             Loader {
                 id: settingsLoader

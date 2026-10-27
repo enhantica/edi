@@ -634,7 +634,7 @@ void ExperimentViewModel::sync() {
             category.rows = static_cast<std::size_t>(measured_range_->points());
         }
     }
-    categories_->setCategories(categories);
+    categories_->setCategories(categories, [this] { return text_->text().toStdString(); });
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();

@@ -4014,6 +4014,43 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         throw IoError("project.edi declares " + tag +
                                       " more than once: " + record_where);
                     }
+                    // A long description is a semicolon text field after its tag, folded as crysta writes it
+                    // (crysta's ADR on display metadata, item 12): a line ending in `\` goes on without a line
+                    // break.
+                    if (line.find_first_not_of(" \t\r", tag.size()) == std::string::npos) {
+                        std::string opening;
+                        if (std::getline(record_lines, opening) && opening.starts_with(';')) {
+                            while (!opening.empty() && opening.back() == '\r') {
+                                opening.pop_back();
+                            }
+                            const bool folded = opening == ";\\";
+                            bool joined = folded;
+                            std::string value = folded ? std::string() : opening.substr(1);
+                            bool closed = false;
+                            for (std::string next; std::getline(record_lines, next);) {
+                                while (!next.empty() && (next.back() == '\r' || next.back() == ' ')) {
+                                    next.pop_back();
+                                }
+                                if (next.starts_with(';')) {
+                                    closed = true;
+                                    break;
+                                }
+                                const bool fold = folded && !next.empty() && next.back() == '\\';
+                                if (fold) {
+                                    next.pop_back();
+                                }
+                                value += (joined || (!folded && value.empty()) ? "" : "\n") + next;
+                                joined = fold;
+                            }
+                            if (!closed) {
+                                throw IoError("project.edi " + tag + " has an unterminated text field: " +
+                                              record_where);
+                            }
+                            restored.emplace(tag, value);
+                            break;
+                        }
+                        throw IoError("project.edi " + tag + " has no value: " + record_where);
+                    }
                     restored.emplace(tag, lexical_value(line, tag.size(), tag));
                     break;
                 }
@@ -4868,6 +4905,7 @@ Project project_with_file_text(const Project& project, const std::string& relati
     Project read = save.load_with(relative, text, on_warning);
     // The copy lives where the project does, so a later save writes back to it.
     read.path = project.path;
+    read.metadata.path = project.metadata.path;
     read.scan_data_root = project.scan_data_root;
     return read;
 }
