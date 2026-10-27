@@ -315,13 +315,6 @@ inline const ParameterSpec preferred_orientation_march_random_fract{"preferred_o
 
 }  // namespace spec
 
-// A setting a fit never refines (the Berar-Baldinozzi limit angle, as FullProf's AsyLim; the
-// extinction's crystal radius, a descriptor of the crystal): no free walk includes it, its Python
-// handle refuses to be freed, and the app shows it fixed.
-inline bool is_fixed_setting(const ParameterSpec* parameter_spec) noexcept {
-    return parameter_spec == &spec::peak_asym_beba_limit || parameter_spec == &spec::extinction_crystal_radius;
-}
-
 // The admissible-range rule of the Python attribute boundary (`lib/src/bindings.cpp`
 // `check_range`), in the core so the app applies the same rule with the same message; the binding
 // keeps its own copy unchanged (owner, 2026-09-27), held equal by a parity test.

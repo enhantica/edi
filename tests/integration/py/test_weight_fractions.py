@@ -271,13 +271,28 @@ def test_single_enabled_fraction_is_unity_in_memory_save_and_reopen(tmp_path, st
         case.enable(rows['alpha'], value=False)
     for name in tuple(rows.keys()):
         row = rows[name]
-        row.scale.free = free_scale
+        disabled = state == 'all-disabled' or (state == 'one-disabled' and name == 'beta')
+        if free_scale and disabled:
+            with pytest.raises(
+                ValueError, match=re.escape("this fit's data cannot determine it")
+            ) as error:
+                row.scale.free = True
+            assert f'linked_structure.{name}.scale' in str(error.value), (
+                'A disabled-link free refusal names its scale and the missing data reason'
+            )
+            assert not row.scale.free, 'A refused disabled-link scale stays fixed'
+        else:
+            row.scale.free = free_scale
         if free_scale:
             row.scale.uncertainty = 0.03
     for stage in ('first', 'reopened'):
         rows = case.links(project.experiments[0])
         for name in tuple(rows.keys()):
             row = rows[name]
+            disabled = state == 'all-disabled' or (state == 'one-disabled' and name == 'beta')
+            assert row.scale.free == (free_scale and not disabled), (
+                'Only enabled-link scales retain their free choice in memory and after reload'
+            )
             fraction = row.weight_fraction
             if state == 'all-disabled' or name == 'beta':
                 assert fraction is None, 'Disabled links retain no share in memory or after reload'

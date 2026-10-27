@@ -26,6 +26,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/display.hpp"
 #include "edi/edits.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/presentation.hpp"
@@ -1085,8 +1086,8 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
     FreeFlags record;
     std::vector<std::pair<std::string, bool>> flags;
     for (const ParameterItem* item : parameters) {
-        if (item == nullptr || !item->isFittable() || !item->isRefinable()) {
-            continue;
+        if (item == nullptr || (free && !item->isFittable())) {
+            continue;  // a flag is set only where a fit can vary the value; any is cleared (ADR-0053)
         }
         const auto found = names.find(item->parameter());
         if (found == names.end() || item->isFree() == free) {
@@ -2791,6 +2792,8 @@ void ProjectViewModel::completeSymmetry() {
     // the completion a fit itself applies. A structure crysta cannot resolve keeps what it holds — the
     // calculation says why.
     edi::apply_relations(*project_);
+    // What a fit can vary follows the same loads and edits, never a fit's frames (ADR-0053).
+    edi::refresh_fittability(*project_);
 }
 
 void ProjectViewModel::syncParameterTable(bool refresh_report) {

@@ -239,7 +239,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // explorer with its Fit column, type selectors and Create experiment, and a searchable combo box. Each
     // opens its example from Home, so `--demo-only t16-` runs them alone.
     steps_.push_back({"t16-01-analysis", start + open_example("pd-neut-cwl_cosio-d20") + QStringList{analysis, basic}});
-    steps_.push_back({"t16-02-fit-running", {"fitting.start", "capture-now"}});
+    steps_.push_back({"t16-02-fit-running", {"statusBar.fit.button", "capture-now"}});
     steps_.push_back({"t16-03-fit-done", {"wait-fit"}});
     steps_.push_back({"t16-04-fit-results", {"statusBar.fit.outcome"}});
     steps_.push_back({"t16-05-experiments", {"choose:OK", experiment, basic, "expand:group.experiments"}});
@@ -265,7 +265,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-21-beer-structure-list", {blocks}});
     steps_.push_back({"t16-22-beer-experiment", {close, experiment, basic}});
     steps_.push_back({"t16-23-beer-experiment-list", {blocks}});
-    steps_.push_back({"t16-24-beer-analysis-fitted", {close, analysis, basic, "fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"t16-24-beer-analysis-fitted", {close, analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK"}});
     steps_.push_back({"t16-25-beer-analysis-list", {blocks}});
     steps_.push_back({"t16-26-beer-experiment-fitted", {close, experiment, basic}});
     steps_.push_back({"t16-27-cosio-structure", start + open_example("pd-neut-cwl_cosio-d20")
@@ -286,11 +286,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // continued to the end, and the Evolution tab after it.
     steps_.push_back({"t16-60-scan-ready", QStringList{"resize:1280x960"} + start
                                                + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
-                                               + QStringList{analysis, basic, "reveal:fitting.start"}});
-    steps_.push_back({"t16-61-scan-running", {"fitting.start", "wait-files:40", "capture-now"}});
-    steps_.push_back({"t16-62-scan-stopped", {"fitting.start", "wait-fit"}});
+                                               + QStringList{analysis, basic}});
+    steps_.push_back({"t16-61-scan-running", {"statusBar.fit.button", "wait-files:40", "capture-now"}});
+    steps_.push_back({"t16-62-scan-stopped", {"statusBar.fit.button", "wait-fit"}});
     steps_.push_back({"t16-63-scan-continue", {"choose:OK"}});
-    steps_.push_back({"t16-64-scan-done", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"t16-64-scan-done", {"statusBar.fit.button", "wait-fit"}});
     steps_.push_back({"t16-65-scan-evolution", {"choose:OK", "mainArea.analysis.tab.evolution"}});
     steps_.push_back({"t16-66-scan-experiment", {experiment, basic, "expand:group.experiments"}});
     // After the scan: the single mode (a setting: the results stay current); a single fit on the shown dataset makes
@@ -298,7 +298,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-67-single-mode", {analysis, extras, "expand:group.fitting_mode", "fittingMode.type",
                                               "choose:Single experiment", basic, "mainArea.analysis.tab.evolution"}});
     steps_.push_back({"t16-68-single-fit-on-dataset",
-                      {"mainArea.analysis.tab.fitting", "reveal:fitting.start", "fitting.start", "wait-fit"}});
+                      {"mainArea.analysis.tab.fitting", "statusBar.fit.button", "wait-fit"}});
     // The single fit's correlations are the fitted dataset's, shown on its Correlations tab.
     steps_.push_back({"t16-68b-single-fit-correlations", {"choose:OK", "mainArea.analysis.tab.correlations"}});
     steps_.push_back({"t16-69-template-dataset", {experiment, basic, "show:experiments.list:161"}});
@@ -307,12 +307,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // and resets with a right click; the Project page shortens a long dataset list.
     steps_.push_back({"t16-70-scan-all-fitted", QStringList{"resize:1280x960"} + start
                                                     + open_cli_project("pd-neut-cwl_cosio-d20_scan-162f")
-                                                    + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
+                                                    + QStringList{analysis, basic, "statusBar.fit.button",
                                                                   "wait-fit", "choose:OK"}});
-    steps_.push_back({"t16-71-scan-reset", {"fitting.reset"}});
-    steps_.push_back({"t16-72-scan-stopped-continue", {"fitting.start", "wait-files:40", "fitting.start", "wait-fit",
+    steps_.push_back({"t16-71-scan-reset", {"statusBar.fit.reset"}});
+    steps_.push_back({"t16-72-scan-stopped-continue", {"statusBar.fit.button", "wait-files:40", "statusBar.fit.button", "wait-fit",
                                                         "choose:OK"}});
-    steps_.push_back({"t16-73-evolution-zoomed", {"fitting.start", "wait-fit", "choose:OK",
+    steps_.push_back({"t16-73-evolution-zoomed", {"statusBar.fit.button", "wait-fit", "choose:OK",
                                                    "mainArea.analysis.tab.evolution",
                                                    "drag:evolution.pointer:0.2,0.1,0.6,0.9"}});
     steps_.push_back({"t16-74-evolution-reset", {"right-click:evolution.pointer"}});
@@ -322,17 +322,17 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t16-76-home", {QStringLiteral("appBar.tab.home")}});
     steps_.push_back({"t16-77-evolution-mid-scan", start
                                                        + open_cli_project("pd-neut-cwl_cosio-d20_scan-324f")
-                                                       + QStringList{analysis, basic, "reveal:fitting.start",
-                                                                     "mainArea.analysis.tab.evolution", "fitting.start",
+                                                       + QStringList{analysis, basic,
+                                                                     "mainArea.analysis.tab.evolution", "statusBar.fit.button",
                                                                      "wait-files:200", "capture-now"}});
-    steps_.push_back({"t16-78-evolution-stopped", {"fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"t16-78-evolution-stopped", {"statusBar.fit.button", "wait-fit", "choose:OK"}});
     // A single crystal (Tb2Ti2O7 on HEiDi): the reflections chart and table on Experiment and Analysis, in both themes,
     // before and after a fit of its scale.
     steps_.push_back({"sc-01-tb2ti2o7-experiment-light",
                       QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-02-tb2ti2o7-analysis-light", {analysis, basic}});
-    steps_.push_back({"sc-03-tb2ti2o7-fit-results-light", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-03-tb2ti2o7-fit-results-light", {"statusBar.fit.button", "wait-fit"}});
     steps_.push_back({"sc-03b-tb2ti2o7-analysis-fitted-light", {"choose:OK"}});
     steps_.push_back({"sc-04-tb2ti2o7-analysis-dark", {"theme:dark"}});
     steps_.push_back({"sc-05-tb2ti2o7-experiment-dark", {experiment, basic}});
@@ -342,13 +342,13 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sc-05e-tb2ti2o7-narrow-light", {"theme:light"}});
     steps_.push_back({"sc-05f-tb2ti2o7-isotropic-extinction", QStringList{"resize:1280x768"} + start
                                                                   + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction"}
-                                                                  + QStringList{analysis, basic, "fitting.start", "wait-fit"}});
+                                                                  + QStringList{analysis, basic, "statusBar.fit.button", "wait-fit"}});
     steps_.push_back({"sc-05g-tb2ti2o7-isotropic-extinction-fitted", {"choose:OK", experiment, basic, "expand:group.extinction"}});
     steps_.push_back({"sc-06-pr2nio4-experiment-light",
                       QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-07-pr2nio4-analysis-dark", {"theme:dark", analysis, basic}});
-    steps_.push_back({"sc-07a-pr2nio4-fit-results-dark", {"fitting.start", "wait-fit"}});
+    steps_.push_back({"sc-07a-pr2nio4-fit-results-dark", {"statusBar.fit.button", "wait-fit"}});
     steps_.push_back({"sc-07a2-pr2nio4-fitted-dark", {"choose:OK"}});
     steps_.push_back({"sc-07a3-pr2nio4-correlations-dark", {"mainArea.analysis.tab.correlations"}});
     steps_.push_back({"sc-07b-pr2nio4-zoomed",
@@ -370,7 +370,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // Both single-crystal fitting examples' report charts after loading and after a fit; then the extinction's s.u.
     // after it is fixed and fitted again, and the reflection table filling the Extras sidebar. Run only when asked
     // (`--demo-only sccheck-`).
-    const QStringList fit_sc{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"};
+    const QStringList fit_sc{analysis, basic, "statusBar.fit.button", "wait-fit", "choose:OK"};
     const QStringList sc_report_steps{QStringLiteral("appBar.tab.report"), "reveal:report.singleCrystal"};
     steps_.push_back({"sccheck-01-tb2ti2o7-report-loaded",
                       QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
@@ -380,9 +380,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-04-pr2nio4-report-fitted", fit_sc + sc_report_steps});
     steps_.push_back({"sccheck-05-pr2nio4-extinction-free-fitted",
                       QStringList{analysis, basic, "parameters.nameFilter", "type:extinction", "parameters.free.0", "parameters.free.1",
-                                  "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"}});
+                                  "statusBar.fit.button", "wait-fit", "choose:OK"}});
     steps_.push_back({"sccheck-06-pr2nio4-extinction-fixed-refitted",
-                      {"parameters.free.0", "parameters.free.1", "reveal:fitting.start", "fitting.start", "wait-fit",
+                      {"parameters.free.0", "parameters.free.1", "statusBar.fit.button", "wait-fit",
                        "choose:OK"}});
     steps_.push_back({"sccheck-07-pr2nio4-reflections-extras", {experiment, extras, "expand:group.refln"}});
     steps_.push_back({"sccheck-08-pr2nio4-reflections-taller", {"resize:1280x1000"}});
@@ -416,7 +416,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-10c-int-wavelength", {"choose:OK", "expand:group.instrument"}});
     steps_.push_back({"sccheck-10d-int-reflections", {extras, "expand:group.refln"}});
     // The two single crystals fit together, each with its own scale.
-    steps_.push_back({"sccheck-10e-int-joint-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"sccheck-10e-int-joint-fitted", {analysis, basic, "statusBar.fit.button", "wait-fit"}});
     steps_.push_back({"sccheck-10f-dat-loaded", QStringList{"choose:OK"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
                                                     + create_sc + QStringList{"load-reflections:" + sc_files + "/tbti.dat"}});
     steps_.push_back({"sccheck-10g-dat-message", {"statusBar.warnings"}});
@@ -441,7 +441,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-12a-taurine-experiment", QStringList{"resize:1280x768"} + start
                                                             + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});
     steps_.push_back({"sccheck-12b-taurine-reflections", {extras, "expand:group.refln"}});
-    steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
+    steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "statusBar.fit.button", "wait-fit"}});
     // The fit's cutoff (FullProf's Rmub 3), and the observed threshold above the reflection table switched to F.
     steps_.push_back({"sccheck-12d-taurine-fitted-reflections", {"choose:OK", extras, "expand:group.refine_ls"}});
     steps_.push_back({"sccheck-12e-taurine-observed-on-f",
@@ -467,7 +467,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // The Tb2Ti2O7 verification project's scale-only fit, its scale shown in the parameter table.
     steps_.push_back({"sccheck-13-tb2ti2o7-basic-fitted", QStringList{"resize:1280x768"} + start
                                                               + QStringList{"appBar.tab.project", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_basic"}
-                                                              + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                                              + QStringList{analysis, basic, "statusBar.fit.button", "wait-fit",
                                                                             "choose:OK", "parameters.nameFilter", "type:scale"}});
     // LiF is a verification project, which the app does not bundle (ADR-0031): it opens from the CLI projects.
     steps_.push_back({"t16-40-created-saved-reopened",
@@ -481,12 +481,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"t17-01-correlations-empty",
                       QStringList{"resize:1280x768"} + start + open_example("pd-neut-cwl_cosio-d20")
                           + QStringList{analysis, basic, correlations}});
-    steps_.push_back({"t17-02-correlations-fitted", {"fitting.start", "wait-fit", "choose:OK"}});
+    steps_.push_back({"t17-02-correlations-fitted", {"statusBar.fit.button", "wait-fit", "choose:OK"}});
     steps_.push_back({"t17-03-correlations-ten", {"correlations.toolbar.parameters.number", "key:Ctrl+A", "type:10", "key:Return"}});
     steps_.push_back({"t17-04-correlations-level", {"correlations.toolbar.level.number", "key:Ctrl+A", "type:0.5", "key:Return"}});
     steps_.push_back({"t17-07-correlations-all", {"correlations.toolbar.parameters.number", "key:Ctrl+A", "type:43", "key:Return"}});
     steps_.push_back({"t17-05-beer-correlations", start + open_example("pd-neut-tof_ferrite-austenite-beer")
-                                                      + QStringList{analysis, basic, "fitting.start", "wait-fit",
+                                                      + QStringList{analysis, basic, "statusBar.fit.button", "wait-fit",
                                                                     "choose:OK", correlations}});
     steps_.push_back({"t17-06-beer-second-experiment", {"mainArea.blocks.down"}});
     // The main-view chart toolbars centred in one line (owner, 2026-10-11): the structure view and the pattern chart.
@@ -514,7 +514,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // shown dataset (owner, 2026-10-11).
     steps_.push_back({"t17-40-scan-correlations", QStringList{"key:Escape"} + start
                                                       + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
-                                                      + QStringList{analysis, basic, "fitting.start", "wait-fit",
+                                                      + QStringList{analysis, basic, "statusBar.fit.button", "wait-fit",
                                                                     "choose:OK", "mainArea.analysis.tab.correlations"}});
     steps_.push_back({"t17-41-scan-second-dataset", {"mainArea.blocks.up"}});
     steps_.push_back({"t17-42-scan-first-dataset", {"mainArea.blocks.up"}});
@@ -610,7 +610,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         const QString fitted = qEnvironmentVariable("EDI_DEMO_REPORT_PROJECT");
         const QStringList open =
             fitted.isEmpty() ? start + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f") +
-                                   QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit",
+                                   QStringList{analysis, basic, "statusBar.fit.button", "wait-fit",
                                                "choose:OK"}
                              : QStringList{"open-project:" + fitted};
         steps_.push_back({"report-scan-1-evolution", QStringList{"resize:1280x960"} + open +
@@ -628,7 +628,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                  + QStringList{analysis, basic, "mainArea.analysis.tab.evolution"};
         steps_.push_back({"evolution-1-unfitted", scan});
         steps_.push_back({"evolution-2-unfitted-parameters", {"evolution.parameters"}});
-        steps_.push_back({"evolution-3-fitted", {"key:Escape", "reveal:fitting.start", "fitting.start", "wait-fit",
+        steps_.push_back({"evolution-3-fitted", {"key:Escape", "statusBar.fit.button", "wait-fit",
                                                  "choose:OK", "mainArea.analysis.tab.evolution"}});
         steps_.push_back({"evolution-4-fitted-parameters", {"evolution.parameters"}});
     }
@@ -749,7 +749,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("seqfit-"))) {
         steps_.push_back({"seqfit-1-running", QStringList{"resize:1280x960", "theme:light"} + start
                                                   + open_example("pd-neut-cwl_cosio-d20_scan")
-                                                  + QStringList{analysis, basic, "reveal:fitting.start", "fitting.start",
+                                                  + QStringList{analysis, basic, "statusBar.fit.button",
                                                                 "wait-files:10", "drag:chart.pointer:0.55,0.05,0.65,0.95",
                                                                 "wait-files:30", "capture-now"}});
         steps_.push_back({"seqfit-2-running", {"wait-files:60", "capture-now"}});
@@ -812,7 +812,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
         steps_.push_back({"scanviews-04-map-light-log-magma", {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale",
                                                               "choose:log", "scanView.map.toolbar.colourMap", "choose:magma"}});
-        steps_.push_back({"scanviews-05-map-light-running", {"reveal:fitting.start", "fitting.start", "wait-files:40",
+        steps_.push_back({"scanviews-05-map-light-running", {"statusBar.fit.button", "wait-files:40",
                                                             "capture-now"}});
         steps_.push_back({"scanviews-06-stacked-light-running", {"mainArea.analysis.tab.stacked", "wait-files:60",
                                                                 "capture-now"}});

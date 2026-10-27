@@ -302,14 +302,14 @@ TestCase {
             verify(glyph !== null, "owner 2026-10-06: Atom sites draws its coloured atom glyph beside the type");
             click("appBar.tab.analysis");
             click("sideBar.tab.basic");
-            const rows = Probe.rows(Session.project.parameters);
-            const index = rows.findIndex(row => row.parameter && row.parameter.rowLabel === "La" && row.parameter.name === "occupancy");
-            verify(index >= 0, "owner 2026-10-06: Analysis contains the same La occupancy row");
             let table = null;
             tryVerify(() => {
                 table = discover(Ui.page(appWindow), "parameters.list");
                 return table !== null;
             }, 2000, "owner 2026-10-06: Analysis parameter table belongs to the selected pane");
+            const rows = Probe.rows(table.sourceModel);
+            const index = rows.findIndex(row => row.parameter && row.parameter.rowLabel === "La" && row.parameter.name === "occupancy");
+            verify(index >= 0, "owner 2026-10-06: Analysis shows the same La occupancy row after its show-filters");
             table.positionViewAtIndex(index, ListView.Center);
             tryVerify(() => control("parameters.name." + index) !== null, 2000, "owner 2026-10-06: the selected Analysis name is exposed");
             const line = control("parameters.name." + index);

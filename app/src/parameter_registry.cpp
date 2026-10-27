@@ -42,6 +42,34 @@ void ParameterRegistry::rebuild(edi::Project& project) {
         items.append(item);
         by_key.emplace(key, item);
     }
+    // Each descriptor that is no parameter after the last row of its block's category, else at its block's end.
+    for (const edi::DescriptorEntry& entry : edi::model_descriptors(project)) {
+        const auto key = std::make_pair(static_cast<const edi::Parameter*>(nullptr),
+                                        entry.path + '\n' + entry.block_name);
+        auto found = by_key_.find(key);
+        ParameterItem* item = nullptr;
+        if (found != by_key_.end()) {
+            item = found->second;
+            by_key_.erase(found);
+        } else {
+            item = new ParameterItem(entry, editor_, this);
+        }
+        const auto& indices = entry.block_kind == "structure" ? structure_index : experiment_index;
+        const auto place = indices.find(entry.block_name);
+        item->setBlockIndex(place != indices.end() ? place->second : -1);
+        const auto same_block = [&entry](const ParameterItem* other) {
+            return other->blockKind().toStdString() == entry.block_kind &&
+                   other->blockName().toStdString() == entry.block_name;
+        };
+        qsizetype at = -1;
+        for (qsizetype i = 0; i < items.size(); ++i) {
+            if (same_block(items[i]) && (at < 0 || items[i]->category().toStdString() == entry.category)) {
+                at = i;
+            }
+        }
+        items.insert(at < 0 ? items.size() : at + 1, item);
+        by_key.emplace(key, item);
+    }
     const bool changed = !by_key_.empty() || items != items_;
     QList<ParameterItem*> removed;
     for (const auto& [key, item] : by_key_) {
@@ -51,9 +79,12 @@ void ParameterRegistry::rebuild(edi::Project& project) {
     by_key_ = std::move(by_key);
     by_parameter_.clear();
     for (ParameterItem* item : items_) {
-        by_parameter_.emplace(item->parameter(), item);
+        if (!item->isDescriptorValue()) {
+            by_parameter_.emplace(item->parameter(), item);
+        }
     }
     refreshElements(project);
+    refreshFittability(project);
     refreshEstimated(project);
     refreshSpelling(project);
     refreshDefiniteness(project);
@@ -155,8 +186,45 @@ void ParameterRegistry::refreshRefinable(edi::Project& project) {
         }
     }
     for (ParameterItem* item : items_) {
+        if (item->isDescriptorValue()) {
+            continue;  // shown read-only, never typed
+        }
         const auto found = refinable.find(item->parameter());
         item->setRefinable(found == refinable.end() || found->second);
+    }
+}
+
+void ParameterRegistry::refreshFittability(edi::Project& project) {
+    // The marks crysta's rule gave each parameter at the last load or edit (edi ADR-0053); a descriptor row's value
+    // as the model holds it now.
+    std::unordered_map<std::string, double> values;
+    for (const edi::DescriptorEntry& entry : edi::model_descriptors(project)) {
+        values.emplace(entry.path + '\n' + entry.block_name, entry.value);
+    }
+    for (ParameterItem* item : items_) {
+        if (item->isDescriptorValue()) {
+            const auto found = values.find(item->path().toStdString() + '\n' + item->blockName().toStdString());
+            if (found != values.end()) {
+                item->setDescriptorValue(found->second);
+            }
+            continue;
+        }
+        const edi::Parameter& parameter = *item->parameter();
+        // The show-filters' groups (edi ADR-0053 §7). A value crysta cannot vary yet goes with those this fit's data
+        // cannot determine: symmetry allows both, and only this fit keeps them fixed.
+        const int group = [&parameter] {
+            switch (parameter.fit_blocker) {
+                case edi::FitBlocker::Data:
+                case edi::FitBlocker::Capability: return ParameterItem::NotMeasured;
+                case edi::FitBlocker::Symmetry: return ParameterItem::BySymmetry;
+                case edi::FitBlocker::Constraint: return ParameterItem::ByConstraint;
+                case edi::FitBlocker::Descriptor: return ParameterItem::FixedSetting;
+                case edi::FitBlocker::None: break;
+            }
+            return ParameterItem::NoGroup;
+        }();
+        item->setFittability(parameter.fit_blocker == edi::FitBlocker::None,
+                             QString::fromStdString(parameter.fit_reason), group);
     }
 }
 
@@ -203,6 +271,7 @@ void ParameterRegistry::refreshDefiniteness(const edi::Project& project) {
 void ParameterRegistry::publish(edi::Project& project) {
     refreshElements(project);
     refreshRefinable(project);
+    refreshFittability(project);
     refreshEstimated(project);
     refreshSpelling(project);
     refreshDefiniteness(project);

@@ -1425,9 +1425,11 @@ Rectangle {
             const evolution = chart.mainTabs.find(item => item.objectName === "mainArea.analysis.tab.evolution");
             verify(evolution !== undefined, "The availability witness reaches the actual Evolution tab");
             compare(evolution.enabled, data.kind === "scan", "Evolution remains scan-only after joint Stacked and Map are added");
-            const follow = findChild(chart, "fitting.follow");
-            verify(follow !== null, "The actual fitting sidebar supplies its Follow control");
-            verify(data.kind === "scan" ? follow.visible : !follow.enabled && !follow.checked, "Follow is usable only for scans and cannot be activated for single or joint fits");
+            applicationWindow = applicationFactory.createObject(null);
+            verify(applicationWindow !== null && waitForRendering(applicationWindow.contentItem), "The mode witness also renders the actual status bar");
+            const follow = findChild(applicationWindow, "statusBar.fit.follow");
+            verify(data.kind !== "scan" || follow !== null, "The scan status bar supplies its Follow control");
+            verify(data.kind === "scan" ? follow.visible : follow === null || !follow.visible && !follow.clickable && !follow.checked, "Follow is usable only for scans and cannot be activated for single or joint fits");
         }
         function test_joint_labels_outside_axis_data() {
             const rows = [];
