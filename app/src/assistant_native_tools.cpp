@@ -41,6 +41,7 @@ QJsonArray native_tool_specs(bool include_profiles) {
     };
     add("create_project", "Create an ordinary empty project in the CURRENT Edi session, only when no project is open. Uses the normal app Create API and current new-project preferences, with no scientific recipe, import or fit. Like the ordinary Create form, saves immediately under its remembered parent or Documents on desktop; existing destinations refuse. Name and description are optional (default basename project). Continue with normal load_structure/create_experiment/load_data using the actual retained file IDs. Both modes use the same native Session owner; Show actions adds the genuine Create cue. Never discover another app or ask the user to create it for you.",
         {{"name",text},{"description",Object{{"type","string"},{"maxLength",4096}}}});
+    add("show_report", "Open the CURRENT project's ordinary enabled Report preview through the same current-window tab navigation as the app. Both modes use the same owner; Show actions adds the existing tab cue. This navigates only; it does not generate/export/save a report or discover another application.");
     add("inspect_project", "Inspect Edi's actual currently displayed project/context, including native_state.interface_groups in actual current category-model/tier order (category groups only; admitted is compatibility, not enabled-control authority), and native_state.calculations: exact dataset published error/stale and calculated-column count/availability. Idle or available stale points do not prove success or viewport visibility. No mutation.");
     add("list_parameters", "Read actual native parameter paths/values/free flags and dependence. No mutation.");
     add("diagnostics", "Read actual available native physical diagnostics plus original app native_state.calculations for each exact dataset: published error/stale and calculated-column count/availability. Published old errors and idle are not current success; calculated availability is not legend/series visibility. No mutation.");
@@ -163,7 +164,7 @@ QJsonArray native_tool_specs(bool include_profiles) {
 }
 } // namespace
 QJsonArray assistant_native_tool_names() {
-    return {"create_project","inspect_project","list_parameters","diagnostics","set_parameters","set_free","run_fit","undo_fit",
+    return {"create_project","show_report","inspect_project","list_parameters","diagnostics","set_parameters","set_free","run_fit","undo_fit",
         "create_cwl_project","load_structure","create_experiment","set_experiment_type","load_data",
         "read_selected_file","create_structure","edit_structure","edit_atom","edit_experiment",
         "acquire_inputs","save_project","add_relations","edit_relation","edit_background","estimate_background"};
@@ -219,7 +220,7 @@ QJsonArray assistant_native_tool_specs() {
     return native_tool_specs(true);
 }
 bool assistant_native_tool(const QString& name) {
-    return name=="create_project" || individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
+    return name=="show_report" || name=="create_project" || individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "undo_fit" || name == "create_cwl_project" || name == "add_relations" || name == "edit_relation" || name == "save_project" || name == "edit_background" || name == "estimate_background";
 }
 QString assistant_native_purpose(const Object& args) {
@@ -236,6 +237,7 @@ QString assistant_native_purpose(const Object& args) {
 }
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
+    if(name=="show_report"){shape(args,{"purpose"});return;}
     if(name=="create_project") {
         QSet<QString> fields{"purpose"};if(args.contains("name"))fields.insert("name");if(args.contains("description"))fields.insert("description");shape(args,fields);
         if((args.contains("name") && (!args.value("name").isString() || args.value("name").toString().isEmpty() || args.value("name").toString().size()>256)) ||

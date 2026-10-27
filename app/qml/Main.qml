@@ -28,6 +28,18 @@ EaComponents.ApplicationWindow {
         return Session.project === null;
     }
 
+    function createNativeProject(values, intent) {
+        if (Session.project !== null) return ({});
+        return Session.createProjectWithOutcome(values.name, values.description, values.location, values.suRule,
+            values.title, values.authors, values.reportLibraries, intent);
+    }
+    function showNativeReport(project) {
+        if (project === null || Session.project !== project || !reportTab.enabled) return false;
+        AppState.open(AppState.Page.Report);
+        return Session.project === project && AppState.reportPageEnabled
+            && EaGlobals.Vars.appBarCurrentIndex === AppState.Page.Report;
+    }
+
     readonly property Item assistantWorkflowPage: {
         const loaders = [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader];
         const index = appBarCentralTabs.currentIndex - 1;
