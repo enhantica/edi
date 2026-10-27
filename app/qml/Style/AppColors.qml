@@ -24,20 +24,20 @@ QtObject {
     readonly property color fitButtonBackground: EaStyle.Colors.isDarkPalette ? "#ffffff" : "#000000"
     readonly property color fitButtonForeground: EaStyle.Colors.isDarkPalette ? "#000000" : "#ffffff"
 
-    // A structure's colour by its place among the project's, from the colour scheme's structure colours (edi ADR-0038):
-    // the first ones in order, or past five a gradient along the order.
-    function structure(index) {
-        const count = Session.project ? Math.max(Session.project.structures.count, 1) : 1;
-        return index >= 0 ? ApplicationInfo.structureColour(Preferences.structureColours, index, count, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
+    // A block's colour from the figure palette (edi ADR-0038): the palette's colour at the block's position, which the
+    // open project holds (a block keeps its position; a new one takes the next free). `dark` picks the dark theme's
+    // colour; without it, the app's theme decides (a PDF's figure asks for the light one).
+    function positioned(positions, index, dark) {
+        const project = Session.project;
+        if (!project || index < 0 || index >= positions.length)
+            return EaStyle.Colors.themeForegroundMinor;
+        return ApplicationInfo.figureColour(Preferences.colourScheme, positions[index], project.colourPositionCount, dark === undefined ? EaStyle.Colors.isDarkPalette : dark);
     }
-
-    // An experiment's colour by its place among the project's, from the colour scheme's measured colours: the first
-    // ones in order, or past five a gradient along the order. None is a structure's colour.
-    // `dark` picks the dark theme's colour; without it, the app's theme decides (a PDF's figure asks for the light one).
+    function structure(index, dark) {
+        return colors.positioned(Session.project ? Session.project.structureColourPositions : [], index, dark);
+    }
     function experiment(index, dark) {
-        const count = Session.project ? Math.max(Session.project.experiments.count, 1) : 1;
-        const darkColour = dark === undefined ? EaStyle.Colors.isDarkPalette : dark;
-        return index >= 0 ? ApplicationInfo.patternColour(Preferences.patternColours, index, count, darkColour) : EaStyle.Colors.themeForegroundMinor;
+        return colors.positioned(Session.project ? Session.project.experimentColourPositions : [], index, dark);
     }
 
     // A block's colour by its kind ("structure" or "experiment") and place.
@@ -59,7 +59,7 @@ QtObject {
     }
     readonly property list<color> tableUnderlays: [EaStyle.Colors.themeBackgroundHovered1, EaStyle.Colors.themeBackgroundHovered2, EaStyle.Colors.themeRowHovered, EaStyle.Colors.mainContentBackground]
 
-    // A colour drawn flat on any of `backgrounds`, moved to 3:1 contrast on each by its lightness (edi ADR-0047).
+    // A colour drawn flat on any of `backgrounds`, moved to 2:1 contrast on each by its lightness (edi ADR-0047).
     function readable(colour, backgrounds) {
         return ApplicationInfo.readableColour(colour, backgrounds);
     }

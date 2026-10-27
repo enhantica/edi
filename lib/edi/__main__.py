@@ -222,11 +222,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     report.add_argument(
         '--colour-scheme',
-        choices=('ediNatural', 'ediCoast', 'ediGarden', 'ediStudio', 'ediContrast'),
+        choices=('earth', 'classic', 'soft', 'natural', 'colourBlindSafe'),
         default=None,
         metavar='NAME',
-        help="the colour scheme whose light colours the report's charts take "
-        '(default: ediNatural)',
+        help="the figure palette whose light colours the report's charts take (default: earth)",
     )
     report.add_argument(
         '--correlation-experiment',

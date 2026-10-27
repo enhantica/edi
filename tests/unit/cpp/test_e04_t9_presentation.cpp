@@ -366,14 +366,15 @@ TEST_CASE("E04-T9 I17 identity modes and I23 authoritative style colors") {
     // the positive/thinner invariant separately proves the owner requirement.
     CHECK_MESSAGE(p.y_residual.title == "Residual",
                   " owner chart item 4 names the residual presentation axis Residual");
-    // Exact Edi Natural coordinates: tests/fixtures/approved_palettes/colours.json.
+    // Owner colours: tests/fixtures/chart_controls/owner.json. ADR-0038 assigns this default
+    // table three experiments, so the first spare Bragg row takes Earth position 3.
     const auto& styles = edi::pattern_style_table();
     for (const auto& [kind, light, dark, width] : std::vector<std::tuple<edi::SeriesKind,std::string,std::string,double>>{
-        {edi::SeriesKind::Measured,"#829DB9","#B2C8E0",2},
-        {edi::SeriesKind::Calculated,"#CA5C6E","#EE8795",2},
+        {edi::SeriesKind::Measured,"#618EC8","#6E92CB",2},
+        {edi::SeriesKind::Calculated,"#AD1A6B","#FC4F81",2},
         {edi::SeriesKind::Background,"#8A8A8A","#969696",1},
         {edi::SeriesKind::Residual,"#737373","#B0B0B0",1},
-        {edi::SeriesKind::BraggTicks,"#D26E3C","#F59B6F",1}}) {
+        {edi::SeriesKind::BraggTicks,"#C877B7","#C375C2",1}}) {
         const auto& s = series(p,kind);
         const auto style = std::find_if(styles.begin(),styles.end(),[&](const auto& v){return v.key==s.style;});
         REQUIRE_MESSAGE(style != styles.end(), " I23 every series resolves to the one authoritative style table");

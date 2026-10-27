@@ -34,7 +34,9 @@ to know where Qt puts it.
    - each page's Settings tab (2);
    - the window's size and position;
    - the last open project and the recent projects;
-   - for each project, the structure and the experiment last selected in it, keyed by the project's path.
+   - for each project, the structure and the experiment last selected in it, keyed by the project's path;
+   - for each project, its scan views' Stacked spacing and Map direction (edi ADR-0041), keyed the same way, so a
+     project reopens with them (the owner, 2026-10-26).
 
    A project opened on another machine, or by someone else, opens with that machine's settings, and changing a
    setting never marks a project modified. The report's settings are project data, not app settings (ADR-0036 §7):
@@ -65,16 +67,18 @@ to know where Qt puts it.
    a confirmation. In the web app the path reads "stored in this browser" and there is no "Open folder".
 6. A demo capture or a test run keeps its own fresh settings folder (as now), so it never reads or writes the user's
    settings.
-7. **The groups.** The store's groups are named for what holds them: `Appearance` (the colour scheme, and since 2026-10-22 `structureColourScheme` and `patternColourScheme`,
-   empty until chosen and then following it; the Stacked and Map colours are chosen beside them in the dialog and kept
-   in `ScanViews`), `Projects`
+7. **The groups.** The store's groups are named for what holds them: `Appearance` (`colourScheme`, the one figure palette since
+   2026-10-26, edi ADR-0038; a stored `patternColourScheme` of 2026-10-22 is read into it once and cleared; the Stacked
+   and Map colours are chosen beside it in the dialog and kept in `ScanViews`), `Projects`
    (the defaults for new projects, `recent` and `last`), `Window` (`x`, `y`, `width`, `height` in logical pixels; a
    position on no screen is moved onto the primary screen), one group per page (`Analysis`: `scanPatternUpdates`),
    `PatternChart` for the one pattern chart every page shows (`yScale`, `structureCurves`, `legendShown`,
    `hoverShown`, `pointerMode`, `measuredStyle`; amended 2026-10-21: the Analysis and Experiment charts' y scales and the Experiment
    chart's x axis merged into it, the x axis being the project's own for every page, edi ADR-0017 §15), `ScanViews`
-   for the Stacked and Map views (`stackedPalette`, `mapColours`, `mapSmooth`, `mapReversed`, `stackedHeight`, `stackedReversed`; edi ADR-0041; the included range only is `Charts/includedOnly`, every pattern chart's) and `Selections` (each project's structure, experiment and
-   scan dataset file, keyed by the project's folder). Today's `settings.ini` is carried over once: a key the store
+   for the Stacked and Map views (`stackedPalette`, `mapColours`, `mapSmooth`, `stackedReversed`; edi ADR-0041; the included range only is `Charts/includedOnly`, every pattern chart's), `Selections` (each project's structure, experiment and
+   scan dataset file, keyed by the project's folder) and `ProjectViews` (each project's `stackedSpacing` and
+   `mapDirection`, keyed by its folder; written when changed and at every save, so a project saved to a new folder
+   takes them along). Today's `settings.ini` is carried over once: a key the store
    holds is never overwritten, the keys that moved go to their groups, and a marker keeps a later start from carrying
    anything again.
 

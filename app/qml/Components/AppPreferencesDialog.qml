@@ -251,41 +251,35 @@ AppDialog {
                 }
             }
 
-            // The colours, one choice for each thing coloured (the owner, 2026-10-22): the structures' and the
-            // patterns' schemes, the Stacked view's lines and the Map's colour map. The schemes' tokens and names
-            // (edi::colour_scheme_names) in the order the core lists them; the scan views' choices as their charts
-            // offer them.
+            // The figure palette, one for experiments and structures (the owner, 2026-10-26), the palettes' tokens and
+            // names (edi::colour_scheme_names) in the order the core lists them, with its colour order under it; then
+            // the Stacked view's lines and the Map's colour map, as their charts offer them.
             RowLabel {
-                text: qsTr("Structures") + ":"
+                text: qsTr("Palette") + ":"
             }
-            RowBox {
-                readonly property var schemes: ApplicationInfo.colourSchemes
+            Column {
+                spacing: dialog.stackSpacing
 
-                objectName: "preferences.structureColours"
-                model: ApplicationInfo.colourSchemeTitles
-                currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.structureColours)))
-                onActivated: index => Preferences.structureColourScheme = schemes[index]
-                ToolTip.text: qsTr("The structures' colours: their icons, Bragg ticks and curves")
-            }
-            RowLabel {
-                text: qsTr("Patterns") + ":"
-            }
-            RowBox {
-                readonly property var schemes: ApplicationInfo.colourSchemes
+                RowBox {
+                    readonly property var schemes: ApplicationInfo.colourSchemes
 
-                objectName: "preferences.patternColours"
-                model: ApplicationInfo.colourSchemeTitles
-                currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.patternColours)))
-                onActivated: index => Preferences.patternColourScheme = schemes[index]
-                ToolTip.text: qsTr("The patterns' colours: the experiments' icons and measured data, and the calculated, background and residual lines")
+                    objectName: "preferences.colours"
+                    model: ApplicationInfo.colourSchemeTitles
+                    currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)))
+                    onActivated: index => Preferences.colourScheme = schemes[index]
+                    ToolTip.text: qsTr("The colours of experiments and structures: their icons, patterns, Bragg ticks and curves")
+                }
+                PaletteStrip {
+                    objectName: "preferences.colourOrder"
+                }
             }
             RowLabel {
                 text: qsTr("Stacked") + ":"
             }
             RowBox {
                 readonly property var choices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
-                // Empty follows the patterns' scheme.
-                readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.patternColours
+                // Empty follows the palette.
+                readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme
 
                 objectName: "preferences.stackedColours"
                 model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
@@ -297,7 +291,7 @@ AppDialog {
                 text: qsTr("Map") + ":"
             }
             RowBox {
-                readonly property var choices: Array.from(ApplicationInfo.scanColourRamps).concat(Array.from(ApplicationInfo.scanColourMaps))
+                readonly property var choices: ApplicationInfo.scanColourMaps
 
                 objectName: "preferences.mapColours"
                 model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))

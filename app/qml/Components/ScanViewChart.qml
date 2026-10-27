@@ -44,18 +44,20 @@ Item {
     // and for the colour bar's top label, centred on the bar's end.
     readonly property real toolbarTop: em
     readonly property real plotTop: toolbarTop + scanToolbar.height + AppSizes.mainAreaMargin
-    // The colours, as the app settings hold them (the owner, 2026-10-22): for either view a colour scheme's token (the
-    // stacked view only), one of the four colour maps, or a ramp from the pattern chart's plot background to a scheme's
-    // first measured colour (`ramp:<scheme>`).
-    // The Stacked view takes the schemes' own colours or a colour map, never a one-colour ramp, whose neighbouring lines
-    // could not be told apart; the Map lists the Edi shades first (the owner, 2026-10-22).
+    // The colours (the owner, 2026-10-26): the Stacked lines take a palette's colours (by default the app's) or a
+    // colour map's, and the Map a colour map, Blue-Red by default, both app settings. The Map's direction is the
+    // project's (Auto by default), resolved in the theme the view is drawn in.
     readonly property var stackedChoices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
-    readonly property var mapChoices: Array.from(ApplicationInfo.scanColourRamps).concat(Array.from(ApplicationInfo.scanColourMaps))
+    readonly property var mapChoices: ApplicationInfo.scanColourMaps
     readonly property string stackedPalette: {
-        const stored = Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.patternColours;
+        const stored = Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme;
         return stackedChoices.indexOf(stored) >= 0 ? stored : ApplicationInfo.colourSchemeOrDefault(stored);
     }
-    readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "ramp:ediNatural"
+    readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "blue-red"
+    readonly property string mapDirection: chart.project ? chart.project.mapDirection : "auto"
+    readonly property bool mapInverted: ApplicationInfo.scanMapInverted(mapColours, mapDirection, chart.colors.chartBackground, chart.colors.isDarkPalette)
+    // The Stacked legend shown: its toolbar button, an app setting, off by default as the pattern chart's.
+    readonly property bool stackedLegend: mode === "stacked" && Preferences.scanStackedLegendShown
     // The view's zoom, always on in these views (the owner, 2026-10-22): [min, max] on x and on y, or empty for the
     // whole range. A drag on the plot sets it; the reset button, another scan, another x axis or another row placing
     // clears it.
@@ -354,12 +356,16 @@ Item {
             yMax: axisY.max
             scale: Preferences.patternYScale
             colourScheme: chart.stackedPalette
+            // A joint fit's experiments at their positions; a scan's datasets at those the structures leave free.
+            positions: chart.scan !== null && chart.scan.joint && chart.project ? chart.project.experimentColourPositions : []
+            takenPositions: chart.project ? chart.project.structureColourPositions : []
             colourMap: chart.mapColours
             background: chart.colors.chartBackground
             smoothRows: Preferences.scanMapSmooth
-            reversed: chart.mode === "map" && Preferences.scanMapReversed
+            reversed: chart.mode === "map" && chart.mapInverted
             stackedReversed: Preferences.scanStackedReversed
             includedOnly: Preferences.chartIncludedOnly
+            subtractBackground: Preferences.chartSubtractBackground
             dark: chart.colors.isDarkPalette
             current: chart.project ? chart.project.currentExperimentIndex : -1
             // A view on a page or tab not shown draws again only once it is shown.
@@ -368,14 +374,16 @@ Item {
             // its font's line tall, rounded up to a whole pixel, which can be more than the row height it is given.
             labelled: chart.shown && chart.rowLabels && chart.scan !== null && chart.scan.rowTextsRevision >= 0 && chart.scan.count > 0
             labelGap: Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height))
+            // Highlighting with the Stacked legend shown, the legend marks the shown dataset instead of its row's name
+            // (the owner, 2026-10-26).
+            nameCurrent: !(chart.stackedLegend && Preferences.chartHighlightSelected)
             // The shown dataset on top and the others faded, or all alike: one app setting for every chart of several
             // datasets (the owner, 2026-10-24).
             highlight: Preferences.chartHighlightSelected
             faded: Preferences.chartFadedOpacity
             busy: chart.project !== null && chart.project.fit !== null && chart.project.fit.running
-            // The stacked patterns' offset and height, app settings in percent (Fit: 0).
-            offset: Preferences.scanStackedOffset / 100
-            heightShare: Preferences.scanStackedSize / 100
+            // The stacked patterns' spacing, the project's step (edi::stacked_spacing_share).
+            spacing: ApplicationInfo.stackedSpacingShare(chart.project ? chart.project.stackedSpacing : "wide")
             // On the GPU as detected or chosen (edi ADR-0041); never on Qt Quick's software backend, which cannot draw
             // the lines' shader.
             gpu: RenderingInfo.api !== "Software" && (Preferences.scanRenderer === "gpu" || (Preferences.scanRenderer === "auto" && RenderingInfo.detected && !RenderingInfo.software))
@@ -541,9 +549,9 @@ Item {
             // Only a label shown has its text: the others, hidden while the rows are too close, lay out nothing.
             readonly property string rowText: chart.shown && chart.shownRowLabels[index] === true && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(index) : ""
             readonly property real at: chart.shown && chart.scan !== null && chart.scan.revision >= 0 && layer.patternHeight > 0 ? layer.rowOf(index) : NaN
-            // The line's colour on the Stacked view; on the Map, a joint fit's experiment's own. The colours' revision is
-            // read here, so the label follows the colour choice and the theme.
-            readonly property color colour: chart.mode === "stacked" && layer.coloursRevision >= 0 ? layer.colourOf(index) : AppColors.experiment(index, chart.colors.isDarkPalette)
+            // The dataset's colour, its Stacked line's (a joint fit's experiment's own, a scan's dataset's position in the
+            // palette). The colours' revision is read here, so the label follows the colour choice and the theme.
+            readonly property color colour: layer.coloursRevision >= 0 ? layer.colourOf(index) : chart.colors.themeForegroundMinor
 
             objectName: "scanView." + chart.mode + ".rowLabel." + index
             visible: chart.hasData && chart.shownRowLabels[index] === true
@@ -566,6 +574,18 @@ Item {
             // Map it is centred on its band.
             y: plot.y + (axisY.max - at) / (axisY.max - axisY.min) * plot.height - (chart.mode === "stacked" ? height : height / 2)
         }
+    }
+
+    // The Stacked legend at the plot's top right: every dataset, or past fifteen the first, the shown and the last with how
+    // many more, the shown one bold in the accent colour while highlighting (ScanLayer.legend).
+    ChartLegend {
+        objectName: "scanView.stacked.legend"
+        z: 1
+        colors: chart.colors
+        x: plot.x + plot.width - width - chart.em
+        y: plot.y + chart.em
+        visible: chart.stackedLegend && chart.hasData
+        entries: layer.legend
     }
 
     // A map whose rows stand at their scan values keeps its numeric scale and labels no row; highlighting off, the shown
@@ -625,7 +645,7 @@ Item {
             colourMap: chart.mapColours
             background: chart.colors.chartBackground
             dark: chart.colors.isDarkPalette
-            reversed: Preferences.scanMapReversed
+            reversed: chart.mapInverted
         }
         Rectangle {
             anchors.fill: bar
@@ -699,6 +719,7 @@ Item {
 
         ToolbarComboBox {
             objectName: "scanView." + chart.mode + ".toolbar.xaxis"
+            toolbarGroup: "axes"
             // As the pattern chart's: d once a calculation has given it, and the closed box names the list's entry.
             enabled: chart.scan !== null && chart.scan.dAvailable
             toolTip: chart.scan !== null && chart.scan.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
@@ -716,6 +737,7 @@ Item {
         }
         ToolbarComboBox {
             objectName: "scanView." + chart.mode + ".toolbar.rows"
+            toolbarGroup: "axes"
             // The rows by the scan value, where the scan extracts one, or in order by file (a scan's datasets share a
             // datablock) or by datablock (a joint fit's experiments), the owner, 2026-10-22.
             readonly property bool hasValue: chart.scan !== null && chart.scan.valueTitle !== ""
@@ -731,35 +753,9 @@ Item {
                     chart.project.evolution.xMode = hasValue ? index : 1;
             }
         }
-        // How far each stacked pattern's baseline sits above the one below it, in tenths of a pattern's own height:
-        // 0 % puts every baseline on one line, 100 % starts each where the one below it ends (the owner,
-        // 2026-10-24).
-        ToolbarComboBox {
-            readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-
-            objectName: "scanView.stacked.toolbar.offset"
-            visible: chart.mode === "stacked"
-            toolTip: qsTr("How far each pattern starts above the one below it, in its own height")
-            model: entries.map(percent => qsTr("%1 %").arg(percent))
-            closedTexts: entries.map(percent => qsTr("offset: %1 %").arg(percent))
-            shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedOffset))
-            onActivated: index => Preferences.scanStackedOffset = entries[index]
-        }
-        // How tall each stacked pattern is: Fit, which fills the plot with the whole stack, or a share of the plot's
-        // height; a stack taller than the plot is reached with the zoom (the owner, 2026-10-24).
-        ToolbarComboBox {
-            readonly property var entries: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-
-            objectName: "scanView.stacked.toolbar.height"
-            visible: chart.mode === "stacked"
-            toolTip: qsTr("How tall each pattern is: Fit, or a share of the plot's height")
-            model: entries.map(percent => percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent))
-            closedTexts: entries.map(percent => qsTr("height: %1").arg(percent === 0 ? qsTr("Fit") : qsTr("%1 %").arg(percent)))
-            shownIndex: Math.max(0, entries.indexOf(Preferences.scanStackedSize))
-            onActivated: index => Preferences.scanStackedSize = entries[index]
-        }
         ToolbarComboBox {
             objectName: "scanView." + chart.mode + ".toolbar.yscale"
+            toolbarGroup: "axes"
             readonly property var tokens: ["linear", "sqrt", "log"]
             readonly property string axis: "z"
             toolTip: qsTr("Z axis: the intensity scale, the pattern chart's y scale")
@@ -769,34 +765,74 @@ Item {
             shownIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
             onActivated: index => Preferences.patternYScale = tokens[index]
         }
+        // The Stacked patterns' spacing, from overlaid to fully separated, a group of its own after the axes; the
+        // project keeps it (the owner, 2026-10-26).
         ToolbarComboBox {
+            readonly property var steps: ApplicationInfo.stackedSpacings
+
+            objectName: "scanView.stacked.toolbar.spacing"
+            toolbarGroup: "spacing"
+            visible: chart.mode === "stacked"
+            toolTip: qsTr("Spacing: from every pattern on one baseline to each in its own band")
+            model: ApplicationInfo.stackedSpacingTitles
+            closedTexts: ApplicationInfo.stackedSpacingTitles.map(title => qsTr("spacing: %1").arg(title))
+            shownIndex: Math.max(0, steps.indexOf(chart.project ? chart.project.stackedSpacing : "wide"))
+            onActivated: index => {
+                if (chart.project)
+                    chart.project.stackedSpacing = steps[index];
+            }
+        }
+        // The Map's colour map, each with its colour bar, and its direction, a group of their own after the axes (the
+        // owner, 2026-10-26).
+        ColourMapComboBox {
             objectName: "scanView.map.toolbar.colourMap"
+            toolbarGroup: "colours"
             visible: chart.mode === "map"
             toolTip: qsTr("The map's colours")
-            readonly property var entries: chart.mapChoices.map(choice => ApplicationInfo.scanColourTitle(choice))
-            model: entries
-            closedTexts: entries
+            maps: chart.mapChoices
+            direction: chart.mapDirection
+            chartBackground: chart.colors.chartBackground
+            dark: chart.colors.isDarkPalette
             shownIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
             onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
+        }
+        ToolbarComboBox {
+            readonly property var directions: ApplicationInfo.scanMapDirections
+
+            objectName: "scanView.map.toolbar.direction"
+            toolbarGroup: "colours"
+            visible: chart.mode === "map"
+            toolTip: qsTr("Direction: Auto starts the map at the chart's background in either theme")
+            model: ApplicationInfo.scanMapDirectionTitles
+            closedTexts: ApplicationInfo.scanMapDirectionTitles.map(title => qsTr("direction: %1").arg(title))
+            shownIndex: Math.max(0, directions.indexOf(chart.mapDirection))
+            onActivated: index => {
+                if (chart.project)
+                    chart.project.mapDirection = directions[index];
+            }
         }
         Row {
             id: buttons
 
             spacing: AppSizes.toolbarSpacing
 
+            // The Stacked legend, as the pattern chart's button.
             ChartToolButton {
-                readonly property bool reversed: chart.mode === "map" ? Preferences.scanMapReversed : Preferences.scanStackedReversed
-
-                objectName: "scanView." + chart.mode + ".toolbar.reverse"
+                objectName: "scanView.stacked.toolbar.legend"
+                visible: chart.mode === "stacked"
+                fontIcon: "align-left"
+                toolTip: Preferences.scanStackedLegendShown ? qsTr("Hide legend") : qsTr("Show legend")
+                checked: Preferences.scanStackedLegendShown
+                onClicked: Preferences.scanStackedLegendShown = !Preferences.scanStackedLegendShown
+            }
+            // The Stacked colours in reverse order; the Map's direction is its own selector.
+            ChartToolButton {
+                objectName: "scanView.stacked.toolbar.reverse"
+                visible: chart.mode === "stacked"
                 fontIcon: "exchange-alt"
-                toolTip: chart.mode === "map" ? qsTr("Reverse the map's colours") : qsTr("Reverse the patterns' colours")
-                checked: reversed
-                onClicked: {
-                    if (chart.mode === "map")
-                        Preferences.scanMapReversed = !Preferences.scanMapReversed;
-                    else
-                        Preferences.scanStackedReversed = !Preferences.scanStackedReversed;
-                }
+                toolTip: qsTr("Reverse the patterns' colours")
+                checked: Preferences.scanStackedReversed
+                onClicked: Preferences.scanStackedReversed = !Preferences.scanStackedReversed
             }
             ChartToolButton {
                 objectName: "scanView.map.toolbar.smooth"
@@ -814,6 +850,16 @@ Item {
                 toolTip: qsTr("Show only the included range")
                 checked: Preferences.chartIncludedOnly
                 onClicked: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
+            }
+            // Every pattern less its background, the pattern chart's button and app setting (the owner, 2026-10-26):
+            // offered when some dataset has a background set, fitted or not.
+            ChartToolButton {
+                objectName: "scanView." + chart.mode + ".toolbar.subtractBackground"
+                available: chart.scan !== null && chart.scan.backgroundAvailable
+                fontIcon: "chart-area"
+                toolTip: available ? qsTr("Subtract each pattern's background") : qsTr("Subtract the background: no shown pattern has a background set")
+                checked: Preferences.chartSubtractBackground && available
+                onClicked: Preferences.chartSubtractBackground = !Preferences.chartSubtractBackground
             }
             // The shown dataset on top and the others faded, or all alike with its row label in bold: the one app
             // setting single-crystal Stacked uses too.
