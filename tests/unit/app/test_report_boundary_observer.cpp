@@ -74,7 +74,7 @@ public:
             project.path = root.string();
             edi_app::ScanSession session(nullptr);
             QString refusal;
-            QVariantMap keptBefore, keptAfter;
+            QVariantMap keptBefore, keptAfter, wantedFiles;
             std::string kept;
             if (late) {
                 qputenv("EDI_REPORT_FAULT_DIR",
@@ -89,12 +89,17 @@ public:
                 run.seconds = 1.25;
                 run.outcome = "success";
                 refusal = session.writeRun(project, run);
-            } else if (route == "putFiles") {
+            } else if (route == "putFiles" || route.startsWith("putFilesMask:")) {
                 edi_app::ScanSession::Files wanted;
-                wanted.results = "new results\n";
-                wanted.provenance = "new provenance\n";
-                wanted.run = "{}\n";
-                wanted.skipped = "new notes\n";
+                const int mask=route=="putFiles"?15:route.mid(QStringLiteral("putFilesMask:").size()).toInt();
+                const std::string bytes[]={"new results\n","new provenance\n","{}\n","new notes\n"};
+                std::optional<std::string>* fields[]={&wanted.results,&wanted.provenance,&wanted.run,&wanted.skipped};
+                for(int index=0;index<4;++index)if(mask&(1<<index)) {
+                    *fields[index]=bytes[index];
+                    wantedFiles[names[index]]=QString::fromLatin1(QCryptographicHash::hash(
+                        QByteArray::fromStdString(bytes[index]),QCryptographicHash::Sha256).toHex());
+                }
+                wantedFiles["carried"]=published.value("carried");
                 refusal = session.putFiles(project, wanted);
             } else if (route == "putRunFile")
                 refusal = session.putRunFile(project, std::string("{}\n"));
@@ -136,6 +141,7 @@ public:
                     {"after", after},
                     {"publishedBefore", filtered(published)},
                     {"publishedAfter", filtered(final)},
+                    {"wanted", wantedFiles},
                     {"refusal", refusal},
                     {"receipt", fs::exists(root / "failure-receipt")},
                     {"kept", keptBefore == keptAfter},
