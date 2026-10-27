@@ -44,15 +44,15 @@ EaComponents.ListView {
     readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
     property int modelRevision: 0
     // The one column rule (ADR-0029; the owner, 2026-10-27): the row-number column and every flex column (-1) but the
-    // ones that fill fit their header and their widest shown cell, each with the same margin, so the columns start at
-    // the left and every two neighbours sit as far apart; the filling columns (`fillColumns`, by default the last
-    // flex column), aligned left, share the rest of the row. Fixed columns, the row buttons among them, keep their
-    // widths, at the right. `equalColumns` keeps the flex columns equal instead (atom sites and atomic
-    // displacements). Only a row too narrow for the texts themselves narrows them, where a number shows its short
-    // form.
+    // last fit their header and their widest shown cell, each with the same margin, so the columns start at the left
+    // and every two neighbours sit as far apart; the last data column, aligned left, takes the rest of the row: a
+    // text there stretches, a number leaves the space after it empty. No column before another data column fills.
+    // Fixed columns, the row buttons among them, keep their widths, at the right. `equalColumns` keeps the flex
+    // columns equal instead (atom sites and atomic displacements). Only a row too narrow for the texts themselves
+    // narrows them, where a number shows its short form.
     property var columns: []
     property bool equalColumns: false
-    property var fillColumns: [columns.lastIndexOf(-1)]
+    readonly property var fillColumns: [columns.lastIndexOf(-1)]
     // Each column's widest text, its header's or a shown cell's, without the margin.
     property var fittedWidths: []
     columnWidths: {

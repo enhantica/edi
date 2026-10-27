@@ -24,8 +24,6 @@ DataTable {
     // The common table design (edi ADR-0017 §8): No., the experiment's icon in its colour, its name, then the
     // weight, a number centred at display precision as every table's numbers.
     columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, -1]
-    // The spare width goes to the experiment's name.
-    fillColumns: [2]
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

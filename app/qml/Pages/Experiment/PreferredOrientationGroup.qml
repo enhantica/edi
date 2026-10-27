@@ -26,8 +26,6 @@ Column {
         sourceModel: group.rows
 
         columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
-        // The spare width goes to the structure's selector.
-        fillColumns: [1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

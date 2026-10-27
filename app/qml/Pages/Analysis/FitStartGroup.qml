@@ -27,8 +27,6 @@ DataTable {
     sourceModel: analysis ? analysis.fitStart : null
 
     columns: [numberColumnWidth, -1, -1, -1]
-    // The spare width goes to the parameter's id.
-    fillColumns: [1]
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {
