@@ -10,7 +10,7 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-27T07:59:47Z
+# measured_utc = 2026-10-27T09:41:40Z
 #
 # Recorded from: measured test run (1 node(s) measured once, 16294 banked, 0 stale row(s) dropped)
 # Collected tests: 18748; with a reported duration: 10475
@@ -669,7 +669,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_anisotropic_shipment.py:
 0.050	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.html-selector]
 0.050	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.js-screen]
 0.050	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.js-selector]
-0.070	tests/integration/py/test_app_cache_closure.py::test_normal_screen_keeps_its_completed_artifact_during_delivery_relink
+0.360	tests/integration/py/test_app_cache_closure.py::test_normal_screen_keeps_its_completed_artifact_during_delivery_relink
 0.120	tests/integration/py/test_app_cache_closure.py::test_normal_screen_reuse_refuses_replaced_delivered_binary[cache]
 0.080	tests/integration/py/test_app_cache_closure.py::test_normal_screen_reuse_refuses_replaced_delivered_binary[prepared]
 0.040	tests/integration/py/test_app_cache_closure.py::test_normal_screen_transport_requires_a_delivered_app
