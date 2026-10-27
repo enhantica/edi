@@ -341,7 +341,9 @@ EaElements.GroupBox {
             currentRow: group.selectedRow
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
-            columns: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 5, textColumnWidth("units", ""), EaStyle.Sizes.fontPixelSize * 3.5, EaStyle.Sizes.fontPixelSize * 3, EaStyle.Sizes.fontPixelSize * 3].concat(group.measured ? [group.freeColumnWidth] : [])
+            columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1].concat(group.measured ? [group.freeColumnWidth] : [])
+            // The spare width goes to the parameter's name.
+            fillColumns: [1]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {

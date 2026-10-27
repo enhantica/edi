@@ -24,7 +24,9 @@ EaElements.GroupBox {
             objectName: "recentProjects.list"
             defaultInfoText: qsTr("No recent projects")
             sourceModel: RecentProjects.rows
-            columns: [numberColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 4.5, AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+            // The spare width goes to the project's path.
+            fillColumns: [1]
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter

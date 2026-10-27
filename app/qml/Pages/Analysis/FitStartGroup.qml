@@ -26,7 +26,9 @@ DataTable {
     defaultInfoText: qsTr("No fit start state")
     sourceModel: analysis ? analysis.fitStart : null
 
-    columns: [numberColumnWidth, textColumnWidth("id", Session.label("fit_parameter.id")), -1, -1]
+    columns: [numberColumnWidth, -1, -1, -1]
+    // The spare width goes to the parameter's id.
+    fillColumns: [1]
 
     header: EaComponents.ListViewHeader {
         EaComponents.ListViewLabel {

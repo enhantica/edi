@@ -24,7 +24,7 @@ Column {
         defaultInfoText: qsTr("No excluded regions")
         sourceModel: group.regions
 
-        columns: [numberColumnWidth, Math.min(textColumnWidth("id", Session.label("excluded_region.id")), width * 0.25), -1, -1, AppSizes.iconColumnWidth]
+        columns: [numberColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

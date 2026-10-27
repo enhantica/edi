@@ -25,7 +25,9 @@ Column {
         defaultInfoText: qsTr("No preferred orientation")
         sourceModel: group.rows
 
-        columns: [numberColumnWidth, textColumnWidth("structureId", Session.label("preferred_orientation.structure_id")), -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+        columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, AppSizes.iconColumnWidth]
+        // The spare width goes to the structure's selector.
+        fillColumns: [1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
