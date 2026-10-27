@@ -55,6 +55,13 @@ class MainActor:
         )
         self.last = self.command('show_actions', enabled=show_actions)
 
+    def configure_turns(self, turns):
+        assert not self.trace.exists(), 'Only the unstarted offline peer may be configured'
+        path = self.folder / 'peer.json'
+        value = json.loads(path.read_text(encoding='utf-8'))
+        value['turns'] = turns
+        path.write_text(json.dumps(value), encoding='utf-8')
+
     def command(self, op, **arguments):
         assert self.process.poll() is None, 'The real Main host must remain alive'
         self.process.stdin.write(json.dumps({'op': op, **arguments}) + '\n')
@@ -191,6 +198,14 @@ def test_actual_registry_offers_closed_estimate_and_optional_compound_background
     assert recipes, 'Explicit manual compound backgrounds remain supported'
     assert all('background' not in row.get('required', []) for row in recipes), (
         'The ordinary compound route cannot require invented manual anchors'
+    )
+    sites = [
+        row
+        for row in objects(offered['create_cwl_project']['inputSchema'])
+        if 'wyckoff_letter' in row.get('properties', {})
+    ]
+    assert sites and all('wyckoff_letter' not in row.get('required', []) for row in sites), (
+        'Manual mapped construction must permit the ordinary native omitted Wyckoff letter'
     )
 
 
@@ -361,3 +376,516 @@ def test_report_refusal_preserves_unrelated_bytes_and_cannot_veto_science(
         'saved',
         'saved_incomplete',
     }, 'The actual report receipt cannot falsely claim this protected collision was saved'
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+@pytest.mark.parametrize(
+    ('code', 'length_a', 'length_c', 'gamma'),
+    [
+        ('9008506', 3.20927, 5.21033, 120),
+        ('1000041', 5.62, 5.62, 90),
+    ],
+)
+def test_selected_published_cif_reaches_native_load_without_recreating_structure(
+    main_actor,
+    tmp_path,
+    show_actions,
+    code,
+    length_a,
+    length_c,
+    gamma,
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    before = actor.last['ui']['project']['structure_rows']
+    path = ROOT / f'tests/fixtures/dictionary_display/published_cod_{code}.cif'
+    token = actor.command('selected_begin')['reply']['token']
+    assert actor.command('selected_add', token=token, paths=[str(path)])['reply']['added']
+    selected = actor.last['ui']['selected_files']
+    assert len(selected) == 1 and selected[0]['id'], (
+        'A genuine admitted opaque file ID is required'
+    )
+    actor.configure_turns([
+        [
+            {
+                'tool': 'load_structure',
+                'call_id': 'published-cif-' + code,
+                'arguments': {
+                    'purpose': 'Import the genuine attached published CIF',
+                    'file_id': selected[0]['id'],
+                },
+            }
+        ]
+    ])
+    actor.connect()
+    actor.request('Use the attached CIF through native Load structure.')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    after = actor.last['ui']['project']['structure_rows']
+    assert len(after) == len(before) + 1 and after[:-1] == before
+    imported = after[-1]
+    assert imported['length_a'] == length_a and imported['length_c'] == length_c
+    assert imported['gamma'] == gamma
+    actor.command('undo')
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    assert actor.last['ui']['project']['structure_rows'] == before
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_explicit_manual_native_setup_does_not_import_the_attached_cif(
+    main_actor,
+    show_actions,
+):
+    override = 6.173
+    turns = [
+        [
+            {
+                'tool': 'create_structure',
+                'call_id': 'manual-create-original',
+                'arguments': {'purpose': 'Create a structure manually without CIF import'},
+            },
+            {
+                'tool': 'set_parameters',
+                'call_id': 'manual-explicit-value',
+                'arguments': {
+                    'purpose': 'Retain the explicit user-supplied manual cell value',
+                    'values': [
+                        {
+                            'path': {'created_structure_parameter': 'cell.length_a'},
+                            'value': override,
+                        }
+                    ],
+                },
+            },
+        ]
+    ]
+    actor = main_actor(turns, show_actions=show_actions)
+    assert actor.command('create', name='explicit-manual-fixture')['reply']['created']
+    path = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    token = actor.command('selected_begin')['reply']['token']
+    assert actor.command('selected_add', token=token, paths=[str(path)])['reply']['added']
+    actor.connect()
+    actor.request('Add the structure manually without loading the attached CIF. Use a=6.173.')
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    for response in actor.responses():
+        native_result(response)
+    rows = actor.last['ui']['project']['structure_rows']
+    assert len(rows) == 1 and rows[0]['length_a'] == override
+    assert rows[0]['length_c'] != 5.21033, 'The attached Mg CIF cannot replace native defaults'
+    assert rows[0]['sites'] == 1, 'Manual Create retains its ordinary initial atom'
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_current_disabled_relation_preserves_ordinary_rows_and_duplicate_call_is_once(
+    main_actor,
+    tmp_path,
+    show_actions,
+):
+    call = {
+        'tool': 'add_relations',
+        'call_id': 'same-native-disabled-relation',
+        'arguments': {
+            'purpose': 'Preserve the explicitly disabled ordinary relation',
+            'aliases': [{'id': 'manual_cell', 'parameter': 'phase.cell.length_a'}],
+            'constraints': [
+                {
+                    'id': 'manual_disabled',
+                    'expression': 'manual_cell = a + 5.873',
+                    'enabled': False,
+                }
+            ],
+        },
+    }
+    actor = main_actor([[call, call]], show_actions=show_actions)
+    project = tmp_path / 'relation-project'
+    shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    original = actor.last['ui']['project']
+    actor.connect()
+    actor.request()
+    actor.until(
+        lambda row: bool(actor.responses()) and row['ui']['state'] in {'idle', 'interrupted'}
+    )
+    sent = [
+        json.loads(line)
+        for line in actor.trace.with_suffix('.sent.jsonl').read_text(encoding='utf-8').splitlines()
+    ]
+    assert len([row for row in sent if row.get('method') == 'item/tool/call']) == 2, (
+        'The once witness must actually deliver both correlated native requests'
+    )
+    native_result(actor.responses()[0])
+    current = actor.last['ui']['project']
+    assert current['aliases'][:-1] == original['aliases']
+    assert current['constraints'][:-1] == original['constraints']
+    assert current['aliases'][-1] == {'id': 'manual_cell', 'parameter': 'phase.cell.length_a'}
+    assert current['constraints'][-1] == {
+        'id': 'manual_disabled',
+        'expression': 'manual_cell = a + 5.873',
+        'enabled': False,
+    }
+    assert current['parameters'] == original['parameters'], (
+        'A disabled relation and duplicate delivery cannot change scientific values/flags'
+    )
+    if not show_actions:
+        actor.command('undo')
+        actor.until(lambda row: not row['ui']['project']['calculating'])
+        assert actor.last['ui']['project']['aliases'] == original['aliases']
+        assert actor.last['ui']['project']['constraints'] == original['constraints']
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_native_free_eligibility_follows_current_dev_marks_without_old_boolean_fields(
+    main_actor,
+    tmp_path,
+    show_actions,
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    parameters = actor.last['ui']['project']['parameters']
+    blocked = next(row for row in parameters if row['fit_blocker'] != 0 and not row['free'])
+    eligible = next(
+        row
+        for row in parameters
+        if row['fit_blocker'] == 0 and row['refinable'] and not row['free']
+    )
+    assert blocked['fit_reason'], 'The current dev rule must give a real exclusion reason'
+    actor.configure_turns([
+        [
+            {
+                'tool': 'set_free',
+                'call_id': 'current-native-ineligible',
+                'arguments': {
+                    'purpose': 'Exercise the existing native fittability refusal',
+                    'flags': [{'path': blocked['path'], 'free': True}],
+                },
+            },
+            {
+                'tool': 'set_free',
+                'call_id': 'current-native-eligible',
+                'arguments': {
+                    'purpose': 'Continue with an actually eligible native parameter',
+                    'flags': [{'path': eligible['path'], 'free': True}],
+                },
+            },
+        ]
+    ])
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    assert actor.responses()[0]['result']['success'] is False
+    native_result(actor.responses()[1])
+    after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
+    assert after[blocked['path']] == blocked
+    assert after[eligible['path']]['free'] is True
+    assert after[eligible['path']]['value'] == eligible['value']
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+@pytest.mark.parametrize('letter', [None, 'a'], ids=['omitted', 'explicit'])
+def test_manual_mapped_wyckoff_omission_and_explicit_value_survive_save_reload(
+    main_actor,
+    tmp_path,
+    show_actions,
+    letter,
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    assert actor.command('create', name='manual-mapped-native')['reply']['created']
+    data = ROOT / 'tests/fixtures/background_estimate/meas-lbco-hrpt.xye'
+    token = actor.command('selected_begin')['reply']['token']
+    assert actor.command('selected_add', token=token, paths=[str(data)])['reply']['added']
+    file_id = actor.last['ui']['selected_files'][0]['id']
+    site = {
+        'id': 'manual_site',
+        'type_symbol': 'Si',
+        'fract_x': 0.173,
+        'fract_y': 0.281,
+        'fract_z': 0.419,
+        'occupancy': 0.73,
+    }
+    if letter is not None:
+        site['wyckoff_letter'] = letter
+    mapped = {
+        'name': 'manual_phase',
+        'space_group': {'name_h_m': 'P 1', 'coord_system_code': ''},
+        'cell': {
+            'length_a': 6.173,
+            'length_b': 5.917,
+            'length_c': 4.863,
+            'angle_alpha': 86.3,
+            'angle_beta': 93.1,
+            'angle_gamma': 112.7,
+        },
+        'atom_sites': [site],
+        'atom_site_adps': [{'id': 'manual_site', 'adp_type': 'Biso', 'adp_iso': 0.37}],
+    }
+    recipe = {
+        'project_name': 'manual-mapped-native',
+        'description': 'Explicit synthetic test inputs',
+        'experiment_name': 'manual_bank',
+        'sample_form': 'powder',
+        'beam_mode': 'constant wavelength',
+        'radiation_probe': 'neutron',
+        'scattering_type': 'bragg',
+        'peak_profile': 'cwl-tch-pseudo-voigt',
+        'wavelength': 1.237,
+        'zero_offset': 0.013,
+        'phase_scale': 1.1,
+        'background': [{'position': 10, 'intensity': 167}, {'position': 164.85, 'intensity': 109}],
+        'exclusions': [],
+        'initial_parameters': [],
+    }
+    actor.configure_turns([
+        [
+            {
+                'tool': 'create_cwl_project',
+                'call_id': 'manual-mapped-letter',
+                'arguments': {
+                    'purpose': 'Construct explicit manual input with native Wyckoff policy',
+                    'mapped_structure': mapped,
+                    'data_file_id': file_id,
+                    'recipe': recipe,
+                },
+            }
+        ]
+    ])
+    actor.connect()
+    actor.request('Construct this explicit manual setup and preserve supplied values.')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    rows = actor.last['ui']['project']['structure_rows']
+    assert len(rows) == 1 and rows[0]['id'] == mapped['name']
+    assert rows[0]['length_a'] == mapped['cell']['length_a']
+    actual_site = rows[0]['atom_rows'][0]
+    assert actual_site['id'] == site['id'] and actual_site['type'] == site['type_symbol']
+    assert [actual_site[key] for key in ('x', 'y', 'z', 'occupancy')] == [
+        site[key] for key in ('fract_x', 'fract_y', 'fract_z', 'occupancy')
+    ]
+    if letter is not None:
+        assert actual_site['wyckoff'] == letter, 'An explicit supplied letter remains exact'
+    destination = tmp_path / 'saved-manual'
+    assert actor.command('save_as', path=str(destination))['reply']['saved']
+    assert actor.command('open', path=str(destination))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    assert actor.last['ui']['project']['structure_rows'] == rows, (
+        'Omitted or explicit native site identity and values survive ordinary save/reload'
+    )
+
+
+def test_opening_a_saved_project_without_assistant_work_does_not_fabricate_a_report(
+    main_actor,
+    tmp_path,
+):
+    actor = main_actor([[]])
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    assert not (project / 'reports/work-report.json').exists()
+    receipt = actor.last['ui']['work_report']
+    assert receipt.get('disposition') not in {'saved', 'saved_incomplete'}
+
+
+def test_unsaved_native_work_reports_unavailable_without_autosave_or_appdata_fallback(main_actor):
+    actor = main_actor([
+        [
+            {
+                'tool': 'create_structure',
+                'call_id': 'unsaved-native-work',
+                'arguments': {'purpose': 'Perform actual work in an unsaved project'},
+            }
+        ]
+    ])
+    assert actor.command('create', name='unsaved-native-report')['reply']['created']
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    assert actor.last['ui']['project']['structures'] == 1
+    native_path = actor.last['ui']['project']['path']
+    assert isinstance(native_path, str) and not native_path, (
+        'Optional reporting cannot implicitly save a project'
+    )
+    receipt = actor.last['ui']['work_report']
+    assert receipt.get('disposition') not in {'saved', 'saved_incomplete'}
+    assert 'storage_root_unavailable' in json.dumps(receipt), (
+        'The unavailable native root must be reported honestly, not treated as saved or disabled'
+    )
+    assert not list(Path(actor.last['test_storage']).rglob('work-report.json')), (
+        'Unsaved scientific diagnostics cannot fall back to unrelated app-data storage'
+    )
+
+
+def test_save_copy_keeps_automatic_final_report_at_the_actual_live_project_root(
+    main_actor, tmp_path
+):
+    call = {
+        'tool': 'estimate_background',
+        'call_id': 'copy-root-native-step',
+        'arguments': {
+            'purpose': 'Keep the final report with the live owner after Save copy',
+            'experiment': 'bank',
+        },
+    }
+    actor = main_actor([[call]], hold_final=True)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.connect()
+    actor.request()
+    report = project / 'reports/work-report.json'
+    actor.until(lambda _row: bool(actor.responses()) and report.is_file())
+    native_result(actor.responses()[0])
+    copied = tmp_path / 'ordinary-save-copy'
+    assert actor.command('save_project_as', path=str(copied), zip=False, copy=True)['reply'][
+        'saved'
+    ]
+    assert actor.last['ui']['project']['path'] == str(project)
+    copy_report = copied / 'reports/work-report.json'
+    copy_before = copy_report.read_bytes() if copy_report.exists() else None
+    actor.gate.touch()
+    actor.command('refresh_usage')
+    actor.until(lambda row: row['ui']['state'] == 'idle' and FINAL in report.read_text())
+    assert (copy_report.read_bytes() if copy_report.exists() else None) == copy_before, (
+        'Later automatic captures cannot rebind the live writer to an ordinary saved copy'
+    )
+
+
+def test_late_old_turn_cannot_publish_its_report_into_a_switched_project(main_actor, tmp_path):
+    call = {
+        'tool': 'estimate_background',
+        'call_id': 'old-owner-native-step',
+        'arguments': {
+            'purpose': 'Exercise the actual project switch retirement',
+            'experiment': 'bank',
+        },
+    }
+    actor = main_actor([[call]], hold_final=True)
+    project = copied_estimate_project(tmp_path)
+    successor = tmp_path / 'successor-project'
+    shutil.copytree(ROOT / 'tests/fixtures/background_estimate/projects/hrpt', successor)
+    successor_record = successor / 'project.edi'
+    successor_record.write_text(
+        successor_record.read_text().replace(
+            '_metadata.name background-estimate', '_metadata.name successor-native-owner'
+        )
+    )
+    original_successor = {
+        str(path.relative_to(successor)): path.read_bytes()
+        for path in successor.rglob('*')
+        if path.is_file()
+    }
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.connect()
+    actor.request()
+    old_report = project / 'reports/work-report.json'
+    actor.until(lambda _row: bool(actor.responses()) and old_report.is_file())
+    native_result(actor.responses()[0])
+    assert actor.command('open', path=str(successor))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.gate.touch()
+    actor.command('refresh_usage')
+    actor.until(lambda row: row['ui']['state'] in {'idle', 'interrupted'})
+    successor_report = successor / 'reports/work-report.json'
+    assert not successor_report.exists() or FINAL not in successor_report.read_text(), (
+        'A late old-provider final cannot become scientific evidence for the new project owner'
+    )
+    after = {
+        str(path.relative_to(successor)): path.read_bytes()
+        for path in successor.rglob('*')
+        if path.is_file() and path != successor_report
+    }
+    assert after == original_successor, 'Old work cannot change the successor project files'
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+@pytest.mark.parametrize('kind', ['line-segment', 'polynomial', 'chebyshev'])
+def test_actual_native_mixed_batch_cannot_bypass_automatic_background_owner(
+    main_actor,
+    tmp_path,
+    show_actions,
+    kind,
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = tmp_path / 'automatic-native-project'
+    shutil.copytree(
+        ROOT / 'tests/fixtures/background_estimate/projects' / ('fitted-auto-' + kind), project
+    )
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    native = actor.last['ui']['project']
+    assert native['backgrounds'][0]['mode'] == 'auto'
+    parameters = native['parameters']
+    owned = next(
+        row
+        for row in parameters
+        if row['category'] == 'background' and row['field'] in {'intensity', 'coef'}
+    )
+    unrelated = next(
+        row
+        for row in parameters
+        if row['category'] == 'cell' and row['field'] == 'length_a' and row['refinable']
+    )
+    actor.configure_turns([
+        [
+            {
+                'tool': 'set_parameters',
+                'call_id': 'mixed-auto-owner-native',
+                'arguments': {
+                    'purpose': 'Exercise complete native prewrite ownership validation',
+                    'values': [
+                        {'path': unrelated['path'], 'value': unrelated['value'] + 0.03125},
+                        {'path': owned['path'], 'value': owned['value'] + 1.0},
+                    ],
+                },
+            }
+        ]
+    ])
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    assert actor.responses()[0]['result']['success'] is False
+    assert actor.last['ui']['project']['parameters'] == parameters, (
+        'Automatic point/poly/Chebyshev ownership must refuse the whole native batch before writes'
+    )
+    assert actor.last['ui']['project']['backgrounds'] == native['backgrounds']
+    assert actor.last['ui']['project']['can_undo'] == native['can_undo']
+
+
+@pytest.mark.parametrize(
+    'name',
+    [
+        'sc-neut-cwl_tb2ti2o7-heidi_basic',
+        'sc-neut-tof_taurine-unknown_basic',
+    ],
+)
+def test_actual_native_outgoing_context_keeps_published_single_crystal_measurements(
+    main_actor,
+    tmp_path,
+    name,
+):
+    actor = main_actor([[]])
+    project = tmp_path / 'single-crystal-native'
+    shutil.copytree(ROOT / 'docs/user/cli' / name / 'project', project)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    context = json.loads(actor.last['ui']['context'])
+    assert 'error' not in context
+    native = actor.last['ui']['project']['backgrounds']
+    assert len(context['datasets']) == len(native)
+    for row, bank in zip(context['datasets'], native, strict=True):
+        assert bank['reflection_count'] > 0
+        assert row['id'] == bank['id'] and row['sample_form'] == 'single crystal'
+        assert row['data_status'] == 'present'
+        assert row['observations']['intensity_count'] == bank['reflection_count']
+        assert row['observations']['sigma_count'] == bank['reflection_sigma_count']
+        assert row['observations']['weighting'] == 'measured_standard_uncertainty'
+        assert row['axis']['kind'] == 'miller_indices'
+        assert row['axis']['count'] == bank['reflection_count']
+        assert row['peak_profile_options'] == [] and row['absorption_type_options'] == []
+        assert row['background'] is None, 'SC context cannot advertise a powder background'
