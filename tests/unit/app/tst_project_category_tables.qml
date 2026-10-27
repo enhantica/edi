@@ -102,7 +102,8 @@ TestCase {
             verify(fit !== undefined, "The Experiments table retains its Fit column");
             fitHeaderInk.font = fit.font;
             fitHeaderInk.text = fit.text;
-            verify((fit.width - fitHeaderInk.advanceWidth) / 2 >= AppSizes.fieldSpacing - 1, "The Experiments Fit column keeps the shared field margin to its right");
+            const rightMargin = fit.width - (fit.leftPadding ?? 0) - fitHeaderInk.advanceWidth;
+            verify(rightMargin >= Style.Sizes.tableColumnSpacing - 1, "The left-aligned Experiments Fit title keeps the shared table edge margin to its right");
         }
         if (!table.count)
             return;
@@ -118,7 +119,19 @@ TestCase {
                 const valueInk = combo.contentItem.mapToItem(table, combo.contentItem.leftPadding ?? 0, 0).x;
                 const headerInk = headerX + (head[i].leftPadding ?? 0);
                 verify(Math.abs(valueInk - headerInk) < 1, "A combobox's shown value aligns with its header rather than its padded popup");
-                verify(combo.popup && combo.popup.padding > 0, "The combobox popup retains its own list padding");
+                verify(combo.popup !== null, "A table combobox retains its own option popup");
+                // The popup container can have zero padding; the option delegates own
+                // the inset around their text. Inspect the actual opened list.
+                combo.popup.open();
+                tryCompare(combo.popup, "opened", true, 1000, "The table combobox opens its real option list for the padding check");
+                const list = combo.popup.contentItem;
+                list.forceLayout();
+                const option = list.itemAtIndex(Math.max(0, combo.currentIndex));
+                verify(option !== null && option.contentItem !== null, "The opened combobox list creates its selected option delegate");
+                const optionInk = option.contentItem.mapToItem(option, option.contentItem.leftPadding ?? 0, 0).x;
+                verify(optionInk > 0, "Popup option text keeps its own inset rather than inheriting the table value alignment");
+                combo.popup.close();
+                tryCompare(combo.popup, "opened", false, 1000, "The inspected option list closes before the next table cell");
             }
         }
         if (!equal) {
@@ -146,7 +159,7 @@ TestCase {
                 click("appBar.tab." + page);
                 for (const tier of ["basic", "extras"]) {
                     click("sideBar.tab." + tier);
-                    const groups = Render.descendants(Ui.page(appWindow)).filter(item => item.objectName.startsWith("group.") && item.visible);
+                    const groups = Render.descendants(Ui.page(appWindow)).filter(item => item.objectName.startsWith("group.") && Ui.inPane(Ui.target(item)));
                     for (const current of groups) {
                         if ("collapsed" in current)
                             current.collapsed = false;
@@ -360,7 +373,7 @@ TestCase {
             },
             {
                 tag: "taurine",
-                project: "sc-neut-tof_taurine_fit"
+                project: "sc-neut-tof_taurine-senju"
             },
             {
                 tag: "two-structures",
