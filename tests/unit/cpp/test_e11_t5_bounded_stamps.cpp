@@ -26,6 +26,10 @@ edi::WorkStamps prechange(const edi::Project& live) {
     return stamps;
 }
 void same(const edi::WorkStamps& actual,const edi::WorkStamps& old) {
+    INFO("component equality experiment=",actual.experiment_inputs==old.experiment_inputs,
+        " geometry=",actual.structure_inputs==old.structure_inputs,
+        " relations=",actual.relations==old.relations,
+        " relation bytes actual=",actual.relations.size()," old=",old.relations.size());
     CHECK_MESSAGE((actual.experiment_inputs==old.experiment_inputs &&
         actual.structure_inputs==old.structure_inputs && actual.relations==old.relations),
         " E11 F3 bounded capture retains exact committed pre-change scientific codec bytes");
@@ -79,6 +83,9 @@ TEST_CASE("E11 bounded stamps link and preserve pre-change codec across powder a
 TEST_CASE("E11 bounded stamps retain original alias relation source and collection identities") {
     auto project=edi::load_project("docs/user/cli/pd-neut-tof_si-sepd_start-2/project");
     const auto name=project.structure().name.value();
+    REQUIRE_MESSAGE((project.structure().cell.length_a.dependence==edi::Dependence::Independent &&
+        project.structure().cell.length_b.dependence!=edi::Dependence::Independent),
+        "E11 frozen alias fixture retains the independent and symmetry-dependent cubic source controls");
     // .edi datablock/category/item grammar is the pre-integration contract;
     // expected membership never comes from today's named_parameters producer.
     edi::ParameterAlias source;source.id="stamp_source";source.parameter_unique_name=name+".cell.length_a";

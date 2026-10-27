@@ -30,3 +30,12 @@ instrumentation to observe input-sized row containers, source strings and alias
 naming scratch, with an actual allocating positive control for each. It does not
 define a process-wide allocator/RSS guarantee or require allocation-free refusal
 diagnostics. Every observed fixture is prepared before instrumentation is armed.
+
+The finite cell-name reference also preserves the original eligibility filter
+from `e782d2d8:core/src/io.cpp:4363-4370`: dependent parameters are omitted by
+`named_parameters`. Known cell-target validation and eligible source membership
+are separate. The cubic silicon fixture intentionally contains an independent
+length-a source and a dependent length-b target; the latter has no independent
+source-value payload in the old relation encoding. Original raw failures are
+retained; this restores a missing reference rule rather than rebasing to a new
+producer's output.
