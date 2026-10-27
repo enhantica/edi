@@ -2371,3 +2371,8 @@ a presentation failure neither retracts them nor invents scientific application.
 The current app and core remain the base for assistant operations. Core sources and embedded resources are declared through `cmake/edi_core_sources.cmake`, shared with the sanitizer build. Assistant parameter preparation reads the existing `refresh_fittability` marks from ADR-0053 rather than maintaining another eligibility rule. Optional raw objectives are copied from the engine progress record; missing values remain absent and cannot qualify an accepted trial. Existing fit and CIF algorithms remain unchanged. A fit job retains its completed report for observers and accepts an optional worker cancellation predicate for the assistant deadline.
 
 The current ordinary constraint editor supersedes the historical Draft/Confirm sections above. Integration uses its actual row operations and complete shared validation; the manual editor is preserved. ADR-0040 continues to own background estimation, and the current save/archive ADR continues to own folder, ZIP and copy behavior.
+
+
+Shared value batches preflight every target through the current estimator ownership rule before the first write. The Edit repeats that check when it executes, so changing a background to auto after preparation cannot bypass the rule. Free flags follow their separate native eligibility rules.
+
+Context uses the current experiment shape: powder patterns and single-crystal reflection tables retain their actual counts, uncertainty weighting and sample form. Powder-only choices are absent for a single crystal. Background context includes current points or series terms and the saved estimation mode and settings. The size admission and materialized output consume the same borrowed measurement facts.
