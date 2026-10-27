@@ -42,7 +42,7 @@ group on the Analysis page's **Settings** tab add the values that cannot be fitt
 - **Fixed by symmetry:** the space group sets the value. Hidden by default.
 - **Set by a constraint:** one of your constraints computes the value. Hidden by default.
 - **Setup values:** values that describe the setup, which no fit ever varies, and the values that are not
-  parameters. Shown by default.
+  parameters. Hidden by default.
 
 The app remembers your choice. It is not saved in the project, and Python and the command line are not filtered.
 

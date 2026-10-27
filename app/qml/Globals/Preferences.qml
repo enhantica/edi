@@ -32,11 +32,12 @@ QtObject {
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
     // Which rows the Analysis table adds on top of what a fit can free (Analysis, Settings; the owner, 2026-10-26): the
-    // values this fit cannot determine and the setup values by default, those symmetry or a constraint sets on request.
+    // values this fit cannot determine by default, the setup values and those symmetry or a constraint sets on request
+    // (the owner, 2026-10-27).
     property bool analysisShowNotMeasured: true
     property bool analysisShowBySymmetry: false
     property bool analysisShowByConstraint: false
-    property bool analysisShowFixedSettings: true
+    property bool analysisShowFixedSettings: false
     // Whether a finished fit opens its results window (Prompts; the owner, 2026-10-26). Off, the status bar's fit status
     // still opens it.
     property bool showFitResults: true
@@ -71,7 +72,7 @@ QtObject {
         preferences.analysisShowNotMeasured = true;
         preferences.analysisShowBySymmetry = false;
         preferences.analysisShowByConstraint = false;
-        preferences.analysisShowFixedSettings = true;
+        preferences.analysisShowFixedSettings = false;
         preferences.showFitResults = true;
         preferences.scanRenderer = "auto";
         preferences.newProjectSuRule = "iucr_19";
