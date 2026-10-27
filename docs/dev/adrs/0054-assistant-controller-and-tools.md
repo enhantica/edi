@@ -2480,6 +2480,12 @@ No CWL recipe is involved. Both modes call the same API; ON adds the real curren
 cue without clicked/accepted synthesis or external app discovery. Actual adoption
 is latched before publication, and partial/changed-owner outcomes remain truthful.
 
+The same thin bridge exposes `show_report(purpose)` through Main's actual enabled
+Report tab and AppState.open(Report), checking the original current project on
+both sides of navigation. ON adds the existing visual cue, without a dispatched
+click. Its shown/page outcome means navigation only: generation/export/save and
+external app discovery are not implied. The ordinary user link remains usable.
+
 The model picker omits known unavailable/hidden catalogue rows; effort labels
 retain wire tokens, place Auto first and explicit highest efforts before lower
 ones, and display Ultra with its proper capital. No entitlement is inferred.
