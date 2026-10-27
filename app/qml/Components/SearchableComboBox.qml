@@ -49,7 +49,8 @@ EaElements.ComboBox {
         // What the shown content draws besides its text: the label's padding, or an icon before the text.
         const label = contentItemLabel ? contentItemLabel.leftPadding + contentItemLabel.rightPadding : 0;
         const besides = contentItem ? contentItem.implicitWidth - optionMetrics.advanceWidth(displayText) : label;
-        return Math.ceil(widest + Math.max(label, besides)) + leftPadding + rightPadding;
+        // A small gap keeps the text off the arrow.
+        return Math.ceil(widest + Math.max(label, besides) + font.pixelSize * 0.5) + leftPadding + rightPadding;
     }
     readonly property real optionWidth: {
         let widest = 0;
