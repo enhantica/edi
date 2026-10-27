@@ -5164,8 +5164,11 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     // A project still being built (no structure yet, or an experiment without data) is read back too: its values are
     // adopted like any other's. A save that cannot be read back is a failed save.
     const bool changed = adopt_values(project, read_saved_project(directory));
+    // A calculation made here, current or stale, is known by its source as well as by its values: one that was not a
+    // result is held calculated with no values, and its records still need the refresh below.
     const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
-        return item->carried_calculation || (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+        return item->carried_calculation || item->computed_source != nullptr ||
+               (item->data.has_value() && !item->data->intensity_calc.empty()) ||
                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
     });
     if (!calculated) {
