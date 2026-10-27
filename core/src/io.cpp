@@ -5111,6 +5111,12 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
     });
     if (!calculated) {
+        // Written once more from the values it took, so what a save derives from them (weight fractions, the
+        // isotropic mirror of an anisotropic ADP) is derived from what the files hold, and the next save writes the
+        // same bytes.
+        if (changed) {
+            save_project(project, directory);
+        }
         return changed;
     }
     // Calculated again with its due background estimates deferred (ADR-0040): every other bank's results describe its

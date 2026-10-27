@@ -161,7 +161,8 @@ bool adopt_values(Project& project, const Project& saved);
 // The save sequence after a successful write of `project` to `directory`, the same on every surface (edi ADR-0052):
 // adopt_saved_values, then, when the project holds results (calculated here, or read from its file), calculate
 // it from the adopted values and write it again, so the files, the open project and a reopen agree, the calculated
-// pattern and R factors included. Returns whether any value changed.
+// pattern and R factors included; a project without results whose values changed is written again too, so what the
+// save derives from those values follows them. Returns whether any value changed.
 bool adopt_saved_project(Project& project, const std::string& directory);
 
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
