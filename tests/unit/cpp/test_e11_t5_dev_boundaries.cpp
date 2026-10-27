@@ -330,18 +330,81 @@ TEST_CASE("E11 dev context retains manual and automatic point and series backgro
     }
 }
 
-TEST_CASE("E11 dev context size admission agrees at the actual encoded byte boundary") {
+TEST_CASE("E11 dev larger native context preserves actual input without a cumulative work quota") {
     auto project = edi::load_project((repo() / "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project").string());
     ControllerHost host(project);
     const auto original = host.controller.context();
-    REQUIRE(edi::json::parse(original).get("error").is_null());
-    REQUIRE(original.size() < edi::assistant::Limits::context_bytes);
-    project.metadata.name.append(edi::assistant::Limits::context_bytes - original.size(), 'x');
-    const auto exact = host.controller.context();
-    REQUIRE(edi::json::parse(exact).get("error").is_null());
-    CHECK(exact.size() == edi::assistant::Limits::context_bytes);
-    project.metadata.name.push_back('x');
-    const auto refused = edi::json::parse(host.controller.context());
-    REQUIRE_FALSE(refused.get("error").is_null());
-    CHECK(refused.at("error").at("code").string("code") == "edi.assistant.resource_exhausted");
+    REQUIRE_MESSAGE(edi::json::parse(original).get("error").is_null(),
+        "E11 owner856 the ordinary native context is valid before larger work");
+    const auto original_name = project.metadata.name;
+    // Historical quota provenance: original d2 Limits::context_bytes=1048576.
+    // Native loaded metadata follows core FS identity rules, independently of
+    // the stricter new-project GUI name editor. This never saves a long path.
+    const std::size_t historical_context_bytes = 1048576;
+    project.metadata.name.append(historical_context_bytes + 257, 'x');
+    const auto large = host.controller.context();
+    const auto decoded = edi::json::parse(large);
+    REQUIRE_MESSAGE(decoded.get("error").is_null(),
+        "E11 owner856 valid larger context cannot be refused by the old work-byte quota");
+    CHECK_MESSAGE(large.size() > historical_context_bytes,
+        "E11 owner856 the independent context input actually crosses the historical admission boundary");
+    CHECK_MESSAGE(decoded.at("project").at("name").string("name") == project.metadata.name,
+        "E11 owner856 larger native metadata remains exact rather than silently truncated");
+    project.metadata.name = original_name;
+    CHECK_MESSAGE(host.controller.context() == original,
+        "E11 owner856 larger read-only context does not mutate science or retained context identity");
+}
+
+TEST_CASE("E11 FIRST Responses stream accepts valid cumulative work and retains typed refusal") {
+    // Literal lifecycle provenance:77ba02de tests/fixtures/assistant/response_events.py,
+    // from the official Responses message lifecycle. No model/scientific answers.
+    edi::assistant::OpenAiStream stream("independent-turn", "independent-request", [](const auto&) {});
+    const auto send = [&](const J& event) { return stream.feed("data: " + edi::json::write(event) + "\n\n"); };
+    const O item{{"id", "independent-message"}, {"type", "message"}, {"role", "assistant"},
+                 {"status", "in_progress"}, {"content", A{}}};
+    const O empty_part{{"type", "output_text"}, {"text", ""}, {"annotations", A{}}, {"logprobs", A{}}};
+    REQUIRE_MESSAGE(send(O{{"type", "response.output_item.added"}, {"output_index", 0},
+        {"sequence_number", 0}, {"item", item}}).ok,
+        "E11 owner856 the actual FIRST SSE parser accepts the original message-start identity");
+    REQUIRE_MESSAGE(send(O{{"type", "response.content_part.added"}, {"item_id", "independent-message"},
+        {"output_index", 0}, {"content_index", 0}, {"sequence_number", 1}, {"part", empty_part}}).ok,
+        "E11 owner856 the original typed content part starts before its streamed text");
+    const std::string chunk(513, 'x');
+    std::string expected;
+    for (int i = 0; i < 8193; ++i) {
+        const auto accepted = send(O{{"type", "response.output_text.delta"}, {"item_id", "independent-message"},
+            {"output_index", 0}, {"content_index", 0}, {"sequence_number", i + 2},
+            {"delta", chunk}, {"logprobs", A{}}});
+        REQUIRE_MESSAGE(accepted.ok,
+            "E11 owner856 valid FIRST text events cannot fail at cumulative event or retained-work quotas");
+        expected += chunk;
+    }
+    CHECK_MESSAGE(expected.size() > 4194304,
+        "E11 owner856 the independent FIRST input crosses the original four-MiB retained-work boundary");
+    const O part{{"type", "output_text"}, {"text", expected}, {"annotations", A{}}, {"logprobs", A{}}};
+    REQUIRE_MESSAGE(send(O{{"type", "response.output_text.done"}, {"item_id", "independent-message"},
+        {"output_index", 0}, {"content_index", 0}, {"sequence_number", 8195},
+        {"text", expected}, {"logprobs", A{}}}).ok,
+        "E11 owner856 larger completed FIRST text is not an arbitrary total-output error");
+    REQUIRE_MESSAGE(send(O{{"type", "response.content_part.done"}, {"item_id", "independent-message"},
+        {"output_index", 0}, {"content_index", 0}, {"sequence_number", 8196}, {"part", part}}).ok,
+        "E11 owner856 the actual typed large content part settles its original identity");
+    const O completed{{"type", "message"}, {"id", "independent-message"}, {"role", "assistant"},
+                      {"status", "completed"}, {"content", A{part}}};
+    REQUIRE_MESSAGE(send(O{{"type", "response.output_item.done"}, {"output_index", 0},
+        {"sequence_number", 8197}, {"item", completed}}).ok,
+        "E11 owner856 the completed large original item remains valid through full wire transfer");
+    REQUIRE_MESSAGE(send(O{{"type", "response.completed"}, {"sequence_number", 8198},
+        {"response", O{{"id", "independent-response"}, {"status", "completed"}, {"output", A{completed}}}}}).ok,
+        "E11 owner856 the FIRST response reaches its original terminal after larger cumulative wire input");
+    CHECK_MESSAGE(stream.finish().ok,
+        "E11 owner856 valid larger FIRST work finishes normally rather than requiring a new task");
+    const auto output = edi::json::parse(stream.output()).array("output");
+    REQUIRE_MESSAGE(output.size() == 1,
+        "E11 owner856 one completed original item is retained exactly once");
+    CHECK_MESSAGE(output.front().at("content").array("content").front().at("text").string("text") == expected,
+        "E11 owner856 original completed provider text remains exact without silent quota truncation");
+    edi::assistant::OpenAiStream malformed("negative-turn", "negative-request", [](const auto&) {});
+    CHECK_MESSAGE(!malformed.feed("data: {not-json}\n\n").ok,
+        "E11 owner856 removing arbitrary work quotas preserves actual malformed-protocol refusal");
 }
