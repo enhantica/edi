@@ -18,7 +18,3 @@ target_include_directories(assistant_real_owner_probe PRIVATE
     "${EDI_SOURCE}/tests/integration/py/assistant_native_probe")
 target_link_libraries(assistant_real_owner_probe PRIVATE edi_app_module edi_app_moduleplugin
     edi_assistant_native ${_edi_test_gui_targets} Qt6::QuickTest Qt6::Test Qt6::Network)
-if(NOT EMSCRIPTEN)
-    target_link_libraries(assistant_real_owner_probe PRIVATE
-        "$<LINK_LIBRARY:WHOLE_ARCHIVE,crysta::process_defaults>")
-endif()
