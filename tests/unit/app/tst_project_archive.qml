@@ -62,6 +62,114 @@ TestCase {
         app = null;
         Session.closeProject();
     }
+    property int completedDialogTurn: 0
+    function completedProjectStaysOpen(name) {
+        tryVerify(() => {
+            const creates = Probe.objectsWithProperty(app, "projectName").filter(dialog => dialog.projectParentDirectory !== undefined);
+            const opens = Probe.objectsWithProperty(app, "enterAccepts").filter(dialog => dialog.objectName === "open.choice");
+            return creates.length > 0 && opens.length > 0 && creates.concat(opens).every(dialog => !dialog.visible && !dialog.opened);
+        }, 2000, "Accepted Create and Open dialogs finish closing on the actual replacement page");
+        for (let turn = 0; turn < 12; ++turn) {
+            completedDialogTurn = 0;
+            Qt.callLater(() => completedDialogTurn = 1);
+            tryCompare(test, "completedDialogTurn", 1, 1000, "The completed project action reaches each following event-loop turn");
+            app.update();
+            verify(waitForRendering(app.contentItem), "The completed project action is checked after each actual application frame");
+            verify(Session.hasProject && Session.project.name === name, "The created or opened project remains open on every following turn");
+            const creates = Probe.objectsWithProperty(app, "projectName").filter(dialog => dialog.projectParentDirectory !== undefined);
+            const opens = Probe.objectsWithProperty(app, "enterAccepts").filter(dialog => dialog.objectName === "open.choice");
+            console.log("PROJECT_DIALOG_COMPLETION " + JSON.stringify({
+                turn,
+                name: Session.project.name,
+                create: creates.map(dialog => ({
+                            visible: dialog.visible,
+                            opened: dialog.opened
+                        })),
+                open: opens.map(dialog => ({
+                            visible: dialog.visible,
+                            opened: dialog.opened
+                        }))
+            }));
+            verify(creates.length > 0, "The current real Project page retains its Create dialog for inspection");
+            verify(creates.every(dialog => !dialog.visible && !dialog.opened), "An accepted project action never reopens any empty Create dialog on a following turn");
+            verify(opens.length > 0 && opens.every(dialog => !dialog.visible && !dialog.opened), "An accepted project action keeps every Open choice dialog closed on following turns");
+        }
+    }
+    function test_create_completion_data() {
+        return [
+            {
+                tag: "enter",
+                enter: true
+            },
+            {
+                tag: "ok",
+                enter: false
+            }
+        ];
+    }
+    function test_create_completion(data) {
+        application();
+        verify(!Session.hasProject, "Create completion starts on the Project page without an existing project");
+        clickControl("project.create");
+        const dialog = SettingsProof.creationDialog(app);
+        verify(dialog !== null, "The Project page Create action opens its actual production dialog");
+        tryCompare(dialog, "opened", true, 2000, "Name input follows the Create dialog's opening transition");
+        dialog.projectParentDirectory = String(SettingsProof.emptyDirectory());
+        const name = "completed_" + data.tag;
+        const field = findChild(dialog, "createProject.name");
+        verify(field !== null, "Create completion types into the real project name field");
+        mouseClick(field, field.width / 2, field.height / 2);
+        verify(SettingsProof.type(field, name), "The focused real project name field receives actual keyboard text events");
+        compare(field.text, name, "Real name-field keyboard input supplies the requested project name");
+        if (data.enter)
+            keyClick(Qt.Key_Return);
+        else {
+            const ok = dialog.standardButton(Dialog.Ok);
+            verify(ok !== null && ok.enabled, "Create completion uses the enabled actual OK control");
+            mouseClick(ok, ok.width / 2, ok.height / 2);
+        }
+        tryVerify(() => Session.hasProject && Session.project.name === name, 4000, "Enter and OK create and open the named project through the actual Project page");
+        completedProjectStaysOpen(name);
+    }
+    function test_open_choice_completion_data() {
+        return [
+            {
+                tag: "enter",
+                enter: true
+            },
+            {
+                tag: "ok",
+                enter: false
+            }
+        ];
+    }
+    function test_open_choice_completion(data) {
+        application();
+        const input = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/loop_parameter_ids/line-segment"));
+        const metadata = SettingsProof.text(input, "project.edi");
+        const name = metadata.match(/_metadata.name\s+(?:"([^"]+)"|(\S+))/).slice(1).find(value => value !== undefined);
+        clickControl("project.open");
+        const choice = findChild(app, "open.choice");
+        verify(choice !== null, "Open completion uses the actual Project page format dialog");
+        tryCompare(choice, "opened", true, 2000, "The actual Open choice dialog receives Enter or OK only after opening");
+        const folder = findChild(choice.contentItem, "open.folder");
+        verify(folder !== null && folder.enabled && folder.checked, "The actual Open choice defaults to its supported Folder route");
+        if (data.enter)
+            keyClick(Qt.Key_Return);
+        else {
+            const ok = choice.standardButton(Dialog.Ok);
+            verify(ok !== null && ok.enabled, "Open completion uses the actual choice dialog's OK control");
+            mouseClick(ok, ok.width / 2, ok.height / 2);
+        }
+        let dialogs;
+        tryVerify(() => {
+            dialogs = SettingsProof.projectFileDialogs(app, true);
+            return dialogs.length === 1;
+        }, 2000, "Accepted Open choice reaches exactly one real folder chooser");
+        verify(SettingsProof.chooseProjectLocation(dialogs[0], input, true), "The real system chooser accepts the independent project folder");
+        tryVerify(() => Session.hasProject && Session.project.name === name, 4000, "Enter and OK Open choices finish opening their selected project");
+        completedProjectStaysOpen(name);
+    }
     function test_save_dialog_layout() {
         application();
         canonicalProject(cases[2]);

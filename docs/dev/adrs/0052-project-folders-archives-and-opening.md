@@ -75,8 +75,10 @@ not the project being read (measured with the app's software renderer, as on the
    with nothing to undo. A project still being built (no structure yet, or an experiment without data) is read back the
    same way: the loader's rules for a whole project are lifted for the readback, so its written values are adopted
    too. A calculation can give an infinite value (a peak width of 1e20, say), which no number in a
-   file spells. Such an experiment is not a result: it is written uncomputed and the open project holds it uncomputed,
-   as a reopen reads it, with no R factors. A NaN is a point that was not calculated, as before.
+   file spells, either in the calculated columns or in the residual derived from them. Such an experiment is not a
+   result, by crysta's one test: it is written uncomputed, it has no R factors, and every calculation, the save's own
+   and any later one, leaves it calculated with no values, so no view shows them. A NaN is a point that was not
+   calculated, as before.
 
 1. **Opening fast.** The pages let go of a project before it is replaced and are built again in the background, one
    after another in the order Project, Structure, Experiment, Analysis, Report (owner, 2026-10-25): asynchronous loaders

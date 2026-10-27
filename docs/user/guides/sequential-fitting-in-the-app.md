@@ -91,21 +91,30 @@ map and its direction.
   fills its band with what the zoom shows, so zooming away from large peaks shows the small ones larger. The project
   remembers the step on this computer.
 - **Colour map**: Blue-Red (the default), Viridis, Batlow, Inferno, Lapaz or Greys, each shown with its colour bar.
-  **Direction**: Auto (the default) starts the map at the chart's background, white in the light theme and dark grey
-  in the dark one, and follows a theme switch; Normal and Inverted fix it. The project remembers the choice.
+  In the dark theme the Map's plot area is black. **Direction**: Auto (the default) starts the map at the plot area's
+  colour, white in the light theme and black in the dark one, and follows a theme switch; Normal and Inverted fix it.
+  The project remembers the choice.
 - **Subtract background**, beside the included-range button, here and on the pattern chart: each pattern is drawn
   less the project's background (its points or terms, fitted or not). It is off by default, and disabled when no
   shown pattern has a background.
 - **Legend** on Stacked: each file's line and name, or for more than fifteen files the first, the selected one and
-  the last with how many more. With **Highlight the selected dataset** on, the selected file is bold in the legend
-  and its name leaves the y axis.
+  the last with how many more. Click an entry to hide its pattern, and again to show it.
+- **Highlight the selected dataset**: on Stacked the selected file keeps its colour and every other one is drawn in
+  grey, its curve, name and legend entry alike; off, all keep their colours and the selected name is bold. The Map
+  marks the selected row with its label either way.
+- **Read-outs**: hovering a pattern or a band shows its name in its colour and the intensity there. The speech-bubble
+  button, as on the pattern chart, turns them off and on.
+
+With only the included range shown, the intensity range leaves the excluded points out, on the pattern chart,
+Stacked and the Map's colours.
 
 The colours of experiments, structures and Stacked lines come from the **Palette** in Preferences, Appearance:
 Earth (the default), Classic, Soft, Natural or Colour-blind safe. Under the choice, the palette's eleven colours show
 in the order new blocks take them: a colour the open project uses shows its block's icon, a free one a square, and
 the calculated curve's colour, the same in every palette, shows as the calculator icon. Each new experiment or
-structure takes the next free colour; in Earth the first two are kept for experiments. Saved reports and pictures
-always use the light theme's colours.
+structure takes the next free colour; in Earth the first two are kept for experiments. A scan with more files than
+the palette has colours runs from its first colour to its second. Saved reports and pictures always use the light
+theme's colours.
 
 ## Examples and saving
 

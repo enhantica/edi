@@ -46,8 +46,10 @@ colours early. The owner chose, by eye, five palettes of eleven colours each tha
    one past the last position the project uses, so no shade repeats either end. `edi::colour_positions` and
    `edi::figure_colour` are the only implementation.
 4. **One colour per block.** An experiment's measured curve, icon and report figures, and a structure's Bragg ticks,
-   icon and curve, all take the colour at its position. A scan's datasets take the positions of their places in the
-   scan, on the pattern chart and on Stacked alike.
+   icon and curve, all take the colour at its position. A scan's datasets take, in order, the positions the project's
+   structures leave free, on the pattern chart and on Stacked alike; a view showing more patterns than the palette has
+   colours gives them only colours 1 and 2, from colour 1 at the first to colour 2 at the last through Oklab shades (the
+   owner, 2026-10-27).
 5. **Drawing.** Widths, marker sizes, opacities and dashes stay as ADR-0017 §15 states them. Measured data are filled
    markers with connecting lines, drawn under the calculated curves; the total calculation is a line in its role
    colour with no fill; the background and the difference take their role colours.

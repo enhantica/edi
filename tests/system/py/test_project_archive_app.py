@@ -27,6 +27,11 @@ CASES = tuple(
     for route in ('folder', 'record', 'zip')
 ) + ('test_project_actions', 'test_escape', 'test_cancel', 'test_save_pending')
 CASES += tuple(
+    action + ':' + accept
+    for action in ('test_create_completion', 'test_open_choice_completion')
+    for accept in ('enter', 'ok')
+)
+CASES += tuple(
     'test_open_dialog:' + project + '-' + route
     for project in (
         'sc-neut-tof_taurine-senju',
@@ -89,6 +94,8 @@ def test_real_app_opens_project_routes_and_cancels_pending_work(case, tmp_path):
         check=False,
     )
     output = result.stdout + result.stderr
+    if case.startswith(('test_create_completion:', 'test_open_choice_completion:')):
+        (tmp_path / 'dialog-completion.log').write_text(output)
     name, _, tag = case.partition(':')
     identity = re.escape('ProjectArchive::' + name + '(' + tag + ')')
     assert result.returncode == 0, 'The real app executes the project opening contract: ' + output

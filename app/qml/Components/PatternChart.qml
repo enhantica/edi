@@ -425,9 +425,9 @@ Item {
         ToolbarComboBox {
             objectName: "chart.toolbar.yscale"
             toolTip: qsTr("Y scale")
-            model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
-            // The closed box names its axis (owner, 2026-10-05).
-            closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
+            model: [qsTr("Linear"), qsTr("Square root"), qsTr("Log")]
+            // The closed box names its axis (owner, 2026-10-05), its value capitalised (the owner, 2026-10-27).
+            closedTexts: [qsTr("y: Linear"), qsTr("y: Square root"), qsTr("y: Log")]
             shownIndex: controller.yScale
             onActivated: index => {
                 if (chart.settingsPage === "pattern")
@@ -459,7 +459,7 @@ Item {
         // points with their error bars; or both.
         ToolbarComboBox {
             readonly property var tokens: ["band", "line", "points", "linePoints"]
-            readonly property var entries: [qsTr("band"), qsTr("line"), qsTr("points"), qsTr("line + points")]
+            readonly property var entries: [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points")]
 
             objectName: "chart.toolbar.measuredStyle"
             visible: !chart.report

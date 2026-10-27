@@ -37,6 +37,9 @@ class ParameterTableModel : public RowTableModel {
     // the next sync.
     void setExperimentScope(const QString& experiment);
     void sync();
+    // A parameter's number in the table, from 1, by its path (its unique name); 0 when it is not listed. The correlation
+    // chart labels its ticks by these when the names are hidden (the owner, 2026-10-27).
+    Q_INVOKABLE int numberOf(const QString& path) const;
 
    signals:
     void freeCountChanged();
@@ -154,8 +157,8 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     // Rebuilds the pickers' lists and counts from the current selections; one that is no longer listed returns to all.
     void refresh();
     bool shownByGroup(bool free, int group) const;
-    // Not measured in this fit and setup values shown, symmetry and constraints not (the owner's defaults).
-    QList<bool> shown_groups_{true, false, false, true};
+    // Not measured in this fit shown, symmetry, constraints and setup values not (the owner's defaults).
+    QList<bool> shown_groups_{true, false, false, false};
     QString datablock_filter_;
     QStringList datablocks_{QString()};
     QList<CategoryGroup> datablock_groups_;
