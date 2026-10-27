@@ -59,7 +59,9 @@ Column {
             }
             return Math.ceil(widest) + AppSizes.fieldSpacing * 2;
         }
-        columnWidths: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
+        // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
+        equalColumns: true
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

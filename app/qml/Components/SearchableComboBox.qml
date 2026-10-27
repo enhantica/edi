@@ -118,6 +118,7 @@ EaElements.ComboBox {
         return first;
     }
 
+    leftPadding: inTable ? 0 : padding
     borderColor: inTable ? "transparent" : _borderColor()
     backgroundColor: inTable ? "transparent" : _backgroundColor()
     topInset: title === "" ? 0 : EaStyle.Sizes.fontPixelSize * 1.5
@@ -195,8 +196,13 @@ EaElements.ComboBox {
     }
 
     Component.onCompleted: {
-        if (control.contentItemLabel)
+        if (control.contentItemLabel) {
             control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
+            // In a table the shown value starts where its column's header does (the owner, 2026-10-24); the list keeps
+            // its own padding.
+            if (control.inTable)
+                control.contentItemLabel.leftPadding = 0;
+        }
         control.popup.contentItem.header = searchHeader;
         // The list holds its entries only while it shows: a closed one sized to the window kept a screenful of
         // entries, and every change of the model's rows (a scan's Reset relabels all its datasets) laid them out again.

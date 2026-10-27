@@ -88,7 +88,7 @@ Column {
         // Each structure's curve, one column per structure at the end of the row. A Repeater places its cells before
         // itself, so the Repeater, declared last, takes the last width, kept narrow.
         readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
-        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
+        columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
