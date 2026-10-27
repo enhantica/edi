@@ -16,7 +16,6 @@ import edi
 import pytest
 
 from tests.fixtures.c34_t28_baseline.generate_bytes import observe
-from tests.fixtures.project_save.reference import expected_pair
 
 
 def _sample_project() -> edi.Project:
@@ -143,11 +142,12 @@ def test_multiple_structures_and_their_links_survive_two_save_cycles(tmp_path: P
     second_save = tmp_path / 'second'
     project.save_as(first)
     assert _triplet(project.experiments[0].linked_structures['demo_two'].scale) == (
-        *expected_pair(0.375, 0.025, None),
+        0.38,
+        0.03,
         True,
-    ), 'Save adopts the independent two-digit value and uncertainty with its free flag'
-    assert 'demo_two 0.375(25)' in (first / 'experiments/bank_a.edi').read_text(), (
-        'The phase scale writes both significant uncertainty digits by default'
+    ), 'Save adopts the IUCr rounding of 0.375 +/- 0.025 without changing the free flag'
+    assert 'demo_two 0.38(3)' in (first / 'experiments/bank_a.edi').read_text(), (
+        'The phase scale writes IUCr half-away value rounding and upward uncertainty rounding'
     )
     restored = edi.Project.load(first)
     assert set(restored.structures.keys()) == {'demo', 'demo_two'}, (
@@ -172,8 +172,8 @@ def test_multiple_structures_and_their_links_survive_two_save_cycles(tmp_path: P
             'Each bank must retain both linked structures through project loading'
         )
         assert _triplet(links['demo_two'].scale) == (
-            expected_pair(0.375, 0.025, None)[0] if index == 0 else 1.375,
-            expected_pair(0.375, 0.025, None)[1] if index == 0 else 0.0,
+            0.38 if index == 0 else 1.375,
+            0.03 if index == 0 else 0.0,
             index == 0,
         ), 'Each bank phase scale must retain its own value, uncertainty and free flag'
         assert links['demo_two'].enabled == (index == 0), (

@@ -55,7 +55,7 @@ Rectangle {
         function titleFont(data) {
             if (reference) reference.visible = true;
             frame();
-            const title = data.kind === "single" ? texts(chart).find(item => item.text === chart.quantity + " calc") : named(reference, "chart.title.x");
+            const title = data.kind === "single" ? named(chart, "singleCrystal.title.x") : named(reference, "chart.title.x");
             verify(title !== undefined && title.visible && title.text.length > 0, "The font reference is the actual populated Pattern axis title");
             const font = title.font;
             compare(font.family, Style.Fonts.fontFamily, "The actual axis title uses the shared app font family");
@@ -123,9 +123,12 @@ Rectangle {
             else if (data.kind === "scan") graph = named(chart, data.mode === "evolution" ? "evolution.view" : "scanView." + data.mode + ".axes");
             else graph = objects(chart).find(item => item.axisX !== undefined && item.axisY !== undefined && item.theme !== undefined);
             verify(graph !== undefined && graph.visible && graph.width > 0 && graph.height > 0, "Every requested pane has an actual visible Qt Graphs view");
-            const titles = texts(chart).filter(item => /(?:^chart|^evolution|^scanView\.[^.]+)\.title\./.test(item.objectName) || data.kind === "single" && [chart.quantity + " calc", chart.quantity + " meas"].includes(item.text));
+            const titles = data.kind === "single" ? ["x", "y"].map(axis => named(chart, "singleCrystal.title." + axis)) : texts(chart).filter(item => /(?:^chart|^evolution|^scanView\.[^.]+)\.title\./.test(item.objectName));
             verify(titles.length >= 2, "Every numeric chart exposes both of its actual axis titles for font comparison");
-            titles.forEach(item => equal(item.font, expected, data.tag + "/title/" + phase));
+            titles.forEach(item => {
+                verify(item !== undefined && item.visible && item.width > 0 && item.height > 0 && typeof item.text === "string" && item.text.length > 0, "Each chart's own named axis title is populated and actually shown");
+                equal(item.font, expected, data.tag + "/title/" + phase);
+            });
             if (data.pane === "bragg") {
                 const rows = objects(chart).filter(item => item.objectName === "chart.bragg.label" && item.visible);
                 verify(rows.length > 0, "The Bragg strip has actual structure-name labels as well as its axis theme");

@@ -10,34 +10,38 @@ import edi.app
 // One square button of a chart's toolbar (easydiffractionbeta's QtCharts1dTab.qml; edi ADR-0017 §15): a Font
 // Awesome icon on the content background inside a border in the chart's axis colour, the icon in the accent
 // colour while hovered or checked; disabled, both in the theme's disabled colours, as the toolbar's boxes. Shared by
-// the pattern chart and, with, the structure view.
+// the pattern chart and, with, the structure view. Not `available`, it looks disabled and ignores clicks but keeps its
+// tooltip, which says why.
 Rectangle {
     id: button
 
     property string fontIcon: ""
     property string toolTip: ""
     property bool checked: false
+    property bool available: true
+    readonly property bool active: enabled && available
     signal clicked
 
     width: AppSizes.toolbarControlSize
     height: width
     color: EaStyle.Colors.contentBackground
-    border.color: button.enabled ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
+    border.color: button.active ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
     border.width: EaStyle.Sizes.borderThickness
 
     EaElements.Label {
         anchors.centerIn: parent
         font.family: EaStyle.Fonts.iconsFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
-        color: !button.enabled ? EaStyle.Colors.themeForegroundDisabled : hover.hovered || button.checked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+        color: !button.active ? EaStyle.Colors.themeForegroundDisabled : hover.hovered || button.checked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
         text: button.fontIcon
     }
     HoverHandler {
         id: hover
 
-        cursorShape: Qt.PointingHandCursor
+        cursorShape: button.available ? Qt.PointingHandCursor : Qt.ArrowCursor
     }
     TapHandler {
+        enabled: button.available
         onTapped: button.clicked()
     }
     EaElements.ToolTip {

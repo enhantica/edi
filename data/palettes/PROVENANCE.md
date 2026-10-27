@@ -1,150 +1,141 @@
-# Colour palettes — provenance
+# Figure palettes — provenance
 
-One table per palette, `edi-<name>.tsv`, in the order Preferences lists them: Edi Natural (the default), Edi Coast, Edi
-Garden, Edi Studio and Edi Contrast (ADR-0038). The core embeds them at build time and reads them through
-`edi::pattern_colour()`, `edi::structure_colour()` and `edi::role_colour()`, the only source of dataset, structure and
-chart-role colours in edi: the app's charts and icons, the pattern presentation and the report all take them from
-there. A report always takes the light colours.
+One table per palette, in the order Preferences lists them: Earth (the default), Classic, Soft, Natural and
+Colour-blind safe (ADR-0038). The core embeds them at build time and reads them through `edi::figure_colour()` and
+`edi::role_colour()`, the only source of experiment, structure and chart-role colours in edi: the app's charts,
+legends and icons, the Preferences colour strip, the pattern presentation and the report all take them from there. A
+report and every saved picture take the light colours.
 
-The colours are the ones the owner approved on 2026-10-21, stored exactly; nothing generates, adapts or retunes them.
-`tools/palettes/check.py` checks each table's shape and that the tables below list the same values; it writes nothing.
+The colours are the ones the owner approved on 2026-10-26 (light values on the palette page's fifth version, dark
+values on the second dark sheet), stored exactly; nothing generates, adapts or retunes them. The approval names were
+edi earth, edi standard, edi soft, edi natural and edi clear. `tools/palettes/check.py` checks each table's shape and
+that the tables below list the same values; it writes nothing.
 
-| Column  | Meaning                                                                                                   |
-| ------- | --------------------------------------------------------------------------------------------------------- |
-| `role`  | `measured`, `structure`, `total_calculation`, `background` or `difference`                                |
-| `index` | The place, from 0, in the order the rows of that role are listed; 0 for the three role colours           |
-| `light` | The colour in the light theme, `#RRGGBB`                                                                  |
-| `dark`  | The colour in the dark theme, `#RRGGBB`                                                                   |
+| Column  | Meaning                                                                                 |
+| ------- | --------------------------------------------------------------------------------------- |
+| `role`  | `figure`, `total_calculation`, `background` or `difference`                             |
+| `index` | The place, from 0, in the palette's colour order; 0 for the three role colours          |
+| `light` | The colour in the light theme, `#RRGGBB`                                                |
+| `dark`  | The colour in the dark theme, `#RRGGBB`                                                 |
 
-Measured colours are listed in the order slate, blue, green, teal, violet (the owner swapped the first two on
-2026-10-22), and structure colours in the order
-orange, gold, brown, amber, olive, the most distinct first. Each palette's slate is made from the raspberry it
-replaced, which came too close to the rose calculated curve: in Oklab, the same lightness, 0.38 of its chroma and hue
-250°, per theme (the owner, 2026-10-21). Up to five datasets, or five structures, take the first
-colours of their group in order. More take a gradient over the whole group, from its first colour to its second, mixed
-in the Oklab colour space (Björn Ottosson, 2020): item i of N, from zero, at t = i / (N − 1).
+Each palette lists eleven figure colours in the order experiments and structures take them. Earth keeps its first
+two for experiments: a structure takes the first free colour from the third on. In the other four an experiment or a
+structure takes the next free colour whatever its kind. Past the eleventh, items take shades between the first and
+the second colour, mixed in the Oklab colour space (Björn Ottosson, 2020): position p of a project using positions up
+to n - 1 at t = (p - 10) / (n - 10).
 
-## Sources
+The dark colours keep each light colour's hue, read at 3:1 or more on the dark chart background (`#444444`), sit in one
+lightness band so none stands out, and keep every pair of a palette at least as far apart in Oklab as in the light
+theme. The calculated curve is the same crimson in all five palettes, `#AD1A6B` light and `#FC4F81` dark, which
+red-green colour-blind viewers see as grey rather than as a palette colour. The background and difference greys are
+edi's own, the same in all five.
 
-The schemes the palettes take colours from, as the earlier eighteen schemes cited them:
-
-| Source | Reference | Licence |
-| ------ | --------- | ------- |
-| Coast | edi's own (the default): sea blue, lagoon teal, leaf green, violet and cyan, with structure colours from the Design Seeds nature palettes by Jessica Colaluca (wheat, plum, rose, stone, sage). | designed for edi |
-| Garden | edi's own, after akulakreative's garden greenery palette (December 2024: khaki, sand, clay) and the Design Seeds sea and lagoon palettes. | designed for edi |
-| Peaceful | edi's own, after paperheartdesign's peaceful palettes (blue lake, fog teal, periwinkle, deep lagoon, plum; tan, khaki, lavender, stone, sand). | designed for edi |
-| Fog forest | edi's own, after the Design Seeds fog and lake palettes by Jessica Colaluca (lake blue, forest green, fog teal, heather, sand; slate, sage, stone, mist, lichen). | designed for edi |
-| Okabe-Ito | Okabe and Ito, *Color Universal Design* (2008), the eight colours as R's `palette.colors()` lists them, in the order edi has used them. | values published for free use |
-| Paul Tol muted | Paul Tol, *Colour Schemes* (SRON/EPS/TN/09-002, 2021), muted. | values published for free use |
-| Tableau 10 | Tableau 10 (Maureen Stone, Tableau, 2016), as d3-scale-chromatic lists it (`schemeTableau10`). | ISC |
-| IBM Carbon | IBM's Carbon Design System, the categorical palettes for light and dark themes (carbon-website `palettes.js`). | Apache-2.0 |
-| ColorBrewer Dark2 | ColorBrewer Dark2 (Cynthia Brewer, colorbrewer2.org), as matplotlib's `Dark2`. | Apache-2.0 |
-| Petroff | Matthew Petroff, *Accessible Color Sequences for Data Visualization* (2021), the ten-colour sequence, matplotlib 3.10's `petroff10` style. | matplotlib licence |
-| Nord | Nord (Arctic Ice Studio), its Frost and Aurora colours: nord10, nord14, nord15, nord8, nord13, nord7, nord9, nord12, nord11. | MIT |
-| Solarized | Solarized (Ethan Schoonover), its accent colours: blue, green, violet, cyan, yellow, magenta, orange, red. | MIT |
-| Catppuccin | Catppuccin, Latte in the light theme and Mocha in the dark, its accents: blue, green, mauve, teal, yellow, sapphire, lavender, then peach, pink, red, maroon, flamingo, rosewater, sky. | MIT |
-| Apple | Apple's system colours, light and dark (Human Interface Guidelines, Color, https://developer.apple.com/design/human-interface-guidelines/color), as guidance: blue, green, indigo, cyan, purple, mint, yellow, teal, then orange, pink, red, brown. | guidance values |
-| Catppuccin neutrals | Catppuccin's Overlay 2 (background) and Subtext 0 (difference), Latte in the light theme and Mocha in the dark, <https://catppuccin.com/palette/>. | MIT |
-| Edi role grey | The shared background and difference greys of edi's own palettes. | designed for edi |
+Colour-blind safe was chosen for colour-vision differences by comparing simulated protanopia, deuteranopia and
+tritanopia with normal vision; it is no guarantee for every colour-vision deficiency.
 
 ## Stored values
 
-### Edi Natural
+### Earth
 
-`edi-natural.tsv`. edi's own palette, kept unchanged from the study that chose it: every colour was designed for edi.
+`earth.tsv`. Approved as edi earth.
 
-| Role | Place | Colour | Light | Light source | Dark | Dark source |
-| ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
-| measured | 0 | Slate | `#829DB9` | from Raspberry `#D475AD` | `#B2C8E0` | from Raspberry `#FDA8CB` |
-| measured | 1 | Blue | `#039EDC` | edi's own | `#71CBFE` | edi's own |
-| measured | 2 | Green | `#6EA163` | edi's own | `#A1CD97` | edi's own |
-| measured | 3 | Teal | `#479F93` | edi's own | `#81CAC2` | edi's own |
-| measured | 4 | Violet | `#8989F7` | edi's own | `#C0B6E8` | edi's own |
-| structure | 0 | Orange | `#D26E3C` | edi's own | `#F59B6F` | edi's own |
-| structure | 1 | Gold | `#958508` | edi's own | `#BAAD52` | edi's own |
-| structure | 2 | Brown | `#936844` | edi's own | `#BD9372` | edi's own |
-| structure | 3 | Amber | `#C28B0A` | edi's own | `#EBB352` | edi's own |
-| structure | 4 | Olive | `#71964E` | edi's own | `#98BB79` | edi's own |
-| total_calculation | 0 | Total calculation | `#CA5C6E` | edi's own | `#EE8795` | edi's own |
-| background | 0 | Background | `#8A8A8A` | edi's own | `#969696` | edi's own |
-| difference | 0 | Difference | `#737373` | edi's own | `#B0B0B0` | edi's own |
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#618EC8` | `#6E92CB` |
+| figure | 1 | `#8B9762` | `#94935C` |
+| figure | 2 | `#C58A03` | `#C58901` |
+| figure | 3 | `#C877B7` | `#C375C2` |
+| figure | 4 | `#A27957` | `#C59B77` |
+| figure | 5 | `#9B82E9` | `#9B82E9` |
+| figure | 6 | `#DE7141` | `#E37646` |
+| figure | 7 | `#918706` | `#AAA931` |
+| figure | 8 | `#01A2C5` | `#00ABCC` |
+| figure | 9 | `#4DA091` | `#4E9D91` |
+| figure | 10 | `#49A45F` | `#39A55A` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |
 
-### Edi Coast
+### Classic
 
-`edi-coast.tsv`. Measured colours led by the earlier Coast scheme's, with richer earth tones for structures, each taken unchanged from the scheme named.
+`classic.tsv`. Approved as edi standard.
 
-| Role | Place | Colour | Light | Light source | Dark | Dark source |
-| ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
-| measured | 0 | Slate | `#849BB3` | from Raspberry `#CC79A7` | `#C7D6E7` | from Raspberry `#F5C2E7` |
-| measured | 1 | Blue | `#2C90D7` | Coast | `#71BFFF` | Coast |
-| measured | 2 | Green | `#3CA059` | Coast | `#7CCD8E` | Coast |
-| measured | 3 | Teal | `#079E92` | Coast | `#44D0C1` | Coast |
-| measured | 4 | Violet | `#8978D7` | Coast | `#B6AAFF` | Coast |
-| structure | 0 | Orange | `#CB4B16` | Solarized | `#FAB387` | Catppuccin |
-| structure | 1 | Gold | `#999933` | Paul Tol muted | `#DDCC77` | Paul Tol muted |
-| structure | 2 | Brown | `#9C755F` | Tableau 10 | `#B09F85` | Coast |
-| structure | 3 | Amber | `#B28600` | IBM Carbon | `#E69F00` | Okabe-Ito |
-| structure | 4 | Olive | `#66A61E` | ColorBrewer Dark2 | `#A3BE8C` | Nord |
-| total_calculation | 0 | Total calculation | `#CC6677` | Paul Tol muted | `#F38BA8` | Catppuccin |
-| background | 0 | Background | `#8A8A8A` | Edi role grey | `#969696` | Edi role grey |
-| difference | 0 | Difference | `#737373` | Edi role grey | `#B0B0B0` | Edi role grey |
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#6896CC` | `#6493C9` |
+| figure | 1 | `#D9773A` | `#E17443` |
+| figure | 2 | `#8B9762` | `#879665` |
+| figure | 3 | `#6F5A8F` | `#AE98C2` |
+| figure | 4 | `#2E8F8A` | `#55B1B3` |
+| figure | 5 | `#B8860B` | `#C08C02` |
+| figure | 6 | `#936844` | `#CA9C7B` |
+| figure | 7 | `#8989F7` | `#7D82FC` |
+| figure | 8 | `#8D6FC9` | `#BD8CF8` |
+| figure | 9 | `#5C6BC0` | `#85A7FE` |
+| figure | 10 | `#3F7F4F` | `#72B976` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |
 
-### Edi Garden
+### Soft
 
-`edi-garden.tsv`. The earlier Garden and Peaceful schemes' softer, quieter colours, each taken unchanged from the scheme named.
+`soft.tsv`. Approved as edi soft.
 
-| Role | Place | Colour | Light | Light source | Dark | Dark source |
-| ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
-| measured | 0 | Slate | `#6D7C8D` | from Raspberry `#9F6683` | `#A9B9CB` | from Raspberry `#E0A2C1` |
-| measured | 1 | Blue | `#3D84A0` | Garden | `#7CC3E0` | Garden |
-| measured | 2 | Green | `#668558` | Garden | `#A2C393` | Garden |
-| measured | 3 | Teal | `#42897C` | Peaceful | `#80C8B9` | Peaceful |
-| measured | 4 | Violet | `#7172B6` | Peaceful | `#ACAFF8` | Peaceful |
-| structure | 0 | Orange | `#D95F02` | ColorBrewer Dark2 | `#D08770` | Nord |
-| structure | 1 | Gold | `#999933` | Paul Tol muted | `#DDCC77` | Paul Tol muted |
-| structure | 2 | Brown | `#A96B59` | Petroff | `#B78A66` | Apple |
-| structure | 3 | Amber | `#A6761D` | ColorBrewer Dark2 | `#EBCB8B` | Nord |
-| structure | 4 | Olive | `#756E51` | Garden | `#B9AC70` | Petroff |
-| total_calculation | 0 | Total calculation | `#A57B7C` | Coast | `#EBA0AC` | Catppuccin |
-| background | 0 | Background | `#8A8A8A` | Edi role grey | `#969696` | Edi role grey |
-| difference | 0 | Difference | `#737373` | Edi role grey | `#B0B0B0` | Edi role grey |
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#6896CC` | `#6496CB` |
+| figure | 1 | `#C28B0A` | `#C28305` |
+| figure | 2 | `#6F5A8F` | `#AE9DC4` |
+| figure | 3 | `#8989F7` | `#8384F9` |
+| figure | 4 | `#479F93` | `#47A196` |
+| figure | 5 | `#5E8F5A` | `#7EB77F` |
+| figure | 6 | `#8D6FC9` | `#BF90FB` |
+| figure | 7 | `#8C6A4A` | `#C19D7A` |
+| figure | 8 | `#C877B7` | `#C776B9` |
+| figure | 9 | `#D26E3C` | `#EF7B4B` |
+| figure | 10 | `#918706` | `#99A004` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |
 
-### Edi Studio
+### Natural
 
-`edi-studio.tsv`. Measured colours from Catppuccin (Latte in the light theme, Mocha in the dark), with earth-tone structure colours, each taken unchanged from the scheme named; the background and difference greys are Catppuccin's neutrals.
+`natural.tsv`. Approved as edi natural.
 
-| Role | Place | Colour | Light | Light source | Dark | Dark source |
-| ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
-| measured | 0 | Slate | `#87AACF` | from Raspberry `#EA76CB` | `#C7D6E7` | from Raspberry `#F5C2E7` |
-| measured | 1 | Blue | `#1E66F5` | Catppuccin | `#89B4FA` | Catppuccin |
-| measured | 2 | Green | `#40A02B` | Catppuccin | `#A6E3A1` | Catppuccin |
-| measured | 3 | Teal | `#179299` | Catppuccin | `#94E2D5` | Catppuccin |
-| measured | 4 | Violet | `#8839EF` | Catppuccin | `#CBA6F7` | Catppuccin |
-| structure | 0 | Orange | `#FE640B` | Catppuccin | `#FAB387` | Catppuccin |
-| structure | 1 | Gold | `#999933` | Paul Tol muted | `#EBCB8B` | Nord |
-| structure | 2 | Brown | `#9C755F` | Tableau 10 | `#B78A66` | Apple |
-| structure | 3 | Amber | `#DF8E1D` | Catppuccin | `#F9E2AF` | Catppuccin |
-| structure | 4 | Olive | `#46653C` | Fog forest | `#A3BE8C` | Nord |
-| total_calculation | 0 | Total calculation | `#D20F39` | Catppuccin | `#F38BA8` | Catppuccin |
-| background | 0 | Background | `#7C7F93` | Catppuccin neutrals | `#9399B2` | Catppuccin neutrals |
-| difference | 0 | Difference | `#6C6F85` | Catppuccin neutrals | `#A6ADC8` | Catppuccin neutrals |
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#7C97B3` | `#888FAC` |
+| figure | 1 | `#D26E3C` | `#EF7B45` |
+| figure | 2 | `#039EDC` | `#039EDC` |
+| figure | 3 | `#958508` | `#B0AD19` |
+| figure | 4 | `#6EA163` | `#6C9C4A` |
+| figure | 5 | `#936844` | `#C4A07A` |
+| figure | 6 | `#479F93` | `#3CA39E` |
+| figure | 7 | `#C28B0A` | `#BE8706` |
+| figure | 8 | `#8989F7` | `#8D7FFB` |
+| figure | 9 | `#71964E` | `#7DBB89` |
+| figure | 10 | `#5C6BC0` | `#9DA2E9` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |
 
-### Edi Contrast
+### Colour-blind safe
 
-`edi-contrast.tsv`. A custom palette for colour-vision differences, inspired by the Okabe–Ito palette and Paul Tol's schemes. It is neither of them, its colours and their roles are edi's own, and it is no guarantee for every colour-vision deficiency: the source sets' accessibility claims do not carry over.
+`colour-blind-safe.tsv`. Approved as edi clear.
 
-| Role | Place | Colour | Light | Light source | Dark | Dark source |
-| ---- | ----- | ------ | ----- | ------------ | ---- | ----------- |
-| measured | 0 | Slate | `#7C9AB9` | from Raspberry `#D66CAC` | `#B7CEE6` | from Raspberry `#FFAEDD` |
-| measured | 1 | Blue | `#009DE2` | Edi Contrast, custom | `#91D4FF` | Edi Contrast, custom |
-| measured | 2 | Green | `#6FA065` | Edi Contrast, custom | `#A4D89A` | Edi Contrast, custom |
-| measured | 3 | Teal | `#2D9894` | Edi Contrast, custom | `#60D1BD` | Edi Contrast, custom |
-| measured | 4 | Violet | `#7264D0` | Edi Contrast, custom | `#9E96F8` | Edi Contrast, custom |
-| structure | 0 | Orange | `#D35E40` | Edi Contrast, custom | `#FFA273` | Edi Contrast, custom |
-| structure | 1 | Gold | `#7D6500` | Edi Contrast, custom | `#B3A442` | Edi Contrast, custom |
-| structure | 2 | Brown | `#7A4E24` | Edi Contrast, custom | `#B68965` | Edi Contrast, custom |
-| structure | 3 | Amber | `#C38900` | Edi Contrast, custom | `#F5CD71` | Edi Contrast, custom |
-| structure | 4 | Olive | `#51905B` | Edi Contrast, custom | `#91C999` | Edi Contrast, custom |
-| total_calculation | 0 | Total calculation | `#C6647F` | Edi Contrast, custom | `#EC8594` | Edi Contrast, custom |
-| background | 0 | Background | `#8A8A8A` | Edi role grey | `#969696` | Edi role grey |
-| difference | 0 | Difference | `#737373` | Edi role grey | `#B0B0B0` | Edi role grey |
+| Role | Place | Light | Dark |
+| ---- | ----- | ----- | ---- |
+| figure | 0 | `#3F7FBF` | `#69A9EC` |
+| figure | 1 | `#C28B0A` | `#C38801` |
+| figure | 2 | `#8989F7` | `#8989F7` |
+| figure | 3 | `#936844` | `#C59D77` |
+| figure | 4 | `#01A2C5` | `#099EC4` |
+| figure | 5 | `#5E8F5A` | `#879F78` |
+| figure | 6 | `#D26E3C` | `#EC7D49` |
+| figure | 7 | `#479F93` | `#06A48D` |
+| figure | 8 | `#918706` | `#A5AA32` |
+| figure | 9 | `#C877B7` | `#BD7ABF` |
+| figure | 10 | `#3F7F4F` | `#68C08A` |
+| total_calculation | 0 | `#AD1A6B` | `#FC4F81` |
+| background | 0 | `#8A8A8A` | `#969696` |
+| difference | 0 | `#737373` | `#B0B0B0` |

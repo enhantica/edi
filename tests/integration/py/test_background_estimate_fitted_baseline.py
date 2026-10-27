@@ -17,7 +17,6 @@ from tests.fixtures.background_estimate.fitted_baseline import (
     values,
 )
 from tests.fixtures.background_estimate.readonly import snapshot
-from tests.fixtures.project_save.reference import six_digits
 
 
 def assert_fitted_pattern(project):
@@ -165,8 +164,8 @@ def test_manual_control_reaches_the_same_fitted_pattern_and_saved_curve(tmp_path
     project.experiment.background_estimate.mode = 'manual'
     fit(project)
     assert_fitted_pattern(project)
+    expected_curve = curve(project).copy()
     project.save_as(tmp_path / 'saved')
-    expected_curve = np.asarray([six_digits(value) for value in curve(project)])
     stored = stored_pattern(tmp_path / 'saved')
     assert len(stored) > 100, 'The Manual positive control must serialize its real fitted pattern'
     np.testing.assert_allclose(
@@ -174,5 +173,5 @@ def test_manual_control_reaches_the_same_fitted_pattern_and_saved_curve(tmp_path
         expected_curve,
         rtol=1e-11,
         atol=1e-8,
-        err_msg='The saved Manual background must follow the adopted model and six-digit rule',
+        err_msg='The Manual control must validate the basis and stored pattern reader',
     )

@@ -121,6 +121,11 @@
    "reason": "a developer benchmark printing timings, not part of the app"
   },
   {
+   "file": "app/tools/scan_bench.cpp",
+   "match": "std::printf(\"%s\\t%d\\t%zu\\t%zu\\t%d\\t%.2f",
+   "reason": "a developer benchmark printing timings, not part of the app"
+  },
+  {
    "file": "app/tools/ui_compare.cpp",
    "match": "std::printf(\"%s %s: min tile %.4f, image %.4f\\n\"",
    "reason": "a test tool printing image similarity scores, not part of the app"
@@ -223,6 +228,16 @@
    "reason": "an app preference (engine threads), outside the dictionary (I1)"
   },
   {
+   "file": "app/qml/Components/PaletteStrip.qml",
+   "literal": "calculator",
+   "reason": "the Font Awesome icon's name, not the calculator category's title"
+  },
+  {
+   "file": "app/qml/Components/PaletteStrip.qml",
+   "literal": "calc",
+   "reason": "the label of the calculated curve's colour in the Preferences colour strip (the owner, 2026-10-26), not the calc item"
+  },
+  {
    "file": "app/qml/Components/ParameterCell.qml",
    "literal": "s.u.",
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
@@ -303,11 +318,6 @@
    "reason": "a page name (edi ADR-0017), not the _metadata category"
   },
   {
-   "file": "app/qml/Pages/Project/RecentProjectsGroup.qml",
-   "literal": "Project",
-   "reason": "the recent projects list's column of places, not the _metadata category"
-  },
-  {
    "file": "app/qml/Pages/Report/ReportPage.qml",
    "literal": "Report",
    "reason": "a page name (edi ADR-0017), not the _report category"
@@ -331,6 +341,11 @@
    "file": "core/src/adapter.cpp",
    "literal": "TOF",
    "reason": "the beam mode abbreviation in a diagnostic, not a label"
+  },
+  {
+   "file": "core/src/scan_views.cpp",
+   "literal": "Auto",
+   "reason": "the Map's direction choice, a view setting outside the dictionary"
   },
   {
    "file": "data/report/report.js",
@@ -371,6 +386,11 @@
    "file": "lib/src/bindings.cpp",
    "literal": "Project",
    "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportTable.qml",
+   "literal": ".",
+   "reason": "the decimal point of a number aligned on its point, not the inapplicable polarisation token"
   }
  ]
 }

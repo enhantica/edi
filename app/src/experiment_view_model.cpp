@@ -570,12 +570,17 @@ void ExperimentViewModel::showPattern(edi::PatternSource source, std::optional<e
     emit patternSourceChanged();
 }
 
-void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::size_t count) {
-    if (place == colour_place_ && (!place || count == colour_count_)) {
+void ExperimentViewModel::setColourPlace(std::optional<std::size_t> place, std::size_t count,
+                                         std::vector<std::size_t> positions) {
+    if (place == colour_place_ && (!place || count == colour_count_) && positions == colour_positions_) {
         return;
     }
     colour_place_ = place;
     colour_count_ = place ? count : 0;
+    if (positions != colour_positions_) {
+        colour_positions_ = std::move(positions);
+        emit colourPositionsChanged();
+    }
     // The same pattern in its new colour: the chart draws it again, and nothing waiting on a new pattern counts it.
     pattern_source_.experiment_place = colourPlace();
     if (d_source_) {

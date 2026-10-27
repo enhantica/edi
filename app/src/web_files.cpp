@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "web_files.hpp"
 
-#include "edi/project_archive.hpp"
-
+#include <QBuffer>
 #include <QDir>
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QtCore/private/qzipreader_p.h>
+#include <QtCore/private/qzipwriter_p.h>
 #include <cstdlib>
 #include <memory>
 #include <vector>
@@ -96,6 +97,24 @@ struct Incoming {
     QByteArray data;
 };
 
+// A relative archive path that stays inside its target: no absolute path, no drive, no `..` component.
+bool inside(const QString& path) {
+    if (path.isEmpty() || path.startsWith(QLatin1Char('/')) || path.startsWith(QLatin1Char('\\'))
+        || path.contains(QLatin1Char(':'))) {
+        return false;
+    }
+    const QStringList parts = QString(path).replace(QLatin1Char('\\'), QLatin1Char('/')).split(QLatin1Char('/'));
+    return !parts.contains(QStringLiteral(".."));
+}
+
+// An archive any unzip tool restores usable. Files are rw-r--r--, not Qt's rw-------. No folder entries are
+// written: QZipWriter stores a folder without its owner's execute bit, which macOS then unpacks as a folder nobody
+// can open, while unzip tools make the folders a file's path names anyway.
+void prepare(QZipWriter& writer) {
+    writer.setCompressionPolicy(QZipWriter::AutoCompress);
+    writer.setCreationPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ReadUser | QFile::WriteUser |
+                                  QFile::ReadGroup | QFile::ReadOther);
+}
 }  // namespace
 
 bool WebFiles::available() {
@@ -117,37 +136,86 @@ QString WebFiles::freshDirectory(const QString& kind) {
     return path;
 }
 
-// The archives are the core's (edi ADR-0052), the same bytes every surface writes and reads.
 QByteArray WebFiles::pack(const QString& directory) {
-    try {
-        const std::string bytes = edi::project_archive_bytes(directory.toStdString());
-        return QByteArray(bytes.data(), static_cast<qsizetype>(bytes.size()));
-    } catch (const std::exception&) {
-        return {};
+    const QDir dir(directory);
+    const QString top = dir.dirName();
+    QByteArray archive;
+    QBuffer buffer(&archive);
+    buffer.open(QIODevice::WriteOnly);
+    QZipWriter writer(&buffer);
+    prepare(writer);
+    QStringList files;
+    QDirIterator it(directory, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        files.append(it.next());
     }
+    files.sort();  // the same project packs into the same archive layout
+    for (const QString& path : files) {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return {};
+        }
+        writer.addFile(top + QLatin1Char('/') + dir.relativeFilePath(path), file.readAll());
+    }
+    writer.close();
+    return writer.status() == QZipWriter::NoError ? archive : QByteArray();
 }
 
 QByteArray WebFiles::packFiles(const QList<QPair<QString, QByteArray>>& files) {
-    std::vector<std::pair<std::string, std::string>> members;
+    QByteArray archive;
+    QBuffer buffer(&archive);
+    buffer.open(QIODevice::WriteOnly);
+    QZipWriter writer(&buffer);
+    prepare(writer);
     for (const auto& [path, data] : files) {
-        members.emplace_back(path.toStdString(), data.toStdString());
+        writer.addFile(path, data);
     }
-    try {
-        const std::string bytes = edi::archive_bytes(members);
-        return QByteArray(bytes.data(), static_cast<qsizetype>(bytes.size()));
-    } catch (const std::exception&) {
-        return {};
-    }
+    writer.close();
+    return writer.status() == QZipWriter::NoError ? archive : QByteArray();
 }
 
 QString WebFiles::unpack(const QByteArray& archive, const QString& target, QString& error) {
-    try {
-        return QString::fromStdString(edi::unpack_project_archive(
-            std::string_view(archive.constData(), static_cast<std::size_t>(archive.size())), target.toStdString()));
-    } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
+    QByteArray bytes = archive;
+    QBuffer buffer(&bytes);
+    buffer.open(QIODevice::ReadOnly);
+    QZipReader reader(&buffer);
+    if (!reader.isReadable() || reader.status() != QZipReader::NoError) {
+        error = QStringLiteral("the file is not a .zip archive");
         return {};
     }
+    const QList<QZipReader::FileInfo> entries = reader.fileInfoList();
+    if (entries.isEmpty()) {
+        error = QStringLiteral("the file is not a .zip archive, or an empty one");
+        return {};
+    }
+    for (const QZipReader::FileInfo& entry : entries) {
+        if (!inside(entry.filePath)) {
+            error = QStringLiteral("the archive names a path outside its folder: %1").arg(entry.filePath);
+            return {};
+        }
+    }
+    const QDir root(target);
+    for (const QZipReader::FileInfo& entry : entries) {
+        const QString path = root.filePath(entry.filePath);
+        if (entry.isDir) {
+            root.mkpath(entry.filePath);
+            continue;
+        }
+        if (!entry.isFile) {
+            continue;  // a link is not unpacked
+        }
+        QDir().mkpath(QFileInfo(path).absolutePath());
+        QFile file(path);
+        if (!file.open(QIODevice::WriteOnly) || file.write(reader.fileData(entry.filePath)) < 0) {
+            error = QStringLiteral("cannot unpack %1").arg(entry.filePath);
+            return {};
+        }
+    }
+    const QString project = projectIn(target, error);
+    if (project.isEmpty()) {
+        error = QStringLiteral("the archive holds no project: no project.edi at its top or in its one folder");
+    }
+    return project;
 }
 
 QString WebFiles::projectIn(const QString& path, QString& error) {

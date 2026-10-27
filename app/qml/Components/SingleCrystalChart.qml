@@ -445,13 +445,16 @@ Item {
         onToggled: key => chart.toggleRow(key)
     }
 
+    // The axis titles, the dictionary's names of the plotted items, found by name as the pattern chart's are.
     EaElements.Label {
+        objectName: "singleCrystal.title.x"
         x: view.x + view.plotArea.x + (view.plotArea.width - width) / 2
         y: view.y + view.height + chart.em * 0.6
         color: chart.colors.chartLabels
         text: Session.label(chart.calculatedItem)
     }
     EaElements.Label {
+        objectName: "singleCrystal.title.y"
         x: chart.sideMargin - chart.em * 0.5
         y: view.y + view.plotArea.y + (view.plotArea.height + width) / 2
         rotation: -90

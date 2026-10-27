@@ -2,6 +2,10 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QImage>
+#include <QPointer>
+#include <QMutex>
+#include <QMutexLocker>
+#include <QCryptographicHash>
 #include <QQuickItem>
 #include <QQuickWindow>
 #include <QSGRendererInterface>
@@ -17,6 +21,45 @@ class PatternPolishObserver final : public QObject {
     Q_OBJECT
 public:
     using QObject::QObject;
+    // Observe the actual source points and receipt in one scene synchronization.
+    // No file is inferred from the worker's newest result or GUI grab timing.
+    Q_INVOKABLE void watchFollowFrames(QQuickWindow* window, QObject* project, QObject* chart) {
+        disconnect(follow_connection_);
+        { QMutexLocker guard(&follow_mutex_); follow_frames_.clear(); last_frame_.clear(); }
+        QPointer<QObject> guarded_project(project), guarded_chart(chart);
+        follow_connection_ = connect(window, &QQuickWindow::afterSynchronizing, this,
+            [this, guarded_project, guarded_chart] {
+                if (!guarded_project || !guarded_chart || !guarded_chart->property("shown").toBool()) return;
+                auto* model = qobject_cast<edi_app::ProjectViewModel*>(guarded_project.data());
+                auto* fit = model ? model->fit() : nullptr;
+                auto* layer = guarded_chart->findChild<edi_app::MeasuredLayer*>("chart.measured");
+                auto* calc = guarded_chart->findChild<QXYSeries*>("chart.series.calc");
+                if (!fit || !layer || !calc) return;
+                const int count = fit->property("scanPatternUpdates").toInt();
+                if (count <= 0) return;
+                const QString file = fit->property("scanShownFile").toString();
+                QVariantList points;
+                QByteArray bytes;
+                for (const auto& point : layer->points()) {
+                    const double x = point.x(), y = point.y();
+                    bytes.append(reinterpret_cast<const char*>(&x), sizeof(x));
+                    bytes.append(reinterpret_cast<const char*>(&y), sizeof(y));
+                    points.append(QVariantList{x, y});
+                }
+                const auto signature = QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex();
+                const QByteArray key = file.toUtf8() + ':' + QByteArray::number(count) + ':' + signature;
+                QMutexLocker guard(&follow_mutex_);
+                if (key == last_frame_) return;
+                last_frame_ = key;
+                follow_frames_.append(QVariantMap{{"file", file}, {"count", count},
+                    {"points", points}, {"calculatedCount", calc->points().size()}});
+            }, Qt::DirectConnection);
+    }
+    Q_INVOKABLE QVariantList followFrames() const {
+        QMutexLocker guard(&follow_mutex_);
+        return follow_frames_;
+    }
+    Q_INVOKABLE void stopFollowFrames() { disconnect(follow_connection_); }
     Q_INVOKABLE QVariantMap fitRecord(QObject* project) const {
         const auto* vm = qobject_cast<edi_app::ProjectViewModel*>(project);
         if (!vm) return {};
@@ -89,6 +132,11 @@ public:
         return QColor::fromRgba(std::max_element(counts.begin(), counts.end(),
             [](const auto& a, const auto& b) { return a.second < b.second; })->first);
     }
+private:
+    QMetaObject::Connection follow_connection_;
+    mutable QMutex follow_mutex_;
+    QVariantList follow_frames_;
+    QByteArray last_frame_;
 };
 
 static void register_pattern_polish_observer() {

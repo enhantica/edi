@@ -22,6 +22,7 @@
 
 namespace edi {
 
+class ExperimentBase;
 class Project;
 
 enum class YScale : std::uint8_t { Linear, Sqrt, Log10 };
@@ -109,6 +110,10 @@ struct PatternView {
     // Series (by id) still presented whose points do not count in the main pane's range: curves hidden from the
     // chart when the range is to fit the visible ones (edi ADR-0017 §15).
     std::vector<std::string> uncounted;
+    // Every curve with the background subtracted (edi ADR-0017 §15): the measured and calculated values less the
+    // calculated background at each point, the background drawn at zero and each structure's curve rising from zero;
+    // the residual is unchanged. A pattern with no current background column is drawn as it is.
+    bool subtract_background = false;
 };
 
 // y is in the pane's display scale. (NaN, NaN) is a gap.
@@ -172,6 +177,10 @@ struct PatternPresentation {
 
 PatternPresentation present_pattern(const PatternSource& source, const PatternView& view);
 
+// Whether the experiment declares a background: line-segment points, or polynomial or Chebyshev terms, fitted or not.
+// One that declares none has nothing to subtract (PatternView::subtract_background).
+bool has_background(const ExperimentBase& experiment);
+
 // One row of the style table: every colour, width and mark a pattern renderer uses, light and dark.
 struct SeriesStyle {
     std::string key, light, dark, mark;
@@ -180,14 +189,13 @@ struct SeriesStyle {
     double marker_px = 0.0;
 };
 // The style table of a project of `experiments` experiments and `structures` structures in `scheme`: a
-// `meas.<place>` row per experiment (at least three) and a `bragg.<place>` row per structure (at least five), each
-// colour the scheme's for its place among its group (edi::pattern_colour, edi::structure_colour), and the role rows:
-// the calculated, background and residual styles in the scheme's role colours (edi::role_colour) and the
-// excluded-region style. With `structure_scheme`, the structures' rows take their colours from that scheme instead
-// (the app's separate Structures and Patterns colours, the owner, 2026-10-22).
+// `meas.<place>` row per experiment (at least three), and a `bragg.<place>` and a `structure.<place>` row per
+// structure (at least five), each in the palette's colour at the item's position (edi::figure_colour); and the role
+// rows: the calculated, background and residual styles in the palette's role colours (edi::role_colour) and the
+// excluded-region style. `positions` holds the experiments' positions, then the structures'; empty, or of another
+// length, they are colour_positions' for a project with none held. Rows beyond the items take the next free positions.
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
-                                             std::size_t structures = 0,
-                                             std::optional<ColourScheme> structure_scheme = std::nullopt);
+                                             std::size_t structures = 0, std::span<const std::size_t> positions = {});
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.

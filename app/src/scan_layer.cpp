@@ -44,7 +44,15 @@ bool excluded_between(const ScanViewModel::Pattern& pattern, double a, double b)
 struct DrawnPattern {
     std::vector<double> x, intensity;
 };
-DrawnPattern drawn_pattern(const ScanViewModel::Pattern& pattern, bool included_only) {
+// A point's value as the views draw it: less the pattern's background there when subtracting and it has one.
+double drawn_value(const ScanViewModel::Pattern& pattern, std::size_t i, bool subtract) {
+    if (subtract && i < pattern.background.size() && std::isfinite(pattern.background[i])) {
+        return pattern.intensity[i] - pattern.background[i];
+    }
+    return pattern.intensity[i];
+}
+
+DrawnPattern drawn_pattern(const ScanViewModel::Pattern& pattern, bool included_only, bool subtract) {
     constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
     const std::size_t points = std::min(pattern.shown.size(), pattern.intensity.size());
     DrawnPattern out;
@@ -58,7 +66,8 @@ DrawnPattern drawn_pattern(const ScanViewModel::Pattern& pattern, bool included_
             out.intensity.push_back(kNaN);
         }
         out.x.push_back(x);
-        out.intensity.push_back(gaps && ScanViewModel::excludedAt(pattern, x) ? kNaN : pattern.intensity[i]);
+        out.intensity.push_back(gaps && ScanViewModel::excludedAt(pattern, x) ? kNaN
+                                                                              : drawn_value(pattern, i, subtract));
     }
     return out;
 }
@@ -73,6 +82,7 @@ bool column_excluded(const ScanViewModel::Pattern& pattern, bool included_only, 
 
 ScanLayer::ScanLayer(QQuickItem* parent)
     : QQuickPaintedItem(parent), lines_(new ScanLines(this)), top_(new ScanLines(lines_)) {
+    legend_ = new ChartLegendModel(this);
     setAntialiasing(true);
     lines_->setVisible(false);
     top_->setVisible(false);
@@ -109,6 +119,46 @@ void ScanLayer::setLabelled(bool labelled) {
         emit labelledChanged();
         labelsMoved();
     }
+}
+
+void ScanLayer::setNameCurrent(bool on) {
+    if (on != name_current_) {
+        name_current_ = on;
+        emit nameCurrentChanged();
+        labelsMoved();
+    }
+}
+
+void ScanLayer::syncLegend() {
+    const int count = model_ ? model_->count() : 0;
+    std::vector<int> listed;
+    if (count <= kFullLegend) {
+        listed.resize(static_cast<std::size_t>(count));
+        std::iota(listed.begin(), listed.end(), 0);
+    } else {
+        listed = {0};
+        if (current_ > 0 && current_ < count - 1) {
+            listed.push_back(current_);
+        }
+        listed.push_back(count - 1);
+    }
+    QList<ChartLegendModel::Entry> entries;
+    for (const int dataset : listed) {
+        ChartLegendModel::Entry entry;
+        entry.label = model_->rowText(dataset);
+        entry.color = colourOf(dataset);
+        entry.mark = QStringLiteral("line");
+        entry.markWidth = 2.0;
+        entry.selected = highlight_ && dataset == current_;
+        entries.append(entry);
+    }
+    if (static_cast<int>(listed.size()) < count) {
+        ChartLegendModel::Entry more;
+        more.label = tr("+ %1 more").arg(count - static_cast<int>(listed.size()));
+        more.color = dark_ ? QColor(0x99, 0x99, 0x99) : QColor(0x8A, 0x93, 0xA0);
+        entries.append(more);
+    }
+    legend_->setEntries(entries);
 }
 
 void ScanLayer::setLabelGap(double gap) {
@@ -156,7 +206,9 @@ QList<bool> ScanLayer::shownLabels() const {
     while (stride < placed.size() && !apart(stride)) {
         ++stride;
     }
-    const auto current = std::find_if(placed.begin(), placed.end(), [this](const Placed& row) { return row.index == current_; });
+    const auto current = name_current_ ? std::find_if(placed.begin(), placed.end(),
+                                                      [this](const Placed& row) { return row.index == current_; })
+                                       : placed.end();
     for (std::size_t n = 0; n < placed.size(); n += stride) {
         if (current == placed.end() || std::abs(placed[n].px - current->px) >= label_gap_ || placed[n].index == current_) {
             shown[static_cast<std::size_t>(placed[n].index)] = true;
@@ -164,6 +216,10 @@ QList<bool> ScanLayer::shownLabels() const {
     }
     if (current != placed.end()) {
         shown[static_cast<std::size_t>(current_)] = true;
+    }
+    // A shown legend names the current dataset instead.
+    if (!name_current_ && current_ >= 0 && current_ < count) {
+        shown[static_cast<std::size_t>(current_)] = false;
     }
     shown_labels_.reserve(count);
     for (const bool row : shown) {
@@ -181,6 +237,7 @@ void ScanLayer::setModel(ScanViewModel* model) {
     }
     model_ = model;
     if (model_) {
+        connect(model_, &ScanViewModel::rowTextsChanged, this, &ScanLayer::syncLegend);
         connect(model_, &ScanViewModel::revisionChanged, this, [this] {
             measure();
             place();
@@ -197,12 +254,34 @@ void ScanLayer::setModel(ScanViewModel* model) {
 
 void ScanLayer::setMode(const QString& mode) {
     assign(mode_, mode, &ScanLayer::modeChanged);
-    lines_->setVisible(lines_on_gpu());
-    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
-    update();  // the painted image clears when the lines move to the GPU
+    showLines();
+    if (!deferred()) {
+        update();  // the painted image clears when the lines move to the GPU
+    }
 }
-void ScanLayer::setXMin(double value) { assign(x_min_, value, &ScanLayer::xMinChanged); }
-void ScanLayer::setXMax(double value) { assign(x_max_, value, &ScanLayer::xMaxChanged); }
+bool ScanLayer::fitsShownRange() const { return mode_ == QLatin1String("stacked") && spacing_ >= 1.0; }
+
+void ScanLayer::setXMin(double value) {
+    if (value != x_min_) {
+        x_min_ = value;
+        if (fitsShownRange()) {
+            measure();
+        }
+        emit xMinChanged();
+        redraw();
+    }
+}
+
+void ScanLayer::setXMax(double value) {
+    if (value != x_max_) {
+        x_max_ = value;
+        if (fitsShownRange()) {
+            measure();
+        }
+        emit xMaxChanged();
+        redraw();
+    }
+}
 void ScanLayer::setYMin(double value) { assign(y_min_, value, &ScanLayer::yMinChanged); }
 void ScanLayer::setYMax(double value) { assign(y_max_, value, &ScanLayer::yMaxChanged); }
 void ScanLayer::setColourScheme(const QString& scheme) {
@@ -224,20 +303,52 @@ void ScanLayer::setDark(bool dark) {
     assign(dark_, dark, &ScanLayer::darkChanged);
     recolour();
 }
-void ScanLayer::setIncludedOnly(bool on) { assign(included_only_, on, &ScanLayer::includedOnlyChanged); }
+void ScanLayer::setIncludedOnly(bool on) {
+    if (on != included_only_) {
+        included_only_ = on;
+        if (fitsShownRange()) {
+            measure();
+        }
+        emit includedOnlyChanged();
+        redraw();
+    }
+}
+
+void ScanLayer::setPositions(const QList<int>& positions) {
+    assign(positions_, positions, &ScanLayer::positionsChanged);
+    recolour();
+}
+
+void ScanLayer::setTakenPositions(const QList<int>& positions) {
+    assign(taken_positions_, positions, &ScanLayer::takenPositionsChanged);
+    recolour();
+}
+
+void ScanLayer::setSubtractBackground(bool on) {
+    if (on != subtract_background_) {
+        subtract_background_ = on;
+        measure();  // every pattern's own range and the intensity's ends move with it
+        emit subtractBackgroundChanged();
+        redraw();
+    }
+}
 
 // The shown dataset is drawn again only while it is highlighted.
 void ScanLayer::setCurrent(int dataset) {
     if (dataset != current_) {
         current_ = dataset;
         emit currentChanged();
+        syncLegend();
         if (highlight_) {
             redraw();
         }
     }
 }
 
-void ScanLayer::setHighlight(bool on) { assign(highlight_, on, &ScanLayer::highlightChanged); }
+void ScanLayer::setHighlight(bool on) {
+    assign(highlight_, on, &ScanLayer::highlightChanged);
+    syncLegend();
+}
 void ScanLayer::setFaded(double opacity) { assign(faded_, std::clamp(opacity, 0.0, 1.0), &ScanLayer::fadedChanged); }
 
 void ScanLayer::setBusy(bool busy) {
@@ -247,24 +358,34 @@ void ScanLayer::setBusy(bool busy) {
     }
 }
 
+void ScanLayer::setActive(bool active) {
+    if (active != active_) {
+        active_ = active;
+        emit activeChanged();
+        lines_->setActive(active_);
+        top_->setActive(active_);
+        if (active_ && stale_) {
+            update();  // the painted image too: a renderer chosen while hidden may need it cleared
+            redraw();
+        }
+    }
+}
+
 int ScanLayer::highlighted() const {
     return highlight_ && current_ >= 0 && static_cast<std::size_t>(current_) < reductions_.size() ? current_ : -1;
 }
 
 void ScanLayer::setGpu(bool on) {
     assign(gpu_, on, &ScanLayer::gpuChanged);
-    lines_->setVisible(lines_on_gpu());
-    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
-    update();  // the painted image clears when the lines move to the GPU
+    showLines();
+    if (!deferred()) {
+        update();  // the painted image clears when the lines move to the GPU
+    }
 }
 
-void ScanLayer::setOffset(double offset) {
-    assign(offset_, std::clamp(offset, 0.0, 1.0), &ScanLayer::offsetChanged);
-    place();
-}
-
-void ScanLayer::setHeightShare(double share) {
-    assign(height_share_, std::clamp(share, 0.0, 1.0), &ScanLayer::heightShareChanged);
+void ScanLayer::setSpacing(double spacing) {
+    assign(spacing_, std::clamp(spacing, 0.0, 1.0), &ScanLayer::spacingChanged);
+    measure();  // Separate spans each pattern over the range shown
     place();
 }
 
@@ -284,31 +405,60 @@ void ScanLayer::geometryChange(const QRectF& next, const QRectF& previous) {
     redraw();
 }
 
+bool ScanLayer::deferred() {
+    if (!active_) {
+        stale_ = true;
+    }
+    return !active_;
+}
+
+void ScanLayer::showLines() {
+    lines_->setVisible(lines_on_gpu());
+    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
+}
+
 void ScanLayer::redraw() {
+    if (deferred()) {
+        return;
+    }
+    stale_ = false;
     polish();
     if (!lines_on_gpu()) {
         update();
     }
 }
 
-// Every read dataset's lowest and highest value on the y scale: the ends of the intensity the views spread.
+// Every read dataset's lowest and highest value on the y scale: the ends of the intensity the views spread. At
+// Separate each stacked pattern spans its lowest to highest value in the x range shown, so its band stays filled as
+// the zoom leaves its large peaks out (the owner, 2026-10-26); one with no point in the range spans all its points.
 void ScanLayer::measure() {
-    double low = std::numeric_limits<double>::infinity(), high = -low;
+    constexpr double kInfinity = std::numeric_limits<double>::infinity();
+    double low = kInfinity, high = -low;
     lows_.clear();
     highs_.clear();
     if (model_) {
         const edi::YScale scale = scale_of(scale_);
+        const bool visible_only = fitsShownRange();
+        const double from = std::min(x_min_, x_max_), to = std::max(x_min_, x_max_);
         for (const ScanViewModel::Pattern& pattern : model_->patterns()) {
-            double own_low = std::numeric_limits<double>::infinity(), own_high = -own_low;
-            for (const double value : pattern.intensity) {
-                const double shown = edi::to_display(value, scale);
-                if (std::isfinite(shown)) {
-                    own_low = std::min(own_low, shown);
-                    own_high = std::max(own_high, shown);
+            double own_low = kInfinity, own_high = -kInfinity, seen_low = kInfinity, seen_high = -kInfinity;
+            for (std::size_t i = 0; i < pattern.intensity.size(); ++i) {
+                const double shown = edi::to_display(drawn_value(pattern, i, subtract_background_), scale);
+                if (!std::isfinite(shown)) {
+                    continue;
+                }
+                own_low = std::min(own_low, shown);
+                own_high = std::max(own_high, shown);
+                const double x = i < pattern.shown.size() ? pattern.shown[i] : std::nan("");
+                const bool counted = !(included_only_ && ScanViewModel::excludedAt(pattern, x));
+                if (visible_only && x >= from && x <= to && counted) {
+                    seen_low = std::min(seen_low, shown);
+                    seen_high = std::max(seen_high, shown);
                 }
             }
-            lows_.push_back(own_low);
-            highs_.push_back(own_high);
+            const bool seen = seen_high >= seen_low;
+            lows_.push_back(seen ? seen_low : own_low);
+            highs_.push_back(seen ? seen_high : own_high);
             low = std::min(low, own_low);
             high = std::max(high, own_high);
         }
@@ -327,8 +477,8 @@ void ScanLayer::measure() {
     }
 }
 
-// The stacked baselines (edi ADR-0041 §4): the datasets in the order of their rows, the i-th at i × H × offset, H the
-// chosen share of the plot or the Fit height, H (1 + (N - 1) offset) = 1, which fills the plot exactly.
+// The stacked baselines (edi ADR-0041 §4): the datasets in the order of their rows, each the spacing's height tall and
+// the i-th at i steps (edi::stacked_placement on the plot's height, 1), so the stack fills the plot exactly.
 void ScanLayer::place() {
     const std::vector<double> rows = model_ ? model_->rows() : std::vector<double>{};
     std::vector<std::size_t> order;
@@ -339,12 +489,17 @@ void ScanLayer::place() {
     }
     std::stable_sort(order.begin(), order.end(), [&rows](std::size_t a, std::size_t b) { return rows[a] < rows[b]; });
     const double count = static_cast<double>(order.size());
-    pattern_height_ = height_share_ > 0.0 ? height_share_ : 1.0 / (1.0 + std::max(0.0, count - 1.0) * offset_);
+    const edi::StackedPlacement placement = edi::stacked_placement(order.size(), 1.0, spacing_);
+    pattern_height_ = placement.height;
     baselines_.assign(rows.size(), std::numeric_limits<double>::quiet_NaN());
     for (std::size_t i = 0; i < order.size(); ++i) {
-        baselines_[order[i]] = static_cast<double>(i) * pattern_height_ * offset_;
+        baselines_[order[i]] = static_cast<double>(i) * placement.step;
     }
-    stack_top_ = std::max(0.0, count - 1.0) * pattern_height_ * offset_ + pattern_height_;
+    const double top = std::max(0.0, count - 1.0) * placement.step + pattern_height_;
+    if (top != stack_top_) {
+        stack_top_ = top;
+        emit stackTopChanged();
+    }
     emit placementChanged();
     redraw();
 }
@@ -435,7 +590,7 @@ ScanLayer::ReductionKey ScanLayer::reductionKey() const {
     // columns are the item's own.
     const double ratio = mode_ == QLatin1String("map") || window() == nullptr ? 1.0 : window()->effectiveDevicePixelRatio();
     return {x_min_, x_max_, std::max(1, static_cast<int>(std::ceil(width() * ratio))), included_only_,
-            static_cast<int>(scale_of(scale_))};
+            subtract_background_, static_cast<int>(scale_of(scale_))};
 }
 
 // Each dataset's reduction for the range shown at the plot's pixel columns (device pixels for the Stacked lines), made
@@ -471,7 +626,7 @@ void ScanLayer::reduce() {
             continue;
         }
         ++built;
-        const DrawnPattern drawn = drawn_pattern(pattern, included_only_);
+        const DrawnPattern drawn = drawn_pattern(pattern, included_only_, subtract_background_);
         if (mode_ == QLatin1String("map")) {
             const std::vector<float> values = edi::scan_pixel_values(drawn.x, drawn.intensity, x_min_, x_max_, columns);
             reduction.v.resize(values.size());
@@ -513,30 +668,57 @@ void ScanLayer::reduce() {
 
 void ScanLayer::recolour() {
     const int count = model_ ? model_->count() : 0;
-    const QString key = QStringLiteral("%1|%2|%3|%4|%5")
+    const auto joined = [](const QList<int>& values) {
+        QStringList texts;
+        for (const int value : values) {
+            texts.append(QString::number(value));
+        }
+        return texts.join(QLatin1Char(','));
+    };
+    const QString key = QStringLiteral("%1|%2|%3|%4|%5|%6|%7")
                             .arg(colour_scheme_, background_.name())
                             .arg(dark_)
                             .arg(stacked_reversed_)
-                            .arg(count);
+                            .arg(count)
+                            .arg(joined(positions_), joined(taken_positions_));
     if (key == coloured_for_) {
         return;
     }
     coloured_for_ = key;
     colours_.assign(static_cast<std::size_t>(count), QColor());
-    // A scheme's colours (ADR-0038), or a colour map's, a dataset at its place along the scan between a tenth and nine
-    // tenths of the map, whose ends can be as dark or as light as a background.
+    // A palette's colours, each dataset at its position (ADR-0038), or a colour map's, a dataset at its place along
+    // the scan between a tenth and nine tenths of the map, whose ends can be as dark or as light as a background.
     const std::string choice = colour_scheme_.toStdString();
     const std::vector<std::string>& maps = edi::scan_colour_map_names();
     const bool map = std::find(maps.begin(), maps.end(), choice) != maps.end();
     const std::vector<edi::ScanMapColour> table =
         map ? edi::scan_colour_table(choice, background_.name().toStdString(), dark_) : std::vector<edi::ScanMapColour>{};
     const auto size = static_cast<std::size_t>(count);
+    const edi::ColourScheme scheme = edi::colour_scheme_or_default(choice);
+    std::vector<std::size_t> taken;
+    for (const int position : taken_positions_) {
+        taken.push_back(static_cast<std::size_t>(std::max(position, 0)));
+    }
+    std::vector<std::size_t> positions;
+    if (positions_.size() == count) {
+        for (const int position : positions_) {
+            positions.push_back(static_cast<std::size_t>(std::max(position, 0)));
+        }
+    } else {
+        positions = edi::free_positions(scheme, edi::FigureKind::Experiment, size, taken);
+    }
+    std::size_t used = 0;
+    for (const std::size_t position : positions) {
+        used = std::max(used, position + 1);
+    }
+    for (const std::size_t position : taken) {
+        used = std::max(used, position + 1);
+    }
     for (std::size_t dataset = 0; dataset < size; ++dataset) {
         // Reversed, the last dataset takes the first colour.
         const std::size_t place = stacked_reversed_ ? size - 1 - dataset : dataset;
         if (!map) {
-            colours_[dataset] = QColor(QString::fromStdString(
-                edi::pattern_colour(edi::colour_scheme_or_default(choice), place, size, dark_)));
+            colours_[dataset] = QColor(QString::fromStdString(edi::figure_colour(scheme, positions[place], used, dark_)));
             continue;
         }
         const double at = size > 1 ? static_cast<double>(place) / static_cast<double>(size - 1) : 1.0;
@@ -545,6 +727,7 @@ void ScanLayer::recolour() {
     }
     ++colours_revision_;
     emit coloursRevisionChanged();
+    syncLegend();
     redraw();
 }
 
@@ -582,7 +765,7 @@ double ScanLayer::peakOf(int dataset) const {
     // The line's highest point in the range shown: a point inside, or where the line joining two neighbouring points
     // crosses an edge of the range (the only part shown when no point is inside), as the line is drawn.
     // With only the included range, as drawn: nothing inside or across an excluded region.
-    const DrawnPattern drawn = drawn_pattern(pattern, included_only_);
+    const DrawnPattern drawn = drawn_pattern(pattern, included_only_, subtract_background_);
     const std::size_t points = drawn.x.size();
     const auto value_at = [&](std::size_t i) {
         return std::isfinite(drawn.x[i]) ? edi::to_display(drawn.intensity[i], scale) : kNaN;
@@ -697,10 +880,13 @@ std::vector<QRect> excluded_bands(const ScanViewModel& model, const std::vector<
 }  // namespace
 
 void ScanLayer::updatePolish() {
-    reduce();
     lines_->setObjectName(objectName() + QStringLiteral(".gpuLines"));
-    lines_->setVisible(lines_on_gpu());
-    top_->setVisible(lines_on_gpu() && highlighted() >= 0);
+    // A polish asked for while the view was shown can come after it is hidden.
+    if (deferred()) {
+        return;
+    }
+    reduce();
+    showLines();
     if (lines_on_gpu() && model_) {
         feedLines();
     }
@@ -770,6 +956,11 @@ void ScanLayer::feedLines() {
 }
 
 QSGNode* ScanLayer::updatePaintNode(QSGNode* old, UpdatePaintNodeData* data) {
+    // Not painted while not shown, whatever asked for it (a resize, an update already queued); the GUI thread waits
+    // while the scene is synchronised, so the flags are read and written safely here.
+    if (deferred()) {
+        return old;
+    }
     QSGNode* node = QQuickPaintedItem::updatePaintNode(old, data);
     if (!lines_on_gpu()) {
         ++redraws_;
@@ -779,6 +970,9 @@ QSGNode* ScanLayer::updatePaintNode(QSGNode* old, UpdatePaintNodeData* data) {
 }
 
 void ScanLayer::paint(QPainter* painter) {
+    if (deferred()) {
+        return;
+    }
     if (!model_ || lines_on_gpu() || !(x_max_ > x_min_) || !(y_max_ > y_min_) || width() <= 0.0 || height() <= 0.0) {
         return;
     }

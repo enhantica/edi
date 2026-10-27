@@ -92,7 +92,13 @@ def test_disabled_link_blocks_its_scale_and_structure(api, tmp_path):
 
 
 def test_measured_fit_excludes_the_data_free_experiment(api, tmp_path):
-    project = api.Project.load(materialize(tmp_path / 'measured', single=False, data_free=True))
+    root = materialize(tmp_path / 'measured', single=False, data_free=True)
+    with (root / 'experiments/powder.edi').open('a') as stream:
+        stream.write(
+            '_data_range.two_theta_min 20\n_data_range.two_theta_max 100\n'
+            '_data_range.two_theta_step 0.2\n'
+        )
+    project = api.Project.load(root)
     require_refusal(project.experiments['powder'].peak.broad_gauss_w, DATA)
     project.experiments['bank'].peak.broad_gauss_w.free = True
     project.structure.cell.length_a.free = True
@@ -105,20 +111,23 @@ def test_measured_fit_excludes_the_data_free_experiment(api, tmp_path):
 
 
 def test_dispersion_change_rechecks_a_retained_parameter_handle(api, tmp_path):
-    project = api.Project.load(materialize(tmp_path / 'xray', single=False, xray=True))
-    experiment = project.experiments['bank']
-    parameter = experiment.instrument.setup_wavelength
-    require_refusal(parameter, CAPABILITY)
-    experiment.scattering_source.xray_dispersion = 'none'
+    root = materialize(tmp_path / 'xray', single=False, xray=True)
+    project = api.Project.load(root)
+    blocked = project.experiments['bank'].instrument.setup_wavelength
+    require_refusal(blocked, CAPABILITY)
+    # Python exposes the source through project files, without a source-selector setter.
+    source = root / 'experiments/bank.edi'
+    original = source.read_text()
+    source.write_text(original.replace('xray_dispersion sasaki1989', 'xray_dispersion none'))
+    admitted = api.Project.load(root)
+    parameter = admitted.experiments['bank'].instrument.setup_wavelength
     parameter.free = True
-    assert parameter.free, 'Turning dispersion off immediately admits a retained wavelength handle'
-    experiment.scattering_source.xray_dispersion = 'sasaki1989'
-    assert parameter.free, 'Changing the source preserves an already-set free flag'
-    with pytest.raises((ValueError, RuntimeError), match=re.escape(CAPABILITY)) as error:
-        project.analysis.fit()
-    assert 'sasaki1989' in str(error.value), 'Fit entry reports the active derivative limitation'
-    parameter.free = False
-    require_refusal(parameter, CAPABILITY)
+    assert parameter.free, 'Loading dispersion none admits a retained wavelength handle'
+    require_refusal(blocked, CAPABILITY)
+    source.write_text(original)
+    restored = api.Project.load(root)
+    require_refusal(restored.experiments['bank'].instrument.setup_wavelength, CAPABILITY)
+    assert parameter.free, 'Loading a different source preserves the earlier project handle'
 
 
 @pytest.mark.parametrize('case', ['basic', 'powder', 'constrained'])

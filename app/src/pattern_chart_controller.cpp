@@ -396,6 +396,10 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
         experiment_->setChartShown(this, active_);
         experiment_->setChartAxis(this, axis());
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
+        connect(experiment_, &ExperimentViewModel::colourPositionsChanged, this, [this] {
+            publishColors();
+            invalidate();  // the legend's colours
+        });
         // The slider let go: the y range is fitted once again, shrinking as well as growing.
         connect(experiment_, &ExperimentViewModel::adjustingChanged, this, [this] {
             if (!experiment_->adjusting()) {
@@ -483,15 +487,6 @@ void PatternChartController::setColourScheme(const QString& scheme) {
     }
 }
 
-void PatternChartController::setStructureColourScheme(const QString& scheme) {
-    if (scheme != structure_colour_scheme_) {
-        structure_colour_scheme_ = scheme;
-        emit structureColourSchemeChanged();
-        publishColors();
-        invalidate();  // the legend's colours
-    }
-}
-
 edi::ColourScheme PatternChartController::scheme() const {
     return edi::colour_scheme_or_default(colour_scheme_.toStdString());
 }
@@ -501,8 +496,8 @@ std::vector<edi::SeriesStyle> PatternChartController::styles() const {
         return report_->reportModel().pattern_styles;
     }
     const std::size_t experiments = experiment_ ? experiment_->colourCount() : 1;
-    const std::optional<edi::ColourScheme> structural = edi::colour_scheme_from_name(structure_colour_scheme_.toStdString());
-    return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0, structural);
+    return edi::pattern_style_table(scheme(), experiments, experiment_ ? experiment_->structureCount() : 0,
+                                    experiment_ ? experiment_->colourPositions() : std::vector<std::size_t>{});
 }
 
 void PatternChartController::setPlotWidth(qreal width) {
@@ -599,6 +594,14 @@ void PatternChartController::setIncludedOnly(bool on) {
     }
 }
 
+void PatternChartController::setSubtractBackground(bool on) {
+    if (on != subtract_background_) {
+        subtract_background_ = on;
+        emit subtractBackgroundChanged();
+        invalidate();
+    }
+}
+
 void PatternChartController::cycleYScale() {
     setYScale(y_scale_ == Linear ? Sqrt : y_scale_ == Sqrt ? Log10 : Linear);
 }
@@ -634,6 +637,7 @@ edi::PatternView PatternChartController::view() const {
     view.structure_curves = structure_curves_;
     view.residual_band = measured_drawing_ == QLatin1String("band") && !report_;
     view.included_only = included_only_;
+    view.subtract_background = subtract_background_ && !report_;
     if (hidden_fits_range_) {
         for (const QString& key : hidden_) {
             view.uncounted.push_back(key.toStdString());
@@ -1014,6 +1018,8 @@ void PatternChartController::refresh() {
                        ticks != shown_.series.end() && hiddenId(ticks->id)});
     }
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
+    const bool subtractable = !report_ && experiment_ != nullptr && edi::has_background(*experiment_->experiment());
+    publish(background_available_, subtractable, &PatternChartController::backgroundAvailableChanged);
     // Past the palette's own colours the count sets every experiment's colour, the measured key's too.
     if (const std::size_t count = experiment_ ? experiment_->colourCount() : 1; count != colour_count_) {
         colour_count_ = count;

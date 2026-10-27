@@ -70,10 +70,13 @@ differently and why.
 
 ## Single crystal
 
-| example | app title | tutorial |
-| --- | --- | --- |
-| [Single-crystal fit: Tb₂Ti₂O₇, HEiDi](sc-neut-cwl_tb2ti2o7-heidi/index.md) | Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II) | [sc-neut-cwl_tb2ti2o7-heidi](../tutorials/sc-neut-cwl_tb2ti2o7-heidi.ipynb) |
-| [Single-crystal fit: Pr₂NiO₄, 5C2](sc-neut-cwl_pr2nio4-5c2/index.md) | Pr₂NiO₄ [Fmmm] · 5C2 @ LLB | [sc-neut-cwl_pr2nio4-5c2](../tutorials/sc-neut-cwl_pr2nio4-5c2.ipynb) |
-| [Single-crystal fit: taurine, SENJU](sc-neut-tof_taurine-senju/index.md) | Taurine [P2₁/c] · SENJU @ J-PARC | [sc-neut-tof_taurine-senju](../tutorials/sc-neut-tof_taurine-senju.ipynb) |
+These three are in the app's Examples too, but they do not have a page, a tutorial or reference values yet,
+so they are not catalogue cases. Open them in the app or fit their folders from the command line.
+
+| folder | app title |
+| --- | --- |
+| `sc-neut-cwl_tb2ti2o7-heidi_fit` | Tb₂Ti₂O₇ [Fd-3m] · HEiDi @ MLZ (FRM II) |
+| `sc-neut-cwl_pr2nio4-5c2_fit` | Pr₂NiO₄ [Fmmm] · 5C2 @ LLB |
+| `sc-neut-tof_taurine_fit` | Taurine [P2₁/c] · SENJU @ J-PARC |
 
 The other folders under `docs/user/cli/` are test projects: the checks fit them on every change, and each has a `README.md` saying what it tests.

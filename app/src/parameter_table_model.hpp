@@ -24,12 +24,15 @@ class ParameterTableModel : public RowTableModel {
     Q_PROPERTY(int fixedCount READ fixedCount NOTIFY fixedCountChanged)
     // Rows no fit can vary that are not free; free, fixed and these partition the rows.
     Q_PROPERTY(int notFittableCount READ notFittableCount NOTIFY notFittableCountChanged)
+    // The rows each show-filter adds, by ParameterItem::FitGroup from NotMeasured: the group's rows that are not free.
+    Q_PROPERTY(QList<int> groupCounts READ groupCounts NOTIFY groupCountsChanged)
 
    public:
     ParameterTableModel(ParameterRegistry& registry, QObject* parent);
     int freeCount() const { return free_count_; }
     int fixedCount() const { return fixed_count_; }
     int notFittableCount() const { return not_fittable_count_; }
+    QList<int> groupCounts() const { return group_counts_; }
     // The one experiment whose parameters are listed; empty lists every experiment's. Takes effect at
     // the next sync.
     void setExperimentScope(const QString& experiment);
@@ -39,6 +42,7 @@ class ParameterTableModel : public RowTableModel {
     void freeCountChanged();
     void fixedCountChanged();
     void notFittableCountChanged();
+    void groupCountsChanged();
 
    protected:
     // `value` and `free` write through the row's ParameterItem (assign_value, D5).
@@ -50,6 +54,7 @@ class ParameterTableModel : public RowTableModel {
     int free_count_ = 0;
     int fixed_count_ = 0;
     int not_fittable_count_ = 0;
+    QList<int> group_counts_{0, 0, 0, 0};
 };
 
 // One entry of an Analysis filter picker (datablocks or categories): the filter key, its title with the parameter
@@ -95,6 +100,9 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     Q_PROPERTY(QList<edi_app::CategoryGroup> categoryGroups READ categoryGroups NOTIFY categoryGroupsChanged)
     // The parameters the datablock and category selections leave: all, free, fixed and not fittable.
     Q_PROPERTY(QList<int> variabilityCounts READ variabilityCounts NOTIFY variabilityCountsChanged)
+    // Which groups of rows no fit can vary are shown on top of the fittable ones (the Settings tab's show-filters, the
+    // owner, 2026-10-26), by ParameterItem::FitGroup from NotMeasured. A value marked free is shown whatever they say.
+    Q_PROPERTY(QList<bool> shownGroups READ shownGroups NOTIFY shownGroupsChanged)
 
    public:
     enum Variability { All, Free, Fixed, NotFittable };
@@ -113,6 +121,9 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     QString categoryFilter() const { return category_filter_; }
     void setCategoryFilter(const QString& category);
     QList<int> variabilityCounts() const { return variability_counts_; }
+    QList<bool> shownGroups() const { return shown_groups_; }
+    // Show or hide one group (ParameterItem::FitGroup, NotMeasured to FixedSetting).
+    Q_INVOKABLE void setShownGroup(int group, bool shown);
     // Every filter back to all, and the name filter empty, in one step.
     Q_INVOKABLE void clearFilters();
     QStringList categories() const { return categories_; }
@@ -134,6 +145,7 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     void categoriesChanged();
     void categoryGroupsChanged();
     void variabilityCountsChanged();
+    void shownGroupsChanged();
 
    protected:
     bool filterAcceptsRow(int source_row, const QModelIndex& source_parent) const override;
@@ -141,6 +153,9 @@ class ParameterFilterModel : public QSortFilterProxyModel {
    private:
     // Rebuilds the pickers' lists and counts from the current selections; one that is no longer listed returns to all.
     void refresh();
+    bool shownByGroup(bool free, int group) const;
+    // Not measured in this fit and setup values shown, symmetry and constraints not (the owner's defaults).
+    QList<bool> shown_groups_{true, false, false, true};
     QString datablock_filter_;
     QStringList datablocks_{QString()};
     QList<CategoryGroup> datablock_groups_;

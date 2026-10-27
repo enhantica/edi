@@ -43,11 +43,11 @@ original could. Three facts shape the decision:
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
 2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `b008de4eab7a753d281c663c74419302dc9cbeb6` and declares its own QML modules under the upstream URIs
+   `bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
    declared replacement seams: ParamTextField for parameter menu terminology and units (ADR-0029), TextInput for its
-   focused colour, ToolTip for text wrapped at one width (owner, 2026-10-25), ProjectDescriptionDialog, Fonts for edi's font inventory (§10) and Sizes for a sidebar width the app
+   focused colour, ProjectDescriptionDialog, Fonts for edi's font inventory (§10) and Sizes for a sidebar width the app
    window sets (ADR-0017 §12); configuration refuses another commit or local changes under `src/`. The pinned
    commit is downloaded as GitHub's archive of it, checked against a committed SHA-256, with a message and a timeout (a
    git clone inside CMake could hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the

@@ -5,20 +5,20 @@ possibly with the already declared calculator and geometry adaptations.
 """
 
 import hashlib
-import json
 import re
 import zipfile
 from functools import cache
 from pathlib import Path
 
 from tests.fixtures.cwl_family.historical import original_tokens
-from tests.fixtures.report_units.iucr_reference import saved_record
+from tests.fixtures.report_units.iucr_reference import rounded_record
 
 ROOT = Path(__file__).resolve().parents[3]
 GEOMETRY = b'_geom.min_bond_distance_cutoff 0\n_geom.bond_distance_inc 0.25\n'
 
 
-def build_projections():
+@cache
+def projections():
     result = {}
     with zipfile.ZipFile(ROOT / 'tests/fixtures/c13_t12_ids/baseline.zip') as archive:
         for name in archive.namelist():
@@ -34,35 +34,15 @@ def build_projections():
                 variants |= {without_follower_brackets(value) for value in variants}
             for value in variants:
                 result[hashlib.sha256(value).hexdigest()] = hashlib.sha256(
-                    saved_record(value)
+                    rounded_record(value)
                 ).hexdigest()
     with zipfile.ZipFile(Path(__file__).with_name('iucr-fullprof-before.zip')) as archive:
         for name in archive.namelist():
             original = archive.read(name)
             result[hashlib.sha256(original).hexdigest()] = hashlib.sha256(
-                saved_record(original)
+                rounded_record(original)
             ).hexdigest()
     return result
-
-
-def projection_sources():
-    return {
-        name: hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-        for name in (
-            'tests/fixtures/c13_t12_ids/baseline.zip',
-            'tests/fixtures/report_units/iucr-fullprof-before.zip',
-            'tests/fixtures/report_units/iucr_reference.py',
-        )
-    }
-
-
-@cache
-def projections():
-    record = json.loads((ROOT / 'tests/fixtures/project_save/saved-projections.json').read_text())
-    assert record['sources'] == projection_sources(), (
-        'Saved-byte projections bind immutable archives and the independent decimal reference'
-    )
-    return record['projections']
 
 
 def rounded_pins(expected):

@@ -289,16 +289,6 @@ def test_operation_catalog_retains_each_reviewed_bounded_exception():
         for item in operations
     ), 'Every exception names an operation, exact context and finite occurrence count'
     assert (
-        hashlib.sha256((json.dumps(operations[:-4], indent=2) + '\n').encode()).hexdigest()
+        hashlib.sha256((folder / 'non_project_operations.json').read_bytes()).hexdigest()
         == '7ddd266f8228a6e6c034d5e37d0b392faad08d0a0b4ecee7a0dfdf0ed4979dff'
-    ), 'The reviewed historical operation catalog retains every exact bounded exception'
-    extensions = json.loads(
-        (ROOT / 'tests/fixtures/project_save/membership-extensions.json').read_text()
-    )
-    assert operations[-4:] == extensions and len(extensions) == 4, (
-        'Only the four exact single-crystal row-membership sites extend the operation catalog'
-    )
-    assert all(
-        item['source'] == 'core/include/edi/model.hpp' and item['limit'] == 1
-        for item in extensions
-    ), 'Row-membership additions admit one reviewed occurrence each in the existing model header'
+    ), 'The reviewed operation catalog cannot silently expand to exempt a new project writer'

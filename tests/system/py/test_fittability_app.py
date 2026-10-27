@@ -48,7 +48,8 @@ def test_analysis_inputs_and_free_controls(case):
     )
     output = result.stdout + result.stderr
     assert result.returncode == 0, (
-        'The real Analysis table retains every input and enforces its shared fit reason: ' + output
+        'The real Analysis table retains selected inputs and enforces each shared fit reason: '
+        + output
     )
     assert 'PASS' in output and '0 failed' in output, (
         'The selected Analysis actor completes its assertions in the production Qt host'

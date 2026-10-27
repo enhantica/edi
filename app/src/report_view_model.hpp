@@ -68,11 +68,8 @@ class ReportViewModel : public QObject {
     // The Report page is shown. Only then does a change rebuild the model at once; otherwise the next read of the
     // model rebuilds it, so a reader never sees a stale one and a hidden page costs nothing per change.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
-    // The app's colour scheme (a token of edi::colour_scheme_from_name), whose light colours the report's charts take.
+    // The app's palette (a token of edi::colour_scheme_from_name), whose light colours the report's charts take.
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
-    // The app's Structures colour scheme, when it differs from the Patterns one; empty: colourScheme's.
-    Q_PROPERTY(QString structureColourScheme READ structureColourScheme WRITE setStructureColourScheme NOTIFY
-                   structureColourSchemeChanged)
     // The project's calculation or fit is in flight or owed, so the model is not yet its outcome; a save waits for it.
     Q_PROPERTY(bool calculating READ calculating NOTIFY calculatingChanged)
 
@@ -90,8 +87,6 @@ class ReportViewModel : public QObject {
     bool active() const { return active_; }
     void setActive(bool active);
     QString colourScheme() const { return colour_scheme_; }
-    QString structureColourScheme() const { return structure_colour_scheme_; }
-    void setStructureColourScheme(const QString& scheme);
     void setColourScheme(const QString& scheme);
     bool calculating() const;
     // The model's pattern of an experiment and its structure of a structure id; null when it has none.
@@ -139,7 +134,6 @@ class ReportViewModel : public QObject {
     void fileStemChanged();
     void activeChanged();
     void colourSchemeChanged();
-    void structureColourSchemeChanged();
     void calculatingChanged();
     void saved(const QString& location);
     void saveFailed(const QString& message);
@@ -177,8 +171,7 @@ class ReportViewModel : public QObject {
     QString published_file_stem_;
     mutable std::optional<edi::ReportLibraries> libraries_;
     bool active_ = false;
-    QString colour_scheme_ = QStringLiteral("ediNatural");
-    QString structure_colour_scheme_;
+    QString colour_scheme_ = QStringLiteral("earth");
     // The model, rebuilt on a read when a change arrived while the page was hidden (`dirty_`).
     mutable bool dirty_ = true;
     mutable edi::ReportModel report_;

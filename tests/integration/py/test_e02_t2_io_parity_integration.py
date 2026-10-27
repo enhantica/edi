@@ -11,8 +11,6 @@ from typing import Any
 import edi
 import pytest
 
-from tests.fixtures.project_save.reference import declared_rule, saved_triplet
-
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e02_t2_ncaf_5bank'
 PROJECT = FIXTURE / 'project'
@@ -161,28 +159,15 @@ def _project_snapshot(project: object) -> dict[str, object]:
     }
 
 
-def _saved_snapshot(project):
-    snapshot = _project_snapshot(project)
-    rule = declared_rule(PROJECT)
-    snapshot['parameters'] = [
-        [name, *saved_triplet(value, su, free, rule)]
-        for name, value, su, free in snapshot['parameters']
-    ]
-
-    return snapshot
-
-
 def test_e02_t2_edi_save_reload_preserves_semantics(tmp_path: Path) -> None:
     original = edi.Project.load(PROJECT)
-    expected = _saved_snapshot(original)
+    expected = _project_snapshot(original)
     destination = tmp_path / 'saved-project'
     original.save_as(destination)
     assert (destination / 'analysis/analysis.edi').is_file()
     assert len(list((destination / 'structures').glob('*.edi'))) == 1
     assert len(list((destination / 'experiments').glob('*.edi'))) == 5
-    assert _project_snapshot(edi.Project.load(destination)) == expected, (
-        'Save/reload retains every semantic field under the independent save rounding rule'
-    )
+    assert _project_snapshot(edi.Project.load(destination)) == expected
 
 
 def _structure_snapshot(structure: object) -> dict[str, object]:
@@ -273,10 +258,8 @@ def test_e02_t2_save_as_replaces_the_complete_destination_without_stale_files(
     stale.write_text('data_stale\n')
 
     project = edi.Project.load(PROJECT)
-    expected = _saved_snapshot(project)
+    expected = _project_snapshot(project)
     project.save_as(destination)
 
     assert not stale.exists()
-    assert _project_snapshot(edi.Project.load(destination)) == expected, (
-        'Save/reload retains every semantic field under the independent save rounding rule'
-    )
+    assert _project_snapshot(edi.Project.load(destination)) == expected

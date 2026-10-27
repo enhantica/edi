@@ -92,7 +92,10 @@ QtObject {
         return "";
     }
 
-    function color(key) {
+    // An outcome's colour for its icon. Stopped, Superseded and Skipped have none of their own: their icon takes
+    // `neutral`, the grey of the icons around it (the minor colour unless given), and their word the text colour
+    // (`textColor`), so they never look disabled (the owner, 2026-10-26).
+    function color(key, neutral) {
         switch (key) {
         case "success":
             return EaStyle.Colors.green;
@@ -104,6 +107,11 @@ QtObject {
         case "refused":
             return EaStyle.Colors.red;
         }
-        return EaStyle.Colors.themeForegroundMinor;
+        return neutral !== undefined ? neutral : EaStyle.Colors.themeForegroundMinor;
+    }
+
+    // An outcome's colour for its word: its own colour, or the text colour for one that has none.
+    function textColor(key) {
+        return color(key, EaStyle.Colors.themeForeground);
     }
 }

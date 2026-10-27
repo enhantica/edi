@@ -47,7 +47,7 @@ TestCase {
         return View.descendants(root).filter(item => item.objectName === name);
     }
     function control(name) {
-        const found = Ui.find(Ui.page(appWindow), name, true);
+        const found = name.startsWith("statusBar.") ? Ui.control(Probe, appWindow, name) : Ui.find(Ui.page(appWindow), name, true);
         verify(found !== null, "Analysis must expose the actual " + name + " control");
         return found;
     }
@@ -472,8 +472,8 @@ TestCase {
             verify(undo !== null && undo.enabled, "A real filter-rebuilding edit enables the app's Undo control");
             Ui.click(test, Probe, appWindow, "appBar.button.undo");
         } else if (data.action === "fit") {
-            verify(control("fitting.start").enabled, "The independently reduced free subset enables a real fit");
-            Ui.click(test, Probe, appWindow, "fitting.start");
+            verify(control("statusBar.fit.button").clickable, "The independently reduced free subset enables a real fit");
+            Ui.click(test, Probe, appWindow, "statusBar.fit.button");
             tryVerify(() => !Session.project.fit.running && Session.project.fit.iterations !== "" && Session.project.fit.canUndo, 15000, "A real fit completion rebuilds the parameter projection and provides undo");
             const dialog = findChild(appWindow, "fit.results");
             verify(dialog !== null, "The fitting rebuild witness has its real result dialog");
@@ -552,12 +552,10 @@ TestCase {
     function checkMode(scan) {
         const evolution = all(Ui.page(appWindow), "mainArea.analysis.tab.evolution");
         compare(evolution.some(item => Ui.exposed(item)), scan, "Evolution must be visible only in sequential and independent modes");
-        const follow = all(Ui.page(appWindow), "fitting.follow");
-        compare(follow.some(item => Ui.exposed(item)), scan, "Follow must be visible only in sequential and independent modes");
-        if (!scan) {
-            const start = control("fitting.start");
-            compare(Math.round(start.width), Math.round(Style.Sizes.sideBarContentWidth), "Start fitting must span the full sidebar content width for single and joint fits");
-        }
+        const follow = findChild(appWindow, "statusBar.fit.follow");
+        verify(!scan || follow !== null, "A scan exposes its status Follow action");
+        compare(follow !== null && Ui.exposed(follow), scan, "Status Follow is visible only in sequential and independent modes");
+        verify(all(Ui.page(appWindow), "fitting.start").length === 0, "Analysis no longer duplicates the status Fit action");
     }
     function test_mode_controls(data) {
         open(data.path);

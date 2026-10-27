@@ -47,10 +47,7 @@ class IoError : public std::runtime_error {
 // unless the caller passes `on_warning`; then each message goes only to the sink. The app passes
 // one so it can show the warnings to its user.
 using WarningSink = std::function<void(const std::string&)>;
-// `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
-// new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
-// and it reads its scan data from the unpacked folder.
-Project load_project(const std::string& path, const WarningSink& on_warning = {});
+Project load_project(const std::string& directory, const WarningSink& on_warning = {});
 
 // Structures and experiments enter an open project from files. Every structure and experiment
 // text these loads and the project loader read goes through one check first: crysta decides once,
@@ -67,16 +64,23 @@ Structure load_structure_edi_file(const std::string& path);
 Structure load_structure_cif_file(const std::string& path);
 BraggPdExperiment load_experiment_file(const std::string& path, const WarningSink& on_warning = {});
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
-// A batch, checked as a whole before anything is added: every file as above, and each name
-// unique against the project and within the batch. The first refusal names its file.
+// A batch, checked as a whole before anything is added: every file as above, each name unique
+// against the project and within the batch, and each linked structure one the project holds. The
+// first refusal names its file.
 std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
                                                          const std::vector<std::string>& paths,
                                                          const WarningSink& on_warning = {});
 // Add a loaded structure: refused when the project already holds one (edi persists one structure
 // per project — load_project reads one, save_project refuses more).
 void add_loaded_structure(Project& project, Structure structure);
+// Refuses an experiment that links a structure the project does not hold, before a project-aware
+// import adds it: `where` leads the message, and `source` names the file it came from. A detached
+// experiment, from a factory, is checked when it is saved or calculated instead.
+void require_held_links(const Project& project, const BraggPdExperiment& experiment,
+                        const std::string& where = {}, const std::string& source = {});
 // Add a loaded experiment: refused when its name is already in the project (upstream's collection
-// `add` replaces by key; edi refuses rather than silently replacing — divergence D-k).
+// `add` replaces by key; edi refuses rather than silently replacing — divergence D-k), or when it
+// links a structure the project does not hold.
 void add_loaded_experiment(Project& project, BraggPdExperiment experiment);
 // Rename an experiment of the project, the adder's rule: refused when the new name is already in the
 // project, so a rename never makes two experiments share one name.
@@ -155,12 +159,6 @@ void save_project_as(Project& project, const std::string& directory);
 // changed. A report saved next stays current after the project is reopened. A project the loader refuses (one
 // without a structure) is left as it is.
 bool adopt_saved_values(Project& project, const std::string& directory);
-
-// The save sequence after a successful write of `project` to `directory`, the same on every surface (edi ADR-0052):
-// adopt_saved_values, then, when a value changed and the project held a calculation, calculate it from the adopted
-// values and write it again, so the files, the open project and a reopen agree, the calculated pattern and R factors
-// included. Returns whether any value changed.
-bool adopt_saved_project(Project& project, const std::string& directory);
 
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).

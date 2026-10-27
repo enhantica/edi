@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <cstdlib>
 #include <limits>
 #include <numeric>
@@ -64,14 +65,39 @@ const std::vector<ColourTable>& colour_maps() {
     return tables;
 }
 
-// A map by name; viridis for any other name.
-const ColourTable& colour_map_named(std::string_view name) {
-    const std::vector<std::string>& names = scan_colour_map_names();
-    const auto found = std::find(names.begin(), names.end(), name);
-    return colour_maps()[found == names.end() ? 0 : static_cast<std::size_t>(found - names.begin())];
+ScanMapColour colour_of(const std::string& hex) {
+    const unsigned long rgb = std::strtoul(hex.c_str() + 1, nullptr, 16);
+    return {static_cast<std::uint8_t>(rgb >> 16), static_cast<std::uint8_t>(rgb >> 8), static_cast<std::uint8_t>(rgb),
+            255};
 }
 
-const ColourTable& colour_map(ScanColourMap map) { return colour_maps()[static_cast<std::size_t>(map)]; }
+std::string hex_of(const ScanMapColour& colour) {
+    char out[8];
+    std::snprintf(out, sizeof(out), "#%02X%02X%02X", colour.r, colour.g, colour.b);
+    return out;
+}
+
+// Blue-Red (the owner, 2026-10-26): the chart's background, blue and red, each half mixed in Oklab.
+ColourTable blue_red(bool dark) {
+    const std::array<std::string, 3> stops =
+        dark ? std::array<std::string, 3>{"#444444", "#6AA6EA", "#FC4F81"}
+             : std::array<std::string, 3>{"#FFFFFF", "#3F7FBF", "#C8323C"};
+    ColourTable out{};
+    for (std::size_t i = 0; i < kMapColours; ++i) {
+        const double t = 2.0 * static_cast<double>(i) / static_cast<double>(kMapColours - 1);
+        out[i] = colour_of(t <= 1.0 ? mix_colours(stops[0], stops[1], t) : mix_colours(stops[1], stops[2], t - 1.0));
+    }
+    return out;
+}
+
+const ColourTable& table_of(ScanColourMap map, bool dark) {
+    static const std::array<ColourTable, 2> kBlueRed{blue_red(false), blue_red(true)};
+    if (map == ScanColourMap::BlueRed) {
+        return kBlueRed[dark ? 1 : 0];
+    }
+    // The embedded tables follow the enum, Blue-Red apart.
+    return colour_maps()[static_cast<std::size_t>(map) - 1];
+}
 
 }  // namespace
 
@@ -342,23 +368,46 @@ void separate_shared_rows(std::vector<double>& positions, std::vector<ScanRowSpa
     }
 }
 
+const std::vector<std::string>& stacked_spacing_names() {
+    static const std::vector<std::string> names{"overlay", "close", "medium", "wide", "separate"};
+    return names;
+}
+
+std::string stacked_spacing_title(StackedSpacing spacing) {
+    static const std::array<std::string_view, 5> titles{"Overlay", "Close", "Medium", "Wide", "Separate"};
+    return std::string(titles[static_cast<std::size_t>(spacing)]);
+}
+
+StackedSpacing stacked_spacing_or_default(std::string_view name) {
+    const std::vector<std::string>& names = stacked_spacing_names();
+    const auto found = std::find(names.begin(), names.end(), name);
+    return found == names.end() ? StackedSpacing::Wide : static_cast<StackedSpacing>(found - names.begin());
+}
+
+double stacked_spacing_share(StackedSpacing spacing) { return 0.25 * static_cast<double>(spacing); }
+
+StackedPlacement stacked_placement(std::size_t count, double plot_height, double s) {
+    if (count == 0) {
+        return {plot_height, 0.0};
+    }
+    const double share = std::clamp(s, 0.0, 1.0);
+    const double each = plot_height / static_cast<double>(count);
+    return {plot_height * (1.0 - share) + each * share, share * each};
+}
+
 const std::vector<std::string>& scan_colour_map_names() {
-    static const std::vector<std::string> names(detail::kColourMapNames, detail::kColourMapNames + detail::kColourMapCount);
+    static const std::vector<std::string> names = [] {
+        std::vector<std::string> out{"blue-red"};
+        out.insert(out.end(), detail::kColourMapNames, detail::kColourMapNames + detail::kColourMapCount);
+        return out;
+    }();
     return names;
 }
 
 std::string scan_colour_map_title(std::string_view name) {
     static const std::vector<std::pair<std::string_view, std::string_view>> titles{
-        {"viridis", "Viridis"},                 {"magma", "Magma"},                 {"inferno", "Inferno"},
-        {"plasma", "Plasma"},                   {"batlow", "batlow (Crameri)"},     {"oslo", "oslo (Crameri)"},
-        {"lajolla", "lajolla (Crameri)"},       {"acton", "acton (Crameri)"},       {"devon", "devon (Crameri)"},
-        {"lapaz", "lapaz (Crameri)"},           {"thermal", "thermal (cmocean)"},   {"haline", "haline (cmocean)"},
-        {"deep", "deep (cmocean)"},             {"dense", "dense (cmocean)"},       {"ice", "ice (cmocean)"},
-        {"tempo", "tempo (cmocean)"},           {"turbo", "turbo (Google)"},        {"ylgnbu", "YlGnBu (ColorBrewer)"},
-        {"pubu", "PuBu (ColorBrewer)"},         {"gnbu", "GnBu (ColorBrewer)"},     {"blues", "Blues (ColorBrewer)"},
-        {"purples", "Purples (ColorBrewer)"},   {"ylorrd", "YlOrRd (ColorBrewer)"}, {"cet-l08", "CET-L08"},
-        {"cet-gouldian", "gouldian (CET-L20)"}, {"cet-l06", "CET-L06"},             {"cet-l17", "CET-L17"},
-        {"cet-l18", "CET-L18"}};
+        {"blue-red", "Blue-Red"}, {"viridis", "Viridis"}, {"batlow", "Batlow"},
+        {"inferno", "Inferno"},   {"lapaz", "Lapaz"},     {"greys", "Greys"}};
     for (const auto& [key, title] : titles) {
         if (key == name) {
             return std::string(title);
@@ -367,21 +416,57 @@ std::string scan_colour_map_title(std::string_view name) {
     return std::string(name);
 }
 
-ScanColourMap scan_colour_map_or_default(std::string_view name) {
+std::optional<ScanColourMap> scan_colour_map_from_name(std::string_view name) {
     const std::vector<std::string>& names = scan_colour_map_names();
-    const auto found = std::find(names.begin(), names.begin() + 4, name);
-    return found == names.begin() + 4 ? ScanColourMap::Viridis : static_cast<ScanColourMap>(found - names.begin());
+    const auto found = std::find(names.begin(), names.end(), name);
+    if (found == names.end()) {
+        return std::nullopt;
+    }
+    return static_cast<ScanColourMap>(found - names.begin());
 }
 
-ScanMapColour scan_map_colour(ScanColourMap map, double t) {
+ScanColourMap scan_colour_map_or_default(std::string_view name) {
+    return scan_colour_map_from_name(name).value_or(ScanColourMap::BlueRed);
+}
+
+std::vector<ScanMapColour> scan_colour_map_table(ScanColourMap map, bool dark) {
+    const ColourTable& table = table_of(map, dark);
+    return {table.begin(), table.end()};
+}
+
+ScanMapColour scan_map_colour(ScanColourMap map, double t, bool dark) {
     if (!std::isfinite(t)) {
         return {};
     }
     const double clamped = std::clamp(t, 0.0, 1.0);
-    return colour_map(map)[static_cast<std::size_t>(std::lround(clamped * static_cast<double>(kMapColours - 1)))];
+    return table_of(map, dark)[static_cast<std::size_t>(std::lround(clamped * static_cast<double>(kMapColours - 1)))];
 }
 
 ScanMapColour scan_map_colour(double t) { return scan_map_colour(ScanColourMap::Viridis, t); }
+
+const std::vector<std::string>& scan_map_direction_names() {
+    static const std::vector<std::string> names{"auto", "normal", "inverted"};
+    return names;
+}
+
+std::string scan_map_direction_title(ScanMapDirection direction) {
+    static const std::array<std::string_view, 3> titles{"Auto", "Normal", "Inverted"};
+    return std::string(titles[static_cast<std::size_t>(direction)]);
+}
+
+ScanMapDirection scan_map_direction_or_default(std::string_view name) {
+    const std::vector<std::string>& names = scan_map_direction_names();
+    const auto found = std::find(names.begin(), names.end(), name);
+    return found == names.end() ? ScanMapDirection::Auto : static_cast<ScanMapDirection>(found - names.begin());
+}
+
+bool scan_map_inverted(ScanColourMap map, ScanMapDirection direction, const std::string& background, bool dark) {
+    if (direction != ScanMapDirection::Auto) {
+        return direction == ScanMapDirection::Inverted;
+    }
+    const ColourTable& table = table_of(map, dark);
+    return oklab_distance(hex_of(table.back()), background) < oklab_distance(hex_of(table.front()), background);
+}
 
 ScanRowPair scan_row_pair(std::span<const double> rising, double y, bool smooth) {
     ScanRowPair pair;
@@ -403,33 +488,22 @@ ScanRowPair scan_row_pair(std::span<const double> rising, double y, bool smooth)
 
 const std::vector<std::string>& scan_colour_choices() {
     static const std::vector<std::string> choices = [] {
-        std::vector<std::string> out = scan_colour_map_names();
-        for (const std::string_view scheme : colour_scheme_names()) {
-            out.push_back("ramp:" + std::string(scheme));
-        }
+        std::vector<std::string> out(colour_scheme_names().begin(), colour_scheme_names().end());
+        const std::vector<std::string>& maps = scan_colour_map_names();
+        out.insert(out.end(), maps.begin(), maps.end());
         return out;
     }();
     return choices;
 }
 
-std::vector<ScanMapColour> scan_colour_table(std::string_view choice, const std::string& background, bool dark) {
-    if (choice.starts_with("ramp:")) {
-        const std::optional<ColourScheme> scheme = colour_scheme_from_name(choice.substr(5));
-        if (scheme) {
-            const std::string to = pattern_colour(*scheme, 0, 1, dark);
-            std::vector<ScanMapColour> out(kMapColours);
-            for (std::size_t i = 0; i < kMapColours; ++i) {
-                const std::string hex =
-                    mix_colours(background, to, static_cast<double>(i) / static_cast<double>(kMapColours - 1));
-                const unsigned long rgb = std::strtoul(hex.c_str() + 1, nullptr, 16);
-                out[i] = {static_cast<std::uint8_t>(rgb >> 16), static_cast<std::uint8_t>(rgb >> 8),
-                          static_cast<std::uint8_t>(rgb), 255};
-            }
-            return out;
-        }
+std::vector<ScanMapColour> scan_colour_table(std::string_view map, const std::string& background, bool dark,
+                                             ScanMapDirection direction) {
+    const ScanColourMap chosen = scan_colour_map_or_default(map);
+    std::vector<ScanMapColour> out = scan_colour_map_table(chosen, dark);
+    if (scan_map_inverted(chosen, direction, background, dark)) {
+        std::reverse(out.begin(), out.end());
     }
-    const ColourTable& table = colour_map_named(choice);
-    return {table.begin(), table.end()};
+    return out;
 }
 
 ScanMapColour scan_table_colour(std::span<const ScanMapColour> table, double t) {

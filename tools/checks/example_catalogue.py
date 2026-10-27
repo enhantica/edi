@@ -45,9 +45,15 @@ CMAKE_LINE = re.compile(r'^  - id: |^    user-facing: |^    app-only: ')
 CMAKE_ID = re.compile(r'^  - id: *(.+)$')
 CMAKE_CASE = re.compile(r'^    user-facing: *true$|^    app-only: ')
 # App examples that have no catalogue form yet (ADR-0048). The list only shrinks: each leaves it
-# when it becomes a catalogue case, and no other project may be app-only. It is empty now that the
-# three single-crystal examples are cases.
-APP_ONLY: dict[str, str] = {}
+# when it becomes a catalogue case, and no other project may be app-only.
+APP_ONLY_REASON = (
+    'its tutorial and reference values come later; until then it is an app example only'
+)
+APP_ONLY = {
+    'sc-neut-cwl_tb2ti2o7-heidi_fit': APP_ONLY_REASON,
+    'sc-neut-cwl_pr2nio4-5c2_fit': APP_ONLY_REASON,
+    'sc-neut-tof_taurine_fit': APP_ONLY_REASON,
+}
 SOURCES = re.compile(r'^## Sources\s*$(?P<body>.*?)(?=^## |\Z)', re.MULTILINE | re.DOTALL)
 # Files in the tutorials folder that are not tutorials.
 NOT_TUTORIALS = {'index.md', 'execution-exclusions.yml'}

@@ -261,27 +261,27 @@ reblessed:
       not bundled in the app, so they have no page to capture.
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
-      - ex-sc-neut-cwl_pr2nio4-5c2.png
-      - ex-sc-neut-cwl_tb2ti2o7-heidi.png
-      - ex-sc-neut-tof_taurine-senju.png
+      - ex-sc-neut-cwl_pr2nio4-5c2_fit.png
+      - ex-sc-neut-cwl_tb2ti2o7-heidi_fit.png
+      - ex-sc-neut-tof_taurine_fit.png
   - produced_at: ed47f85906c00758789c076be0cfc9d4115563e5
     reason: >-
       The Pr2NiO4 fitting example now starts with its mosaicity free from 0 beside a fixed 1 micrometre radius, so
       its page shows the new extinction values. Captured with edi built against the same locally packed crysta SDK.
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
-      - ex-sc-neut-cwl_pr2nio4-5c2.png
+      - ex-sc-neut-cwl_pr2nio4-5c2_fit.png
   - produced_at: 4286e0a20e26d78faec216e63e701a6123631f36
     reason: >-
       The Pr2NiO4 fitting example now frees its crystal radius from 1 micrometre with the mosaicity fixed at 0, so its
       page shows the new extinction start. Captured with edi built against the same locally packed crysta SDK.
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
-      - ex-sc-neut-cwl_pr2nio4-5c2.png
+      - ex-sc-neut-cwl_pr2nio4-5c2_fit.png
   - produced_at: fe833ced2fe949ab15e24e9d5bfa29f203d013dc
     reason: >-
       The Pr2NiO4 fitting example now starts every displacement at 0 with the extinction off, so its page shows the
       fixed zero radius and mosaicity. Captured with edi built against the same locally packed crysta SDK.
     platform: Linux x86_64, QT_QPA_PLATFORM=xcb (Xwayland on headless Weston, Mesa llvmpipe OpenGL)
     images:
-      - ex-sc-neut-cwl_pr2nio4-5c2.png
+      - ex-sc-neut-cwl_pr2nio4-5c2_fit.png

@@ -295,7 +295,7 @@ std::vector<std::pair<Parameter*, std::string>> parameter_names(Project& project
 void require_fittable_free(Project& project) {
     refresh_fittability(project);
     for (const auto& [parameter, name] : parameter_names(project)) {
-        if (parameter->free.get() && !free_refusal(*parameter).empty()) {
+        if (parameter->free.get() && !parameter->fit_idle && !free_refusal(*parameter).empty()) {
             throw std::invalid_argument(name + " " + free_refusal(*parameter));
         }
     }
@@ -305,7 +305,7 @@ std::vector<std::string> clear_unfittable_free(Project& project) {
     refresh_fittability(project);
     std::vector<std::string> notes;
     for (const auto& [parameter, name] : parameter_names(project)) {
-        if (parameter->free.get() && !free_refusal(*parameter).empty()) {
+        if (parameter->free.get() && !parameter->fit_idle && !free_refusal(*parameter).empty()) {
             notes.push_back(name + " " + free_refusal(*parameter) + "; loaded fixed");
             parameter->free = false;
         }

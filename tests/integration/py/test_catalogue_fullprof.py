@@ -16,12 +16,6 @@ from tests.fixtures.example_catalogue.fullprof_profile import read_profile
 from tests.integration.py.test_example_catalogue import SELECTED
 
 ROOT = Path(__file__).resolve().parents[3]
-SINGLE_CRYSTAL = {
-    'sc-neut-cwl_tb2ti2o7-heidi',
-    'sc-neut-cwl_pr2nio4-5c2',
-    'sc-neut-tof_taurine-senju',
-}
-MODEL_GAP = 'sc-neut-cwl_tb2ti2o7-heidi'
 # The recorded comparison decision names these four cases explicitly.
 ASYMMETRY_OFF_CASES = {
     'pd-neut-cwl_hs-hrpt',
@@ -71,27 +65,11 @@ def test_fullprof_reference_binds_all_committed_start_inputs_and_outputs(case):
     assert record['project_sha256'] == inputs, (
         'Every structure, experiment, free flag and constraint must match the referenced start'
     )
-    if case not in SINGLE_CRYSTAL:
-        assert record['staging'] == 'none', (
-            'A staged fit cannot claim agreement from the user start'
-        )
+    assert record['staging'] == 'none', 'A staged fit cannot claim agreement from the user start'
     pins = record['artifacts_sha256']
     assert 'start.pcr' in pins and any(p.endswith('.prf') for p in pins), (
         'A reference requires the committed calculation input and actual FullProf output'
     )
-    if case in SINGLE_CRYSTAL:
-        assert set(pins) == {
-            'start.pcr',
-            'start.int',
-            'fit.pcr',
-            'fit.out',
-            'fit.sum',
-            'fit.prf',
-            'run.log',
-        }, (
-            'Single-crystal provenance must bind the actual reflection input and '
-            'complete F-squared fit outputs'
-        )
     for name, digest in pins.items():
         assert sha256(home / name) == digest, (
             'Every external output must retain its provenance pin'
@@ -105,7 +83,7 @@ def test_fullprof_reference_binds_all_committed_start_inputs_and_outputs(case):
     )
 
 
-@pytest.mark.parametrize('case', [case for case in SELECTED if case not in SINGLE_CRYSTAL])
+@pytest.mark.parametrize('case', SELECTED)
 def test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error(case):
     record = reference(case)
     project = edi.Project.load(ROOT / record['start_project'])
@@ -133,10 +111,7 @@ def test_fullprof_fixed_start_agrees_before_fitting_can_absorb_a_mapping_error(c
     verification.assert_patterns_agree(comparisons)
 
 
-@pytest.mark.parametrize(
-    'case',
-    [case for case in SELECTED if not case.endswith('_simulation') and case not in SINGLE_CRYSTAL],
-)
+@pytest.mark.parametrize('case', [case for case in SELECTED if not case.endswith('_simulation')])
 def test_measured_reference_has_a_fit_and_its_fitted_fixed_twin(case):
     record = reference(case)
     home = reference_home(case)
@@ -326,9 +301,6 @@ def test_latp_disposition_provenance_names_the_resume_cap():
 def assert_cli_expectations(case, expected):
     values = expected['quantities']
     source = reference(case)
-    if case in SINGLE_CRYSTAL:
-        assert_single_crystal_expectations(case, expected, source)
-        return
     assert expected.get('template', False) is case.endswith('_scan'), (
         'A scan compares its template single fit; ordinary cases cannot substitute a template'
     )
@@ -400,221 +372,6 @@ def assert_cli_expectations(case, expected):
         )
         assert_shared_references(values, source)
     assert_comparison_disposition(case, expected)
-
-
-def single_crystal_parameters(home):
-    text = (home / 'fit.out').read_text(encoding='latin-1')
-    rows = re.findall(
-        r'->\s+Parameter number\s+(\d+)\s*:\s+(\S+)\s+(\S+)\s*\(\s*\+/-\s+(\S+)\s*\)', text
-    )
-    return {
-        number: {'symbol': symbol, 'value': float(value), 'uncertainty': float(su)}
-        for number, symbol, value, su in rows
-    }
-
-
-@pytest.mark.parametrize('case', sorted(SINGLE_CRYSTAL))
-def test_single_crystal_reference_retains_its_actual_f_squared_fit_report(case):
-    home, record = reference_home(case), reference(case)
-    output = (home / 'fit.out').read_text(encoding='latin-1')
-    summary = (home / 'fit.sum').read_text(encoding='latin-1')
-    assert (
-        record['scope'] == 'fit'
-        and record['converged']
-        and 'Convergence reached at this CYCLE' in output
-    ), (
-        'Single-crystal minima must be actual converged fits of their bound '
-        'start, not powder fixed-twin claims'
-    )
-    pcr = (home / 'fit.pcr').read_text(encoding='latin-1').splitlines()
-    index = next(i for i, line in enumerate(pcr) if line.startswith('!Job'))
-    options = dict(
-        zip(pcr[index].lstrip('!').split(), map(int, pcr[index + 1].split()), strict=True)
-    )
-    assert options['Cry'] == 1 and abs(options['Job']) == 1, (
-        'The FullProf single-crystal input must select integrated F-squared observations'
-    )
-    profile = (home / 'fit.prf').read_text(encoding='latin-1').splitlines()
-    assert all(label in profile[1] for label in ['Gobs', 'Gcal', 'Sigma', 'h', 'k', 'l']), (
-        'The single-crystal profile must report observed/calculated '
-        'integrated intensities, uncertainties and indices'
-    )
-    data = np.loadtxt(home / 'fit.prf', skiprows=2)
-    assert (
-        data.shape == (record['n_points_fitted'], 9)
-        and np.isfinite(data).all()
-        and (data[:, 3] > 0).all()
-    ), (
-        'Every fitted reflection must retain a finite F-squared report row '
-        'with positive measurement uncertainty'
-    )
-    assert np.array_equal(data[:, 5:8], np.rint(data[:, 5:8])), (
-        'Every reported reflection must retain integer Miller indices'
-    )
-    assert record['n_points_fitted'] == int(
-        re.search(r'Nobserv \(I>n\*sigma\):\s+(\d+)', output)[1]
-    ), 'The reference count must come from FullProf actual fitted observations'
-    assert record['n_free'] == len(single_crystal_parameters(home)), (
-        'The free count must cover the actual FullProf parameter table'
-    )
-    assert record['r_wp'] == float(re.findall(r'RF2w-factor :\s+(\S+)', summary)[-1]) / 100, (
-        'The single-crystal weighted factor must retain FullProf RF2w as a fraction'
-    )
-    assert record['chi2'] == float(
-        re.findall(r'Global user-weigthed Chi2 \(Bragg contrib\.\):\s+(\S+)', summary)[-1]
-    ), 'The external single-crystal chi-square must retain the actual summary value'
-
-
-@pytest.mark.parametrize('case', sorted(SINGLE_CRYSTAL))
-def test_single_crystal_parameters_retain_fullprof_values_and_independent_report_units(case):
-    record = reference(case)
-    parameters = single_crystal_parameters(reference_home(case))
-    assert record['fullprof_parameters'] == parameters, (
-        'Every external parameter and uncertainty must match the actual final FullProf table'
-    )
-    project = ROOT / record['start_project']
-    structure = next((project / 'structures').glob('*.edi')).read_text()
-    axes = [
-        float(re.search(r'_cell\.length_' + axis + r'\s+(\S+)', structure)[1]) for axis in 'abc'
-    ]
-    expected = {}
-    for item in parameters.values():
-        symbol = item['symbol']
-        factor = 1.0
-        if match := re.fullmatch(r'Scale(\d+)', symbol):
-            label = 'senju_' + match[1] + '.scale' if case.endswith('senju') else 'scale'
-            factor = 64.0 if case.endswith('5c2') else 1.0
-        elif match := re.fullmatch(r'Ext([123])', symbol):
-            label = (
-                'fullprof_extinction_1'
-                if case == MODEL_GAP
-                else 'senju_1.coefficient_' + {'1': '11', '2': '22', '3': '33'}[match[1]]
-            )
-        elif match := re.fullmatch(r'([XYZ])_(\w+)', symbol):
-            label = match[2] + '.fract_' + match[1].lower()
-        elif match := re.fullmatch(r'Biso_(\w+)', symbol):
-            label = match[1] + '.adp_iso'
-        else:
-            match = re.fullmatch(r'bet([123])([123])_(\w+)', symbol)
-            assert match, (
-                'Every FullProf parameter family must have an explicit report-unit mapping'
-            )
-            i, j = int(match[1]) - 1, int(match[2]) - 1
-            label = match[3] + '.adp_' + match[1] + match[2]
-            if not case.endswith('senju'):
-                assert all(
-                    float(re.search(r'_cell\.angle_' + angle + r'\s+(\S+)', structure)[1]) == 90
-                    for angle in ['alpha', 'beta', 'gamma']
-                ), 'The orthogonal beta-to-B/U conversion must refuse a nonorthogonal cell'
-                factor = (
-                    4 * axes[i] * axes[j]
-                    if case.endswith('5c2')
-                    else axes[i] * axes[j] / (2 * math.pi**2)
-                )
-        expected[label] = {key: item[key] * factor for key in ['value', 'uncertainty']}
-    assert (
-        len(expected) == len(parameters) and record['report_values'].keys() == expected.keys()
-    ), 'The report mapping must cover every independently printed parameter exactly once'
-    for label, values in expected.items():
-        assert record['report_values'][label] == pytest.approx(values, rel=1e-14, abs=1e-15), (
-            'FullProf betas and occupancy-normalised scales must use the '
-            'independent project-unit conversion'
-        )
-
-
-def assert_single_crystal_expectations(case, expected, record):
-    values = expected['quantities']
-    assert all(
-        isinstance(spec['value'], (int, float)) and math.isfinite(spec['value'])
-        for spec in values.values()
-    ), 'Single-crystal references and regression pins must contain finite numerical values'
-    assert not expected.get('variants') and not expected.get('template', False), (
-        'Single-crystal examples compare their own fitted model, not powder templates or variants'
-    )
-    assert bool(record.get('models_differ')) == (case == MODEL_GAP), (
-        'Only the recorded Tb extinction mismatch may replace independent '
-        'comparisons with regression pins'
-    )
-    if case == MODEL_GAP:
-        assert (
-            'extinction' in record['models_differ'].lower()
-            and 'regression' in expected['source']['engine'].lower()
-        ), (
-            'The Tb comparison must name its incompatible extinction model and '
-            'label the engine pins'
-        )
-        assert all(spec['kind'] == 'regression-pin' for spec in values.values()), (
-            'An incompatible FullProf model must never be presented as numerical agreement'
-        )
-    else:
-        assert values.keys() == {'n_free', 'rwp', 'iterations', 'reduced_chi_square'} | {
-            'param.' + label + '.value' for label in record['report_values']
-        }, 'Every comparable single-crystal report value must be included exactly once'
-        assert (
-            values['n_free']['kind'] == 'reference'
-            and values['n_free']['value'] == record['n_free']
-        ), 'Comparable single-crystal free counts must come from FullProf'
-        assert values['rwp']['kind'] == 'reference' and values['rwp']['value'] == record['r_wp'], (
-            'Comparable single-crystal weighted factors must come from FullProf RF2w'
-        )
-        for label, item in record['report_values'].items():
-            spec = values['param.' + label + '.value']
-            assert spec['kind'] == 'reference' and spec['value'] == item['value'], (
-                'Every comparable single-crystal fitted value must retain its '
-                'independent FullProf reference'
-            )
-            assert (
-                spec['tol_rel'] is None and math.isfinite(spec['tol_abs']) and spec['tol_abs'] > 0
-            ), (
-                'Shared single-crystal values must retain finite positive absolute '
-                'uncertainty bounds'
-            )
-        assert all(
-            values[name]['kind'] == 'regression-pin'
-            for name in ['iterations', 'reduced_chi_square']
-        ), 'Solver-specific single-crystal terminal results must stay labelled regression pins'
-    assert_comparison_disposition(case, expected)
-
-
-@pytest.mark.parametrize(
-    'escape',
-    [
-        'missing-value',
-        'changed-value',
-        'relabelled-value',
-        'relaxed-bound',
-        'wrong-free-count',
-        'wrong-factor',
-        'fake-model-gap',
-        'unlabelled-model-gap',
-    ],
-)
-def test_single_crystal_comparison_refuses_reference_and_model_gap_escapes(escape):
-    case = MODEL_GAP if escape == 'unlabelled-model-gap' else 'sc-neut-cwl_pr2nio4-5c2'
-    expected = json.loads((ROOT / 'docs/user/cli' / case / 'expected.json').read_text())
-    record = reference(case)
-    assert_single_crystal_expectations(case, expected, record)
-    bad = copy.deepcopy(expected)
-    source = copy.deepcopy(record)
-    shared = next((name for name in bad['quantities'] if name.startswith('param.')), None)
-    if escape == 'missing-value':
-        del bad['quantities'][shared]
-    elif escape == 'changed-value':
-        bad['quantities'][shared]['value'] += 1
-    elif escape == 'relabelled-value':
-        bad['quantities'][shared]['kind'] = 'regression-pin'
-    elif escape == 'relaxed-bound':
-        bad['quantities'][shared]['tol_abs'] *= 2
-    elif escape == 'wrong-free-count':
-        bad['quantities']['n_free']['value'] += 1
-    elif escape == 'wrong-factor':
-        bad['quantities']['rwp']['value'] *= 100
-    elif escape == 'fake-model-gap':
-        source['models_differ'] = 'different'
-    else:
-        bad['quantities']['rwp']['kind'] = 'reference'
-    with pytest.raises(AssertionError):
-        assert_single_crystal_expectations(case, bad, source)
 
 
 @pytest.mark.parametrize('case', [case for case in SELECTED if not case.endswith('_simulation')])

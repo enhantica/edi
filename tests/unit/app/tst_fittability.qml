@@ -13,6 +13,7 @@ TestCase {
     when: windowShown
     property var appWindow
     property var group
+    property var savedShowStates
     Component {
         id: host
         ApplicationWindow {
@@ -31,6 +32,14 @@ TestCase {
 
     function init() {
         Session.closeProject();
+        savedShowStates = null;
+        if (typeof Preferences.analysisShowNotMeasured === "boolean") {
+            savedShowStates = [Preferences.analysisShowNotMeasured, Preferences.analysisShowBySymmetry, Preferences.analysisShowByConstraint, Preferences.analysisShowFixedSettings];
+            Preferences.analysisShowNotMeasured = true;
+            Preferences.analysisShowBySymmetry = true;
+            Preferences.analysisShowByConstraint = true;
+            Preferences.analysisShowFixedSettings = true;
+        }
         appWindow = host.createObject(null);
         verify(appWindow !== null, "Fit eligibility is observed in a real Qt window");
     }
@@ -38,6 +47,12 @@ TestCase {
         if (group)
             group.destroy();
         group = null;
+        if (savedShowStates) {
+            Preferences.analysisShowNotMeasured = savedShowStates[0];
+            Preferences.analysisShowBySymmetry = savedShowStates[1];
+            Preferences.analysisShowByConstraint = savedShowStates[2];
+            Preferences.analysisShowFixedSettings = savedShowStates[3];
+        }
         Session.closeProject();
         appWindow.destroy();
         Probe.releaseScratchProjects();
@@ -63,6 +78,8 @@ TestCase {
         const found = Probe.rows(filter);
         const index = found.findIndex(row => row.name === name && (!rowLabel || row.rowLabel === rowLabel));
         verify(index >= 0, "Analysis includes the requested numerical input: " + block + "." + category + "." + name);
+        table.positionViewAtIndex(index, ListView.Contain);
+        verify(waitForPolish(table), "The selected numerical input has an instantiated visible table delegate");
         return {
             row: found[index],
             index: index
@@ -148,8 +165,9 @@ TestCase {
         const table = open("tests/fixtures/fittability/projects/single");
         const expected = ["phase.cell.length_a", "phase.cell.length_b", "phase.cell.length_c", "phase.cell.angle_alpha", "phase.cell.angle_beta", "phase.cell.angle_gamma", "phase.atom_site.Ni.fract_x", "phase.atom_site.Ni.fract_y", "phase.atom_site.Ni.fract_z", "phase.atom_site.Ni.occupancy", "phase.atom_site.Ni.adp_iso", "bank.instrument.setup_wavelength", "bank.extinction.crystal_radius", "bank.extinction.domain_radius", "bank.linked_structure.phase.scale"];
         const actual = rows().map(row => [row.blockName, row.category, row.rowLabel, row.name].filter(x => x !== "").join("."));
-        compare(JSON.stringify(actual.sort()), JSON.stringify(expected.sort()), "The table equals the complete hand-authored input inventory, with no data, results or computed rows");
+        compare(JSON.stringify(actual.sort()), JSON.stringify(expected.sort()), "The unfiltered project model equals every numerical input, with no data, results or computed rows");
         const filter = table.sourceModel;
+        compare(Probe.rows(filter).map(row => [row.blockName, row.category, row.rowLabel, row.name].filter(x => x !== "").join(".")).sort(), expected.sort(), "Selecting every show group restores every numerical input in the actual Analysis view");
         compare(JSON.stringify(filter.variabilityCounts), JSON.stringify([15, 0, 7, 8]), "Free, Fixed and Not fittable partition the independent single-crystal input inventory");
         const picker = Ui.find(group, "parameters.variability", true);
         verify(picker !== null && picker.count === 4, "The actual variability picker includes Not fittable");

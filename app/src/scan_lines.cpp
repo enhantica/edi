@@ -189,7 +189,22 @@ void ScanLines::setLineWidth(double width) {
     }
 }
 
+void ScanLines::setActive(bool active) {
+    if (active != active_) {
+        active_ = active;
+        if (active_ && pending_) {
+            pending_ = false;
+            update();
+        }
+    }
+}
+
 QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/) {
+    // The GUI thread waits while the scene is synchronised, so the flags are read and written safely here.
+    if (!active_) {
+        pending_ = true;
+        return old;
+    }
     // The root's first child holds the bands; the groups of lines follow it.
     auto* root = old;
     if (root == nullptr) {

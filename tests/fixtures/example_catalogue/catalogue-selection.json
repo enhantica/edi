@@ -1,5 +1,5 @@
 {
-  "source": "Owner selection of 22 October 2026, extended by the 23 October single-crystal catalogue record",
+  "source": "Owner selection, naming and ordering of 22 October 2026, after removing LaB6 and diamond",
   "cases": [
     {"id": "pd-neut-cwl_lbco_simulation", "group": "Calculations without data"},
     {"id": "pd-neut-tof_si_simulation", "group": "Calculations without data"},
@@ -20,9 +20,6 @@
     {"id": "pd-xray-cwl_lam7o3-p021", "group": "X-ray"},
     {"id": "pd-neut-xray-cwl_pbso4-d1a-lab", "group": "Neutron and X-ray joint"},
     {"id": "pd-neut-cwl_cosio-d20_scan", "group": "Scans"},
-    {"id": "pd-xray-cwl_latp-bm01_scan", "group": "Scans"},
-    {"id": "sc-neut-cwl_tb2ti2o7-heidi", "group": "Single crystal"},
-    {"id": "sc-neut-cwl_pr2nio4-5c2", "group": "Single crystal"},
-    {"id": "sc-neut-tof_taurine-senju", "group": "Single crystal"}
+    {"id": "pd-xray-cwl_latp-bm01_scan", "group": "Scans"}
   ]
 }

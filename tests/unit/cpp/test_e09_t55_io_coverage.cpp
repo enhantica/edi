@@ -12,7 +12,6 @@
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/validation.hpp"
-#include "project_save/rounding.hpp"
 
 namespace {
 
@@ -499,9 +498,8 @@ TEST_CASE("E09-T55 project I/O fails closed before partial state escapes") {
             carried.structures[i]->atom_sites.size() == multi.structures[i]->atom_sites.size(),
             "A multi-structure save must preserve each structure's sites");
         CHECK_MESSAGE(
-            carried.structures[i]->cell.length_a.value ==
-                saved_reference::six_digits(multi.structures[i]->cell.length_a.value.get()),
-            "A multi-structure save retains each cell under independent six-digit rounding");
+            carried.structures[i]->cell.length_a.value == multi.structures[i]->cell.length_a.value,
+            "A multi-structure save must preserve each structure's cell");
     }
 }
 

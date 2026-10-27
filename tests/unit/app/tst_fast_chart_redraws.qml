@@ -217,6 +217,94 @@ Item {
                 }
             }
         }
+        function test_wheel_reaches_last_dataset_data() {
+            return ["experiment", "analysis"].map(page => ({tag: page, page}));
+        }
+        function test_wheel_reaches_last_dataset(data) {
+            open("stacked", 12);
+            chart.destroy(); chart = null;
+            const win = window();
+            Ui.click(test, Probe, win, "appBar.tab." + data.page);
+            tryVerify(() => pageReady(data.page) && !Ui.moving(win.contentItem), 3000, "Wheel navigation reaches the actual settled Experiment or Analysis page");
+            const body = pageBody(data.page);
+            const tab = Array.from(body.mainTabs).find(item => item.text === "Stacked");
+            verify(tab !== undefined && tab.enabled, "Both pages expose the actual Stacked chart tab");
+            Ui.click(test, Probe, win, tab.objectName);
+            tryVerify(() => tab.checked && !Ui.moving(win.contentItem), 2000, "Real tab input exposes the settled Stacked chart");
+            chart = Render.descendants(body).find(item => item.objectName === "scanView.stacked" && item.visible && item.shown);
+            verify(chart !== undefined, "Wheel reachability observes the live page-owned Stacked chart");
+            tryCompare(chart.scan, "loaded", 12, 8000, "Every independently supplied triangle is loaded on the shown page");
+            choose(named("toolbar.offset"), "100%");
+            choose(named("toolbar.height"), "50%");
+            const axes = named("axes"), pointer = named("pointer"), layer = named("layer");
+            closeEnough(axes.axisY.min, 0, "Fixed-height stack starts at its default lower viewport");
+            closeEnough(axes.axisY.max, 1, "Fixed-height stack starts with one plot-height viewport");
+            for (let step = 0; step < 35; ++step)
+                mouseWheel(pointer, pointer.width / 2, pointer.height / 2, 0, 120);
+            settled(chart);
+            closeEnough(axes.axisY.min, 5, "Real wheel input reaches the independently computed top viewport of twelve half-height traces");
+            closeEnough(axes.axisY.max, 6, "The complete fixed-height stack is reachable beyond zero to one");
+            closeEnough(layer.peakOf(11) - layer.rowOf(11), .5, "Wheel scrolling preserves the last trace's specified relative height");
+            const x = (25 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * pointer.width;
+            const y = (axes.axisY.max - 5.75) / (axes.axisY.max - axes.axisY.min) * pointer.height;
+            mouseClick(pointer, x, y);
+            tryCompare(Session.project, "currentExperimentIndex", 11, 1500, "The last independently placed triangle is selectable by real pointer input after wheel scrolling");
+            for (let step = 0; step < 35; ++step)
+                mouseWheel(pointer, pointer.width / 2, pointer.height / 2, 0, -120);
+            settled(chart);
+            closeEnough(axes.axisY.min, 0, "Reverse wheel input returns to the first trace without losing the stack's lower end");
+            closeEnough(axes.axisY.max, 1, "Wheel navigation preserves the viewport span in both directions");
+        }
+        function test_joint_exclusions_follow_placement_data() {
+            return ["gpu", "software"].map(renderer => ({tag: renderer, renderer}));
+        }
+        function test_joint_exclusions_follow_placement(data) {
+            Preferences.resetToDefaults();
+            Preferences.chartHighlightSelected = false;
+            Preferences.scanRenderer = data.renderer;
+            Style.Colors.theme = Style.Colors.LightTheme;
+            const location = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project"));
+            Input.joint(SettingsProof, location, false);
+            const bands = [[1213, 1513], [5481, 6231]];
+            for (const [row, name] of [[0, "expt_n2"], [1, "expt_s2"]]) {
+                const file = "experiments/" + name + ".edi";
+                const old = SettingsProof.text(location, file);
+                const changed = old.replace(/loop_\n_excluded_region\.id[\s\S]*?\n\n/, "loop_\n_excluded_region.id\n_excluded_region.start\n_excluded_region.end\n1 " + bands[row].join(" ") + "\n\n");
+                verify(changed !== old && SettingsProof.write(location, file, changed), "Each independent joint experiment receives its own distinct native excluded interval");
+            }
+            verify(Session.openProject(location), "Joint exclusion placement opens the independently authored real two-bank project");
+            chart = scanFactory.createObject(surface, {project: Session.project, mode: "stacked", shown: true});
+            verify(chart !== null, "Joint exclusion pixels come from the production Stacked component");
+            tryCompare(chart.scan, "loaded", 2, 8000, "Both distinct joint experiments load before checking their exclusion extents");
+            const layer = named("layer"), axes = named("axes");
+            tryCompare(layer, "gpu", data.renderer === "gpu", 2000, "The joint exclusion matrix exercises the actual GPU and painter Stacked paths");
+            const selector = named("toolbar.xaxis");
+            if (chart.scan.dShown) {
+                selector.currentIndex = 0; selector.activated(0);
+                tryCompare(chart.scan, "dShown", false, 2000, "The independent native exclusion intervals use the native TOF axis");
+            }
+            for (const placement of [{offset: "100%", height: "20%", spans: [[0, .2], [.2, .4]]}, {offset: "50%", height: "40%", spans: [[0, .4], [.2, .6]]}]) {
+                choose(named("toolbar.offset"), placement.offset);
+                choose(named("toolbar.height"), placement.height);
+                const sample = (image, x, y) => {
+                    const at = layer.mapToItem(chart, (x - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
+                    return String(image.pixel(Math.floor(at.x * image.width / chart.width), Math.floor(at.y * image.height / chart.height)));
+                };
+                settled(chart);
+                const full = grabImage(chart);
+                // At each band's midpoint, compare its interior and exterior with a nearby
+                // included x column; the triangle is zero here, away from its sharp peak.
+                for (let row = 0; row < 2; ++row) {
+                    const x = (bands[row][0] + bands[row][1]) / 2;
+                    const plainX = row === 0 ? bands[row][0] - 100 : bands[row][1] + 100;
+                    const span = placement.spans[row];
+                    for (const y of [span[0] + .035, (span[0] + span[1]) / 2, span[1] - .035])
+                        verify(sample(full, x, y) !== sample(full, plainX, y), "Every experiment's exclusion tint follows its own independently placed baseline-to-top span");
+                    for (const y of [span[0] - .035, span[1] + .035].filter(value => value > 0 && value < 1))
+                        compare(sample(full, x, y), sample(full, plainX, y), "An experiment's excluded tint stops outside its own placed vertical span rather than using Map row extents");
+                }
+            }
+        }
         function test_highlight_data() {
             return ["stacked", "map"].map(mode => ({
                         tag: mode,

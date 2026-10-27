@@ -165,15 +165,15 @@ projects:
   - id: sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp
     executing: true
     verification: true
-  - id: sc-neut-cwl_tb2ti2o7-heidi
-    executing: true
-    user-facing: true
-  - id: sc-neut-cwl_pr2nio4-5c2
-    executing: true
-    user-facing: true
+  - id: sc-neut-cwl_tb2ti2o7-heidi_fit
+    executing: false
+    app-only: "its tutorial and reference values come later; until then it is an app example only"
+  - id: sc-neut-cwl_pr2nio4-5c2_fit
+    executing: false
+    app-only: "its tutorial and reference values come later; until then it is an app example only"
   - id: sc-neut-tof_taurine-unknown_basic
     executing: true
     verification: true
-  - id: sc-neut-tof_taurine-senju
-    executing: true
-    user-facing: true
+  - id: sc-neut-tof_taurine_fit
+    executing: false
+    app-only: "its tutorial and reference values come later; until then it is an app example only"

@@ -1,24 +1,12 @@
 // Protocol controls only; synthetic states are never application evidence.
 import assert from 'node:assert/strict';
 import {runInNewContext} from 'node:vm';
-import {beginFitProgress,endFitProgress,isLiveFitProgress,advancesLiveFitProgress,observesOrderedFitProgress} from './web_fit_progress.mjs';
+import {beginFitProgress,endFitProgress,isLiveFitProgress,advancesLiveFitProgress} from './web_fit_progress.mjs';
 
 const idle={running:false,visible:false,text:''};
 const live={running:true,visible:true,text:'fitting · it 3'};
 let count=0;
 const iterations = values => values.map(value => ({...live,text:`fitting · it ${value}`}));
-for (const values of [[0,4],[0,1],[0]]) {
-  assert(observesOrderedFitProgress(iterations(values),8),
-    'A fast fit retains genuine running-counter observations without promising a frame per iteration');count++;
-  assert(!advancesLiveFitProgress(iterations(values),8),
-    'Coalesced fast-fit counters cannot impersonate the sustained frame-liveness proof');count++;
-}
-for (const [states,final] of [[iterations([4,1]),8],[iterations([9]),8],
-  [iterations([0]),NaN],[iterations([0]),0],[[],8],
-  [[idle],8],[[{...live,visible:false}],8],[[{...live,text:'Success · it 4'}],8]]) {
-  assert(!observesOrderedFitProgress(states,final),
-    'Fast-fit sampling still refuses reversed, out-of-range, absent, hidden and completed counters');count++;
-}
 for (const values of [[0,1,1,2,5],[1,3,4,5]]) {
   assert(advancesLiveFitProgress(iterations(values),5),
     'The indicator must advance through distinct intermediate values while actually running');count++;

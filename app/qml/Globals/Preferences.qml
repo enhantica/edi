@@ -31,23 +31,29 @@ QtObject {
     // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
+    // Which rows the Analysis table adds on top of what a fit can free (Analysis, Settings; the owner, 2026-10-26): the
+    // values this fit cannot determine and the setup values by default, those symmetry or a constraint sets on request.
+    property bool analysisShowNotMeasured: true
+    property bool analysisShowBySymmetry: false
+    property bool analysisShowByConstraint: false
+    property bool analysisShowFixedSettings: true
+    // Whether a finished fit opens its results window (Prompts; the owner, 2026-10-26). Off, the status bar's fit status
+    // still opens it.
+    property bool showFitResults: true
     // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
     // one and painted without (RenderingInfo), "gpu" or "software" whatever was detected.
     property string scanRenderer: "auto"
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
-    property string newProjectSuRule: "iucr_99"
-    // The experiments' and structures' colours (data/palettes, edi ADR-0038): a scheme's token, "ediNatural" (the
-    // default) or another of ApplicationInfo.colourSchemes; a stored token no longer offered reads as the default.
-    // Every chart, icon and report the app draws follows it, a report in the scheme's light colours.
-    property string colourScheme: "ediNatural"
-    // The colours split by what they colour (the owner, 2026-10-22): the structures' and the patterns' schemes, each
-    // empty until chosen and then following colourScheme, the one choice before the split, so a stored choice carries
-    // over. The Stacked and Map colours are scanStackedPalette and scanMapColours.
-    property string structureColourScheme: ""
+    property string newProjectSuRule: "iucr_19"
+    // The figure palette of experiments and structures (data/palettes, edi ADR-0038): a palette's token, "earth" (the
+    // default) or another of ApplicationInfo.colourSchemes; a stored earlier palette reads as its nearest new one
+    // (ApplicationInfo.colourSchemeOrDefault). Every chart, legend, icon and report the app draws follows it, a report
+    // in its light colours. The Stacked and Map colours are scanStackedPalette and scanMapColours.
+    property string colourScheme: "earth"
+    // The patterns' palette stored before the one palette (the owner, 2026-10-22, until 2026-10-26): read once into
+    // colourScheme, then cleared, so a choice made there carries over.
     property string patternColourScheme: ""
-    readonly property string structureColours: structureColourScheme !== "" ? structureColourScheme : colourScheme
-    readonly property string patternColours: patternColourScheme !== "" ? patternColourScheme : colourScheme
     // Whether a new project's HTML reports load their chart libraries ("online", the default) or embed them
     // ("embedded"): its `_report.html_offline` (edi ADR-0036 §7). A project keeps its own; this only starts a new one.
     property string newReportLibraries: "online"
@@ -59,12 +65,15 @@ QtObject {
         preferences.sideBarSide = "Right";
         preferences.engineThreads = 0;
         preferences.scanPatternUpdates = 2;
+        preferences.analysisShowNotMeasured = true;
+        preferences.analysisShowBySymmetry = false;
+        preferences.analysisShowByConstraint = false;
+        preferences.analysisShowFixedSettings = true;
+        preferences.showFitResults = true;
         preferences.scanRenderer = "auto";
-        preferences.newProjectSuRule = "iucr_99";
+        preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
-        preferences.colourScheme = "ediNatural";
-        preferences.structureColourScheme = "";
-        preferences.patternColourScheme = "";
+        preferences.colourScheme = "earth";
         preferences.patternYScale = "linear";
         preferences.structureCurves = true;
         preferences.patternLegendShown = false;
@@ -72,13 +81,12 @@ QtObject {
         preferences.patternMeasuredStyle = "band";
         preferences.patternPointerMode = "zoom";
         preferences.scanStackedPalette = "";
-        preferences.scanMapColours = "ramp:ediNatural";
+        preferences.scanMapColours = "blue-red";
         preferences.scanMapSmooth = true;
-        preferences.scanMapReversed = false;
-        preferences.scanStackedOffset = 10;
-        preferences.scanStackedSize = 0;
         preferences.scanStackedReversed = false;
+        preferences.scanStackedLegendShown = false;
         preferences.chartIncludedOnly = false;
+        preferences.chartSubtractBackground = false;
         preferences.singleCrystalQuantity = "f_squared";
         preferences.chartHighlightSelected = true;
         preferences.chartHiddenRange = "keep";
@@ -97,7 +105,7 @@ QtObject {
         location: EaGlobals.Vars.settingsFile
         category: "Appearance"
         property alias colourScheme: preferences.colourScheme
-        property alias structureColourScheme: preferences.structureColourScheme
+        // After colourScheme: the settings load in this order, so the earlier patterns' choice wins once.
         property alias patternColourScheme: preferences.patternColourScheme
     }
 
@@ -129,25 +137,23 @@ QtObject {
     // "linePoints" (the owner, 2026-10-22).
     property string patternMeasuredStyle: "band"
     property string patternPointerMode: "zoom"
-    // A scan's Stacked and Map views (edi ADR-0041): the palette the stacked patterns take their colours from (one of
-    // ApplicationInfo.colourSchemes; empty follows colourScheme) and the map's colour map (one of
-    // ApplicationInfo.scanColourMaps).
+    // A scan's Stacked and Map views (edi ADR-0041): the palette or colour map the stacked patterns take their colours
+    // from (one of ApplicationInfo.colourSchemes or ApplicationInfo.scanColourMaps; empty follows colourScheme) and the
+    // map's colour map (one of ApplicationInfo.scanColourMaps; Blue-Red by default, the owner, 2026-10-26). The Map's
+    // direction is the project's (ScanViewModel.mapDirection).
     property string scanStackedPalette: ""
-    // The Map's default, for now, is Edi Natural's shades (the owner, 2026-10-22).
-    property string scanMapColours: "ramp:ediNatural"
+    property string scanMapColours: "blue-red"
     // The Map's colour between datasets' rows: smooth, or stepped in bands (the owner, 2026-10-22).
     property bool scanMapSmooth: true
-    // The Map's colours reversed, from the map's high end at the lowest intensity (the owner, 2026-10-22).
-    property bool scanMapReversed: false
-    // The Stacked patterns' placing (edi ADR-0041 §4; the owner, 2026-10-24): each baseline's offset above the one
-    // below it, in percent of a pattern's own height (0 to 100 by 10), and each pattern's height, in percent of the
-    // plot's (10 to 100 by 10), 0 for Fit, which fills the plot with the whole stack.
-    property int scanStackedOffset: 10
-    property int scanStackedSize: 0
     // The Stacked colours reversed, last dataset first (the owner, 2026-10-22).
     property bool scanStackedReversed: false
+    // The Stacked legend shown (its toolbar button; off by default, the owner, 2026-10-26).
+    property bool scanStackedLegendShown: false
     // Every pattern chart shows only the included range (the toolbar's eraser button; edi ADR-0044).
     property bool chartIncludedOnly: false
+    // Pattern, Stacked and the Map draw every curve with its background subtracted; off by default (the owner,
+    // 2026-10-26).
+    property bool chartSubtractBackground: false
     // A single crystal's chart plots F² (calc against meas) or F ("f_squared" or "f").
     property string singleCrystalQuantity: "f_squared"
     // Every chart of several datasets (Stacked, single-crystal Stacked and the Map) draws the selected one on top and
@@ -163,6 +169,7 @@ QtObject {
         location: EaGlobals.Vars.settingsFile
         category: "Charts"
         property alias includedOnly: preferences.chartIncludedOnly
+        property alias subtractBackground: preferences.chartSubtractBackground
         property alias singleCrystalQuantity: preferences.singleCrystalQuantity
         property alias highlightSelected: preferences.chartHighlightSelected
         property alias hiddenRange: preferences.chartHiddenRange
@@ -172,6 +179,11 @@ QtObject {
         location: EaGlobals.Vars.settingsFile
         category: "Analysis"
         property alias scanPatternUpdates: preferences.scanPatternUpdates
+        property alias showNotMeasured: preferences.analysisShowNotMeasured
+        property alias showBySymmetry: preferences.analysisShowBySymmetry
+        property alias showByConstraint: preferences.analysisShowByConstraint
+        property alias showFixedSettings: preferences.analysisShowFixedSettings
+        property alias showFitResults: preferences.showFitResults
     }
 
     property Settings patternChartSettings: Settings {
@@ -191,10 +203,8 @@ QtObject {
         property alias stackedPalette: preferences.scanStackedPalette
         property alias mapColours: preferences.scanMapColours
         property alias mapSmooth: preferences.scanMapSmooth
-        property alias mapReversed: preferences.scanMapReversed
-        property alias stackedOffset: preferences.scanStackedOffset
-        property alias stackedSize: preferences.scanStackedSize
         property alias stackedReversed: preferences.scanStackedReversed
+        property alias stackedLegend: preferences.scanStackedLegendShown
         property alias renderer: preferences.scanRenderer
     }
 
@@ -204,28 +214,34 @@ QtObject {
         value: preferences.scanPatternUpdates
         when: Session.project !== null
     }
-    // The report's charts take the Patterns and Structures colours, bound here with the open project, not on the Report
-    // page, which loads only once reached.
-    property Binding reportPatternColours: Binding {
-        target: Session.project ? Session.project.report : null
+    // The open project's blocks take their positions in the palette, and the report's charts its colours, bound here
+    // with the open project, not on the Report page, which loads only once reached.
+    property Binding projectColours: Binding {
+        target: Session.project
         property: "colourScheme"
-        value: preferences.patternColours
+        value: preferences.colourScheme
         when: Session.project !== null
     }
-    property Binding reportStructureColours: Binding {
+    property Binding reportColours: Binding {
         target: Session.project ? Session.project.report : null
-        property: "structureColourScheme"
-        value: preferences.structureColours
+        property: "colourScheme"
+        value: preferences.colourScheme
         when: Session.project !== null
     }
 
     onToolTipsChanged: EaGlobals.Vars.showToolTips = toolTips
-    // A stored scheme no longer offered (one of the eighteen before the Edi palettes) becomes the default, so the
-    // chosen scheme and the one drawn agree and the settings file keeps the one shown.
+    // A stored palette no longer offered becomes the one it reads as, so the chosen palette and the one drawn agree
+    // and the settings file keeps the one shown.
     onColourSchemeChanged: {
         const offered = ApplicationInfo.colourSchemeOrDefault(colourScheme);
         if (offered !== colourScheme) {
             colourScheme = offered;
+        }
+    }
+    onPatternColourSchemeChanged: {
+        if (patternColourScheme !== "") {
+            colourScheme = ApplicationInfo.colourSchemeOrDefault(patternColourScheme);
+            patternColourScheme = "";
         }
     }
     onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = autoCollapse

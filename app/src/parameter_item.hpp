@@ -33,6 +33,9 @@ class ParameterItem : public QObject {
     // free toggle is enabled while it is fittable or free, so a flag set before a change can still be cleared.
     Q_PROPERTY(bool fittable READ isFittable NOTIFY fittableChanged)
     Q_PROPERTY(QString fitReason READ fitReason NOTIFY fitReasonChanged)
+    // Which group of rows no fit can vary it belongs to, the Analysis table's show-filters (FitGroup); None when
+    // fittable.
+    Q_PROPERTY(int fitGroup READ fitGroup NOTIFY fitGroupChanged)
     // True for an auto-mode background's point intensity or term coefficient (ADR-0040): the estimate owns the value,
     // so a page shows it locked and a value write refuses; it can still be freed or fixed.
     Q_PROPERTY(bool estimated READ isEstimated NOTIFY estimatedChanged)
@@ -76,6 +79,10 @@ class ParameterItem : public QObject {
 
    public:
     enum Field { ValueField = 1, UncertaintyField = 2, FreeField = 4 };
+    // The Analysis table's groups of rows no fit can vary, by crysta's reason (the owner, 2026-10-26): a value no fitted
+    // experiment measures or crysta cannot vary yet, one symmetry fixes, one a constraint sets, a descriptor.
+    enum FitGroup { NoGroup = 0, NotMeasured = 1, BySymmetry = 2, ByConstraint = 3, FixedSetting = 4 };
+    Q_ENUM(FitGroup)
 
     ParameterItem(const edi::ParameterEntry& entry, ProjectEditor& editor, QObject* parent);
     // A descriptor that is no parameter (edi::model_descriptors): its value is shown, never typed or fitted.
@@ -90,8 +97,9 @@ class ParameterItem : public QObject {
     bool isRefinable() const { return refinable_; }
     bool isFittable() const { return fittable_; }
     QString fitReason() const { return fit_reason_; }
+    int fitGroup() const { return fit_group_; }
     // Set by the registry at each publish from the parameter's mark (edi::refresh_fittability).
-    void setFittability(bool fittable, const QString& reason);
+    void setFittability(bool fittable, const QString& reason, int group);
     bool isDescriptorValue() const { return own_ != nullptr; }
     // A descriptor row's value, as the model holds it now; set by the registry before each publish.
     void setDescriptorValue(double value);
@@ -160,6 +168,7 @@ class ParameterItem : public QObject {
     void refinableChanged();
     void fittableChanged();
     void fitReasonChanged();
+    void fitGroupChanged();
     void estimatedChanged();
     void domainWarningChanged();
     void lastErrorChanged();
@@ -186,6 +195,7 @@ class ParameterItem : public QObject {
     bool refinable_;
     bool fittable_ = true;
     QString fit_reason_;
+    int fit_group_ = NoGroup;
     bool estimated_ = false;
     QString domain_warning_;
     QString last_error_;

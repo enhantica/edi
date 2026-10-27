@@ -19,9 +19,6 @@ from tests.fixtures.background_estimate.review3 import (
     rows,
     state,
 )
-from tests.fixtures.project_save.reference import (
-    six_digits,
-)
 
 
 @pytest.mark.parametrize(
@@ -92,10 +89,6 @@ def test_auto_basis_edit_reestimates_like_a_fresh_normalized_control(
         project.fit(on_start=started)
         assert len(starts) == 1, 'A direct single fit must expose exactly one actual pre-fit cost'
         saved = tmp_path / 'after-fit'
-        expected = [
-            (name, coordinate, six_digits(value), free)
-            for name, coordinate, value, free in expected
-        ]
         project.save_as(saved)
         settings = persisted_settings(saved)
         assert re.fullmatch(
@@ -144,28 +137,13 @@ def test_delegated_multibank_save_preserves_the_complete_due_host_background(
             intensity_meas_su=np.asarray(data.intensity_meas_su),
         )
     before = [state(e) for e in project.experiments]
-    expected_saved = [
-        (
-            *snapshot[:-1],
-            [
-                (name, coordinate, six_digits(value), free)
-                for name, coordinate, value, free in snapshot[-1]
-            ],
-        )
-        for snapshot in before
-    ]
     project.save_as(tmp_path / 'saved')
-    assert state(project.experiments[0]) == before[0], (
-        'Saving a due series beside a current bank must not mutate the live due host background'
-    )
-    assert state(project.experiments[1]) == expected_saved[1], (
-        'Save adopts independently rounded six-digit current-bank coefficients '
-        'with exact identities, flags, basis and mode'
+    assert [state(e) for e in project.experiments] == before, (
+        'Saving a due series beside a current bank must not mutate any live host background'
     )
     reloaded = engine.Project.load(tmp_path / 'saved')
-    assert [state(e) for e in reloaded.experiments] == expected_saved, (
-        'Delegated save writes independently rounded coefficients in both banks '
-        'with exact identities, flags, origin/domain, mode and layout'
+    assert [state(e) for e in reloaded.experiments] == before, (
+        'Delegated save must retain terms, origin/domain, mode and layout exactly as in the host'
     )
     project.analysis.calculate()
     reloaded.analysis.calculate()
