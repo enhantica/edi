@@ -242,8 +242,8 @@ struct ChatGptConnection::State : QObject {
             const auto sampled = now();
             if (signing_out && sampled - revoke_started >= Limits::revoke_ms) { cancel_operations(); end_sign_out(false); return false; }
             if (signing_in && sampled - sign_in_started >= Limits::sign_in_ms) { fail("ChatGPT sign-in deadline expired."); return false; }
-            const bool due = sampled - op->started >= op->timeout ||
-                (op->inference && sampled - op->last_data >= Limits::inference_idle_ms) ||
+            const bool due = (op->timeout && sampled - op->started >= op->timeout) ||
+                (op->inference && Limits::inference_idle_ms && sampled - op->last_data >= Limits::inference_idle_ms) ||
                 (signing_in && sampled - sign_in_started >= Limits::sign_in_ms) ||
                 (signing_out && sampled - revoke_started >= Limits::revoke_ms);
             if (due) { operation_failed(op, "Provider operation deadline expired."); return false; }
@@ -253,8 +253,7 @@ struct ChatGptConnection::State : QObject {
     std::uint64_t request(HttpRequest input, std::function<void(int, QByteArray)> done,
                           std::function<void(QByteArray)> data = {}, std::function<void()> failed = {}) {
         headers_bound(input.headers);
-        if (operations.size() >= Limits::http_operations || input.body.size() > static_cast<qsizetype>(Limits::request_bytes))
-            detail::refuse("resource_exhausted", "Native operation limit exceeded");
+
         auto op = std::make_shared<Operation>(); op->id = ++serial; op->generation = generation;
         op->started = op->last_data = now(); op->limit = input.body_limit_bytes; op->timeout = input.timeout_ms;
         op->done = std::move(done); op->data = std::move(data); op->failed = std::move(failed); op->inference = static_cast<bool>(op->data);
@@ -285,7 +284,7 @@ struct ChatGptConnection::State : QObject {
             if (!owner || !owner->admit_callback(op)) return;
             try {
                 if (owner->requesting || !op->headers) throw std::invalid_argument("Data before headers");
-                if (static_cast<std::uint64_t>(bytes.size()) > op->limit - op->bytes) { owner->operation_failed(op, "Provider body limit exceeded.", true); return; }
+                if (op->limit && (op->bytes>op->limit || static_cast<std::uint64_t>(bytes.size()) > op->limit - op->bytes)) { owner->operation_failed(op, "Provider body limit exceeded.", true); return; }
                 op->bytes += static_cast<std::uint64_t>(bytes.size()); if (!bytes.isEmpty()) op->last_data = owner->now();
                 if (op->data) op->data(std::move(bytes)); else op->body += bytes;
             } catch (...) { owner->operation_failed(op, "Invalid provider transport sequence."); }
@@ -565,7 +564,7 @@ void ChatGptConnection::State::poll() {
         std::vector<std::shared_ptr<Operation>> due;
         for (const auto& [id, op] : operations) {
             (void)id;
-            if (sampled - op->started >= op->timeout || (op->inference && sampled - op->last_data >= Limits::inference_idle_ms)) due.push_back(op);
+            if ((op->timeout && sampled - op->started >= op->timeout) || (op->inference && Limits::inference_idle_ms && sampled - op->last_data >= Limits::inference_idle_ms)) due.push_back(op);
         }
         for (const auto& op : due) operation_failed(op, "Provider request timed out. Retry when connected.");
         if (signing_out && revoke_retry_at && sampled >= revoke_retry_at) { revoke_retry_at = 0; revoke(); }
@@ -661,7 +660,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
         if (s.credentials.value("expires_at").toInteger() <= s.wall()) {
             (void)connect_saved(s.registration.toStdString()); return no("Renewing ChatGPT authorization. Retry when connected.");
         }
-        const auto parsed = detail::parse(input, Limits::request_bytes);
+        const auto parsed = detail::parse(input);
         detail::shape(parsed, {"schema", "type", "connection_id", "turn_id", "request_id", "model", "text", "attachments", "context", "history", "tools"}, {"effort", "conversation_id"});
         for (const auto* key : {"schema", "type", "connection_id", "turn_id", "request_id", "model"}) detail::string(parsed, key);
         detail::string(parsed, "text", true);
@@ -703,12 +702,10 @@ Reply ChatGptConnection::send(const JsonText& input) {
         }
         if (!allowed) return no("This model or reasoning effort is unavailable.");
         const auto context = source.value("context").toObject();
-        if (context.contains("error") || encoded(context).size() > static_cast<qsizetype>(Limits::context_bytes))
-            return no("Project context exceeds the assistant limit.", "edi.assistant.resource_exhausted");
+        if (context.contains("error"))
+            return no("Project context is unavailable.", "edi.assistant.resource_exhausted");
         if (!source.value("attachments").isArray() || !source.value("attachments").toArray().isEmpty()) return no("Attachment transfer is not available in this slice.");
         const auto history = source.value("history").toArray();
-        if (history.size() > static_cast<qsizetype>(Limits::history_entries) || QJsonDocument(history).toJson(QJsonDocument::Compact).size() > static_cast<qsizetype>(Limits::history_bytes))
-            return no("Conversation exceeds the assistant limit.", "edi.assistant.resource_exhausted");
         const auto marker = source.value("conversation_id").toString();
         if (!marker.isEmpty() && marker != s.conversation_project) {
             s.retire_replay(); s.conversation_project = marker;
@@ -756,7 +753,6 @@ Reply ChatGptConnection::send(const JsonText& input) {
             {"instructions", instructions}, {"tools", QJsonArray{Object{{"type", "namespace"}, {"name", "edi"}, {"description", "Validated diffraction project operations"}, {"tools", functions}}}}};
         if (!effort.isEmpty()) body["reasoning"] = Object{{"effort", effort}};
         auto wire = encoded(body);
-        if (wire.size() > static_cast<qsizetype>(Limits::request_bytes)) return no("Outgoing request exceeds the assistant limit.", "edi.assistant.resource_exhausted");
         s.request_context = source; s.pending_terminal = {}; s.pending_calls = {}; s.pending_call_bytes = 2; const auto generation = s.generation; const auto connection = s.connection;
         s.stream = std::make_unique<OpenAiStream>(source.value("turn_id").toString().toStdString(), source.value("request_id").toString().toStdString(), [&s, source, generation, connection](const JsonText& input) {
             if (generation != s.generation) return;
@@ -768,9 +764,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
             if (event.value("type") == "tool_call") {
                 const auto bytes = static_cast<std::uint64_t>(encoded(event).size());
                 const auto growth = bytes + (s.pending_calls.isEmpty() ? 0 : 1);
-                if (bytes > Limits::message_bytes || s.pending_calls.size() >= static_cast<qsizetype>(Limits::stream_calls) ||
-                    growth > Limits::stream_retained_bytes - s.pending_call_bytes)
-                    detail::refuse("resource_exhausted", "Pending provider calls exceed the inference buffer limit");
+
                 s.pending_calls.append(event); s.pending_call_bytes += growth;
             } else if (event.value("type") == "turn_finished") s.pending_terminal = event;
             else if (s.sink) s.sink(json(event));
@@ -784,9 +778,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
             const auto output = QJsonDocument::fromJson(QByteArray::fromStdString(s.stream->output())).array();
             auto replay = s.replay;
             for (const auto& item : output) replay.append(item);
-            if (replay.size() > static_cast<qsizetype>(Limits::replay_items) || QJsonDocument(replay).toJson(QJsonDocument::Compact).size() > static_cast<qsizetype>(Limits::replay_bytes)) {
-                s.inference_failed("Provider continuation exceeds the assistant limit.", "edi.assistant.resource_exhausted"); return;
-            }
+
             // Retain every original completed item under the replay-role bound,
             // but only semantically completed responses become continuation.
             // Failed calls were deferred and never dispatched, so retry can use
@@ -820,7 +812,7 @@ Reply ChatGptConnection::send(const JsonText& input) {
         };
         s.active_inference = s.request({HttpMethod::post, QUrl("https://api.openai.com/v1/responses"),
             {{"Content-Type", "application/json"}, {"Authorization", "Bearer " + s.credentials.value("access_token").toString().toUtf8()}},
-            std::move(wire), Limits::stream_wire_bytes, Limits::inference_total_ms}, done, data);
+            std::move(wire), 0, 0}, done, data);
         return ok();
     } catch (const detail::Refusal& e) { return no("Assistant request was refused.", "edi.assistant." + q(e.code)); }
     catch (...) { s.inference_failed("The native provider request could not start."); return no("The native provider request could not start."); }

@@ -72,7 +72,7 @@ struct OpenAiStream::State {
 
     void emit(O fields) {
         fields.emplace_back("schema", "edi.assistant/1"); fields.emplace_back("turn_id", turn); fields.emplace_back("request_id", request);
-        bounded(fields, Limits::message_bytes);
+        (void)payload_size(fields);
         if (sink) sink(json::write(fields));
     }
     std::string identifier(const J& item, const char* key) const {
@@ -83,25 +83,20 @@ struct OpenAiStream::State {
     void retained() {
         std::uint64_t size = response_id.size();
         for (const auto& [id, item] : items) {
-            size += id.size() + payload_size(item.original, Limits::stream_retained_bytes);
+            size += id.size() + payload_size(item.original);
             for (const auto& [index, part] : item.parts) {
                 (void)index;
                 size += payload_size(O{{"content_index", std::to_string(index)}, {"type", part.kind}, {"text", part.text},
-                                       {"text_done", part.text_done}, {"part_done", part.part_done}, {"complete", part.complete}, {"declaration", part.declaration}}, Limits::stream_retained_bytes);
+                                       {"text_done", part.text_done}, {"part_done", part.part_done}, {"complete", part.complete}, {"declaration", part.declaration}});
             }
-            if (size > Limits::stream_retained_bytes) refuse("resource_exhausted", "Provider retained-item limit exceeded");
         }
         for (const auto& [id, call] : calls) {
             size += id.size() + call.id.size() + call.name.size() + call.arguments.size();
-            if (size > Limits::stream_retained_bytes) refuse("resource_exhausted", "Provider retained-call limit exceeded");
         }
         retained_base = size;
         partial();
     }
-    void partial() const {
-        if (pending.size() + record.size() + retained_base > Limits::stream_retained_bytes)
-            refuse("resource_exhausted", "Provider retained state exceeds limit");
-    }
+    void partial() const {} // Actual buffered data is not a total-work allowance.
     void tool(Call& call, const std::string& arguments, const J& declaration) {
         const auto args = parse(arguments); args.object("arguments");
         if (!call.arguments_done && has(declaration, "arguments")) {
@@ -147,9 +142,6 @@ struct OpenAiStream::State {
             if (response_id != supplied) refuse("invalid_argument", "Provider response identity changed");
             return;
         }
-        const auto retained_now = retained_base + pending.size() + record.size();
-        if (supplied.size() > Limits::stream_retained_bytes - retained_now)
-            refuse("resource_exhausted", "Provider response identity exceeds retained limit");
         response_id = supplied;
         retained();
     }
@@ -193,9 +185,6 @@ struct OpenAiStream::State {
         if ((part.text_done || part.deltas) && part.text != text)
             refuse("invalid_argument", "Final provider content contradicts its public text");
         const bool publish = !part.text_done && !part.deltas;
-        const auto before = payload_size(J(part.text)), after = payload_size(J(text));
-        if (after > before && after - before > Limits::stream_retained_bytes - retained_base)
-            refuse("resource_exhausted", "Provider retained text exceeds limit");
         part.text = text; part.text_done = true;
         if (part.kind == "refusal") refused = true;
         retained();
@@ -271,7 +260,6 @@ struct OpenAiStream::State {
         if (done) finalized_known_shape(original);
         const auto prior = items.find(id);
         if (prior == items.end()) {
-            if (items.size() >= Limits::stream_items) refuse("resource_exhausted", "Provider item count exceeds limit");
             const auto position = positions.find(output_index);
             if (position != positions.end() && position->second != id)
                 refuse("invalid_argument", "Provider output position already belongs to another item");
@@ -291,7 +279,6 @@ struct OpenAiStream::State {
             if (has(original, "namespace") && string(original, "namespace") != "edi") refuse("invalid_argument", "Unknown provider tool namespace");
             auto found = calls.find(id);
             if (found == calls.end()) {
-                if (calls.size() >= Limits::stream_calls) refuse("resource_exhausted", "Provider call count exceeds limit");
                 for (const auto& entry : calls) if (entry.second.id == call_id) refuse("invalid_argument", "Provider call ID reused by another item");
                 calls.emplace(id, Call{call_id, name, {}});
             } else if (found->second.id != call_id || found->second.name != name) refuse("invalid_argument", "Provider tool identity changed");
@@ -300,7 +287,6 @@ struct OpenAiStream::State {
             preserve_declaration = !done && declared_before;
             if (!done && has(original, "arguments")) {
                 const auto& declared = original.at("arguments").string("arguments");
-                if (declared.size() > Limits::message_bytes) refuse("invalid_json", "Tool arguments exceed message limit");
                 if (declared_before) {
                     // held.original is the actual prior declaration, not tool()'s
                     // canonically equivalent but potentially respelled final buffer.
@@ -310,9 +296,6 @@ struct OpenAiStream::State {
                     if (call.arguments_done) refuse("invalid_argument", "New tool declaration after argument completion");
                     if (!call.deltas) {
                         retained();
-                        const auto retained_now = retained_base + pending.size() + record.size();
-                        if (declared.size() > Limits::stream_retained_bytes - retained_now)
-                            refuse("resource_exhausted", "Initial tool arguments exceed retained limit");
                         call.arguments = declared;
                     }
                 }
@@ -341,7 +324,6 @@ struct OpenAiStream::State {
             return;
         }
         const auto& output = response.at("output").array("output");
-        if (output.size() > Limits::stream_items) refuse("resource_exhausted", "Terminal provider item count exceeds limit");
         std::set<std::string> membership;
         std::set<std::uint64_t> resolved_positions;
         std::vector<std::uint64_t> final_positions;
@@ -396,7 +378,7 @@ struct OpenAiStream::State {
         if (record.empty()) return;
         auto body = std::exchange(record, {}); if (body.back() == '\n') body.pop_back();
         if (body.empty()) return;
-        if (++events > Limits::stream_events) refuse("resource_exhausted", "Provider event count exceeds limit");
+        ++events; // Observation, never an artificial work veto.
         if (body == "[DONE]") { if (!terminal) refuse("interrupted", "Stream ended without terminal response"); return; }
         if (terminal) refuse("invalid_argument", "Data after terminal response");
         diagnostic_stage = "event JSON";
@@ -433,8 +415,6 @@ struct OpenAiStream::State {
             } else {
                 if (part.text_done || part.part_done) refuse("invalid_argument", "Text arrived after content completion");
                 const auto delta = string(message, "delta", true);
-                if (payload_size(J(delta)) - 2 > Limits::stream_retained_bytes - retained_base)
-                    refuse("resource_exhausted", "Provider retained text exceeds limit");
                 part.text += delta; part.deltas = true; retained();
                 if (part.kind == "refusal") refused = true;
                 if (part.kind != "reasoning_text") emit({{"type", "text_delta"}, {"text", delta}});
@@ -476,7 +456,6 @@ struct OpenAiStream::State {
             if (type.ends_with(".delta")) {
                 if (call.arguments_done) refuse("invalid_argument", "Arguments changed after completion");
                 const auto delta = string(message, "delta", true);
-                if (delta.size() > Limits::message_bytes - call.arguments.size()) refuse("invalid_json", "Tool arguments exceed message limit");
                 call.arguments += delta; call.deltas = true; retained();
             } else tool(call, string(message, "arguments", true), items.at(id).original);
         } else if (type == "response.completed" || type == "response.failed" || type == "response.incomplete" || type == "error") {
@@ -516,18 +495,15 @@ Reply OpenAiStream::feed(std::string_view bytes) {
     if (state.failed) return state.failed_reply();
     try {
         state.diagnostic_stage = "SSE framing";
-        if (bytes.size() > Limits::stream_wire_bytes - state.wire) refuse("resource_exhausted", "Provider wire limit exceeded");
         state.wire += bytes.size();
         for (char c : bytes) {
             if (c != '\n') {
-                if (state.pending.size() >= Limits::message_bytes && !(c == '\r' && state.pending.size() == Limits::message_bytes)) refuse("invalid_json", "SSE line exceeds message limit");
                 state.pending += c; state.partial(); continue;
             }
             auto line = std::exchange(state.pending, {}); if (!line.empty() && line.back() == '\r') line.pop_back();
             if (line.empty()) { state.event(); state.diagnostic_stage = "SSE framing"; }
             else if (line.starts_with("data:")) {
                 std::string_view data(line); data.remove_prefix(5); if (data.starts_with(' ')) data.remove_prefix(1);
-                if (data.size() + 1 > Limits::message_bytes + 1 - state.record.size()) refuse("invalid_json", "SSE event exceeds message limit");
                 state.record.append(data); state.record += '\n'; state.partial();
             }
         }
@@ -555,7 +531,7 @@ JsonText OpenAiStream::output() const {
         (void)position;
         if (state_->items.at(id).done) output.push_back(state_->items.at(id).original);
     }
-    bounded(output, Limits::stream_retained_bytes, Limits::stream_items);
+    (void)payload_size(output);
     return json::write(output);
 }
 }

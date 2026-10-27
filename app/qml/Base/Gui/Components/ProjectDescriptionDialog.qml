@@ -22,6 +22,10 @@ EaElements.Dialog {
     property alias projectAuthors: projectAuthorsField.text
     property alias projectDescription: projectDescriptionField.text
 
+    function acceptsProjectName(value) {
+        return typeof value === "string" && projectNameField.validator.regularExpression.test(value);
+    }
+
     property string projectLocation: ""
     property string projectParentDirectory: ""
     property string defaultProjectParentDirectory: projectLocation

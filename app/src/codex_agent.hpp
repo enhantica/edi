@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 #include <memory>
+#include <optional>
 #include <QObject>
 #include <functional>
 #include <QHash>
@@ -15,6 +16,8 @@
 
 namespace edi_app {
 bool codex_encoded_size(const QJsonValue&, quint64 cap, quint64& size);
+// Measure actual retained data without a cumulative work quota.
+bool codex_measured_size(const QJsonValue&, quint64& size);
 quint64 codex_json_capacity(quint64 bytes);
 // App-internal transport for the pinned runtime. It owns no account
 // or provider protocol; the VM owns admitted rows, approvals and scientific state.
@@ -70,8 +73,6 @@ private:
     void processOwnerReleased(quint64) noexcept;
     void maybeOwnersReleased() noexcept;
     using Limits = edi::assistant::Limits;
-    static constexpr qsizetype recordLimit = Limits::message_bytes;
-    static constexpr qsizetype pendingLimit = Limits::http_operations;
     QProcess* process_ = nullptr;
     QPointer<QProcess> retired_process_;
     quint64 active_frames_=0;

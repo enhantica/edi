@@ -81,12 +81,14 @@ EaElements.GroupBox {
     }
     // Native Create reuses this actual form's remembered parent/defaults. It does
     // not accept a dialog or synthesize a chooser selection.
-    function nativeCreateDefaults(name, description) {
+    function nativeCreateDefaults(name, description, title) {
         if (Session.project !== null || createIntent !== null || createDialog.visible) return ({});
         const actualName = name.length > 0 ? name : "project";
+        if (!createDialog.acceptsProjectName(actualName))
+            return ({error: qsTr("Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed."), target: "createProject.name"});
         const parent = createDialog.projectParentDirectory
             ? EaLogic.Utils.urlToLocalFile(createDialog.projectParentDirectory) : createDialog.defaultProjectParentDirectory;
-        return ({name: actualName, description: description, title: createDialog.projectTitle,
+        return ({name: actualName, description: description, title: title === undefined || title === null ? createDialog.projectTitle : title,
             authors: createDialog.projectAuthors, location: WebFiles.available ? "" : createDialog.joinedPath(parent, actualName),
             suRule: Preferences.newProjectSuRule, reportLibraries: Preferences.newReportLibraries === "embedded"});
     }
