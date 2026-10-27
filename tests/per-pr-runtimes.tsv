@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-27T03:50:45Z
+# measured_utc = 2026-10-27T04:17:34Z
 #
-# Recorded from: /home/andrewsazonov/runs/e04-t37/tests-seq2-native.log
-# Collected tests: 18331; with a reported duration: 10281
+# Recorded from: /home/andrewsazonov/runs/e04-t37/tests-seq3-native.log
+# Collected tests: 18331; with a reported duration: 10282
 # Module-scoped fixture costs recorded: 91
 #
 # Breaches are decided PER TIER against the table
