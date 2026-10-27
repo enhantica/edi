@@ -5239,7 +5239,7 @@ struct AssistantViewModel::State {
         QPointer<ProjectViewModel> completion_project;
         bool completing_existing = false;
         bool ordinary_project = false;
-        QString ordinary_name, ordinary_description, ordinary_intent, ordinary_location;
+        QString ordinary_name, ordinary_description, ordinary_intent, ordinary_location, ordinary_failure;
         std::uint64_t ordinary_edit_scope = 0;
         bool estimate_default = false;
         std::shared_ptr<ProjectViewModel::EditOutcome> estimate_outcome;
@@ -6479,6 +6479,12 @@ struct AssistantViewModel::State {
         if (show_actions && !readonly && !individual_app_action(name) && name != "set_parameters" && name != "set_free" && name != "run_fit" && name != "undo_fit" && name != "add_relations" && name != "edit_relation" && name != "create_cwl_project" && name != "create_project" && name != "show_report" && name != "edit_background" && name != "estimate_background" && name != "save_project") {
             reply(false, {{"status", "unavailable"}, {"code", "visible_unmapped"}, {"message", "This operation has no genuine visible widget workflow yet; use normal mode. Nothing was changed."}}); return;
         }
+        if(show_actions && !readonly) {
+            const QPointer<AssistantViewModel> originalOwner(&owner);
+            widget_showing(true); // Shared normal-sidebar reveal BEFORE route lookup/cues.
+            if(!originalOwner || originalOwner->state_.get()!=this || !publication.input_current())return;
+            if(!native_current(original_receipt)) {reply(false,{{"status","refused"},{"code","request_stale"},{"message","The original request changed while revealing the ordinary app sidebar; inspect current state."}});return;}
+        }
         const QPointer<CodexAgent> work_transport(agent.get());
         const auto work_generation=work_transport?work_transport->outputGeneration():0;
         if(!work_transport || !work_transport->beginNativeWork(rpc,work_generation)) {
@@ -7244,7 +7250,10 @@ struct AssistantViewModel::State {
     }
     void native_apply_normal_project(const std::shared_ptr<NativeCreation>& creation) {
         if(!normal_project_create_current(creation))return;
-        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<QQuickItem> form(widget_named("group.getStarted"));
+        const QPointer<AssistantViewModel> receiver(&owner);QPointer<QQuickItem> form;
+        for(auto* item:widget_items())if(item->objectName()==QStringLiteral("group.getStarted")) {
+            if(form)throw std::runtime_error("The ordinary Create form is ambiguous");form=item;
+        }
         bool presented=false;QVariantMap facts;
         try {
             QVariant defaults,answer;
@@ -7262,7 +7271,9 @@ struct AssistantViewModel::State {
                 Q_ARG(QVariant,defaults),Q_ARG(QVariant,QVariant(creation->ordinary_intent))))throw std::runtime_error("The current app Create API is unavailable");
             if(answer.metaType()==QMetaType::fromType<QJSValue>())answer=answer.value<QJSValue>().toVariant();
             facts=answer.toMap();presented=facts.value("success").toBool() && facts.value("current").toBool();
-        }catch(...) {} // Actual adoption was latched by the shared Session commit.
+        }catch(const std::exception& failure) {creation->ordinary_failure=QString::fromUtf8(failure.what());}
+        catch(...) {creation->ordinary_failure=QStringLiteral("The ordinary Create API did not return its result");}
+        // Actual adoption was latched by the shared Session commit.
         if(!receiver || receiver->state_.get()!=this)return;
         if(creation->ordinary_edit_scope){end_own_edit(creation->ordinary_edit_scope);creation->ordinary_edit_scope=0;}
         const bool original=native_call && native_call->record==creation->record && native_call->receipt==creation->receipt;
@@ -7279,7 +7290,8 @@ struct AssistantViewModel::State {
             if(current && native_call){native_call->may_have_written=true;native_refresh(*native_call);}
             if(native_call && native_call->record==creation->record)native_finish(current && presented,outcome);
         }
-        else native_finish(false,{{"status","refused"},{"adopted",false},{"complete",false},{"message","The ordinary current-session Create did not commit; no project was replaced."}});
+        else native_finish(false,{{"status","refused"},{"adopted",false},{"complete",false},
+            {"message",!creation->ordinary_failure.isEmpty()?creation->ordinary_failure:QStringLiteral("The ordinary current-session Create did not commit; no project was replaced.")}});
     }
     void native_start_normal_project(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original,const Object& args) {
         auto* session=result_session();
@@ -7309,10 +7321,10 @@ struct AssistantViewModel::State {
                 AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
                 auto current=[this,receiver,creation,target]{return receiver && receiver->state_.get()==this && target && normal_project_create_current(creation);};
                 request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
-                request.completed=[this,receiver,creation](bool delivered,const QString&,ControlCause){
+                request.completed=[this,receiver,creation](bool delivered,const QString& diagnostic,ControlCause){
                     if(!receiver || receiver->state_.get()!=this || !normal_project_create_current(creation))return;
                     if(delivered)native_apply_normal_project(creation);
-                    else {native_creation.reset();native_finish(false,{{"status","refused"},{"adopted",false},{"message","The original Create cue did not complete; nothing was created."}});}
+                    else {native_creation.reset();native_finish(false,{{"status","refused"},{"adopted",false},{"message",diagnostic.isEmpty()?QStringLiteral("The original Create cue did not complete; nothing was created."):diagnostic}});}
                 };
                 control_start(*native_call,ControlField::Project,std::move(request));
             }catch(...) {
@@ -12884,8 +12896,11 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
     if(normal && normal->ordinary_project && normal->ordinary_intent==intent) {
         if(!target || !s->normal_project_create_current(normal) || !edi::empty_for_population(*target->assistantProject()) ||
             !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->description()!=normal->ordinary_description ||
-            location!=normal->ordinary_location || (!location.isEmpty() && QFileInfo::exists(location)))return false;
-        (void)s->prepare_creation_attachment(normal,target,normal->population_outcome);
+            location!=normal->ordinary_location)return false;
+        if(!location.isEmpty() && QFileInfo::exists(location)) {
+            normal->ordinary_failure=QStringLiteral("The normal Create destination already exists. Choose another project name; the existing destination was not replaced.");return false;
+        }
+        (void)s->prepare_creation_attachment(normal,target,normal->partial_outcomes[0]);
         return receiver && state_.get()==s && s->normal_project_create_current(normal);
     }
     const auto run = s->native_create_widget;

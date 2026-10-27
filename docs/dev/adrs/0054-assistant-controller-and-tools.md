@@ -2478,7 +2478,9 @@ in-memory as in the form. Actual Session success/current/owner/replacement and
 saved/path facts are retained; unknown save outcome is not reported as false.
 No CWL recipe is involved. Both modes call the same API; ON adds the real current Create visual
 cue without clicked/accepted synthesis or external app discovery. Actual adoption
-is latched before publication, and partial/changed-owner outcomes remain truthful.
+is latched before publication. The prepared adoption receipt stays incomplete
+until the required ordinary Create/save result returns; publication or owner
+retirement between adoption and save cannot advertise complete success.
 
 The same thin bridge exposes `show_report(purpose)` through Main's actual enabled
 Report tab and AppState.open(Report), checking the original current project on
@@ -2489,3 +2491,11 @@ external app discovery are not implied. The ordinary user link remains usable.
 The model picker omits known unavailable/hidden catalogue rows; effort labels
 retain wire tokens, place Auto first and explicit highest efforts before lower
 ones, and display Ultra with its proper capital. No entitlement is inferred.
+
+The shared native Show ON admission reveals the normal sidebar before any route
+lookup or cue, retaining original request identity across the reveal. Create
+refusals retain the actual unavailable-control or existing-destination reason.
+The toolbar robot stays static; chat working animation remains independent.
+The red action pointer retains its last position between controls while the agent
+is active and hides at work end. Automatic local report receipts remain in the
+diagnostic files and no longer insert a chat/footer notice.
