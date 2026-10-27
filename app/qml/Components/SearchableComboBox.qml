@@ -118,7 +118,6 @@ EaElements.ComboBox {
         return first;
     }
 
-    leftPadding: inTable ? 0 : padding
     borderColor: inTable ? "transparent" : _borderColor()
     backgroundColor: inTable ? "transparent" : _backgroundColor()
     topInset: title === "" ? 0 : EaStyle.Sizes.fontPixelSize * 1.5
