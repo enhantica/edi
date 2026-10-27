@@ -70,8 +70,8 @@ TEST_CASE("E11 bounded stamps link and preserve pre-change codec across powder a
         const auto editor_before=edi::work_stamps(project,std::size_t{16}*1024*1024);
         project.note_edit();
         const auto editor_after=edi::work_stamps(project,std::size_t{16}*1024*1024);
-        CHECK_MESSAGE(editor_before.edits && editor_before.edits==editor_after.edits &&
-            editor_before.edits_at!=editor_after.edits_at && !edi::unchanged_since(project,editor_before),
+        CHECK_MESSAGE((editor_before.edits && editor_before.edits==editor_after.edits &&
+            editor_before.edits_at!=editor_after.edits_at && !edi::unchanged_since(project,editor_before)),
             " E11 F3 real owner edits preserve their record and renew its publication generation");
     }
 }

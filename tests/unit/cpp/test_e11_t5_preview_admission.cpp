@@ -45,9 +45,9 @@ TEST_CASE("E11 preview queued FIFO settles actual generations and cancellation w
 #endif
     for(int step=0;preview.busy() && step<16;++step)queue.one();
     queue.drain();
-    CHECK_MESSAGE(!preview.busy() && preview.newest_request()==2,
+    CHECK_MESSAGE((!preview.busy() && preview.newest_request()==2),
         " E11 F2 queued preview settles with the actual newest generation");
-    CHECK_MESSAGE(calculations==2 && published==std::vector<std::uint64_t>{2},
+    CHECK_MESSAGE((calculations==2 && published==std::vector<std::uint64_t>{2}),
         " E11 F2 cancelled first generation never publishes or replays");
     CHECK_MESSAGE((begin==std::vector<std::uint64_t>{1,2} && end==begin),
         " E11 F2 both actual calculations emit one ordered start and end");
@@ -97,7 +97,7 @@ TEST_CASE("E11 preview scheduling Post failure leaves no unowned job for later s
             {[&](auto& snapshot,const auto& token){++calculations;return result_for(snapshot,token);}});
         CHECK_THROWS_AS_MESSAGE(preview.recalculate(),std::runtime_error,
             " E11 F2 scheduling refusal reaches the owner synchronously");
-        CHECK_MESSAGE(calculations==0 && published.empty(),
+        CHECK_MESSAGE((calculations==0 && published.empty()),
             " E11 F2 rejected scheduling has executed and published no calculation");
         CHECK_NOTHROW_MESSAGE(preview.recalculate(),
             " E11 F2 an actual new request can retry after Post admission refusal");
@@ -124,7 +124,7 @@ TEST_CASE("E11 preview Worker scheduling refusal and explicit cancellation retai
             ++valid;cancelled=token.cancelled();return edi::work::Delivery([&]{++delivered;});});
         worker.cancel(ticket);
         for(int step=0;!queue.empty() && step<16;++step){auto delivery=std::move(queue.front());queue.pop_front();delivery();}
-        CHECK_MESSAGE(queue.empty() && orphan==0 && valid==1 && delivered==1 && cancelled,
+        CHECK_MESSAGE((queue.empty() && orphan==0 && valid==1 && delivered==1 && cancelled),
             " E11 F2 failed scheduling never replays and the later real token still cancels cooperatively");
         CHECK_MESSAGE(events.ids(edi::work::EventKind::Started)==std::vector<std::uint64_t>{ticket},
             " E11 F2 only the successfully returned ticket owns a started job");

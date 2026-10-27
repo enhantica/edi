@@ -83,7 +83,7 @@ void optional_lifetime(Family& live,Members members) {
         const auto retired_image=*held;
         Family absent=live; (absent.*member).reset();
         Prepared removal(live,std::move(absent)); transfer(removal);
-        CHECK_MESSAGE(!slot && held->is_detached(),
+        CHECK_MESSAGE((!slot && held->is_detached()),
             " E11 F1 removal retires the exact held coefficient cell");
         same(*held,retired_image);
         Family incoming=live; (incoming.*member).emplace();
@@ -91,7 +91,7 @@ void optional_lifetime(Family& live,Members members) {
         const auto wanted=*(incoming.*member);
         Prepared addition(live,std::move(incoming)); transfer(addition);
         REQUIRE_MESSAGE(slot.has_value()," E11 F1 absent-to-present restoration actually admits its slot");
-        CHECK_MESSAGE(&*slot!=held && slot->is_attached() && held->is_detached(),
+        CHECK_MESSAGE((&*slot!=held && slot->is_attached() && held->is_detached()),
             " E11 F1 reintroduced slots use new live cells and never resurrect retired handles");
         same(*slot,wanted); same(*held,retired_image);
     }
@@ -115,14 +115,14 @@ TEST_CASE("E11 restore peak fixed and optional payloads transfer without allocat
     for(auto* parameter:identities)REQUIRE_MESSAGE(parameter->bound(),
         " E11 F1 retained parameters enter commit through real bound column cells");
     edi::detail::PreparedPeakRestore prepared(live,wanted);transfer(prepared);
-    CHECK_MESSAGE(live.type==wanted.type && live.cutoff_fwhm==wanted.cutoff_fwhm,
+    CHECK_MESSAGE((live.type==wanted.type && live.cutoff_fwhm==wanted.cutoff_fwhm),
         " E11 F1 profile selector and cutoff restore with all coefficient payloads");
     std::size_t index=0;
     for(auto member:fixed){same(live.*member,wanted.*member);
-        CHECK_MESSAGE(&(live.*member)==identities[index++] && (live.*member).bound(),
+        CHECK_MESSAGE((&(live.*member)==identities[index++] && (live.*member).bound()),
             " E11 F1 fixed parameter retains its bound live cell identity");}
     for(auto member:optional){same(*(live.*member),*(wanted.*member));
-        CHECK_MESSAGE(&*(live.*member)==identities[index++] && (live.*member)->is_attached() && (live.*member)->bound(),
+        CHECK_MESSAGE((&*(live.*member)==identities[index++] && (live.*member)->is_attached() && (live.*member)->bound()),
             " E11 F1 engaged optional retains its live handle identity");}
     optional_lifetime<edi::PeakBase,edi::detail::PreparedPeakRestore>(live,optional);
 }
@@ -143,7 +143,7 @@ TEST_CASE("E11 restore absorption transfers metadata even when scientific values
         " E11 F1 absorption coefficients enter commit through real bound column cells");
     edi::detail::PreparedAbsorptionRestore prepared(live,wanted);transfer(prepared);
     std::size_t index=0;for(auto member:absorption){same(*(live.*member),*(wanted.*member));
-        CHECK_MESSAGE(&*(live.*member)==identities[index++] && (live.*member)->is_attached() && (live.*member)->bound(),
+        CHECK_MESSAGE((&*(live.*member)==identities[index++] && (live.*member)->is_attached() && (live.*member)->bound()),
             " E11 F1 retained absorption coefficient keeps its attached handle");}
     CHECK_MESSAGE(live.type==wanted.type," E11 F1 absorption family selector restores exactly");
     optional_lifetime<edi::AbsorptionBase,edi::detail::PreparedAbsorptionRestore>(live,absorption);
