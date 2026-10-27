@@ -12,7 +12,13 @@ get_directory_property(_edi_test_gui_targets DIRECTORY "${EDI_SOURCE}/app"
 if(NOT _edi_test_gui_targets)
     message(FATAL_ERROR "The real app must provide its current GUI targets to its acceptance host")
 endif()
-qt_add_executable(assistant_real_owner_probe probe.cpp)
+get_directory_property(_edi_test_build_commit_cpp DIRECTORY "${EDI_SOURCE}/app"
+                       DEFINITION EDI_APP_BUILD_COMMIT_CPP)
+if(NOT _edi_test_build_commit_cpp OR NOT TARGET edi_app_build_commit)
+    message(FATAL_ERROR "The real app must provide its current executable build-commit source and owner")
+endif()
+qt_add_executable(assistant_real_owner_probe probe.cpp "${_edi_test_build_commit_cpp}")
+add_dependencies(assistant_real_owner_probe edi_app_build_commit)
 set_target_properties(assistant_real_owner_probe PROPERTIES AUTOMOC ON)
 target_include_directories(assistant_real_owner_probe PRIVATE
     "${EDI_SOURCE}/tests/integration/py/assistant_native_probe")
