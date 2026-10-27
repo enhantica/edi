@@ -72,7 +72,9 @@ not the project being read (measured with the app's software renderer, as on the
    `adopt_saved_project`: the open project takes the values a reopen reads, and, when they changed and the project held
    a calculation, it is calculated from them and written again. The file, the open project and a reopened project then
    agree, the calculated pattern and R factors included. In the app this is not an edit: the project stays unmodified
-   with nothing to undo.
+   with nothing to undo. A calculation can give an infinite value (a peak width of 1e20, say), which no number in a
+   file spells. Such an experiment is not a result: it is written uncomputed and the open project holds it uncomputed,
+   as a reopen reads it, with no R factors. A NaN is a point that was not calculated, as before.
 
 1. **Opening fast.** The pages let go of a project before it is replaced and are built again in the background, one
    after another in the order Project, Structure, Experiment, Analysis, Report (owner, 2026-10-25): asynchronous loaders
