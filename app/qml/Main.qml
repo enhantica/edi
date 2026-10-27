@@ -465,6 +465,8 @@ EaComponents.ApplicationWindow {
     ]
 
     statusBar: StatusBar {
+        assistantChatShown: assistantPanel.visible && assistantPanel.shown
+        assistantManualTakeover: window.assistantManualTakeover
         pagesBuilt: window.pagesBuilt
         pagesWanted: window.pagesWanted
     }

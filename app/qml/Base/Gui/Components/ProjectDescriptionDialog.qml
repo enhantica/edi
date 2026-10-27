@@ -44,6 +44,10 @@ EaElements.Dialog {
     standardButtons: Dialog.Ok
 
     onAccepted: projectLocation = projectLocationField.text
+    onOpened: {
+        const create = standardButton(Dialog.Ok);
+        if (create) create.objectName = "createProject.accept";
+    }
 
     // Main layout
 
@@ -147,6 +151,7 @@ EaElements.Dialog {
 
             EaElements.TextField {
                 id: projectLocationField
+                objectName: "createProject.location"
 
                 implicitWidth: dialog.inputFieldWidth
                 rightPadding: chooseParentDirectoryButton.width

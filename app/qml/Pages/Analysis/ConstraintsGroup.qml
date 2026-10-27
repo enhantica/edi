@@ -15,6 +15,7 @@ import edi.app
 // duplicate below, as the aliases. A loop in `.edi`, so a table.
 Column {
     id: group
+    objectName: "relations.constraints"
 
     property AnalysisViewModel analysis: null
     readonly property ConstraintListModel constraints: analysis ? analysis.constraints : null
