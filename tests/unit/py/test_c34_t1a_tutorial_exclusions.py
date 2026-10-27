@@ -39,6 +39,9 @@ EXPECTED = {
     'pd-neut-xray-cwl_pbso4-d1a-lab': 'tutorial-runner',
     'pd-neut-cwl_cosio-d20_scan': 'sequential-scan-tutorial',
     'pd-xray-cwl_latp-bm01_scan': 'sequential-scan-tutorial',
+    'sc-neut-cwl_tb2ti2o7-heidi': 'tutorial-runner',
+    'sc-neut-cwl_pr2nio4-5c2': 'tutorial-runner',
+    'sc-neut-tof_taurine-senju': 'tutorial-runner',
 }
 
 

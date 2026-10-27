@@ -5,8 +5,22 @@ export function isLiveFitProgress(state) {
     /^fitting\s*·\s*it\s+[1-9]\d*$/i.test(state.text);
 }
 
+export function observesOrderedFitProgress(states, finalIteration) {
+  if (!Array.isArray(states) || !Number.isSafeInteger(finalIteration) || finalIteration < 1) return false;
+  let previous = -1;
+  for (const state of states) {
+    if (state?.running !== true || state?.visible !== true || typeof state.text !== 'string') continue;
+    const match = state.text.match(/^fitting\s*·\s*it\s+(\d+)$/i);
+    if (!match) continue;
+    const iteration = Number(match[1]);
+    if (!Number.isSafeInteger(iteration) || iteration > finalIteration || iteration < previous) return false;
+    previous = iteration;
+  }
+  return previous >= 0;
+}
+
 export function advancesLiveFitProgress(states, finalIteration) {
-  if (!Array.isArray(states) || !Number.isSafeInteger(finalIteration) || finalIteration < 3) return false;
+  if (!observesOrderedFitProgress(states, finalIteration) || finalIteration < 3) return false;
   let previous = 0;
   let advances = 0;
   for (const state of states) {

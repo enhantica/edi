@@ -9,6 +9,8 @@ import edi as engine
 import numpy as np
 import pytest
 
+from tests.fixtures.project_save.reference import six_digits
+
 HERE = Path(__file__).resolve().parents[2] / 'fixtures/background_estimate/basis-loader'
 INPUTS = json.loads((HERE / 'inputs.json').read_text())
 OMISSIONS = [
@@ -149,10 +151,10 @@ def test_raw_auto_basis_omission_derives_before_consumption_and_saves_current_ro
     )
     np.testing.assert_allclose(
         [r[2] for r in before],
-        [r[2] for r in actual],
+        [six_digits(r[2]) for r in actual],
         rtol=1e-11,
         atol=1e-8,
-        err_msg='Saved raw-omission rows must retain every estimated coefficient through reload',
+        err_msg='Saved raw-omission coefficients follow independent six-digit rounding',
     )
     loaded.analysis.calculate()
     assert rows(loaded.experiment) == before, (

@@ -11,7 +11,8 @@ namespace edi_app {
 //  - window.ediDevelopDiagnostics(action): "open" opens Preferences, selects Develop and opens Diagnostics through
 //    their own controls; "read" returns the dialogs' state, the text Diagnostics shows and the text ApplicationInfo
 //    provides; "close" closes both and resolves once they have closed.
-//  - window.ediControlGeometry(name): the one visible item of that name's scene rectangle and state, read only.
+//  - window.ediControlGeometry(name): the one visible item of that name's scene rectangle and state, read only: its
+//    text (a text item's own, else its visible descendants'), and for a checkable item whether it is checked.
 //  - window.ediFitProgress(): the status bar's fit progress text, its visibility and whether the fit is running;
 //    for a scan, the patterns it has drawn and the file drawn last.
 //  - window.ediPatternUpdates(mode): sets the "Pattern updates during a scan" preference (0 every pattern, 1 about

@@ -166,12 +166,14 @@ def test_source_metadata_archive_refuses_rebanked_whitelist_escapes(tmp_path, mo
 
 @pytest.mark.parametrize('damage', ['science', 'data', 'missing', 'extra', 'row-order'])
 def test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller(
-    tmp_path, monkeypatch, damage
+    tmp_path, monkeypatch, damage, record_property
 ):
     case = 'repo:docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project'
     source = metadata_bytes.restore(pins.REFERENCE.inputs()[case], tmp_path / 'input')
     monkeypatch.setattr(pins.REFERENCE, 'inputs', lambda: {case: source})
-    pins.test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'control', case)
+    pins.test_save_matches_the_labelled_pre_move_regression_pin(
+        tmp_path / 'control', case, record_property
+    )
     if damage == 'science':
         with (source / 'experiments/d20.edi').open('a') as stream:
             stream.write('\n_peak.cutoff_fwhm 3.125\n')
@@ -192,4 +194,6 @@ def test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_ca
         lines = target.read_bytes().splitlines(keepends=True)
         target.write_bytes(b''.join(reversed(lines)))
     with pytest.raises(AssertionError, match='complete reviewed pre-catalogue input'):
-        pins.test_save_matches_the_labelled_pre_move_regression_pin(tmp_path / 'escape', case)
+        pins.test_save_matches_the_labelled_pre_move_regression_pin(
+            tmp_path / 'escape', case, record_property
+        )

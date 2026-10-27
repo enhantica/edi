@@ -4343,6 +4343,15 @@
      "reason": "C",
      "verdict": "public"
     },
+    "export_zip": {
+     "need": {
+      "by": "deviation",
+      "ref": "D91",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
     "fit": {
      "need": {
       "by": "deviation",
@@ -4401,6 +4410,15 @@
      "need": {
       "by": "counterpart",
       "ref": "Project.load",
+      "verdict": "keep"
+     },
+     "reason": "C",
+     "verdict": "public"
+    },
+    "location": {
+     "need": {
+      "by": "deviation",
+      "ref": "D91",
       "verdict": "keep"
      },
      "reason": "C",
@@ -7589,6 +7607,7 @@
     "descent",
     "experiment",
     "experiments",
+    "export_zip",
     "fit",
     "fit_independent",
     "fit_joint",
@@ -7596,6 +7615,7 @@
     "fitting_mode",
     "free_parameters",
     "load",
+    "location",
     "metadata",
     "name",
     "parameters",

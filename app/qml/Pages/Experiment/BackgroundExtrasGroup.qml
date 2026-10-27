@@ -55,7 +55,7 @@ Column {
             token: group.experiment ? group.experiment.backgroundEstimateUseModel : "auto"
             resolved: group.experiment ? group.experiment.estimateModelChoice : ""
             onSelected: token => group.experiment.backgroundEstimateUseModel = token
-            ToolTip.visible: hovered && EaGlobals.Vars.showToolTips && refusal === ""
+            helpToolTip: true
             ToolTip.text: qsTr("What Estimate and the automatic mode do with the peaks of the calculated pattern. Subtract removes them from the measured data before the background is estimated and keeps the background away from them, which helps where peaks overlap and the data never come down to the background. Ignore estimates from the measured data alone. Auto subtracts them only when the calculated pattern matches the data: subtracting them leaves at most 1% of the points below the noise, which peaks in the wrong place or too strong do.")
         }
         ValueField {
@@ -90,7 +90,7 @@ Column {
             token: group.experiment ? group.experiment.backgroundEstimateMethod : ""
             resolved: group.experiment ? group.experiment.estimateMethod : ""
             onSelected: token => group.experiment.backgroundEstimateMethod = token
-            ToolTip.visible: hovered && EaGlobals.Vars.showToolTips && refusal === ""
+            helpToolTip: true
             ToolTip.text: group.methodTips[group.experiment ? group.experiment.estimateMethod : ""] ?? ""
         }
         ValueField {

@@ -122,6 +122,23 @@ QString ScanSession::load(const edi::Project& project) {
     return reindex(project);
 }
 
+void ScanSession::take(ScanSession& listing) {
+    stopMetadata();
+    datasets_ = std::move(listing.datasets_);
+    places_ = std::move(listing.places_);
+    index_ = std::move(listing.index_);
+    run_ = std::move(listing.run_);
+    source_ = std::move(listing.source_);
+    metadata_.assign(datasets_.files.size(), std::nullopt);
+    asked_.assign(datasets_.files.size(), false);
+    wanted_.clear();
+    metadata_errors_.clear();
+    loaded_.clear();
+    // A new generation, as a listing is: a read still in flight from before delivers nothing.
+    ++metadata_generation_;
+    reading_ = false;
+}
+
 QString ScanSession::readRun(const edi::Project& project) {
     // Only a provenance file that is not there is a legacy run; one that is there must read whole: the template it
     // names, the last kind, a known outcome, a finite non-negative time or none.

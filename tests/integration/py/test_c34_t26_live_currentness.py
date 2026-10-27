@@ -8,6 +8,8 @@ import numpy as np
 import pytest
 import test_c13_t4_march as march
 
+from tests.fixtures.project_save.computed_columns import check as check_computed
+
 ROOT = Path(__file__).resolve().parents[3]
 CORPUS = Path(os.environ.get('EDI_CRYSTA_CORPUS_ROOT', ROOT / 'build/crysta-src/tests/fitting'))
 
@@ -92,6 +94,14 @@ def test_mixed_bank_save_precedes_lazy_recalculation(tmp_path):
     source = tmp_path / 'two-bank-input'
     march._project(source, None)
     original = (source / 'experiments/experiment.edi').read_text()
+    # The same zero background is explicit so the independent interpolation
+    # reference reaches authored anchors, without changing the Bragg witness.
+    original += (
+        '\n_background.type line-segment\nloop_\n_background.id\n'
+        '_background.position\n_background.intensity\n'
+        'left 0 0\nright 180 0\n'
+    )
+    (source / 'experiments/experiment.edi').write_text(original)
     assert original.startswith('data_experiment\n'), (
         'the two-bank control must duplicate the declared three-point bank exactly'
     )
@@ -116,9 +126,10 @@ def test_mixed_bank_save_precedes_lazy_recalculation(tmp_path):
     assert '_data.intensity_calc' in current_file and '_refln.index_h' in current_file, (
         ' a bank-local edit leaves the untouched bank savable as current'
     )
-    assert '_data.intensity_calc' not in edited_file and '_refln.index_h' not in edited_file, (
-        ' a stale bank is omitted if saved before a non-UI read'
+    assert '_data.intensity_calc' in edited_file and '_refln.index_h' in edited_file, (
+        'Save renews a held stale bank from its own saved inputs before a non-UI read'
     )
+    check_computed(destination, edi)
     assert np.asarray(edited_bank.data.intensity_calc).size, (
         ' the first edited-bank read recalculates its current model'
     )
@@ -141,9 +152,10 @@ def test_equal_write_stales_before_read_then_recalculates(tmp_path, route):
         name = 'intensity_meas' if route == 'measured' else 'intensity_meas_su'
         data = project.experiment.data
         setattr(data, name, list(getattr(data, name)))
-    assert '_data.intensity_calc' not in saved_text(project, tmp_path / route), (
-        ' an equal write stales a computed unit before any read'
+    assert '_data.intensity_calc' in saved_text(project, tmp_path / route), (
+        'Save renews held results after an equal dependency write before any non-UI read'
     )
+    check_computed(tmp_path / route / 'saved', edi)
     assert np.asarray(project.experiment.data.intensity_calc).size, (
         ' an equal-write non-UI read recalculates rather than returns empty'
     )

@@ -15,7 +15,7 @@ from tests.fixtures.scan_screen.build import browser_configuration
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = (
     'tests/fixtures/loop_parameter_ids/line-segment',
-    'docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project',
+    'docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project',
     'tests/fixtures/report_evolution/project',
     'tests/fixtures/correlations/polynomial-3',
 )
