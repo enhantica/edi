@@ -12,6 +12,7 @@
 #include <QDesktopServices>
 #include <QInputMethodEvent>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QDirIterator>
 #include <QGuiApplication>
 #include <QFile>
@@ -35,6 +36,20 @@
 #include <QtTest/QTest>
 
 Q_IMPORT_QML_PLUGIN(edi_appPlugin)
+// Observe actual window delivery; never replace or consume an app input.
+class UiInputObserver final:public QObject {
+public:
+    std::function<void(const QString&,QEvent*)> observe;
+    bool eventFilter(QObject*,QEvent* event) override {
+        QString kind;
+        if(event->type()==QEvent::MouseButtonPress)kind="mouse_press";
+        else if(event->type()==QEvent::MouseButtonRelease)kind="mouse_release";
+        else if(event->type()==QEvent::KeyPress)kind="key_press";
+        else if(event->type()==QEvent::InputMethod)kind="input_method";
+        if(!kind.isEmpty() && observe)observe(kind,event);
+        return false;
+    }
+};
 class UrlObserver:public QObject {
     Q_OBJECT
 public:
@@ -195,6 +210,40 @@ int main(int argc,char** argv) {
         }
         return false;
     };
+    Array ui_sequence;
+    UiInputObserver ui_inputs;
+    auto ui_record=[&](const QString& kind,QEvent* event=nullptr) {
+        if(!window || !observed)return;
+        auto* panel=find("assistant.popup");auto* toggle=find("assistant.toggle");
+        auto* dialog=find("createProject.dialog");auto* create=qobject_cast<QQuickItem*>(find("project.create"));
+        Object row{{"kind",kind},{"project_present",observed->project()!=nullptr},
+            {"assistant_preference",preferences->property("assistantShown").toBool()},
+            {"assistant_selected",toggle&&toggle->property("assistantSelected").toBool()},
+            {"assistant_visible",panel&&panel->property("visible").toBool()},
+            {"create_visible",create&&create->isVisible()},
+            {"create_exposed",create&&!exposed_rect(create).isEmpty()},
+            {"dialog_visible",dialog&&dialog->property("visible").toBool()},
+            {"dialog_opened",dialog&&dialog->property("opened").toBool()},
+            {"dialog_name",dialog?dialog->property("projectName").toString():QString()},
+            {"focus",QGuiApplication::focusObject()?QGuiApplication::focusObject()->objectName():QString()}};
+        if(event && (event->type()==QEvent::MouseButtonPress || event->type()==QEvent::MouseButtonRelease)) {
+            const auto point=static_cast<QMouseEvent*>(event)->position();
+            row["create_contains_press"]=create&&exposed_rect(create).contains(create->mapFromScene(point));
+            if(dialog&&dialog->property("visible").toBool()) {
+                QQmlExpression expression(qmlContext(dialog),dialog,"standardButton(Dialog.Ok)");
+                auto* button=qobject_cast<QQuickItem*>(expression.evaluate().value<QObject*>());
+                row["confirm_contains_press"]=button&&button->isVisible()&&button->isEnabled()&&exposed_rect(button).contains(button->mapFromScene(point));
+                if(expression.hasError())row["confirm_lookup_error"]=expression.error().toString();
+            }
+        }
+        ui_sequence.push_back(row);
+    };
+    ui_inputs.observe=ui_record;window->installEventFilter(&ui_inputs);
+    QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerShown,&ui_inputs,[&]{ui_record("pointer_shown");});
+    QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerMoved,&ui_inputs,[&]{ui_record("pointer_moved");});
+    QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerPressed,&ui_inputs,[&]{ui_record("pointer_pressed");});
+    QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerHidden,&ui_inputs,[&]{ui_record("pointer_hidden");});
+    QObject::connect(observed,&edi_app::Session::projectChanged,&ui_inputs,[&]{ui_record("project_changed");});
     auto ui_snapshot=[&]()->Object {
         if(!observed) return {{"alive",false}};
         QQmlExpression expression(qmlContext(window),window,"Session.assistant");
@@ -292,7 +341,7 @@ int main(int argc,char** argv) {
                 {"selected_effort",assistant->selectedEffort()},
                 {"last_error",assistant->lastError()},{"messages",model_rows(assistant->messages())},
                 {"show_actions",assistant->showActions()},
-                {"action_transitions",action_transitions},
+                {"action_transitions",action_transitions},{"ui_sequence",ui_sequence},
                 {"work_report",QJsonObject::fromVariantMap(assistant->workReportReceipt())},
                 {"context",assistant->contextPreview()},
                 {"context_consent_required",assistant->contextConsentRequired()},
@@ -442,6 +491,15 @@ int main(int argc,char** argv) {
                 if(!composer || !composer->setProperty("text",input["text"].toString())) throw std::runtime_error("actual composer text property unavailable");
                 click(find("assistant.send"));
             } else if(op=="accept_dialog") result={{"accepted",accept_dialog()}};
+            else if(op=="clear_ui_sequence") ui_sequence=Array{};
+            else if(op=="dialog_ok") {
+                auto* dialog=find(input["name"].toString());
+                if(!dialog)throw std::runtime_error("actual original dialog is absent");
+                QQmlExpression expression(qmlContext(dialog),dialog,"standardButton(Dialog.Ok)");
+                const auto button=expression.evaluate().value<QObject*>();
+                if(expression.hasError())throw std::runtime_error(expression.error().toString().toStdString());
+                click(button);
+            }
             else if(op=="click") click(find(input["name"].toString()));
             else if(op=="open") result={{"opened",observed->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
             else if(op=="create") result={{"created",observed->createProject(input["name"].toString(),"independent fixture")}};

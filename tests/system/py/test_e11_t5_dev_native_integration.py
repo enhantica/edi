@@ -85,6 +85,8 @@ class MainActor:
             value = json.loads(line)
             assert 'host_error' not in value, value
             self.last = value
+            if 'ui_sequence' in value.get('ui', {}):
+                (self.folder / 'ui-sequence.json').write_text(json.dumps(value['ui']['ui_sequence'], indent=2))
             return value
         raise AssertionError(f'No actual observation returned for {op}')
 
@@ -1939,6 +1941,7 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
         tool_call('save_project', 'ordinary-created-current-save', destination='current'),
     ]])
     actor.connect()
+    actor.command('clear_ui_sequence')
     actor.request('Create a new project, import the attached CIF and save it.')
     actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle')
     outcomes = [native_result(response) for response in actor.responses()]
@@ -1951,6 +1954,35 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
     assert actor.last['ui']['singleton_identity'] and actor.last['ui']['engine_parent'], (
         'Create, Load and Save retain the one actual current Main engine-owned Session'
     )
+    events = actor.last['ui']['ui_sequence']
+    before_adoption = []
+    for event in events:
+        if event['project_present']:
+            break
+        before_adoption.append(event)
+    if show_actions:
+        pointers = [row for row in before_adoption if row['kind'].startswith('pointer_')]
+        assert pointers and all(not row['assistant_visible'] and not row['assistant_selected'] for row in pointers), (
+            'Show ON selects the real normal sidebar before locating or cueing its Create control'
+        )
+        assert any(row['kind'] == 'mouse_press' and row.get('create_contains_press')
+                   and not row['dialog_visible'] for row in before_adoption), (
+            'Show ON actually clicks the original normal-sidebar Create control before popup input'
+        )
+        assert any(row['dialog_visible'] and row['kind'] in {'key_press', 'input_method'}
+                   and row['focus'] == 'createProject.name' for row in before_adoption), (
+            'Show ON enters the original Create dialog through its genuine focused name control'
+        )
+        assert any(row['kind'] == 'mouse_press' and row['dialog_visible']
+                   and row['dialog_name'] == project_name and row.get('confirm_contains_press')
+                   for row in before_adoption), (
+            'Show ON confirms the actual original Create popup before ordinary Session adoption'
+        )
+    else:
+        assert before_adoption and all(not row['kind'].startswith('pointer_')
+            and not row['dialog_visible'] and row['assistant_preference'] for row in before_adoption), (
+            'Show OFF keeps assistant presentation unchanged before ordinary project adoption'
+        )
     owner = actor.last['ui']['project']
     assert owner['name'] == project_name and Path(owner['path']) == destination, (
         'Normal native Create retains its actual requested name and ordinary Documents destination'
