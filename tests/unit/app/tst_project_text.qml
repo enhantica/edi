@@ -97,6 +97,7 @@ Item {
             compare(editor.readOnly, false, "The default Text view permits editing");
             compare(apply.enabled, false, "Apply is disabled while the editor equals the project");
             const initial = editor.text, before = snapshot();
+            verify(!/^_edi\./m.test(initial), "Editable omits the output file-header category");
             const edited = initial.replace(/(_cell\.length_[abc]\s+)\S+/g, "$1" + "5.4317");
             verify(edited !== initial, "The valid edit changes the nontrivial cell lengths");
             editor.text = edited;
@@ -110,13 +111,41 @@ Item {
             const after = snapshot();
             verify(after !== before, "The text edit changes observable project values");
             const control = SettingsProof.copyProject(proof.project());
-            verify(SettingsProof.write(control, "structures/structure.edi", edited), "The file-open control receives exactly the valid edited block");
+            const complete = proof.structureText();
+            verify(/^_edi\.schema_version[ \t]+\d+/m.test(complete), "The independent standalone file retains its declared output schema header");
+            const fileEdit = complete.replace(/(_cell\.length_[abc]\s+)\S+/g, "$1" + "5.4317");
+            verify(fileEdit !== complete, "The ordinary-reader control receives the same nontrivial cell edits");
+            verify(SettingsProof.write(control, "structures/structure.edi", fileEdit), "The file-open control carries the same edited inputs in a complete EDI document");
             Session.project.undo();
             compare(snapshot(), before, "One undo restores every model parameter changed by one text apply");
             verify(Session.openProject(control), "The ordinary project reader opens the same edited text");
             compare(snapshot(), after, "Text apply and ordinary file open produce the same project values");
         }
-        function test_invalid_edits_are_atomic() {
+        function test_invalid_edits_are_atomic_data() {
+            return [
+                {
+                    tag: "unknown-item",
+                    kind: 0
+                },
+                {
+                    tag: "unknown-category",
+                    kind: 1
+                },
+                {
+                    tag: "invalid-number",
+                    kind: 2
+                },
+                {
+                    tag: "short-loop-row",
+                    kind: 3
+                },
+                {
+                    tag: "invalid-block-name",
+                    kind: 4
+                }
+            ];
+        }
+        function test_invalid_edits_are_atomic(data) {
             const block = Session.project.currentStructure;
             const editor = openText(block), apply = applyButton();
             compare(editor.readOnly, false, "Validation is exercised through the editable Text view");
@@ -147,17 +176,19 @@ Item {
                     problem: /block|data_|name/i
                 }
             ];
-            for (const witness of invalid) {
-                verify(witness.text !== original, "Every invalid edit actually changes the input text");
-                editor.text = witness.text;
-                tryCompare(apply, "enabled", true, 1000, "Each invalid edit remains eligible for validation");
-                click(apply);
-                compare(snapshot(), before, "Refusing invalid text changes no project parameter");
-                compare(block.text.text, sourceBefore, "Refusing invalid text preserves the committed block text");
-                compare(editor.text, witness.text, "An invalid edit stays available for correction");
-                const messages = [Session.lastError, block.text.error].concat(Render.descendants(tab).filter(item => item !== editor && item.visible && typeof item.text === "string" && !("cursorPosition" in item)).map(item => item.text)).join("\n");
-                verify(witness.problem.test(messages), "The refusal shows a warning identifying the invalid input class");
-            }
+            const witness = invalid[data.kind];
+            const warning = findChild(tab, "text.refusal");
+            verify(warning !== null, "The production Text tab owns a rendered refusal label");
+            compare(warning.text, "", "Each invalid input starts with a fresh tab and no stale refusal");
+            verify(witness.text !== original, "Every invalid edit actually changes the input text");
+            editor.text = witness.text;
+            tryCompare(apply, "enabled", true, 1000, "Each invalid edit remains eligible for validation");
+            click(apply);
+            compare(snapshot(), before, "Refusing invalid text changes no project parameter");
+            compare(block.text.text, sourceBefore, "Refusing invalid text preserves the committed block text");
+            compare(editor.text, witness.text, "An invalid edit stays available for correction");
+            verify(witness.problem.test(warning.text) || /\bline[ \t]+[1-9]\d*[ \t]*:[ \t]*\S+/i.test(warning.text), "The refusal identifies the invalid input by its tag/class or a source line with the reader's reason: " + warning.text);
+            tryVerify(() => Render.texts(tab).includes(warning) && warning.text.trim() !== "", 1000, "The refusal is displayed in the actual Text-tab warning, not only retained in an error property; visible=" + warning.visible + ", size=" + warning.width + "x" + warning.height + ", text=" + warning.text);
         }
         function test_everything_is_read_only() {
             tryCompare(Session.project, "calculating", false, 5000, "The calculated-data witness finishes its real model calculation");
