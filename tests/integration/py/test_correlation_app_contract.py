@@ -102,6 +102,7 @@ def test_create_project_passes_the_chosen_location_to_the_session():
     accepted = body(source, 'onAccepted:')
     script = """const queued=[],calls=[];
     const Qt={callLater:callback=>queued.push(callback)};
+    const EaGlobals={Vars:{showProjectDescriptionDialog:true}};
     const Preferences={newProjectSuRule:'iucr_99',newReportLibraries:'embedded'};
     const AppState={createFailed(){throw Error('creation refused')}};
     const createDialog={projectName:'first',projectDescription:'desc',
@@ -111,9 +112,13 @@ def test_create_project_passes_the_chosen_location_to_the_session():
     const Session={createProject(...args){calls.push(args);return true}};
     function accept(){BODY}accept();
     const before=calls.length;
+    const flagBeforeCreate=EaGlobals.Vars.showProjectDescriptionDialog;
     createDialog.projectLocation='/other';createDialog.projectName='changed';
+    createDialog.projectDescription='changed description';
+    createDialog.projectTitle='changed title';createDialog.projectAuthors='changed author';
     queued.splice(0).forEach(callback=>callback());
-    process.stdout.write(JSON.stringify([before,calls]));""".replace('BODY', accepted)
+    process.stdout.write(JSON.stringify({before,calls,flagBeforeCreate,
+      flagAfterCreate:EaGlobals.Vars.showProjectDescriptionDialog}));""".replace('BODY', accepted)
     result = subprocess.run(
         ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
     )
@@ -121,10 +126,17 @@ def test_create_project_passes_the_chosen_location_to_the_session():
         'The actual Create acceptance handler must execute with its captured dialog values: '
         + result.stderr
     )
-    assert json.loads(result.stdout) == [
+    observed = json.loads(result.stdout)
+    assert [observed['before'], observed['calls']] == [
         0,
         [['first', 'desc', '/chosen/first', 'iucr_99', 'title', 'author', True]],
     ], 'Create must defer replacement and retain the accepted name, chosen location and metadata'
+    assert observed['flagBeforeCreate'] is False, (
+        'Create acceptance clears the open-dialog flag before the queued project replacement'
+    )
+    assert observed['flagAfterCreate'] is False, (
+        'The queued project creation keeps the Create dialog flag cleared'
+    )
 
 
 def test_supported_only_selectors_are_disabled_and_explain_the_reason():

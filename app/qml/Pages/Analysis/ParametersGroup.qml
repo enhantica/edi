@@ -415,7 +415,7 @@ EaElements.GroupBox {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onContainsMouseChanged: group.freeTitleHovered = containsMouse
-                        onClicked: freeMenu.popup()
+                        onClicked: freeMenu.open()
                     }
                     FreeHeaderMenu {
                         id: freeMenu

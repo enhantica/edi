@@ -316,7 +316,7 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
 }
 
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures,
-                                             std::span<const std::size_t> positions) {
+                                             std::span<const std::size_t> positions, bool pattern_set) {
     // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
     // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the palette's (ADR-0038): an
     // experiment's and a structure's at its position, the calculated, background and residual colours its role colours.
@@ -342,10 +342,17 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
     const auto structure_at = [&](std::size_t place) {
         return place < structures ? held[experiments + place] : spare_structure[place - structures];
     };
+    const std::vector<std::size_t> structure_positions(held.begin() + static_cast<std::ptrdiff_t>(experiments),
+                                                       held.end());
+    const auto measured = [&](std::size_t place, bool dark) {
+        return pattern_set && place < experiments
+                   ? pattern_set_colour(scheme, place, experiments, structure_positions, dark)
+                   : colour(measured_at(place), dark);
+    };
     std::vector<SeriesStyle> table;
     for (std::size_t place = 0; place < measured_rows; ++place) {
-        table.push_back({"meas." + std::to_string(place), colour(measured_at(place), false),
-                         colour(measured_at(place), true), "line+markers+bars", 2.0, 1.0, 5.0});
+        table.push_back({"meas." + std::to_string(place), measured(place, false), measured(place, true),
+                         "line+markers+bars", 2.0, 1.0, 5.0});
     }
     const auto role = [scheme](ChartRole chart_role, bool dark) { return role_colour(scheme, chart_role, dark); };
     table.push_back({"calc", role(ChartRole::TotalCalculation, false), role(ChartRole::TotalCalculation, true), "line",
@@ -958,6 +965,10 @@ std::string hover_text(const PatternSource& source, const PatternSeries& series,
         return {};
     }
     return item_number(source.x_item, (*source.x)[row]) + ", " + item_number(series_item(series.kind), (*column)[row]);
+}
+
+std::string measured_readout(double value) {
+    return "meas: " + readout_number(series_item(SeriesKind::Measured), value);
 }
 
 std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternSeries& series, std::size_t point) {

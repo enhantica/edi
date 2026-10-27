@@ -714,14 +714,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("ncaf-"))) {
         const QString yscale = QStringLiteral("chart.toolbar.yscale");
         steps_.push_back({"ncaf-1-log-off", {"resize:1280x960", "theme:dark", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5",
-                                             analysis, basic, yscale, "choose:log"}});
-        steps_.push_back({"ncaf-2-sqrt-off", {yscale, "choose:square root"}});
+                                             analysis, basic, yscale, "choose:Log"}});
+        steps_.push_back({"ncaf-2-sqrt-off", {yscale, "choose:Square root"}});
         steps_.push_back({"ncaf-3-sqrt-on", {"chart.toolbar.structureCurves"}});
-        steps_.push_back({"ncaf-4-log-on", {yscale, "choose:log"}});
-        steps_.push_back({"ncaf-5-linear-on", {yscale, "choose:linear"}});
+        steps_.push_back({"ncaf-4-log-on", {yscale, "choose:Log"}});
+        steps_.push_back({"ncaf-5-linear-on", {yscale, "choose:Linear"}});
         steps_.push_back({"ncaf-6-linear-off", {"chart.toolbar.structureCurves"}});
-        steps_.push_back({"ncaf-7-log-off", {yscale, "choose:log"}});
-        steps_.push_back({"ncaf-8-bank2-sqrt-on", {"mainArea.blocks.down", yscale, "choose:square root", "chart.toolbar.structureCurves"}});
+        steps_.push_back({"ncaf-7-log-off", {yscale, "choose:Log"}});
+        steps_.push_back({"ncaf-8-bank2-sqrt-on", {"mainArea.blocks.down", yscale, "choose:Square root", "chart.toolbar.structureCurves"}});
         steps_.push_back({"ncaf-9-bank2-sqrt-off", {"chart.toolbar.structureCurves"}});
     }
     // The owner's retest: each structure's curve on (the default), off and on again through the toolbar on latp_scan, on
@@ -735,12 +735,12 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                 experiment, basic, "drag:chart.pointer:0.30,0.05,0.45,0.95"}});
         steps_.push_back({"retest-02-latp-off", {curves}});
         steps_.push_back({"retest-03-latp-on", {curves}});
-        steps_.push_back({"retest-04-latp-log", {yscale, "choose:log"}});
-        steps_.push_back({"retest-05-latp-sqrt", {yscale, "choose:square root"}});
+        steps_.push_back({"retest-04-latp-log", {yscale, "choose:Log"}});
+        steps_.push_back({"retest-05-latp-sqrt", {yscale, "choose:Square root"}});
         steps_.push_back({"retest-06-cosio", {"open-cli-project:pd-neut-cwl_cosio-d20_start-4", analysis, basic}});
-        steps_.push_back({"retest-07-cosio-linear", {yscale, "choose:linear"}});
+        steps_.push_back({"retest-07-cosio-linear", {yscale, "choose:Linear"}});
         steps_.push_back({"retest-08-ncaf", {"open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic}});
-        steps_.push_back({"retest-09-ncaf-log", {yscale, "choose:log"}});
+        steps_.push_back({"retest-09-ncaf-log", {yscale, "choose:Log"}});
         steps_.push_back({"retest-10-ncaf-off", {curves}});
     }
     // The owner's sequential fit: cosio's 155 patterns fitted with each structure's curve on (the default) and zoomed,
@@ -810,7 +810,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"scanviews-02-map-light", {"mainArea.analysis.tab.map"}});
         steps_.push_back({"scanviews-03-map-light-stepped", {"scanView.map.toolbar.smooth"}});
         steps_.push_back({"scanviews-04-map-light-log-inferno",
-                          {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale", "choose:log",
+                          {"scanView.map.toolbar.smooth", "scanView.map.toolbar.yscale", "choose:Log",
                            "scanView.map.toolbar.colourMap", "choose:Inferno"}});
         steps_.push_back({"scanviews-05-map-light-running", {"statusBar.fit.button", "wait-files:40",
                                                             "capture-now"}});
@@ -849,14 +849,14 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     if (only.startsWith(QLatin1String("mstyle-"))) {
         steps_.push_back({"mstyle-1-band-light", QStringList{"resize:1280x960", "theme:light"} + start
                                                      + open_example("pd-neut-cwl_lbco-hrpt")
-                                                     + QStringList{analysis, basic, "chart.toolbar.measuredStyle", "choose:band"}});
-        steps_.push_back({"mstyle-2-line-light", {"chart.toolbar.measuredStyle", "choose:line"}});
-        steps_.push_back({"mstyle-3-points-light", {"chart.toolbar.measuredStyle", "choose:points"}});
-        steps_.push_back({"mstyle-4-linepoints-light", {"chart.toolbar.measuredStyle", "choose:line + points", "chart.toolbar.legend"}});
+                                                     + QStringList{analysis, basic, "chart.toolbar.measuredStyle", "choose:Band"}});
+        steps_.push_back({"mstyle-2-line-light", {"chart.toolbar.measuredStyle", "choose:Line"}});
+        steps_.push_back({"mstyle-3-points-light", {"chart.toolbar.measuredStyle", "choose:Points"}});
+        steps_.push_back({"mstyle-4-linepoints-light", {"chart.toolbar.measuredStyle", "choose:Line + points", "chart.toolbar.legend"}});
         steps_.push_back({"mstyle-5-linepoints-dark", {"theme:dark"}});
-        steps_.push_back({"mstyle-6-points-dark", {"chart.toolbar.measuredStyle", "choose:points"}});
-        steps_.push_back({"mstyle-7-line-dark", {"chart.toolbar.measuredStyle", "choose:line"}});
-        steps_.push_back({"mstyle-8-band-dark", {"chart.toolbar.measuredStyle", "choose:band", "chart.toolbar.legend"}});
+        steps_.push_back({"mstyle-6-points-dark", {"chart.toolbar.measuredStyle", "choose:Points"}});
+        steps_.push_back({"mstyle-7-line-dark", {"chart.toolbar.measuredStyle", "choose:Line"}});
+        steps_.push_back({"mstyle-8-band-dark", {"chart.toolbar.measuredStyle", "choose:Band", "chart.toolbar.legend"}});
         steps_.push_back({"mstyle-9-band-dark-zoom", {"drag:chart.pointer:0.30,0.05,0.42,0.95"}});
         steps_.push_back({"mstyle-10-band-light-zoom", {"theme:light"}});
     }
@@ -899,11 +899,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"rowlabels-02c-map-reset-light", {"right-click:scanView.map.pointer"}});
         steps_.push_back({"rowlabels-02d-map-dense-selected-light", {"drag:scanView.map.pointer:0.5,0.93,0.5,0.93"}});
         steps_.push_back({"rowlabels-02e-stacked-dense-selected-light", {"mainArea.analysis.tab.stacked"}});
-        steps_.push_back({"rowlabels-03-map-file-light", {"mainArea.analysis.tab.map", "scanView.map.toolbar.rows", "choose:file"}});
+        steps_.push_back({"rowlabels-03-map-file-light", {"mainArea.analysis.tab.map", "scanView.map.toolbar.rows", "choose:File"}});
         steps_.push_back({"rowlabels-04-stacked-file-light", {"mainArea.analysis.tab.stacked"}});
         steps_.push_back({"rowlabels-05-stacked-file-zoom-light", {"drag:scanView.stacked.pointer:0.1,0.55,0.9,0.85"}});
         steps_.push_back({"rowlabels-06-stacked-file-dark", {"theme:dark", "right-click:scanView.stacked.pointer"}});
-        steps_.push_back({"rowlabels-07-stacked-value-dark", {"scanView.stacked.toolbar.rows", "choose:temperature (K)"}});
+        steps_.push_back({"rowlabels-07-stacked-value-dark", {"scanView.stacked.toolbar.rows", "choose:Temperature (K)"}});
         steps_.push_back({"rowlabels-08-map-value-dark", {"mainArea.analysis.tab.map"}});
         steps_.push_back({"rowlabels-09-three-stacked-light",
                           QStringList{"theme:light"} + open_cli_project("pd-neut-cwl_cosio-d20_scan-3f")
@@ -929,7 +929,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"mapcands-00-open", QStringList{"resize:1280x960", "theme:light"} + start
                                                   + open_example("pd-neut-cwl_cosio-d20_scan")
                                                   + QStringList{analysis, basic, "mainArea.analysis.tab.map",
-                                                                "scanView.map.toolbar.yscale", "choose:log"}});
+                                                                "scanView.map.toolbar.yscale", "choose:Log"}});
         for (const QString theme : {QStringLiteral("light"), QStringLiteral("dark")}) {
             // The list is taller than the window, so a far entry cannot be clicked: the first map is chosen from the
             // list, and each next one by a key on the closed box (open it to give it the keyboard, close it, step),
@@ -1025,6 +1025,48 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             {"figures-37-taurine-preferences-dark", "theme:dark"},
         };
         for (const QStringList& step : figures) {
+            steps_.push_back({step.front(), step.mid(1)});
+        }
+    }
+    // The owner's chart fixes of 2026-10-27, in both themes: on cosio's 162-file scan, Stacked with the shown pattern
+    // highlighted and not, its read-out, its legend and a click hiding a pattern, the included range rescaling at
+    // Overlay, and the Map with its read-out and its black plot area in the dark; ncaf's banks; the 3-file scan's
+    // pattern rescaled to the included range; heidi's correlations numbered. Run only when asked (`--demo-only fixes-`).
+    if (only.startsWith(QLatin1String("fixes-"))) {
+        const QString stacked = QStringLiteral("mainArea.analysis.tab.stacked");
+        const QString map = QStringLiteral("mainArea.analysis.tab.map");
+        const QString spacing = QStringLiteral("scanView.stacked.toolbar.spacing");
+        const QStringList fixes[] = {
+            {"fixes-01-162f-stacked-highlight-light", "resize:1280x960", "theme:light",
+             "open-cli-project:pd-neut-cwl_cosio-d20_scan-162f", analysis, basic, stacked, "wait-scan:stacked"},
+            {"fixes-02-162f-stacked-hover-light", "hover:scanView.stacked.pointer:0.5,0.5"},
+            {"fixes-03-162f-stacked-highlight-off-light", "scanView.stacked.toolbar.highlight"},
+            {"fixes-04-162f-stacked-legend-light", "scanView.stacked.toolbar.legend"},
+            {"fixes-05-162f-stacked-legend-hidden-light", "drag:scanView.stacked.pointer:0.93,0.035,0.93,0.035"},
+            {"fixes-06-162f-stacked-legend-highlight-light", "scanView.stacked.toolbar.highlight"},
+            {"fixes-07-162f-stacked-overlay-included-light", spacing, "choose:Overlay",
+             "scanView.stacked.toolbar.includedRange"},
+            {"fixes-08-162f-map-light", map, "wait-scan:map"},
+            {"fixes-09-162f-map-hover-light", "hover:scanView.map.pointer:0.5,0.5"},
+            {"fixes-10-162f-map-dark", "theme:dark"},
+            {"fixes-11-162f-map-hover-dark", "hover:scanView.map.pointer:0.5,0.5"},
+            {"fixes-12-162f-stacked-overlay-included-dark", stacked, "wait-scan:stacked"},
+            {"fixes-13-162f-stacked-overlay-dark", "scanView.stacked.toolbar.includedRange"},
+            {"fixes-14-162f-stacked-wide-dark", "scanView.stacked.toolbar.legend", spacing, "choose:Wide"},
+            {"fixes-15-ncaf-stacked-dark", "open-cli-project:pd-neut-tof_ncaf-wish-5bank_start-5", analysis, basic,
+             stacked, "wait-scan:stacked"},
+            {"fixes-16-ncaf-stacked-hover-dark", "hover:scanView.stacked.pointer:0.3,0.5"},
+            {"fixes-17-ncaf-map-dark", map, "wait-scan:map"},
+            {"fixes-18-ncaf-map-light", "theme:light"},
+            {"fixes-19-ncaf-stacked-light", stacked, "wait-scan:stacked"},
+            {"fixes-20-3f-pattern-included-light", "open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", analysis, basic,
+             "mainArea.analysis.tab.fitting", "chart.toolbar.includedRange"},
+            {"fixes-21-3f-pattern-light", "chart.toolbar.includedRange"},
+            {"fixes-22-heidi-correlations-light", "open-cli-project:sc-neut-cwl_tb2ti2o7-heidi_fit", analysis, basic,
+             "mainArea.analysis.tab.correlations"},
+            {"fixes-23-heidi-correlations-dark", "theme:dark"},
+        };
+        for (const QStringList& step : fixes) {
             steps_.push_back({step.front(), step.mid(1)});
         }
     }

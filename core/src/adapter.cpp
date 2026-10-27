@@ -4135,6 +4135,13 @@ void Project::publish_calculation(DueEstimates due) {
         const crysta::ComputedUnits& units = crysta::current(
             engine, engine.experiments[index],
             due == DueEstimates::Run ? crysta::DueEstimates::Run : crysta::DueEstimates::Defer);
+        // A calculation holding an infinity is not a result (crysta's one test, the residual included): the bank
+        // is calculated and holds nothing, as a save writes it and a reopen reads it, and no view shows the values.
+        if (crysta::holds_infinite(engine.experiments[index])) {
+            data.emplace_back();
+            reflections.emplace_back();
+            continue;
+        }
         if (experiments[index]->reflections) {
             // A single crystal: its calculated F² and geometry, one value per measured reflection.
             const crysta::ComputedRefln& refln = units.refln();
@@ -5424,7 +5431,7 @@ PatternSource fitted_scan_pattern(const Project& model, const crysta::Project& f
     source.meas = shared(view.data.intensity_meas);
     source.su = shared(view.data.intensity_meas_su);
     source.current = view.data_state == crysta::ComputedState::Current &&
-                     view.refln_state == crysta::ComputedState::Current;
+                     view.refln_state == crysta::ComputedState::Current && !crysta::holds_infinite(fitted.experiment());
     if (!source.current) {
         return source;
     }

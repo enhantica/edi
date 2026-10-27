@@ -15,6 +15,10 @@
 # Recorded from: union of this branch's and main's rows in a merge of main, no node measured
 # Collected tests: 18346; with a reported duration: 10631
 # Module-scoped fixture costs recorded: 91
+# measured_utc = 2026-10-27T10:29:53Z
+# Recorded from: measured test run (1 node(s) measured once, 16298 banked, 0 stale row(s) dropped)
+# Collected tests: 18752; with a reported duration: 10480
+# Module-scoped fixture costs recorded: 93
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -33,6 +37,10 @@
 # inventory_cpp = 327
 # inventory_measured = 17372
 # inventory_unmeasured = 0
+# inventory_python = 18752
+# inventory_cpp = 396
+# inventory_measured = 16299
+# inventory_unmeasured = 2849
 
 0.330	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-labels]
 0.420	tests/integration/app/test_adp_symmetry_gui.py::test_same_site_followers_and_tensor_equivalents_in_the_normal_qt_host[cubic-Bani-tensor]
@@ -502,6 +510,11 @@
 0.070	tests/integration/py/test_app_cache_closure.py::test_normal_screen_keeps_its_completed_artifact_during_delivery_relink
 0.080	tests/integration/py/test_app_cache_closure.py::test_normal_screen_reuse_refuses_replaced_delivered_binary[cache]
 0.070	tests/integration/py/test_app_cache_closure.py::test_normal_screen_reuse_refuses_replaced_delivered_binary[prepared]
+0.050	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.js-screen]
+0.050	tests/integration/py/test_app_cache_closure.py::test_new_browser_host_requires_sealed_served_assets[remove-edi_app.js-selector]
+0.360	tests/integration/py/test_app_cache_closure.py::test_normal_screen_keeps_its_completed_artifact_during_delivery_relink
+0.120	tests/integration/py/test_app_cache_closure.py::test_normal_screen_reuse_refuses_replaced_delivered_binary[cache]
+0.080	tests/integration/py/test_app_cache_closure.py::test_normal_screen_reuse_refuses_replaced_delivered_binary[prepared]
 0.040	tests/integration/py/test_app_cache_closure.py::test_normal_screen_transport_requires_a_delivered_app
 0.080	tests/integration/py/test_app_cache_closure.py::test_prepared_receipt_requires_effective_input_and_bundle_seals[browser_bundle-screen]
 0.080	tests/integration/py/test_app_cache_closure.py::test_prepared_receipt_requires_effective_input_and_bundle_seals[browser_bundle-selector]
@@ -2996,7 +3009,7 @@
 0.140	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[/chosen/-renamed-/chosen/renamed]
 0.150	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[/chosen///-first-/chosen/first]
 0.130	tests/integration/py/test_correlation_app_contract.py::test_create_location_joins_folder_and_edited_name_once[C:\\chosen\\\\-first-C:\\chosen\\first]
-0.000	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
+0.130	tests/integration/py/test_correlation_app_contract.py::test_create_project_passes_the_chosen_location_to_the_session
 0.000	tests/integration/py/test_correlation_app_contract.py::test_diagnostics_uses_the_preferences_shared_control_width
 0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[experiment-Experiment/ExperimentsGroup.qml-duplicateExperiment]
 0.000	tests/integration/py/test_correlation_app_contract.py::test_duplicate_group_action_is_reachable[structure-Structure/StructuresGroup.qml-duplicateStructure]
@@ -5289,7 +5302,7 @@
 0.040	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ferrite-austenite-beer]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ferrite-austenite-beer_joint]
 0.020	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_lbco-si-mcstas]
-0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-2bank_start-3]
+0.180	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-2bank_start-3]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-3bank_start-5]
 0.020	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-5bank_start-5]
 0.020	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-5bank_start-fullprof]
@@ -13512,6 +13525,8 @@
 0.490	tests/system/py/test_project_archive.py::test_python_opens_each_project_route_and_preserves_model_values[zip-sc-neut-tof_taurine-senju]
 0.000	tests/system/py/test_project_archive_app.py::test_opening_measurement_declares_both_targets_for_every_real_route
 0.970	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_cancel]
+3.480	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_create_completion:enter]
+3.410	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_create_completion:ok]
 2.910	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-folder]
 2.260	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-record]
 2.050	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_drop:pd-neut-cwl_cosio-d20_scan-3f-zip]
@@ -13528,6 +13543,9 @@
 1.040	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-cwl_tb2ti2o7-heidi_basic-record]
 1.400	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-folder]
 1.120	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-record]
+UNMEASURED:failed-in-this-run	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open:sc-neut-tof_taurine-senju-zip]
+4.330	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_choice_completion:enter]
+4.820	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_choice_completion:ok]
 2.740	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-folder]
 2.350	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:pd-neut-cwl_cosio-d20_scan-3f-zip]
 2.280	tests/system/py/test_project_archive_app.py::test_real_app_opens_project_routes_and_cancels_pending_work[test_open_dialog:sc-neut-cwl_tb2ti2o7-heidi_basic-folder]

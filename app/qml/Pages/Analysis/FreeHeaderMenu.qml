@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Controls
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
@@ -83,6 +84,10 @@ EaElements.Menu {
         }
     }
 
+    // Centred in the app window, as the app's dialogs are, not at the click (the owner, 2026-10-27).
+    parent: Overlay.overlay
+    x: Math.round((parent.width - width) / 2)
+    y: Math.round((parent.height - height) / 2)
     width: layout.implicitWidth
     verticalPadding: 0
 

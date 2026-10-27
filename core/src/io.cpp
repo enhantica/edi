@@ -4726,31 +4726,6 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
     return back;
 }
 
-// Whether a calculation left an infinite value in the experiment's calculated columns. No file number spells one, so
-// the save writes the experiment uncomputed (edi ADR-0052); a NaN is a point not calculated.
-bool holds_infinite(const ExperimentBase& experiment) {
-    const auto infinite = [](const ComputedColumn<double>& column) {
-        return std::any_of(column.begin(), column.end(), [](double value) { return std::isinf(value); });
-    };
-    if (experiment.data.has_value()) {
-        const PdDataBase& data = *experiment.data;
-        if (infinite(data.d_spacing) || infinite(data.intensity_calc) || infinite(data.intensity_bkg) ||
-            infinite(data.component_intensities_net) || infinite(data.residual)) {
-            return true;
-        }
-    }
-    if (experiment.reflections.has_value()) {
-        const auto& reflections = *experiment.reflections;
-        if (infinite(reflections.d_spacing) || infinite(reflections.sin_theta_over_lambda) ||
-            infinite(reflections.intensity_calc)) {
-            return true;
-        }
-    }
-    const PowderReflnDataBase& refln = experiment.refln;
-    return infinite(refln.d_spacing) || infinite(refln.sin_theta_over_lambda) || infinite(refln.f_calc) ||
-           infinite(refln.f_squared_calc) || infinite(refln.position);
-}
-
 }  // namespace
 
 bool adopt_saved_project(Project& project, const std::string& directory) {
@@ -4760,8 +4735,11 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     // A project still being built (no structure yet, or an experiment without data) is read back too: its values are
     // adopted like any other's. A save that cannot be read back is a failed save.
     const bool changed = adopt_values(project, read_saved_project(directory));
+    // A calculation made here, current or stale, is known by its source as well as by its values: one that was not a
+    // result is held calculated with no values, and its records still need the refresh below.
     const bool calculated = std::any_of(project.experiments.begin(), project.experiments.end(), [](const auto& item) {
-        return item->carried_calculation || (item->data.has_value() && !item->data->intensity_calc.empty()) ||
+        return item->carried_calculation || item->computed_source != nullptr ||
+               (item->data.has_value() && !item->data->intensity_calc.empty()) ||
                (item->reflections.has_value() && !item->reflections->intensity_calc.empty());
     });
     if (!calculated) {
@@ -4778,19 +4756,6 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
     const std::vector<std::function<void()>> before = hold_calculation(project);
     try {
         project.refresh_calculated_pattern(DueEstimates::Defer);
-        // An experiment whose calculation holds an infinity is written uncomputed, and held so, as a reopen reads it.
-        for (const auto& experiment : project.experiments) {
-            if (holds_infinite(*experiment)) {
-                if (experiment->data.has_value()) {
-                    experiment->data->clear_computed();
-                }
-                if (experiment->reflections.has_value()) {
-                    experiment->reflections->clear_computed();
-                }
-                experiment->refln.clear();
-                experiment->computed_source.reset();
-            }
-        }
         refresh_agreement_records(project);
         save_project(project, directory);
     } catch (...) {

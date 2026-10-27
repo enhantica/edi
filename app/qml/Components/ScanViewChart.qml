@@ -55,7 +55,15 @@ Item {
     }
     readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "blue-red"
     readonly property string mapDirection: chart.project ? chart.project.mapDirection : "auto"
-    readonly property bool mapInverted: ApplicationInfo.scanMapInverted(mapColours, mapDirection, chart.colors.chartBackground, chart.colors.isDarkPalette)
+    // A chart selector's value as its box shows it: a capital first, after the lower-case prefix ("y: Datablock"); the
+    // x box's symbols keep their case (the owner, 2026-10-27).
+    function capitalised(text: string): string {
+        return text.length > 0 ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+    }
+    // The plot area's colour: the chart's background, but black for the Map in the dark theme, so its low values (from
+    // #181818 in Blue-Red) stand apart from empty areas as they do on white in the light theme (the owner, 2026-10-27).
+    readonly property color plotBackground: mode === "map" && chart.colors.isDarkPalette ? "#000000" : chart.colors.chartBackground
+    readonly property bool mapInverted: ApplicationInfo.scanMapInverted(mapColours, mapDirection, chart.plotBackground, chart.colors.isDarkPalette)
     // The Stacked legend shown: its toolbar button, an app setting, off by default as the pattern chart's.
     readonly property bool stackedLegend: mode === "stacked" && Preferences.scanStackedLegendShown
     // The view's zoom, always on in these views (the owner, 2026-10-22): [min, max] on x and on y, or empty for the
@@ -333,6 +341,10 @@ Item {
         height: view.plotArea.height
         clip: true
 
+        Rectangle {
+            anchors.fill: parent
+            color: chart.plotBackground
+        }
         Repeater {
             model: chart.mode === "stacked" ? plot.ticks(axisX) : []
             delegate: Rectangle {
@@ -360,7 +372,7 @@ Item {
             positions: chart.scan !== null && chart.scan.joint && chart.project ? chart.project.experimentColourPositions : []
             takenPositions: chart.project ? chart.project.structureColourPositions : []
             colourMap: chart.mapColours
-            background: chart.colors.chartBackground
+            background: chart.plotBackground
             smoothRows: Preferences.scanMapSmooth
             reversed: chart.mode === "map" && chart.mapInverted
             stackedReversed: Preferences.scanStackedReversed
@@ -374,13 +386,11 @@ Item {
             // its font's line tall, rounded up to a whole pixel, which can be more than the row height it is given.
             labelled: chart.shown && chart.rowLabels && chart.scan !== null && chart.scan.rowTextsRevision >= 0 && chart.scan.count > 0
             labelGap: Math.max(AppSizes.legendRowHeight, Math.ceil(tickMetrics.height))
-            // Highlighting with the Stacked legend shown, the legend marks the shown dataset instead of its row's name
-            // (the owner, 2026-10-26).
-            nameCurrent: !(chart.stackedLegend && Preferences.chartHighlightSelected)
             // The shown dataset on top and the others faded, or all alike: one app setting for every chart of several
             // datasets (the owner, 2026-10-24).
             highlight: Preferences.chartHighlightSelected
             faded: Preferences.chartFadedOpacity
+            disabledColour: chart.colors.themeForegroundDisabled
             busy: chart.project !== null && chart.project.fit !== null && chart.project.fit.running
             // The stacked patterns' spacing, the project's step (edi::stacked_spacing_share).
             spacing: ApplicationInfo.stackedSpacingShare(chart.project ? chart.project.stackedSpacing : "wide")
@@ -459,6 +469,8 @@ Item {
                     chart.resetZoom();
                     return;
                 }
+                if (!zoomBox.visible && stackedLegend.toggleAt(pointer, mouse.x, mouse.y))
+                    return;
                 const atX = share => axisX.min + share * (axisX.max - axisX.min);
                 const atY = share => axisY.max - share * (axisY.max - axisY.min);
                 if (zoomBox.visible) {
@@ -476,28 +488,53 @@ Item {
                     chart.project.currentExperimentIndex = dataset;
             }
 
-            // The hovered dataset's name next to the pointer (the owner, 2026-10-25): above it while that fits inside the
-            // plot, else below it, and kept between the plot's sides, so it never covers the toolbar. Its arrow points
-            // at the pointer.
-            Item {
-                id: hoverPoint
+            // The hovered dataset's read-out (the owner, 2026-10-27), as the pattern chart's: its icon and name in its
+            // colour, then the intensity there; on Stacked by its curve, on the Map at the pointer. Right of and above
+            // that point, or on the other side where the plot ends. Shown while hover read-outs are on (the toolbar's
+            // button, the pattern chart's one setting).
+            Rectangle {
+                id: hoverTip
 
-                x: pointer.mouseX
-                y: pointer.mouseY
-                width: 0
-                height: 0
+                readonly property int dataset: pointer.hovered
+                readonly property real atX: axisX.min + pointer.mouseX / pointer.width * (axisX.max - axisX.min)
+                readonly property real value: dataset >= 0 ? layer.valueAt(dataset, atX) : NaN
+                readonly property real curve: chart.mode === "stacked" && !isNaN(value) ? layer.curveAt(dataset, atX) : NaN
+                readonly property real anchorY: isNaN(curve) ? pointer.mouseY : Math.max(0, Math.min(pointer.height, (axisY.max - curve) / (axisY.max - axisY.min) * pointer.height))
 
-                EaElements.ToolTip {
-                    id: hoverTip
+                objectName: "scanView." + chart.mode + ".hover"
+                visible: Preferences.patternHoverShown && dataset >= 0 && pointer.containsMouse
+                width: hoverLines.implicitWidth + chart.em
+                height: hoverLines.implicitHeight + chart.em * 0.5
+                x: pointer.mouseX + chart.em + width <= pointer.width ? pointer.mouseX + chart.em : Math.max(0, pointer.mouseX - chart.em - width)
+                y: anchorY - height - chart.em * 0.5 >= 0 ? anchorY - height - chart.em * 0.5 : anchorY + chart.em
+                color: chart.colors.mainContentBackgroundHalfTransparent
+                border.color: chart.colors.chartGridLine
+                border.width: EaStyle.Sizes.borderThickness
 
-                    readonly property real plotWidth: pointer.width
+                Column {
+                    id: hoverLines
 
-                    objectName: "scanView." + chart.mode + ".hover"
-                    visible: pointer.hovered >= 0 && pointer.containsMouse
-                    text: pointer.hovered >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(pointer.hovered) : ""
-                    x: Math.max(-hoverPoint.x, Math.min(plotWidth - hoverPoint.x - implicitWidth, -implicitWidth / 2))
-                    // Below, clear of the cross cursor.
-                    y: hoverPoint.y >= implicitHeight + gap ? -implicitHeight - gap : 3 * gap
+                    anchors.centerIn: parent
+
+                    IconLine {
+                        objectName: "scanView." + chart.mode + ".hover.name"
+                        height: AppSizes.legendRowHeight
+                        textColor: hoverTip.dataset >= 0 && layer.coloursRevision >= 0 ? layer.colourOf(hoverTip.dataset) : chart.colors.themeForeground
+                        segments: [
+                            {
+                                "icon": "microscope"
+                            },
+                            {
+                                "text": hoverTip.dataset >= 0 && chart.scan !== null && chart.scan.rowTextsRevision >= 0 ? chart.scan.rowText(hoverTip.dataset) : ""
+                            }
+                        ]
+                    }
+                    EaElements.Label {
+                        objectName: "scanView." + chart.mode + ".hover.intensity"
+                        visible: text !== ""
+                        color: chart.colors.themeForeground
+                        text: layer.intensityText(hoverTip.value)
+                    }
                 }
             }
         }
@@ -555,10 +592,14 @@ Item {
             objectName: "scanView." + chart.mode + ".rowLabel." + index
             visible: chart.hasData && chart.shownRowLabels[index] === true
             height: AppSizes.legendRowHeight
-            // Not highlighting, the shown dataset's label is its mark: bold, in the accent colour.
-            readonly property bool marked: !Preferences.chartHighlightSelected && chart.project !== null && chart.project.currentExperimentIndex === index
+            // On Stacked (the owner, 2026-10-27): highlighting, the shown dataset's label keeps its colour and every
+            // other is disabled-coloured; not highlighting, all keep their colours and the shown one is bold. On the
+            // Map, not highlighting, the shown one is bold in the accent colour.
+            readonly property bool current: chart.project !== null && chart.project.currentExperimentIndex === index
+            readonly property bool marked: !Preferences.chartHighlightSelected && current
+            readonly property color stackedColour: Preferences.chartHighlightSelected && !current ? chart.colors.themeForegroundDisabled : colour
             // The icon takes the text's colour, so a new colour changes no piece of the line.
-            textColor: marked ? EaStyle.Colors.themeAccent : colour
+            textColor: chart.mode === "stacked" ? stackedColour : marked ? EaStyle.Colors.themeAccent : colour
             segments: [
                 {
                     "icon": "microscope"
@@ -576,8 +617,11 @@ Item {
     }
 
     // The Stacked legend at the plot's top right: every dataset, or past fifteen the first, the shown and the last with how
-    // many more, the shown one bold in the accent colour while highlighting (ScanLayer.legend).
+    // many more, coloured as the row labels are (ScanLayer.legend).
+    // A click on an entry hides its pattern or shows it again, as on the pattern chart; the pointer area passes clicks.
     ChartLegend {
+        id: stackedLegend
+
         objectName: "scanView.stacked.legend"
         z: 1
         colors: chart.colors
@@ -585,16 +629,22 @@ Item {
         y: plot.y + chart.em
         visible: chart.stackedLegend && chart.hasData
         entries: layer.legend
+        toggles: true
+        // The "more" line has no key: it hides nothing.
+        onToggled: key => {
+            if (key !== "")
+                layer.toggleHidden(Number(key));
+        }
     }
 
-    // A map whose rows stand at their scan values keeps its numeric scale and labels no row; highlighting off, the shown
-    // dataset is still marked by its bold label (the owner, 2026-10-24), inside the plot's left edge at its row.
+    // A map whose rows stand at their scan values keeps its numeric scale and labels no row; the shown dataset is still
+    // marked by its bold label inside the plot's left edge at its row, with highlighting on too (the owner, 2026-10-27).
     IconLine {
         readonly property int dataset: chart.project !== null ? chart.project.currentExperimentIndex : -1
         readonly property real at: dataset >= 0 && chart.scan !== null && chart.scan.revision >= 0 ? layer.rowOf(dataset) : NaN
 
         objectName: "scanView." + chart.mode + ".rowLabel." + dataset
-        visible: !chart.rowLabels && chart.hasData && !Preferences.chartHighlightSelected && !isNaN(at) && at >= axisY.min && at <= axisY.max
+        visible: !chart.rowLabels && chart.hasData && !isNaN(at) && at >= axisY.min && at <= axisY.max
         height: AppSizes.legendRowHeight
         textColor: EaStyle.Colors.themeAccent
         segments: [
@@ -642,7 +692,7 @@ Item {
             width: chart.em
             height: parent.height
             colourMap: chart.mapColours
-            background: chart.colors.chartBackground
+            background: chart.plotBackground
             dark: chart.colors.isDarkPalette
             reversed: chart.mapInverted
         }
@@ -674,11 +724,10 @@ Item {
         const scale = Preferences.patternYScale;
         return scale === "log" ? Math.pow(10, value) : scale === "sqrt" ? Math.sign(value) * value * value : value;
     }
-    // The ends are written as the pattern chart writes its intensity ticks, so large ones take the same short
-    // exponent form (the owner, 2026-10-22).
-    readonly property var colourBarFormat: NumberText.axisFormat([intensityCounts(layer.displayMin), intensityCounts(layer.displayMax)], Preferences.patternYScale !== "log")
+    // The ends in scientific notation with two significant digits, 1.4e4 (the owner, 2026-10-27).
     function intensityText(value: real): string {
-        return NumberText.axisTick(intensityCounts(value), colourBarFormat);
+        const counts = intensityCounts(value);
+        return !isFinite(counts) ? "" : counts === 0 ? "0" : NumberText.exponent(counts, 2).replace("e+", "e");
     }
 
     EaElements.Label {
@@ -743,7 +792,7 @@ Item {
             readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
             // Open with one entry too, so it shows how the rows are placed.
             toolTip: qsTr("Y axis: the rows' places")
-            readonly property var entries: hasValue ? [chart.scan.valueTitle, order] : [order]
+            readonly property var entries: (hasValue ? [chart.scan.valueTitle, order] : [order]).map(text => chart.capitalised(text))
             model: entries
             closedTexts: entries.map(text => qsTr("y: %1").arg(text))
             shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
@@ -758,7 +807,7 @@ Item {
             readonly property var tokens: ["linear", "sqrt", "log"]
             readonly property string axis: "z"
             toolTip: qsTr("Z axis: the intensity scale, the pattern chart's y scale")
-            readonly property var entries: [qsTr("linear"), qsTr("square root"), qsTr("log")]
+            readonly property var entries: [qsTr("Linear"), qsTr("Square root"), qsTr("Log")]
             model: entries
             closedTexts: entries.map(text => qsTr("%1: %2").arg(axis).arg(text))
             shownIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
@@ -790,7 +839,7 @@ Item {
             toolTip: qsTr("The map's colours")
             maps: chart.mapChoices
             direction: chart.mapDirection
-            chartBackground: chart.colors.chartBackground
+            chartBackground: chart.plotBackground
             dark: chart.colors.isDarkPalette
             shownIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
             onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
@@ -823,6 +872,15 @@ Item {
                 toolTip: Preferences.scanStackedLegendShown ? qsTr("Hide legend") : qsTr("Show legend")
                 checked: Preferences.scanStackedLegendShown
                 onClicked: Preferences.scanStackedLegendShown = !Preferences.scanStackedLegendShown
+            }
+            // Hover read-outs on or off: the pattern chart's button, in its place after the legend, and its one setting
+            // (the owner, 2026-10-27).
+            ChartToolButton {
+                objectName: "scanView." + chart.mode + ".toolbar.hover"
+                fontIcon: "comment-alt"
+                toolTip: qsTr("Show coordinates tooltip on hover")
+                checked: Preferences.patternHoverShown
+                onClicked: Preferences.patternHoverShown = !Preferences.patternHoverShown
             }
             // The Stacked colours in reverse order; the Map's direction is its own selector.
             ChartToolButton {

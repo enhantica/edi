@@ -82,6 +82,15 @@ void ParameterTableModel::sync() {
     }
 }
 
+int ParameterTableModel::numberOf(const QString& path) const {
+    for (int row = 0; row < count(); ++row) {
+        if (text(row, QStringLiteral("path")) == path) {
+            return row + 1;
+        }
+    }
+    return 0;
+}
+
 bool ParameterTableModel::setRole(int row, const QString& role, const QVariant& value) {
     auto* item = const_cast<ParameterItem*>(static_cast<const ParameterItem*>(keyAt(row)));
     if (item == nullptr) {

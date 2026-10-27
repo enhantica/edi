@@ -251,6 +251,14 @@ class Edit {
     static Edit chi_square_tolerance(Project& project, double tolerance) {
         return Edit([&project, tolerance] { set_minimizer_chi_square_tolerance(project, tolerance); });
     }
+    // The facility and instrument that measured an experiment (ADR-0052), both at once, as a change of facility
+    // may also clear the instrument. "?" states an unknown one.
+    static Edit instrument_description(ExperimentBase& experiment, std::string facility, std::string instrument) {
+        return Edit([&experiment, facility = std::move(facility), instrument = std::move(instrument)] {
+            experiment.instrument.facility = facility;
+            experiment.instrument.name = instrument;
+        });
+    }
     static Edit peak_profile(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_peak_profile(experiment, token); });
     }

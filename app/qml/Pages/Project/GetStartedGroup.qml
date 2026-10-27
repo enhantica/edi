@@ -69,8 +69,11 @@ EaElements.GroupBox {
         // A new project's folder is under the user's documents unless one was chosen before; it is saved there at
         // once (the owner, 2026-10-08). The browser has no folder to save into: Save As downloads it.
         defaultProjectParentDirectory: EaLogic.Utils.urlToLocalFile(String(StandardPaths.writableLocation(StandardPaths.DocumentsLocation)))
-        // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges).
+        // On the next turn: the new project replaces this page, dialog and all (AppState.afterChanges). The flag is
+        // reset here, not only when the dialog has closed: this page goes before its closing ends, and the new page's
+        // dialog would open again on a flag still set.
         onAccepted: {
+            EaGlobals.Vars.showProjectDescriptionDialog = false;
             const name = createDialog.projectName, description = createDialog.projectDescription;
             const location = WebFiles.available ? "" : createDialog.projectLocation;
             const title = createDialog.projectTitle, authors = createDialog.projectAuthors;

@@ -431,10 +431,23 @@ def test_normal_screen_keeps_its_completed_artifact_during_delivery_relink(dispa
     retained = Path(first['receipt']['executable'])
     old = retained.read_bytes()
     delivered = dispatch.root / 'build/app/app/edi_app'
-    delivered.write_bytes(b'new delivered native artifact')
+    revision = subprocess.check_output(
+        ['git', '-C', str(dispatch.root), 'rev-parse', 'HEAD'], text=True
+    ).strip()
+    # A completed relink still identifies the source it was built from.
+    delivered.write_bytes(
+        b'new delivered native artifact\nedi-build-commit:' + revision.encode() + b'\n'
+    )
+    assert delivered.read_bytes() != old, (
+        'The delivery relink must replace its bytes while keeping the same source identity'
+    )
     assert retained != delivered and retained.read_bytes() == old, (
         'The screen driver retains the completed native artifact across a later delivery relink'
     )
     assert request('screen', 'desktop', tmp_path / 'second') == first, (
         'A later delivery relink cannot replace the already qualified screen observation artifact'
+    )
+    assert dispatch.calls == [('screen', 'desktop')] and dispatch.captures == ['desktop'], (
+        'A qualified delivery relink reuses the completed observation '
+        'without preparing or capturing again'
     )

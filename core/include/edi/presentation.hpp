@@ -194,8 +194,11 @@ struct SeriesStyle {
 // rows: the calculated, background and residual styles in the palette's role colours (edi::role_colour) and the
 // excluded-region style. `positions` holds the experiments' positions, then the structures'; empty, or of another
 // length, they are colour_positions' for a project with none held. Rows beyond the items take the next free positions.
+// With `pattern_set`, the `experiments` are one view's patterns (a scan's datasets) and take pattern_set_colour beside
+// the structures' positions, as the Stacked view colours them.
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme = kDefaultColourScheme, std::size_t experiments = 3,
-                                             std::size_t structures = 0, std::span<const std::size_t> positions = {});
+                                             std::size_t structures = 0, std::span<const std::size_t> positions = {},
+                                             bool pattern_set = false);
 
 // The display scales. Linear: the value. Sqrt: sign(y) × sqrt(|y|). Log10: log10(y) for y > 0,
 // NaN otherwise.
@@ -225,6 +228,9 @@ struct HoverLine {
 // the structure's name, `x` and `Miller indices: (h k l)` of its `_refln` row, the Miller indices alone in the
 // tick's colour. Numbers with two decimals and a thousands separator. Empty for a gap or a tick's end.
 std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternSeries& series, std::size_t point);
+
+// A measured intensity as the read-out writes it: `meas: 1,192.23`.
+std::string measured_readout(double value);
 
 // The decimator. A row is visible when its x lies in [x_min, x_max]; one row beyond each edge is
 // kept too. The pixel column of a row is min(columns − 1, floor((x − x_min) / (x_max − x_min) ×
