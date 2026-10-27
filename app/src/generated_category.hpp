@@ -26,6 +26,8 @@ class GeneratedCategory : public QObject {
     Q_PROPERTY(QStringList names READ names NOTIFY changed)
     Q_PROPERTY(QStringList labels READ labels NOTIFY changed)
     Q_PROPERTY(QStringList units READ units NOTIFY changed)
+    // The items the program writes, shown and never edited (the project's times and location).
+    Q_PROPERTY(QStringList setByProgram READ setByProgram NOTIFY changed)
     // A list of rows, each a list of values in the order of `names`.
     Q_PROPERTY(QVariantList rows READ rows NOTIFY changed)
 
@@ -41,6 +43,7 @@ class GeneratedCategory : public QObject {
     QStringList names() const { return names_; }
     QStringList labels() const { return labels_; }
     QStringList units() const { return units_; }
+    QStringList setByProgram() const { return set_by_program_; }
     QVariantList rows() const { return rows_; }
 
     // The block's text with one value replaced.
@@ -58,7 +61,7 @@ class GeneratedCategory : public QObject {
     QString id_;
     bool loop_ = false;
     bool output_ = false;
-    QStringList names_, labels_, units_;
+    QStringList names_, labels_, units_, set_by_program_;
     QVariantList rows_;
 };
 
