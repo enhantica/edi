@@ -1399,7 +1399,10 @@ void ProjectViewModel::syncPatternColours() {
     for (int i = 0; i < experiment_models_.size(); ++i) {
         if (scan_ && i == 0) {
             const std::size_t files = scan_session_->datasets().files.size();
-            const std::vector<std::size_t> structures(positions.begin() + experiment_models_.size(), positions.end());
+            std::vector<std::size_t> structures;
+            for (const int position : structure_colour_positions_) {
+                structures.push_back(static_cast<std::size_t>(position));
+            }
             std::vector<std::size_t> datasets =
                 edi::free_positions(edi::colour_scheme_or_default(colour_scheme_.toStdString()),
                                     edi::FigureKind::Experiment, files, structures);
