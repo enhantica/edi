@@ -42,6 +42,7 @@
 #include "crysta/constraints.hpp"
 #include "crysta/cell_metric.hpp"
 #include "crysta/cell_symmetry.hpp"
+#include "crysta/cif_import.hpp"
 #include "crysta/descent.hpp"
 #include "crysta/experiment_builder.hpp"
 #include "crysta/fit.hpp"
@@ -49,6 +50,7 @@
 #include "crysta/fit_report.hpp"
 #include "crysta/fittability.hpp"
 #include "crysta/identity.hpp"
+#include "crysta/legacy_metadata.hpp"
 #include "crysta/model.hpp"
 #include "crysta/parameter.hpp"
 #include "crysta/partype.hpp"
@@ -2570,13 +2572,54 @@ std::string one_row_category(const std::string& tag) {
 #endif
 }
 
-// crysta's check that a text's names are not a CIF's; an SDK without it has no such check.
-void refuse_cif_names(const std::vector<std::string>& tags) {
+std::vector<std::string> name_variants(const std::string& tag) {
 #if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
-    crysta::refuse_cif_names(tags);
+    return crysta::name_variants(tag);
 #else
-    static_cast<void>(tags);
+    static_cast<void>(tag);
+    return {};
 #endif
+}
+
+bool is_retired_metadata_tag(const std::string& tag) { return crysta::is_retired_metadata_tag(tag); }
+
+std::vector<std::string> apply_legacy_metadata(
+    const std::vector<std::pair<std::string, std::string>>& record, Project& project) {
+    std::vector<crysta::LegacyExperiment> experiments;
+    for (const auto& experiment : project.experiments) {
+        experiments.push_back(
+            {experiment->name, experiment->experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY,
+             experiment->effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT});
+    }
+    const crysta::LegacyMetadata converted = crysta::legacy_project_metadata(record, experiments);
+    std::size_t index = 0;
+    for (const auto& experiment : project.experiments) {
+        const crysta::LegacyDescription& description = converted.experiments[index++];
+        for (const auto& [field, value] :
+             {std::pair{&experiment->experiment_type.dimensionality, &description.dimensionality},
+              std::pair{&experiment->experiment_type.polarisation, &description.polarisation},
+              std::pair{&experiment->instrument.name, &description.instrument_name},
+              std::pair{&experiment->instrument.facility, &description.facility}}) {
+            if (field->empty() && !value->empty()) {
+                *field = *value;
+            }
+        }
+    }
+    std::vector<std::string> warnings;
+    for (const crysta::LegacyNotice& notice : converted.notices) {
+        warnings.push_back("project.edi " + notice.tag + " is retired (" + notice.detail + ")");
+    }
+    return warnings;
+}
+
+bool is_cif_names(const std::vector<std::string>& tags) {
+    return crysta::classify_names(tags) == crysta::TextKind::Cif;
+}
+
+std::string cif_to_edi(const std::string& text, bool experiment, const std::string& where,
+                       std::vector<std::string>& notes) {
+    return crysta::cif_to_edi(text, experiment ? crysta::DocumentKind::Experiment : crysta::DocumentKind::Structure,
+                              where, &notes);
 }
 
 #if !__has_include("crysta/dictionary_items.hpp")  // drop with the guards below when the pin moves
@@ -2595,10 +2638,11 @@ static std::vector<std::string> sorted_edi_paths(const std::string& folder) {
 }
 #endif
 
-std::vector<std::string> project_structure_files(const std::string& folder) {
+std::vector<std::string> project_structure_files(const std::string& folder, std::vector<std::string>* hidden) {
 #if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
-    return crysta::project_structure_files(folder);
+    return crysta::project_structure_files(folder, hidden);
 #else
+    static_cast<void>(hidden);
     return sorted_edi_paths(folder);
 #endif
 }
@@ -2779,6 +2823,12 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
     // The declared neutron source, so crysta chooses the table.
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
+    // ADR-0052: the description crosses as declared, so a save writes it back.
+    built.dimensionality =
+        crossed(crysta::TokenField::Dimensionality, built, e.experiment_type.dimensionality);
+    built.polarisation = crossed(crysta::TokenField::Polarisation, built, e.experiment_type.polarisation);
+    built.instrument_name = e.instrument.name;
+    built.facility = e.instrument.facility;
     built.dataset_weight = e.dataset_weight;
     built.data_file = e.data_file;
     // ADR-0040: the estimate settings, with the mode in force and, in auto mode, what the points came from, so a save
@@ -3117,6 +3167,12 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
                                                                       : std::string());
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
+    // ADR-0052: the description crosses as declared, so a save writes it back.
+    built.dimensionality =
+        crossed(crysta::TokenField::Dimensionality, built, e.experiment_type.dimensionality);
+    built.polarisation = crossed(crysta::TokenField::Polarisation, built, e.experiment_type.polarisation);
+    built.instrument_name = e.instrument.name;
+    built.facility = e.instrument.facility;
     built.dataset_weight = e.dataset_weight;
     if (cw) {
         if (!e.instrument.setup_wavelength) {

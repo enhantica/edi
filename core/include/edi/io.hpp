@@ -49,30 +49,38 @@ class IoError : public std::runtime_error {
 using WarningSink = std::function<void(const std::string&)>;
 Project load_project(const std::string& directory, const WarningSink& on_warning = {});
 
-// Structures and experiments enter an open project only from `.edi` block files. Every structure
-// and experiment text these loads and the project loader read goes through one check first:
-// crysta decides once, from the text as written, whether it is a CIF, which is refused, as reading
-// CIF files is not supported yet (the from-text entries below still read the classic CIF
-// vocabulary); text crysta cannot read is refused with its reason, never read by another reader.
-// Each load then refuses a path without the `.edi` extension and content without the project
-// format's `_edi.schema_version`, and builds through the loader's own block builder. An
-// experiment file must also declare its type — all four `_experiment_type` axes — and a type edi's
-// experiment class implements (powder + bragg); a project directory keeps the loader's
-// presence-tracked axes. Nothing is changed by a load: adding is the separate step below.
+// Structures and experiments enter an open project from files. Every structure and experiment
+// text these loads and the project loader read goes through one check first: crysta decides once,
+// from the names the text spells as written, whether it is a CIF. A CIF is read by crysta, which
+// writes the `.edi` text a save would write for what it builds, and edi reads that text; any other
+// text is read as it is. No file suffix decides anything. A text crysta refuses, or one without
+// the project format's `_edi.schema_version`, is refused naming the file, and what crysta reports
+// goes to `on_warning`, else to stderr. An experiment file must also declare its type — all four
+// `_experiment_type` axes — and a type edi's experiment class implements (powder + bragg); a
+// project directory keeps the loader's presence-tracked axes. Nothing is changed by a load: adding
+// is the separate step below. The `_edi_file` and `_cif_file` names are the older spellings.
+Structure load_structure_file(const std::string& path, const WarningSink& on_warning = {});
 Structure load_structure_edi_file(const std::string& path);
-// A structure file as crysta reads one, whatever it is called: a `.edi` structure is read, and a
-// CIF is refused, as reading CIF files is not supported yet. Throws IoError naming the file.
 Structure load_structure_cif_file(const std::string& path);
+BraggPdExperiment load_experiment_file(const std::string& path, const WarningSink& on_warning = {});
 BraggPdExperiment load_experiment_edi_file(const std::string& path);
-// A batch, checked as a whole before anything is added: every file as above, and each name
-// unique against the project and within the batch. The first refusal names its file.
+// A batch, checked as a whole before anything is added: every file as above, each name unique
+// against the project and within the batch, and each linked structure one the project holds. The
+// first refusal names its file.
 std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
-                                                         const std::vector<std::string>& paths);
+                                                         const std::vector<std::string>& paths,
+                                                         const WarningSink& on_warning = {});
 // Add a loaded structure: refused when the project already holds one (edi persists one structure
 // per project — load_project reads one, save_project refuses more).
 void add_loaded_structure(Project& project, Structure structure);
+// Refuses an experiment that links a structure the project does not hold, before a project-aware
+// import adds it: `where` leads the message, and `source` names the file it came from. A detached
+// experiment, from a factory, is checked when it is saved or calculated instead.
+void require_held_links(const Project& project, const BraggPdExperiment& experiment,
+                        const std::string& where = {}, const std::string& source = {});
 // Add a loaded experiment: refused when its name is already in the project (upstream's collection
-// `add` replaces by key; edi refuses rather than silently replacing — divergence D-k).
+// `add` replaces by key; edi refuses rather than silently replacing — divergence D-k), or when it
+// links a structure the project does not hold.
 void add_loaded_experiment(Project& project, BraggPdExperiment experiment);
 // Rename an experiment of the project, the adder's rule: refused when the new name is already in the
 // project, so a rename never makes two experiments share one name.
@@ -288,15 +296,14 @@ std::vector<ItemVec<FitParameterCorrelation>::Ptr> numbered_correlations(
     const std::vector<FitParameterCorrelation>& pairs);
 
 // Build one entity from text (diffraction-lib `StructureFactory.from_cif_str` /
-// `ExperimentFactory.from_cif_str` — ruling absorb-ten-26). BOTH entries accept the dot-form
-// `.edi` schema and the classic CIF vocabulary: the structure entry dispatches on
-// the cell vocabulary to the restored reader (B/U/aniso ADP ladder); the experiment entry
-// translates diffraction-lib's `cif_names` spellings (`_pd_meas.*`, `_instr.*`,
-// `_easydiffraction_peak.*`, …) to their `.edi` tags and flows through the one experiment
-// builder. Any other CIF is refused through the check above. Fails closed (IoError) as the
-// directory loader does.
-Structure structure_from_edi_text(const std::string& text);
-BraggPdExperiment experiment_from_edi_text(const std::string& text);
+// `ExperimentFactory.from_cif_str`), a CIF or a `.edi` text, by the check above. `where` names the
+// text in a refusal (the path, for a file), and crysta's reports go to `on_warning`, else to
+// stderr. Fails closed (IoError) as the directory loader does.
+Structure structure_from_edi_text(const std::string& text, const std::string& where = "<from_cif_str>",
+                                  const WarningSink& on_warning = {});
+BraggPdExperiment experiment_from_edi_text(const std::string& text,
+                                           const std::string& where = "<from_cif_str>",
+                                           const WarningSink& on_warning = {});
 
 /// The type of a new experiment, by its `.edi` tokens (`_experiment_type.*`).
 struct ExperimentTypeTokens {

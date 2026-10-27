@@ -45,4 +45,20 @@ Column {
             fieldValue: group.reflections ? group.band(group.reflections.wavelengthLow, group.reflections.wavelengthHigh) : ""
         }
     }
+    // The instrument and facility that measured the experiment (ADR-0052), as its file states them.
+    EaElements.GroupRow {
+        spacing: AppSizes.inputSpacing
+        ValueField {
+            objectName: "instrument.name"
+            editable: false
+            label: Session.label("instrument.name")
+            fieldValue: group.experiment && group.experiment.instrumentName !== "" ? group.experiment.instrumentName : qsTr("Not specified")
+        }
+        ValueField {
+            objectName: "instrument.facility"
+            editable: false
+            label: Session.label("instrument.facility")
+            fieldValue: group.experiment && group.experiment.facility !== "" ? group.experiment.facility : qsTr("Not specified")
+        }
+    }
 }
