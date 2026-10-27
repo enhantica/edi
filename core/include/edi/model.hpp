@@ -3864,6 +3864,13 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<double> fit_prof_cr_factor;
     std::optional<double> fit_prof_cwr_factor;
     std::optional<double> fit_chi_square;
+    // Whether the last fit recorded a share for this bank: any of the above, since a factor that was not a number
+    // is none.
+    bool fit_share_held() const {
+        return fit_n_data_points.has_value() || fit_prof_r_factor.has_value() || fit_prof_wr_factor.has_value() ||
+               fit_prof_wr_expected.has_value() || fit_prof_cr_factor.has_value() || fit_prof_cwr_factor.has_value() ||
+               fit_chi_square.has_value();
+    }
 
     // The bank's embedded measured data, parsed from the `.edi` `_data.*` loop.
     // Presence-tracked: `std::nullopt` means the source file declared no `_data` loop at all.
@@ -3897,6 +3904,9 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // (null = never calculated here). A copy shares it, and is never current: see
     // computed_current().
     std::shared_ptr<const detail::ComputedSource> computed_source;
+    // Whether the file it was loaded from held calculated results, which the loader does not keep: a save calculates
+    // them again, as it does results calculated here. Cleared by a calculation.
+    bool carried_calculation = false;
     // This experiment's identity as a calculation input.
     detail::Epoch epoch;
     // Whether `data`'s computed columns and `refln` describe this experiment now: it is still held
@@ -4526,16 +4536,17 @@ struct FitResultRecord {
     std::string message;
     int iterations = 0;
     double fitting_time = 0.0;  // seconds
-    double reduced_chi_square = 0.0;
+    // The agreement factors: none for one that was not a number (a fit over no weight), which a save leaves out.
+    std::optional<double> reduced_chi_square;
     std::string objective_name;
-    double objective_value = 0.0;
+    std::optional<double> objective_value;
     int n_data_points = 0;
     int n_parameters = 0;
     int n_free_parameters = 0;
     int degrees_of_freedom = 0;
     bool covariance_available = false;
     std::string exit_reason;  // crysta's status label: done, max_iter, no_step, cancelled
-    double prof_wr_factor = 0.0;
+    std::optional<double> prof_wr_factor;
     // The profile and expected R factors over every fitted point, and the two with the background taken out;
     // absent in a result written before them.
     std::optional<double> prof_r_factor;
@@ -4614,8 +4625,14 @@ inline void validate_sequential_data_dir(const std::string& data_dir, const std:
 // The top-level user object. calculate(tof_grid) runs the edi model through the crysta adapter and
 // returns the calculated intensity on the supplied TOF grid (len == tof_grid.size()); the grid is
 // the caller's argument (no measured data needed for a pure forward calculation).
-// The s.u. rule of a project that states none: IUCr recommendation 12 (`iucr_19`).
-inline constexpr const char* kDefaultSuRule = "iucr_19";
+// The s.u. rule of a project that states none: always two digits (`iucr_99`).
+inline constexpr const char* kDefaultSuRule = "iucr_99";
+// The rule a report and its CIF round by, whatever the project's own: IUCr recommendation 12 (`iucr_19`).
+inline constexpr const char* kReportSuRule = "iucr_19";
+
+// What a calculation does with a due background estimate (ADR-0040): run it first, as a calculation asked for does,
+// or defer it, so the experiment calculates with its own points, as a save's recalculation does.
+enum class DueEstimates { Run, Defer };
 
 class Project : public detail::ProjectAnchor {
    public:
@@ -4641,7 +4658,7 @@ class Project : public detail::ProjectAnchor {
     // experiment's computed `data` columns and `refln`, never returned alongside the model.
     // Every bank gets its results, or none does. Fails closed (std::invalid_argument -> Python
     // ValueError) on an experiment without a data node.
-    void calculate();
+    void calculate(DueEstimates due = DueEstimates::Run);
 
     // The fit and undo POSTCONDITION: make the stored calculated pattern describe the model it
     // sits beside. Ordinarily `calculate()` at the current state. A model can legitimately have NO
@@ -4652,7 +4669,7 @@ class Project : public detail::ProjectAnchor {
     // the old series would be a stale pattern nothing marks stale and propagating would make a
     // CONVERGED fit raise after writing its values. Absorbs only the declared
     // std::invalid_argument "cannot be calculated" failure; anything else propagates.
-    void refresh_calculated_pattern();
+    void refresh_calculated_pattern(DueEstimates due = DueEstimates::Run);
 
     // THE FIT-COMPLETION CONTRACT, binding on every `fit*` entry below. Completing a fit writes BOTH
     // halves of the model: the fitted values AND the stored calculated pattern beside them. Each fit
@@ -4786,8 +4803,8 @@ class Project : public detail::ProjectAnchor {
     ItemVec<BraggPdExperiment> experiments;
     std::string fitting_mode;
     // `project.edi` `_su_format.rule`: how every value with a standard uncertainty is written,
-    // `iucr_19` (IUCr recommendation 12, the default) or `iucr_99` (always two digits), by crysta's
-    // rule.
+    // `iucr_99` (always two digits, the default since the owner's record of 2026-10-24) or `iucr_19` (IUCr
+    // recommendation 12), by crysta's rule.
     std::string su_rule = kDefaultSuRule;
     // `reports/report.edi` `_report` (ADR-0036 §7): the report's settings, each absent until the file or the app
     // states it: whether Save report writes the HTML, the PDF and the CIF report, whether the HTML embeds its chart
@@ -4812,6 +4829,9 @@ class Project : public detail::ProjectAnchor {
     // so scan data are read in place and never copied. Forwarded to crysta's
     // Project::scan_data_root; never persisted.
     std::string scan_data_root;
+    // The .zip a project opened from an archive works for (edi ADR-0052): Python's `save()` writes `path` (the
+    // unpacked folder) and then rewrites this archive from it; empty for a project in a folder. Never persisted.
+    std::string archive;
     // diffraction-lib `Project.metadata` / `Project.name`: plain data, mirrored on crysta.
     // `load_project` and the binding's `save_as` keep metadata.path in step.
     ProjectMetadata metadata;
@@ -4901,7 +4921,7 @@ class Project : public detail::ProjectAnchor {
     friend bool unchanged_since(const Project& live, const WorkStamps& stamps);
     friend PublishOutcome publish(Project& live, CalculationResult&& result);
     // calculate()'s body: converts, calculates and publishes every bank, or throws first.
-    void publish_calculation();
+    void publish_calculation(DueEstimates due);
     detail::EditLog edits_;
     // edi ADR-0024: every collection of the project, and every collection inside its structures and
     // experiments, holds the project's record. ProjectTail calls it after a build or an assignment.
@@ -5475,8 +5495,8 @@ static_assert(detail::one_entry_per_column(MetadataCategory::columns, MetadataCa
 struct ProjectStateCategory {
     using Owner = Project;
     static constexpr const char* name = "project";
-    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root};
-    static constexpr std::array items{"", ""};
+    static constexpr auto columns = std::tuple{&Project::path, &Project::scan_data_root, &Project::archive};
+    static constexpr std::array items{"", "", ""};
 };
 static_assert(detail::one_entry_per_column(ProjectStateCategory::columns, ProjectStateCategory::items));
 

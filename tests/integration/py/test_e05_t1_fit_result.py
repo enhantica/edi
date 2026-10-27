@@ -8,7 +8,6 @@ No production fit-result projection supplies these expectations.
 from __future__ import annotations
 
 import json
-import math
 import re
 import runpy
 import shlex
@@ -21,6 +20,15 @@ from types import SimpleNamespace
 import edi
 import pytest
 import yaml
+
+from tests.fixtures.project_save.agreement import rounded_model_reference
+from tests.fixtures.project_save.reference import (
+    declared_rule,
+    require_saved_parameters,
+    saved_parameters,
+    six_digits,
+)
+from tests.fixtures.project_save.rounded_input import materialize as rounded_input
 
 ROOT = Path(__file__).resolve().parents[3]
 CASES = json.loads((ROOT / 'tests/fixtures/e05_t1/cli.json').read_text())['cases']
@@ -129,8 +137,8 @@ def test_cli_fixture_inventory():
 
 def codec_copy(case, target):
     shutil.copytree(ROOT / case['path'], target)
-    # Persistence does not calculate a pattern: retain real measured rows and the
-    # complete model, while historical result counts keep their CLI provenance.
+    # Retain a small real measured table and the complete model. Carried-result
+    # sources recalculate it on Save; codec-only metadata retains its historical provenance.
     for experiment in (target / 'experiments').glob('*.edi'):
         lines = experiment.read_text().splitlines()
         first = next(i for i, line in enumerate(lines) if line.startswith(('_data.', '_refln.')))
@@ -138,6 +146,39 @@ def codec_copy(case, target):
             first += 1
         experiment.write_text('\n'.join(lines[: first + 3]) + '\n')
     return target
+
+
+def carried_codec_reference(source, control_path, case, reference):
+    if any(
+        '_data.intensity_calc' in path.read_text()
+        for path in (source / 'experiments').glob('*.edi')
+    ):
+        # This is an independent rounded input control, never an engine-produced
+        # expected parameter set or a second Save through the same path.
+        control = rounded_input(source, control_path)
+        derived = rounded_model_reference(edi, control, case['record'])
+        points, free = int(derived['n_points_fitted']), int(reference['n_free_parameters'])
+        if points == 0:
+            # An empty assessment preserves the imported record, including absent
+            # factors; its historical fit count is not this truncated data's count.
+            return reference
+        reference |= {
+            'n_data_points': str(points),
+            'degrees_of_freedom': str(max(points - free, 0)),
+            'reduced_chi_square': str(derived['reduced_chi_square']),
+            'objective_value': str(derived['chi_square']),
+            **{
+                field: str(derived[metric])
+                for field, metric in (
+                    ('prof_r_factor', 'rp'),
+                    ('prof_wr_factor', 'rwp'),
+                    ('prof_wr_expected', 'rexp'),
+                    ('prof_cr_factor', 'crp'),
+                    ('prof_cwr_factor', 'cwrp'),
+                )
+            },
+        }
+    return reference
 
 
 @pytest.mark.parametrize('case', CASES, ids=itemgetter('id'))
@@ -155,6 +196,7 @@ def test_persisted_cli_projection_survives_load_and_save(case, tmp_path):
     saved = tmp_path / 'saved'
     project.save_as(saved)
     actual = scalars((saved / 'analysis/analysis.edi').read_text())
+    reference = carried_codec_reference(source, tmp_path / 'rounded-control', case, reference)
     assert set(actual) == {'_fit_result.' + key for key in reference}, (
         ' gate 8 load/save retains supported diffraction-lib result fields '
         'and omits unavailable metrics'
@@ -169,12 +211,25 @@ def test_persisted_cli_projection_survives_load_and_save(case, tmp_path):
         'n_free_parameters',
         'degrees_of_freedom',
         'prof_wr_factor',
+        'prof_r_factor',
+        'prof_wr_expected',
+        'prof_cr_factor',
+        'prof_cwr_factor',
     }
     for key, expected in reference.items():
         value = actual['_fit_result.' + key]
         if key in numeric:
-            assert math.isclose(float(value), float(expected), rel_tol=5e-9, abs_tol=5e-10), (
-                ' gate 8 persisted CLI numbers survive reopening at parity precision'
+            counts = {
+                'iterations',
+                'n_data_points',
+                'n_parameters',
+                'n_free_parameters',
+                'degrees_of_freedom',
+            }
+            wanted = float(expected) if key in counts else six_digits(float(expected))
+            assert float(value) == pytest.approx(wanted, rel=0, abs=0), (
+                'Persisted counts stay exact and real fit metrics follow independent '
+                'six-significant-digit rounding'
             )
         else:
             assert value == expected, (
@@ -192,6 +247,7 @@ def test_persisted_cli_projection_survives_load_and_save(case, tmp_path):
 def test_legacy_project_without_fit_result_keeps_model_state(case, tmp_path):
     project = edi.Project.load(codec_copy(case, tmp_path / 'source'))
     before = [(p.value, p.uncertainty, p.free) for p in project.parameters]
+    expected = saved_parameters(project, declared_rule(tmp_path / 'source'))
     target = tmp_path / 'saved'
     project.save_as(target)
     assert not scalars((target / 'analysis/analysis.edi').read_text()), (
@@ -200,19 +256,8 @@ def test_legacy_project_without_fit_result_keeps_model_state(case, tmp_path):
     after = edi.Project.load(target)
     actual = [(p.value, p.uncertainty, p.free) for p in after.parameters]
     assert len(actual) == len(before), ' gate 8 legacy persistence retains every model parameter'
-    for parameter, old, saved in zip(after.parameters, before, actual, strict=True):
-        assert saved[1:] == old[1:], (
-            ' gate 8 legacy persistence retains uncertainty and free flags exactly'
-        )
-        if parameter.name == 'occupancy' and not parameter.free:
-            # Complementary occupancies can evaluate as 1 - 0.95 before decimal output.
-            assert math.isclose(saved[0], old[0], rel_tol=0, abs_tol=math.ulp(1.0)), (
-                ' gate 8 fixed occupancy arithmetic retains its value within one unit-interval ulp'
-            )
-        else:
-            assert saved[0] == old[0], (
-                ' gate 8 every other legacy parameter retains its exact value'
-            )
+    require_saved_parameters(after.parameters, expected)
+    require_saved_parameters(project.parameters, expected)
 
 
 @pytest.mark.parametrize('status', ['done', 'cancelled', 'maxiter', 'nostep'])

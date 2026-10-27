@@ -163,7 +163,7 @@ Column {
                 enabled: !row.anisotropic
                 ToolTip.text: row.adpIso ? (row.anisotropic ? qsTr("Equivalent isotropic displacement %1, %2 (%3)") : qsTr("Isotropic displacement %1, %2 (%3)")).arg(row.adpIso.shortName).arg(row.adpIso.displayUnits).arg("_atom_site.adp_iso") : ""
                 // Help, hidden while the cell shows why its value is red.
-                ToolTip.visible: hovered && !warned && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -174,7 +174,7 @@ Column {
                 item: row.ani11 ? row.ani11 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_11") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -185,7 +185,7 @@ Column {
                 item: row.ani22 ? row.ani22 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_22") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -196,7 +196,7 @@ Column {
                 item: row.ani33 ? row.ani33 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_33") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -207,7 +207,7 @@ Column {
                 item: row.ani12 ? row.ani12 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_12") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -218,7 +218,7 @@ Column {
                 item: row.ani13 ? row.ani13 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_13") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
@@ -229,7 +229,7 @@ Column {
                 item: row.ani23 ? row.ani23 : null
                 text: item !== null ? value : ""
                 ToolTip.text: item !== null ? qsTr("%1, %2 (%3)").arg(item.shortName).arg(item.displayUnits !== "" ? item.displayUnits : qsTr("dimensionless")).arg("_atom_site_aniso.adp_23") : ""
-                ToolTip.visible: hovered && !warned && ToolTip.text !== "" && EaGlobals.Vars.showToolTips
+                helpToolTip: true
             }
         }
     }

@@ -3,9 +3,12 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <crysta/background_estimate.hpp>
 #include <filesystem>
+#include <iomanip>
 #include <memory>
 #include <optional>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -15,6 +18,7 @@
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/selectors.hpp"
+#include "project_save/rounding.hpp"
 
 namespace {
 namespace fs = std::filesystem;
@@ -93,6 +97,34 @@ State state(const edi::ExperimentBase& e) {
         }
     return result;
 }
+std::string saved_difference(const State& expected, const State& actual) {
+    if (expected == actual) return "";
+    std::ostringstream out;
+    out << std::setprecision(17) << " input digests " << expected.inputs << "/" << actual.inputs
+        << " point digests " << expected.points << "/" << actual.points;
+    for (std::size_t i = 0; i < std::min(expected.values.size(), actual.values.size()); ++i)
+        if (expected.values[i] != actual.values[i])
+            out << " value[" << i << "] " << expected.values[i] << "/" << actual.values[i];
+    for (std::size_t i = 0;
+         i < std::min(expected.positions_or_orders.size(), actual.positions_or_orders.size()); ++i)
+        if (expected.positions_or_orders[i] != actual.positions_or_orders[i])
+            out << " position[" << i << "] " << expected.positions_or_orders[i] << "/"
+                << actual.positions_or_orders[i];
+    return out.str();
+}
+State saved_state(State state) {
+    for (double& value : state.values) value = saved_reference::six_digits(value);
+    if (state.mode == "auto") {
+        // The values above have an independent decimal oracle. The separate wire-checksum
+        // invariant must now describe those written rows, rather than their old binary values.
+        std::vector<crysta::BackgroundPointValues> points;
+        for (std::size_t i = 0; i < state.values.size(); ++i)
+            points.push_back(
+                {state.ids[i], state.positions_or_orders[i], state.values[i], state.free[i]});
+        state.points = crysta::background_points_digest(points);
+    }
+    return state;
+}
 void delegated(const std::string& kind, bool data) {
     auto p = input(kind);
     auto other = std::make_shared<edi::BraggPdExperiment>(p.experiment());
@@ -118,9 +150,10 @@ void delegated(const std::string& kind, bool data) {
                   "Native delegated save must preserve the exact live host rows, constants, mode "
                   "and digests");
     auto loaded = edi::load_project((scratch.root / "saved").string());
-    CHECK_MESSAGE(
-        state(loaded.experiment()) == before,
-        "Native delegated save must write the same complete background state that its host holds");
+    CHECK_MESSAGE(state(loaded.experiment()) == saved_state(before),
+                  "Native delegated save must write the complete background state with six-digit "
+                  "saved values"
+                      << saved_difference(saved_state(before), state(loaded.experiment())));
     REQUIRE_NOTHROW_MESSAGE(
         loaded.calculate(),
         "A saved due series must reload and refresh without an unauthorized-edit refusal");
@@ -163,8 +196,10 @@ void typed_undo(const std::string& source, const std::string& target) {
         edi::save_project(p, (scratch.root / "saved").string()),
         "A cross-type Estimate Undo must leave a saveable complete typed background");
     auto loaded = edi::load_project((scratch.root / "saved").string());
-    CHECK_MESSAGE(state(loaded.experiment()) == state(e),
-                  "Typed Estimate Undo state must save and reload exactly");
+    CHECK_MESSAGE(state(loaded.experiment()) == saved_state(state(e)),
+                  "Typed Estimate Undo retains every field with independently projected six-digit "
+                  "saved values"
+                      << saved_difference(saved_state(state(e)), state(loaded.experiment())));
 }
 void explicit_fit(const std::string& kind, bool joint, bool simulation, bool phases,
                   bool automatic = true, bool already_current = false) {
