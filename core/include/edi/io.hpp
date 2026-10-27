@@ -291,7 +291,7 @@ UndoFitOutcome restore_fit_start(Project& project);
 void copy_fit_result(Project& to, const Project& from);
 // One experiment's share of the last fit (its `_fit_result_bank` row and its phases' `_fit_result_phase` rows),
 // from its counterpart in another copy of the project.
-void copy_fit_share(ExperimentBase& to, const ExperimentBase& from);
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept;
 void clear_fit_share(ExperimentBase& experiment);
 void clear_fit_result(Project& project);
 // `tag` when its category belongs only to a powder pattern, which a single crystal refuses by name; else empty.
@@ -389,6 +389,10 @@ bool persistable_name(const std::string& name);
 /// row.
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name);
+/// Same reader and assembly, with an internal approved-byte reader path and the original source path
+/// for file identity/naming. No second parser or input authority is introduced.
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
+                                         const std::string& source_path, bool take_file_name);
 
 // Registration-live loader vocabulary (seam 20 / I15): the Python registration seam adds a new
 // `_peak.type` token here so the loader and selector accept it without a rebuild — crysta's

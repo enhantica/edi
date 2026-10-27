@@ -598,6 +598,9 @@ std::string relation_inputs(const ItemVec<ParameterAlias>& aliases,
                             std::vector<RelationValueSlot>* values) {
     std::string out; relation_inputs_write(out, aliases, constraints, values); return out;
 }
+void relation_inputs_into(std::string& out,const ItemVec<ParameterAlias>& aliases,const ItemVec<ParameterConstraint>& constraints) {
+    relation_inputs_write(out,aliases,constraints,nullptr);
+}
 std::size_t relation_inputs_size(const ItemVec<ParameterAlias>& aliases,
                                 const ItemVec<ParameterConstraint>& constraints, std::size_t limit) {
     EncodingSize out(limit); relation_inputs_write(out, aliases, constraints, nullptr); return out.size();

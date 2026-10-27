@@ -8,6 +8,7 @@
 // than a parity to prove.
 
 #include "edi/io.hpp"
+#include <type_traits>
 #include "edi/project_archive.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
@@ -21,6 +22,7 @@
 #include "edi/selectors.hpp"
 #include "edi/symmetry.hpp"
 #include "edi/worker.hpp"
+#include "assistant_project_io.hpp"
 #include "identity_bridge.hpp"  // Crysta's identity rules, via the adapter
 #include "number_token.hpp"
 
@@ -1835,7 +1837,7 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     return experiment;
 }
 
-BraggPdExperiment experiment_from_block(const Block& block, const std::string& where) {
+BraggPdExperiment experiment_from_block(const Block& block, const std::string& where, bool embedded_only = false) {
     require_edi_schema(block, where);
     validate_known_tags(block, where);
     if (const std::string* form = block.find("_experiment_type.sample_form");
@@ -2381,6 +2383,9 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
         experiment.background.assign(std::move(points));
     }
     experiment.data = parse_measured_data(block, resolved.mode, where);
+    if (embedded_only && !experiment.data.has_value()) {
+        throw IoError("assistant result requires embedded measured data; generated grids are unsupported: " + where);
+    }
 
     // The one-loader ruling ("one loader, project contents select calculate vs fit"): a block may
     // declare its measured `_data` loop (fit-ready) or its `_data_range.<axis>_min/_max/_step`
@@ -2492,29 +2497,47 @@ struct KeyRename {
 };
 
 template <typename ProjectT>
-auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
+auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr, const Parameter* selected = nullptr, std::size_t maximum_name_bytes = 0, std::size_t* scratch_bytes = nullptr, std::size_t scratch_limit = 0) {
     using ParameterPtr = decltype(&project.structures.front()->cell.length_a);
     std::vector<ParameterSlot<ParameterPtr>> slots;
-    const auto add = [&slots](std::string id, std::string unique_name, ParameterPtr parameter) {
-        slots.push_back({std::move(id), std::move(unique_name), parameter});
+    const auto source = [selected,maximum_name_bytes,scratch_bytes,scratch_limit](const std::string& value) -> const std::string& {
+        if(selected && value.size()>maximum_name_bytes)throw std::length_error("Parameter spelling source exceeds capacity");
+        if(scratch_bytes && value.size()>(scratch_limit-*scratch_bytes)/16)
+            throw std::length_error("Relation spelling scratch exceeds capacity");
+        return value;
     };
-    const auto structure_name = [rename](const std::string& name) -> const std::string& {
+    if(selected)slots.reserve(1);
+    const auto add = [&slots,selected,scratch_bytes,scratch_limit](ParameterPtr parameter,const auto& names) {
+        if(selected && parameter!=selected)return; // No unrelated member formatting/allocation.
+        if(selected && !slots.empty())throw std::invalid_argument("Parameter spelling member is ambiguous");
+        if(scratch_bytes && scratch_limit-*scratch_bytes<8*sizeof(std::string)+8*64)throw std::length_error("Relation spelling scratch exceeds capacity");
+        auto pair=names();
+        if(scratch_bytes) {
+            // Original slot vector, returned named vector and lookup map overlap.
+            const auto add_bytes=[&](std::size_t bytes){if(bytes>scratch_limit-*scratch_bytes)throw std::length_error("Relation spelling scratch exceeds capacity");*scratch_bytes+=bytes;};
+            add_bytes(2*sizeof(ParameterSlot<ParameterPtr>)+2*sizeof(NamedParameter)+sizeof(std::pair<const std::string,const Parameter*>)+5*sizeof(void*));
+            for(unsigned copy=0;copy<4;++copy){add_bytes(pair.first.size()+1);add_bytes(pair.second.size()+1);}
+            return;
+        }
+        slots.push_back({std::move(pair.first),std::move(pair.second),parameter});
+    };
+    const auto structure_name = [rename,&source](const std::string& name) -> const std::string& {
         const bool renamed =
             rename != nullptr && !rename->structure.empty() && datablock_key(name, "structure") == rename->structure;
-        return renamed ? rename->to : name;
+        return source(renamed ? rename->to : name);
     };
-    const auto experiment_name = [rename](const ExperimentBase& experiment) -> const std::string& {
-        return rename != nullptr && rename->experiment == &experiment ? rename->to : experiment.name.value();
+    const auto experiment_name = [rename,&source](const ExperimentBase& experiment) -> const std::string& {
+        return source(rename != nullptr && rename->experiment == &experiment ? rename->to : experiment.name.value());
     };
     // Several structures name each one's slots by its datablock key, as crysta's fit_state.hpp; one
     // structure keeps `structure.`.
     const bool several_structures = project.structures.size() > 1;
     for (auto& structure_item : project.structures) {
         auto& structure = *structure_item;
-        const std::string block = datablock_key(structure_name(structure.name.value()), "structure");
-        const std::string base = several_structures ? "structure." + block + "." : std::string("structure.");
+        const auto block = [&] {return datablock_key(source(structure_name(structure.name.value())), "structure");};
+        const auto base = [&] {return several_structures ? "structure." + block() + "." : std::string("structure.");};
         const auto cell = [&](const char* name, ParameterPtr parameter) {
-            add(base + "cell." + name, block + ".cell." + name, parameter);
+            add(parameter,[&] {return std::pair<std::string,std::string>{base() + "cell." + name,block() + ".cell." + name};});
         };
         cell("length_a", &structure.cell.length_a);
         cell("length_b", &structure.cell.length_b);
@@ -2524,49 +2547,49 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         cell("angle_gamma", &structure.cell.angle_gamma);
         for (auto& site_item : structure.atom_sites) {
             auto& site = *site_item;
-            const std::string prefix = base + site.id.value() + ".";
-            const std::string unique = block + ".atom_site." + site.id.value() + ".";
-            add(prefix + "fract_x", unique + "fract_x", &site.fract_x);
-            add(prefix + "fract_y", unique + "fract_y", &site.fract_y);
-            add(prefix + "fract_z", unique + "fract_z", &site.fract_z);
-            add(prefix + "occupancy", unique + "occupancy", &site.occupancy);
-            add(prefix + "adp_iso", unique + "adp_iso", &site.adp_iso);
+            const auto prefix = [&] {return base() + source(site.id.value()) + ".";};
+            const auto unique = [&] {return block() + ".atom_site." + source(site.id.value()) + ".";};
+            add(&site.fract_x,[&] {return std::pair<std::string,std::string>{prefix() + "fract_x",unique() + "fract_x"};});
+            add(&site.fract_y,[&] {return std::pair<std::string,std::string>{prefix() + "fract_y",unique() + "fract_y"};});
+            add(&site.fract_z,[&] {return std::pair<std::string,std::string>{prefix() + "fract_z",unique() + "fract_z"};});
+            add(&site.occupancy,[&] {return std::pair<std::string,std::string>{prefix() + "occupancy",unique() + "occupancy"};});
+            add(&site.adp_iso,[&] {return std::pair<std::string,std::string>{prefix() + "adp_iso",unique() + "adp_iso"};});
         }
         // The anisotropic sites' tensors, after every site (crysta's fit_state.hpp order).
         for (auto& tensor_item : structure.atom_site_aniso) {
             auto& tensor = *tensor_item;
-            const std::string prefix = base + tensor.id.value() + ".";
-            const std::string unique = block + ".atom_site_aniso." + tensor.id.value() + ".";
-            add(prefix + "adp_11", unique + "adp_11", &tensor.adp_11);
-            add(prefix + "adp_22", unique + "adp_22", &tensor.adp_22);
-            add(prefix + "adp_33", unique + "adp_33", &tensor.adp_33);
-            add(prefix + "adp_12", unique + "adp_12", &tensor.adp_12);
-            add(prefix + "adp_13", unique + "adp_13", &tensor.adp_13);
-            add(prefix + "adp_23", unique + "adp_23", &tensor.adp_23);
+            const auto prefix = [&] {return base() + source(tensor.id.value()) + ".";};
+            const auto unique = [&] {return block() + ".atom_site_aniso." + source(tensor.id.value()) + ".";};
+            add(&tensor.adp_11,[&] {return std::pair<std::string,std::string>{prefix() + "adp_11",unique() + "adp_11"};});
+            add(&tensor.adp_22,[&] {return std::pair<std::string,std::string>{prefix() + "adp_22",unique() + "adp_22"};});
+            add(&tensor.adp_33,[&] {return std::pair<std::string,std::string>{prefix() + "adp_33",unique() + "adp_33"};});
+            add(&tensor.adp_12,[&] {return std::pair<std::string,std::string>{prefix() + "adp_12",unique() + "adp_12"};});
+            add(&tensor.adp_13,[&] {return std::pair<std::string,std::string>{prefix() + "adp_13",unique() + "adp_13"};});
+            add(&tensor.adp_23,[&] {return std::pair<std::string,std::string>{prefix() + "adp_23",unique() + "adp_23"};});
         }
     }
     for (auto& experiment_item : project.experiments) {
         auto& experiment = *experiment_item;
         // ADR-0016: the canonical datablock key, as crysta's writer composes it.
-        const std::string prefix = datablock_key(experiment_name(experiment), "experiment") + ".";
+        const auto prefix = [&] {return datablock_key(source(experiment_name(experiment)), "experiment") + ".";};
         // A link with no structure id names its scale by the project's structure, as crysta's walk
         // does (structure_link_id). Every link prefixes its own slots by its structure, whatever their
         // number, as every loop row is named by its id (the owner, 2026-10-11).
         const auto entry_of = [&](const std::string& linked) {
             return datablock_key(
-                structure_name(linked.empty() && !project.structures.empty() ? project.structures.front()->name.value()
-                                                                             : linked),
+                source(structure_name(linked.empty() && !project.structures.empty() ? project.structures.front()->name.value()
+                                                                             : linked)),
                 "structure");
         };
-        const auto phase_prefix = [&](const std::string& structure_id) { return prefix + entry_of(structure_id) + "."; };
+        const auto phase_prefix = [&](const std::string& structure_id) { return prefix() + entry_of(structure_id) + "."; };
         const auto peak = [&](const std::string& name, ParameterPtr parameter) {
-            add(prefix + name, prefix + "peak." + name, parameter);
+            add(parameter,[&] {return std::pair<std::string,std::string>{prefix() + name,prefix() + "peak." + name};});
         };
         const auto instrument = [&](const std::string& name, ParameterPtr parameter) {
-            add(prefix + name, prefix + "instrument." + name, parameter);
+            add(parameter,[&] {return std::pair<std::string,std::string>{prefix() + name,prefix() + "instrument." + name};});
         };
         const auto absorption = [&](const std::string& name, ParameterPtr parameter) {
-            add(prefix + name, prefix + "absorption." + name, parameter);
+            add(parameter,[&] {return std::pair<std::string,std::string>{prefix() + name,prefix() + "absorption." + name};});
         };
         if (experiment.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT) {
             peak("rise_alpha_0", &experiment.peak.rise_alpha_0);
@@ -2650,8 +2673,7 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         }
         // One scale per linked structure; several links name theirs by structure.
         for (auto& link : experiment.linked_structures) {
-            add(phase_prefix(link->structure_id) + "scale",
-                prefix + "linked_structure." + entry_of(link->structure_id.value()) + ".scale", &link->scale);
+            add(&link->scale,[&] {return std::pair<std::string,std::string>{phase_prefix(link->structure_id) + "scale",prefix() + "linked_structure." + entry_of(link->structure_id.value()) + ".scale"};});
         }
         if (experiment.absorption.abscor1) {
             absorption("abscor1", &*experiment.absorption.abscor1);
@@ -2664,16 +2686,16 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         }
         // A single crystal's extinction, after absorption (crysta fit_state.hpp's order).
         if (experiment.extinction.domain_radius) {
-            add(prefix + "domain_radius", prefix + "extinction.domain_radius", &*experiment.extinction.domain_radius);
+            add(&*experiment.extinction.domain_radius,[&] {return std::pair<std::string,std::string>{prefix() + "domain_radius",prefix() + "extinction.domain_radius"};});
         }
         if (experiment.extinction.mosaic_spread) {
-            add(prefix + "mosaic_spread", prefix + "extinction.mosaic_spread", &*experiment.extinction.mosaic_spread);
+            add(&*experiment.extinction.mosaic_spread,[&] {return std::pair<std::string,std::string>{prefix() + "mosaic_spread",prefix() + "extinction.mosaic_spread"};});
         }
         if (experiment.extinction.crystal_radius) {
-            add(prefix + "crystal_radius", prefix + "extinction.crystal_radius", &*experiment.extinction.crystal_radius);
+            add(&*experiment.extinction.crystal_radius,[&] {return std::pair<std::string,std::string>{prefix() + "crystal_radius",prefix() + "extinction.crystal_radius"};});
         }
         if (experiment.extinction.coefficient) {
-            add(prefix + "coefficient", prefix + "extinction.coefficient", &*experiment.extinction.coefficient);
+            add(&*experiment.extinction.coefficient,[&] {return std::pair<std::string,std::string>{prefix() + "coefficient",prefix() + "extinction.coefficient"};});
         }
         for (const auto& [name, term] :
              {std::pair{"coefficient_11", &experiment.extinction.coefficient_11},
@@ -2683,15 +2705,14 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
               std::pair{"coefficient_13", &experiment.extinction.coefficient_13},
               std::pair{"coefficient_23", &experiment.extinction.coefficient_23}}) {
             if (*term) {
-                add(prefix + name, prefix + "extinction." + name, &**term);
+                add(&**term,[&] {return std::pair<std::string,std::string>{prefix() + name,prefix() + "extinction." + name};});
             }
         }
         // The preferred-orientation pair, crysta fit_state.hpp's order (after absorption).
         for (auto& row : experiment.preferred_orientation) {
-            const std::string texture = prefix + "preferred_orientation." + structure_name(row->structure_id.value()) + ".";
-            add(phase_prefix(row->structure_id) + "march_r", texture + "march_r", &row->march_r);
-            add(phase_prefix(row->structure_id) + "march_random_fract", texture + "march_random_fract",
-                &row->march_random_fract);
+            const auto texture = [&] {return prefix() + "preferred_orientation." + structure_name(row->structure_id.value()) + ".";};
+            add(&row->march_r,[&] {return std::pair<std::string,std::string>{phase_prefix(row->structure_id) + "march_r",texture() + "march_r"};});
+            add(&row->march_random_fract,[&] {return std::pair<std::string,std::string>{phase_prefix(row->structure_id) + "march_random_fract",texture() + "march_random_fract"};});
         }
         // The declared model's parameters by row (crysta fit_state.hpp) — the line-segment
         // intensities, or a polynomial or Chebyshev model's coefficients.
@@ -2699,13 +2720,11 @@ auto parameter_slots(ProjectT& project, const KeyRename* rename = nullptr) {
         // file's position name is refused on load (refuse_older_parameter_name).
         if (experiment.background_type == "line-segment") {
             for (const auto& point : experiment.background) {
-                add(prefix + "background." + point->id.value(),
-                    prefix + "background." + point->id.value() + ".intensity", &point->intensity);
+                add(&point->intensity,[&] {return std::pair<std::string,std::string>{prefix() + "background." + source(point->id.value()),prefix() + "background." + source(point->id.value()) + ".intensity"};});
             }
         } else {
             for (const auto& term : experiment.background_terms) {
-                add(prefix + "background." + term->id.value(),
-                    prefix + "background." + term->id.value() + ".coef", &term->coef);
+                add(&term->coef,[&] {return std::pair<std::string,std::string>{prefix() + "background." + source(term->id.value()),prefix() + "background." + source(term->id.value()) + ".coef"};});
             }
         }
     }
@@ -3294,11 +3313,13 @@ void visit_registered_peak_types(const std::function<void(const std::string&, st
         visitor(token, row.implemented ? std::optional<BeamModeEnum>(row.mode) : std::nullopt);
 }
 
+void visit_registered_peak_types(const std::function<void(const std::string&, std::optional<BeamModeEnum>)>& visitor) {
+    for(const auto& [token,row]:peak_type_rows())visitor(token,row.implemented?std::optional<BeamModeEnum>(row.mode):std::nullopt);
+}
+
 std::vector<std::string> registered_peak_types() {
     std::vector<std::string> tokens;
-    for (const auto& [token, row] : peak_type_rows()) {
-        tokens.push_back(token);
-    }
+    visit_registered_peak_types([&](const std::string& token,std::optional<BeamModeEnum>){tokens.push_back(token);});
     return tokens;
 }
 
@@ -3307,7 +3328,7 @@ std::vector<std::string> registered_peak_types() {
 // writes a project still being built too, and its values must still be adopted (edi ADR-0052).
 std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
 
-static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true) {
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true, bool assistant_result = false) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3370,7 +3391,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");
             }
         }
-        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string());
+        BraggPdExperiment experiment = experiment_from_block(experiment_block, file.string(), assistant_result);
         // A time-of-flight single crystal has no instrument category: its calculation reads none. Items a file
         // carries for one are read past, and said so (the owner, 2026-10-23).
         if (experiment.reflections.has_value() &&
@@ -3424,6 +3445,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 }
             }
             if (const Loop* files = block.loop_with("_report_file.name")) {
+                if (assistant_result && !files->rows.empty()) throw IoError("assistant result external report files are unsupported");
                 for (const auto& row : files->rows) {
                     ReportFile file;
                     file.name = loop_cell(*files, row, "_report_file.name", where);
@@ -3444,6 +3466,10 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         const Block block =
             parse_block(read_file(analysis_file.string()), analysis_file.string(), false);
         const std::string* mode = block.find("_fitting_mode.type");
+        if (assistant_result && (block.find("_sequential_fit.data_dir") ||
+            (mode && is_scan_fitting_mode(*mode)))) {
+            throw IoError("assistant result external scan declarations are unsupported");
+        }
         if (mode != nullptr) {
             // Review-1 F4: the closed set is enforced at LOAD on this side too. Without it a
             // lookalike survived loading and then performed one plausible template fit through
@@ -4266,6 +4292,13 @@ Project load_project(const std::string& path, const WarningSink& on_warning) {
     return load_project_folder(path, on_warning);
 }
 
+namespace detail {
+Project load_assistant_project(const std::string& directory) {
+    if(!fs::is_directory(directory))throw IoError("assistant result must be a captured project directory");
+    return load_project_folder(directory,{},true,true);
+}
+} // namespace detail
+
 double parse_edi_double(const std::string& text, const std::string& where) {
     // Review-10 F2: the ONE numeric boundary, exported for the adapter's start_tied parsing —
     // finite, full-token, classic-locale (the loader's own to_double), so the new column can
@@ -4375,6 +4408,31 @@ std::vector<NamedParameter> named_parameters(const Project& project) {
     return named;
 }
 
+namespace detail {
+std::size_t relation_name_preparation_bytes(const Project& project,std::size_t limit) {
+    std::size_t bytes=0;(void)parameter_slots(project,nullptr,nullptr,0,&bytes,limit);return bytes;
+}
+}
+std::size_t named_parameter_preparation_bytes(std::size_t maximum_name_bytes) {
+    // Actual FIRST spelling expressions have at most two variable components;
+    // 64 bounds every fixed category/member/separator suffix in this walk.
+    // Two completed slot strings, their live concatenation/return intermediates
+    // and the single retained slot fit eight such logical string owners.
+    constexpr std::size_t owners=8,fixed=64;
+    constexpr auto headers=owners*sizeof(std::string)+2*sizeof(std::string)+sizeof(const Parameter*);
+    const auto ceiling=std::numeric_limits<std::size_t>::max();
+    if(maximum_name_bytes>(ceiling-headers-owners*fixed)/(2*owners))throw std::length_error("Parameter spelling scratch exceeds capacity");
+    return headers+owners*(2*maximum_name_bytes+fixed);
+}
+std::optional<std::string> named_parameter(const Project& project,const Parameter* member,std::size_t maximum_name_bytes) {
+    if(!member)return std::nullopt;
+    (void)named_parameter_preparation_bytes(maximum_name_bytes); // Overflow is refused before growth.
+    auto selected=parameter_slots(project,nullptr,member,maximum_name_bytes);
+    if(selected.empty())return std::nullopt;
+    if(selected.front().unique_name.size()>maximum_name_bytes)throw std::length_error("Parameter spelling exceeds capacity");
+    return std::move(selected.front().unique_name);
+}
+
 std::vector<NamedParameter> named_dependents(const Project& project) {
     std::vector<NamedParameter> named;
     for (const auto& slot : parameter_slots(project)) {
@@ -4448,14 +4506,16 @@ UndoFitOutcome restore_fit_start(Project& project) {
 }
 
 void copy_fit_result(Project& to, const Project& from) {
-    to.fit_result = from.fit_result;
+    FitResultRecord prepared = from.fit_result;
+    static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
+    to.fit_result = std::move(prepared);
     for (std::size_t index = 0; index < to.experiments.size() && index < from.experiments.size(); ++index) {
         copy_fit_share(*to.experiments[index], *from.experiments[index]);
         record_fitted_background(*to.experiments[index]);  // the fitted points, written before (ADR-0040)
     }
 }
 
-void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) {
+void copy_fit_share(ExperimentBase& to, const ExperimentBase& from) noexcept {
     to.fit_n_data_points = from.fit_n_data_points;
     to.fit_prof_r_factor = from.fit_prof_r_factor;
     to.fit_prof_wr_factor = from.fit_prof_wr_factor;

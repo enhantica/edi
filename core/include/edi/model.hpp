@@ -3493,11 +3493,12 @@ struct PreparedPeakRestore {
         }
     }
     void commit() noexcept {
+        static_assert(std::is_nothrow_move_assignable_v<Parameter>);
         target->type.swap(image.type);target->cutoff_fwhm=image.cutoff_fwhm;
-        for(auto member:PeakBase::fixed_parameter_members)target->*member=image.*member;
+        for(auto member:PeakBase::fixed_parameter_members)target->*member=std::move(image.*member);
         for(auto member:PeakBase::optional_parameter_members) {
             auto& current=target->*member;auto& incoming=image.*member;
-            if(current.live_ && incoming.live_)current.live_->parameter=incoming.live_->parameter;
+            if(current.live_ && incoming.live_)current.live_->parameter=std::move(incoming.live_->parameter);
             else if(!current.live_ && incoming.live_) {
                 current.live_.swap(incoming.live_);
                 current.live_->parameter.category.point_at(target->row);
@@ -3622,7 +3623,7 @@ struct PreparedAbsorptionRestore {
         }
     }
     void commit() noexcept {
-        static_assert(std::is_nothrow_copy_assignable_v<Parameter>);
+        static_assert(std::is_nothrow_move_assignable_v<Parameter>);
         static_assert(std::is_nothrow_swappable_v<std::optional<std::string>>);
         target->type.swap(image.type);
         for(auto member:AbsorptionBase::optional_parameter_members) {
@@ -3633,8 +3634,8 @@ struct PreparedAbsorptionRestore {
                 // their written identities; Undo restores only differing state.
                 const bool equal=held.value.get()==wanted.value.get() && held.uncertainty.get()==wanted.uncertainty.get() &&
                     held.free.get()==wanted.free.get() && held.start_value.get()==wanted.start_value.get() &&
-                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence;
-                if(!equal)held=wanted;
+                    held.start_uncertainty.get()==wanted.start_uncertainty.get() && held.spec==wanted.spec && held.dependence==wanted.dependence && held.fit_blocker==wanted.fit_blocker && held.fit_reason==wanted.fit_reason && held.fit_idle==wanted.fit_idle;
+                if(!equal)held=std::move(incoming.live_->parameter);
             }
             else if(!current.live_ && incoming.live_) {
                 current.live_.swap(incoming.live_);

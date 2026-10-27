@@ -65,6 +65,8 @@ std::size_t relation_inputs_size(const ItemVec<ParameterAlias>&, const ItemVec<P
 
 // Slots were checked against this exact complete encoding before live writes.
 // No name joining, resizing, allocation or declaration traversal occurs here.
+void relation_inputs_into(std::string&,const ItemVec<ParameterAlias>&,const ItemVec<ParameterConstraint>&);
+
 void refresh_relation_values(std::string& encoding,
                               const std::vector<RelationValueSlot>& values) noexcept;
 

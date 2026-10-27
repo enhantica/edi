@@ -7,4 +7,6 @@ namespace edi::detail {
 // Uses the actual loader; rejects generated grids BEFORE allocation, plus
 // external scan/report declarations BEFORE external materialization.
 Project load_assistant_project(const std::string& directory);
+
+std::size_t relation_name_preparation_bytes(const Project&,std::size_t limit);
 }
