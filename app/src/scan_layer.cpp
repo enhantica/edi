@@ -128,12 +128,7 @@ void ScanLayer::setDisabledColour(const QColor& colour) {
 
 // Highlighting, the other Stacked lines recede (the owner, 2026-10-27): the disabled colour halfway to the plot's
 // background, opaque so a line crossing itself stays even, and half as wide as the shown line, at least 0.75 px.
-QColor ScanLayer::recededColour() const {
-    const auto mix = [](double ink, double paper) { return static_cast<float>((ink + paper) / 2.0); };
-    return QColor::fromRgbF(mix(disabled_colour_.redF(), background_.redF()),
-                            mix(disabled_colour_.greenF(), background_.greenF()),
-                            mix(disabled_colour_.blueF(), background_.blueF()), 1.0F);
-}
+QColor ScanLayer::recededColour() const { return blendedColour(disabled_colour_, 0.5); }
 
 double ScanLayer::recededWidth(double width) { return std::max(0.75, width / 2.0); }
 
@@ -754,6 +749,24 @@ void ScanLayer::recolour() {
     redraw();
 }
 
+QColor ScanLayer::lineColour(int dataset, int top) const {
+    // Every line at 75 % (the owner, 2026-10-27); highlighting, the shown one in full and the others receded.
+    constexpr double kLineOpacity = 0.75;
+    if (top >= 0) {
+        return dataset == top ? colourOf(dataset) : recededColour();
+    }
+    return blendedColour(colourOf(dataset), kLineOpacity);
+}
+
+QColor ScanLayer::blendedColour(const QColor& colour, double keep) const {
+    // Blended toward the background rather than made translucent: a line crossing itself, up and down a narrow peak,
+    // stays one even colour, as the pattern chart's opaque lines do.
+    const auto mix = [keep](double ink, double paper) { return keep * ink + (1.0 - keep) * paper; };
+    return QColor::fromRgbF(static_cast<float>(mix(colour.redF(), background_.redF())),
+                            static_cast<float>(mix(colour.greenF(), background_.greenF())),
+                            static_cast<float>(mix(colour.blueF(), background_.blueF())), 1.0F);
+}
+
 QColor ScanLayer::colourOf(int dataset) const {
     if (dataset < 0 || static_cast<std::size_t>(dataset) >= colours_.size()) {
         return {};
@@ -853,8 +866,8 @@ std::vector<std::size_t> top_down(const std::vector<double>& rows, std::size_t c
     return order;
 }
 
-// As wide as the pattern chart's measured line, 2 px (the owner, 2026-10-22), narrowing toward 1 px where
-// neighbouring rows are closer than six pixels, so the lines of a dense scan never merge.
+// 1.5 px (the owner, 2026-10-27), narrowing toward 1 px where neighbouring rows are closer than 4.5 pixels, so the
+// lines of a dense scan never merge.
 double line_width(const std::vector<double>& rows, const std::vector<std::size_t>& order, double y_span, double height) {
     double step_px = std::numeric_limits<double>::infinity();
     for (std::size_t k = 1; k < order.size(); ++k) {
@@ -863,7 +876,7 @@ double line_width(const std::vector<double>& rows, const std::vector<std::size_t
             step_px = std::min(step_px, gap);
         }
     }
-    return std::clamp(step_px / 3.0, 1.0, 2.0);
+    return std::clamp(step_px / 3.0, 1.0, 1.5);
 }
 
 // The pattern chart's tint of an excluded region (edi::pattern_style_table's `excluded`).
@@ -955,11 +968,9 @@ void ScanLayer::feedLines() {
     const auto style_of = [this, top](std::size_t d) {
         const double span = highs_[d] - lows_[d];
         const double scaled = span > 0.0 ? pattern_height_ / span : 0.0;
-        QColor colour = colourOf(static_cast<int>(d));
+        QColor colour = lineColour(static_cast<int>(d), top);
         if (top >= 0 && static_cast<int>(d) == top) {
             colour.setAlphaF(0.0F);  // drawn by the line over the others
-        } else if (top >= 0) {
-            colour = recededColour();
         }
         return ScanLines::Style{baselines_[d] - (span > 0.0 ? lows_[d] : 0.0) * scaled, scaled, colour};
     };
@@ -1177,12 +1188,8 @@ void ScanLayer::paint(QPainter* painter) {
         const QRectF bounds = line.path.boundingRect();
         line.top = bounds.top() - width_px;
         line.bottom = bounds.bottom() + width_px;
-        line.colour = colourOf(static_cast<int>(d));
-        line.width = width_px;
-        if (top >= 0 && static_cast<int>(d) != top) {
-            line.colour = recededColour();
-            line.width = recededWidth(width_px);
-        }
+        line.colour = lineColour(static_cast<int>(d), top);
+        line.width = top >= 0 && static_cast<int>(d) != top ? recededWidth(width_px) : width_px;
         lines.push_back(std::move(line));
     }
     // Stroked in horizontal tiles, one per thread: every core, one while a fit runs; EDI_SCAN_PAINT_THREADS sets the
