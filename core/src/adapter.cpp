@@ -2409,48 +2409,12 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
                           item->computed_current());
     }
     if (std::find(current.begin(), current.end(), true) != current.end()) {
-        // A save writes edi's points. A bank whose estimate is due (its settings or data changed since its points)
-        // is never current, so its columns stay out; the engine's calculation estimates it, and its points and
-        // digests are put back afterwards (ADR-0040).
-        // The whole background: points, or terms with their origin or domain, and its estimate record.
-        struct HeldPoints {
-            std::vector<crysta::LineSegment> points;
-            std::vector<crysta::PolynomialTerm> terms;
-            std::optional<double> origin, x_min, x_max;
-            std::optional<std::string> mode;
-            std::uint64_t inputs = 0;
-            std::uint64_t written = 0;
-        };
-        std::vector<std::optional<HeldPoints>> held(cproject.experiments.size());
-        for (std::size_t index = 0; index < model.experiments.size(); ++index) {
-            if (background_estimate_due(*model.experiments[index])) {
-                const crysta::BraggPdExperiment& bank = cproject.experiments[index];
-                held[index] = HeldPoints{{bank.background.begin(), bank.background.end()},
-                                         {bank.background_terms.begin(), bank.background_terms.end()},
-                                         bank.background_origin.get(),
-                                         bank.background_x_min.get(),
-                                         bank.background_x_max.get(),
-                                         bank.background_estimate_mode.get(),
-                                         bank.background_estimate_inputs.get(),
-                                         bank.background_estimate_points.get()};
-            }
-        }
+        // A save writes edi's points: the engine calculates with due estimates deferred, so a bank whose estimate is
+        // due calculates with its own points, and its columns are written when edi's calculation of it is current; it
+        // stays due, and the next calculation estimates it (ADR-0040).
         try {
-            crysta::calculate_project(cproject);
+            crysta::calculate_project(cproject, crysta::DueEstimates::Defer);
         } catch (const std::invalid_argument&) {  // NOLINT(bugprone-empty-catch) — saved uncomputed
-        }
-        for (std::size_t index = 0; index < held.size(); ++index) {
-            if (held[index]) {
-                crysta::BraggPdExperiment& bank = cproject.experiments[index];
-                bank.background.assign(held[index]->points);
-                bank.background_terms.assign(held[index]->terms);
-                bank.background_origin = held[index]->origin;
-                bank.background_x_min = held[index]->x_min;
-                bank.background_x_max = held[index]->x_max;
-                bank.background_estimate_mode = held[index]->mode;
-                bank.background_estimate_inputs = held[index]->inputs;
-                bank.background_estimate_points = held[index]->written;
-            }
         }
         for (std::size_t index = 0; index < current.size(); ++index) {
             if (!current[index]) {
