@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-26T21:40:56Z
+# measured_utc = 2026-10-27T02:35:19Z
 #
-# Recorded from: banked rows (nothing added; 46 stale row(s) dropped)
-# Collected tests: 18734; with a reported duration: 10433
+# Recorded from: measured test run (14 node(s) measured once, 16253 banked, 0 stale row(s) dropped)
+# Collected tests: 18748; with a reported duration: 10447
 # Module-scoped fixture costs recorded: 93
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 18734
+# inventory_python = 18748
 # inventory_cpp = 396
-# inventory_measured = 16253
+# inventory_measured = 16267
 # inventory_unmeasured = 2877
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -14830,6 +14830,12 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_archive_links_keep_lexical_member_identity_or_refuse_with_an_explanation
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_save_as_replaces_old_entities_and_preserves_unrelated_destination_content
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_browser_save_waits_for_durable_success_and_preserves_refused_state
+0.470	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[desktop-before-write-first]
+0.520	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[web-before-read-first]
+0.580	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[web-before-write-first]
+0.500	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[web-during-read-first]
+0.600	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[web-during-write-first]
+0.680	tests/system/py/test_project_transactions.py::test_dataset_read_uses_the_template_generation_adopted_by_save[zip-before-write-first]
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_desktop_refusal_preserves_location_origin_and_unsaved_state_then_retries
 UNMEASURED:not-completed-in-this-run	tests/system/py/test_project_transactions.py::test_discard_during_a_pending_recovery_write_cannot_resurrect_recovery
 0.230	tests/system/py/test_project_transactions.py::test_edit_during_moving_save_keeps_new_values_and_recovery[False-folder]
@@ -14867,6 +14873,14 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_failed_publication_restores_the_complete_high_precision_live_snapshot[zip-as-missing-folder-dirty]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_failed_publication_restores_the_complete_high_precision_live_snapshot[zip-save-zip-clean]
 UNMEASURED:failed-in-this-run	tests/system/py/test_project_transactions.py::test_failed_publication_restores_the_complete_high_precision_live_snapshot[zip-save-zip-dirty]
+0.180	tests/system/py/test_project_transactions.py::test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable[clean-readback-move]
+0.151	tests/system/py/test_project_transactions.py::test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable[clean-readback-save]
+0.160	tests/system/py/test_project_transactions.py::test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable[clean-second-write-move]
+0.160	tests/system/py/test_project_transactions.py::test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable[clean-second-write-save]
+0.180	tests/system/py/test_project_transactions.py::test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable[dirty-readback-move]
+0.190	tests/system/py/test_project_transactions.py::test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable[dirty-readback-save]
+0.170	tests/system/py/test_project_transactions.py::test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable[dirty-second-write-move]
+0.160	tests/system/py/test_project_transactions.py::test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable[dirty-second-write-save]
 0.160	tests/system/py/test_project_transactions.py::test_late_moving_save_answer_cannot_change_a_replacement_project[desktop-False-folder]
 0.190	tests/system/py/test_project_transactions.py::test_late_moving_save_answer_cannot_change_a_replacement_project[desktop-False-zip]
 0.190	tests/system/py/test_project_transactions.py::test_late_moving_save_answer_cannot_change_a_replacement_project[desktop-True-folder]
@@ -19235,7 +19249,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 179.025	tests/system/py/test_plain_data_app.py
 # module-cost: 64.280	tests/system/py/test_project_page_readiness.py
 # module-cost: 100.158	tests/system/py/test_project_tooltip_style.py
-# module-cost: 1.577	tests/system/py/test_project_transactions.py
+# module-cost: 1.649	tests/system/py/test_project_transactions.py
 # module-cost: 21.241	tests/system/py/test_pytest_child_environment.py
 # module-cost: 33.845	tests/system/py/test_rendering_setup.py
 # module-cost: 4.607	tests/system/py/test_report_browser_readiness.py

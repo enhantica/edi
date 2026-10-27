@@ -987,3 +987,136 @@ def test_actual_app_fields_and_text_decode_to_exact_save_policy_values(
         'The actual app surface decodes to canonical thirds, six-digit ordinary values '
         'or the full-precision bank angle under the all-exact fallback'
     )
+
+
+@pytest.mark.parametrize('route', ['save', 'move'])
+@pytest.mark.parametrize('boundary', ['readback', 'second-write'])
+@pytest.mark.parametrize('initial', ['clean', 'dirty'])
+def test_late_folder_refusal_keeps_published_place_explicitly_unsaved_and_retryable(
+    observer, tmp_path, route, boundary, initial
+):
+    row = observe(observer, f'late-folder/{route}/{boundary}/{initial}', tmp_path)[0]
+    before, refused = row['before'], row['refused']
+    assert row['filesExist'], 'The late refusal occurs after an actual first folder publication'
+    assert row['writes'] == (1 if boundary == 'readback' else 2), (
+        'The selected refusal reaches readback or the second delegated writer, not initial Save'
+    )
+    assert not row['returned'], 'A late scientific refusal cannot announce a successful Save'
+    assert refused['modified'], (
+        'A published folder with unfinished adoption remains explicitly unsaved'
+    )
+    assert refused['path'] == row['destination'], (
+        'After the first publication the open project works in the written folder even on refusal'
+    )
+    assert row['firstWriteKept'], (
+        'A refused later step keeps the complete first-published folder bytes'
+    )
+    assert refused['name'] == before['name'], (
+        'A late refusal preserves the project identity and edits'
+    )
+    for field in ('banks', 'fit'):
+        assert refused['scientific'][field] == before['scientific'][field], (
+            'Late refusal preserves held results and complete agreement records: ' + field
+        )
+    expected = copy.deepcopy(before['parameters'])
+    if boundary == 'second-write':
+        for parameter in expected:
+            # Only ordinary absent/zero-s.u. values are authored in this fixture.
+            parameter['value'] = six_digits(parameter['value'])
+    assert refused['parameters'] == expected, (
+        'Readback keeps exact inputs; second-write refusal keeps the first-adopted values'
+    )
+    for key in ('title', 'description', 'authors', 'created'):
+        assert refused['scientific']['metadata'][key] == before['scientific']['metadata'][key], (
+            'Late scientific refusal preserves non-publication metadata: ' + key
+        )
+    assert row['retry'], 'Removing the one-shot refusal lets a real Save retry succeed'
+    assert not row['afterRetry']['modified'], 'Only a successful retry clears the unsaved state'
+    assert row['afterRetry']['path'] == row['destination'], (
+        'The retry writes the project place that survived the late refusal'
+    )
+    rounded = copy.deepcopy(before['parameters'])
+    for parameter in rounded:
+        parameter['value'] = six_digits(parameter['value'])
+    assert row['afterRetry']['parameters'] == rounded, (
+        'The successful retry adopts exactly the independently rounded saved inputs'
+    )
+    live = row['afterRetry']['scientific']['banks'][0]
+    fresh = row['retryFresh']['banks'][0]
+    for key in ('calculated', 'background', 'residual', 'spacing'):
+        assert live[key] == fresh[key], (
+            'Retry arrays satisfy the saved-input fresh-calculation invariant: ' + key
+        )
+    values = loop_rows(row['retryExperiment'], '_data')
+    assert len(values) == len(live['calculated']) > 0, (
+        'A successful retry writes all actual computed rows before any lazy read'
+    )
+    predicted = []
+    for cells, bits in zip(values, live['calculated'], strict=True):
+        number = struct.unpack('>d', bytes.fromhex(bits.zfill(16)))[0]
+        predicted.append(number)
+        assert float(cells['_data.intensity_calc']) == six_digits(number), (
+            'Retry durable calculated values equal independent decimal rounding of the live model'
+        )
+    measured = [float(cells['_data.intensity_meas']) for cells in values]
+    sigma = [float(cells['_data.intensity_meas_su']) for cells in values]
+    rp = sum(abs(y - c) for y, c in zip(measured, predicted, strict=True)) / sum(
+        abs(y) for y in measured
+    )
+    chi = sum(((y - c) / s) ** 2 for y, c, s in zip(measured, predicted, sigma, strict=True))
+    rwp = math.sqrt(chi / sum((y / s) ** 2 for y, s in zip(measured, sigma, strict=True)))
+    record = loop_rows(row['retryAnalysis'], '_fit_result_bank')[0]
+    for key, number in [('prof_r_factor', rp), ('prof_wr_factor', rwp), ('chi_square', chi)]:
+        assert float(record['_fit_result_bank.' + key]) == six_digits(number), (
+            'Retry agreement records follow independent residual sums from its saved model: ' + key
+        )
+
+
+@pytest.mark.parametrize(
+    ('route', 'moment', 'order'),
+    [
+        ('desktop', 'before', 'write-first'),
+        ('zip', 'before', 'write-first'),
+        ('web', 'before', 'read-first'),
+        ('web', 'before', 'write-first'),
+        ('web', 'during', 'read-first'),
+        ('web', 'during', 'write-first'),
+    ],
+)
+def test_dataset_read_uses_the_template_generation_adopted_by_save(
+    observer, tmp_path, route, moment, order
+):
+    source = ROOT / 'tests/fixtures/scan_template/project'
+    row = observe(observer, f'dataset-save/{route}/{moment}/{order}', tmp_path, source)[0]
+    assert row['requested'], 'The pending-dataset exercise reaches the actual Save route'
+    assert row['selected'] == row['chosen'], (
+        'The latest selected dataset survives both completion orders'
+    )
+    blocked_adoption = route == 'web' and order == 'read-first'
+    value = 10.31234567 if blocked_adoption else six_digits(10.31234567)
+    expected = struct.pack('>d', value).hex().lstrip('0') or '0'
+    assert row['template'] == expected, (
+        'Save adopts its rounded template; an earlier finished view retains the revision guard'
+    )
+    assert row['shown'] == row['template'], (
+        'A late dataset read cannot put a pre-Save fixed value over the adopted scan template'
+    )
+    assert row['after']['modified'] == blocked_adoption, (
+        'The completed view is clean only when the held Save actually adopted its generation'
+    )
+    assert row['after']['scientific']['banks'] == row['fresh']['banks'], (
+        'Displayed results describe the final template and its own measured rows'
+    )
+    for name, shown in row['after']['shown'].items():
+        bank = next(item for item in row['fresh']['banks'] if item['name'] == name)
+        assert shown['calculated'] == bank['calculated'], (
+            'The actual PatternModel shows the final selected dataset calculation'
+        )
+    edited = struct.pack('>d', 10.41234567).hex().lstrip('0') or '0'
+    assert row['editedTemplate'] == edited, (
+        'A subsequent real field edit targets the live scan template'
+    )
+    assert row['editedShown'] == edited, (
+        'A subsequent real field edit targets the shown dataset too'
+    )
+    assert row['edited']['modified'], 'A subsequent edit stays unsaved after the read/save race'

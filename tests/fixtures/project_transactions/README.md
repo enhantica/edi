@@ -19,4 +19,4 @@ pixi run python -m pytest tests/system/py/test_project_transactions.py \
   -vv --durations=0 -p fixture_costs
 ```
 
-The browser observations use the pinned Chromium and Node toolchains resolved by the browser fixture. The Session observer holds asynchronous browser I/O at the native link boundary. The browser-handle observations execute the production JavaScript in Chromium.
+The browser observations use the pinned Chromium and Node toolchains resolved by the browser fixture. The Session observer holds asynchronous browser I/O and dataset reads at the native link boundary. It can also obstruct a real readback or refuse a selected delegated write; the other production operations still execute. The browser-handle observations execute the production JavaScript in Chromium.

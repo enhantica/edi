@@ -1,4 +1,4 @@
-"""Link an observation host to freshly built production app objects, wrapping only browser I/O.
+"""Link an observation host to real app objects at declared asynchronous and file boundaries.
 
 The existing app build must use the selected SDK. No production source is patched.
 The receipt binds source, SDK headers/library and all linked local objects.
@@ -44,7 +44,7 @@ def observe_fallible_core(prefix, output, core_observed):
                 'adopt_saved_project',
             ),
         ),
-        ('adapter.cpp.o', ('save_report_settings',)),
+        ('adapter.cpp.o', ('save_report_settings', 'read_scan_dataset')),
     ):
         io_member = output / member_name
         with io_member.open('wb') as stream:
@@ -84,6 +84,26 @@ def observe_fallible_core(prefix, output, core_observed):
         subprocess.run(
             [str(prefix / 'bin/llvm-ar'), 'r', str(core_observed), str(io_member)], check=True
         )
+    # Redirect only the adapter's undefined native writer call. The actual SDK
+    # writer remains untouched and is called unless the authored refusal is armed.
+    adapter = output / 'adapter.cpp.o'
+    symbols = run([str(prefix / 'bin/llvm-nm'), '--undefined-only', str(adapter)])
+    names = [line.split()[-1] for line in symbols.splitlines() if '12save_projectE' in line]
+    if len(names) != 1:
+        raise RuntimeError('The write refusal must reach exactly the delegated SDK writer')
+    target = ('_' if sys.platform == 'darwin' else '') + 'transaction_native_write'
+    subprocess.run(
+        [
+            str(prefix / 'bin/llvm-objcopy'),
+            '--redefine-sym=' + names[0] + '=' + target,
+            str(adapter),
+        ],
+        check=True,
+    )
+    subprocess.run(
+        [str(prefix / 'bin/llvm-ar'), 'r', str(core_observed), str(adapter)], check=True
+    )
+    io_names[names[0]] = target
     return io_names
 
 
@@ -282,7 +302,8 @@ def build(root, native, output):  # noqa: PLR0914, PLR0915 - source, linker and 
             if path.is_file()
         },
         'boundary': symbols,
-        'limit': 'Native Session with held browser I/O; not a browser UI or OS-picker measurement',
+        'limit': 'Native Session with held I/O/dataset reads and authored file refusals; '
+        'not a browser UI or OS-picker measurement',
     }
     (output / 'receipt.json').write_text(json.dumps(receipt, indent=2, sort_keys=True) + '\n')
     return receipt

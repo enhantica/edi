@@ -1,4 +1,8 @@
-// Observe the real Session. Only asynchronous browser I/O is held at the link boundary.
+// Observe the real Session. Only asynchronous I/O and authored failures are held.
+// Read the native model before Qt introduces its signals/slots keyword macros.
+// clang-format off
+#include "crysta/model.hpp"
+// clang-format on
 #include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
@@ -18,9 +22,12 @@
 #include <QtQml>
 #include <QtTest/QSignalSpy>
 #include <bit>
+#include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
+#include <mutex>
 #include <stdexcept>
 #include <vector>
 
@@ -35,6 +42,7 @@
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/project_archive.hpp"
+#include "edi/scan.hpp"
 #include "experiment_view_model.hpp"
 #include "fit_view_model.hpp"
 #include "parameter_item.hpp"
@@ -50,6 +58,30 @@ QMap<QString, Image> durable;
 bool aliasPlaces = false;
 bool faultArmed = false, publicationCompleted = false;
 QStringList postPublicationCalls;
+QString lateFault;
+int nativeWrites = 0;
+Image firstPublished;
+std::mutex readMutex;
+std::condition_variable readRelease;
+bool holdRead = false, readEntered = false, readReleased = false;
+void releaseRead() {
+    std::lock_guard lock(readMutex);
+    readReleased = true;
+    readRelease.notify_all();
+}
+struct ReadReleaseGuard {
+    ~ReadReleaseGuard() { releaseRead(); }
+};
+template <class Predicate>
+void pumpUntil(Predicate predicate, const char* why) {
+    QElapsedTimer clock;
+    clock.start();
+    while (!predicate() && clock.elapsed() < 10000) {
+        QCoreApplication::processEvents();
+        QThread::msleep(1);
+    }
+    if (!predicate()) throw std::runtime_error(why);
+}
 void fallibleBoundary(const char* name) {
     if (!faultArmed || !publicationCompleted) return;
     postPublicationCalls.append(name);
@@ -121,12 +153,23 @@ QJsonObject scientificState(const edi::Project& project) {
                          {"timestamp", text(m.timestamp)}};
     QJsonArray banks;
     for (const auto& bank : project.experiments) {
-        QJsonObject row{{"name", text(bank->name.value())},
-                        {"inputsDigest", QString::number(bank->background_estimate_inputs, 16)},
-                        {"pointsDigest", QString::number(bank->background_estimate_points, 16)},
-                        {"rp", metric(bank->fit_prof_r_factor)},
-                        {"rwp", metric(bank->fit_prof_wr_factor)},
-                        {"chi", metric(bank->fit_chi_square)}};
+        QJsonObject row{
+            {"name", text(bank->name.value())},
+            {"inputsDigest", QString::number(bank->background_estimate_inputs, 16)},
+            {"pointsDigest", QString::number(bank->background_estimate_points, 16)},
+            {"rp", metric(bank->fit_prof_r_factor)},
+            {"rwp", metric(bank->fit_prof_wr_factor)},
+            {"chi", metric(bank->fit_chi_square)},
+            {"rexp", metric(bank->fit_prof_wr_expected)},
+            {"cr", metric(bank->fit_prof_cr_factor)},
+            {"cwr", metric(bank->fit_prof_cwr_factor)},
+            {"n", bank->fit_n_data_points ? QJsonValue(*bank->fit_n_data_points) : QJsonValue()}};
+        QJsonArray phases;
+        for (const auto& link : bank->linked_structures)
+            phases.append(QJsonObject{{"id", text(link->structure_id.value())},
+                                      {"bragg", metric(link->fit_bragg_r_factor)},
+                                      {"f", metric(link->fit_f_r_factor)}});
+        row["phases"] = phases;
         if (bank->data) {
             const auto& data = *bank->data;
             row["calculated"] = numberBits(data.intensity_calc);
@@ -140,7 +183,33 @@ QJsonObject scientificState(const edi::Project& project) {
         }
         banks.append(row);
     }
-    return {{"metadata", metadata}, {"banks", banks}};
+    const auto& fit = project.fit_result;
+    QJsonObject record{
+        {"kind", text(fit.result_kind)},          {"success", fit.success},
+        {"iterations", fit.iterations},           {"time", bits(fit.fitting_time)},
+        {"message", text(fit.message)},           {"exit", text(fit.exit_reason)},
+        {"objective", bits(fit.objective_value)}, {"chi", bits(fit.reduced_chi_square)},
+        {"rp", metric(fit.prof_r_factor)},        {"rwp", bits(fit.prof_wr_factor)},
+        {"rexp", metric(fit.prof_wr_expected)},   {"n", fit.n_data_points},
+        {"dof", fit.degrees_of_freedom},          {"cr", metric(fit.prof_cr_factor)},
+        {"cwr", metric(fit.prof_cwr_factor)}};
+    record["objectiveName"] = text(fit.objective_name);
+    record["parameters"] = fit.n_parameters;
+    record["freeParameters"] = fit.n_free_parameters;
+    record["covariance"] = fit.covariance_available;
+    record["profile"] = text(fit.profile_function);
+    record["backgroundFunction"] = text(fit.background_function);
+    record["descent"] = text(fit.descent);
+    QJsonArray correlations;
+    for (const auto& pair : fit.correlations)
+        correlations.append(QJsonObject{{"id", text(pair->id.value())},
+                                        {"i", text(pair->parameter_unique_name_i)},
+                                        {"j", text(pair->parameter_unique_name_j)},
+                                        {"value", bits(pair->correlation.get())},
+                                        {"source", text(pair->source_kind)},
+                                        {"file", text(pair->file_path)}});
+    record["correlations"] = correlations;
+    return {{"metadata", metadata}, {"banks", banks}, {"fit", record}};
 }
 QJsonObject shownState(ProjectViewModel& project) {
     QJsonObject shown;
@@ -1124,6 +1193,168 @@ QJsonObject mixedSave(const QString& source, bool web) {
             {"freshScience", scientificState(reopened)},
             {"analysis", analysisText}};
 }
+QJsonObject lateFolder(const QString& source, const QStringList& spec) {
+    need(spec.size() == 4, "A late folder refusal declares route, boundary and initial state");
+    const bool moving = spec[1] == "move", dirty = spec[3] == "dirty";
+    QTemporaryDir temp;
+    browser = false;
+    Session session;
+    const auto input = preciseInput(source, temp.filePath("input"));
+    need(session.openProject(QUrl::fromLocalFile(input)),
+         "A late refusal starts with a real project");
+    settle(session);
+    if (dirty) session.project()->setName("dirty-late-folder");
+    auto& model = const_cast<edi::Project&>(session.project()->project());
+    model.fit_result.result_kind = "deterministic";
+    model.fit_result.success = true;
+    model.fit_result.message = "Authored held record, not an agreement reference";
+    model.fit_result.iterations = 7;
+    model.fit_result.prof_r_factor = 0.913;
+    model.fit_result.prof_wr_factor = 0.917;
+    const auto before = state(session);
+    const QString destination = moving ? temp.filePath("moved") : input;
+    lateFault = spec[2];
+    nativeWrites = 0;
+    firstPublished.clear();
+    bool returned = moving ? session.saveProjectAs(QUrl::fromLocalFile(destination), false, false)
+                           : session.save();
+    lateFault.clear();
+    const auto refused = state(session);
+    const auto bytesAfter = image(destination);
+    const auto count = nativeWrites;
+    const bool retry = session.save();
+    settle(session);
+    auto fresh = edi::load_project(session.project()->path().toStdString());
+    fresh.refresh_calculated_pattern(edi::DueEstimates::Defer);
+    const auto writtenText = [&](const QString& relative) {
+        QFile file(session.project()->path() + "/" + relative);
+        need(file.open(QIODevice::ReadOnly), "A successful retry leaves readable durable records");
+        return QString::fromUtf8(file.readAll());
+    };
+    return {{"before", before},
+            {"refused", refused},
+            {"returned", returned},
+            {"retry", retry},
+            {"afterRetry", state(session)},
+            {"retryFresh", scientificState(fresh)},
+            {"retryExperiment", writtenText("experiments/bank.edi")},
+            {"retryAnalysis", writtenText("analysis/analysis.edi")},
+            {"destination", destination},
+            {"firstWriteKept", firstPublished == bytesAfter},
+            {"writes", count},
+            {"filesExist", QFileInfo::exists(destination + "/project.edi")}};
+}
+QJsonObject datasetSave(const QString& source, const QStringList& spec) {
+    need(spec.size() == 4,
+         "A dataset/save race declares route, request time and completion order");
+    const bool web = spec[1] == "web", during = spec[2] == "during",
+               readFirst = spec[3] == "read-first";
+    QTemporaryDir temp;
+    const auto input = copy(source, temp.filePath("input"));
+    // This fixed template parameter has no dataset-result override.
+    QFile structure(input + "/structures/cosio.edi");
+    need(structure.open(QIODevice::ReadOnly), "The scan template structure exists");
+    auto text = structure.readAll();
+    structure.close();
+    text.replace("_cell.length_a 10.31()", "_cell.length_a 10.31234567");
+    need(structure.open(QIODevice::WriteOnly | QIODevice::Truncate),
+         "The authored scan value is writable");
+    structure.write(text);
+    structure.close();
+    Session session;
+    browser = false;
+    if (web)
+        openBrowserInput(session, input, "folder");
+    else
+        need(session.openProject(QUrl::fromLocalFile(input)), "The actual scan project opens");
+    auto* project = session.project();
+    pumpUntil([&] { return !project->calculating() && !project->view_reading_; },
+              "The initial scan selection settles");
+    if (!project->scanTemplate()) {
+        project->setCurrentExperimentIndex(0);
+        pumpUntil([&] { return !project->calculating() && !project->view_reading_; },
+                  "The first actual dataset selection settles");
+    }
+    need(project->scanTemplate() && project->currentExperimentIndex() >= 0,
+         qPrintable(QString("The actual scan template and shown dataset exist; scan=%1 index=%2 "
+                            "refusal=%3 error=%4 path=%5")
+                        .arg(project->scan_)
+                        .arg(project->currentExperimentIndex())
+                        .arg(project->scan_refusal_)
+                        .arg(project->lastError())
+                        .arg(project->path())));
+    if (spec[1] == "zip") {
+        need(session.saveProjectAs(QUrl::fromLocalFile(temp.filePath("scan.zip")), true, false),
+             "The ZIP Save race starts from an archive created by actual app Save as");
+        pumpUntil([&] { return !project->calculating() && !project->view_reading_; },
+                  "The initial app ZIP Save as and its shown dataset settle");
+        project->currentStructure()->cell()->lengthA()->setValue(10.31234567);
+    }
+    project->setName("pending-dataset-save");
+    settle(session);
+    const auto before = state(session);
+    const auto oldTemplate =
+        bits(project->scanTemplate()->structures.front()->cell.length_a.value.get());
+    const int chosen = (project->currentExperimentIndex() + 1) % 3;
+    ReadReleaseGuard guard;
+    auto select = [&] {
+        {
+            std::lock_guard lock(readMutex);
+            holdRead = true;
+            readEntered = false;
+            readReleased = false;
+        }
+        project->setCurrentExperimentIndex(chosen);
+        pumpUntil(
+            [&] {
+                std::lock_guard lock(readMutex);
+                return readEntered;
+            },
+            "A real asynchronous dataset read is held after template capture");
+    };
+    jobs.clear();
+    if (!during) select();
+    const bool requested = session.save();
+    std::size_t write = nextWrite(0);
+    if (during) select();
+    if (web && readFirst) {
+        releaseRead();
+        pumpUntil([&] { return !project->view_reading_; },
+                  "The old view completes before the held write");
+    }
+    if (web) {
+        need(write < jobs.size(), "The browser race reaches its actual held durable write");
+        finish(write, true);
+    }
+    releaseRead();
+    pumpUntil(
+        [&] {
+            return !project->view_reading_ && project->view_applied_ == project->view_request_ &&
+                   !project->calculating();
+        },
+        "The newest dataset settles after save and read completion");
+    const auto after = state(session);
+    const auto templateValue =
+        bits(project->scanTemplate()->structures.front()->cell.length_a.value.get());
+    const auto shownValue = bits(project->project().structures.front()->cell.length_a.value.get());
+    const auto selected = project->currentExperimentIndex();
+    auto fresh = project->project();
+    fresh.refresh_calculated_pattern(edi::DueEstimates::Defer);
+    const auto freshScience = scientificState(fresh);
+    project->currentStructure()->cell()->lengthA()->setValue(10.41234567);
+    settle(session);
+    const auto editedTemplate =
+        bits(project->scanTemplate()->structures.front()->cell.length_a.value.get());
+    const auto editedShown =
+        bits(project->project().structures.front()->cell.length_a.value.get());
+    browser = false;
+    return {{"before", before},           {"after", after},
+            {"requested", requested},     {"chosen", chosen},
+            {"selected", selected},       {"oldTemplate", oldTemplate},
+            {"template", templateValue},  {"shown", shownValue},
+            {"fresh", freshScience},      {"editedTemplate", editedTemplate},
+            {"editedShown", editedShown}, {"edited", state(session)}};
+}
 QJsonObject exactFields(const QString& source) {
     QTemporaryDir temp;
     browser = false;
@@ -1345,6 +1576,18 @@ bool adopt_saved_values(Project& p, const std::string& path) {
 }
 bool adopt_saved_project(Project& p, const std::string& path) {
     fallibleBoundary("adopt_saved_project");
+    if (lateFault == "readback") {
+        const auto hidden = path + ".held-readback";
+        std::filesystem::rename(path, hidden);
+        try {
+            const bool answer = transaction_real_adopt_saved_project(p, path);
+            std::filesystem::rename(hidden, path);
+            return answer;
+        } catch (...) {
+            std::filesystem::rename(hidden, path);
+            throw;
+        }
+    }
     return transaction_real_adopt_saved_project(p, path);
 }
 bool save_report_settings(const Project& p, const std::string& path) {
@@ -1352,6 +1595,33 @@ bool save_report_settings(const Project& p, const std::string& path) {
     return transaction_real_save_report_settings(p, path);
 }
 }  // namespace edi
+extern "C" edi::PdDataBase transaction_real_read_scan_dataset(const std::string&,
+                                                              const std::string&,
+                                                              edi::BeamModeEnum);
+namespace edi {
+PdDataBase read_scan_dataset(const std::string& dir, const std::string& file, BeamModeEnum mode) {
+    if (QThread::currentThread() != QCoreApplication::instance()->thread()) {
+        std::unique_lock lock(readMutex);
+        if (holdRead) {
+            holdRead = false;
+            readEntered = true;
+            if (!readRelease.wait_for(lock, std::chrono::seconds(15), [] { return readReleased; }))
+                throw std::runtime_error("The controlled dataset read was not released");
+        }
+    }
+    return transaction_real_read_scan_dataset(dir, file, mode);
+}
+}  // namespace edi
+extern "C" void transaction_native_write(const crysta::Project& p, const std::string& path) {
+    if (!lateFault.isEmpty()) {
+        ++nativeWrites;
+        if (lateFault == "second-write" && nativeWrites == 2)
+            throw std::runtime_error("Independent second delegated write refusal");
+    }
+    crysta::save_project(p, path);
+    if (!lateFault.isEmpty() && nativeWrites == 1)
+        firstPublished = image(QString::fromStdString(path));
+}
 extern "C" bool boundary_available() __asm__("__wrap__ZN7edi_app8WebFiles9availableEv");
 extern "C" bool boundary_available() { return browser; }
 extern "C" void
@@ -1406,6 +1676,10 @@ int main(int argc, char** argv) {
         if (group.startsWith("save-conflict/") || group.startsWith("save-alias-") ||
             group.startsWith("save-replaced-"))
             rows.append(saveConflict(source, group.split('/')));
+        else if (group.startsWith("late-folder/"))
+            rows.append(lateFolder(source, group.split('/')));
+        else if (group.startsWith("dataset-save/"))
+            rows.append(datasetSave(source, group.split('/')));
         else if (group == "exact-fields")
             rows.append(exactFields(source));
         else if (group == "mixed-desktop" || group == "mixed-web")
