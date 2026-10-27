@@ -4577,6 +4577,12 @@ std::vector<FitParameterCorrelation> crysta_correlations(crysta::Project& fitted
     return rows;
 }
 
+// An agreement factor over no signal or no weight is not a number. The record holds none for it, which a save leaves
+// out.
+std::optional<double> finite_factor(double value) {
+    return std::isfinite(value) ? std::optional<double>(value) : std::nullopt;
+}
+
 // The fit's result as the project records it (`_fit_result`, diffraction-lib's names, each experiment's share and
 // each phase's), from what the fit returned — the same numbers the reports print — with the R factors and the
 // parameter correlations crysta computed. The status label is crysta's machine-record spelling; the profile function
@@ -4598,11 +4604,11 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     record.message = record.exit_reason;
     record.iterations = outcome.iterations;
     record.fitting_time = outcome.elapsed_ms / 1000.0;
-    record.reduced_chi_square = outcome.reduced_chi_square;
+    record.reduced_chi_square = finite_factor(outcome.reduced_chi_square);
     const std::size_t n_free = outcome.values.size();
     record.objective_name = "chi_square";
     record.objective_value =
-        outcome.reduced_chi_square * detail::reduced_chi_square_dof(outcome.n_points_fitted, n_free);
+        finite_factor(outcome.reduced_chi_square * detail::reduced_chi_square_dof(outcome.n_points_fitted, n_free));
     record.n_data_points = static_cast<int>(outcome.n_points_fitted);
     // diffraction-lib's n_parameters is every parameter the fit considered (its structures' and its experiments'
     // parameters, the active profile family only): the engine project the fit ran on, the count crysta's own
@@ -4613,7 +4619,7 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
     record.degrees_of_freedom =
         outcome.n_points_fitted > n_free ? static_cast<int>(outcome.n_points_fitted - n_free) : 0;
     record.covariance_available = !outcome.uncertainty.empty();
-    record.prof_wr_factor = outcome.rwp;
+    record.prof_wr_factor = finite_factor(outcome.rwp);
     std::optional<std::string> profile;
     bool shared = true;
     for (const auto& experiment_item : project.experiments) {
@@ -4636,10 +4642,10 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
         record.background_function = *background;
     }
     record.descent = outcome.descent;  // review-1 F3: the descent that produced it
-    record.prof_r_factor = quality.pooled.rp;
-    record.prof_wr_expected = quality.pooled.rexp;
-    record.prof_cr_factor = quality.pooled.crp;
-    record.prof_cwr_factor = quality.pooled.cwrp;
+    record.prof_r_factor = finite_factor(quality.pooled.rp);
+    record.prof_wr_expected = finite_factor(quality.pooled.rexp);
+    record.prof_cr_factor = finite_factor(quality.pooled.crp);
+    record.prof_cwr_factor = finite_factor(quality.pooled.cwrp);
     const std::vector<ItemVec<FitParameterCorrelation>::Ptr> rows = numbered_correlations(correlations);
     outcome.correlations.clear();
     for (const auto& row : rows) {
@@ -4653,20 +4659,20 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
         for (const crysta::ProfileFactors& bank : quality.experiments) {
             if (bank.experiment == experiment.name) {
                 experiment.fit_n_data_points = static_cast<int>(bank.n_points);
-                experiment.fit_prof_r_factor = bank.rp;
-                experiment.fit_prof_wr_factor = bank.rwp;
-                experiment.fit_prof_wr_expected = bank.rexp;
-                experiment.fit_prof_cr_factor = bank.crp;
-                experiment.fit_prof_cwr_factor = bank.cwrp;
-                experiment.fit_chi_square = bank.chi_square;
+                experiment.fit_prof_r_factor = finite_factor(bank.rp);
+                experiment.fit_prof_wr_factor = finite_factor(bank.rwp);
+                experiment.fit_prof_wr_expected = finite_factor(bank.rexp);
+                experiment.fit_prof_cr_factor = finite_factor(bank.crp);
+                experiment.fit_prof_cwr_factor = finite_factor(bank.cwrp);
+                experiment.fit_chi_square = finite_factor(bank.chi_square);
             }
         }
         // A bank the fit reported keeps the fit's own points, Rwp and chi-square, the numbers the report prints.
         for (const BankMetric& bank : outcome.banks) {
             if (bank.name == experiment.name) {
                 experiment.fit_n_data_points = static_cast<int>(bank.n_points);
-                experiment.fit_prof_wr_factor = bank.rwp;
-                experiment.fit_chi_square = bank.chi_square;
+                experiment.fit_prof_wr_factor = finite_factor(bank.rwp);
+                experiment.fit_chi_square = finite_factor(bank.chi_square);
             }
         }
         for (const auto& link : experiment.linked_structures) {
@@ -4676,8 +4682,8 @@ void record_fit_result(Project& project, FitResultBase& outcome, std::size_t con
             for (const crysta::PhaseFactors& phase : quality.phases) {
                 if (link->enabled.get() && phase.experiment == experiment.name &&
                     KeyTraits<Structure>::canonical(phase.structure) == structure) {
-                    link->fit_bragg_r_factor = phase.r_bragg;
-                    link->fit_f_r_factor = phase.r_f;
+                    link->fit_bragg_r_factor = finite_factor(phase.r_bragg);
+                    link->fit_f_r_factor = finite_factor(phase.r_f);
                 }
             }
         }

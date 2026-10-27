@@ -3864,6 +3864,13 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     std::optional<double> fit_prof_cr_factor;
     std::optional<double> fit_prof_cwr_factor;
     std::optional<double> fit_chi_square;
+    // Whether the last fit recorded a share for this bank: any of the above, since a factor that was not a number
+    // is none.
+    bool fit_share_held() const {
+        return fit_n_data_points.has_value() || fit_prof_r_factor.has_value() || fit_prof_wr_factor.has_value() ||
+               fit_prof_wr_expected.has_value() || fit_prof_cr_factor.has_value() || fit_prof_cwr_factor.has_value() ||
+               fit_chi_square.has_value();
+    }
 
     // The bank's embedded measured data, parsed from the `.edi` `_data.*` loop.
     // Presence-tracked: `std::nullopt` means the source file declared no `_data` loop at all.
@@ -4529,16 +4536,17 @@ struct FitResultRecord {
     std::string message;
     int iterations = 0;
     double fitting_time = 0.0;  // seconds
-    double reduced_chi_square = 0.0;
+    // The agreement factors: none for one that was not a number (a fit over no weight), which a save leaves out.
+    std::optional<double> reduced_chi_square;
     std::string objective_name;
-    double objective_value = 0.0;
+    std::optional<double> objective_value;
     int n_data_points = 0;
     int n_parameters = 0;
     int n_free_parameters = 0;
     int degrees_of_freedom = 0;
     bool covariance_available = false;
     std::string exit_reason;  // crysta's status label: done, max_iter, no_step, cancelled
-    double prof_wr_factor = 0.0;
+    std::optional<double> prof_wr_factor;
     // The profile and expected R factors over every fitted point, and the two with the background taken out;
     // absent in a result written before them.
     std::optional<double> prof_r_factor;

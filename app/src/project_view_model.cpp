@@ -78,13 +78,13 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
     // and fitted the first.
     const QString outcome = recorded_outcome(project.fit_result);
     const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
-                                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+                                    [](const auto& experiment) { return experiment->fit_share_held(); });
     dataset_row_ = nullptr;
     dataset_experiment_ = nullptr;
     QList<Row> rows;
     for (int i = 0; i < experiments.size(); ++i) {
         ExperimentViewModel* experiment = experiments[i];
-        const bool fitted = shares ? experiment->experiment()->fit_prof_wr_factor.has_value() : i == 0;
+        const bool fitted = shares ? experiment->experiment()->fit_share_held() : i == 0;
         experiment->setFitOutcome(fitted ? outcome : QString());
         // Its last fit's reliability follows its name and file on the selector's line (Rwp and χ²).
         const std::string reliability = fitted ? edi::reliability_text(project, static_cast<std::size_t>(i)) : std::string();

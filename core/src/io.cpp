@@ -4093,25 +4093,24 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             result.message = text("_fit_result.message");
             result.iterations = count("_fit_result.iterations");
             result.fitting_time = number("_fit_result.fitting_time");
-            result.reduced_chi_square = number("_fit_result.reduced_chi_square");
+            // An agreement factor is absent when it was not a number, or in a result written before it.
+            const auto factor = [&block, &number](const char* tag) {
+                return block.find(tag) != nullptr ? std::optional<double>(number(tag)) : std::nullopt;
+            };
+            result.reduced_chi_square = factor("_fit_result.reduced_chi_square");
             result.objective_name = text("_fit_result.objective_name");
-            result.objective_value = number("_fit_result.objective_value");
+            result.objective_value = factor("_fit_result.objective_value");
             result.n_data_points = count("_fit_result.n_data_points");
             result.n_parameters = count("_fit_result.n_parameters");
             result.n_free_parameters = count("_fit_result.n_free_parameters");
             result.degrees_of_freedom = count("_fit_result.degrees_of_freedom");
             result.covariance_available = flag("_fit_result.covariance_available");
             result.exit_reason = text("_fit_result.exit_reason");
-            result.prof_wr_factor = number("_fit_result.prof_wr_factor");
-            // Absent in a result written before them.
-            for (const auto& [tag, field] : {std::pair{"_fit_result.prof_r_factor", &result.prof_r_factor},
-                                             std::pair{"_fit_result.prof_wr_expected", &result.prof_wr_expected},
-                                             std::pair{"_fit_result.prof_cr_factor", &result.prof_cr_factor},
-                                             std::pair{"_fit_result.prof_cwr_factor", &result.prof_cwr_factor}}) {
-                if (block.find(tag) != nullptr) {
-                    *field = number(tag);
-                }
-            }
+            result.prof_wr_factor = factor("_fit_result.prof_wr_factor");
+            result.prof_r_factor = factor("_fit_result.prof_r_factor");
+            result.prof_wr_expected = factor("_fit_result.prof_wr_expected");
+            result.prof_cr_factor = factor("_fit_result.prof_cr_factor");
+            result.prof_cwr_factor = factor("_fit_result.prof_cwr_factor");
             result.profile_function = text("_fit_result.profile_function");
             result.background_function = text("_fit_result.background_function");
             result.descent = text("_fit_result.descent");
@@ -4146,8 +4145,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         }
                         bank->fit_n_data_points = static_cast<int>(value);
                     }
-                    bank->fit_prof_wr_factor =
-                        to_double(loop_cell(*banks, row, "_fit_result_bank.prof_wr_factor", where), where);
+                    loop_cell(*banks, row, "_fit_result_bank.prof_wr_factor", where);
+                    bank->fit_prof_wr_factor = cell(*banks, row, "_fit_result_bank.prof_wr_factor");
                     bank->fit_chi_square = cell(*banks, row, "_fit_result_bank.chi_square");
                     bank->fit_prof_r_factor = cell(*banks, row, "_fit_result_bank.prof_r_factor");
                     bank->fit_prof_wr_expected = cell(*banks, row, "_fit_result_bank.prof_wr_expected");

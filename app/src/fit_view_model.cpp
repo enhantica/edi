@@ -19,6 +19,8 @@ namespace {
 
 // The goodness-of-fit and the fit-results table show χ² in its dictionary format.
 QString chi(double value) { return QString::fromStdString(edi::display_text("fit_result.reduced_chi_square", value)); }
+// A recorded χ² that was not a number is none, and shows as nothing.
+QString chi(const std::optional<double>& value) { return value.has_value() ? chi(*value) : QString(); }
 // The goodness-of-fit's dictionary label (`reduced χ²`).
 QString chi_label() { return QString::fromStdString(edi::label("fit_result.reduced_chi_square")); }
 
@@ -134,15 +136,13 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         QList<Row> rows;
         for (std::size_t i = 0; i < project.experiments.size(); ++i) {
             const edi::ExperimentBase& experiment = *project.experiments[i];
-            const bool own = experiment.fit_prof_wr_factor.has_value();
+            const bool own = experiment.fit_share_held();
             rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
                          {QString::fromStdString(experiment.name.value()), static_cast<int>(i),
                           QStringList{percent("fit_result.prof_r_factor",
                                               own ? experiment.fit_prof_r_factor : result.prof_r_factor, form),
                                       percent("fit_result.prof_wr_factor",
-                                              own ? experiment.fit_prof_wr_factor
-                                                  : std::optional<double>(result.prof_wr_factor),
-                                              form)}}});
+                                              own ? experiment.fit_prof_wr_factor : result.prof_wr_factor, form)}}});
         }
         if (columns != columns_) {
             columns_ = columns;
@@ -192,9 +192,9 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     // first experiment, as the experiment selector reads it (ExperimentListModel).
     const bool shares =
         std::any_of(project.experiments.begin(), project.experiments.end(),
-                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+                    [](const auto& experiment) { return experiment->fit_share_held(); });
     const auto in_fit = [&](std::size_t i) {
-        return shares ? project.experiments[i]->fit_prof_wr_factor.has_value() : i == 0;
+        return shares ? project.experiments[i]->fit_share_held() : i == 0;
     };
     std::size_t datasets = 0;
     for (std::size_t i = 0; i < project.experiments.size(); ++i) {
