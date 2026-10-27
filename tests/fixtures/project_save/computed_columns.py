@@ -147,8 +147,22 @@ def check(directory, engine):  # noqa: PLR0914 - each physical column has its ow
                     'Every included background follows independent linear interpolation',
                 )
         fresh_reflections = observed.refln
+        # Take each stable fresh column once. Binding getters materialize whole
+        # vectors; doing that for every row adds no check and makes this quadratic.
+        columns = {
+            key: np.asarray(getattr(fresh_reflections, key)).copy()
+            for key in (
+                'index_h',
+                'index_k',
+                'index_l',
+                'structure_id',
+                'f_calc',
+                'f_squared_calc',
+                axis,
+            )
+        }
         require(
-            len(fresh_reflections.index_h) == len(reflections),
+            len(columns['index_h']) == len(reflections),
             'A fresh rounded-model calculation retains every saved reflection row',
         )
         for index, row in enumerate(reflections):
@@ -174,13 +188,13 @@ def check(directory, engine):  # noqa: PLR0914 - each physical column has its ow
             )
             for key in ('index_h', 'index_k', 'index_l', 'structure_id'):
                 require(
-                    str(getattr(fresh_reflections, key)[index]) == row['_refln.' + key],
+                    str(columns[key][index]) == row['_refln.' + key],
                     'Fresh calculation preserves every saved reflection identity and order',
                 )
             for key in ('f_calc', 'f_squared_calc', axis):
                 close_saved(
                     row['_refln.' + key],
-                    getattr(fresh_reflections, key)[index],
+                    columns[key][index],
                     'Every saved reflection value follows independent Decimal spelling '
                     'of a fresh calculation from written inputs',
                 )

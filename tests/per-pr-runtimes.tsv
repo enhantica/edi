@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-27T03:58:36Z
+# measured_utc = 2026-10-27T04:45:58Z
 #
-# Recorded from: measured test run (24 node(s) measured once, 16267 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (12 node(s) measured once, 16279 banked, 0 stale row(s) dropped)
 # Collected tests: 18748; with a reported duration: 10471
 # Module-scoped fixture costs recorded: 93
 #
@@ -2165,10 +2165,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_c34_t25_fullprof_layout.
 0.260	tests/integration/py/test_c34_t26_live_currentness.py::test_edited_category_reads_current_or_raises[site-refln]
 0.270	tests/integration/py/test_c34_t26_live_currentness.py::test_edited_category_reads_current_or_raises[structure-replacement-data]
 0.270	tests/integration/py/test_c34_t26_live_currentness.py::test_edited_category_reads_current_or_raises[structure-replacement-refln]
-0.110	tests/integration/py/test_c34_t26_live_currentness.py::test_equal_write_stales_before_read_then_recalculates[measured-su]
-0.110	tests/integration/py/test_c34_t26_live_currentness.py::test_equal_write_stales_before_read_then_recalculates[measured]
-0.250	tests/integration/py/test_c34_t26_live_currentness.py::test_equal_write_stales_before_read_then_recalculates[parameter]
-0.040	tests/integration/py/test_c34_t26_live_currentness.py::test_mixed_bank_save_precedes_lazy_recalculation
+0.430	tests/integration/py/test_c34_t26_live_currentness.py::test_equal_write_stales_before_read_then_recalculates[measured-su]
+0.430	tests/integration/py/test_c34_t26_live_currentness.py::test_equal_write_stales_before_read_then_recalculates[measured]
+0.440	tests/integration/py/test_c34_t26_live_currentness.py::test_equal_write_stales_before_read_then_recalculates[parameter]
+0.060	tests/integration/py/test_c34_t26_live_currentness.py::test_mixed_bank_save_precedes_lazy_recalculation
 0.040	tests/integration/py/test_c34_t26_live_currentness.py::test_retained_category_rechecks_its_live_owner[cell-data]
 0.040	tests/integration/py/test_c34_t26_live_currentness.py::test_retained_category_rechecks_its_live_owner[cell-refln]
 0.050	tests/integration/py/test_c34_t26_live_currentness.py::test_retained_category_rechecks_its_live_owner[refused-cell-data]
@@ -6256,7 +6256,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py:
 UNMEASURED:failed-in-this-run	tests/integration/py/test_fitting_mode_weights.py::test_joint_weights_load_in_every_mode_and_save_only_in_joint[single]
 0.010	tests/integration/py/test_free_header_declaration.py::test_analysis_free_header_declares_the_owner_radio_popup
 0.350	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t4_existing_tof_writer_goldens_remain_byte_exact
-0.310	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t56_datablock_bytes_match_pre_fix_regression_pins
+0.550	tests/integration/py/test_frozen_writer_bytes.py::test_c11_t56_datablock_bytes_match_pre_fix_regression_pins
 0.020	tests/integration/py/test_fullprof_public_logs.py::test_authoring_capture_scrubs_paths_and_preserves_program_evidence
 0.030	tests/integration/py/test_fullprof_public_logs.py::test_every_committed_fullprof_log_is_scrubbed_and_its_receipt_matches
 0.014	tests/integration/py/test_historical_correlation_rename.py::test_removed_rows_keep_both_historical_endpoints_on_block_rename[category-experiment-link-remove-compact]
@@ -7051,7 +7051,7 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract
 0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[stopped]
 0.130	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[success]
 0.170	tests/integration/py/test_scan_app_contract.py::test_view_model_names_each_outcome_from_owner_table[superseded]
-0.010	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
+0.020	tests/integration/py/test_scan_extended_contract.py::test_bundled_project_load_and_save_as_use_the_writable_copy_routes
 0.520	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[desktop]
 0.370	tests/integration/py/test_scan_extended_contract.py::test_effective_bundle_contains_selected_scan_payloads[web]
 0.000	tests/integration/py/test_scan_extended_contract.py::test_empty_selectors_are_hidden_on_experiment_and_structure_pages
@@ -7675,11 +7675,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_table_and_about_contract
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_descriptive_saved_mapping_refuses_every_nonpresentation_change[title]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_descriptive_saved_mapping_refuses_every_nonpresentation_change[value]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_legacy_input_without_a_key_column_requires_generated_saved_keys
-0.210	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[data]
-0.200	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[extra]
-0.210	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[missing]
-0.240	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[row-order]
-0.960	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[science]
+0.460	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[data]
+0.460	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[extra]
+0.470	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[missing]
+0.490	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[row-order]
+0.540	tests/integration/py/test_table_byte_adaptations.py::test_reviewed_input_byte_projection_refuses_changes_through_the_saved_pin_caller[science]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_source_metadata_archive_refuses_rebanked_whitelist_escapes[beam]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_source_metadata_archive_refuses_rebanked_whitelist_escapes[duplicate]
 0.000	tests/integration/py/test_table_byte_adaptations.py::test_source_metadata_archive_refuses_rebanked_whitelist_escapes[fitting]
@@ -19206,7 +19206,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
 # module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.555	tests/integration/py/test_scan_app_contract.py
-# module-cost: 0.299	tests/integration/py/test_scan_extended_contract.py
+# module-cost: 0.277	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
 # module-cost: 0.352	tests/integration/py/test_scan_notes_resume.py
 # module-cost: 1.158	tests/integration/py/test_weight_fraction_app.py

@@ -38,6 +38,15 @@ def carried_hashes(previous, case):
     return row['after']
 
 
+def carried_file_hash(previous, name, case):
+    """Reuse a generated whole-file transition only from its exact historical bytes."""
+    row = json.loads(PATH.read_text())['cases'][case]
+    if hashlib.sha256(previous).hexdigest() != row['before'][name]:
+        message = 'A carried file pin must retain its complete historical byte witness'
+        raise ValueError(message)
+    return row['after'][name]
+
+
 def computed_files(name):
     if 'ncaf-wish-2bank' in name:
         expected_changes = {

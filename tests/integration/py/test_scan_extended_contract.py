@@ -633,8 +633,24 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     model = block(source('src/project_view_model.cpp'), 'QString ProjectViewModel::saveTo(')
     require(
         model,
-        r'edi::save_project_as\(\*project_, directory\.toStdString\(\)\)',
-        'Save As wiring: the action reaches the core project writer',
+        r'edi::Project& saved = scan_template_ \? \*scan_template_ : \*project_;',
+        'Save As wiring: the writer selects the actual scan template or ordinary model',
+    )
+    require(
+        model,
+        r'edi::save_project_as\(saved, directory\.toStdString\(\)\)',
+        'Save As wiring: the selected saved model reaches the core project writer',
+    )
+    staged = block(session, 'bool Session::stageCopy(')
+    require(
+        staged,
+        r'std::make_shared<edi::Project>\(project_->savedModel\(\)\)',
+        'Save As wiring: a staged archive or browser save copies the canonical saved model',
+    )
+    require(
+        staged,
+        r'edi::save_project_as\(\*copy, staged\.folder\.toStdString\(\)\)',
+        'Save As wiring: the staged copy reaches the actual core project writer',
     )
 
 
