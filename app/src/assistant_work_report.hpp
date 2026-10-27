@@ -13,7 +13,7 @@
 namespace edi_app {
 class AssistantViewModel;
 // Immutable native launch configuration; no provider or mutable test fields.
-struct AssistantWorkReportOptions { bool automatic = false; };
+struct AssistantWorkReportOptions { bool automatic = true; };
 
 bool work_report_next_serial(std::uint64_t current, std::uint64_t& next) noexcept;
 const QJsonObject& work_report_serial_refusal();

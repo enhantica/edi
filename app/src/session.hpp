@@ -15,6 +15,10 @@
 #include "example_list_model.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
+#include "assistant_view_model.hpp"
+
+class QQmlEngine;
+class QJSEngine;
 #include "web_storage.hpp"
 
 namespace edi_app {
@@ -75,6 +79,7 @@ class Session : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
+    Q_PROPERTY(edi_app::AssistantViewModel* assistant READ assistant CONSTANT)
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -97,7 +102,9 @@ class Session : public QObject {
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
 
    public:
-    explicit Session(QObject* parent = nullptr);
+    explicit Session(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
+    static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
+    AssistantViewModel* assistant() const { return assistant_; }
     ~Session() override;
 
     ProjectViewModel* project() const { return project_; }
@@ -227,6 +234,9 @@ class Session : public QObject {
     void leaveTemporaryOrigin();
     bool saveCopy(const QString& target, bool zip);
 
+    friend void configure_engine(QQmlEngine&, std::unique_ptr<Session>);
+    bool engine_bound_ = false;
+    AssistantViewModel* assistant_ = nullptr;
     ProjectViewModel* project_ = nullptr;
     QString last_error_;
     ExampleListModel* examples_;

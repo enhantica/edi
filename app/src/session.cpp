@@ -128,8 +128,11 @@ void WarningListModel::recount() {
 
 // ---- Session ------------------------------------------------------------------------------------
 
-Session::Session(QObject* parent)
+Session::Session(QObject* parent, AssistantWorkReportOptions options)
     : QObject(parent), examples_(new ExampleListModel(this)), warnings_(new WarningListModel(this)) {
+    assistant_ = new AssistantViewModel(this, options);
+    connect(this, &Session::projectAboutToChange, this, [this] { assistant_->setProject(nullptr); });
+    connect(this, &Session::projectChanged, this, [this] { assistant_->setProject(project_); });
     // crysta's warnings reach Messages, never only the terminal (the owner, 2026-10-23).
     edi::collect_engine_warnings();
     // What a crash left in the temporary directory (edi ADR-0052).
@@ -144,7 +147,11 @@ Session::Session(QObject* parent)
     }
 }
 
-Session::~Session() { releaseTemporaryFolder(); }
+Session::~Session() {
+    delete assistant_;
+    assistant_ = nullptr;
+    releaseTemporaryFolder();
+}
 
 void Session::releaseTemporaryFolder() {
     if (!temporary_folder_.isEmpty()) {
