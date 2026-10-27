@@ -219,6 +219,14 @@ QtObject {
             colourScheme = offered;
         }
     }
+    // A stored Stacked choice no longer offered (an earlier palette's token) follows the palette again, so the Stacked
+    // lines and the choice Preferences shows agree (the owner's report, 2026-10-27).
+    onScanStackedPaletteChanged: {
+        const offered = Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps));
+        if (scanStackedPalette !== "" && offered.indexOf(scanStackedPalette) < 0) {
+            scanStackedPalette = "";
+        }
+    }
     onPatternColourSchemeChanged: {
         if (patternColourScheme !== "") {
             colourScheme = ApplicationInfo.colourSchemeOrDefault(patternColourScheme);

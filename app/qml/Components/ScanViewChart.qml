@@ -51,7 +51,8 @@ Item {
     readonly property var mapChoices: ApplicationInfo.scanColourMaps
     readonly property string stackedPalette: {
         const stored = Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme;
-        return stackedChoices.indexOf(stored) >= 0 ? stored : ApplicationInfo.colourSchemeOrDefault(stored);
+        // A choice no longer offered follows the app's palette, as Preferences then shows it.
+        return stackedChoices.indexOf(stored) >= 0 ? stored : ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme);
     }
     readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "blue-red"
     readonly property string mapDirection: chart.project ? chart.project.mapDirection : "auto"
