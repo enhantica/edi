@@ -78,6 +78,19 @@ std::string input_categories_text(const std::string& text);
 /// An edit of input_categories_text(full) with the output categories of `full` after it, so an apply keeps the
 /// measured data and the results the edit did not show.
 std::string with_output_categories(const std::string& edited, const std::string& full);
+/// One category as a block's text holds it, for a group the app makes from the dictionary: its item names and its
+/// values as written (quotes removed), a row per loop row, or one row for single items.
+struct TextCategory {
+    bool loop = false;
+    std::vector<std::string> names;
+    std::vector<std::vector<std::string>> rows;
+};
+/// The categories a block's text holds, by id, in the text's order.
+std::vector<std::string> text_category_ids(const std::string& text);
+TextCategory text_category(const std::string& text, std::string_view id);
+/// The text with one value of a category replaced, spelled as the writer spells a value.
+std::string with_text_value(const std::string& text, std::string_view id, std::size_t row, std::string_view name,
+                            const std::string& value);
 
 /// What a surface shows for a parameter: a value the space group fixes as its exact fraction, a value
 /// with a nonzero s.u. as `value(su)` by the project's rule (`iucr_19` or `iucr_99`), any other by its

@@ -386,7 +386,7 @@ void AnalysisViewModel::sync() {
     fit_start_->sync();
     aliases_->sync();
     constraints_->sync();
-    categories_->setCategories(edi::analysis_categories(project_));
+    categories_->setCategories(edi::analysis_categories(project_), [this] { return text_->text().toStdString(); });
 }
 
 }  // namespace edi_app

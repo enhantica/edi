@@ -151,6 +151,7 @@ WorkflowPage {
             Repeater {
                 model: page.analysis ? page.analysis.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.analysis ? page.analysis.text : null
                     shownTier: "Extras"
                     contents: page.contents
                     measured: page.measured

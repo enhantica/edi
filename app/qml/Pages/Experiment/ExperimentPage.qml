@@ -117,6 +117,7 @@ WorkflowPage {
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.experiment ? page.experiment.text : null
                     shownTier: "Basic"
                     contents: page.contents
                     measured: page.measured
@@ -135,6 +136,7 @@ WorkflowPage {
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.experiment ? page.experiment.text : null
                     shownTier: "Extras"
                     contents: page.extrasContents
                     measured: page.measured

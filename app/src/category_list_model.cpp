@@ -77,7 +77,8 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
 
 CategoryListModel::CategoryListModel(QObject* parent) : QAbstractListModel(parent) {}
 
-void CategoryListModel::setCategories(const std::vector<edi::Category>& categories) {
+void CategoryListModel::setCategories(const std::vector<edi::Category>& categories,
+                                      const std::function<std::string()>& text) {
     std::vector<Row> target;
     for (const edi::Category* shown : presentation_order(categories)) {
         const edi::Category& category = *shown;
@@ -89,6 +90,41 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
             target.push_back({QStringLiteral("background_estimate"), 0, false, true});
         }
     }
+    std::vector<std::string> ids;
+    for (const edi::Category& category : categories) {
+        ids.push_back(category.id);
+    }
+    if (text && ids != core_ids_) {
+        core_ids_ = ids;
+        generated_.clear();
+        const std::string saved = text();
+        // The bond settings get a designed group of their own later, and the type is shown elsewhere.
+        static const char* const kNotGenerated[] = {"geom", "experiment_type"};
+        for (const std::string& id : edi::text_category_ids(saved)) {
+            const bool excluded =
+                std::find(std::begin(kNotGenerated), std::end(kNotGenerated), id) != std::end(kNotGenerated);
+            if (excluded || edi::category_label(id).empty()) {
+                continue;
+            }
+            const edi::TextCategory category = edi::text_category(saved, id);
+            generated_.push_back({QString::fromStdString(id),
+                                  category.loop ? static_cast<int>(category.rows.size()) : 0, category.loop, true});
+        }
+    }
+    for (const Row& row : generated_) {
+        const bool listed = std::any_of(target.begin(), target.end(), [&row](const Row& held) { return held.id == row.id; });
+        // A file's `data` loop is the core's measured data or calculation range.
+        const bool data = row.id == QLatin1String("data") &&
+                          std::any_of(target.begin(), target.end(), [](const Row& held) {
+                              return held.id == QLatin1String("data_range");
+                          });
+        if (!listed && !data) {
+            target.push_back(row);
+        }
+    }
+    std::stable_sort(target.begin(), target.end(), [](const Row& a, const Row& b) {
+        return edi::category_order(a.id.toStdString()) < edi::category_order(b.id.toStdString());
+    });
     const std::size_t before = rows_.size();
     const auto find = [](const std::vector<Row>& rows, const QString& id, std::size_t from) {
         for (std::size_t i = from; i < rows.size(); ++i) {
