@@ -48,7 +48,8 @@ Column {
 
         equalColumns: true
 
-        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
+        // The type's combo box as wide as its widest type, its icon and arrow (the owner, 2026-10-27).
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), -1, -1, -1, group.wyckoffWidth, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

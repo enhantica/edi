@@ -24,7 +24,8 @@ EaElements.GroupBox {
             objectName: "recentProjects.list"
             defaultInfoText: qsTr("No recent projects")
             sourceModel: RecentProjects.rows
-            columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
+            // The status is icons only, so it sits by the remove buttons (the owner, 2026-10-27).
+            columns: [numberColumnWidth, -1, AppSizes.iconOnlyColumnWidth, AppSizes.iconColumnWidth]
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
