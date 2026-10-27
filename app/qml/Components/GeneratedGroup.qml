@@ -55,7 +55,7 @@ Column {
                 label: data.labels[index] ?? modelData
                 unit: data.units[index] ?? ""
                 fieldValue: data.rows.length > 0 ? (data.rows[0][index] ?? "") : ""
-                editable: !data.output && group.source !== null && group.source.file !== ""
+                editable: !data.output && !data.setByProgram.includes(modelData) && group.source !== null && group.source.file !== ""
                 onCommitted: text => group.apply(0, modelData, text)
             }
         }

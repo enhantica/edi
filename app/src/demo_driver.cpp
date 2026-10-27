@@ -792,6 +792,9 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"texttab-3-everything-dark", {"text.show", "choose:Everything"}});
         steps_.push_back({"texttab-4-everything-light", {"theme:light"}});
         steps_.push_back({"texttab-5-editable-again", {"text.show", "choose:Editable"}});
+        // An edit not yet applied: the check button turns red.
+        steps_.push_back({"texttab-6-edited-light", {"text.view", "type: "}});
+        steps_.push_back({"texttab-7-edited-dark", {"theme:dark"}});
     }
     // The excluded ranges on Stacked and the Map, shown and hidden (the owner, 2026-10-27): NCAF's five banks. Run only
     // when asked (`--demo-only excluded-`).

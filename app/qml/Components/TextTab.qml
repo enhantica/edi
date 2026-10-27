@@ -206,7 +206,7 @@ EaComponents.SideBarColumn {
             anchors.rightMargin: AppSizes.textViewPadding
             width: Math.min(parent.width - 2 * AppSizes.textViewPadding, refusalLabel.implicitWidth + 2 * AppSizes.textViewPadding)
             height: refusalLabel.height + AppSizes.textViewPadding
-            visible: refusalLabel.visible
+            visible: tab.refusal !== "" && tab.dirty
             color: EaStyle.Colors.contentBackground
             border.color: EaStyle.Colors.red
             border.width: EaStyle.Sizes.borderThickness
@@ -218,7 +218,6 @@ EaComponents.SideBarColumn {
                 objectName: "text.refusal"
                 anchors.centerIn: parent
                 width: parent.width - 2 * AppSizes.textViewPadding
-                visible: tab.refusal !== "" && tab.dirty
                 wrapMode: Text.Wrap
                 color: EaStyle.Colors.red
                 text: tab.refusal

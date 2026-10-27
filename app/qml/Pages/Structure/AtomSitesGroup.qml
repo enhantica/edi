@@ -115,7 +115,7 @@ Column {
                 property int horizontalAlignment: Text.AlignLeft
                 height: parent.height
                 SearchableComboBox {
-                    width: Math.min(parent.width, implicitWidth)
+                    width: Math.min(parent.width, fittedWidth)
                     x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
                     horizontalAlignment: Text.AlignLeft
                     objectName: `atomSite.typeSymbol.${row.index}`

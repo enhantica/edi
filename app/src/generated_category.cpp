@@ -41,12 +41,16 @@ void GeneratedCategory::read() {
     names_.clear();
     labels_.clear();
     units_.clear();
+    set_by_program_.clear();
     for (const std::string& name : category.names) {
         const std::string uid = id + "." + name;
         const bool known = edi::has_item(uid);
         names_.append(QString::fromStdString(name));
         labels_.append(QString::fromStdString(known ? edi::label(uid) : name));
         units_.append(QString::fromStdString(known ? edi::units_label(uid) : std::string()));
+        if (edi::item_is_set_by_program("_" + uid)) {
+            set_by_program_.append(QString::fromStdString(name));
+        }
     }
     rows_.clear();
     for (const std::vector<std::string>& row : category.rows) {

@@ -148,6 +148,12 @@ bool category_is_output(std::string_view id) {
     return found != nullptr && found->output;
 }
 
+bool item_is_set_by_program(std::string_view tag) {
+    static const std::string_view kSet[] = {"_metadata.created", "_metadata.last_modified", "_metadata.timestamp",
+                                            "_metadata.path"};
+    return std::find(std::begin(kSet), std::end(kSet), tag) != std::end(kSet);
+}
+
 namespace {
 
 // A block's text split as crysta's writer orders it: the lines up to its `data_` line, then each item, loop (its
@@ -203,7 +209,8 @@ TextUnits text_units(const std::string& text) {
             }
         } else if (line.starts_with('_')) {
             const std::string id = category_of(line);
-            out.units.push_back({category_is_output(id), id, {}});
+            const std::string tag = line.substr(0, line.find_first_of(" \t"));
+            out.units.push_back({category_is_output(id) || item_is_set_by_program(tag), id, {}});
         } else if (out.units.empty()) {
             out.units.push_back({});
         } else {
@@ -328,19 +335,24 @@ TextCategory text_category(const std::string& text, std::string_view id) {
         out.names.push_back(line.substr(dot + 1, end == std::string::npos ? std::string::npos : end - dot - 1));
         std::string value;
         if (unit.lines.size() > 1 && unit.lines[1].starts_with(';')) {
-            // A field opening with `;\` is folded, as crysta writes a long description: a line ending in `\`
-            // goes on without a line break.
-            const bool folded = unit.lines[1] == ";\\";
-            bool joined = folded;
-            value = folded ? std::string() : unit.lines[1].substr(1);
-            for (std::size_t k = 2; k + 1 < unit.lines.size(); ++k) {
-                std::string line = unit.lines[k];
-                const bool fold = folded && !line.empty() && line.back() == '\\';
-                if (fold) {
-                    line.pop_back();
+            // A text field, as crysta writes a long description: a line break inside a paragraph is a space, an
+            // empty line a paragraph break.
+            std::size_t breaks = 0;
+            value.clear();
+            std::vector<std::string> field{unit.lines[1].substr(1)};
+            if (unit.lines.size() > 2) {
+                field.insert(field.end(), unit.lines.begin() + 2, unit.lines.end() - 1);
+            }
+            for (const std::string& line : field) {
+                if (line.empty()) {
+                    breaks += value.empty() ? 0 : 1;
+                    continue;
                 }
-                value += (joined ? "" : "\n") + line;
-                joined = fold;
+                if (!value.empty()) {
+                    value += breaks > 0 ? std::string(breaks, '\n') : std::string(" ");
+                }
+                breaks = 0;
+                value += line;
             }
         } else {
             const std::vector<std::string> values = line_values(end == std::string::npos ? std::string() : line.substr(end));
