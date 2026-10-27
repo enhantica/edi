@@ -1791,7 +1791,7 @@
         },
         {
           "member": "FitResultRecord::reduced_chi_square",
-          "type": "double",
+          "type": "std::optional<double>",
           "items": [
             "reduced_chi_square"
           ]
@@ -1805,7 +1805,7 @@
         },
         {
           "member": "FitResultRecord::objective_value",
-          "type": "double",
+          "type": "std::optional<double>",
           "items": [
             "objective_value"
           ]
@@ -1854,7 +1854,7 @@
         },
         {
           "member": "FitResultRecord::prof_wr_factor",
-          "type": "double",
+          "type": "std::optional<double>",
           "items": [
             "prof_wr_factor"
           ]
@@ -4445,6 +4445,11 @@
       "not_storage": "what the computed categories were computed from"
     },
     {
+      "member": "ExperimentBase::carried_calculation",
+      "type": "bool",
+      "not_storage": "whether its file held calculated results"
+    },
+    {
       "member": "ExperimentBase::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
@@ -4923,7 +4928,7 @@
     },
     {
       "member": "FitResultRecord::reduced_chi_square",
-      "type": "double",
+      "type": "std::optional<double>",
       "category": "_fit_result"
     },
     {
@@ -4933,7 +4938,7 @@
     },
     {
       "member": "FitResultRecord::objective_value",
-      "type": "double",
+      "type": "std::optional<double>",
       "category": "_fit_result"
     },
     {
@@ -4968,7 +4973,7 @@
     },
     {
       "member": "FitResultRecord::prof_wr_factor",
-      "type": "double",
+      "type": "std::optional<double>",
       "category": "_fit_result"
     },
     {
