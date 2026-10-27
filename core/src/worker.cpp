@@ -174,10 +174,15 @@ Ticket Worker::submit(const std::string& channel, Job job) {
         state_->tokens.emplace(ticket, State::Live{pending.token, channel});
     }
     // Traced before the job can start, so `Submitted` always precedes `Started` in the trace.
-    state_->trace(EventKind::Submitted, channel, ticket);
-    {
+    // Failure before queue admission has no job: release its prepared token too.
+    try {
+        state_->trace(EventKind::Submitted, channel, ticket);
         const std::lock_guard<std::mutex> lock(state_->mutex);
         state_->queue.push_back(std::move(pending));
+    } catch (...) {
+        const std::lock_guard<std::mutex> lock(state_->mutex);
+        state_->tokens.erase(ticket);
+        throw;
     }
 #if EDI_WORKER_OWNER_THREAD
     state_->post([state = state_, keep = state_->open] {
