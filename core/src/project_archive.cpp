@@ -5,6 +5,7 @@
 #include <atomic>
 #include <cctype>
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
@@ -172,6 +173,9 @@ void give_members_unix_modes(std::string& archive) {
                static_cast<unsigned>(static_cast<unsigned char>(archive[at + 1])) << 8U;
     };
     const auto u32 = [&u16](std::size_t at) { return u16(at) | u16(at + 2) << 16U; };
+    const auto u64 = [&u32](std::size_t at) {
+        return static_cast<std::uint64_t>(u32(at)) | static_cast<std::uint64_t>(u32(at + 4)) << 32U;
+    };
     const auto put32 = [&archive](std::size_t at, unsigned value) {
         for (int byte = 0; byte < 4; ++byte) {
             archive[at + static_cast<std::size_t>(byte)] = static_cast<char>((value >> (8 * byte)) & 0xFFU);
@@ -182,9 +186,23 @@ void give_members_unix_modes(std::string& archive) {
         throw IoError("cannot finish the archive: no end of its central directory");
     }
     const std::size_t end = archive.size() - kEndRecord;
-    const unsigned entries = u16(end + 10);
-    std::size_t at = u32(end + 16);
-    for (unsigned entry = 0; entry < entries; ++entry) {
+    std::uint64_t entries = u16(end + 10);
+    std::uint64_t at = u32(end + 16);
+    if (entries == 0xFFFFU || at == 0xFFFFFFFFU) {
+        // A ZIP64 archive (more members, or a larger directory, than the end record holds): the full count and offset
+        // are in the ZIP64 end record, which its locator, just before the end record, names.
+        constexpr std::size_t kLocator = 20;
+        if (end < kLocator || u32(end - kLocator) != 0x07064b50U) {
+            throw IoError("cannot finish the archive: no locator of its ZIP64 end record");
+        }
+        const std::uint64_t record = u64(end - kLocator + 8);
+        if (record + 56 > end || u32(record) != 0x06064b50U) {
+            throw IoError("cannot finish the archive: its ZIP64 end record does not read");
+        }
+        entries = u64(record + 32);
+        at = u64(record + 48);
+    }
+    for (std::uint64_t entry = 0; entry < entries; ++entry) {
         if (at + 46 > end || u32(at) != 0x02014b50U) {
             throw IoError("cannot finish the archive: its central directory does not read");
         }
