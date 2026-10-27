@@ -161,6 +161,41 @@ std::vector<std::string> project_archive_members(const std::string& directory) {
     return members;
 }
 
+namespace {
+
+// Each member of a finished archive stored as a Unix regular file readable by everyone and writable by its owner
+// (0644), as Qt's writer stores them: miniz leaves the mode out, and an extractor that applies stored modes would
+// otherwise write files nobody can read. The central directory's records are walked from its end record.
+void give_members_unix_modes(std::string& archive) {
+    const auto u16 = [&archive](std::size_t at) {
+        return static_cast<unsigned>(static_cast<unsigned char>(archive[at])) |
+               static_cast<unsigned>(static_cast<unsigned char>(archive[at + 1])) << 8U;
+    };
+    const auto u32 = [&u16](std::size_t at) { return u16(at) | u16(at + 2) << 16U; };
+    const auto put32 = [&archive](std::size_t at, unsigned value) {
+        for (int byte = 0; byte < 4; ++byte) {
+            archive[at + static_cast<std::size_t>(byte)] = static_cast<char>((value >> (8 * byte)) & 0xFFU);
+        }
+    };
+    constexpr std::size_t kEndRecord = 22;
+    if (archive.size() < kEndRecord || u32(archive.size() - kEndRecord) != 0x06054b50U) {
+        throw IoError("cannot finish the archive: no end of its central directory");
+    }
+    const std::size_t end = archive.size() - kEndRecord;
+    const unsigned entries = u16(end + 10);
+    std::size_t at = u32(end + 16);
+    for (unsigned entry = 0; entry < entries; ++entry) {
+        if (at + 46 > end || u32(at) != 0x02014b50U) {
+            throw IoError("cannot finish the archive: its central directory does not read");
+        }
+        archive[at + 5] = 3;                    // made by Unix, so the mode below is read
+        put32(at + 38, 0100644U << 16U);        // a regular file, rw-r--r--
+        at += 46 + u16(at + 28) + u16(at + 30) + u16(at + 32);
+    }
+}
+
+}  // namespace
+
 // An archive of members whose bytes `body` reads and whose time `time` gives.
 template <typename Body, typename Time>
 std::string archive_of(const std::vector<std::string>& members, const Body& body,
@@ -186,7 +221,9 @@ std::string archive_of(const std::vector<std::string>& members, const Body& body
         throw IoError("cannot finish the archive");
     }
     const std::unique_ptr<void, decltype(&mz_free)> owned(buffer, &mz_free);
-    return std::string(static_cast<const char*>(buffer), size);
+    std::string archive(static_cast<const char*>(buffer), size);
+    give_members_unix_modes(archive);
+    return archive;
 }
 
 std::string project_archive_bytes(const std::string& directory) {
