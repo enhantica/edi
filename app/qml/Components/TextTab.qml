@@ -38,6 +38,9 @@ EaComponents.SideBarColumn {
     // left with its edit kept shows it again when it is shown again.
     property string shownFile: ""
     property var keptEdits: ({})
+    // The source shown, and the refusals of kept edits an apply on leaving refused, by file.
+    property BlockText shownSource: null
+    property var keptRefusals: ({})
     // True while the tab itself puts a block's text in the view, which is no edit.
     property bool showing: false
     // Whether the page and this tab are shown, and the page's block (WorkflowPage sets both): leaving the edit asks
@@ -49,9 +52,11 @@ EaComponents.SideBarColumn {
     signal blockRequested(int index)
 
     function showBlock() {
+        tab.shownSource = tab.source;
         tab.shownFile = tab.source ? tab.source.file : "";
         tab.shownBlockIndex = tab.blockIndex;
-        tab.refusal = "";
+        tab.refusal = tab.keptRefusals[tab.shownFile] ?? "";
+        delete tab.keptRefusals[tab.shownFile];
         const kept = tab.keptEdits[tab.shownFile];
         delete tab.keptEdits[tab.shownFile];
         tab.showing = true;
@@ -59,19 +64,28 @@ EaComponents.SideBarColumn {
         tab.showing = false;
         tab.edited = kept !== undefined;
     }
+    // Applies `text` as the block `source`'s file: the refusal, with nothing changed, or empty.
+    function applyTo(source: BlockText, text: string): string {
+        return Session.project ? Session.project.applyText(source.file, source.withOutputs(text)) : qsTr("No project");
+    }
     function applyEdit() {
         if (!tab.dirty || !tab.editable)
             return;
-        const refusal = Session.project.applyText(tab.source.file, tab.source.withOutputs(textEdit.text));
+        const refusal = tab.applyTo(tab.source, textEdit.text);
         tab.refusal = refusal;
         if (refusal === "")
             tab.showBlock();
     }
-    // Leaving the edit with it unapplied asks "Discard changes?" (the owner, 2026-10-25): `discard` runs once the
-    // user discards it, `keep` if the user keeps it.
-    function askDiscard(discard, keep) {
-        discardDialog.discard = discard;
-        discardDialog.keep = keep;
+    // Leaving the edit with it unapplied asks (the owner, 2026-10-27): Apply applies it as ✓ does and leaves, and a
+    // refused apply stays on the text with its reason; Don't apply drops it and leaves; Cancel stays. `apply` gives
+    // the refusal, `leave` leaves, `drop` drops the edit and leaves, `stay` comes back to the edit.
+    function askLeave(apply, leave, drop, stay) {
+        discardDialog.actions = {
+            "apply": apply,
+            "leave": leave,
+            "drop": drop,
+            "stay": stay
+        };
         discardDialog.open();
     }
     onShownTextChanged: {
@@ -84,8 +98,14 @@ EaComponents.SideBarColumn {
         if (tab.edited && tab.shownFile !== "" && (tab.source === null || tab.source.file !== tab.shownFile)) {
             const file = tab.shownFile;
             const index = tab.shownBlockIndex;
-            tab.keptEdits[file] = textEdit.text;
-            tab.askDiscard(() => delete tab.keptEdits[file], () => tab.blockRequested(index));
+            const left = tab.shownSource;
+            const kept = textEdit.text;
+            tab.keptEdits[file] = kept;
+            tab.askLeave(() => left ? tab.applyTo(left, kept) : "", () => delete tab.keptEdits[file], () => delete tab.keptEdits[file], refusal => {
+                if (refusal)
+                    tab.keptRefusals[file] = refusal;
+                tab.blockRequested(index);
+            });
         }
         tab.showBlock();
     }
@@ -96,7 +116,10 @@ EaComponents.SideBarColumn {
     // Another page or sidebar tab: kept, the page and this tab are shown again.
     onShownChanged: {
         if (!tab.shown && tab.dirty)
-            tab.askDiscard(() => tab.showBlock(), () => tab.stayRequested());
+            tab.askLeave(() => tab.applyTo(tab.source, textEdit.text), () => tab.showBlock(), () => tab.showBlock(), refusal => {
+                tab.refusal = refusal ?? "";
+                tab.stayRequested();
+            });
     }
     Component.onCompleted: tab.showBlock()
 
@@ -114,7 +137,7 @@ EaComponents.SideBarColumn {
             EaAnimations.ThemeChange {}
         }
 
-        // Show, then ✓, at the tab's top right (the owner, 2026-10-25).
+        // Show, then ✓, over the text's top right corner (the owner, 2026-10-25 and 2026-10-27).
         Row {
             id: controls
 
@@ -125,6 +148,8 @@ EaComponents.SideBarColumn {
             z: 1
 
             ToolbarComboBox {
+                id: showBox
+
                 readonly property list<string> choices: ["editable", "everything"]
 
                 objectName: "text.show"
@@ -138,11 +163,15 @@ EaComponents.SideBarColumn {
                         Preferences.textShow = choice;
                         return;
                     }
-                    tab.askDiscard(() => {
+                    const shown = () => {
                         tab.edited = false;
                         Preferences.textShow = choice;
                         tab.showBlock();
-                    }, null);
+                    };
+                    tab.askLeave(() => tab.applyTo(tab.source, textEdit.text), shown, shown, refusal => {
+                        tab.refusal = refusal ?? "";
+                        showBox.currentIndex = Qt.binding(() => showBox.shownIndex);
+                    });
                 }
             }
             // A disabled button takes no hover, so the reason it is disabled comes from here.
@@ -155,6 +184,7 @@ EaComponents.SideBarColumn {
 
                     objectName: "text.apply"
                     enabled: tab.editable && tab.dirty
+                    alert: true
                     fontIcon: "check"
                     toolTip: qsTr("Apply the edited text to the project")
                     onClicked: tab.applyEdit()
@@ -168,24 +198,36 @@ EaComponents.SideBarColumn {
                 }
             }
         }
-        // Why the last apply was refused; the edited text stays as it was.
-        EaElements.Label {
-            id: refusalLabel
-
-            objectName: "text.refusal"
+        // Why the last apply was refused, over the text under the controls; the edited text stays as it was.
+        Rectangle {
             anchors.top: controls.bottom
-            anchors.left: parent.left
             anchors.right: parent.right
-            anchors.margins: AppSizes.textViewPadding
-            visible: tab.refusal !== "" && tab.dirty
-            wrapMode: Text.Wrap
-            color: EaStyle.Colors.red
-            text: tab.refusal
+            anchors.topMargin: AppSizes.textViewPadding / 2
+            anchors.rightMargin: AppSizes.textViewPadding
+            width: Math.min(parent.width - 2 * AppSizes.textViewPadding, refusalLabel.implicitWidth + 2 * AppSizes.textViewPadding)
+            height: refusalLabel.height + AppSizes.textViewPadding
+            visible: refusalLabel.visible
+            color: EaStyle.Colors.contentBackground
+            border.color: EaStyle.Colors.red
+            border.width: EaStyle.Sizes.borderThickness
+            z: 1
+
+            EaElements.Label {
+                id: refusalLabel
+
+                objectName: "text.refusal"
+                anchors.centerIn: parent
+                width: parent.width - 2 * AppSizes.textViewPadding
+                visible: tab.refusal !== "" && tab.dirty
+                wrapMode: Text.Wrap
+                color: EaStyle.Colors.red
+                text: tab.refusal
+            }
         }
 
         Flickable {
             anchors.fill: parent
-            anchors.topMargin: (refusalLabel.visible ? refusalLabel.y + refusalLabel.height : controls.y + controls.height) + AppSizes.textViewPadding
+            anchors.topMargin: AppSizes.textViewPadding
             anchors.bottomMargin: AppSizes.textViewPadding
             anchors.leftMargin: AppSizes.textViewPadding
             contentWidth: textEdit.contentWidth
@@ -231,28 +273,37 @@ EaComponents.SideBarColumn {
     AppDialog {
         id: discardDialog
 
-        // What leaving runs once the edit is discarded, or kept.
-        property var discard: null
-        property var keep: null
+        // What each answer runs (askLeave).
+        property var actions: ({})
+
+        function answer(name: string, argument): void {
+            const action = discardDialog.actions[name];
+            discardDialog.actions = {};
+            if (action)
+                action(argument);
+        }
 
         objectName: "text.discard"
         title: qsTr("Discard changes?")
-        standardButtons: Dialog.Discard | Dialog.Cancel
+        standardButtons: Dialog.Apply | Dialog.Discard | Dialog.Cancel
         contentWidth: discardText.implicitWidth
         contentHeight: discardText.implicitHeight
+        Component.onCompleted: {
+            const dropButton = standardButton(Dialog.Discard);
+            if (dropButton)
+                dropButton.text = qsTr("Don't apply");
+        }
+        onApplied: {
+            close();
+            const apply = discardDialog.actions["apply"];
+            const refusal = apply ? apply() : "";
+            discardDialog.answer(refusal === "" ? "leave" : "stay", refusal);
+        }
         onDiscarded: {
             close();
-            const discard = discardDialog.discard;
-            discardDialog.discard = discardDialog.keep = null;
-            if (discard)
-                discard();
+            discardDialog.answer("drop");
         }
-        onRejected: {
-            const keep = discardDialog.keep;
-            discardDialog.discard = discardDialog.keep = null;
-            if (keep)
-                keep();
-        }
+        onRejected: discardDialog.answer("stay", "")
 
         EaElements.Label {
             id: discardText
