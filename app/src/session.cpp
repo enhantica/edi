@@ -661,7 +661,7 @@ struct Session::ProjectCreationOutcome {
 bool Session::createProject(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
                             bool reportLibraries, const QString& assistantIntent) {
-    return createProjectImpl(name, description, location, suRule, title, authors, reportLibraries, assistantIntent, nullptr);
+    return createProjectWithOutcome(name,description,location,suRule,title,authors,reportLibraries,assistantIntent).value("success").toBool();
 }
 QVariantMap Session::createProjectWithOutcome(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
@@ -673,9 +673,11 @@ QVariantMap Session::createProjectWithOutcome(const QString& name, const QString
     if (!receiver) return {};
     const bool current = (!outcome.has_owner || outcome.owner) && project_ == outcome.owner &&
         replacement_generation_ == outcome.replacement;
-    return {{"success", success}, {"current", current}, {"error", outcome.error}, {"saved", outcome.saved}, {"path", outcome.path},
+    const QVariantMap result{{"success", success}, {"current", current}, {"error", outcome.error}, {"saved", outcome.saved}, {"path", outcome.path},
         {"owner", QVariant::fromValue(static_cast<QObject*>(outcome.owner.data()))},
         {"has_owner", outcome.has_owner}, {"replacement", QString::number(outcome.replacement)}};
+    assistant_->finishOrdinaryProjectCreationOutcome(assistantIntent,result);
+    return result;
 }
 bool Session::creationOutcomeCurrent(const QVariantMap& outcome) const {
     const auto original = outcome.value("owner").value<QObject*>();
@@ -719,7 +721,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     if (!receiver || !originalCreated) return false;
     bool committed = false;
     quint64 committedReplacement = 0;
-    const bool presented = replaceProject(created, {}, {}, assistantCreation, &committed, &committedReplacement);
+    const bool presented = replaceProject(created, {}, {}, assistantCreation, &committed, &committedReplacement, !assistantCreation && project_==nullptr);
     if (outcome && committed) {
         outcome->owner = originalCreated; outcome->has_owner = true; outcome->replacement = committedReplacement;
     }
@@ -868,7 +870,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate) {
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     if(replacement_generation_==UINT64_MAX)throw std::length_error("Session replacement identity is exhausted");
@@ -903,7 +905,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     project_ = target;
     if(committed)*committed=true;
     if(committedReplacement)*committedReplacement=replacement;
-    if(!nativePrepared && !assistant_->attachProject(target,false))return false;
+    if(!nativePrepared && !assistant_->attachProject(target,false,ordinaryEmptyCreate && previous==nullptr))return false;
     if(!current() || project_!=target)return false;
     opened_example_ = example;
     warnings_->setMessages(warnings);

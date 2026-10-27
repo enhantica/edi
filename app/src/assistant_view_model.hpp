@@ -164,7 +164,7 @@ class AssistantViewModel : public QObject {
    private:
     friend class Session;
     bool ordinarySaveNotification(ProjectViewModel*) const noexcept;
-    bool attachProject(ProjectViewModel* project, bool managedResult); // Session-only exact attachment result.
+    bool attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate = false); // Session-only exact attachment result.
     enum class AttachmentClear { NotRequested, Discarded, Failed };
     AttachmentClear drainAttachmentClear() noexcept;
     bool clearHistoryNow(bool* committed = nullptr);
@@ -172,6 +172,7 @@ class AssistantViewModel : public QObject {
     // Existing ordinary Create dialog only; its captured original intent cannot
     // become an unauthenticated fallback after Stop/replacement.
     bool prepareOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, const QString& location = {});
+    void finishOrdinaryProjectCreationOutcome(const QString& intent, const QVariantMap& outcome) noexcept;
     void finishOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, bool committed) noexcept;
     bool resultSettledReady() const;
     struct State;

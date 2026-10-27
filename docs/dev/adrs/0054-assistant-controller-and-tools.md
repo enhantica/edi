@@ -2499,3 +2499,37 @@ The toolbar robot stays static; chat working animation remains independent.
 The red action pointer retains its last position between controls while the agent
 is active and hides at work end. Automatic local report receipts remain in the
 diagnostic files and no longer insert a chat/footer notice.
+
+### Ordinary Create continuity and visible current-dev controls
+
+The FIRST Create dialog and existing NativeCreateWidget form sequence own ON
+opening, text entry and confirmation. OFF retains the ordinary Session API. Both
+capture the same normal preferences/destination and actual Session save outcome;
+no CWL recipe/candidate/scientific population is introduced. The actual dialog
+location and standard Create button carry their original stable target names.
+One preowned partial/refusal bank and the original call guard cover preparation,
+cue, save, owner retirement and post-adoption refresh failures, including
+cancellation of ticketless creation. Successful completion requires the actual
+ordinary creation/save receipt, and cleanup cannot answer a successor.
+
+Ordinary manual Create has a narrow explicit empty-owner setup handoff. For a
+settled approved current task it retains the original provider thread, admitted
+input snapshots and genuine objective, creates a fresh controller/receipt scope
+for the new empty project, and updates the actual saved-root context. The flag is
+supplied only by Session Create from no project; Open/close/replacement of an
+existing project, account changes and Clear retain their destructive boundaries.
+No stale worker/mutation callback or unrelated scientific authority transfers.
+
+The current-dev statusBar.fit.button and its exact Fit owner replace the retired
+fitting.start lookup, without forcing the Analysis page. Constraints use the
+actual existing group's relations.constraints identity and ordinary editor.
+The FIRST StatusBar assistant work/Stop cluster is restored beside current dev
+fit/opening progress, with current cancel ownership and independent chat icon
+cadence; the toolbar robot remains static. Effective compiled/tool/skill guidance
+prefers normal creation and current Report navigation, investigates current
+source/docs on route refusal, and retains exact updated skill hashes.
+
+Outgoing Result/Diagnostic projection now retains bounded factual app messages
+and known code/target/stage data through the same size/project walk. These are
+untrusted diagnostic data, never instructions. Native Fit identifies its actual
+status-bar owner and closed fit field rather than disguising failure as project.

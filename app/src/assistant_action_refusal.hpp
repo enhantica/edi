@@ -6,9 +6,9 @@
 #include <string_view>
 namespace edi_app {
 inline constexpr std::array<const char*,19> action_errors{{"project_required","input_required","input_unavailable","unsupported_input","target_unavailable","data_already_present","type_locked","unsupported_type","reader_refused","operation_superseded","control_unavailable","invalid_range","purpose_too_long","workflow_page_unavailable","main_sidebar_unavailable","extra_sidebar_unavailable","control_delivery_unconfirmed","control_commit_unconfirmed","manual_input_pending"}};
-inline constexpr std::array<const char*,17> action_fields{{"project","file_id","experiment","axis","token","offset","max_bytes","structure","atom","field","value","region","relation","phase","purpose","parameter","background"}};
+inline constexpr std::array<const char*,18> action_fields{{"project","file_id","experiment","axis","token","offset","max_bytes","structure","atom","field","value","region","relation","phase","purpose","parameter","background","fit"}};
 enum class ControlCause { None, Unavailable, WorkflowPage, MainSidebar, ExtraSidebar, Delivery, Commit, ManualInput, Superseded };
-enum class ControlField { None, Parameter, Background, Relation, Project, Structure, Experiment, Phase, File };
+enum class ControlField { None, Parameter, Background, Relation, Project, Structure, Experiment, Phase, File, Fit };
 inline constexpr const char* control_error(ControlCause cause) noexcept {
     switch(cause) {
     case ControlCause::Unavailable:return action_errors[10];
@@ -33,6 +33,7 @@ inline constexpr const char* control_field(ControlField field) noexcept {
     case ControlField::Experiment:return action_fields[2];
     case ControlField::Phase:return action_fields[13];
     case ControlField::File:return action_fields[1];
+    case ControlField::Fit:return action_fields[17];
     case ControlField::None:return nullptr;
     }
     return nullptr;

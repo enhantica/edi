@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.6.1. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
+Version: 1.7.0. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
 
 ## Inputs and setup
 
@@ -13,7 +13,9 @@ Use genuine user-selected inputs. Acquire immutable files through their current 
 
 Import an attached CIF by default. Use manual structure entry when the user requests it, or when a real import limit requires a different supported route. Do not replace a supplied CIF with guessed coordinates, a generated CIF, a sample structure or an unnecessary manual reconstruction. Current native symmetry/Wyckoff ownership applies: an omitted optional Wyckoff letter is not missing scientific input.
 
-The complete create_cwl_project operation is available only for its advertised target and current no-project/scientifically empty owner. Its CIF and explicit mapped_structure alternatives share native validation. Existing partial projects and broader experiment types use their actually offered operations. Use returned identities after loads, selections, renames or Undo; never infer them from table indices or assume placeholder rows represent the supplied structure.
+From an empty current Edi window use normal create_project, with optional name/description and actual app preferences/destination. On desktop normal Create saves immediately. Show ON opens the original normal dialog, fills its fields and confirms its existing Create button; OFF calls the same ordinary Session owner. Then import the admitted CIF and measurement through load_structure/create_experiment/load_data and current native editors. Keep the same task and supplied calibration through creation; do not ask the user to create the project or repeat already admitted files/instructions.
+
+The specialized complete create_cwl_project operation is available only for its advertised target and current no-project/scientifically empty owner. Its CIF and explicit mapped_structure alternatives share native validation. Existing partial projects and broader experiment types use their actually offered operations. Use returned identities after loads, selections, renames or Undo; never infer them from table indices or assume placeholder rows represent the supplied structure.
 
 For a complete setup, omit recipe.background to use the ordinary native Estimate after measured data is loaded. Preserve explicitly supplied manual anchors exactly through that alternative. Standalone estimate_background operates on the exact current selected experiment and its saved estimation mode, type and settings. After estimating, inspect actual anchors/terms and eligibility. Automatic ownership can refuse direct point/term values or structural edits; it does not authorize changing mode, inventing anchors or freeing every point to bypass that refusal. Explicit manual requests retain their supplied IDs, positions, intensities and free flags.
 
@@ -23,7 +25,7 @@ Preserve requested refinement flags. Current native fittability, dependency and 
 
 Choose steps from the actual residuals, model, uncertainty and user's goal. Use public web search/read to discover ideas when guidance is insufficient, including Edi documentation/source and other relevant scientific primary sources. Search public concepts only; never transmit credentials, private paths, raw measurements or unpublished sample details as queries. Retain actual source URLs/citations and distinguish research suggestions, assumptions and observed results.
 
-If a native operation refuses, inspect its factual cause, current state and completed prefix. A missing control or unsupported operation is a capability limit, not a scientific conclusion. Research supported alternatives and continue authorized work that remains possible. Ask for genuinely missing scientific information or an indispensable user action; do not repeat consent for already delegated work. Never invent results, replay uncertain mutations, switch action modes or bypass controls to force success.
+If a native operation refuses, inspect its factual cause, current state and completed prefix. Investigate actual UI/native diagnostics and current public Edi source/docs/skills for stale route guidance, then continue supported normal actions autonomously. Current Fit is the ordinary status-bar control, not a legacy Analysis-only button. Do not tell the user that only they can make a control accessible without establishing an actual missing capability. Research does not fabricate an executable API. A missing control or unsupported operation is a capability limit, not a scientific conclusion. Research supported alternatives and continue authorized work that remains possible. Ask for genuinely missing scientific information or an indispensable user action; do not repeat consent for already delegated work. Never invent results, replay uncertain mutations, switch action modes or bypass controls to force success.
 
 ## Fits and relations
 
@@ -36,6 +38,8 @@ Respect once/current-owner protections. Normal mode uses validated native operat
 ## Saving, reporting and recommendations
 
 Use save_project for the settled current project. Omitted destination uses its genuine current Session location when owned; a fresh Save As uses the existing folder/ZIP/copy chooser and the user's destination. A name is a suggestion, not path authority. Both modes use ordinary Session save methods; Show actions adds the existing Save cue. A successful ordinary save is reported plainly. Preserve genuine failure/owner-change/uncertainty and do not claim a separate reopen that did not occur. Before quoting final fitted numbers, inspect current saved/adopted values and disclose any actually observed rounding or unresolved uncertainty.
+
+When asked to show the scientific report, use show_report to navigate this current project's enabled ordinary Report preview. Navigation does not generate/export/save a report. The optional edi:report link remains a user-navigation alternative.
 
 Useful project-local work reports are automatic after settled operations/research and at final completion. They reuse actual history, native facts and source attribution; /work-report is optional. A busy writer catches up to the latest snapshot and each admitted write retains its original root while later captures follow the current saved project location. Report-writing failure never vetoes science or creates a separate permission requirement.
 

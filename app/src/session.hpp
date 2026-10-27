@@ -239,7 +239,7 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source, const QString& target, const QString& example);
-    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr);
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false);
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
     bool saveInto(const QString& folder);
