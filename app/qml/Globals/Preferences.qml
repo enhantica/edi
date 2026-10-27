@@ -45,7 +45,7 @@ QtObject {
     property string scanRenderer: "auto"
     // How a new project writes values with a standard uncertainty: "iucr_19" or "iucr_99". A project keeps its
     // own; this only starts a new one.
-    property string newProjectSuRule: "iucr_19"
+    property string newProjectSuRule: "iucr_99"
     // The figure palette of experiments and structures (data/palettes, edi ADR-0038): a palette's token, "earth" (the
     // default) or another of ApplicationInfo.colourSchemes; a stored earlier palette reads as its nearest new one
     // (ApplicationInfo.colourSchemeOrDefault). Every chart, legend, icon and report the app draws follows it, a report
@@ -71,7 +71,7 @@ QtObject {
         preferences.analysisShowFixedSettings = true;
         preferences.showFitResults = true;
         preferences.scanRenderer = "auto";
-        preferences.newProjectSuRule = "iucr_19";
+        preferences.newProjectSuRule = "iucr_99";
         preferences.newReportLibraries = "online";
         preferences.colourScheme = "earth";
         preferences.patternYScale = "linear";

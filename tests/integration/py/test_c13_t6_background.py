@@ -16,6 +16,7 @@ import numpy as np
 import pytest
 
 from conftest import corpus_case_dir
+from tests.fixtures.project_save.reference import six_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/c13_t6_background'
@@ -115,6 +116,15 @@ def test_background_declaration_values_and_free_flags_survive_two_saves(tmp_path
     selected = [0, len(coefficients) // 2, len(coefficients) - 1]
     project = load_project(tmp_path / 'input', row, x, coefficients=coefficients, free=selected)
     expected = basis(row, x) @ coefficients
+    np.testing.assert_allclose(
+        _background(project),
+        expected,
+        rtol=0,
+        atol=1e-8,
+        err_msg='Before Save the declared background consumes the exact authored coefficients',
+    )
+    coefficients = np.asarray([six_digits(value) for value in coefficients])
+    expected = basis(row, x) @ coefficients
     for generation in range(2):
         destination = tmp_path / f'save-{generation}'
         project.save_as(destination)
@@ -124,10 +134,11 @@ def test_background_declaration_values_and_free_flags_survive_two_saves(tmp_path
         )
         actual_free = np.asarray([parameter.value for parameter in project.free_parameters])
         assert np.allclose(actual_free, coefficients[selected], rtol=0, atol=1e-10), (
-            ' both saves must retain the identities of the free coefficients'
+            'Both saves retain free coefficient identities and independently rounded values'
         )
         assert np.allclose(_background(project), expected, rtol=0, atol=1e-8), (
-            ' saved coefficient values, type and normalization must preserve the calculation'
+            'Saved background uses independently rounded coefficients '
+            'with exact type and normalization'
         )
 
 

@@ -1,0 +1,13 @@
+{
+  "authority": "Owner decision 2026-10-25: Save project as dialog and browser-storage warning",
+  "observer": "Read only: ediControlGeometry returns the actual named visible native item; no visible item differs from no item is named. Text items also return text; checkable items return checked.",
+  "controls": {
+    "error": "webFiles.error.message",
+    "notice": "webNotice.text",
+    "folderTooltip": "saveAs.folderTooltip",
+    "warningText": "webStorageWarning.text",
+    "warningIcon": "webStorageWarning.icon",
+    "warningOk": "webStorageWarning.ok",
+    "warningSaveAs": "webStorageWarning.saveAs"
+  }
+}

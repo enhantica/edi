@@ -255,6 +255,36 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Save the project into `directory` through the core (edi::save_project_as), which then is the
     // project's directory; an empty string on success, else the core's message (also `lastError`).
     QString saveTo(const QString& directory);
+    // Work in `folder` from now on: the folder an archive was unpacked into, whose archive is the project's location
+    // (edi ADR-0052). Not a save and not an edit.
+    void workIn(const QString& folder);
+    // Why the project cannot be saved now (a fit is running), or empty.
+    QString saveRefusal() const;
+    // The project takes a save already written into `directory` (by itself, which wrote `metadata`): it works there
+    // and holds what the files hold. An empty string, else why not (also `lastError`).
+    QString adoptSave(const QString& directory, const edi::ProjectMetadata& metadata);
+    // What a scan project reads of a staged save's folder, read before the save is published: the folder's listing
+    // (its datasets, index and run) and the shown dataset's values over the staged copy.
+    struct StagedScan {
+        std::shared_ptr<ScanSession> listing;
+        QString refusal;  // why the listing refused, if it did: the scan shows it, the save goes ahead
+        std::optional<std::vector<edi::Edit::ScanValue>> shown;
+    };
+    // A processed scan's results written into a staged save's `directory`, and what the project will read there read
+    // into `scan`, before the save is published. Why not, or empty.
+    QString stageScan(const QString& directory, const edi::Project& staged, StagedScan& scan);
+    // The project takes a published staged save: `staged` is the staged copy, which already wrote `directory`. It works
+    // there and holds the staged values and results, and a scan the listing `scan` read. Reads and writes no file.
+    void takeStaged(const QString& directory, const edi::Project& staged, StagedScan scan);
+    // After a save adopted the template: a dataset read in flight took its values before, so it is dropped and the
+    // selected dataset read again over the adopted template; `shown` when the shown one was not built again already.
+    void viewAfterSave(bool shown);
+    // The model a save writes: a scan's template while a dataset is shown, else the project.
+    const edi::Project& savedModel() const { return scan_template_ ? *scan_template_ : *project_; }
+    // The project holds changes its place does not (the web app's kept unsaved state, reopened).
+    void markUnsaved() { setModified(true); }
+    // How many edits the project has had: a save that finishes later knows whether the project changed meanwhile.
+    quint64 revision() const { return revision_; }
     QString lastModified() const;
     StructureListModel* structures() const { return structure_list_; }
     ExperimentListModel* experiments() const { return experiment_list_; }
@@ -454,6 +484,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void experimentModelsChanged();
     void lastErrorChanged();
     void canUndoChanged();
+    // Each edit, as it is made: what keeps unsaved work follows it (the web app, edi ADR-0052 §9).
+    void edited();
     void refused(const QString& message);
     // A message for the status bar's Messages (Session lists it): a load's account, a removal's links.
     void message(const QString& text);
@@ -700,6 +732,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void applyDatasetView(std::uint64_t request, int index, DatasetView view);
     // The values a dataset is shown with: the template's, with its results row's over them.
     std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row) const;
+    // The same over `from`, read with `index`'s columns.
+    std::vector<edi::Edit::ScanValue> datasetValues(const std::vector<std::string>& row, const edi::Project& from,
+                                                    const edi::ScanResultIndex& index) const;
     void syncDatasets();
     // One dataset's row in the lists (its outcome, extracted values, template tag).
     void syncDataset(int index);
@@ -724,6 +759,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool calculating_ = false;
     bool adjusting_ = false;
     bool modified_ = false;
+    quint64 revision_ = 0;
     QString last_error_;
     QString published_name_, published_title_, published_description_, published_last_modified_;
     QString published_authors_, published_su_rule_;

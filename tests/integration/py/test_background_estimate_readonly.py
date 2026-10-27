@@ -4,6 +4,7 @@ import edi as engine
 import pytest
 
 from tests.fixtures.background_estimate.readonly import KINDS, edit, materialize, snapshot
+from tests.fixtures.project_save.reference import six_digits
 
 
 @pytest.mark.parametrize('kind', KINDS)
@@ -53,8 +54,14 @@ def test_auto_rows_allow_free_toggles_but_require_manual_for_other_edits(
     saved = tmp_path / 'saved'
     project.save_as(saved)
     again = engine.Project.load(saved)
+    expected = [
+        (name, coordinate, six_digits(value), free) for name, coordinate, value, free in expected
+    ]
+    assert snapshot(project) == expected, (
+        'Save adopts six-digit Manual coefficients while retaining row identity and flags'
+    )
     assert snapshot(again) == expected, (
-        'Manual point and term edits must round-trip every cell exactly'
+        'Manual point and term edits round-trip independently rounded cells and exact row identity'
     )
     assert again.experiment.background_estimate.mode == 'manual', (
         'Manual edit permissions must follow the explicitly saved mode after reload'

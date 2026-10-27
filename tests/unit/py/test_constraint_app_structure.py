@@ -1,5 +1,6 @@
 """Static app wiring checks retained while native app tests are disabled."""
 
+import json
 import re
 from pathlib import Path
 
@@ -102,7 +103,12 @@ def test_preview_projects_cannot_be_bundled_as_application_resources():
     cmake = (ROOT / 'app/CMakeLists.txt').read_text()
     registry = yaml.safe_load((ROOT / 'docs/user/cli/projects.yml').read_text())['projects']
     bundled = [row['id'] for row in registry if row.get('user-facing') is True]
-    assert bundled and len(bundled) == 20, 'the app bundles the complete owner-selected catalogue'
+    selected = json.loads(
+        (ROOT / 'tests/fixtures/example_catalogue/catalogue-selection.json').read_text()
+    )['cases']
+    assert bundled == [row['id'] for row in selected], (
+        'The app must bundle the complete independent owner selection in its declared order'
+    )
     assert 'file(STRINGS ${_cli}/projects.yml' in cmake and 'user-facing:' in cmake, (
         'the app example selection must read the registry user-facing declarations'
     )
@@ -195,10 +201,28 @@ def test_analysis_text_uses_the_saved_core_block_and_invalidates_after_edits():
         'ADR-0015 makes Text use the shown model, including selected scan values; '
         'the save routes still write the scan template or ordinary project'
     )
-    assert (
-        'edi::save_project_as(*scan_template_' in project
-        and 'edi::save_project_as(*project_' in project
-    ), 'project saving must retain both the scan-template and ordinary-model canonical routes'
+    save = re.search(r'QString ProjectViewModel::saveTo\([^)]*\)\s*{(.*?)\n}', project, re.DOTALL)
+    assert save, 'The actual project Save boundary remains inspectable'
+    assert re.search(
+        r'edi::Project& saved = scan_template_ \? \*scan_template_ : \*project_;',
+        save.group(1),
+    ), 'Project saving selects the canonical scan template or ordinary project'
+    assert 'edi::save_project_as(saved, directory.toStdString())' in save.group(1), (
+        'The selected canonical model reaches the actual core writer'
+    )
+    session = source('src/session.cpp')
+    staged = re.search(r'bool Session::stageCopy\([^)]*\)\s*{(.*?)\n}', session, re.DOTALL)
+    assert staged, 'The staged project Save boundary remains inspectable'
+    assert 'std::make_shared<edi::Project>(project_->savedModel())' in staged.group(1), (
+        'A staged save copies the canonical saved model rather than a selected dataset view'
+    )
+    assert 'edi::save_project_as(*copy, staged.folder.toStdString())' in staged.group(1), (
+        'The canonical staged snapshot reaches the actual core writer'
+    )
+    assert re.search(
+        r'savedModel\(\) const { return scan_template_ \? \*scan_template_ : \*project_; }',
+        source('src/project_view_model.hpp'),
+    ), 'Both staged and direct writers select the scan template or ordinary model'
     assert re.search(r'for \(const auto& \[path, body\] : savedFiles\(\)\)', project), (
         'each text block must come from the shared saved-file snapshot'
     )
