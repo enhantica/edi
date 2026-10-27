@@ -355,7 +355,7 @@ EaElements.GroupBox {
             equalColumns: true
             readonly property real nameWidth: (fittedWidths[1] ?? 0) + autoColumnPadding + EaStyle.Sizes.fontPixelSize
             readonly property real unitsWidth: (fittedWidths[3] ?? 0) + autoColumnPadding
-            readonly property real freeWidth: group.measured ? group.freeColumnWidth + EaStyle.Sizes.fontPixelSize : 0
+            readonly property real freeWidth: group.measured ? group.freeColumnWidth : 0
             readonly property real restWidth: Math.max(0, width - numberColumnWidth - nameWidth - unitsWidth - freeWidth - EaStyle.Sizes.tableColumnSpacing * (group.measured ? 7 : 6) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2)
             columns: [numberColumnWidth, nameWidth, -1, unitsWidth, restWidth * 0.3, restWidth * 0.2, restWidth * 0.2].concat(group.measured ? [freeWidth] : [])
 
@@ -388,13 +388,15 @@ EaElements.GroupBox {
                     text: qsTr("max")
                 }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
-                // filters show, as one Undo step (the owner, 2026-10-11). The word and the arrow are centred together
-                // over the checkboxes.
+                // filters show, as one Undo step (the owner, 2026-10-11). The word and the arrow end at the column's
+                // right, over the right-aligned checkboxes; its menu opens centred, so the title is as wide as itself.
                 EaComponents.ListViewLabel {
                     id: freeTitle
+                    // Laid out here, not by the table's alignment rule.
+                    readonly property bool keepsAlignment: true
                     objectName: "parameters.freeHeader"
                     visible: group.measured
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignRight
                     rightPadding: freeArrow.width + group.freeGap
                     color: group.freeTitleColor
                     text: qsTr("free")
@@ -405,7 +407,7 @@ EaElements.GroupBox {
 
                     EaElements.Label {
                         id: freeArrow
-                        x: (freeTitle.width - freeTitle.rightPadding + freeTitle.contentWidth) / 2 + group.freeGap
+                        x: freeTitle.width - freeTitle.rightPadding + group.freeGap
                         anchors.verticalCenter: parent.verticalCenter
                         font: freeArrowProbe.font
                         color: group.freeTitleColor
