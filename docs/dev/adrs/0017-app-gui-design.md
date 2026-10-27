@@ -404,8 +404,8 @@ one selected row, and the row's number in the first column, bold in the accent c
 - **Appearance**: Theme; **Colour scheme — Edi Natural (the default), Edi Coast, Edi Garden, Edi Studio or Edi
   Contrast** (the experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app
   draws; ADR-0038), listed from the core; a stored scheme no longer offered reads and is kept as the default;
-  **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner,
-  2026-09-29): edi has no choice of chart library.
+  **Sidebar — Left or Right** (the owner, 2026-09-29); One sidebar group open at a time (the owner, 2026-10-27; it
+  was Auto collapse). **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
 - **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
   always 2 digits; a project's own rule is on its Project page's Extra tab) and new reports' libraries (online, the
   default, or embedded; a project's own is the Report page's Embed box).
