@@ -5026,7 +5026,7 @@ struct AssistantViewModel::State {
     void widget_click_tab(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
-        if(run->tool=="run_fit"){widget_file_or_fit_input(run);return;}
+        if(run->tool=="run_fit"){widget_reach_parameter(run);return;}
         const QPointer<QQuickItem> target(widget_named(run->tab));
         if (!target) { control_failure(run,ControlCause::WorkflowPage); widget_refuse(run, QObject::tr("The actual workflow tab is unavailable")); return; }
         if (target->property("checked").toBool()) { if (run->tool == "add_relations" || run->tool == "edit_relation") widget_relation_extra(run); else widget_click_main(run); return; }
