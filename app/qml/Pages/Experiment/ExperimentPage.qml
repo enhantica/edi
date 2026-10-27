@@ -45,7 +45,7 @@ WorkflowPage {
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
         "peak": peakExtrasContent,
-        "background": backgroundExtrasContent
+        "background_estimate": backgroundExtrasContent
     })
 
     pageName: "experiment"

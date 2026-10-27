@@ -195,8 +195,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     const SavedFile saved = [this](const std::string& relative) { return savedFile(relative); };
     analysis_ = new AnalysisViewModel(*project_, *this, saved, this);
     (void)model;
-    metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this);
-    report_text_ = new BlockText([this] { return edi::report_settings_text(*project_); }, this);
+    metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this, [] { return std::string("project.edi"); });
+    report_text_ = new BlockText([this] { return edi::report_settings_text(*project_); }, this,
+                                 [] { return std::string("reports/report.edi"); });
     project_text_ = new BlockText(
         [this] {
             std::string text;
@@ -2581,6 +2582,8 @@ void ProjectViewModel::undo() {
         }
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
         undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
+    } else if (const auto* text = std::get_if<AppliedText>(&undo_history_.back())) {
+        undone = apply(edi::Edit::replace_project(*project_, edi::Project(*text->before)), true).isEmpty();
     } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {
         undone = write_report_settings(edi::Edit::report_settings(*project_, *report)).isEmpty();
     } else if (const auto* flags = std::get_if<FreeFlags>(&undo_history_.back())) {
@@ -2701,6 +2704,27 @@ void ProjectViewModel::undo() {
         undo_history_.pop_back();
     }
     syncUndo();
+}
+
+QString ProjectViewModel::applyText(const QString& file, const QString& text) {
+    // A scan's datasets read their data from its files, which a project read from text does not carry.
+    if (scan_) {
+        return tr("A scan project is edited on its pages, not as text");
+    }
+    std::optional<edi::Project> read;
+    try {
+        read = edi::project_with_file_text(*project_, file.toStdString(), text.toStdString());
+    } catch (const std::exception& refusal) {
+        return QString::fromUtf8(refusal.what());
+    }
+    auto before = std::make_shared<const edi::Project>(*project_);
+    const QString error = apply(edi::Edit::replace_project(*project_, std::move(*read)), true);
+    if (!error.isEmpty()) {
+        return error;
+    }
+    undo_history_.emplace_back(AppliedText{std::move(before)});
+    syncUndo();
+    return {};
 }
 
 void ProjectViewModel::syncUndo() {

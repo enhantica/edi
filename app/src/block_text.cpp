@@ -5,9 +5,24 @@
 
 #include <exception>
 
+#include "edi/display.hpp"
+
 namespace edi_app {
 
-BlockText::BlockText(Source source, QObject* parent) : QObject(parent), source_(std::move(source)) {}
+BlockText::BlockText(Source source, QObject* parent, File file)
+    : QObject(parent), source_(std::move(source)), file_(std::move(file)) {}
+
+QString BlockText::file() const { return file_ ? QString::fromStdString(file_()) : QString(); }
+
+QString BlockText::inputText() const {
+    compute();
+    return error_.isEmpty() ? QString::fromStdString(edi::input_categories_text(text_.toStdString())) : QString();
+}
+
+QString BlockText::withOutputs(const QString& edited) const {
+    compute();
+    return QString::fromStdString(edi::with_output_categories(edited.toStdString(), text_.toStdString()));
+}
 
 QString BlockText::text() const {
     compute();

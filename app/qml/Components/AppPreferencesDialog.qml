@@ -331,6 +331,19 @@ AppDialog {
                 onToggled: Preferences.autoCollapse = checked
                 ToolTip.text: qsTr("Opening a group in the sidebar closes the other open groups")
             }
+
+            RowLabel {
+                text: qsTr("Text tab shows") + ":"
+            }
+            RowBox {
+                readonly property list<string> choices: ["editable", "everything"]
+
+                objectName: "preferences.textShow"
+                model: [qsTr("Editable"), qsTr("Everything")]
+                currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
+                onActivated: index => Preferences.textShow = choices[index]
+                ToolTip.text: qsTr("What every Text tab shows: the categories you can edit, or also the measured data and results, read-only")
+            }
         }
 
         // Projects: only the defaults a new project takes. A project keeps its own: its s.u. rule on the Project

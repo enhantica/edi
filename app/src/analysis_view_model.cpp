@@ -274,7 +274,7 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       aliases_(new AliasListModel(project, editor, this)),
       constraints_(new ConstraintListModel(project, editor, this)),
       categories_(new CategoryListModel(this)),
-      text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this)) {
+      text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this, [] { return std::string("analysis/analysis.edi"); })) {
     descent_options_->setItemOptions("minimizer.descent", edi::supported_descents(), edi::default_descent());
     minimizer_type_options_->setItemOptions("minimizer.type", edi::supported_minimizer_types());
     sync();
