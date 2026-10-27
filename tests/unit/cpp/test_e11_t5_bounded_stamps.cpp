@@ -102,7 +102,8 @@ TEST_CASE("E11 bounded stamps refuse before input-sized row payload and relation
     // allocator overhead, aligned allocations and process RSS are not an oracle.
     for(int role=0;role<3;++role) {
         INFO(role);
-        edi::Project project;std::size_t capacity=64*1024,threshold=512*1024;
+        edi::Project project;project.structures.clear();project.experiments.clear();
+        std::size_t capacity=64*1024,threshold=512*1024;
         if(role==0) {
             for(int i=0;i<1024;++i){edi::Structure row;row.name="row_"+std::to_string(i);project.structures.push_back(row);}
             capacity=0;threshold=project.structures.size()*sizeof(std::string);
