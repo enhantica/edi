@@ -494,7 +494,10 @@ void ExperimentViewModel::setExtinctionType(const QString& token) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::extinction(experiment, token.toStdString()), true));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::extinction(experiment,token.toStdString()),true,
+        {ProjectEditor::CreationAction::Kind::ExtinctionType,&experiment,{},token});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setMosaicDistribution(const QString& token) {
@@ -502,7 +505,10 @@ void ExperimentViewModel::setMosaicDistribution(const QString& token) {
         return;
     }
     edi::ExperimentBase& experiment = experiment_;
-    setLastError(editor_.apply(edi::Edit::mosaic_distribution(experiment, token.toStdString()), false));
+    const QPointer<ExperimentViewModel> self(this);
+    const auto refusal=editor_.apply_creation_control(edi::Edit::mosaic_distribution(experiment,token.toStdString()),false,
+        {ProjectEditor::CreationAction::Kind::MosaicDistribution,&experiment,{},token});
+    if(self)setLastError(refusal);
 }
 
 void ExperimentViewModel::setReflnsThresholdSigma(double sigma) {

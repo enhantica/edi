@@ -14,6 +14,8 @@ AppDialog {
     id: dialog
 
     property string text: ""
+    property string objectNamePrefix: "diagnostics"
+    property var readText: () => ApplicationInfo.diagnostics()
 
     objectName: "diagnostics"
     title: qsTr("Diagnostics")
@@ -22,7 +24,7 @@ AppDialog {
     contentWidth: AppSizes.messagesDialogContentWidth
     contentHeight: column.implicitHeight
 
-    onAboutToShow: dialog.text = ApplicationInfo.diagnostics()
+    onAboutToShow: dialog.text = dialog.readText()
 
     Column {
         id: column
@@ -38,7 +40,7 @@ AppDialog {
             EaElements.TextArea {
                 id: textArea
 
-                objectName: "diagnostics.text"
+                objectName: dialog.objectNamePrefix + ".text"
                 readOnly: true
                 selectByMouse: true
                 wrapMode: TextEdit.Wrap
@@ -47,7 +49,7 @@ AppDialog {
             }
         }
         EaElements.SideBarButton {
-            objectName: "diagnostics.copy"
+            objectName: dialog.objectNamePrefix + ".copy"
             width: parent.width
             fontIcon: "copy"
             text: qsTr("Copy as text")

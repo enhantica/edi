@@ -5,13 +5,15 @@ description: Choose and revise a refinement strategy from actual model, data, na
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.3.0. This is scientific guidance for actually offered operations. The agent chooses the steps and stopping point from evidence and the user's goal; no finite staged recipe or pass count is mandatory.
+Version: 1.4.0. This is scientific guidance for actually offered operations. The agent chooses the steps and stopping point from evidence and the user's goal; no finite staged recipe or pass count is mandatory.
 
 Inspect the measured shape, units, weighting, exclusions, structure, calibration, current fit variables, constraints and diagnostics. Preserve input provenance and compare like objectives on comparable observations. A lower residual or a saved project alone does not establish a physically meaningful model. Distinguish an unavailable action, an unidentifiable variable and an observed scientific defect.
 
 Import a supplied CIF by default unless manual entry is requested. Use the ordinary native Estimate with current saved settings for initial background work, unless the user supplies explicit manual anchors. Inspect its current type, estimation mode, anchors/terms and native eligibility before subsequent refinement. Do not impose manual anchors, change ownership or free all background values as a universal first stage.
 
 Choose identifiable variable groups. With a credible model, cumulative release may be useful; divergence or strong correlations may justify a smaller temporary group and renewed diagnosis. Alternative starts or model families require actual supported operations and a restorable state. Ordinary fit Undo is a single current opportunity, not a checkpoint bank. Respect actual native fittability and preserve explicit calibration anchors, chemical composition, symmetry constraints and requested flags.
+
+For single-crystal data, inspect actual extinction family, mosaic-distribution choices and the currently exposed parameters. A supplied crystal size/radius is entered in the native field and units as requested; do not invent a diameter conversion. Extinction family and free variables must follow scientific evidence, not a reference screenshot. A mixed Becker–Coppens domain-radius or mosaic-spread term can have zero local sensitivity at an exact zero start: after observing a genuine zero-stall, a small positive, physically justified trial start may be used and refined. Explain the observation and chosen scale, inspect the actual response and uncertainty, and retain a restorable state. Do not seed fitted values from another experiment or force a positive start without evidence.
 
 For mixed sites, establish the intended same-phase co-occupancy model before imposing relationships. Consider shared coordinates/ADPs or a simpler displacement model only when the scientific evidence and user's scope support them. Native affine constraints are not arbitrary geometric restraints. Do not apply an X-ray atom-order heuristic as a universal neutron rule. Report unresolved correlations and conditional uncertainties honestly.
 

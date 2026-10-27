@@ -39,8 +39,9 @@ struct Limits final {
     static constexpr std::uint64_t jwk_keys = 64;
     static constexpr std::uint64_t sign_in_ms = 300000;
     static constexpr std::uint64_t http_json_ms = 30000;
-    static constexpr std::uint64_t inference_idle_ms = 120000;
-    static constexpr std::uint64_t inference_total_ms = 3600000;
+    // Assistant task lifetime is unlimited. Individual transport/bootstrap requests retain their own bounds.
+    static constexpr std::uint64_t inference_idle_ms = 0;
+    static constexpr std::uint64_t inference_total_ms = 0;
     static constexpr std::uint64_t revoke_ms = 10000;
     static constexpr std::uint64_t callback_ms = 10000;
     static constexpr std::uint64_t question_options = 5;

@@ -172,6 +172,10 @@ std::uint64_t project_metadata_size(const Project* project) {
         });
         const auto absorption_tokens=facts.powder ? supported_absorption_families(experiment->effective_beam_mode()) : std::vector<std::string>{};
         const auto absorption_options=encoded_rows(absorption_tokens,[](const auto& token){return encoded_text(token);});
+        const auto extinction_tokens=facts.powder ? std::vector<std::string>{} : extinction_type_tokens();
+        const auto distribution_tokens=!facts.powder && experiment->extinction.mosaic_distribution ? mosaic_distribution_tokens() : std::vector<std::string>{};
+        const auto extinction_options=encoded_rows(extinction_tokens,[](const auto& token){return encoded_text(token);});
+        const auto distribution_options=encoded_rows(distribution_tokens,[](const auto& token){return encoded_text(token);});
         const auto exclusions = encoded_rows(experiment->excluded_regions, [](const auto& region) {
             return encoded_fields({{"id", encoded_text(region->id.value(), true)}, {"first", encoded_finite(region->first.get())}, {"second", encoded_finite(region->second.get())}});
         });
@@ -204,7 +208,11 @@ std::uint64_t project_metadata_size(const Project* project) {
             {"peak_profile",facts.powder ? encoded_text(effective_peak_type(*experiment)) : 4},
             {"peak_profile_options",profile_options},
             {"absorption_type",facts.powder ? encoded_text(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none")) : 4},
-            {"absorption_type_options",absorption_options},{"cutoff_fwhm",facts.powder ? encoded_finite(experiment->peak.cutoff_fwhm) : 4},
+            {"absorption_type_options",absorption_options},
+            {"extinction_type",facts.powder ? 4 : encoded_text(experiment->extinction.type.value_or("none"))},
+            {"extinction_type_options",extinction_options},
+            {"mosaic_distribution",!facts.powder && experiment->extinction.mosaic_distribution ? encoded_text(*experiment->extinction.mosaic_distribution) : 4},
+            {"mosaic_distribution_options",distribution_options},{"cutoff_fwhm",facts.powder ? encoded_finite(experiment->peak.cutoff_fwhm) : 4},
             {"dataset_weight", encoded_finite(experiment->dataset_weight)}, {"excluded_regions", exclusions}, {"phases", phases},
             {"background", facts.powder ? encoded_fields({{"type", encoded_text(experiment->background_type)}, {"origin", encoded_optional(experiment->background_origin)},
                 {"x_min", encoded_optional(experiment->background_x_min)}, {"x_max", encoded_optional(experiment->background_x_max)},
@@ -265,6 +273,9 @@ J project_metadata(const Project* project) {
                 {"in_peaks",options.in_peaks},{"use_model",options.use_model},{"max_terms",optional(options.max_terms)}};
             A absorption_options;
             if (facts.powder) for(const auto& token:supported_absorption_families(experiment->effective_beam_mode()))append(absorption_options,J(token));
+            A extinction_options,distribution_options;
+            if(!facts.powder)for(const auto& value:extinction_type_tokens())append(extinction_options,J(value));
+            if(!facts.powder && experiment->extinction.mosaic_distribution)for(const auto& value:mosaic_distribution_tokens())append(distribution_options,J(value));
             A profile_options;
             if (facts.powder) visit_supported_peak_profiles(experiment->effective_beam_mode(),[&](const std::string& token){append(profile_options,J(token));});
             append(datasets, O{{"id", KeyTraits<BraggPdExperiment>::canonical(experiment->name.value())},
@@ -274,6 +285,9 @@ J project_metadata(const Project* project) {
                 {"observations", O{{"intensity_count", static_cast<double>(facts.intensities)}, {"sigma_count", static_cast<double>(facts.uncertainties)}, {"weighting",std::string(facts.weighting)}}},
                 {"peak_profile",facts.powder ? J(effective_peak_type(*experiment)) : J(nullptr)},{"peak_profile_options",std::move(profile_options)},
                 {"absorption_type",facts.powder ? (experiment->absorption.type?J(*experiment->absorption.type):J("none")) : J(nullptr)},{"absorption_type_options",std::move(absorption_options)},
+                {"extinction_type",facts.powder ? J(nullptr) : J(experiment->extinction.type.value_or("none"))},{"extinction_type_options",std::move(extinction_options)},
+                {"mosaic_distribution",!facts.powder && experiment->extinction.mosaic_distribution ? J(*experiment->extinction.mosaic_distribution) : J(nullptr)},
+                {"mosaic_distribution_options",std::move(distribution_options)},
                 {"cutoff_fwhm",facts.powder ? finite(experiment->peak.cutoff_fwhm) : J(nullptr)},{"dataset_weight", finite(experiment->dataset_weight)}, {"excluded_regions", std::move(exclusions)}, {"phases", std::move(phases)},
                 {"background",facts.powder ? J(O{{"type", experiment->background_type}, {"origin", optional(experiment->background_origin)},
                                  {"x_min", optional(experiment->background_x_min)}, {"x_max", optional(experiment->background_x_max)},

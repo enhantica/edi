@@ -336,7 +336,7 @@ The existing local-prefix core producer honors positive CMAKE_BUILD_PARALLEL_LEV
 
 ### Bundled official runtime, owner53138596a
 
-A native app configure acquires the complete pinned0.162.1 dedicated app-server package for the declared Linux x86_64/macOS arm64 targets. Public release SHA256, exact layout/version/target/variant, required regular executable members and preserved modes are checked before staging. The source and installed app retain the complete resource layout and matching licence/notice material. Normal build and install verify every staged member hash before exposing it. Missing/corrupt packages fail acquisition/build/install, without silently falling back to PATH or global installers. Other platform packages require their own pinned/qualified target entry before a native build can succeed.
+Developer acquisition is owned by the Pixi assistant-runtime task (see the later canonical provisioning decision); native CMake consumes its already provisioned complete official app-server package for the declared Linux x86_64/macOS arm64 targets. Public release SHA256, exact layout/version/target/variant, required regular executable members and preserved modes are checked before staging. The source and installed app retain the complete resource layout and matching licence/notice material. Normal build and install verify every staged member hash before exposing it. Missing/corrupt packages fail acquisition/build/install, without silently falling back to PATH or global installers. Other platform packages require their own pinned/qualified target entry before a native build can succeed.
 
 The dedicated entrypoint receives --listen directly, not the full CLI's app-server subcommand. Build-tree and relocated-install resolution are explicit and deterministic. EDI_CODEX_DEVELOPMENT_EXECUTABLE is an explicit offline/developer composition: an absolute existing executable implementing that same dedicated protocol entrypoint, with invalid overrides refused and no fallback. Ordinary users set nothing. The optional bundled zsh-fork feature is disabled with the supported per-launch feature override so inherited opt-in cannot select its higher-minimum helper on older supported macOS. Upstream executables/signatures/entitlements remain intact; no profile, HOME/CODEX_HOME or credential-store redirection occurs. Actual Mac outer-distribution signing and user-managed login remain separate witnesses.
 
@@ -2966,3 +2966,65 @@ value is modified by inspection, no Save/calculation is replayed, and no new
 asynchronous Save hook or implicit file authority is introduced. The returned
 parameter/diagnostic projection remains unchanged; its receipt proof uses the
 complete context rather than that projection.
+
+
+## Current-owner continuity, recovery and developer provisioning (2026-10-27)
+
+Prior art is the original Session static QML factory, native scalar-control receipts/Undo,
+selected-file controller collection, CodexAgent operation clock, WorkReport snapshot/writer,
+DiagnosticsDialog and the official runtime staging verifier. These owners remain authoritative.
+
+- Session requires an explicit QObject parent at C++ construction, as in the first assistant.
+  It is intentionally not default constructible: Qt must select static create(engine, scriptEngine)
+  and receive configure_engine's prepared, engine-parented, CppOwnership Session. A second implicit
+  QML Session is not the current-session action owner.
+- Ordinary empty-to-created setup retains the genuine task and admitted bytes. The replacement
+  controller receives a fresh actual selected collection; preowned immutable input-origin wrappers
+  bind that new collection/generation to duplicated original descriptors and physical identities.
+  Old captures retain their old identity. Unrelated project/account/Clear boundaries still retire it.
+- Fit reaches the current statusBar.fit.button and original FitViewModel on any ordinary enabled
+  page; it does not require an obsolete Analysis tab. The persistent cue uses the Save highlight
+  theme colour. Current native scalar actions also expose SC extinction_type and mosaic_distribution
+  through the original ExperimentViewModel setters, offered choices and prepared applied/published
+  receipt. The original family Undo owns every optional extinction parameter, detached handle,
+  relation, free flag and fit metadata. Numeric crystal_radius/domain_radius/mosaic_spread remain
+  normal parameter paths; no example-specific operation, start or engine workaround is introduced.
+- Assistant work has zero total/idle deadline until actual completion, explicit Stop or owner
+  retirement. Active native/human waits work with zero budgets. Bounded individual connection,
+  authentication, protocol and network operations retain their existing limits.
+- Local server-request retention exceptions retain account and task authority when the original
+  channel survives. Return the same call's truthful partial/refused outcome and bounded app-owned
+  diagnostic; automatically retain first_stage/first_class. Do not reinterpret every allocation,
+  unsupported native call or read refusal as expired authentication.
+- Initial official threads are durable (ephemeral=false). A recoverable transport failure can retain
+  the original opaque thread ID only with the same actual project/model, generation, approved
+  inputs/skills/disclosure and staging workspace. Reconnect verifies the actual managed account,
+  then uses thread/resume(threadId, excludeTurns=true), preserving the once ledger and own visible
+  conversation without importing a second history. No uncertain scientific call is replayed.
+  Explicit Clear/sign-out/account change/unrelated project retires resume authority. A failed or
+  unsupported resume is not presented as a successful new instance of the old thread.
+- The existing bounded report snapshot supplies one in-memory current/last JSON document from
+  work start, including before a project exists and after helper reconnect. Preferences > AI opens
+  the existing DiagnosticsDialog with this complete selectable document and Copy; there is no
+  duplicate header button or automatic report chatter. Existing project reports/work-report.json
+  remains the ordinary settled/final mirror. A capture gap preserves the last useful document and
+  records missing evidence, never a fabricated scientific outcome. Regression attempts retain
+  their own exported artifacts; ordinary ZIP working-root/save-pack ownership is unchanged.
+
+Pixi's assistant-runtime task is the sole developer version/checksum source. Its developer-only
+Python provisioner verifies the official native archive, exact regular/executable layout and an
+immutable content-addressed input before atomically publishing input.json. --offline reuses the
+same canonical archive and refuses missing/corrupt inputs. CMake performs no runtime download or
+independent version election: it verifies that manifest/member closure, then reuses the existing
+staging/legal/publication/build/install verifier. Generated version metadata comes from the input.
+Installed users receive native binaries/resources via the existing bundle/install route, without
+Python, Node or Pixi. Platform installers and complete LGPL source delivery remain unqualified.
+
+The stock supported shell_tool/view_image/stable_environment_tools/apps/plugins/remote_plugin/
+multi_agent switches and empty runtime environments disable those routes; hosted public search
+remains enabled and exact configured skill bodies are supplied directly as instructions. These
+switches do not prove a universal exclusion of arbitrary externally configured MCP servers in the
+stock public JSONL API. No eager MCP discovery, global profile mutation, hidden CODEX_HOME,
+guessed allowlist flag or custom Rust runtime is used to claim that unresolved boundary closed.
+Actual advertisement/dispatch, same-thread resume, OFF/ON native behavior and model/scientific
+regressions require independent execution; this source decision alone certifies none of them.

@@ -199,6 +199,7 @@ struct ExperimentControlsUndo {
     std::optional<std::vector<ExcludedRegion>> regions;
     std::optional<std::vector<LinkedStructure>> links;
     std::optional<AbsorptionBase> absorption;
+    std::optional<ExtinctionBase> extinction;
     std::optional<double> cutoff_fwhm, dataset_weight;
     std::optional<RelationsUndo> related;
     std::optional<FitResultRecord> fit_result;
@@ -233,12 +234,18 @@ inline ExperimentControlsUndo capture_experiment_links(Project& project,Experime
     return before;
 }
 
-enum class ExperimentScalarControl { Absorption, CutoffFwhm, DatasetWeight };
+enum class ExperimentScalarControl { Absorption, Extinction, CutoffFwhm, DatasetWeight };
 inline ExperimentControlsUndo capture_experiment_scalar(Project& project,ExperimentBase& experiment,ExperimentScalarControl control) {
     ExperimentControlsUndo before;before.experiment=&experiment;before.fit_result=project.fit_result;
     if(control==ExperimentScalarControl::CutoffFwhm)before.cutoff_fwhm=experiment.peak.cutoff_fwhm;
     else if(control==ExperimentScalarControl::DatasetWeight)before.dataset_weight=experiment.dataset_weight;
-    else {
+    else if(control==ExperimentScalarControl::Extinction) {
+        before.extinction.emplace(experiment.extinction);before.related=capture_relations(project);
+        const auto replaced=experiment.extinction.parameters();std::set<std::string> retained;
+        for(const auto& slot:named_slots(project))
+            if(std::find(replaced.begin(),replaced.end(),slot.parameter)==replaced.end())retained.insert(slot.unique_name);
+        std::erase_if(before.related->parameters,[&](const auto& state){return !retained.contains(state.unique_name);});
+    } else {
         before.absorption.emplace(experiment.absorption);before.related=capture_relations(project);
         const auto replaced=experiment.absorption.parameters();std::set<std::string> retained;
         for(const auto& slot:named_slots(project))
@@ -1184,14 +1191,15 @@ class Edit {
         return Edit([&project,before] {
             const auto found=std::find_if(project.experiments.begin(),project.experiments.end(),[&](const auto& member){return member.get()==before->experiment;});
             if(found==project.experiments.end())throw std::invalid_argument("undo: experiment control owner is no longer in the project");
-            const int owners=int(before->peak.has_value())+int(before->regions.has_value())+int(before->absorption.has_value())+
+            const int owners=int(before->peak.has_value())+int(before->regions.has_value())+int(before->absorption.has_value())+int(before->extinction.has_value())+
                 int(before->cutoff_fwhm.has_value())+int(before->dataset_weight.has_value())+int(before->links.has_value());
-            const bool family=before->peak.has_value() || before->absorption.has_value() || before->links.has_value();
+            const bool family=before->peak.has_value() || before->absorption.has_value() || before->extinction.has_value() || before->links.has_value();
             if(owners!=1 || family!=before->related.has_value() || (!before->regions.has_value())!=before->fit_result.has_value())
                 throw std::invalid_argument("undo: incomplete experiment-control footprint");
             auto& experiment=**found;
             std::unique_ptr<detail::PreparedPeakRestore> peak;
             std::unique_ptr<detail::PreparedAbsorptionRestore> absorption;
+            std::unique_ptr<detail::PreparedExtinctionRestore> extinction;
             ItemVec<ExcludedRegion> regions;ItemVec<LinkedStructure> links;
             std::vector<std::pair<Parameter*,const RelationsUndo::ParameterState*>> targets;
             ItemVec<ParameterAlias> aliases;ItemVec<ParameterConstraint> constraints;
@@ -1199,6 +1207,7 @@ class Edit {
             if(family) {
                 if(before->peak)peak=std::make_unique<detail::PreparedPeakRestore>(experiment.peak,*before->peak);
                 else if(before->absorption)absorption=std::make_unique<detail::PreparedAbsorptionRestore>(experiment.absorption,*before->absorption);
+                else if(before->extinction)extinction=std::make_unique<detail::PreparedExtinctionRestore>(experiment.extinction,*before->extinction);
                 else {
                     std::vector<ItemVec<LinkedStructure>::Ptr> rows;rows.reserve(before->links->size());
                     for(const auto& row:*before->links)rows.push_back(std::make_shared<LinkedStructure>(row));
@@ -1206,7 +1215,7 @@ class Edit {
                 }
                 std::map<std::string,Parameter*> named;
                 for(const auto& slot:named_slots(project))named.emplace(slot.unique_name,slot.parameter);
-                auto replaced=before->peak?experiment.peak.parameters():before->absorption?experiment.absorption.parameters():std::vector<Parameter*>{};
+                auto replaced=before->peak?experiment.peak.parameters():before->absorption?experiment.absorption.parameters():before->extinction?experiment.extinction.parameters():std::vector<Parameter*>{};
                 if(before->links)for(const auto& row:experiment.linked_structures)replaced.push_back(&row->scale);
                 for(const auto& state:before->related->parameters) {
                     const auto at=named.find(state.unique_name);
@@ -1226,7 +1235,7 @@ class Edit {
                 // Every allocation/target validation above precedes these original no-throw transfers.
                 static_assert(std::is_nothrow_move_assignable_v<ItemVec<LinkedStructure>>);
                 static_assert(std::is_nothrow_move_assignable_v<FitResultRecord>);
-                if(peak)peak->commit();else if(absorption)absorption->commit();else experiment.linked_structures=std::move(links);
+                if(peak)peak->commit();else if(absorption)absorption->commit();else if(extinction)extinction->commit();else experiment.linked_structures=std::move(links);
                 project.aliases=std::move(aliases);project.constraints=std::move(constraints);project.fit_result=std::move(*fit_result);
                 for(const auto& [parameter,state]:targets){parameter->value=state->value;parameter->uncertainty=state->uncertainty;parameter->free=state->free;}
             } else if(before->regions)experiment.excluded_regions=std::move(regions);

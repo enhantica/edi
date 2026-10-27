@@ -62,6 +62,7 @@ signals:
     // Only a correlated optional account/rateLimits/read disposition; not a provider error.
     void optionalUsageUnavailable(const QString& id);
 private:
+    friend struct CodexAgentTestAccess; // Defined only by the independent finite native probe.
     class Process;
     const std::shared_ptr<const void> release_owner_;
     quint64 process_birth_=0;

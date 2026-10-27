@@ -410,6 +410,13 @@ AppDialog {
                 id: aiContent
                 width: Math.max(0, aiPage.availableWidth)
                 spacing: AppSizes.unit
+                EaElements.SideBarButton {
+                    objectName: "preferences.ai.workReport"
+                    width: parent.width
+                    text: qsTr("Show current or last work report")
+                    fontIcon: "file-alt"
+                    onClicked: workReport.open()
+                }
                 EaElements.Label {
                     width: parent.width
                     text: qsTr("Skill sources")
@@ -721,6 +728,14 @@ AppDialog {
         font: themeLabel.font
     }
 
+    DiagnosticsDialog {
+        id: workReport
+        objectName: "assistant.workReport"
+        objectNamePrefix: "assistant.workReport"
+        parent: Overlay.overlay
+        title: qsTr("Current or last assistant work report")
+        readText: () => Session.assistant.workReportDocument()
+    }
     DiagnosticsDialog {
         id: diagnostics
         parent: Overlay.overlay
