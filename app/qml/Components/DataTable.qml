@@ -39,46 +39,81 @@ EaComponents.ListView {
         event.accepted = true;
     }
     // Rows are made when they come into view, never ahead of it: rows made ahead are built a few per frame in
-    // the background, and a page's tables kept laying out for about a second after a project opened.
+    // the background, and a page's tables kept laying out for about a second after a project opened. So the
+    // columns fit the rows measured since the content last changed: scrolling only ever widens a column, for a wider
+    // row, and never moves one back and forth (the owner, 2026-10-27).
     cacheBuffer: 0
     readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
     property int modelRevision: 0
-    // The one column rule (ADR-0029; the owner, 2026-10-27): the row-number column and every flex column (-1) but the
-    // last fit their header and their widest shown cell, each with the same margin, so the columns start at the left
-    // and every two neighbours sit as far apart; the last data column, aligned left, takes the rest of the row: a
-    // text there stretches, a number leaves the space after it empty. No column before another data column fills.
-    // Fixed columns, the row buttons among them, keep their widths, at the right. `equalColumns` keeps the flex
-    // columns equal instead (atom sites and atomic displacements). Only a row too narrow for the texts themselves
-    // narrows them, where a number shows its short form.
+    // The one column rule (ADR-0029; the owner, 2026-10-24 and 2026-10-27). The row-number column and every flex
+    // column (-1) fit their header and their widest cell, each with the same margin, so every two neighbours sit as
+    // far apart. Numbers are right-aligned under right-aligned headers, text left-aligned, icons centred. An empty
+    // filler cell after the last data column takes the rest of the row, so nothing moves towards the row buttons,
+    // which keep their widths at the right. `equalColumns` keeps the flex columns equal instead (atom sites, atomic
+    // displacements, the Analysis parameters), and `spreadColumns` shares the rest among those columns after their
+    // fitted widths (Measured data). A row too narrow for its texts loses the margins first, then narrows the
+    // texts, where a number shows its short form. Widths follow the content: scrolling only widens a column for a
+    // wider row, and a change of the content fits them again.
     property var columns: []
     property bool equalColumns: false
-    // The one margin every fitted column has, half again the base's (the owner, 2026-10-27).
-    autoColumnPadding: EaStyle.Sizes.tableColumnSpacing * 3
-    readonly property var fillColumns: [columns.lastIndexOf(-1)]
-    // Each column's widest text, its header's or a shown cell's, without the margin.
+    property var spreadColumns: []
+    autoColumnPadding: EaStyle.Sizes.tableColumnSpacing * 4
+    // The last data column, which holds the spare width as empty space after its content; -1 for none.
+    readonly property int fillerIndex: equalColumns || spreadColumns.length > 0 ? -1 : columns.lastIndexOf(-1)
+    // Each column's widest text, its header's or a cell's, without the margin.
     property var fittedWidths: []
+    property bool refitting: true
     columnWidths: {
         const fitted = fittedWidths;
         // Before the first fit every flex column shares the row, as the base lays it out.
         if (equalColumns || fitted.length !== columns.length)
             return columns;
-        const fits = columns.map((w, i) => (w === -1 || (i === 0 && w === numberColumnWidth)) && !fillColumns.includes(i));
+        const fits = columns.map((w, i) => w === -1 || (i === 0 && w === numberColumnWidth));
         const fitting = fits.filter(Boolean).length;
-        if (fitting === 0)
-            return columns;
         const fixed = columns.reduce((sum, w, i) => sum + (w > 0 && !fits[i] ? w : 0), 0);
         const texts = fitted.reduce((sum, w, i) => sum + (fits[i] ? w : 0), 0);
-        const filling = fillColumns.reduce((sum, i) => sum + (fitted[i] ?? 0), 0);
-        // The filling columns give up their room first; the others narrow only when their texts alone do not fit, as
-        // a number's short form is not always narrower.
-        const room = width - fixed - EaStyle.Sizes.tableColumnSpacing * (columns.length - 1) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2;
-        const margin = Math.max(0, Math.min(autoColumnPadding, (room - texts - filling) / fitting));
+        const gaps = columns.length - 1;
+        const room = width - fixed - EaStyle.Sizes.tableColumnSpacing * gaps - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2;
+        const margin = fitting > 0 ? Math.max(0, Math.min(autoColumnPadding, (room - texts) / fitting)) : 0;
         const scale = texts > room && texts > 0 ? Math.max(0, room) / texts : 1;
-        return columns.map((w, i) => fits[i] ? Math.floor(fitted[i] * scale + margin) : w);
+        const spread = spreadColumns.length > 0 ? Math.max(0, room - texts - margin * fitting) / spreadColumns.length : 0;
+        const widths = columns.map((w, i) => fits[i] ? Math.floor(fitted[i] * scale + margin + (spreadColumns.includes(i) ? spread : 0)) : w);
+        if (fillerIndex >= 0) {
+            const used = widths.reduce((sum, w) => sum + w, 0);
+            const spare = Math.max(0, width - EaStyle.Sizes.tableColumnSpacing * gaps - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2 - used);
+            widths[fillerIndex] += Math.floor(spare);
+        }
+        return widths;
+    }
+    // The spare width the last data column holds after its content, as empty space before the row buttons: its
+    // cells keep their text where it fits, a right-aligned number by its neighbours.
+    property real fillerWidth: 0
+    // Each padded cell's own right padding, by cell.
+    property var basePaddings: new Map()
+    function padForFiller(cell, column) {
+        if (!("rightPadding" in cell))
+            return;
+        if (!basePaddings.has(cell))
+            basePaddings.set(cell, cell.rightPadding);
+        cell.rightPadding = basePaddings.get(cell) + (column === fillerIndex ? fillerWidth : 0);
+    }
+    // A cell's kind, which sets how it aligns: a number, an icon or button, or text.
+    function kindOf(cell) {
+        if ("ring" in cell || "fontIcon" in cell)
+            return "icon";
+        if ("number" in cell || "columnAlignment" in cell || ("numeric" in cell && cell.numeric))
+            return "number";
+        return "text";
+    }
+    function alignCell(cell, kind) {
+        const alignment = kind === "number" ? Text.AlignRight : kind === "icon" ? Text.AlignHCenter : Text.AlignLeft;
+        if ("columnAlignment" in cell)
+            cell.columnAlignment = alignment;
+        else if ("horizontalAlignment" in cell)
+            cell.horizontalAlignment = alignment;
     }
     function fitColumns() {
-        const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths : [];
-        const widths = columns.map((w, i) => header[i] ?? 0);
+        const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths.filter((w, i) => true) : [];
         // A cell is measured by its whole text: a number cell by the number it would show if it fitted (it shortens
         // itself to the width it is given), a label by its natural width, an editor by its text (its implicit width
         // is a default, not its text).
@@ -88,38 +123,54 @@ EaComponents.ListView {
         const control = child => "fittedWidth" in child ? child.fittedWidth : child.implicitWidth ?? 0;
         const held = cell => Array.from(cell.children).reduce((widest, child) => Math.max(widest, control(child)), cell.implicitWidth);
         const measure = cell => "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : held(cell);
-        // A filling column reads from the left, as its header, so its value sits next to the columns before it and
-        // the space it takes is left after it (a right-aligned number would move to the row's far edge).
-        const align = cells => {
-            for (const fill of equalColumns ? [] : fillColumns) {
-                if (fill >= 0 && fill < cells.length && "horizontalAlignment" in cells[fill])
-                    cells[fill].horizontalAlignment = Text.AlignLeft;
-            }
-        };
-        // The cells as the base sizes them: the children of the row's inner Row, in order, so a Repeater's cells
-        // (placed before the Repeater) line up with their columns.
+        // The cells of a row's inner Row, in column order, the filler left out.
         const cellsOf = row => {
             const first = row && row.contentRowData ? Array.from(row.contentRowData).find(cell => cell instanceof Item) : null;
             return first && first.parent ? Array.from(first.parent.children) : null;
         };
-        if (cellsOf(headerItem))
-            align(cellsOf(headerItem));
+        const headerCells = cellsOf(headerItem);
+        const headerWidths = headerCells ? headerCells.map((cell, i) => Math.ceil(cell.implicitWidth - (i === fillerIndex && basePaddings.has(cell) ? fillerWidth : 0))) : header;
+        const widths = columns.map((w, i) => Math.max(headerWidths[i] ?? 0, refitting ? 0 : (fittedWidths[i] ?? 0)));
+        let kinds = null;
         for (const item of contentItem.children) {
             const cells = cellsOf(item);
-            if (!cells)
+            if (!cells || item === headerItem)
                 continue;
-            align(cells);
-            for (let i = 0; i < cells.length && i < widths.length; ++i)
-                widths[i] = Math.max(widths[i], Math.ceil(measure(cells[i])));
+            kinds = kinds ?? cells.map(cell => kindOf(cell));
+            for (let i = 0; i < cells.length && i < widths.length; ++i) {
+                if (i > 0 && kinds[i])
+                    alignCell(cells[i], kinds[i]);
+                padForFiller(cells[i], i);
+                widths[i] = Math.max(widths[i], Math.ceil(measure(cells[i]) - (i === fillerIndex ? fillerWidth : 0)));
+            }
         }
+        if (kinds && headerCells) {
+            for (let i = 1; i < headerCells.length && i < kinds.length; ++i) {
+                alignCell(headerCells[i], kinds[i]);
+                padForFiller(headerCells[i], i);
+            }
+        }
+        refitting = false;
         if (JSON.stringify(widths) !== JSON.stringify(fittedWidths))
             fittedWidths = widths;
     }
-    onColumnsChanged: Qt.callLater(fitColumns)
-    onFillColumnsChanged: Qt.callLater(fitColumns)
-    onModelRevisionChanged: Qt.callLater(fitColumns)
-    onCountChanged: Qt.callLater(fitColumns)
-    Component.onCompleted: Qt.callLater(fitColumns)
+    // A change of the content fits the columns afresh; scrolling only adds rows to what was measured.
+    function refit() {
+        refitting = true;
+        Qt.callLater(fitColumns);
+    }
+    onColumnsChanged: refit()
+    // The spare width follows the columns: the last data column's cells take it as padding after their content.
+    onColumnWidthsChanged: {
+        const spare = fillerIndex >= 0 && fittedWidths.length === columns.length ? Math.max(0, columnWidths[fillerIndex] - (fittedWidths[fillerIndex] ?? 0) - autoColumnPadding) : 0;
+        if (spare !== fillerWidth) {
+            fillerWidth = spare;
+            Qt.callLater(fitColumns);
+        }
+    }
+    onModelRevisionChanged: refit()
+    onCountChanged: refit()
+    Component.onCompleted: refit()
     Connections {
         target: table.contentItem
         function onChildrenChanged() {
@@ -197,7 +248,7 @@ EaComponents.ListView {
         ignoreUnknownSignals: true
         function onDataChanged(topLeft, bottomRight) {
             // A value arriving later (a calculated curve) can widen its column.
-            Qt.callLater(table.fitColumns);
+            table.refit();
             let changed = false;
             for (const role in table.rowWidths) {
                 const widths = table.rowWidths[role];
