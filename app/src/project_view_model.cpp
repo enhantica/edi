@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
+#include <utility>
 #include "project_view_model.hpp"
 
 #include <QCoreApplication>
+#include <QJsonArray>
 #include <QHash>
 #include <QMetaObject>
 #include <QPointer>
@@ -13,6 +15,8 @@
 #include <QFileInfo>
 #include <QSettings>
 #include <QUrl>
+#include <limits>
+#include <string_view>
 #include <algorithm>
 #include <numeric>
 #include <memory>
@@ -23,6 +27,12 @@
 #include <filesystem>
 
 #include "background.hpp"
+#include "../../core/src/assistant_relation_edits.hpp"
+#include "edi/assistant_limits.hpp"
+#include "edi/assistant_files.hpp"
+#include "background_input.hpp"
+#include "edi/parameter_walk.hpp"
+#include "edi/categories.hpp"
 #include "engine_setup.hpp"
 #include "edi/background_estimate.hpp"
 #include "edi/display.hpp"
@@ -46,6 +56,25 @@ namespace edi_app {
 
 namespace {
 
+// Original assistant-owned control receipts have a finite diagnostic role.
+// Ordinary manual loaders keep their existing diagnostic presentation.
+QString original_input_error(const char* text) {
+    std::size_t length=0;
+    while (length<edi::assistant::Limits::error_bytes && text[length]) ++length;
+    return QString::fromUtf8(text,static_cast<qsizetype>(length));
+}
+// The same native byte bound used by individual result/context projection.
+// Empty native names retain the original short canonical category fallback.
+// No parser, normalization, truncation or extra identifier domain is introduced.
+bool assistant_result_name(const std::string& name) noexcept {
+    return name.size() <= edi::assistant::Limits::id_bytes;
+}
+bool assistant_result_experiment(const edi::BraggPdExperiment& experiment) noexcept {
+    if (!assistant_result_name(experiment.name.value())) return false;
+    for (const auto& link : experiment.linked_structures)
+        if (!link || !assistant_result_name(link->structure_id.value())) return false;
+    return true;
+}
 // A name as a save tells names apart: saved files are compared without letter case (crysta refuses
 // two datablock names that differ only by case, as one file on a case-insensitive filesystem).
 std::string folded_name(std::string name) {
@@ -247,18 +276,25 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     });
     edi::LivePreview::Hooks hooks;
     hooks.edited = [this] {
-        completeSymmetry();
+        if (retired_) return;
+        if (fit_) fit_->invalidateFitUndo(); // Actual edit, before any model/Qt publication.
+        try { completeSymmetry(); }
+        catch (...) { finishRecordedEdit(); throw; }
+        finishRecordedEdit();
         publish(pending_structural_);
+        if (retired_) return;
         // An admitted edit, whatever it wrote: every pattern shows a calculation of the state before it, and
         // says so until the newest request publishes. A refused edit never gets here.
         for (ExperimentViewModel* experiment : experiment_models_) {
             experiment->markPatternStale();
+            if (retired_) return;
         }
         // A structure whose geometry the edit changed shows its last published frame, reported as not current,
         // until the newest request publishes.
         for (StructureViewModel* structure : structure_models_) {
             if (!structure->structure()->geometry_current()) {
                 structure->markSceneStale();
+                if (retired_) return;
             }
         }
     };
@@ -388,6 +424,20 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     restoreViewSettings();
     preview_->recalculate();
     publishCalculating();
+}
+
+void ProjectViewModel::retire() noexcept {
+    if (retired_) return;
+    retired_ = true;
+    // apply/recalculate own a local shared State and stop when the destructor
+    // closes it. No worker request may continue from a retired publication hook.
+    preview_.reset();
+}
+
+void ProjectViewModel::holdPublicationFailure(const QString& warning) noexcept {
+    if (retired_) return;
+    edit_publication_failed_ = true;
+    try { setLastError(warning); } catch (...) { /* already prepared warning/outcome ownership remains */ }
 }
 
 ProjectViewModel::~ProjectViewModel() {
@@ -621,18 +671,23 @@ QString ProjectViewModel::selectionKey() const {
 }
 
 void ProjectViewModel::publishCurrent() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     storeSelection();
     if (current_structure_ != published_structure_index_) {
         published_structure_index_ = current_structure_;
         emit currentStructureIndexChanged();
+        if (retired_) return;
     }
     if (currentStructure() != published_structure_) {
         published_structure_ = currentStructure();
         showStructureView();
         emit currentStructureChanged();
+        if (retired_) return;
     }
     if (currentExperiment() != published_experiment_) {
         syncParameterTable();  // a scan mode lists the selected experiment's parameters; before the signals
+        if (retired_) return;
     }
     if (currentExperimentIndex() != published_experiment_index_) {
         published_experiment_index_ = currentExperimentIndex();
@@ -641,55 +696,306 @@ void ProjectViewModel::publishCurrent() {
     if (currentExperiment() != published_experiment_) {
         published_experiment_ = currentExperiment();
         emit currentExperimentChanged();
+        if (retired_) return;
     }
 }
 
 void ProjectViewModel::publishMetadata() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     const auto update = [this](QString& published, const QString& current, void (ProjectViewModel::*signal)()) {
         if (current != published) {
             published = current;
             emit(this->*signal)();
+            if (retired_) return;
         }
     };
     update(published_name_, name(), &ProjectViewModel::nameChanged);
+    if (retired_) return;
     update(published_title_, title(), &ProjectViewModel::titleChanged);
+    if (retired_) return;
     update(published_description_, description(), &ProjectViewModel::descriptionChanged);
+    if (retired_) return;
     update(published_authors_, authors(), &ProjectViewModel::authorsChanged);
+    if (retired_) return;
     update(published_su_rule_, suRule(), &ProjectViewModel::suRuleChanged);
+    if (retired_) return;
     update(published_last_modified_, lastModified(), &ProjectViewModel::lastModifiedChanged);
+    if (retired_) return;
     if (patternDSpacing() != published_pattern_d_spacing_) {
         published_pattern_d_spacing_ = patternDSpacing();
         emit patternDSpacingChanged();
+        if (retired_) return;
     }
 }
 
+std::shared_ptr<ProjectViewModel::WidgetCreationInput> ProjectViewModel::prepareWidgetCreation(const CreationAction& action) {
+    if (widget_creation_input_ || widget_file_input_) throw std::runtime_error("An original input is already prearmed");
+    if (const auto refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    auto input = std::make_shared<WidgetCreationInput>(); input->expected = action;
+    input->outcome.message = tr("The original creation control did not commit");
+    widget_creation_input_ = input; return input;
+}
+void ProjectViewModel::finishWidgetCreation(const std::shared_ptr<WidgetCreationInput>& input) noexcept {
+    if (widget_creation_input_ == input) widget_creation_input_.reset();
+}
+QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool structural, const CreationAction& actual) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_creation_input_;
+    if (widget_input_ || widget_relation_input_ || widget_background_input_ || widget_file_input_)
+        return tr("A different original input is still being completed");
+    const bool generated_atom = actual.kind == CreationAction::Kind::AtomAppend;
+    if (input) {
+        const auto& expected=input->expected;
+        if (input->consumed || expected.kind!=actual.kind || expected.row!=actual.row || expected.field!=actual.field ||
+            (!generated_atom && expected.text!=actual.text) || expected.number!=actual.number)
+            return tr("A different creation control cannot enter this original input");
+        if (generated_atom && input->bounded_result &&
+            (actual.text.isEmpty() || actual.text.contains(QChar(0)) || actual.text.toUtf8().size()>edi::assistant::Limits::id_bytes)) {
+            input->consumed=true;input->result_identity_refused=true;
+            input->outcome.message=tr("The generated atom identity exceeds the assistant result limit; no edit was made");
+            return input->outcome.message;
+        }
+    }
+    const bool previous=widget_input_executing_;
+    const auto release=qScopeGuard([self,previous]{if(self)self->widget_input_executing_=previous;});
+    if(input){input->consumed=true;widget_input_executing_=true;}
+    using Kind=CreationAction::Kind;
+    const bool scalar_control=actual.kind==Kind::AbsorptionType || actual.kind==Kind::CutoffFwhm || actual.kind==Kind::DatasetWeight;
+    const bool phase_control=actual.kind==Kind::PhaseAppend || actual.kind==Kind::PhaseRetarget ||
+        actual.kind==Kind::PhaseEnabled || actual.kind==Kind::PhaseRemove;
+    const bool experiment_control=phase_control || scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend ||
+        actual.kind==Kind::ExclusionStart || actual.kind==Kind::ExclusionEnd || actual.kind==Kind::ExclusionRemove;
+    if(experiment_control) {
+        edi::ExperimentBase* experiment=nullptr;const edi::ExcludedRegion* region=nullptr;const edi::LinkedStructure* link=nullptr;
+        for(const auto& held:project_->experiments) {
+            if((scalar_control || actual.kind==Kind::PeakProfile || actual.kind==Kind::ExclusionAppend || actual.kind==Kind::PhaseAppend) && held.get()==actual.row)experiment=held.get();
+            if(!phase_control)for(const auto& row:held->excluded_regions)if(row.get()==actual.row){experiment=held.get();region=row.get();}
+            if(phase_control && actual.kind!=Kind::PhaseAppend)
+                for(const auto& row:held->linked_structures)if(row.get()==actual.row){experiment=held.get();link=row.get();}
+        }
+        if(!experiment) {
+            const auto message=tr("The original experiment control member is unavailable");if(input)input->outcome.message=message;return message;
+        }
+        // Cached Qt row counts/keys are not scientific membership authority.
+        // Reentrant publication must refuse before even an equal-value result.
+        if(const auto pending=editReadinessRefusal(false);!pending.isEmpty()){if(input)input->outcome.message=pending;return pending;}
+        if(phase_control) {
+            QString refusal;
+            if(actual.kind==Kind::PhaseRetarget) {
+                const auto id=actual.text.toStdString();bool offered=false;
+                for(const auto& structure:project_->structures) {
+                    const auto& raw=structure->name.value();
+                    if((raw.empty()?std::string_view("structure"):std::string_view(raw))==id)offered=true;
+                }
+                if(!link || !link->enabled.get() || !offered)refusal=tr("The linked structure target is unavailable or disabled");
+            } else if(actual.kind==Kind::PhaseRemove && experiment->linked_structures.size()<=1)
+                refusal=tr("The final linked structure cannot be removed");
+            else if(actual.kind==Kind::PhaseEnabled && actual.number!=0 && actual.number!=1)
+                refusal=tr("The linked structure flag must be boolean");
+            else if(actual.kind==Kind::PhaseAppend) {
+                std::string next;
+                for(const auto& structure:project_->structures) {
+                    const auto& raw=structure->name.value();
+                    const std::string_view id=raw.empty()?std::string_view("structure"):std::string_view(raw);
+                    if(std::none_of(experiment->linked_structures.begin(),experiment->linked_structures.end(),[&](const auto& row){return (row->structure_id.value().empty()?std::string_view("structure"):std::string_view(row->structure_id.value()))==id;})){next=std::string(id);break;}
+                }
+                if(next.empty() || next!=actual.text.toStdString())refusal=tr("The original linked structure append offer changed");
+                if(input && input->bounded_result && !assistant_result_name(next)) {
+                    input->result_identity_refused=true;
+                    refusal=tr("The linked structure identity exceeds the assistant result limit; no edit was made");
+                }
+            }
+            if(!refusal.isEmpty()){if(input)input->outcome.message=refusal;return refusal;}
+        }
+        const bool equal=actual.kind==Kind::PhaseRetarget?link && edi::KeyTraits<edi::LinkedStructure>::canonical(link->structure_id.value())==actual.text.toStdString():
+            actual.kind==Kind::PhaseEnabled?link && link->enabled.get()==bool(actual.number):
+            actual.kind==Kind::AbsorptionType?(experiment->absorption.type?std::string_view(*experiment->absorption.type):std::string_view("none"))==actual.text.toStdString():
+            actual.kind==Kind::CutoffFwhm?experiment->peak.cutoff_fwhm==actual.number:
+            actual.kind==Kind::DatasetWeight?experiment->dataset_weight==actual.number:
+            actual.kind==Kind::PeakProfile?edi::effective_peak_type(*experiment)==actual.text.toStdString():
+            actual.kind==Kind::ExclusionStart?region && region->first.get()==actual.number:
+            actual.kind==Kind::ExclusionEnd?region && region->second.get()==actual.number:false;
+        if(equal)return {};
+        auto before=phase_control?edi::capture_experiment_links(*project_,*experiment):scalar_control?edi::capture_experiment_scalar(*project_,*experiment,
+            actual.kind==Kind::AbsorptionType?edi::ExperimentScalarControl::Absorption:
+            actual.kind==Kind::CutoffFwhm?edi::ExperimentScalarControl::CutoffFwhm:edi::ExperimentScalarControl::DatasetWeight):
+            edi::capture_experiment_controls(*project_,*experiment,actual.kind==Kind::PeakProfile);
+        undo_history_.reserve(undo_history_.size()+1);undo_history_.emplace_back(std::move(before));
+        EditOutcome result;
+        try {result=applyEdit(change,structural);}catch(...){if(self)undo_history_.pop_back();throw;}
+        if(input)input->outcome=result;
+        if(!self)return result.applied?QString{}:result.message;
+        if(!result.applied)undo_history_.pop_back();
+        if(!retired_) {
+            const bool publishing_before=editing_;editing_=true;
+            const auto restore=qScopeGuard([self,publishing_before]{if(self)self->editing_=publishing_before;});
+            try {syncUndo();}catch(...){if(!result.applied)throw;result.published=false;result.message=tr("The edit was applied, but its presentation could not be completed. Undo or reopen the project before further changes.");if(input)input->outcome=result;if(self)holdPublicationFailure(result.message);}
+        }
+        return result.applied?QString{}:result.message;
+    }
+    const bool structure_metadata=actual.kind==Kind::SpaceGroupName || actual.kind==Kind::SpaceGroupNumber || actual.kind==Kind::SpaceGroupSetting;
+    const bool site_edit=actual.kind==Kind::AtomAppend || actual.kind==Kind::AtomText || actual.kind==Kind::AtomRemove || actual.kind==Kind::AtomAdpType;
+    if(!structure_metadata && !site_edit) {
+        if(!input)return apply(change,structural);
+        input->outcome=applyEdit(change,structural);
+        return input->outcome.applied?QString{}:input->outcome.message;
+    }
+    const edi::Structure* structure=nullptr;const edi::AtomSite* atom=nullptr;
+    for(const auto& held:project_->structures) {
+        if((structure_metadata || actual.kind==Kind::AtomAppend) && held.get()==actual.row)structure=held.get();
+        if(site_edit && actual.kind!=Kind::AtomAppend)
+            for(const auto& site:held->atom_sites)if(site.get()==actual.row){structure=held.get();atom=site.get();}
+    }
+    const auto refuse=[&](const QString& message) {
+        if(input)input->outcome.message=message;
+        else setLastError(message);
+        return message;
+    };
+    if(!structure)return refuse(tr("The original structure or atom is no longer in this project"));
+    const auto text=actual.text.toStdString();bool equal=false;
+    if(actual.kind==Kind::SpaceGroupName)equal=edi::same_space_group_name(structure->space_group.name_h_m.value(),text);
+    else if(actual.kind==Kind::SpaceGroupNumber)equal=actual.number>0?
+        structure->space_group.it_number && *structure->space_group.it_number==actual.number:!structure->space_group.it_number;
+    else if(actual.kind==Kind::SpaceGroupSetting)equal=structure->space_group.coord_system_code.value()==text;
+    else if(atom && actual.kind==Kind::AtomAdpType)equal=atom->adp_type.value()==text;
+    else if(atom && actual.kind==Kind::AtomText) {
+        if(actual.field=="label")equal=atom->id.value()==text;
+        else if(actual.field=="typeSymbol")equal=atom->type_symbol.value()==text;
+        else if(actual.field=="wyckoffLetter")equal=atom->wyckoff_letter.value()==text;
+        else if(actual.field=="adpType")equal=atom->adp_type.value()==text;
+    }
+    if(equal)return {}; // No setter/write/history or publication for stored no-op.
+    if(const auto pending=editReadinessRefusal(false);!pending.isEmpty())return refuse(pending);
+    const auto warning=tr("The structure edit was applied and Undo retained, but its presentation could not be completed");
+    auto before=edi::capture_structure_edit(*project_);
+    undo_history_.reserve(undo_history_.size()+1);
+    undo_history_.emplace_back(std::move(before)); // Same original history, BEFORE live Edit/observers.
+    EditOutcome result;
+    try {result=applyEdit(change,structural);}
+    catch(...) {if(self)undo_history_.pop_back();throw;} // applyEdit contains post-write failures.
+    if(input)input->outcome=result;
+    if(!self)return result.applied?QString{}:result.message;
+    if(!result.applied)undo_history_.pop_back();
+    if(retired_)return result.applied?QString{}:result.message;
+    const bool publishing_before=editing_;editing_=true;
+    const auto publish_release=qScopeGuard([self,publishing_before]{if(self)self->editing_=publishing_before;});
+    try {syncUndo();}
+    catch(...) {
+        if(!result.applied)throw;
+        result.published=false;result.message=warning;
+        if(input)input->outcome=result;
+        holdPublicationFailure(warning);
+    }
+    if(self && !retired_ && !result.applied)setLastError(result.message);
+    return result.applied?QString{}:result.message;
+}
+
+std::shared_ptr<ProjectViewModel::WidgetFileInput> ProjectViewModel::prepareWidgetStructureFile(
+    const QUrl& path, std::shared_ptr<const edi::assistant::SelectedFile> source) {
+    if (widget_file_input_ || widget_creation_input_) throw std::runtime_error("An original input is already prearmed");
+    if (const auto refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    if (!path.isLocalFile() || !source || source->bytes.empty() || source->bytes.size() > edi::assistant::SelectedFileLimits::file_bytes)
+        throw std::invalid_argument("The admitted original structure input is unavailable");
+    auto input = std::make_shared<WidgetFileInput>(); input->path = path; input->source = std::move(source);
+    input->outcome.message = tr("The original Structure Load did not commit");
+    widget_file_input_ = input; return input;
+}
+std::shared_ptr<ProjectViewModel::WidgetFileInput> ProjectViewModel::prepareWidgetMeasurementFile(
+    const QUrl& path, std::shared_ptr<const edi::assistant::SelectedFile> source, ExperimentViewModel* model) {
+    if (widget_file_input_ || widget_creation_input_) throw std::runtime_error("An original input is already prearmed");
+    if (const auto refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    const auto index = experiment_models_.indexOf(model);
+    if (index < 0 || !path.isLocalFile() || !source || source->bytes.empty() || source->bytes.size() > edi::assistant::SelectedFileLimits::file_bytes)
+        throw std::invalid_argument("The admitted original measurement input is unavailable");
+    auto input = std::make_shared<WidgetFileInput>(); input->kind = WidgetFileInput::Kind::Measurement;
+    input->experiment = project_->experiments[static_cast<std::size_t>(index)].get();
+    input->path = path; input->source = std::move(source);
+    input->outcome.message = tr("The original Load data control did not commit");
+    widget_file_input_ = input; return input;
+}
+void ProjectViewModel::finishWidgetFile(const std::shared_ptr<WidgetFileInput>& input) noexcept {
+    if (widget_file_input_ == input) widget_file_input_.reset();
+}
+
 bool ProjectViewModel::loadStructure(const QUrl& file) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    if (retired_) return false;
     if (!file.isLocalFile()) {
-        const QString message = QStringLiteral("not a local file: %1").arg(file.toString());
-        emit refused(message);
+        emit refused(QStringLiteral("not a local file: %1").arg(file.toString()));
         return false;
     }
-    edi::Project& project = *project_;
-    // The file is read first: a file that is refused adds nothing, and what is added is one edit.
-    QString error;
+    EditOutcome result;
+    const auto input = widget_file_input_;
+    const bool previous = widget_input_executing_;
+    const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+    bool reserved_undo = false;
     try {
-        // A CIF or a `.edi` file, by its content; what crysta reports about a CIF is shown.
-        const std::string path = file.toLocalFile().toStdString();
-        error = apply(edi::Edit::add_structure(project, edi::load_structure_file(path,
-                                                                                  [this](const std::string& note) {
-                                                                                      emit message(QString::fromStdString(note));
-                                                                                  })),
-                      true);
+        if (input) {
+            if (input->kind != WidgetFileInput::Kind::Structure || input->consumed || input->path != file || !input->source)
+                throw std::invalid_argument("The chosen structure does not match its admitted original file");
+            const bool sourceCurrent=!input->source_current || input->source_current();
+            if(!self || retired_ || widget_file_input_!=input)return false;
+            if(!sourceCurrent) { input->source_changed=true;throw std::invalid_argument("The original attached structure changed or is unavailable"); }
+            input->consumed = true; widget_input_executing_ = true;
+        }
+        // The app-owned file receipt carries the admitted capture. Its immutable
+        // bytes are the authority, not a second path read after genuine input.
+        // Ordinary manual Load keeps its existing native/CIF file-reader door.
+        auto structure = input ? edi::structure_from_edi_text(std::string(
+            reinterpret_cast<const char*>(input->source->bytes.data()), input->source->bytes.size()), "<selected structure>", [this](const std::string& note){emit message(QString::fromStdString(note));})
+            : edi::load_structure_file(file.toLocalFile().toStdString(), [this](const std::string& note) { emit message(QString::fromStdString(note)); });
+        if (input && input->bounded_result && !assistant_result_name(structure.name.value())) {
+            input->consumed = true; // The original refused input is one-shot before notifying.
+            input->result_identity_refused = true;
+            input->outcome.message = tr("The parsed structure identity exceeds the assistant result limit; no edit was made");
+            const auto message = input->outcome.message;
+            setLastError(message);
+            if (self && !retired_) emit refused(message);
+            return false;
+        }
+        if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) {
+            emit refused(refusal); return false;
+        }
+        if(input) {
+            const bool sourceCurrent=!input->source_current || input->source_current();
+            if(!self || retired_ || widget_file_input_!=input)return false;
+            if(!sourceCurrent) { input->source_changed=true;throw std::invalid_argument("The original attached structure changed or is unavailable"); }
+        }
+        auto before = edi::capture_structures(*project_);
+        undo_history_.reserve(undo_history_.size() + 1);
+        undo_history_.emplace_back(std::move(before)); reserved_undo = true;
+        result = applyEdit(edi::Edit::add_structure(*project_, std::move(structure)), true);
+        if (input) input->outcome = result;
+        if (!self || retired_) return result.applied;
+        if (!result.applied) { undo_history_.pop_back(); reserved_undo = false; }
+        if (result.applied) {
+            syncUndo();
+            if (!self || retired_) return true;
+            setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
+            return true; // Actual addition; calculation/presentation is separate.
+        }
     } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
-        setLastError(error);
+        if (!self || retired_) return result.applied;
+        if (input && input->outcome.applied) result = input->outcome;
+        if (reserved_undo && !result.applied) undo_history_.pop_back();
+        if (result.applied) {
+            result.published = false;
+            result.message = tr("The structure and its Undo were retained; final presentation was incomplete");
+            if (input) input->outcome = result;
+            holdPublicationFailure(result.message);
+            return true;
+        }
+        result.message = input ? original_input_error(refusal.what()) : QString::fromUtf8(refusal.what());
     }
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
-    }
-    setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
-    return true;
+    if (input) input->outcome = result;
+    if (!self || retired_) return result.applied;
+    const auto message = result.message;
+    setLastError(message);
+    if (self && !retired_) emit refused(message);
+    return false;
 }
 
 bool ProjectViewModel::loadExperiments(const QList<QUrl>& files) {
@@ -726,6 +1032,9 @@ bool ProjectViewModel::canCreateExperiment() const {
 }
 
 bool ProjectViewModel::createExperiment() {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_creation_input_;
     edi::Project& project = *project_;
     // The first free name of the form experiment1, experiment2, …
     std::string name;
@@ -740,19 +1049,42 @@ bool ProjectViewModel::createExperiment() {
     for (const auto& structure : project.structures) {
         structures.emplace_back(structure->name.value());
     }
+    if (input && input->bounded_result && (!assistant_result_name(name) ||
+        !std::all_of(structures.begin(), structures.end(), assistant_result_name))) {
+        input->consumed = true; // The original refused input is one-shot before notifying.
+        input->result_identity_refused = true;
+        input->outcome.message = tr("The experiment or phase identity exceeds the assistant result limit; no edit was made");
+        const auto message = input->outcome.message;
+        setLastError(message);
+        if (self && !retired_) emit refused(message);
+        return false;
+    }
+    AddedExperiments added;
+    added.experiments.push_back(nullptr); // exact one new member, no post-write vector growth
+    undo_history_.reserve(undo_history_.size()+1);
+    undo_history_.emplace_back(std::move(added));
+    const auto historyIndex=undo_history_.size()-1;
+    const auto before=project.experiments.size();
     QString error;
     try {
-        error = apply(edi::Edit::create_experiment(project, edi::simulation_experiment(name, {}, structures)), true);
+        error = apply_creation_control(edi::Edit::create_experiment(project, edi::simulation_experiment(name, {}, structures)), true,
+            {CreationAction::Kind::ExperimentAppend});
     } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
-        setLastError(error);
+        error = input ? original_input_error(refusal.what()) : QString::fromUtf8(refusal.what());
     }
+    if (!self || retired_) return input && input->outcome.applied;
+    if (project.experiments.size()==before+1 && error.isEmpty())
+        std::get<AddedExperiments>(undo_history_[historyIndex]).experiments[0]=project.experiments.back().get();
+    else undo_history_.pop_back();
     if (!error.isEmpty()) {
-        emit refused(error);
+        setLastError(error);
+        if (self && !retired_) emit refused(error);
         return false;
     }
     syncLoadState();
-    noteAddedExperiments(project.experiments.size() - 1);
+    if (!self || retired_) return true;
+    syncUndo();
+    if (!self || retired_) return true;
     setCurrentExperimentIndex(static_cast<int>(experiment_models_.size()) - 1);
     return true;
 }
@@ -781,6 +1113,9 @@ bool ProjectViewModel::duplicateExperiment() {
 }
 
 bool ProjectViewModel::setExperimentType(int index, const QString& axis, const QString& token) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input=widget_creation_input_;
     if (index < 0 || index >= experiment_models_.size()) {
         return false;
     }
@@ -819,11 +1154,23 @@ bool ProjectViewModel::setExperimentType(int index, const QString& axis, const Q
             !replacement.reflections.has_value()) {
             replacement.data = experiment.data;
         }
+        if (input && input->bounded_result && !assistant_result_experiment(replacement)) {
+            input->consumed = true; // The original refused input is one-shot before notifying.
+            input->result_identity_refused = true;
+            input->outcome.message = tr("The replacement experiment or phase identity exceeds the assistant result limit; no edit was made");
+            const auto message = input->outcome.message;
+            setLastError(message);
+            if (self && !retired_) emit refused(message);
+            return false;
+        }
         const edi::ExperimentBase* before = &experiment;
-        error = apply(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true);
+        error = apply_creation_control(edi::Edit::replace_experiment(project, experiment, std::move(replacement)), true,
+            {CreationAction::Kind::ExperimentType, &experiment, axis, token});
+        if (!self || retired_) return input && input->outcome.applied;
         if (error.isEmpty()) {
             // Undo of the experiment's creation removes it in its new type.
             experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get());
+            if (!self || retired_) return true;
             syncDatasets();
         }
     } catch (const std::exception& refusal) {
@@ -843,6 +1190,8 @@ void ProjectViewModel::experimentReplaced(const edi::ExperimentBase* before, con
             std::replace(added->experiments.begin(), added->experiments.end(), before, after);
         } else if (auto* loaded = std::get_if<LoadedData>(&record)) {
             loaded->experiment = loaded->experiment == before ? after : loaded->experiment;
+        } else if (auto* control = std::get_if<edi::ExperimentControlsUndo>(&record)) {
+            if(control->experiment==before)control->experiment=after;
         } else if (auto* structures = std::get_if<edi::StructuresUndo>(&record)) {
             for (auto& rows : structures->experiments) {
                 rows.experiment = rows.experiment == before ? after : rows.experiment;
@@ -860,28 +1209,43 @@ void ProjectViewModel::syncLoadState() {
     }
 }
 
-QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacement) {
+QString ProjectViewModel::replaceData(int index, edi::BraggPdExperiment replacement, bool restoring) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_file_input_;
     edi::Project& project = *project_;
     const edi::ExperimentBase* before = project.experiments[static_cast<std::size_t>(index)].get();
     QString error;
     try {
-        error = apply(edi::Edit::load_data(project, *before, std::move(replacement)), true);
+        const EditOutcome result = applyEdit(edi::Edit::load_data(project, *before, std::move(replacement)), true, restoring);
+        if (input && input->consumed) input->outcome = result;
+        error = result.applied ? QString{} : result.message;
+        if (!self || retired_) return error;
     } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
-        setLastError(error);
+        error = input ? original_input_error(refusal.what()) : QString::fromUtf8(refusal.what());
+        if (self && !retired_) setLastError(error);
     }
     if (!error.isEmpty()) {
         return error;
     }
+    if (!self || retired_) return error;
     experimentReplaced(before, project.experiments[static_cast<std::size_t>(index)].get());
+    if (!self || retired_) return error;
     syncDatasets();
     return {};
 }
 
 bool ProjectViewModel::loadData(int index, const QUrl& file) {
-    const auto refuse = [this](const QString& refusal) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_file_input_;
+    const bool previous = widget_input_executing_;
+    const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+    const auto refuse = [this, self, input](const QString& refusal) {
+        if (input && !input->outcome.applied) input->outcome.message = refusal;
+        if (!self || retired_) return false;
         setLastError(refusal);
-        emit refused(refusal);
+        if (self && !retired_) emit refused(refusal);
         return false;
     };
     if (index < 0 || index >= experiment_models_.size()) {
@@ -896,15 +1260,27 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         return refuse(tr("A scan's datasets take their data from the scan's files; '%1' loads none of its own")
                           .arg(QString::fromStdString(experiment.name)));
     }
+    if (input) {
+        if (input->kind != WidgetFileInput::Kind::Measurement || input->consumed || input->path != file ||
+            input->experiment != &experiment || !input->source)
+            return refuse(tr("The chosen data does not match its admitted original experiment/file"));
+        const bool sourceCurrent=!input->source_current || input->source_current();
+        if(!self || retired_ || widget_file_input_!=input || static_cast<std::size_t>(index)>=project_->experiments.size() || project_->experiments[static_cast<std::size_t>(index)].get()!=&experiment)return false;
+        if(!sourceCurrent) { input->source_changed=true;return refuse(tr("The original attached data changed or is unavailable")); }
+        input->consumed = true; widget_input_executing_ = true;
+    }
     // A name the user has not changed (experiment1, experiment2, …) gives way to the file's.
     const std::string& name = experiment.name.value();
     const bool default_name = name.size() > 10 && name.starts_with("experiment") &&
                               std::all_of(name.begin() + 10, name.end(), [](char c) { return c >= '0' && c <= '9'; });
     std::optional<edi::PlainDataLoad> read;
     try {
-        read.emplace(edi::experiment_with_plain_data(experiment, file.toLocalFile().toStdString(), default_name));
+        if(input) {
+            if(!input->reader_path.isLocalFile())return refuse(tr("The approved data reader input is unavailable"));
+            read.emplace(edi::experiment_with_plain_data(experiment,input->reader_path.toLocalFile().toStdString(),file.toLocalFile().toStdString(),default_name));
+        } else read.emplace(edi::experiment_with_plain_data(experiment, file.toLocalFile().toStdString(), default_name));
     } catch (const std::exception& refusal) {
-        return refuse(QString::fromUtf8(refusal.what()));
+        return refuse(input ? original_input_error(refusal.what()) : QString::fromUtf8(refusal.what()));
     }
     edi::PlainDataLoad& load = *read;
     // A file name another experiment already has, in any letter case (saved files are told apart without it),
@@ -915,15 +1291,35 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
             load.experiment.name = name;
         }
     }
+    if (input && input->bounded_result && !assistant_result_experiment(load.experiment)) {
+        input->consumed = true; // The original refused input is one-shot before notifying.
+        input->result_identity_refused = true;
+        return refuse(tr("The parsed data or phase identity exceeds the assistant result limit; no edit was made"));
+    }
+    if(input) {
+        const bool sourceCurrent=!input->source_current || input->source_current();
+        if(!self || retired_ || widget_file_input_!=input || static_cast<std::size_t>(index)>=project_->experiments.size() || project_->experiments[static_cast<std::size_t>(index)].get()!=&experiment)return false;
+        if(!sourceCurrent) { input->source_changed=true;return refuse(tr("The original attached data changed or is unavailable")); }
+    }
     const QString file_name = QString::fromStdString(load.file_name);
-    LoadedData record{nullptr, std::make_shared<const edi::BraggPdExperiment>(experiment)};
+    LoadedData record{&experiment, std::make_shared<const edi::BraggPdExperiment>(experiment)};
     const QString loaded_name = QString::fromStdString(load.experiment.name);
-    if (const QString error = replaceData(index, std::move(load.experiment)); !error.isEmpty()) {
+    // Own the original experiment snapshot/history node before core publication.
+    // experimentReplaced updates this same record with the actual new member.
+    undo_history_.reserve(undo_history_.size() + 1);
+    undo_history_.emplace_back(std::move(record));
+    if (input) {
+        input->points = load.points; input->skipped = load.skipped; input->nonpositive = load.nonpositive;
+        input->duplicates = load.duplicates; input->reordered = load.reordered; input->derived = load.derived;
+    }
+    const auto error = replaceData(index, std::move(load.experiment));
+    if (!self || retired_) return input && input->outcome.applied;
+    if (!error.isEmpty()) {
+        if (!input || !input->outcome.applied) undo_history_.pop_back();
         return refuse(error);
     }
-    record.experiment = project.experiments[static_cast<std::size_t>(index)].get();
-    undo_history_.emplace_back(std::move(record));
     syncUndo();
+    if (!self || retired_) return true;
     // A FullProf file of several datasets: the first went into this experiment, each other one becomes its own.
     const std::size_t datasets = load.more.size() + 1;
     if (!load.more.empty()) {
@@ -984,6 +1380,7 @@ bool ProjectViewModel::loadData(int index, const QUrl& file) {
         text += QStringLiteral("; ") + notes.join(QStringLiteral("; "));
     }
     emit message(text);
+    if (!self || retired_) return true;
     setCurrentExperimentIndex(index);
     return true;
 }
@@ -1000,6 +1397,31 @@ bool ProjectViewModel::loadDataInto(ExperimentViewModel* experiment, const QUrl&
 }
 
 bool ProjectViewModel::createStructure() {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_creation_input_;
+    const CreationAction actual{CreationAction::Kind::StructureAppend};
+    // Refuse a new invocation before factory/history work. A consumed receipt
+    // belongs to the earlier invocation, even if its outcome was successful.
+    if (widget_input_executing_ || widget_input_ || widget_relation_input_ || widget_background_input_ || widget_file_input_)
+        return false;
+    if (input && (input->consumed || input->expected.kind != actual.kind || input->expected.row != actual.row ||
+        input->expected.field != actual.field || input->expected.text != actual.text || input->expected.number != actual.number))
+        return false;
+    QString readiness;
+    {
+        // Only this exact unconsumed input may enter its original readiness
+        // check; restore execution before any publication or factory work.
+        const bool previous = widget_input_executing_;
+        const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+        widget_input_executing_ = bool(input);
+        readiness = editReadinessRefusal(false);
+    }
+    if (!readiness.isEmpty()) {
+        setLastError(readiness);
+        if (self && !retired_) emit refused(readiness);
+        return false;
+    }
     edi::Project& project = *project_;
     // The first free name of the form structure1, structure2, …
     std::string name;
@@ -1019,22 +1441,37 @@ bool ProjectViewModel::createStructure() {
                              "loop_\n_atom_site.id\n_atom_site.type_symbol\n_atom_site.fract_x\n_atom_site.fract_y\n"
                              "_atom_site.fract_z\n_atom_site.wyckoff_letter\n_atom_site.occupancy\n_atom_site.adp_type\n"
                              "_atom_site.adp_iso\nO O 0. 0. 0. a 1. Biso 0.\n";
-    edi::StructuresUndo before = edi::capture_structures(project);
+    bool reserved = false;
     QString error;
     try {
-        error = apply(edi::Edit::add_structure(project, edi::structure_from_edi_text(text)), true);
+        auto structure = edi::structure_from_edi_text(text);
+        if (input && input->bounded_result && !assistant_result_name(structure.name.value())) {
+            input->consumed = true; input->result_identity_refused = true;
+            input->outcome.message = tr("The generated structure identity exceeds the assistant result limit; no edit was made");
+            return false;
+        }
+        auto before = edi::capture_structures(project);
+        undo_history_.reserve(undo_history_.size()+1);
+        undo_history_.emplace_back(std::move(before)); reserved = true;
+        error = apply_creation_control(edi::Edit::add_structure(project, std::move(structure)), true, actual);
     } catch (const std::exception& refusal) {
-        error = QString::fromUtf8(refusal.what());
-        setLastError(error);
+        error = input ? original_input_error(refusal.what()) : QString::fromUtf8(refusal.what());
     }
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
+    const bool applied = input ? input->outcome.applied : error.isEmpty();
+    if (self && reserved && !applied) undo_history_.pop_back();
+    if (!self || retired_) return applied;
+    if (!error.isEmpty()) { setLastError(error); if (self && !retired_) emit refused(error); return applied; }
+    {
+        // History availability is part of this publication, including manual
+        // Create: a synchronous observer cannot start another edit or Undo it.
+        const bool previous = editing_;
+        const auto release = qScopeGuard([self, previous] { if (self) self->editing_ = previous; });
+        editing_ = true;
+        syncUndo();
     }
-    undo_history_.emplace_back(std::move(before));
-    syncUndo();
+    if (!self || retired_) return applied;
     setCurrentStructureIndex(static_cast<int>(structure_models_.size()) - 1);
-    return true;
+    return applied;
 }
 
 bool ProjectViewModel::nameTermsByOrder() {
@@ -1061,10 +1498,21 @@ bool ProjectViewModel::nameTermsByOrder() {
 }
 
 bool ProjectViewModel::namePointsByPosition() {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_background_input_;
+    const bool previous = widget_input_executing_;
+    const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
     if (current_experiment_ < 0 || current_experiment_ >= static_cast<int>(project_->experiments.size())) {
         return false;
     }
     edi::ExperimentBase& experiment = *project_->experiments[static_cast<std::size_t>(current_experiment_)];
+    if (input) {
+        if (!input->names || input->consumed || input->experiment != &experiment || input->members.size() != experiment.background.size()) return false;
+        for (std::size_t i=0;i<input->members.size();++i)
+            if (input->members[i] != experiment.background[i].get()) return false;
+        input->consumed = true; widget_input_executing_ = true;
+    }
     PointIds record{&experiment, {}};
     for (const auto& point : experiment.background) {
         record.before.push_back(point->id.value());
@@ -1073,14 +1521,24 @@ bool ProjectViewModel::namePointsByPosition() {
     if (ids == record.before) {
         return true;
     }
-    const QString error =
-        apply_background_edit(experiment, edi::Edit::background_point_ids(experiment, std::move(ids)), true);
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
+    if(const auto refusal=estimated_background_refusal(experiment);!refusal.isEmpty()){emit refused(refusal);return false;}
+    const auto edit = edi::Edit::background_point_ids(experiment, std::move(ids));
+    undo_history_.reserve(undo_history_.size()+1);
+    undo_history_.emplace_back(std::move(record)); // Actual Undo owner precedes the live edit.
+    EditOutcome result;
+    try { result = applyEdit(edit, true); }
+    catch (...) { if(self)undo_history_.pop_back(); throw; }
+    if (input) input->outcome=result;
+    if (!self || retired_) return result.applied;
+    if (!result.applied) undo_history_.pop_back();
+    try { syncUndo(); }
+    catch (...) {
+        if (!result.applied) throw;
+        result.published=false;result.message=tr("Background IDs and Undo were retained; presentation was incomplete");
+        if(input)input->outcome=result;
+        holdPublicationFailure(result.message);
     }
-    undo_history_.emplace_back(std::move(record));
-    syncUndo();
+    if (!result.applied) { emit refused(result.message); return false; }
     return true;
 }
 
@@ -1128,6 +1586,22 @@ void ProjectViewModel::postAutoModelReason(const std::string& experiment, const 
 }
 
 bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters, bool free) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_input_;
+    const bool previous = widget_input_executing_;
+    const auto release = qScopeGuard([self, previous] { if(self)self->widget_input_executing_=previous; });
+    if (input) {
+        if(input->field!=WidgetParameterInput::Field::FreeGroup || input->consumed || input->free!=free ||
+            input->members.size()!=static_cast<std::size_t>(parameters.size()))return false;
+        for(qsizetype i=0;i<parameters.size();++i) {
+            const auto* item=parameters[i];
+            if(!registry_->items().contains(const_cast<ParameterItem*>(item)) || !item->isFittable() || !item->isRefinable() ||
+                std::count(input->members.begin(),input->members.end(),item->parameter())!=1 ||
+                std::count(parameters.begin(),parameters.end(),item)!=1)return false;
+        }
+        input->consumed=true;widget_input_executing_=true;
+    }
     if (const QString refusal = free_refusal(); !refusal.isEmpty()) {
         emit refused(refusal);
         return false;
@@ -1136,7 +1610,6 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
     for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
         names.emplace(slot.parameter, slot.unique_name);
     }
-    FreeFlags record;
     std::vector<std::pair<std::string, bool>> flags;
     for (const ParameterItem* item : parameters) {
         if (item == nullptr || (free && !item->isFittable())) {
@@ -1146,19 +1619,15 @@ bool ProjectViewModel::setParametersFree(const QList<ParameterItem*>& parameters
         if (found == names.end() || item->isFree() == free) {
             continue;
         }
-        record.before.emplace_back(found->second, item->isFree());
         flags.emplace_back(found->second, free);
     }
     if (flags.empty()) {
         return true;
     }
-    const QString error = apply(edi::Edit::set_free(*project_, std::move(flags)), false);
-    if (!error.isEmpty()) {
-        emit refused(error);
-        return false;
-    }
-    undo_history_.emplace_back(std::move(record));
-    syncUndo();
+    const EditOutcome result = applyRecordedEdit(edi::Edit::set_free(*project_, std::move(flags)), false);
+    if(input)input->outcome=result;
+    if (!self || retired_) return result.applied;
+    if (!result.applied) { emit refused(result.message); return false; }
     return true;
 }
 
@@ -1531,7 +2000,22 @@ void ProjectViewModel::viewDataset(int index, bool refresh) {
     }
 }
 
-QString ProjectViewModel::pendingRefusal() const {
+QString ProjectViewModel::pendingRefusal() const { return editReadinessRefusal(false); }
+
+QString ProjectViewModel::criticalEditRefusal(bool restoring) const {
+    if (retired_) return tr("This project owner has been replaced or closed");
+    if (editing_) return tr("The current project edit is still being published");
+    if (fit_undo_invoking_ && (!fit_undo_input_ || fit_undo_input_->started))
+        return tr("The current ordinary fit Undo is still being completed");
+    if ((widget_input_ || widget_relation_input_ || widget_background_input_ || widget_file_input_ || widget_creation_input_) && !widget_input_executing_)
+        return tr("The current visible native input is still being completed");
+    if (edit_publication_failed_ && !restoring)
+        return tr("An edit was applied but its presentation failed: Undo or reopen the project before further changes");
+    return {};
+}
+
+QString ProjectViewModel::editReadinessRefusal(bool restoring) const {
+    if (const QString critical = criticalEditRefusal(restoring); !critical.isEmpty()) return critical;
     // The model must hold the chosen dataset: not while its read is in flight, nor after a read that failed (the
     // model still holds the one before, whatever the selection says).
     if (view_applied_ != view_request_) {
@@ -1763,119 +2247,169 @@ void ProjectViewModel::markTemplateChanged() {
 }
 
 QString ProjectViewModel::prepareScan(bool fresh) {
-    if (fit_ != nullptr && fit_->running()) {
-        return tr("A fit is running");
-    }
-    // Admission first, before anything on disk changes: one template experiment, a listed scan, a directory.
-    if (const QString refusal = scanRefusal(); !refusal.isEmpty()) {
-        return refusal;
-    }
-    if (project_->path.empty()) {
-        return tr("The project has no directory yet: save it first");
-    }
+    const PublicationScope publication(*this);
+    if (const QString critical = criticalEditRefusal(); !critical.isEmpty()) return critical;
+    if (fit_ != nullptr && fit_->running()) return tr("A fit is running");
+    if (const QString refusal = scanRefusal(); !refusal.isEmpty()) return refusal;
+    if (project_->path.empty()) return tr("The project has no directory yet: save it first");
+    const QString warning = tr("The scan preparation changed the project, but its presentation failed. Undo or reopen before further changes.");
+    editing_ = true;
+    const auto release = qScopeGuard([this] { editing_ = false; });
     run_identity_ = ScanSession::templateIdentity(scanTemplateOrModel());
-    // A Continue keeps the rows already there, which came from the run (or runs) before: their provenance stays
-    // with the scan's (scanEnded).
     previous_run_.reset();
-    if (!fresh) {
-        previous_run_ = scan_session_->run();
-        return {};
-    }
-    // The previous results, kept for Undo (their absence included), then removed, all or none: crysta's driver
-    // starts a scan without them.
-    ScanRun run;
-    if (const QString refusal = scan_session_->takeFiles(*project_, run.files); !refusal.isEmpty()) {
-        return refusal;
-    }
-    undo_history_.emplace_back(std::move(run));
-    syncUndo();
-    setModified(true);
-    reloadScanResults();
+    if (!fresh) { previous_run_ = scan_session_->run(); return {}; }
+    undo_history_.reserve(undo_history_.size() + 1);
+    undo_history_.emplace_back(ScanRun{});
+    auto& record = std::get<ScanRun>(undo_history_.back());
+    QString refusal;
+    try { refusal = scan_session_->takeFiles(*project_, record.files); }
+    catch (...) { undo_history_.pop_back(); throw; } // takeFiles is the existing all-or-none file door.
+    if (!refusal.isEmpty()) { undo_history_.pop_back(); return refusal; }
+    try {
+        syncUndo();
+        if (retired_) return tr("The scan preparation owner was replaced");
+        setModified(true);
+        if (retired_) return tr("The scan preparation owner was replaced");
+        reloadScanResults();
+        if (retired_) return tr("The scan preparation owner was replaced");
+    } catch (...) { holdPublicationFailure(warning); return warning; }
     return {};
 }
 
 QString ProjectViewModel::resetScan() {
-    if (fit_ != nullptr && fit_->running()) {
-        return tr("A fit is running");
-    }
-    if (scan_session_ == nullptr) {
-        return scanRefusal();
-    }
-    // Every dataset's fit result goes, as one Undo step: the result files are set aside, absent ones included, the
-    // run's provenance with them, and the record a single fit left on the template (its values stay: they are the
-    // template). The datasets read as unfitted.
+    const PublicationScope publication(*this);
+    if (const QString critical = criticalEditRefusal(); !critical.isEmpty()) return critical;
+    if (fit_ != nullptr && fit_->running()) return tr("A fit is running");
+    if (scan_session_ == nullptr) return scanRefusal();
+    const QString warning = tr("The scan reset changed the project, but its presentation failed. Undo or reopen before further changes.");
     ScanRun run;
-    if (const QString refusal = scan_session_->takeFiles(*project_, run.files); !refusal.isEmpty()) {
-        setLastError(refusal);
-        return refusal;
-    }
     run.fit_records = FitRecords{project_->fit_result, scan_template_ ? std::optional(scan_template_->fit_result) : std::nullopt};
-    // The values the model shows now (a dataset's projection, or a single fit's result on it), which its Undo
-    // restores as they are rather than as the older results would project them.
     run.shown_dataset = projected_dataset_;
-    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_))
         run.shown_values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()});
-    }
-    project_->fit_result = {};
-    if (scan_template_) {
-        scan_template_->fit_result = {};
-    }
-    syncCorrelations();
+    undo_history_.reserve(undo_history_.size() + 1);
+    editing_ = true;
+    const auto release = qScopeGuard([this] { editing_ = false; });
     undo_history_.emplace_back(std::move(run));
-    syncUndo();
-    setModified(true);
-    reloadScanResults();
-    if (current_dataset_ >= 0) {
-        viewDataset(current_dataset_, true);
-    }
+    auto& record = std::get<ScanRun>(undo_history_.back());
+    QString refusal;
+    try { refusal = scan_session_->takeFiles(*project_, record.files); }
+    catch (...) { undo_history_.pop_back(); throw; }
+    if (!refusal.isEmpty()) { undo_history_.pop_back(); setLastError(refusal); return refusal; }
+    try {
+        project_->fit_result = {};
+        if (scan_template_) scan_template_->fit_result = {};
+        syncCorrelations();
+        if (retired_) return tr("The scan reset owner was replaced");
+        syncUndo();
+        if (retired_) return tr("The scan reset owner was replaced");
+        setModified(true);
+        if (retired_) return tr("The scan reset owner was replaced");
+        reloadScanResults();
+        if (retired_) return tr("The scan reset owner was replaced");
+        if (current_dataset_ >= 0) {
+            const QPointer<ProjectViewModel> self(this);
+            const int index = current_dataset_;
+            QMetaObject::invokeMethod(this, [self, index] {
+                if (self && !self->retired_ && self->current_dataset_ == index) self->viewDataset(index, true);
+            }, Qt::QueuedConnection);
+        }
+    } catch (...) { holdPublicationFailure(warning); return warning; }
     return {};
 }
 
-bool ProjectViewModel::restoreScanRun(const ScanRun& run) {
-    if (fit_ != nullptr && fit_->running()) {
-        return false;
+bool ProjectViewModel::restoreScanRun(const ScanRun& run, bool restoring) {
+    const PublicationScope publication(*this);
+    if (const QString critical = criticalEditRefusal(restoring); !critical.isEmpty()) { setLastError(critical); return false; }
+    if (fit_ != nullptr && fit_->running()) return false;
+    const QString warning = tr("The scan Undo restored files and model, but its presentation failed. Reopen before further changes.");
+    const QString prepare_warning = tr("The previous scan results could not be prepared for Undo; nothing was restored.");
+    editing_ = true;
+    const auto release = qScopeGuard([this] { editing_ = false; });
+    std::optional<FitRecords> records;
+    std::optional<edi::detail::PreparedScanView> projection;
+    bool files_committed = false;
+    QString file_error;
+    try {
+        // Every owning copy, name resolution and projection allocation precedes
+        // file reversal. No callbacks or model changes intervene before commit.
+        records = run.fit_records;
+        if (run.shown_dataset >= 0 && run.shown_dataset == projected_dataset_ &&
+            view_applied_ == view_request_ && project_->experiment().data)
+            projection.emplace(edi::detail::prepare_scan_view(*project_, project_->experiment(),
+                run.shown_values, *project_->experiment().data));
+        file_error = scan_session_->putFiles(*project_, run.files, &files_committed);
+    } catch (...) {
+        if (!files_committed) { setLastError(prepare_warning); return false; }
+        file_error = warning; // Genuine file commit still obliges model restoration below.
     }
-    if (const QString refusal = scan_session_->putFiles(*project_, run.files); !refusal.isEmpty()) {
-        const QString message = tr("The previous scan results could not be put back: %1").arg(refusal);
+    if (!files_committed) {
+        const QString message = tr("The previous scan results could not be put back: %1").arg(file_error);
         setLastError(message);
-        emit refused(message);
-        return false;
+        if (!retired_) emit refused(message);
+        return false; // The sole Undo remains; a kept-aside OS diagnostic is retained.
     }
-    if (run.fit_records) {
-        project_->fit_result = run.fit_records->model;
-        if (scan_template_ && run.fit_records->stash) {
-            scan_template_->fit_result = *run.fit_records->stash;
+    // Real model restoration, with prepared ownership and nonthrowing writes,
+    // completes BEFORE observers. Only now may the caller consume this Undo.
+    static_assert(std::is_nothrow_move_assignable_v<edi::FitResultRecord>);
+    if (records) {
+        project_->fit_result = std::move(records->model);
+        if (scan_template_ && records->stash) scan_template_->fit_result = std::move(*records->stash);
+    }
+    if (projection) { projection->commit(); project_->note_edit(); }
+    if ((records || projection) && fit_) fit_->invalidateFitUndo();
+    try {
+        if (records) { syncCorrelations(); if (retired_) return true; }
+        setModified(true);
+        if (retired_) return true;
+        scan_refusal_ = scan_session_->load(*project_);
+        reloadScanResults();
+        if (retired_) return true;
+        if (projection) {
+            // shown_values captured every original named slot, including its
+            // completed dependents. Publish that exact restored state; no new
+            // normalization or owning data copy is part of the file commit.
+            pending_structural_ = false;
+            publish(false);
+            if (retired_) return true;
+            for (ExperimentViewModel* experiment : experiment_models_) {
+                experiment->markPatternStale();
+                if (retired_) return true;
+            }
+            for (StructureViewModel* structure : structure_models_) {
+                if (!structure->structure()->geometry_current()) structure->markSceneStale();
+                if (retired_) return true;
+            }
+            preview_->recalculate();
+            if (retired_) return true;
+            publishCalculating();
+            if (retired_) return true;
+            publishCurrent();
+        } else if (current_dataset_ >= 0) {
+            const QPointer<ProjectViewModel> self(this);
+            const int index = current_dataset_;
+            QMetaObject::invokeMethod(this, [self, index] {
+                if (self && !self->retired_ && self->current_dataset_ == index) self->viewDataset(index, true);
+            }, Qt::QueuedConnection);
         }
-        syncCorrelations();
-    }
-    setModified(true);
-    scan_refusal_ = scan_session_->load(*project_);
-    reloadScanResults();
-    // Reset fits' Undo: the values shown before it, on the same dataset, as they were. Otherwise the shown dataset as
-    // its row on disk now gives it.
-    if (run.shown_dataset >= 0 && run.shown_dataset == projected_dataset_ && view_applied_ == view_request_ &&
-        project_->experiment().data) {
-        const bool modified = modified_;
-        applying_view_ = true;
-        const QString error = apply(edi::Edit::scan_view(*project_, project_->experiment(), run.shown_values,
-                                                         *project_->experiment().data),
-                                    false);
-        applying_view_ = false;
-        setModified(modified || error.isEmpty());
-        publishCurrent();
-    } else if (current_dataset_ >= 0) {
-        viewDataset(current_dataset_, true);
-    }
+        if (!retired_) {
+            if (file_error.isEmpty()) { edit_publication_failed_ = false; setLastError({}); }
+            else holdPublicationFailure(file_error);
+        }
+    } catch (...) { holdPublicationFailure(warning); }
     return true;
 }
 
 void ProjectViewModel::reloadScanResults() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     if (scan_session_ == nullptr) {
         return;
     }
     if (const QString refusal = scan_session_->reindex(*project_); !refusal.isEmpty()) {
         setLastError(refusal);
         emit refused(refusal);
+        if (retired_) return;
     }
     showScanResults();
 }
@@ -1890,10 +2424,13 @@ void ProjectViewModel::showScanResults() {
         fit_->showScanRefused(QString::fromStdString(scan_session_->index().error), provenance.outcome,
                               provenance.seconds);
         syncOutOfDate();
+        if (retired_) return;
         return;
     }
     fit_->showScan(scanSummary(provenance.outcome, provenance.seconds), !provenance.last_single);
+    if (retired_) return;
     syncOutOfDate();
+    if (retired_) return;
 }
 
 ScanSummary ProjectViewModel::scanSummary(const QString& run_outcome, double seconds) const {
@@ -2324,31 +2861,167 @@ void ProjectViewModel::pinTimestamps(const QString& timestamp) {
     setModified(modified);
 }
 
+std::shared_ptr<ProjectViewModel::WidgetRelationInput> ProjectViewModel::prepareWidgetRelations(const ProjectEditor::RelationAction& action) {
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    auto input = std::make_shared<WidgetRelationInput>();
+    input->expected = action;
+    input->outcome.message = tr("The original relation control did not commit");
+    widget_relation_input_ = input;
+    return input;
+}
+void ProjectViewModel::finishWidgetRelations(const std::shared_ptr<WidgetRelationInput>& input) noexcept {
+    if (widget_relation_input_ == input) widget_relation_input_.reset();
+}
+QString ProjectViewModel::apply_relation_control(const edi::Edit& change, const ProjectEditor::RelationAction& action) {
+    const PublicationScope publication(*this);
+    const auto input = widget_relation_input_;
+    if (!input) return apply_relation_edit(change);
+    if (input->consumed || input->expected.kind != action.kind || input->expected.row != action.row ||
+        input->expected.text != action.text || input->expected.enabled != action.enabled || input->expected.expression != action.expression)
+        return tr("A different relation control cannot enter the original native event");
+    input->consumed = true;
+    const QPointer<ProjectViewModel> self(this);
+    const bool previous = widget_input_executing_;
+    widget_input_executing_ = true;
+    const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+    input->outcome = applyRecordedEdit(change, true);
+    return input->outcome.applied ? QString{} : input->outcome.message;
+}
+
+std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepareWidgetValue(const edi::Parameter& parameter, double value) {
+    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) throw std::runtime_error(pending.toStdString());
+    auto input = std::make_shared<WidgetParameterInput>();
+    input->field = WidgetParameterInput::Field::Value; input->parameter = &parameter; input->value = value;
+    input->outcome.message = tr("The visible parameter input was not committed");
+    widget_input_ = input;
+    return input;
+}
+std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepareWidgetFree(const edi::Parameter& parameter, bool free) {
+    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) throw std::runtime_error(pending.toStdString());
+    auto input = std::make_shared<WidgetParameterInput>();
+    input->field = WidgetParameterInput::Field::Free; input->parameter = &parameter; input->free = free;
+    input->outcome.message = tr("The visible free-flag input was not committed");
+    widget_input_ = input;
+    return input;
+}
+std::shared_ptr<ProjectViewModel::WidgetParameterInput> ProjectViewModel::prepareWidgetFreeGroup(std::vector<const edi::Parameter*> members, bool free) {
+    if (const QString pending=editReadinessRefusal(false);!pending.isEmpty())throw std::runtime_error(pending.toStdString());
+    if(members.empty())throw std::invalid_argument("The original free-header set is empty");
+    for(const auto* member:members) {
+        const auto* item=registry_->find(member);
+        if(!item || !item->isFittable() || !item->isRefinable() || std::count(members.begin(),members.end(),member)!=1)
+            throw std::invalid_argument("The original free-header member changed");
+    }
+    auto input=std::make_shared<WidgetParameterInput>();input->field=WidgetParameterInput::Field::FreeGroup;
+    input->members=std::move(members);input->free=free;input->outcome.message=tr("The original free-header action did not commit");
+    widget_input_=input;return input;
+}
+void ProjectViewModel::finishWidgetInput(const std::shared_ptr<WidgetParameterInput>& input) noexcept {
+    if (widget_input_ == input) widget_input_.reset(); // Never detach a replacement input.
+}
+QString ProjectViewModel::assign_parameter_value(edi::Parameter& parameter, double value) {
+    if (const auto refusal = value_refusal(parameter); !refusal.isEmpty()) return refusal;
+    const PublicationScope publication(*this);
+    const auto input = widget_input_;
+    if (!input) {
+        const QString pending = fit_ != nullptr && fit_->running() && !(applying_view_ && fit_->scanning())
+            ? tr("The project cannot be edited while a fit is running") : editReadinessRefusal(false);
+        if (!pending.isEmpty()) {
+            if (!retired_) setLastError(pending);
+            return pending;
+        }
+        // Equal values outside the admissible range must still reach the original refusal.
+        if (parameter.value.get() == value && (!parameter.spec ||
+            !(value < parameter.spec->range.min || value > parameter.spec->range.max))) return {};
+        const EditOutcome result = applyRecordedEdit(edi::Edit::value(parameter, value), false);
+        if (!retired_ && !result.applied) setLastError(result.message);
+        return result.applied ? QString{} : result.message;
+    }
+    if (input->consumed || input->parameter != &parameter || input->field != WidgetParameterInput::Field::Value || input->value != value)
+        return tr("A different parameter input cannot enter the current native event");
+    input->consumed = true;
+    widget_input_executing_ = true;
+    const QPointer<ProjectViewModel> self(this);
+    const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
+    input->outcome = applyRecordedEdit(edi::Edit::value(parameter, value), false);
+    return input->outcome.applied ? QString{} : input->outcome.message;
+}
+QString ProjectViewModel::assign_parameter_free(edi::Parameter& parameter, bool free) {
+    if (const auto refusal = free_refusal(); !refusal.isEmpty()) return refusal;
+    const PublicationScope publication(*this);
+    const auto input = widget_input_;
+    if (!input) {
+        const QString pending = fit_ != nullptr && fit_->running() && !(applying_view_ && fit_->scanning())
+            ? tr("The project cannot be edited while a fit is running") : editReadinessRefusal(false);
+        if (!pending.isEmpty()) {
+            if (!retired_) setLastError(pending);
+            return pending;
+        }
+        if (parameter.free.get() == free) return {};
+        const EditOutcome result = applyRecordedEdit(edi::Edit::assign(parameter.free, free), false);
+        if (!retired_ && !result.applied) setLastError(result.message);
+        return result.applied ? QString{} : result.message;
+    }
+    if (input->consumed || input->parameter != &parameter || input->field != WidgetParameterInput::Field::Free || input->free != free)
+        return tr("A different free-flag input cannot enter the current native event");
+    input->consumed = true;
+    widget_input_executing_ = true;
+    const QPointer<ProjectViewModel> self(this);
+    const auto release = qScopeGuard([self] { if (self) self->widget_input_executing_ = false; });
+    input->outcome = applyRecordedEdit(edi::Edit::assign(parameter.free, free), false);
+    return input->outcome.applied ? QString{} : input->outcome.message;
+}
+
 QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
-    // ADR-0020 §2, §8: every write the app admits comes through this door and through the preview, as an
-    // edi::Edit: one core operation that refuses before it writes, or completes. The change runs at once; the
-    // preview notes the edit, so the computed categories are stale whatever field it wrote and whatever value
-    // it left; this object publishes what changed (the preview's `edited` hook); and the edit is a request,
-    // calculated on the worker and published only if no newer one exists by then. While a fit runs, the model
-    // it fits is not edited. A write that reached the model anyway would make the fit publish nothing
-    // (Superseded).
-    if (fit_ != nullptr && fit_->running() && !(applying_view_ && fit_->scanning())) {
-        const QString message = tr("The project cannot be edited while a fit is running");
-        setLastError(message);
-        return message;
-    }
-    if (const QString pending = pendingRefusal(); !applying_view_ && !pending.isEmpty()) {
-        setLastError(pending);
-        return pending;
-    }
+    const PublicationScope publication(*this);
+    const EditOutcome result = applyEdit(change, structural);
+    if (!retired_ && !result.applied) setLastError(result.message);
+    return result.applied ? QString{} : result.message;
+}
+
+ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& change, bool structural, bool restoring) {
+    const PublicationScope publication(*this);
+    EditOutcome result;
+    // Own the post-write warning before the write, including if exception formatting fails.
+    const QString applied_warning = tr("The edit was applied, but its presentation could not be completed. Undo or reopen the project before further changes.");
+    result.message = tr("The project edit was refused before changing the model");
+    const auto refuse = [&result](const QString& message) {
+        result.message = message;
+        return result;
+    };
+    if (fit_ != nullptr && fit_->running() && !(applying_view_ && fit_->scanning()))
+        return refuse(tr("The project cannot be edited while a fit is running"));
+    // Reentrancy and an uncertain prior publication are unconditional fences,
+    // including while a scan projection is being applied. Only a real Undo may
+    // recover the publication fence; dataset readiness remains authoritative.
+    if (const QString critical = criticalEditRefusal(restoring); !critical.isEmpty())
+        return refuse(critical);
+    if (const QString pending = editReadinessRefusal(restoring); !applying_view_ && !pending.isEmpty())
+        return refuse(pending);
+    const QPointer<ProjectViewModel> self(this);
+    editing_ = true;
+    const auto release = qScopeGuard([self] { if (self) self->editing_ = false; });
     pending_structural_ = structural;
+    const auto relation_input = widget_input_executing_ ? widget_relation_input_ : nullptr;
+    const auto background_input = widget_input_executing_ ? widget_background_input_ : nullptr;
+    const auto parameter_input = widget_input_executing_ ? widget_input_ : nullptr;
+    const auto file_input = widget_input_executing_ ? widget_file_input_ : nullptr;
+    const auto creation_input = widget_input_executing_ ? widget_creation_input_ : nullptr;
+    auto* applied_result = creation_input && creation_input->consumed ? &creation_input->applied_result
+        : file_input && file_input->consumed ? &file_input->applied_result
+        : relation_input && relation_input->consumed ? &relation_input->applied_result : relation_result_;
+    const auto fit_undo_input = fit_undo_invoking_ && fit_undo_input_ && fit_undo_input_->consumed && !fit_undo_input_->started ? fit_undo_input_ : nullptr;
+    if (fit_undo_input) fit_undo_input->started = true;
+    bool* applied = fit_undo_input ? &fit_undo_input->outcome.applied : creation_input && creation_input->consumed ? &creation_input->outcome.applied
+        : file_input && file_input->consumed ? &file_input->outcome.applied
+        : relation_input && relation_input->consumed ? &relation_input->outcome.applied
+        : background_input && background_input->consumed ? &background_input->outcome.applied
+        : parameter_input && parameter_input->consumed ? &parameter_input->outcome.applied : &result.applied;
     try {
-        preview_->apply(change);
-    } catch (const std::exception& refusal) {
-        const QString message = QString::fromUtf8(refusal.what());
-        setLastError(message);
-        return message;
-    }
+        preview_->apply(change, applied, applied_result);
+        result.applied = *applied;
+        if (result.applied && fit_) fit_->invalidateFitUndo();
+        if (!self || retired_) { result.message = applied_warning; return result; }
     // ADR-0040: an experiment in auto background mode re-estimates its points once an edit changed its data or
     // settings, so the calculation the edit starts reads them; a hand edit of a point makes it manual. The edit
     // stands whatever the estimate does; a refusal is reported.
@@ -2391,40 +3064,87 @@ QString ProjectViewModel::apply(const edi::Edit& change, bool structural) {
             }
         }
     }
-    // An admitted edit while a scan dataset is shown (edi ADR-0017 §19): a project-wide setting goes to the
-    // template too; an edit of the experiment or the structures makes the shown values the template's, over the
-    // template's own data file. A refused edit never gets here. A stopped scan is then started afresh.
-    if (!applying_view_) {
-        if (scan_template_ && applying_setting_) {
-            scan_template_->metadata = project_->metadata;
-            scan_template_->fitting_mode = project_->fitting_mode;
-            scan_template_->descent = project_->descent;
-            scan_template_->minimizer_max_iterations = project_->minimizer_max_iterations;
-            scan_template_->minimizer_chi_square_tolerance = project_->minimizer_chi_square_tolerance;
-            scan_template_->su_rule = project_->su_rule;
-            scan_template_->report_html = project_->report_html;
-            scan_template_->report_pdf = project_->report_pdf;
-            scan_template_->report_cif = project_->report_cif;
-            scan_template_->report_html_offline = project_->report_html_offline;
-            scan_template_->report_excluded = project_->report_excluded;
-            scan_template_->correlation_threshold = project_->correlation_threshold;
-            scan_template_->pattern_x_axis = project_->pattern_x_axis;
-        } else if (scan_template_) {
-            edi::Project promoted = *project_;
-            promoted.experiment().data = scan_template_->experiment().data;
-            promoted.experiment().calculation_only = scan_template_->experiment().calculation_only;
-            scan_template_ = std::move(promoted);
+        // An admitted edit while a scan dataset is shown (edi ADR-0017 §19): a project-wide setting goes to the
+        // template too; an edit of the experiment or the structures makes the shown values the template's, over the
+        // template's own data file. A refused edit never gets here. A stopped scan is then started afresh.
+        if (!applying_view_) {
+            if (scan_template_ && applying_setting_) {
+                scan_template_->metadata = project_->metadata;
+                scan_template_->fitting_mode = project_->fitting_mode;
+                scan_template_->descent = project_->descent;
+                scan_template_->minimizer_max_iterations = project_->minimizer_max_iterations;
+                scan_template_->minimizer_chi_square_tolerance = project_->minimizer_chi_square_tolerance;
+                scan_template_->su_rule = project_->su_rule;
+                scan_template_->report_html = project_->report_html;
+                scan_template_->report_pdf = project_->report_pdf;
+                scan_template_->report_cif = project_->report_cif;
+                scan_template_->report_html_offline = project_->report_html_offline;
+                scan_template_->report_excluded = project_->report_excluded;
+                scan_template_->correlation_threshold = project_->correlation_threshold;
+                scan_template_->pattern_x_axis = project_->pattern_x_axis;
+            } else if (scan_template_) {
+                edi::Project promoted = *project_;
+                promoted.experiment().data = scan_template_->experiment().data;
+                promoted.experiment().calculation_only = scan_template_->experiment().calculation_only;
+                scan_template_ = std::move(promoted);
+            }
+            // The results' outdated state follows any change of the template's identity, the minimizer's settings included.
+            markTemplateChanged();
+            if (!self || retired_) { result.message = applied_warning; return result; }
         }
-        // The results' outdated state follows any change of the template's identity, the minimizer's settings included.
-        markTemplateChanged();
+        setLastError({});
+        if (!self || retired_) { result.message = applied_warning; return result; }
+        setModified(true);
+        if (!self || retired_) { result.message = applied_warning; return result; }
+        publishCalculating();
+        if (!self || retired_) { result.message = applied_warning; return result; }
+        edit_publication_failed_ = false;
+        notifyProjectEdited();
+        if (!self || retired_) { result.message = applied_warning; return result; }
+        result.published = true;
+        result.message.clear();
+    } catch (...) {
+        result.applied = *applied;
+        if (result.applied && fit_) fit_->invalidateFitUndo();
+        if (!self || retired_) {
+            result.message = result.applied ? applied_warning : result.message;
+            return result;
+        }
+        if (result.applied) {
+            // Completion/request/Qt observers may fail AFTER the actual closed edit.
+            // Its exact Undo footprint already belongs to the history, never a rollback.
+            finishRecordedEdit();
+            edit_publication_failed_ = true;
+            result.message = applied_warning;
+            try { setModified(true); } catch (...) { /* actual edit/Undo stay owned */ }
+            if (self && !retired_) try { notifyProjectEdited(); } catch (...) { /* fence remains authoritative */ }
+        } else {
+            try { throw; }
+            catch (const std::exception& error) {
+                try { result.message = (creation_input || file_input) ? original_input_error(error.what()) : QString::fromUtf8(error.what()); } catch (...) { /* prepared refusal */ }
+            } catch (...) { /* prepared refusal */ }
+        }
+        if (self && !retired_) try { setLastError(result.message); } catch (...) { /* prepared result still returns to its owner */ }
     }
-    setLastError({});
-    setModified(true);
-    publishCalculating();
-    return {};
+    return result;
+}
+
+QString ProjectViewModel::applyUndo(const edi::Edit& change, bool structural) {
+    const auto input = fit_undo_input_;
+    if (input) {
+        if (!fit_undo_invoking_ || !input->consumed || input->started || !fitUndoAvailable() ||
+            input->attempt != fit_->undo_attempt_) return tr("The latest adopted fit is no longer undoable");
+    }
+    const EditOutcome result = applyEdit(change, structural, true);
+    if (input) {
+        input->outcome.applied = result.applied;
+        input->outcome.published = result.published;
+    }
+    return result.applied ? QString{} : result.message;
 }
 
 QString ProjectViewModel::apply_setting(const edi::Edit& change) {
+    const PublicationScope publication(*this);
     applying_setting_ = true;
     const QString refusal = apply(change, false);
     applying_setting_ = false;
@@ -2483,58 +3203,337 @@ QString ProjectViewModel::apply_background_edit(const edi::ExperimentBase& exper
 }
 
 QString ProjectViewModel::apply_report_setting(const edi::Edit& change) {
+    const PublicationScope publication(*this);
+    if (const QString critical = criticalEditRefusal(); !critical.isEmpty()) return critical;
+    const QString warning = tr("The report setting was applied and Undo retained, but its presentation failed");
     edi::ReportSettingsState before = edi::report_settings_state(*project_);
-    const QString refusal = write_report_settings(change);
-    if (refusal.isEmpty() && edi::report_settings_state(*project_) != before) {
-        undo_history_.emplace_back(std::move(before));
-        syncUndo();
-    }
+    undo_history_.reserve(undo_history_.size() + 1);
+    undo_history_.emplace_back(std::move(before)); // own normal Undo before the report setting writes
+    QString refusal;
+    try { refusal = write_report_settings(change); }
+    catch (...) { undo_history_.pop_back(); throw; } // Only pre-write setup can escape.
+    if (retired_) return refusal;
+    if (!refusal.isEmpty()) { undo_history_.pop_back(); return refusal; }
+    try { syncUndo(); }
+    catch (...) { holdPublicationFailure(warning); }
     return refusal;
 }
 
-QString ProjectViewModel::write_report_settings(const edi::Edit& change) {
-    // No calculation reads a report setting: the patterns, the structures and the saved reports' digests stay current
-    // (no recalculation is asked for), and a scan's template takes the setting too.
-    if (fit_ != nullptr && fit_->running()) {
-        const QString message = tr("The project cannot be edited while a fit is running");
-        setLastError(message);
-        return message;
-    }
+QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool restoring) {
+    const PublicationScope publication(*this);
+    if (const QString critical = criticalEditRefusal(restoring); !critical.isEmpty()) return critical;
+    if (fit_ != nullptr && fit_->running()) return tr("The project cannot be edited while a fit is running");
+    const QString warning = tr("The report setting was applied, but its presentation failed. Undo or reopen before further changes.");
+    bool applied = false;
+    editing_ = true;
+    const auto release = qScopeGuard([this] { editing_ = false; });
     try {
         preview_->apply_setting(change);
-    } catch (const std::exception& refusal) {
-        const QString message = QString::fromUtf8(refusal.what());
-        setLastError(message);
-        return message;
+        applied = true;
+        if (fit_) fit_->invalidateFitUndo();
+        notifyProjectEdited();
+        if (retired_) return {};
+        if (scan_template_) edi::Edit::report_settings(*scan_template_, edi::report_settings_state(*project_))();
+        setLastError({});
+        if (retired_) return {};
+        setModified(true);
+        if (retired_) return {};
+        publishMetadata();
+        if (retired_) return {};
+        syncCorrelations();
+        if (retired_) return {};
+        saved_files_.reset();
+        invalidateTexts();
+        if (retired_) return {};
+        report_->refresh();
+        if (!retired_) edit_publication_failed_ = false;
+        return {};
+    } catch (const std::exception& error) {
+        if (applied) { holdPublicationFailure(warning); return {}; }
+        const QString refusal = QString::fromUtf8(error.what());
+        setLastError(refusal);
+        return refusal;
+    } catch (...) {
+        if (applied) { holdPublicationFailure(warning); return {}; }
+        throw;
     }
-    if (scan_template_) {
-        edi::Edit::report_settings(*scan_template_, edi::report_settings_state(*project_))();
+}
+
+void ProjectViewModel::finishRecordedEdit() noexcept {
+    RecordedEdit* record = recording_;
+    if (record == nullptr) return;
+    recording_ = nullptr; // no UI observer can reuse this stack receipt
+    auto& states = std::get<edi::RelationsUndo>(undo_history_[record->index]).parameters;
+    std::size_t kept = 0;
+    for (std::size_t i = 0; i < states.size(); ++i) {
+        const edi::Parameter& now = *record->targets[i];
+        const auto& before = states[i];
+        if (now.value.get() != before.value || now.uncertainty.get() != before.uncertainty || now.free.get() != before.free) {
+            if (kept != i) states[kept] = std::move(states[i]);
+            ++kept;
+        }
     }
-    setLastError({});
-    setModified(true);
-    publishMetadata();
-    syncCorrelations();
-    saved_files_.reset();
-    invalidateTexts();
-    report_->refresh();
-    return {};
+    states.resize(kept); // shrink only; strings move, no map/traversal/allocation after write
+}
+
+ProjectViewModel::EditOutcome ProjectViewModel::applyRecordedEdit(const edi::Edit& change, bool structural) {
+    const PublicationScope publication(*this);
+    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty())
+        return {false, false, pending};
+    const QPointer<ProjectViewModel> self(this);
+    const QString warning = tr("The edit was applied and Undo retained, but its presentation could not be completed");
+    edi::RelationsUndo before = edi::capture_relations(*project_);
+    // These closed relation/value/free operations preserve parameter membership/names.
+    // Resolve the exact before-state pointers BEFORE writing, not after publication.
+    std::map<std::string, const edi::Parameter*> named;
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) named.emplace(slot.unique_name, slot.parameter);
+    RecordedEdit record;
+    record.index = undo_history_.size();
+    record.targets.reserve(before.parameters.size());
+    for (const auto& state : before.parameters) record.targets.push_back(named.at(state.unique_name));
+    undo_history_.reserve(record.index + 1);
+    const auto detach = qScopeGuard([self, &record] {
+        if (self && self->recording_ == &record) self->recording_ = nullptr;
+    });
+    undo_history_.emplace_back(std::move(before)); // complete owner exists before the first live write
+    recording_ = &record;
+    EditOutcome result;
+    try { result = applyEdit(change, structural); }
+    catch (...) {
+        // applyEdit contains every post-write failure; only its pre-write setup
+        // can escape. The prepared but unadmitted Undo must not become a step.
+        if (self) {
+            recording_ = nullptr;
+            undo_history_.pop_back();
+        }
+        throw;
+    }
+    if (!self || retired_) return result;
+    if (!result.applied) {
+        recording_ = nullptr;
+        undo_history_.pop_back();
+    } else finishRecordedEdit();
+    try { syncUndo(); }
+    catch (...) {
+        if (result.applied) {
+            edit_publication_failed_ = true;
+            result.published = false;
+            result.message = warning;
+            holdPublicationFailure(warning);
+        } else throw;
+    }
+    return result;
+}
+
+ProjectViewModel::EditOutcome ProjectViewModel::populateEmptyProject(const std::shared_ptr<edi::EmptyProjectPopulation>& prepared) {
+    const PublicationScope publication(*this);
+    if (const QString pending = editReadinessRefusal(false); !pending.isEmpty()) return {false, false, pending};
+    if (!edi::empty_for_population(*project_)) return {false, false, tr("The current project is no longer empty")};
+    const auto edit = edi::Edit::populate_empty_project(*project_, prepared);
+    const QPointer<ProjectViewModel> self(this);
+    const QString warning = tr("The scientific graph was added and Undo retained, but its presentation was incomplete");
+    undo_history_.reserve(undo_history_.size() + 1);
+    undo_history_.emplace_back(EmptyPopulationUndo{prepared}); // before the first live write
+    EditOutcome result;
+    try { result = applyEdit(edit, true); }
+    catch (...) { if (self && !prepared->committed()) undo_history_.pop_back(); throw; }
+    if (!self || retired_) return result;
+    if (!prepared->committed()) undo_history_.pop_back();
+    try {
+        if (prepared->committed()) {
+            // Same explicit selection as the ordinary separate block imports.
+            setCurrentStructureIndex(0);
+            if (retired_) return result;
+            setCurrentExperimentIndex(0);
+            if (retired_) return result;
+        }
+        syncUndo();
+    }
+    catch (...) {
+        if (!prepared->committed()) throw;
+        result.applied = true; result.published = false; result.message = warning;
+        edit_publication_failed_ = true; holdPublicationFailure(warning);
+    }
+    return result;
+}
+
+std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepareWidgetBackground(
+    edi::ExperimentBase& experiment, const edi::BackgroundPointInput& expected) {
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    auto input = std::make_shared<WidgetBackgroundInput>(); input->experiment = &experiment; input->expected = expected;
+    if (expected.action != edi::BackgroundPointInput::Action::Add) {
+        const auto row = std::find_if(experiment.background.begin(), experiment.background.end(),
+            [&](const auto& point) { return point->id.value() == expected.id; });
+        if (row == experiment.background.end()) throw std::invalid_argument("The original background member is unavailable");
+        input->row = row->get();
+    }
+    input->outcome.message = tr("The original background control did not commit");
+    widget_background_input_ = input; return input;
+}
+std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepareWidgetBackgroundRename(
+    edi::ExperimentBase& experiment, edi::LineSegment& point, const std::string& id) {
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
+    auto input = std::make_shared<WidgetBackgroundInput>();
+    input->experiment = &experiment; input->row = &point; input->rename = true; input->expected.id = id;
+    input->outcome.message = tr("The original background ID control did not commit");
+    widget_background_input_ = input; return input;
+}
+std::shared_ptr<ProjectViewModel::WidgetBackgroundInput> ProjectViewModel::prepareWidgetBackgroundNames(edi::ExperimentBase& experiment) {
+    if(const QString pending=editReadinessRefusal(false);!pending.isEmpty())throw std::runtime_error(pending.toStdString());
+    if(!currentExperiment() || currentExperiment()->experiment()!=&experiment)throw std::invalid_argument("The original background experiment changed");
+    auto input=std::make_shared<WidgetBackgroundInput>();input->names=true;input->experiment=&experiment;
+    input->members.reserve(experiment.background.size());
+    for(const auto& point:experiment.background)input->members.push_back(point.get());
+    input->outcome.message=tr("The original position-derived IDs action did not commit");widget_background_input_=input;return input;
+}
+void ProjectViewModel::finishWidgetBackground(const std::shared_ptr<WidgetBackgroundInput>& input) noexcept {
+    if (widget_background_input_ == input) widget_background_input_.reset();
+}
+ProjectViewModel::EditOutcome ProjectViewModel::changeBackgroundPoint(
+    edi::ExperimentBase& experiment, const edi::BackgroundPointInput& request, bool native_bounded) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
+    const auto input = widget_background_input_;
+    EditOutcome result;
+    result.message = tr("The background point operation was refused");
+    const bool previous = widget_input_executing_;
+    std::shared_ptr<edi::BackgroundPointChange> prepared;
+    try {
+        using Limits = edi::assistant::Limits;
+        if (input) {
+            const auto& expected = input->expected;
+            if (input->rename || input->consumed || input->experiment != &experiment || request.action != expected.action || request.id != expected.id ||
+                (request.action != edi::BackgroundPointInput::Action::Remove && (request.position != expected.position ||
+                 request.intensity != expected.intensity || request.free != expected.free)))
+                throw std::invalid_argument("The actual background control differs from its original request");
+            if (request.action != edi::BackgroundPointInput::Action::Add &&
+                std::none_of(experiment.background.begin(), experiment.background.end(), [&](const auto& point) {
+                    return point.get() == input->row && point->id.value() == request.id;
+                })) throw std::invalid_argument("The original background member was replaced");
+            input->consumed = true; widget_input_executing_ = true;
+        }
+        const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+        if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) { result.message = refusal; if (input) input->outcome = result; return result; }
+        if (!currentExperiment() || currentExperiment()->experiment() != &experiment)
+            throw std::invalid_argument("The requested background bank is not the selected experiment");
+        // Native packet/source/domain policy is caller-owned. Ordinary manual
+        // simulation/extrapolation and stored keys use this same Edit/Undo path.
+        const auto unbounded = std::numeric_limits<std::size_t>::max();
+        prepared = edi::prepare_background_point(*project_, experiment, request,
+            native_bounded ? Limits::stream_items : unbounded, native_bounded ? Limits::id_bytes : unbounded,
+            native_bounded ? edi::assistant::SelectedFileLimits::collection_bytes / sizeof(double) : unbounded,
+            native_bounded ? Limits::stream_items : unbounded, native_bounded);
+        if (input && request.action != edi::BackgroundPointInput::Action::Remove) {
+            const auto row = std::find_if(prepared->after.begin(), prepared->after.end(),
+                [&](const auto& point) { return point->id.value() == request.id; });
+            if (row == prepared->after.end()) throw std::invalid_argument("The prepared background row is unavailable");
+            input->result_row = row->get(); // Exact preowned replacement, before any model callback.
+        }
+        const auto edit = edi::Edit::background_point(*project_, prepared);
+        const auto index = undo_history_.size(); undo_history_.reserve(index + 1);
+        undo_history_.emplace_back(BackgroundPointUndo{prepared});
+        try { result = applyEdit(edit, true); }
+        catch (...) { if (self && !prepared->committed) undo_history_.pop_back(); throw; }
+        if (input) input->outcome = result; // Actual committed/applied latch before presentation/readback.
+        if (!self || retired_) return result;
+        if (!prepared->committed) undo_history_.pop_back();
+        try { syncUndo(); }
+        catch (...) {
+            if (!result.applied) throw;
+            result.published = false; result.message = tr("The background edit and Undo are retained; final presentation was incomplete");
+            holdPublicationFailure(result.message);
+        }
+    } catch (...) {
+        if (input && input->outcome.applied) result = input->outcome;
+        if (prepared && prepared->committed) result.applied = true;
+        if (!result.applied) result.message = tr("The background edit was refused; check its current bank, ID, measured domain and relation ownership");
+        else { result.published = false; result.message = tr("The background edit was applied; final presentation was not confirmed"); }
+    }
+    if (input) input->outcome = result;
+    return result;
+}
+ProjectEditor::BackgroundOutcome ProjectViewModel::edit_background_point(edi::ExperimentBase& experiment, const edi::BackgroundPointInput& request) {
+    const QPointer<ProjectViewModel> self(this);
+    const auto result = changeBackgroundPoint(experiment, request);
+    if (self && !retired_ && !result.applied) setLastError(result.message);
+    return {result.applied, result.published, result.message};
+}
+QString ProjectViewModel::rename_background_point(edi::ExperimentBase& experiment, edi::LineSegment& point, const std::string& id) {
+    if(const auto refusal=estimated_background_refusal(experiment);!refusal.isEmpty())return refusal;
+    const PublicationScope publication(*this);
+    const auto input = widget_background_input_;
+    const QPointer<ProjectViewModel> original(this);
+    const bool previous = widget_input_executing_;
+    if (input) {
+        if (!input->rename || input->consumed || input->experiment != &experiment || input->row != &point || input->expected.id != id)
+            return tr("A different background ID cannot enter the original control");
+        input->consumed = true; widget_input_executing_ = true;
+    }
+    const auto release = qScopeGuard([original, previous] { if (original) original->widget_input_executing_ = previous; });
+    if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) return refusal;
+    if (!currentExperiment() || currentExperiment()->experiment() != &experiment ||
+        std::none_of(project_->experiments.begin(), project_->experiments.end(), [&](const auto& bank) { return bank.get() == &experiment; }))
+        return tr("The background experiment was replaced or is not selected");
+    PointIds before{&experiment, {}}; before.before.reserve(experiment.background.size());
+    bool found = false;
+    for (const auto& row : experiment.background) {
+        before.before.push_back(row->id.value()); found = found || row.get() == &point;
+    }
+    if (!found) return tr("The exact background row was replaced");
+    undo_history_.reserve(undo_history_.size() + 1); undo_history_.emplace_back(std::move(before));
+    const QPointer<ProjectViewModel> self(this);
+    EditOutcome result;
+    try { result = applyEdit(edi::Edit::background_id(point, id), true); }
+    catch (...) { if (self) undo_history_.pop_back(); throw; }
+    if (input) input->outcome = result;
+    if (!self || retired_) return result.applied ? QString{} : result.message;
+    if (!result.applied) undo_history_.pop_back();
+    try { syncUndo(); } catch (...) { if (!result.applied) throw; holdPublicationFailure(tr("The background rename and Undo are retained")); }
+    return result.applied ? QString{} : result.message;
+}
+
+ProjectEditor::RelationOutcome ProjectViewModel::append_constraint(edi::Project& project, edi::ParameterConstraint&& complete, const ProjectEditor::RelationAction& action) {
+    const PublicationScope publication(*this);
+    if (&project != project_.get()) return {false, false, tr("The constraint project changed")};
+    const auto input = widget_relation_input_;
+    if (input) {
+        if (input->consumed || input->expected.kind != RelationAction::Kind::ConstraintAppend || action.kind != input->expected.kind ||
+            action.text != input->expected.text || action.expression != input->expected.expression || action.enabled != input->expected.enabled)
+            return {false, false, tr("A different constraint control cannot enter the original native event")};
+        input->consumed = true; // Before factory/history entry; no retry after entry.
+        const QPointer<ProjectViewModel> self(this);
+        const bool previous = widget_input_executing_;
+        widget_input_executing_ = true;
+        const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
+        input->outcome = applyRecordedEdit(edi::Edit::constraint_append(project, std::move(complete)), true);
+        return {input->outcome.applied, input->outcome.published, input->outcome.message, input->applied_result.constraint};
+    }
+    // A manual commit uses the same early pin without installing native input.
+    edi::Edit::AppliedResult pin;
+    auto* const previous = relation_result_;
+    if (previous) return {false, false, tr("A constraint commit is already in progress")};
+    relation_result_ = &pin;
+    const QPointer<ProjectViewModel> self(this);
+    const auto release = qScopeGuard([self, previous] { if (self) self->relation_result_ = previous; });
+    const auto result = applyRecordedEdit(edi::Edit::constraint_append(project, std::move(complete)), true);
+    return {result.applied, result.published, result.message, pin.constraint};
 }
 
 QString ProjectViewModel::apply_relation_edit(const edi::Edit& change) {
-    edi::RelationsUndo before = edi::capture_relations(*project_);
-    const QString refusal = apply(change, true);
-    if (refusal.isEmpty()) {
-        // The door's completion has run: what the edit changed is now known.
-        edi::keep_changed(before, *project_);
-        undo_history_.emplace_back(std::move(before));
-        syncUndo();
-    }
-    return refusal;
+    const PublicationScope publication(*this);
+    if (widget_relation_input_) return tr("A different relation action cannot enter the original native control");
+    const EditOutcome result = applyRecordedEdit(change, true);
+    if (!retired_ && !result.applied) setLastError(result.message);
+    return result.applied ? QString{} : result.message;
 }
 
 QString ProjectViewModel::rename_structure(edi::Structure& structure, const std::string& name) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
     BlockName record{true, {}, structure.name.value(), project_->fit_result.scan_results, {}};
-    const QString refusal = apply(edi::Edit::structure_name(structure, name), true);
+    const QString refusal = apply_creation_control(edi::Edit::structure_name(structure, name), true,
+        {CreationAction::Kind::StructureName,&structure,{},QString::fromStdString(name)});
+    if (!self || retired_) return refusal;
     if (refusal.isEmpty() && structure.name.value() != record.before) {
         record.name = structure.name.value();
         record.results_after = project_->fit_result.scan_results;
@@ -2546,8 +3545,12 @@ QString ProjectViewModel::rename_structure(edi::Structure& structure, const std:
 
 QString ProjectViewModel::rename_experiment(edi::Project& project, edi::ExperimentBase& experiment,
                                             const std::string& name) {
+    const PublicationScope publication(*this);
+    const QPointer<ProjectViewModel> self(this);
     BlockName record{false, {}, experiment.name.value(), project_->fit_result.scan_results, {}};
-    const QString refusal = apply(edi::Edit::rename_experiment(project, experiment, name), true);
+    const QString refusal = apply_creation_control(edi::Edit::rename_experiment(project, experiment, name), true,
+        {CreationAction::Kind::ExperimentName, &experiment, {}, QString::fromStdString(name)});
+    if (!self || retired_) return refusal;
     if (refusal.isEmpty() && experiment.name.value() != record.before) {
         record.name = experiment.name.value();
         record.results_after = project_->fit_result.scan_results;
@@ -2557,22 +3560,58 @@ QString ProjectViewModel::rename_experiment(edi::Project& project, edi::Experime
     return refusal;
 }
 
+bool ProjectViewModel::fitUndoAvailable() const {
+    return !retired_ && !editing_ && !calculating() && fit_ && !fit_->running() && !fit_->nativeRunning() &&
+        !fit_->presenting_ && fit_->undo_attempt_ && fit_->undo_attempt_ == fit_->latest_attempt_ &&
+        !edi::is_scan_fitting_mode(edi::effective_fitting_mode(*project_)) && can_undo_ && fit_->canUndo() &&
+        !undo_history_.empty() && std::holds_alternative<std::monostate>(undo_history_.back()) &&
+        criticalEditRefusal(true).isEmpty() && editReadinessRefusal(true).isEmpty();
+}
+std::shared_ptr<ProjectViewModel::FitUndoInput> ProjectViewModel::prepareFitUndo() {
+    if (fit_undo_input_ || !fitUndoAvailable()) throw std::runtime_error("The latest adopted fit is not undoable");
+    auto input = std::make_shared<FitUndoInput>();
+    input->attempt = fit_->undo_attempt_;
+    fit_undo_input_ = input;
+    return input;
+}
+void ProjectViewModel::finishFitUndo(const std::shared_ptr<FitUndoInput>& input) noexcept {
+    if (fit_undo_input_ == input) fit_undo_input_.reset();
+}
 void ProjectViewModel::undo() {
+    const PublicationScope publication(*this);
+    if (fit_undo_invoking_) return; // A completed/retired prearm never becomes a nested manual Undo.
+    const auto input = fit_undo_input_;
+    if (input) {
+        if (input->consumed || fit_undo_invoking_ || !fitUndoAvailable() || input->attempt != fit_->undo_attempt_) return;
+        input->consumed = true;
+    }
+    const QPointer<ProjectViewModel> self(this);
+    const auto release_input = qScopeGuard([self, input] {
+        if (self && (!self->fit_undo_input_ || self->fit_undo_input_ == input)) self->fit_undo_invoking_ = false;
+    });
+    if (const QString critical = criticalEditRefusal(true); !critical.isEmpty()) { setLastError(critical); return; }
     syncUndo();
+    if (retired_) return;
     if (!can_undo_) {
         return;
     }
+    if (input && (fit_undo_input_ != input || !fitUndoAvailable() || input->attempt != fit_->undo_attempt_)) return;
     // The newest record is kept until its reversal succeeds: a refused restore (a parameter it names was
     // removed or renamed since) leaves it in place, with the refusal as the message. A fit's undo can drop
     // its own entry on the way (its start state is gone once restored), so only a record still there goes.
     const std::size_t depth = undo_history_.size();
     bool undone = false;
+    const auto restore = [this](const edi::Edit& edit, bool structural) {
+        return applyEdit(edit, structural, true).applied;
+    };
     if (const auto* relations = std::get_if<edi::RelationsUndo>(&undo_history_.back())) {
-        undone = apply(edi::Edit::restore_relations(*project_, *relations), true).isEmpty();
+        undone = restore(edi::Edit::restore_relations(*project_, *relations), true);
+    } else if (const auto* population = std::get_if<EmptyPopulationUndo>(&undo_history_.back())) {
+        undone = restore(edi::Edit::undo_empty_population(*project_, population->prepared), true);
     } else if (const auto* added = std::get_if<AddedExperiments>(&undo_history_.back())) {
-        undone = apply(edi::Edit::erase_experiments(*project_, added->experiments), true).isEmpty();
+        undone = restore(edi::Edit::erase_experiments(*project_, added->experiments), true);
     } else if (const auto* run = std::get_if<ScanRun>(&undo_history_.back())) {
-        undone = restoreScanRun(*run);
+        undone = restoreScanRun(*run, true);
     } else if (const auto* loaded = std::get_if<LoadedData>(&undo_history_.back())) {
         // The experiment as it was before the load: its simulation with its range and type, or the earlier data.
         const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
@@ -2582,11 +3621,13 @@ void ProjectViewModel::undo() {
         } else {
             const LoadedData record = *loaded;
             const QString error = replaceData(static_cast<int>(found - project_->experiments.begin()),
-                                              edi::BraggPdExperiment(*record.before));
+                                              edi::BraggPdExperiment(*record.before), true);
             undone = error.isEmpty();
         }
+    } else if (const auto* controls = std::get_if<edi::ExperimentControlsUndo>(&undo_history_.back())) {
+        undone=restore(edi::Edit::restore_experiment_controls(*project_,*controls),true);
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
-        undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
+        undone = restore(edi::Edit::restore_structures(*project_, *structures), true);
     } else if (const auto* text = std::get_if<AppliedText>(&undo_history_.back())) {
         undone = apply(edi::Edit::replace_project(*project_, edi::Project(*text->before)), true).isEmpty();
     } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {
@@ -2603,14 +3644,14 @@ void ProjectViewModel::undo() {
             if (found == project_->structures.end()) {
                 setLastError(tr("undo: the structure is no longer in the project"));
             } else {
-                undone = apply(edi::Edit::structure_name(**found, record.before), true).isEmpty();
+                undone = restore(edi::Edit::structure_name(**found, record.before), true);
             }
         } else {
             const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(), named);
             if (found == project_->experiments.end()) {
                 setLastError(tr("undo: the experiment is no longer in the project"));
             } else {
-                undone = apply(edi::Edit::rename_experiment(*project_, **found, record.before), true).isEmpty();
+                undone = restore(edi::Edit::rename_experiment(*project_, **found, record.before), true);
             }
         }
         // The results the rename replaced come back as they were, unless something changed them since.
@@ -2629,6 +3670,8 @@ void ProjectViewModel::undo() {
         } else {
             undone = apply(edi::Edit::restore_background(**found, points->before), true).isEmpty();
         }
+    } else if (const auto* point = std::get_if<BackgroundPointUndo>(&undo_history_.back())) {
+        undone = restore(edi::Edit::background_point(*project_, point->prepared, true), true);
     } else if (const auto* ids = std::get_if<PointIds>(&undo_history_.back())) {
         const auto found = std::find_if(project_->experiments.begin(), project_->experiments.end(),
                                         [ids](const auto& held) { return held.get() == ids->experiment; });
@@ -2651,7 +3694,7 @@ void ProjectViewModel::undo() {
             emit refused(refusal);
             syncUndo();
         };
-        if (const QString pending = pendingRefusal(); !pending.isEmpty()) {
+        if (const QString pending = editReadinessRefusal(true); !pending.isEmpty()) {
             refuse(pending);
             return;
         }
@@ -2670,7 +3713,10 @@ void ProjectViewModel::undo() {
             }
             swapped = true;
         }
+        if (input && (fit_undo_input_ != input || !fitUndoAvailable() || input->attempt != fit_->undo_attempt_)) return;
+        fit_undo_invoking_ = bool(input);
         undone = fit_->undo();
+        if (retired_) return;
         if (swapped && undone) {
             ScanSession::dropRunFile(kept);
         } else if (swapped) {
@@ -2705,6 +3751,7 @@ void ProjectViewModel::undo() {
             showScanResults();
         }
     }
+    if (retired_) return;
     if (undone && undo_history_.size() == depth) {
         undo_history_.pop_back();
     }
@@ -2788,6 +3835,7 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
 }
 
 void ProjectViewModel::syncUndo() {
+    if (retired_) return;
     // Nothing is undone while a fit runs, as nothing is edited then. A fit entry whose start state is gone
     // (undone, or replaced by a load) is no longer undoable; while a fit runs its start state only reads as
     // unavailable, so the entry stays, and a refused fit leaves it as it was.
@@ -2804,6 +3852,7 @@ void ProjectViewModel::syncUndo() {
 }
 
 void ProjectViewModel::setModified(bool modified) {
+    if(retired_)return;
     if (modified) {
         ++revision_;
         emit edited();
@@ -2830,11 +3879,30 @@ QString ProjectViewModel::saveRefusal() const {
     return {};
 }
 
+void ProjectViewModel::notifyProjectEdited(std::uint64_t origin) {
+    const QPointer<ProjectViewModel> receiver(this);
+    const auto previous=project_edit_origin_;project_edit_origin_=origin;
+    const auto scope=qScopeGuard([receiver,previous]{if(receiver)receiver->project_edit_origin_=previous;});
+    emit projectEdited();
+}
+
 QString ProjectViewModel::saveTo(const QString& directory) {
+    const auto save_origin=std::exchange(assistant_save_origin_,0);
+    const PublicationScope publication(*this);
+    if(const auto refusal=criticalEditRefusal();!refusal.isEmpty())return refusal;
+    notifyProjectEdited(save_origin);
+    if(retired_)return tr("The save owner changed before writing");
     if (const QString refusal = saveRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);
         return refusal;
     }
+    editing_ = true;
+    const auto release = qScopeGuard([this] { editing_ = false; });
+    // Saving may round/adopt values or partially advance files even if later readback refuses.
+    // Retire manual authority as before; only this original Save's exact
+    // one-shot notification may be recognized as its own assistant effect.
+    notifyProjectEdited(save_origin);
+    if (retired_) return tr("The save was retired before writing because the project owner changed");
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.
     edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
@@ -3009,15 +4077,23 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
 }
 
 void ProjectViewModel::publishTemplate() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     // The template designation or the template itself changed: the texts a save writes, the dataset tags and the
     // results' outdated state follow.
     setModified(true);
+    if (retired_) return;
     saved_files_.reset();
     invalidateTexts();
+    if (retired_) return;
     report_->refresh();
+    if (retired_) return;
     markTemplateChanged();
+    if (retired_) return;
     syncDatasets();
+    if (retired_) return;
     emit templateIndexChanged();
+    if (retired_) return;
 }
 
 void ProjectViewModel::publish(bool structural) {
@@ -3032,24 +4108,35 @@ void ProjectViewModel::publish(bool structural) {
     }
     for (ExperimentViewModel* experiment : experiment_models_) {
         experiment->sync();
+        if (retired_) return;
     }
     structure_list_->setStructures(structure_models_);
+    if (retired_) return;
     // A scan's rows change with its results and its template, not with an edit or a dataset shown: those are
     // updated one row at a time (syncDataset). A structural change listed them already (syncBlocks).
     if (!structural && !scan_) {
         syncDatasets();
+        if (retired_) return;
     }
     analysis_->sync();
+    if (retired_) return;
     evolution_->syncParameters();
+    if (retired_) return;
     syncCorrelations();
+    if (retired_) return;
     syncParameterTable(false);  // the report is refreshed below, once everything it reads is published
+    if (retired_) return;
     publishMetadata();
+    if (retired_) return;
     // What a save writes changed now, not at the recalculation: a Text read in this same turn sees it.
     saved_files_.reset();
     invalidateTexts();
+    if (retired_) return;
     report_->refresh();
+    if (retired_) return;
     if (fit_ != nullptr) {
         fit_->sync();
+        if (retired_) return;
     }
 }
 
@@ -3066,11 +4153,14 @@ void ProjectViewModel::adoptScanFileResult(const std::string& file,
 }
 
 void ProjectViewModel::syncCorrelations() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     if (correlations_ == nullptr) {
         return;
     }
     // The level is the project's `_correlation_chart.threshold`, so it is saved, undone and reported as one.
     correlations_->setThreshold(project_->correlation_threshold);
+    if (retired_) return;
     if (scan_) {
         const std::vector<std::string>& files = scan_session_->datasets().files;
         const bool shown = current_dataset_ >= 0 && current_dataset_ < static_cast<int>(files.size());
@@ -3081,10 +4171,13 @@ void ProjectViewModel::syncCorrelations() {
             found != record.scan_results.end()) {
             if (found->second && found->second->correlations) {
                 correlations_->setTable(*found->second->correlations);
+                if (retired_) return;
             } else if (found->second && !found->second->read_rows.empty()) {
                 correlations_->setRows(file, found->second->read_rows);
+                if (retired_) return;
             } else {
                 correlations_->setRows(file, {});
+                if (retired_) return;
             }
             return;
         }
@@ -3096,6 +4189,7 @@ void ProjectViewModel::syncCorrelations() {
         }
         if (!rows.empty()) {
             correlations_->setRows(file, rows);
+            if (retired_) return;
             return;
         }
         // A save keeps only the template dataset's correlations (the owner, 2026-10-12): a dataset fitted before the
@@ -3108,17 +4202,22 @@ void ProjectViewModel::syncCorrelations() {
             }
         }
         correlations_->setRows(file, {}, absent);
+        if (retired_) return;
         return;
     }
     const ExperimentViewModel* experiment = currentExperiment();
     correlations_->setRecord(*project_, current_experiment_,
                              experiment != nullptr && !experiment->fitOutcome().isEmpty());
+                             if (retired_) return;
 }
 
 void ProjectViewModel::publishFit() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     // The fitted values, uncertainties and fit start, and the pattern of the fitted state the fit's own last
     // calculation left (edi::FitJob): the parameter table, the blocks and the texts, then the patterns.
     publish(false);
+    if (retired_) return;
     QString error;
     for (const auto& experiment : project_->experiments) {
         if (!experiment->computed_current()) {
@@ -3136,10 +4235,14 @@ void ProjectViewModel::publishFit() {
         }
     }
     published(edi::PreviewResult{preview_->newest_request(), error.toStdString()});
+    if (retired_) return;
     setModified(true);
+    if (retired_) return;
 }
 
 void ProjectViewModel::showFitFrame(const edi::FitFrame& frame, std::optional<edi::PatternSource> d_frame) {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     for (int i = 0; i < experiment_models_.size() && i < static_cast<int>(frame.size()); ++i) {
         experiment_models_[i]->showPattern(frame[static_cast<std::size_t>(i)],
                                            i == 0 ? std::move(d_frame) : std::nullopt);
@@ -3147,8 +4250,11 @@ void ProjectViewModel::showFitFrame(const edi::FitFrame& frame, std::optional<ed
 }
 
 void ProjectViewModel::restorePatterns() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     for (ExperimentViewModel* experiment : experiment_models_) {
         experiment->capturePattern();
+        if (retired_) return;
     }
 }
 
@@ -3163,6 +4269,8 @@ void ProjectViewModel::completeSymmetry() {
 }
 
 void ProjectViewModel::syncParameterTable(bool refresh_report) {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     // The Analysis table follows the fitting mode (owner, 2026-09-29; edi ADR-0019): a joint fit varies
     // every experiment's parameters together, so all are listed; a scan mode (sequential, independent)
     // fits one experiment at a time, so only the selected experiment's are, beside the structures'.
@@ -3179,23 +4287,34 @@ void ProjectViewModel::syncParameterTable(bool refresh_report) {
     // changes the report in the same step. The status bar and the Analysis table bind the model itself.
     if (refresh_report && report_ != nullptr) {
         report_->refresh();
+        if (retired_) return;
     }
 }
 
 void ProjectViewModel::invalidateTexts() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     for (ExperimentViewModel* experiment : experiment_models_) {
         experiment->text()->invalidate();
+        if (retired_) return;
     }
     for (StructureViewModel* structure : structure_models_) {
         structure->text()->invalidate();
+        if (retired_) return;
     }
     analysis_->text()->invalidate();
+    if (retired_) return;
     metadata_text_->invalidate();
+    if (retired_) return;
     report_text_->invalidate();
+    if (retired_) return;
     project_text_->invalidate();
+    if (retired_) return;
 }
 
 void ProjectViewModel::syncBlocks() {
+    const PublicationScope publication(*this);
+    if (retired_) return;
     // One view-model per core block, matched by identity: kept while the block exists, created for a
     // new one, removed (after the lists drop it) for a gone one — never a reset (I5).
     QList<QObject*> gone;
@@ -3230,6 +4349,7 @@ void ProjectViewModel::syncBlocks() {
                 connect(found, &ExperimentViewModel::patternShownChanged, this, [this, found] {
                     if (fit_ != nullptr && found == currentExperiment()) {
                         fit_->patternShownChanged();
+                        if (retired_) return;
                     }
                 });
             }
@@ -3245,8 +4365,11 @@ void ProjectViewModel::syncBlocks() {
     emit experimentModelsChanged();  // a sample form may have changed too
     syncColourPositions();
     syncLoadState();
+    if (retired_) return;
     structure_list_->setStructures(structure_models_);
+    if (retired_) return;
     syncDatasets();
+    if (retired_) return;
     const int structures = static_cast<int>(structure_models_.size());
     const int experiments = static_cast<int>(experiment_models_.size());
     if (current_structure_ >= structures) {
@@ -3257,21 +4380,29 @@ void ProjectViewModel::syncBlocks() {
     }
     if (report_ != nullptr) {  // not during construction: the constructor records the first state
         publishCurrent();
+        if (retired_) return;
         if (canLoadStructure() != published_can_load_structure_) {
             published_can_load_structure_ = canLoadStructure();
             emit canLoadStructureChanged();
+            if (retired_) return;
         }
         if (canCreateExperiment() != published_can_create_experiment_) {
             published_can_create_experiment_ = canCreateExperiment();
             emit canCreateExperimentChanged();
+            if (retired_) return;
         }
     }
     for (QObject* model : gone) {
         model->deleteLater();
+        if (retired_) return;
     }
 }
 
 void ProjectViewModel::published(const edi::PreviewResult& result) {
+    const PublicationScope publication(*this);
+    if (retired_) return;
+    registry_->publish(*project_);
+    if (retired_) return;
     // The project holds the calculation now (or its refusal, with every computed category cleared): the
     // tables, the charts, the texts and the report follow, once.
     const QString error = QString::fromStdString(result.refusal);
@@ -3284,16 +4415,22 @@ void ProjectViewModel::published(const edi::PreviewResult& result) {
     // its captured source, here on the owner thread.
     for (StructureViewModel* structure : structure_models_) {
         structure->captureScene();
+        if (retired_) return;
     }
     scan_views_->setConversion(project_.get());  // a scan's d axis follows the calculation, as the pattern chart's
     saved_files_.reset();  // a save writes the calculated pattern too
     invalidateTexts();
+    if (retired_) return;
     report_->refresh();
+    if (retired_) return;
     publishCalculating();
+    if (retired_) return;
     emit recalculated();
+    if (retired_) return;
 }
 
 void ProjectViewModel::publishCalculating() {
+    if (retired_) return;
     // A dataset view on its way is a calculation too: the shown state is not the newest until it arrives.
     const bool calculating = (preview_ != nullptr && preview_->busy()) || view_applied_ != view_request_;
     if (calculating != calculating_) {
@@ -3362,6 +4499,7 @@ std::string ProjectViewModel::savedFile(const std::string& relative) const {
 }
 
 void ProjectViewModel::setLastError(const QString& error) {
+    if (retired_) return;
     if (error != last_error_) {
         last_error_ = error;
         emit lastErrorChanged();

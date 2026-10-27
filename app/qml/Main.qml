@@ -594,10 +594,30 @@ EaComponents.ApplicationWindow {
     }
     // Save project as asks first, on every surface (edi ADR-0052 §6, §9). A browser that cannot write the disk offers
     // only a copy as a .zip download (owner, 2026-10-25).
-    function saveProjectAs() {
-        if (Session.project !== null)
-            saveAsChoice.open();
+    property string assistantSaveIntent: ""
+    function saveProjectAs(intent = "") {
+        if (Session.project === null) return;
+        if (assistantSaveIntent !== "" && assistantSaveIntent !== intent)
+            Session.cancelAssistantSaveAs(assistantSaveIntent);
+        assistantSaveIntent = intent;
+        saveAsChoice.open();
     }
+    function finishAssistantSaveAs(target, zip, copy) {
+        const intent = assistantSaveIntent;
+        assistantSaveIntent = "";
+        return intent === "" ? Session.saveProjectAs(target, zip, copy)
+            : Session.completeAssistantSaveAs(intent, target, zip, copy);
+    }
+    function cancelAssistantSaveAs() {
+        const intent = assistantSaveIntent;
+        assistantSaveIntent = "";
+        if (intent !== "") Session.cancelAssistantSaveAs(intent);
+    }
+    Connections {
+        target: Session
+        function onAssistantSaveAsRequested(intent) { window.saveProjectAs(intent); }
+    }
+
 
     // The sidebar reaches from the window's edge to the Experiment button's centre in the top bar (the owner,
     // 2026-10-22), read from where the centred tabs are, so it follows the window and any change to the buttons.
@@ -707,6 +727,7 @@ EaComponents.ApplicationWindow {
     AppDialog {
         id: saveAsChoice
         objectName: "saveAs.choice"
+        onRejected: window.cancelAssistantSaveAs()
         enterAccepts: true
         property bool zip: false
         property bool copy: false
@@ -728,9 +749,9 @@ EaComponents.ApplicationWindow {
             else if (WebFiles.available)
                 Session.saveWebProjectAs(zip ? "zip" : "folder", copy);
             else if (zip)
-                saveZip.openAt(Session.suggestedSaveTarget(true));
+                saveZip.openAt(window.assistantSaveIntent === "" ? Session.suggestedSaveTarget(true) : Session.assistantSaveAsTarget(window.assistantSaveIntent, true));
             else
-                saveFolder.openAt(Session.suggestedSaveTarget(false));
+                saveFolder.openAt(window.assistantSaveIntent === "" ? Session.suggestedSaveTarget(false) : Session.assistantSaveAsTarget(window.assistantSaveIntent, false));
         }
 
         Column {
@@ -786,6 +807,7 @@ EaComponents.ApplicationWindow {
     // folder it is in (owner, 2026-10-25); the folder is made if it is new.
     FileDialog {
         id: saveFolder
+        onRejected: window.cancelAssistantSaveAs()
         function openAt(target) {
             currentFolder = target.toString().substring(0, target.toString().lastIndexOf("/"));
             selectedFile = target;
@@ -795,13 +817,14 @@ EaComponents.ApplicationWindow {
         fileMode: FileDialog.SaveFile
         acceptLabel: qsTr("Save")
         onAccepted: {
-            if (!Session.saveProjectAs(selectedFile, false, saveAsChoice.copy))
+            if (!window.finishAssistantSaveAs(selectedFile, false, saveAsChoice.copy))
                 saveError.open();
         }
     }
 
     FileDialog {
         id: saveZip
+        onRejected: window.cancelAssistantSaveAs()
         function openAt(target) {
             currentFolder = target.toString().substring(0, target.toString().lastIndexOf("/"));
             selectedFile = target;
@@ -813,7 +836,7 @@ EaComponents.ApplicationWindow {
         nameFilters: [qsTr("Zip archives (*.zip)")]
         acceptLabel: qsTr("Save")
         onAccepted: {
-            if (!Session.saveProjectAs(selectedFile, true, saveAsChoice.copy))
+            if (!window.finishAssistantSaveAs(selectedFile, true, saveAsChoice.copy))
                 saveError.open();
         }
     }

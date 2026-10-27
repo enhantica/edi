@@ -30,15 +30,21 @@ EaElements.ComboBox {
     property int horizontalAlignment: Text.AlignHCenter
     property int searchThreshold: 10
     // Filters start with their current selection; a fully visible list starts at its first option.
-    function positionPopup() {
-        const list = control.popup.contentItem as ListView;
+    function positionPopup(opening) {
+        const component = control, pending = popupLayout, popup = component.popup;
+        const current = () => Qt.isQtObject(component) && Qt.isQtObject(pending) && Qt.isQtObject(popup)
+            && opening && pending.opening === opening && opening.popup === popup
+            && component.popup === popup && popup.visible;
+        if (!current()) return;
+        const list = popup.contentItem as ListView;
         if (!list)
             return;
         list.forceLayout();
+        if (!current() || !Qt.isQtObject(list) || popup.contentItem !== list) return;
         if (list.contentHeight <= list.height)
             list.positionViewAtBeginning();
         else
-            list.positionViewAtIndex(Math.max(0, control.currentIndex), ListView.Contain);
+            list.positionViewAtIndex(Math.max(0, component.currentIndex), ListView.Contain);
     }
     // In a table, as wide as its widest option (or what it shows), a small gap and the arrow, the arrow right after
     // the text (the owner, 2026-10-27); a wider column keeps the space after it.
@@ -88,27 +94,33 @@ EaElements.ComboBox {
     // showing its value while one searches; it is as tall as its entries or the room allows, and keeps that
     // height while a search shortens it. A list wider than the box is moved left where it would pass the
     // window's right edge.
-    function placePopup() {
-        const popup = control.popup;
-        const window = control.Window.window;
-        if (!window)
+    function placePopup(opening) {
+        const component = control, pending = popupLayout, popup = component.popup;
+        const window = component.Window.window;
+        const current = () => Qt.isQtObject(component) && Qt.isQtObject(pending) && Qt.isQtObject(popup) && Qt.isQtObject(window)
+            && opening && pending.opening === opening && opening.popup === popup
+            && component.popup === popup && popup.visible && component.Window.window === window;
+        if (!current())
             return;
-        const left = control.mapToItem(null, 0, 0).x;
+        const left = component.mapToItem(null, 0, 0).x;
         popup.x = Math.min(0, window.width - Math.max(0, popup.rightMargin) - popup.width - left);
-        const top = control.mapToItem(null, 0, 0).y;
-        const below = window.height - top - control.height - popup.bottomMargin;
+        if (!current()) return;
+        const top = component.mapToItem(null, 0, 0).y;
+        const below = window.height - top - component.height - popup.bottomMargin;
         const above = top - popup.topMargin;
         let entries = 0;
-        for (let index = 0; index < control.count; ++index)
-            if (control.matches(control.textAt(index)))
+        for (let index = 0; index < component.count; ++index)
+            if (component.matches(component.textAt(index)))
                 entries++;
         const header = (popup.contentItem as ListView)?.headerItem;
         const wanted = entries * EaStyle.Sizes.comboBoxHeight + (header ? header.height : 0) + popup.topPadding + popup.bottomPadding;
         if (below >= wanted || below >= above) {
             popup.height = Math.min(wanted, below);
-            popup.y = control.height;
+            if (!current()) return;
+            popup.y = component.height;
         } else {
             popup.height = Math.min(wanted, above);
+            if (!current()) return;
             popup.y = -popup.height;
         }
     }
@@ -223,23 +235,67 @@ EaElements.ComboBox {
         control.popup.focus = Qt.binding(() => control.searchable);
     }
 
+    Timer {
+        id: popupLayout
+        interval: 0
+        property var opening: null
+        property var request: null
+        function schedule(original) {
+            const pending = popupLayout;
+            if (pending.opening !== original) return;
+            pending.request = original;
+            if (Qt.isQtObject(pending) && pending.opening === original && pending.request === original) pending.restart();
+        }
+        onTriggered: {
+            const pending = popupLayout, component = control, original = request;
+            const popup = original ? original.popup : null;
+            pending.request = null;
+            if (!Qt.isQtObject(pending) || pending.request !== null || pending.opening !== original
+                || !original || !Qt.isQtObject(component) || !Qt.isQtObject(popup)
+                || component.popup !== popup || !popup.visible) return;
+            component.placePopup(original);
+            if (!Qt.isQtObject(pending) || pending.request !== null || pending.opening !== original
+                || !Qt.isQtObject(component) || !Qt.isQtObject(popup) || component.popup !== popup || !popup.visible) return;
+            component.positionPopup(original);
+        }
+    }
     Connections {
         target: control.popup
         function onAboutToShow() {
-            const field = (control.popup.contentItem as ListView)?.headerItem;
+            const component = control, pending = popupLayout, popup = component.popup;
+            const opening = { popup: popup };
+            pending.opening = opening;
+            if (!Qt.isQtObject(component) || !Qt.isQtObject(pending) || !Qt.isQtObject(popup)
+                || pending.opening !== opening || component.popup !== popup || !popup.visible) return;
+            const field = (popup.contentItem as ListView)?.headerItem;
             if (field)
                 field.clear();
-            control.searchText = "";
-            control.placePopup();
-            Qt.callLater(() => {
-                control.placePopup();
-                control.positionPopup();
-            });
+            if (!Qt.isQtObject(component) || !Qt.isQtObject(pending) || !Qt.isQtObject(popup)
+                || pending.opening !== opening || component.popup !== popup || !popup.visible) return;
+            component.searchText = "";
+            if (!Qt.isQtObject(component) || !Qt.isQtObject(pending) || !Qt.isQtObject(popup)
+                || pending.opening !== opening || component.popup !== popup || !popup.visible) return;
+            component.placePopup(opening);
+            if (Qt.isQtObject(component) && Qt.isQtObject(pending) && Qt.isQtObject(popup)
+                && pending.opening === opening && component.popup === popup && popup.visible)
+                pending.schedule(opening);
+        }
+        function onAboutToHide() {
+            const pending = popupLayout;
+            pending.opening = null;
+            if (!Qt.isQtObject(pending) || pending.opening !== null) return;
+            pending.request = null;
+            if (Qt.isQtObject(pending) && pending.opening === null && pending.request === null) pending.stop();
         }
         function onOpened() {
-            control.positionPopup();
-            const field = (control.popup.contentItem as ListView)?.headerItem;
-            if (field && control.searchable)
+            const component = control, pending = popupLayout, popup = component.popup;
+            const opening = pending.opening;
+            if (!opening || !Qt.isQtObject(popup) || opening.popup !== popup || !popup.visible) return;
+            component.positionPopup(opening);
+            if (!Qt.isQtObject(component) || !Qt.isQtObject(pending) || !Qt.isQtObject(popup)
+                || pending.opening !== opening || component.popup !== popup || !popup.visible) return;
+            const field = (popup.contentItem as ListView)?.headerItem;
+            if (field && component.searchable)
                 field.focusField();
         }
     }

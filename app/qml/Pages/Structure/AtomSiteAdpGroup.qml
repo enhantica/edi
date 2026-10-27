@@ -127,6 +127,9 @@ Column {
             }
             // An atom's id is edited in the Atom sites table only (the owner, 2026-10-23).
             TextCell {
+                editMember: row
+                editModel: group.adps
+                editIndex: row.index
                 objectName: `atomSiteAdp.label.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 readOnly: true

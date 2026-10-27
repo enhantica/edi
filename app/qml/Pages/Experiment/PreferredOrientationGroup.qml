@@ -76,6 +76,9 @@ Column {
                 text: row.index + 1
             }
             TextCell {
+                editMember: row
+                editModel: group.rows
+                editIndex: row.index
                 objectName: `preferredOrientation.structureId.${row.index}`
                 horizontalAlignment: Text.AlignLeft
                 value: row.structureId

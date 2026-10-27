@@ -62,7 +62,7 @@ QJsonObject native_cwl_recipe_schema(bool include_profiles) {
             {"items", shape({{first, num}, {second, num}}, {first, second})}};
     };
     auto background = pairs("position", "intensity", 2);
-    background["description"] = "Direct array of exact position/intensity rows; no anchors wrapper. Setup intensities start fixed implicitly. Retain desired source refinement flags separately for authorized grouped Analysis after setup.";
+    background["description"] = "Optional exact manual position/intensity rows; omit to use the current native Estimate with saved settings after data import. No anchors wrapper. Setup intensities start fixed implicitly. Retain desired source refinement flags separately for authorized grouped Analysis after setup.";
     auto background_point = background.value("items").toObject();
     background_point["description"] = "Exactly position and intensity numbers. No free, id, uncertainty or other keys; standalone edit_background has a separate explicit free field.";
     background["items"] = background_point;
@@ -76,7 +76,7 @@ QJsonObject native_cwl_recipe_schema(bool include_profiles) {
         {"initial_parameters", Object{{"type", "array"}, {"minItems", 0}, {"maxItems", static_cast<int>(Limits::stream_items)},
             {"items", shape({{"path", shortText}, {"value", num}}, {"path", "value"})}}}},
         {"project_name", "description", "experiment_name", "sample_form", "beam_mode", "radiation_probe", "scattering_type",
-            "peak_profile", "wavelength", "zero_offset", "phase_scale", "background", "exclusions", "initial_parameters"});
+            "peak_profile", "wavelength", "zero_offset", "phase_scale", "exclusions", "initial_parameters"});
 }
 QJsonObject native_mapped_structure_schema() {
     const Object token{{"type","string"},{"minLength",1},{"maxLength",static_cast<int>(Limits::id_bytes)}};
@@ -190,8 +190,9 @@ edi::Structure mapped_structure(const Object& source) {
 }
 }
 NativeCwlRecipe parse_native_cwl_recipe(const Object& recipe) {
-    exact(recipe, {"project_name", "description", "experiment_name", "sample_form", "beam_mode", "radiation_probe", "scattering_type",
-        "peak_profile", "wavelength", "zero_offset", "phase_scale", "background", "exclusions", "initial_parameters"});
+    Object shaped=recipe;shaped.remove("background");
+    exact(shaped, {"project_name", "description", "experiment_name", "sample_form", "beam_mode", "radiation_probe", "scattering_type",
+        "peak_profile", "wavelength", "zero_offset", "phase_scale", "exclusions", "initial_parameters"});
     NativeCwlRecipe result;
     result.project_name = text(recipe, "project_name", Limits::id_bytes);
     result.description = text(recipe, "description", Limits::context_bytes, true);
@@ -208,7 +209,7 @@ NativeCwlRecipe parse_native_cwl_recipe(const Object& recipe) {
         throw RecipeRefusal(RecipeField::PeakProfile, RecipeReason::SupportedProfile);
 
     result.wavelength = number(recipe, "wavelength"); result.zero_offset = number(recipe, "zero_offset"); result.phase_scale = number(recipe, "phase_scale");
-    for (const auto& entry : array(recipe, "background", 2)) {
+    if(recipe.contains("background"))for (const auto& entry : array(recipe, "background", 2)) {
         if (!entry.isObject()) throw RecipeRefusal(RecipeField::Background, RecipeReason::ObjectRequired);
         const auto row = entry.toObject(); exact(row, {"position", "intensity"}, RecipeField::Background);
         result.background.emplace_back(number(row, "position"), number(row, "intensity"));
@@ -238,7 +239,7 @@ NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std:
         recipe.type.radiation_probe != "neutron" || recipe.type.scattering_type != "bragg")
         throw edi::IoError("This native creation slice supports an explicit powder/CW/neutron/Bragg recipe only");
     if (!std::isfinite(recipe.wavelength) || recipe.wavelength <= 0 || !std::isfinite(recipe.zero_offset) ||
-        !std::isfinite(recipe.phase_scale) || recipe.phase_scale <= 0 || recipe.background.size() < 2)
+        !std::isfinite(recipe.phase_scale) || recipe.phase_scale <= 0 || (!recipe.background.empty() && recipe.background.size() < 2))
         throw edi::IoError("Supply actual wavelength, zero, positive phase scale and line-segment background anchors");
     NativeCwlCandidate candidate;
     candidate.project = edi::empty_project(recipe.project_name, recipe.description);
@@ -255,6 +256,7 @@ NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std:
     edi::assign_value(*experiment.instrument.calib_twotheta_offset, recipe.zero_offset);
     if (experiment.linked_structures.size() != 1) throw edi::IoError("The recipe does not identify exactly one phase");
     edi::assign_value(experiment.linked_structures[0]->scale, recipe.phase_scale);
+    if(!recipe.background.empty())edi::Edit::background_estimate_mode(experiment,"manual")();
     edi::select_background_type(experiment, "line-segment");
     experiment.background.clear();
     double previous = -INFINITY;
@@ -286,10 +288,10 @@ NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std:
     // Match the original visible AutoIDs action AFTER values that name the
     // ordinary Add IDs. The normal candidate remains one atomic transaction.
     auto& background_owner=*candidate.project.experiments[0];
-    auto ids=edi::position_point_ids(background_owner);
+    auto ids=recipe.background.empty()?std::vector<std::string>{}:edi::position_point_ids(background_owner);
     for(const auto& id:ids)if(id.size()>Limits::id_bytes)
         throw std::length_error("Position-derived IDs exceed their original admitted capacity");
-    edi::Edit::background_point_ids(background_owner,std::move(ids))();
+    if(!recipe.background.empty())edi::Edit::background_point_ids(background_owner,std::move(ids))();
     edi::complete_relations(candidate.project);
     if(!mapped.isEmpty()) {
         const auto check=[](const edi::Parameter& parameter,double requested) {

@@ -2,6 +2,7 @@
 #include "row_table_model.hpp"
 
 #include <QSet>
+#include <QPointer>
 
 namespace edi_app {
 
@@ -45,6 +46,7 @@ QVariant RowTableModel::get(int row, const QString& role) const {
 }
 
 void RowTableModel::setTableRows(const QList<Row>& target) {
+    const QPointer<RowTableModel> self(this);
     const qsizetype before = rows_.size();
     const auto find = [](const QList<Row>& rows, const void* key, qsizetype from) {
         for (qsizetype i = from; i < rows.size(); ++i) {
@@ -63,8 +65,10 @@ void RowTableModel::setTableRows(const QList<Row>& target) {
     for (qsizetype i = rows_.size() - 1; i >= 0; --i) {
         if (!wanted.contains(rows_.at(i).key)) {
             beginRemoveRows(QModelIndex(), static_cast<int>(i), static_cast<int>(i));
+            if (!self) return;
             rows_.removeAt(i);
             endRemoveRows();
+            if (!self) return;
         }
     }
     for (qsizetype i = 0; i < target.size(); ++i) {
@@ -73,13 +77,17 @@ void RowTableModel::setTableRows(const QList<Row>& target) {
             const qsizetype found = find(rows_, target.at(i).key, i);
             if (found < 0) {
                 beginInsertRows(QModelIndex(), row, row);
+                if (!self) return;
                 rows_.insert(i, target.at(i));
                 endInsertRows();
+                if (!self) return;
                 continue;
             }
             beginMoveRows(QModelIndex(), static_cast<int>(found), static_cast<int>(found), QModelIndex(), row);
+            if (!self) return;
             rows_.move(found, i);
             endMoveRows();
+            if (!self) return;
         }
         QList<int> changed;
         for (int column = 0; column < roles_.size(); ++column) {
@@ -90,6 +98,7 @@ void RowTableModel::setTableRows(const QList<Row>& target) {
         if (!changed.isEmpty()) {
             rows_[i].values = target.at(i).values;
             emit dataChanged(index(row), index(row), changed);
+            if (!self) return;
         }
     }
     if (rows_.size() != before) {

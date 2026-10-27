@@ -10,6 +10,7 @@
 #include <QMetaObject>
 #include <QPointer>
 #include <algorithm>
+#include <type_traits>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -140,21 +141,25 @@ void ScanSession::take(ScanSession& listing) {
 }
 
 QString ScanSession::readRun(const edi::Project& project) {
-    // Only a provenance file that is not there is a legacy run; one that is there must read whole: the template it
-    // names, the last kind, a known outcome, a finite non-negative time or none.
-    run_ = {};
-    const auto invalid = [this](const QString& why) {
+    std::optional<std::string> bytes;
+    try { bytes = read_file(analysis_dir(project) / "scan-run.json"); }
+    catch (const std::exception& refusal) {
         run_ = {};
         run_.invalid = true;
-        run_.error = QStringLiteral("analysis/scan-run.json: %1").arg(why);
+        run_.error = QStringLiteral("analysis/scan-run.json: %1").arg(QString::fromUtf8(refusal.what()));
         return run_.error;
-    };
-    std::optional<std::string> bytes;
-    try {
-        bytes = read_file(analysis_dir(project) / "scan-run.json");
-    } catch (const std::exception& refusal) {
-        return invalid(QString::fromUtf8(refusal.what()));
     }
+    return decodeRun(bytes, run_);
+}
+
+QString ScanSession::decodeRun(const std::optional<std::string>& bytes, Run& run) {
+    run = {};
+    const auto invalid = [&run](const QString& why) {
+        run = {};
+        run.invalid = true;
+        run.error = QStringLiteral("analysis/scan-run.json: %1").arg(why);
+        return run.error;
+    };
     if (!bytes) {
         return {};
     }
@@ -187,11 +192,11 @@ QString ScanSession::readRun(const edi::Project& project) {
     if (!mixed.isUndefined() && !mixed.isBool()) {
         return invalid(QStringLiteral("a mixed flag that is not true or false"));
     }
-    run_.identity = identity.toString().toStdString();
-    run_.last_single = last.toString() == QLatin1String("single");
-    run_.outcome = outcome.toString();
-    run_.seconds = seconds.isUndefined() ? -1.0 : seconds.toDouble();
-    run_.mixed = mixed.toBool(false);
+    run.identity = identity.toString().toStdString();
+    run.last_single = last.toString() == QLatin1String("single");
+    run.outcome = outcome.toString();
+    run.seconds = seconds.isUndefined() ? -1.0 : seconds.toDouble();
+    run.mixed = mixed.toBool(false);
     return {};
 }
 
@@ -431,6 +436,7 @@ void move_file(const fs::path& from, const fs::path& to) {
 // telling the caller, which alone undoes them, what to move back.
 void set_aside(const edi::Project& project, const ScanSession::Files& present, const fs::path& aside,
                std::vector<int>& moved) {
+    moved.reserve(kResultFileCount); // Every successful rename can be recorded without a later allocation.
     const fs::path directory = analysis_dir(project);
     crysta::output::own_folder(aside, fs::path(project.path));
     for (int which = 0; which < kResultFileCount; ++which) {
@@ -487,6 +493,7 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
     }
     // Set aside, all or none, and kept there until an Undo puts them back (the caller holds the bytes too).
     const fs::path aside = set_aside_dir(project, fresh_name("taken"));
+    std::string kept = aside.string(); // Own the post-rename recovery path before the first move.
     std::vector<int> moved;
     try {
         own_analysis_dir(project);
@@ -498,12 +505,20 @@ QString ScanSession::takeFiles(const edi::Project& project, Files& taken) {
         drop_set_aside(aside);
         return QString::fromUtf8(refusal.what());
     }
-    taken.kept = aside.string();
+    taken.kept = std::move(kept);
     run_ = {};
     return {};
 }
 
-QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
+QString ScanSession::putFiles(const edi::Project& project, const Files& files, bool* committed) {
+    if (committed) *committed = false;
+    // Parse/copy and own every bounded rename receipt before touching staging.
+    Run restored;
+    (void)decodeRun(files.run, restored);
+    std::vector<int> staged, moved_aside, moved_in;
+    staged.reserve(kResultFileCount);
+    moved_aside.reserve(kResultFileCount);
+    moved_in.reserve(kResultFileCount);
     const fs::path directory = analysis_dir(project);
     Files current;
     try {
@@ -514,9 +529,10 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());
     }
+    const fs::path aside = set_aside_dir(project, fresh_name("replaced"));
+    const fs::path captured = files.kept.empty() ? fs::path{} : fs::path(files.kept);
     // 1. The wanted files written beside their places; a failure here changes nothing.
-    Files wanted = files;
-    std::vector<int> staged;
+    const Files& wanted = files;
     try {
         for (int which = 0; which < kResultFileCount; ++which) {
             if (const std::optional<std::string>& text = *slot(wanted, which)) {
@@ -524,7 +540,6 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
                 if (!crysta::output::write_temporary_file(path, *text)) {
                     throw std::runtime_error("cannot write " + path.string());
                 }
-                staged.push_back(which);
             }
         }
     } catch (const std::exception& refusal) {
@@ -534,8 +549,6 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
         return QString::fromUtf8(refusal.what());
     }
     // 2. The present files set aside; 3. the staged ones moved in. A failure puts the earlier ones back.
-    std::vector<int> moved_aside, moved_in;
-    const fs::path aside = set_aside_dir(project, fresh_name("replaced"));
     try {
         set_aside(project, current, aside, moved_aside);
         for (const int which : staged) {
@@ -563,12 +576,16 @@ QString ScanSession::putFiles(const edi::Project& project, const Files& files) {
         drop_set_aside(aside);
         return QString::fromUtf8(refusal.what());
     }
+    // All actual result files have committed. The caller must finish its already
+    // prepared model restore even if later cleanup/presentation cannot complete.
+    if (committed) *committed = true;
+    static_assert(std::is_nothrow_move_assignable_v<Run>);
+    run_ = std::move(restored);
     // Put back: the replaced files and the copies kept when these were taken go.
     drop_set_aside(aside);
     if (!files.kept.empty()) {
-        drop_set_aside(fs::path(files.kept));
+        drop_set_aside(captured);
     }
-    readRun(project);
     return {};
 }
 

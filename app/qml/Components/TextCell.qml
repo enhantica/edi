@@ -42,7 +42,16 @@ EaComponents.ListViewTextInput {
     // The base's colours, with a locked cell kept in the normal colour rather than the read-only grey.
     color: enterFlash ? EaStyle.Colors.themeForeground : warned ? EaStyle.Colors.red : !enabled || (readOnly && !locked) || minored ? EaStyle.Colors.themeForegroundMinor : activeFocus || selected || hovered ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
 
-    text: shown
+    // RestoreNone removes the clean binding without assigning text. This is
+    // essential for IME preedit, which must survive even before textEdited.
+    Binding {
+        target: cell
+        property: "text"
+        value: cell.shown
+        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady &&
+              cell.commitInProgress === null && !cell.inputMethodComposing
+        restoreMode: Binding.RestoreNone
+    }
     warned: refusal !== ""
     ToolTip.text: refusal
     WarningToolTip {

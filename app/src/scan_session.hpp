@@ -82,8 +82,9 @@ class ScanSession : public QObject {
     // in-memory provenance goes with them. The refusal, if any; a refusal that could not put everything back says
     // where the files were kept.
     QString takeFiles(const edi::Project& project, Files& taken);
-    // Puts the three files back as they were, all or none, with the same refusal; the provenance is read again.
-    QString putFiles(const edi::Project& project, const Files& files);
+    // Prepared provenance and bounded rename ledgers precede file writes. committed
+    // latches actual reversal; later cleanup cannot turn it into an unperformed Undo.
+    QString putFiles(const edi::Project& project, const Files& files, bool* committed = nullptr);
     // The provenance file alone, as it is now (a single fit's Undo restores it), and put back.
     // The provenance file's bytes (absent: none) in `bytes`; false when it is there but cannot be read.
     bool runFile(const edi::Project& project, std::optional<std::string>& bytes) const;
@@ -127,6 +128,7 @@ class ScanSession : public QObject {
     std::shared_ptr<std::atomic<bool>> metadata_stop_;
     void readWanted();
     QString readRun(const edi::Project& project);
+    static QString decodeRun(const std::optional<std::string>& bytes, Run& run);
 };
 
 }  // namespace edi_app

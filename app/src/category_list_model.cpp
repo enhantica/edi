@@ -231,4 +231,8 @@ QHash<int, QByteArray> CategoryListModel::roleNames() const {
             {NeedsDataRole, "needsData"},   {ExtrasNeedsDataRole, "extrasNeedsData"}, {ExtrasTitleRole, "extrasTitle"}};
 }
 
+std::vector<const edi::Category*> category_presentation_order(const std::vector<edi::Category>& categories) {
+    return presentation_order(categories);
+}
+
 }  // namespace edi_app

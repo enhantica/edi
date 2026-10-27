@@ -38,14 +38,14 @@ Column {
         delegate: ParameterGrid {
             required property ParameterListModel modelData
 
-            visible: modelData.usedCount > 0
+            visible: fieldCount > 0
             fields: modelData
             prefix: "peak"
         }
     }
 
     ParameterGrid {
-        visible: group.experiment !== null && group.experiment.peakAsymmetry.usedCount > 0
+        visible: fieldCount > 0
         fields: group.experiment ? group.experiment.peakAsymmetry : null
         prefix: "peak"
     }

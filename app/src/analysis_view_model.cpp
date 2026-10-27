@@ -195,7 +195,15 @@ void ConstraintListModel::append() {
     if (project.aliases.size() >= 2) {
         constraint.expression = project.aliases[1]->id.value() + " = " + project.aliases[0]->id.value();
     }
-    editor_.apply_relation_edit(edi::Edit::append(project.constraints, std::move(constraint)));
+    (void)appendComplete(QString::fromStdString(constraint.id.value()),
+                         QString::fromStdString(constraint.expression.value()), constraint.enabled.get());
+}
+
+ProjectEditor::RelationOutcome ConstraintListModel::appendComplete(const QString& id, const QString& expression, bool enabled) {
+    edi::ParameterConstraint row; row.id=id.toStdString(); row.expression=expression.toStdString(); row.enabled=enabled;
+    ProjectEditor::RelationAction action; action.kind=ProjectEditor::RelationAction::Kind::ConstraintAppend;
+    action.text=id; action.expression=expression; action.enabled=enabled;
+    return editor_.append_constraint(project_, std::move(row), action);
 }
 
 void ConstraintListModel::duplicate(int row) {

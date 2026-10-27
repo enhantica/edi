@@ -59,10 +59,22 @@ EaElements.ParamComboBox {
     Component.onCompleted: FieldTitles.align(selector)
 
     onActivated: index => {
-        const chosen = options.tokenAt(index);
+        const life = editorLife;
+        const originalOwner = Session.project;
+        const originalOptions = options;
+        const original = ({});
+        activation = original;
+        const current = () => life.alive && selector.activation === original && Session.project === originalOwner && selector.options === originalOptions;
+        if (!current() || originalOptions === null) return;
+        const chosen = originalOptions.tokenAt(index);
+        if (!current()) return;
         if (chosen !== token) {
             selected(chosen);
-            refusal = Session.project ? Session.project.lastError : "";
+            if (!current()) return;
+            const message = originalOwner ? originalOwner.lastError : "";
+            if (!current()) return;
+            refusal = message;
+            if (!current()) return;
         }
         currentIndex = Qt.binding(() => options ? options.indexOf(selector.token) : -1);
     }
