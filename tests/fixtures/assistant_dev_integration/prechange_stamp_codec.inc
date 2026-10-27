@@ -377,6 +377,11 @@ std::vector<NamedParameter> e11_prechange_relation_sources(const Project& projec
         if (found == out.end())
             throw std::invalid_argument("Unsupported frozen alias-source fixture");
     }
+    // Pre-change io.cpp:4363-4370 excludes dependent alias sources.
+    // Known-cell validation above remains distinct from source eligibility.
+    std::erase_if(out, [](const auto& row) {
+        return row.parameter->dependence != Dependence::Independent;
+    });
     return out;
 }
 
