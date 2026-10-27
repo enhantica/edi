@@ -71,6 +71,15 @@ class MainActor:
         value['turns'] = turns
         path.write_text(json.dumps(value), encoding='utf-8')
 
+    def append_turn(self, calls):
+        assert self.last['ui']['state'] == 'idle', (
+            'Only a settled offline peer may receive its next finite test turn'
+        )
+        path = self.folder / 'peer.json'
+        value = json.loads(path.read_text(encoding='utf-8'))
+        value['turns'].append(calls)
+        path.write_text(json.dumps(value), encoding='utf-8')
+
     def command(self, op, **arguments):
         assert self.process.poll() is None, 'The real Main host must remain alive'
         self.process.stdin.write(json.dumps({'op': op, **arguments}) + '\n')
@@ -93,8 +102,8 @@ class MainActor:
             return value
         raise AssertionError(f'No actual observation returned for {op}')
 
-    def until(self, predicate):
-        deadline = time.monotonic() + 10
+    def until(self, predicate, *, seconds=10):
+        deadline = time.monotonic() + seconds
         while time.monotonic() < deadline:
             value = self.command('inspect')
             if predicate(value):
@@ -756,7 +765,7 @@ def test_opening_a_saved_project_without_assistant_work_does_not_fabricate_a_rep
     assert receipt.get('disposition') not in {'saved', 'saved_incomplete'}
 
 
-def test_unsaved_native_work_reports_unavailable_without_autosave_or_appdata_fallback(main_actor):
+def test_unsaved_work_retains_accessible_diagnostics_without_implicit_science_save(main_actor):
     actor = main_actor([
         [
             {
@@ -781,8 +790,19 @@ def test_unsaved_native_work_reports_unavailable_without_autosave_or_appdata_fal
     assert 'storage_root_unavailable' in json.dumps(receipt), (
         'The unavailable native root must be reported honestly, not treated as saved or disabled'
     )
-    assert not list(Path(actor.last['test_storage']).rglob('work-report.json')), (
-        'Unsaved scientific diagnostics cannot fall back to unrelated app-data storage'
+    # Owner2c9 explicitly elects a current/last diagnostic cache before a project
+    # has a working root. This updates only the former no-appdata policy, while
+    # retaining the original no-autosave and truthful missing-project-copy checks.
+    document = qml(actor, 'Session.assistant.workReportDocument()')
+    cached = json.loads(document)
+    assert 'unsaved-native-work' in json.dumps(cached), (
+        'The current diagnostic cache exposes actual unsaved work without another provider request'
+    )
+    assert 'storage_root_unavailable' in json.dumps(cached), (
+        'The diagnostic cache preserves the real missing project-report-root limitation'
+    )
+    assert not actor.last['ui']['project']['path'], (
+        'Explicit diagnostic cache access cannot turn unsaved scientific work into a project Save'
     )
 
 
@@ -1928,7 +1948,12 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
     assert documents == Path(environment['temporary_documents_root']) and documents.is_dir(), (
         'Normal Create uses the isolated ordinary OS Documents parent without real-user writes'
     )
-    project_name = 'e11_native_create_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    project_name = 'e11_native_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    project_title = 'Independent published-cell continuation'
+    project_description = 'Native Create followed by selected CIF import and ordinary current Save'
+    assert re.fullmatch(r'[a-zA-Z][a-zA-Z0-9_\-.]{1,30}', project_name), (
+        'The autonomous Create fixture supplies a valid name under the unchanged original dialog validator'
+    )
     destination = documents / project_name
     assert not destination.exists(), (
         'The native ordinary Create action owns creating its previously absent project destination'
@@ -1936,8 +1961,8 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
     offered = {row['name']: row for row in actor.command('tool_specs')['reply']['tools']}
     schema = offered['create_project']['inputSchema']
     assert set(schema['required']) == {'purpose'} and set(schema['properties']) == {
-        'purpose', 'name', 'description'
-    }, 'Normal current-session Create exposes only ordinary name and description metadata'
+        'purpose', 'name', 'title', 'description'
+    }, 'Normal current-session Create exposes the complete ordinary project metadata contract'
     cif = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
     actor.connect()
     token = qml(actor, 'Session.assistant.beginFileSelection(true)')
@@ -1949,8 +1974,8 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
         'Native Create and subsequent import retain the actually admitted selected-input identity'
     )
     actor.configure_turns([[
-        tool_call('create_project', 'ordinary-empty-create', name=project_name,
-                  description='Independent ordinary Create continuation'),
+        tool_call('create_project', 'ordinary-empty-create', name=project_name, title=project_title,
+                  description=project_description),
         tool_call('load_structure', 'ordinary-created-cif', file_id=selected[0]['id']),
         tool_call('save_project', 'ordinary-created-current-save', destination='current'),
     ]])
@@ -1962,7 +1987,8 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
     created = outcomes[0]
     assert (created['status'] == 'created' and created['adopted'] and created['complete']
             and created['presentation_complete'] and created['saved'] is True
-            and created['name'] == project_name and Path(created['path']) == destination), (
+            and created['name'] == project_name and Path(created['path']) == destination
+            and created['title'] == project_title and created['description'] == project_description), (
         'Normal Create reports actual adopted current-owner completion and its immediately saved destination'
     )
     assert actor.last['ui']['singleton_identity'] and actor.last['ui']['engine_parent'], (
@@ -1987,8 +2013,16 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
                    and row['focus'] == 'createProject.name' for row in before_adoption), (
             'Show ON enters the original Create dialog through its genuine focused name control'
         )
+        for field in ('createProject.title', 'createProject.description'):
+            assert any(row['dialog_visible'] and row['kind'] in {'key_press', 'input_method'}
+                       and row['focus'] == field for row in before_adoption), (
+                'Show ON enters each supplied metadata field through its actual original dialog editor'
+            )
         assert any(row['kind'] == 'mouse_press' and row['dialog_visible']
-                   and row['dialog_name'] == project_name and row.get('confirm_contains_press')
+                   and row['dialog_name'] == project_name
+                   and row['dialog_title'] == project_title
+                   and row['dialog_description'] == project_description
+                   and row.get('confirm_contains_press')
                    for row in before_adoption), (
             'Show ON confirms the actual original Create popup before ordinary Session adoption'
         )
@@ -2000,6 +2034,10 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
     owner = actor.last['ui']['project']
     assert owner['name'] == project_name and Path(owner['path']) == destination, (
         'Normal native Create retains its actual requested name and ordinary Documents destination'
+    )
+    assert qml(actor, 'Session.project.title') == project_title and qml(
+        actor, 'Session.project.description') == project_description, (
+        'The actual ordinary owner retains supplied title and description after native Create and Save'
     )
     assert (destination / 'project.edi').is_file(), (
         'Native ordinary Create and current Save write the actual owned project rather than a receipt only'
@@ -2017,6 +2055,11 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
     actor.until(lambda row: not row['ui']['project']['calculating'])
     assert actor.last['ui']['project']['structure_rows'] == rows, (
         'Normal current Save conserves the actual imported structure through independent ordinary reopen'
+    )
+
+    assert qml(actor, 'Session.project.title') == project_title and qml(
+        actor, 'Session.project.description') == project_description, (
+        'Independent ordinary reopen reads the actually saved title and description without receipt derivation'
     )
 
 
@@ -2065,7 +2108,10 @@ def test_ordinary_empty_to_created_transition_retains_original_task_and_approved
     actor.command('click', name='project.create')
     actor.until(lambda row: any(c['name'] == 'createProject.name' and c['visible']
                                for c in row['ui']['controls']))
-    name = 'e11_manual_create_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    name = 'e11_manual_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    assert re.fullmatch(r'[a-zA-Z][a-zA-Z0-9_\-.]{1,30}', name), (
+        'The ordinary manual Create continuity fixture preserves unchanged native name validation'
+    )
     actor.command('click', name='createProject.name')
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text=name)
@@ -2265,4 +2311,556 @@ def test_native_single_crystal_extinction_matches_current_selectors_and_direct_m
     scalar.command('undo')
     assert qml(scalar, 'Session.project.currentExperiment.mosaicDistribution') == original_distribution, (
         'One separate ordinary Undo restores the original mosaic selector token'
+    )
+
+
+def test_sc_raw_columns_invalidate_only_actual_input_consent_and_cache(main_actor, tmp_path):
+    reached = set()
+    for name in ['sc-neut-cwl_tb2ti2o7-heidi_basic', 'sc-neut-tof_taurine-unknown_basic']:
+        actor = main_actor([[]])
+        path = tmp_path / name
+        shutil.copytree(ROOT / 'docs/user/cli' / name / 'project', path)
+        assert actor.command('open', path=str(path))['reply']['opened'], (
+            'The raw-input scope witness uses genuinely published CW and TOF SC observations'
+        )
+        actor.until(lambda row: not row['ui']['project']['calculating'])
+        actor.connect()
+        original_context = json.loads(actor.last['ui']['context'])
+        original_revision = original_context['project']['revision']
+        original_files = actor.last['ui']['selected_files']
+        baseline = actor.command('sc_input')['reply']
+        assert baseline['rectangular'] and baseline['sample_form'] == 'single crystal', (
+            'The independent measured fixture is rectangular native single-crystal input'
+        )
+        for field, facts in baseline['columns'].items():
+            assert facts['element_bytes'] == (4 if field in {'h', 'k', 'l'} else 8), (
+                'Native SC identity accounts actual int32 Miller and float64 measured columns'
+            )
+            if not facts['count']:
+                assert field == 'wavelength', 'Only CW per-reflection wavelength is absent'
+                continue
+            actor.command('sc_input', mode='equal', field=field)
+            assert not actor.last['ui']['context_consent_required'], (
+                'An equal native column replacement retains the same approved raw scientific bytes'
+            )
+            old = facts['first']
+            new = old + ((17 if old >= 0 else -17) if field in {'h', 'k', 'l'} else abs(old) * 0.03125 + 0.125)
+            changed = actor.command('sc_input', mode='column', field=field, value=new)['reply']
+            assert changed['rectangular'] and changed['columns'][field]['count'] == facts['count'], (
+                'The native mutation is a real same-shape measured-input change'
+            )
+            assert changed['columns'][field]['first'] == new, (
+                'The actual independent raw field changes before testing disclosure invalidation'
+            )
+            now = json.loads(actor.last['ui']['context'])
+            assert now['project']['revision'] == original_revision and actor.last['ui']['selected_files'] == original_files, (
+                'No unrelated revision or selected-file change can mask the SC raw-input identity witness'
+            )
+            assert actor.last['ui']['context_consent_required'], (
+                'Every changed SC measured column invalidates the actual approved input scope and cached disclosure'
+            )
+            actor.command('sc_input', mode='column', field=field, value=old)
+            assert not actor.last['ui']['context_consent_required'], (
+                'Restoring exact original raw bytes restores the original unchanged disclosure approval'
+            )
+            reached.add(field)
+        field = 'intensity'
+        old = baseline['columns'][field]['first']
+        actor.command('sc_input', mode='replace', field=field, value=old + 0.375)
+        assert actor.last['ui']['context_consent_required'], (
+            'Replacing the complete native reflection owner cannot reuse a stale borrowed input stamp'
+        )
+        actor.command('sc_input', mode='column', field=field, value=old)
+        assert not actor.last['ui']['context_consent_required'], (
+            'A restored native reflection owner remains the original approved measured input'
+        )
+        actor.command('sc_input', mode='column', field='computed', value=0.73125)
+        assert not actor.last['ui']['context_consent_required'], (
+            'Calculated reflection values are not promoted into measured-input authority'
+        )
+        actor.command('sc_input', mode='column', field='sample_form', value='powder')
+        assert actor.last['ui']['context_consent_required'], (
+            'Declared sample form is actual disclosure identity even when all raw columns are unchanged'
+        )
+        assert json.loads(actor.last['ui']['context'])['datasets'][0]['sample_form'] == 'powder', (
+            'The actual cached context refreshes its declared sample form rather than only an approval flag'
+        )
+        actor.command('sc_input', mode='column', field='sample_form', value='single crystal')
+        assert not actor.last['ui']['context_consent_required'], (
+            'Restoring the original declared sample form restores the original input scope'
+        )
+    assert reached == {'h', 'k', 'l', 'intensity', 'sigma', 'wavelength'}, (
+        'The finite genuine CW and TOF witnesses reach every typed measured reflection channel'
+    )
+
+
+def test_result_projection_size_matches_real_wire_for_every_closed_code_and_message_shape(main_actor):
+    actor = main_actor([[]])
+    # Independent protocol vocabulary retained from d2, not a digest/value emitted by the changed projector.
+    codes = ['refused', 'unavailable', 'cancelled', 'uncertain', 'resource_exhausted',
+             'input_changed', 'policy_mismatch', 'request_stale', 'context_unready',
+             'owner_unavailable', 'pending_operation', 'item_mismatch', 'duplicate_call',
+             'invalid_arguments', 'calculation_busy', 'visible_unmapped', 'project_required',
+             'unclassified', 'owner_retired', 'retention_blocked', 'attachments_clear',
+             'publication_paused', 'account_unready', 'owner_retiring', 'consent_revoked',
+             'history_unretained', 'agent_interrupted', 'context_pending', 'history_clearing',
+             'question_pending', 'selection_pending', 'input_staging']
+    escaped = 'Bounded app message: quote" backslash\\ newline\n tab\t Ω 𝛌'
+    cases = [{'source': {'status': 'refused', 'code': code, 'message': escaped}} for code in codes]
+    cases += [{'source': {'status': status, 'message': escaped}} for status in
+              ['refused', 'unavailable', 'error', 'cancelled', 'interrupted', 'superseded',
+               'unconfirmed', 'applied_unconfirmed', 'complete']]
+    cases += [{'source': {'status': 'refused', 'code': None, 'message': None}},
+              {'source': {'status': 'refused', 'code': {'unknown': True}, 'message': escaped}},
+              {'role': 'diagnostic', 'source': {'code': 'native_diagnostic', 'message': escaped}}]
+    valid_count = len(cases)
+    cases += [{'source': {'status': 'refused', 'message': value}} for value in [True, {}, []]]
+    actual = actor.command('outgoing_projection_cases', cases=cases)['reply']['cases']
+    assert len(actual) == len(cases), 'The finite projector witness reaches every supplied result shape'
+    for source, result in zip(cases[:valid_count], actual[:valid_count], strict=True):
+        assert not result['rejected'], 'Each legal closed result can be counted and materialized'
+        wire = result['wire'].encode('utf-8')
+        assert result['size'] == result['wire_bytes'] == len(wire), (
+            'The admission count equals actual compact QJson UTF8 wire bytes with one code owner'
+        )
+        decoded = json.loads(result['wire'])
+        assert decoded == result['projected'], 'Materialized native JSON is the actual measured wire object'
+        assert decoded.get('message') == source['source']['message'], (
+            'Bounded human app messages, nulls and escaped Unicode survive the actual outgoing role'
+        )
+        if source.get('role') == 'diagnostic':
+            assert decoded['code'] == 'native_diagnostic', 'Diagnostic code retains its separate original field owner'
+        elif 'code' in decoded:
+            assert decoded['code'] in codes and result['wire'].count('"code":') == 1, (
+                'Explicit and derived native result codes occur once and remain in the closed protocol vocabulary'
+            )
+    assert all(row['rejected'] for row in actual[valid_count:]), (
+        'Malformed message types refuse concretely instead of changing byte identity or retiring an account'
+    )
+
+
+def test_empty_create_actor_prelude_reaches_connection_before_selected_file_admission():
+    # This guards the demonstrated wrong-function edit class in the test carrier:
+    # checking an earlier similar fixture did not prove the actually selected node.
+    import ast
+    tree = ast.parse(Path(__file__).read_text(encoding='utf-8'))
+    target = next(node for node in tree.body if isinstance(node, ast.FunctionDef)
+                  and node.name == 'test_empty_current_session_uses_normal_create_load_and_current_save')
+    calls = sorted((node for node in ast.walk(target) if isinstance(node, ast.Call)),
+                   key=lambda node: (node.lineno, node.col_offset))
+    connected = [node.lineno for node in calls if isinstance(node.func, ast.Attribute)
+                 and node.func.attr == 'connect']
+    admitted = [node.lineno for node in calls if isinstance(node.func, ast.Attribute)
+                and node.func.attr == 'command' and node.args
+                and isinstance(node.args[0], ast.Constant) and node.args[0].value == 'selected_add']
+    assert len(admitted) == 1 and connected and connected[0] < admitted[0], (
+        'The exact executed empty-Create node establishes real connection before approved file admission'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_refused_empty_create_prefix_settles_load_and_save_without_account_loss(
+    main_actor, show_actions
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    actor.connect()
+    cif = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    token = qml(actor, 'Session.assistant.beginFileSelection(true)')
+    assert actor.command('selected_add', token=token, paths=[str(cif)])['reply']['added'], (
+        'The refused-prefix continuation retains a genuinely admitted native CIF input'
+    )
+    file_id = actor.last['ui']['selected_files'][0]['id']
+    documents = Path(actor.last['ui']['environment']['documents_root'])
+    name = 'e11_existing_destination'
+    collision = documents / name
+    collision.mkdir()
+    marker = collision / 'independent-existing-bytes'
+    original = b'Existing destination is not an adopted scientific project.\x00\xff'
+    marker.write_bytes(original)
+    # This is an intentional refusal fixture, never an autonomous live setup.
+    actor.configure_turns([[
+        tool_call('create_project', 'refused-create-prefix', name=name,
+                  title='Must not overwrite an existing destination', description='Negative fixture'),
+        tool_call('load_structure', 'load-after-refused-create', file_id=file_id),
+        tool_call('save_project', 'save-after-refused-create', destination='current'),
+    ], [tool_call('inspect_project', 'still-current-no-project')]])
+    actor.request('Try the requested new-project name, then report the actual current Save outcome.')
+    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle')
+    responses = actor.responses()
+    assert all(not row['result']['success'] for row in responses), (
+        'Refused Create and subsequent no-project Save each settle their original actual provider call'
+    )
+    create, load, save = [json.loads(row['result']['contentItems'][0]['text']) for row in responses]
+    assert not create.get('adopted') and not actor.last['ui']['project'], (
+        'Existing-folder Create refusal cannot fabricate adoption or a project for subsequent Save'
+    )
+    assert load['code'] == 'project_required', (
+        'Default native CIF import after refused Create reports the actual missing current project'
+    )
+    assert save['code'] == 'project_required' and isinstance(save['message'], str) and save['message'], (
+        'The no-project Save refusal has a real closed code and model-visible bounded diagnostic'
+    )
+    assert marker.read_bytes() == original and list(collision.iterdir()) == [marker], (
+        'The refused ordinary Create preserves every planted destination byte without overwrite or side effects'
+    )
+    assert actor.last['ui']['connected'] and not actor.last['ui']['can_cancel'], (
+        'Native refusal encoding cannot retire the account or strand a pending provider reply'
+    )
+    actor.request('Inspect the actual current state without clearing the conversation.')
+    actor.until(lambda row: len(actor.responses()) == 4 and row['ui']['state'] == 'idle')
+    final = actor.responses()[-1]['result']
+    assert not final['success'] and json.loads(final['contentItems'][0]['text'])['code'] == 'project_required', (
+        'A later actual request remains usable after the refusal prefix without stale reply replay'
+    )
+    wire = list(map(json.loads, actor.trace.read_text().splitlines()))
+    requests = [row for row in wire if row.get('method') == 'turn/start']
+    assert len(requests) == 2 and requests[0]['params']['threadId'] == requests[1]['params']['threadId'], (
+        'Ordinary refused actions preserve the actual original conversation rather than silently replacing it'
+    )
+
+
+def test_valid_large_stream_reaches_native_continuation_without_work_quota_logout(main_actor, tmp_path):
+    # Finite test input crosses the former cumulative8192 event/4MiB retained
+    # boundaries. These are provenance for the escape, never new product budgets.
+    chunk = 'x'
+    count = 8193
+    larger = 'z' * (4 * 1024 * 1024 + 257)
+    actor = main_actor([[
+        {'call_id': 'valid-large-message', 'message_stream': {'chunk': chunk, 'count': count}},
+        {'call_id': 'valid-large-snapshot', 'message_stream': {'chunk': larger, 'count': 1}},
+        tool_call('inspect_project', 'native-after-large-valid-stream'),
+    ]])
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'The valid large-output witness starts from an independently saved ordinary project'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    before = actor.last['ui']['project']
+    actor.connect()
+    actor.request('Retain the ongoing task and inspect the current project after valid streamed output.')
+    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle', seconds=90)
+    native_result(actor.responses()[0])
+    assert actor.last['ui']['connected'] and not actor.last['ui']['can_cancel'], (
+        'Valid cumulative text/events cannot cause app logout, a retention fence or a Clear requirement'
+    )
+    assert actor.last['ui']['project'] == before, (
+        'Large read-only work preserves the actual current scientific model and owner state'
+    )
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    deltas = [row for row in sent if row.get('method') == 'item/agentMessage/delta']
+    assert (len(deltas) == count + 1 and all(row['params']['delta'] == chunk for row in deltas[:-1])
+            and deltas[-1]['params']['delta'] == larger), (
+        'The offline peer actually delivers the finite valid event/text escape before native continuation'
+    )
+    assert len(chunk.encode()) * count + len(larger.encode()) > 4 * 1024 * 1024, (
+        'The independent finite input genuinely crosses the old cumulative retained-byte boundary'
+    )
+    document = json.loads(qml(actor, 'Session.assistant.workReportDocument()'))
+    assert 'native-after-large-valid-stream' in json.dumps(document), (
+        'Useful current diagnostics remain accessible after large valid work without another provider query'
+    )
+
+
+def test_same_project_reconnect_resumes_original_durable_thread_files_and_cached_report(main_actor, tmp_path):
+    actor = main_actor([[tool_call('inspect_project', 'before-reconnect')],
+                        [tool_call('inspect_project', 'after-reconnect')]])
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'The durable same-project witness uses the actual ordinary saved owner'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.connect()
+    selected_path = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    token = qml(actor, 'Session.assistant.beginFileSelection(true)')
+    assert actor.command('selected_add', token=token, paths=[str(selected_path)])['reply']['added'], (
+        'The original durable task genuinely admits its scientific input before transport loss'
+    )
+    selected = actor.last['ui']['selected_files']
+    config_path = actor.folder / 'peer.json'
+    config = json.loads(config_path.read_text()); config['disconnect_after_turn'] = True
+    config_path.write_text(json.dumps(config))
+    original = 'Keep this project and attached CIF; inspect its current scientific state.'
+    actor.request(original)
+    actor.until(lambda row: len(actor.responses()) == 1 and not row['ui']['connected'])
+    native_result(actor.responses()[0])
+    model = actor.last['ui']['project']
+    document = qml(actor, 'Session.assistant.workReportDocument()')
+    assert 'before-reconnect' in document, (
+        'The completed-step diagnostic cache survives helper termination before any new query'
+    )
+    # Actual ordinary Preferences -> report popup -> Copy, without asking the model.
+    actor.command('click', name='appBar.button.preferences')
+    actor.command('click', name='preferences.tab.aiAssistance')
+    actor.command('click', name='preferences.ai.workReport')
+    actor.until(lambda row: any(c['name'] == 'assistant.workReport.copy' and c['fully_exposed']
+                               for c in row['ui']['controls']))
+    actor.command('click', name='assistant.workReport.copy')
+    clipboard = qml(actor, "(function(){const item=Qt.createQmlObject('import QtQuick; TextEdit {}',contentItem);"
+                    "item.paste();const value=item.text;item.destroy();return value;})()")
+    assert json.loads(clipboard) == json.loads(document), (
+        'The actual Preferences report Copy button copies the retained diagnostic document'
+    )
+    # Close the existing modal owners through their public QML close methods.
+    for name in ('assistant.workReport', 'preferences'):
+        qml(actor, f'(function(){{const item={control_expression(name)};if(item&&item.close)item.close();}})()')
+    config['disconnect_after_turn'] = False;config_path.write_text(json.dumps(config))
+    actor.command('click', name='assistant.connection')
+    actor.until(lambda row: row['ui']['connected'])
+    assert not actor.last['ui']['context_consent_required'] and actor.last['ui']['selected_files'] == selected, (
+        'Actual same-project Connect resumes the unchanged approved task/files without Clear or new consent'
+    )
+    assert actor.last['ui']['project'] == model, (
+        'Recoverable reconnection preserves current scientific state without replaying earlier native actions'
+    )
+    actor.request('Continue the same original task and inspect the current project.')
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[1])
+    wire = list(map(json.loads, actor.trace.read_text().splitlines()))
+    starts = [row['params'] for row in wire if row.get('method') == 'thread/start']
+    resumes = [row['params'] for row in wire if row.get('method') == 'thread/resume']
+    turns = [row['params'] for row in wire if row.get('method') == 'turn/start']
+    assert len(starts) == 1 and starts[0]['ephemeral'] is False, (
+        'A resumable actual provider thread is durable from its original thread/start request'
+    )
+    assert len(resumes) == 1 and resumes[0]['threadId'] == turns[0]['threadId'] == turns[1]['threadId'], (
+        'Recovery uses the supported actual original thread ID rather than a fresh thread disguised as resume'
+    )
+    assert resumes[0].get('excludeTurns') is True and not resumes[0].get('history') and not resumes[0].get('path'), (
+        'Recovery uses the pinned threadId metadata resume contract without fabricated history hydration'
+    )
+    assert original in json.dumps(actor.last['ui']['messages'], ensure_ascii=False), (
+        'The original natural task remains visible after genuine same-thread transport recovery'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_fresh_native_experiment_selects_real_sample_form_before_reflection_import(main_actor, tmp_path, show_actions):
+    actor = main_actor([[]], show_actions=show_actions)
+    actor.connect()
+    attachment_root = Path('/home/andrewsazonov/.codex/attachments/f8212720-2fab-4f66-b3ce-a5c0ebb9c72c')
+    cif, measured = attachment_root / 'tbti.cif', attachment_root / 'heidi.dat'
+    expected = [list(map(float, line.split())) for line in measured.read_text().splitlines() if line.strip()]
+    assert expected and all(len(row) == 5 for row in expected), (
+        'The independent supplied reflection input has actual h k l intensity sigma rows'
+    )
+    token = qml(actor, 'Session.assistant.beginFileSelection(true)')
+    assert actor.command('selected_add', token=token, paths=[str(cif), str(measured)])['reply']['added'], (
+        'Fresh native SC routing starts from genuinely admitted original CIF and reflection files'
+    )
+    ids = {row['name']: row['id'] for row in actor.last['ui']['selected_files']}
+    name = 'e11_sc_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    actor.configure_turns([[
+        tool_call('create_project', 'fresh-sc-normal-create', name=name,
+                  title='Independent native single-crystal routing', description='Supplied reflection observations'),
+        tool_call('load_structure', 'fresh-sc-native-cif', file_id=ids[cif.name]),
+        tool_call('create_experiment', 'fresh-sc-normal-experiment'),
+    ]])
+    actor.request('Create a new project from the selected structure and prepare a normal experiment.')
+    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle')
+    result = [native_result(row) for row in actor.responses()]
+    assert actor.last['ui']['project']['structures'] == 1, (
+        'Fresh SC routing uses one actual native CIF import rather than a prepared SC project'
+    )
+    created_id = result[2]['datasets'][0]['id']
+    context = json.loads(actor.last['ui']['context'])['datasets'][0]
+    assert context['id'] == created_id and context['calculation_only'], (
+        'The actual returned new experiment identity is the current ordinary calculation-only owner'
+    )
+    actor.append_turn([tool_call('set_experiment_type', 'fresh-native-sample-form',
+                                experiment=created_id, axis='sampleForm', token='single crystal')])
+    actor.request('Use the original sample form selector to select single-crystal neutron diffraction.')
+    actor.until(lambda row: len(actor.responses()) == 4 and row['ui']['state'] == 'idle')
+    selected = native_result(actor.responses()[-1])
+    actual_id = selected['datasets'][0]['id']
+    context = json.loads(actor.last['ui']['context'])['datasets'][0]
+    assert context['id'] == actual_id and context['sample_form'] == 'single crystal', (
+        'Native sampleForm reaches the real type-factory replacement and reports its actual resulting identity'
+    )
+    assert qml(actor, 'Session.project.currentExperiment.sampleFormToken') == 'single crystal', (
+        'Native type selection agrees with the genuine current ordinary experiment selector'
+    )
+    actor.command('undo')
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    restored = json.loads(actor.last['ui']['context'])['datasets'][0]
+    assert restored['id'] == created_id and restored['sample_form'] == result[2]['datasets'][0]['sample_form'], (
+        'One ordinary Undo restores exact pre-replacement sample-form identity and type'
+    )
+    actor.append_turn([tool_call('set_experiment_type', 'fresh-native-sample-form-again',
+                                experiment=created_id, axis='sampleForm', token='single crystal')])
+    actor.request('Select the requested single-crystal sample form again after the explicit Undo.')
+    actor.until(lambda row: len(actor.responses()) == 5 and row['ui']['state'] == 'idle')
+    actual_id = native_result(actor.responses()[-1])['datasets'][0]['id']
+    actor.append_turn([tool_call('load_data', 'fresh-sc-native-reflections',
+                                experiment=actual_id, file_id=ids[measured.name])])
+    actor.request('Load the genuine selected measured reflections into that current experiment.')
+    actor.until(lambda row: len(actor.responses()) == 6 and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[-1])
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actual = actor.command('sc_input')['reply']
+    assert actual['sample_form'] == 'single crystal' and actual['rectangular'], (
+        'Normal fresh native routing produces real rectangular measured SC ownership'
+    )
+    for index, field in enumerate(('h', 'k', 'l', 'intensity', 'sigma')):
+        assert actual['columns'][field]['count'] == len(expected) and actual['columns'][field]['first'] == expected[0][index], (
+            'Native reflection import preserves independent source column counts and first observation values'
+        )
+    context = json.loads(actor.last['ui']['context'])['datasets'][0]
+    assert context['observations']['intensity_count'] == len(expected) and context['axis']['kind'] == 'miller_indices', (
+        'The actual fresh SC context exposes measured reflections rather than phantom powder observations'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_native_create_explicit_names_follow_original_dialog_without_silent_renaming(main_actor, show_actions):
+    actor = main_actor([[]], show_actions=show_actions)
+    actor.connect()
+    actor.command('click', name='assistant.toggle')
+    actor.command('click', name='project.create')
+    actor.until(lambda row: any(c['name'] == 'createProject.name' and c['visible']
+                               for c in row['ui']['controls']))
+    validator = qml(actor, control_expression('createProject.name') + '.validator.regularExpression.toString()')
+    assert validator.startswith('/') and validator.endswith('/'), (
+        'The independent name boundary is read from the actual original ordinary dialog validator'
+    )
+    pattern = validator[1:-1]
+    invalid = ['LBCO neutron refinement', 'a' * 34, '1starts_with_digit']
+    assert all(re.fullmatch(pattern, name) is None for name in invalid), (
+        'Each explicit invalid-name control genuinely violates the unchanged original GUI rule'
+    )
+    qml(actor, '(' + control_expression('createProject.dialog') + ').close()')
+    actor.command('click', name='assistant.toggle')
+    actor.configure_turns([[tool_call('create_project', 'invalid-explicit-name-' + str(i),
+                                     name=name, title='Human-readable metadata belongs in title')
+                            for i, name in enumerate(invalid)]])
+    actor.command('clear_ui_sequence')
+    actor.request('Try each exact requested name and explain any ordinary form validation refusal.')
+    actor.until(lambda row: len(actor.responses()) == len(invalid) and row['ui']['state'] == 'idle')
+    for response in actor.responses():
+        assert not response['result']['success'], (
+            'Both native modes refuse exact names the original normal Create form cannot represent'
+        )
+        value = json.loads(response['result']['contentItems'][0]['text'])
+        assert not value.get('adopted') and isinstance(value.get('message'), str) and value['message'], (
+            'Invalid explicit project metadata yields a useful actual model-visible refusal'
+        )
+    assert not actor.last['ui']['project'] and actor.last['ui']['connected'], (
+        'Invalid names cannot silently adopt renamed projects or retire the connected account'
+    )
+    documents = Path(actor.last['ui']['environment']['documents_root'])
+    assert not list(documents.iterdir()), (
+        'Native invalid-name refusal cannot create any implicit normalized project destination'
+    )
+
+
+def test_nonnative_event_failure_preserves_first_cause_and_actual_connect_recovery(main_actor, tmp_path):
+    marker = 'UNTRUSTED_EVENT_BODY_MUST_NOT_BECOME_THE_DIAGNOSTIC'
+    actor = main_actor([[
+        {'notification': {'method': 'item/started', 'params': {'item': {
+            'type': 'agentMessage', 'id': 'typed-event-negative', 'text': ''}}}},
+        {'notification': {'method': 'item/agentMessage/delta', 'params': {
+            'itemId': 'typed-event-negative', 'delta': [marker]}}, 'hold_after': True},
+    ], [tool_call('inspect_project', 'after-typed-event-recovery')]])
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'The nonnative event-error control starts from an actual ordinary saved project'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    model = actor.last['ui']['project']
+    actor.connect()
+    original = 'Inspect this current project and retain the original task across recoverable errors.'
+    actor.request(original)
+    actor.until(lambda row: not row['ui']['can_cancel'] and row['ui']['state'] != 'connecting')
+    assert actor.last['ui']['project'] == model, (
+        'A genuinely malformed nonnative notification cannot change scientific state'
+    )
+    before = json.loads(qml(actor, 'Session.assistant.workReportDocument()'))
+
+    def first_event(document):
+        values = [row['event_failure'] for row in objects(document) if 'event_failure' in row]
+        assert values, (
+            'A no-NativeRecord notification failure persists its actual original event diagnostic in accessible evidence'
+        )
+        facts = values[0]
+        def observed(value):
+            return value.get('value') if isinstance(value, dict) else value
+        return {key: observed(facts[key]) for key in ('method', 'first_stage', 'first_class')}
+
+    first = first_event(before)
+    assert first['method'] == 'TEXT_DELTA' and first['first_stage'] and first['first_class'], (
+        'The retained event tuple identifies the actual typed text-delta method and closed first processing class'
+    )
+    assert 'client.event_processing' in json.dumps(before) and marker not in json.dumps(before), (
+        'Actual nonnative error evidence has its concrete code without copying arbitrary malformed provider bodies'
+    )
+    if not actor.last['ui']['connected']:
+        actor.until(lambda row: any(c['name'] == 'assistant.connection' and c['fully_exposed']
+                                   and c['enabled'] for c in row['ui']['controls']))
+        actor.command('click', name='assistant.connection')
+        actor.until(lambda row: row['ui']['connected'])
+    actor.request('Continue the same original task without clearing it; inspect actual current state.')
+    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    after = json.loads(qml(actor, 'Session.assistant.workReportDocument()'))
+    assert first_event(after) == first, (
+        'Later successful work/report refresh preserves the original notification first cause rather than overwriting it'
+    )
+    assert actor.last['ui']['connected'] and original in json.dumps(actor.last['ui']['messages']), (
+        'Actual recovery and later native work preserve the account and original conversation without Clear'
+    )
+    wire = list(map(json.loads, actor.trace.read_text().splitlines()))
+    starts = [row for row in wire if row.get('method') == 'thread/start']
+    turns = [row['params'] for row in wire if row.get('method') == 'turn/start']
+    assert len(starts) == 1 and len(turns) == 2 and turns[0]['threadId'] == turns[1]['threadId'], (
+        'Malformed-notification recovery resumes the durable original thread instead of silently replacing its task'
+    )
+
+
+def test_local_history_publication_failure_does_not_require_clear_or_retire_account(main_actor, tmp_path):
+    actor = main_actor([[tool_call('inspect_project', 'history-before-fault')], [],
+                        [tool_call('inspect_project', 'history-after-fault')]])
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'The local-history failure witness uses an actual ordinary project and its independent science bytes'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.connect()
+    original = 'Keep the original current scientific task while ordinary local diagnostics are maintained.'
+    actor.request(original)
+    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    before = actor.last['ui']['project']
+    roots = list(Path(actor.last['test_storage']).rglob('assistant/history.json'))
+    assert len(roots) == 1 and roots[0].is_file(), (
+        'The fault targets the actual newly written history inside this isolated test storage only'
+    )
+    history = roots[0]
+    retained = history.with_name('history.independent-preserved')
+    history.rename(retained)
+    history.mkdir()
+    try:
+        actor.request('Continue the same task while retaining actual local diagnostic outcomes.')
+        actor.until(lambda row: not row['ui']['can_cancel'] and row['ui']['state'] == 'idle')
+        assert actor.last['ui']['connected'], (
+            'A real local history publication failure cannot turn valid provider work into account retirement'
+        )
+        document = qml(actor, 'Session.assistant.workReportDocument()')
+        assert isinstance(json.loads(document), dict), (
+            'Useful cached diagnostics remain accessible when ordinary history publication fails'
+        )
+        assert actor.last['ui']['project'] == before, (
+            'Local diagnostic failure cannot mutate the independent scientific model or owner'
+        )
+    finally:
+        history.rmdir()
+        retained.rename(history)
+    actor.request('Continue the original task without Clear and inspect the actual current project.')
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[1])
+    assert actor.last['ui']['connected'] and original in json.dumps(actor.last['ui']['messages']), (
+        'A later valid action is usable with original conversation after local retention recovers, without Clear'
+    )
+    wire = list(map(json.loads, actor.trace.read_text().splitlines()))
+    turns = [row['params'] for row in wire if row.get('method') == 'turn/start']
+    assert len(turns) == 3 and len({row['threadId'] for row in turns}) == 1, (
+        'Local history/report maintenance cannot replace the original provider thread or replay its prior calls'
     )

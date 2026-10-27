@@ -21,6 +21,39 @@ turn_number = 0
 thread_number = 0
 cursor = {'position': 0, 'sequence': 0, 'pending_final': False, 'research': None}
 native_ids = {}
+# Provider-owned offline persistence, using pinned092d Thread/Resume/Read shapes.
+# This never fabricates application state or scientific results. A killed helper
+# must resume the original stored ID, rather than silently starting another one.
+state_path = trace.with_suffix('.provider-state.json')
+state = json.loads(state_path.read_text()) if state_path.exists() else {
+    'thread_number': 0, 'turn_number': 0, 'threads': {}, 'inputs': []}
+thread_number = state['thread_number']
+turn_number = state['turn_number']
+
+
+def persist():
+    temporary = state_path.with_suffix('.new')
+    temporary.write_text(json.dumps(state), encoding='utf-8')
+    temporary.replace(state_path)
+
+
+def saved_thread(exclude_turns=False):
+    value = dict(state['threads'][thread_id])
+    if exclude_turns:
+        value['turns'] = []
+    return value
+
+
+def thread_response(exclude_turns=False):
+    return {
+        'thread': saved_thread(exclude_turns), 'model': 'gpt-6.1-sol',
+        'modelProvider': 'openai', 'serviceTier': None, 'disabledPluginIds': [],
+        'cwd': cwd, 'instructionSources': [], 'approvalPolicy': 'never',
+        'approvalsReviewer': 'user',
+        'sandbox': {'type': 'readOnly', 'networkAccess': False},
+        'reasoningEffort': 'medium', 'collaborationMode': None,
+        'turnsBackwardsCursor': None, 'itemsBackwardsCursor': None,
+    }
 
 
 def emit(value):
@@ -38,7 +71,9 @@ def notify(method, params):
 
 
 def turn(status):
-    return {'id': turn_id, 'items': [], 'status': status}
+    return {'id': turn_id, 'rootTurnId': None, 'items': [], 'itemsView': 'full',
+            'status': status, 'error': None, 'startedAt': None, 'completedAt': None,
+            'durationMs': None}
 
 
 def operands(value):
@@ -67,12 +102,34 @@ def advance():
         binding = {'threadId': thread_id, 'turnId': turn_id, 'item': item}
         notify('item/started', binding)
         notify('item/completed', {**binding, 'completedAtMs': 1})
-        notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
+        completed = turn('completed')
+        state['threads'][thread_id]['turns'].append(completed)
+        persist()
+        notify('turn/completed', {'threadId': thread_id, 'turn': completed})
+        if config.get('disconnect_after_turn'):
+            sys.exit(23)
         return
     spec = calls[cursor['position']]
     cursor['position'] += 1
     cursor['sequence'] += 1
     call_id = spec.get('call_id', 'integration-call-' + str(cursor['sequence']))
+    if 'message_stream' in spec:
+        stream = spec['message_stream']
+        chunks = [stream['chunk']] * stream['count']
+        binding = {'threadId': thread_id, 'turnId': turn_id}
+        item = {'type': 'agentMessage', 'id': call_id, 'text': ''}
+        notify('item/started', {**binding, 'item': item})
+        for chunk in chunks:
+            notify('item/agentMessage/delta', {**binding, 'itemId': call_id, 'delta': chunk})
+        notify('item/completed', {**binding, 'item': {**item, 'text': ''.join(chunks)}, 'completedAtMs': 1})
+        advance()
+        return
+    if 'notification' in spec:
+        event = spec['notification']
+        notify(event['method'], {**event['params'], 'threadId': thread_id, 'turnId': turn_id})
+        if not spec.get('hold_after'):
+            advance()
+        return
     if 'research' in spec:
         # Official 0.162.1 ThreadItem WebSearchItem + WebSearchAction. Results
         # are opaque JSON; no invented typed status/refusal/citation fields.
@@ -220,35 +277,38 @@ for line in sys.stdin:
         )
     elif method == 'thread/start':
         thread_number += 1
+        state['thread_number'] = thread_number
         thread_id = '019a0290-0000-7000-8000-' + f'{thread_number:012d}'
         cwd = params['cwd']
-        reply(
-            request,
-            {
-                'approvalPolicy': 'never',
-                'approvalsReviewer': 'user',
-                'cwd': cwd,
-                'model': 'gpt-6.1-sol',
-                'modelProvider': 'openai',
-                'reasoningEffort': 'medium',
-                'sandbox': {'type': 'readOnly', 'networkAccess': False},
-                'thread': {
-                    'id': thread_id,
-                    'cliVersion': '0.162.1',
-                    'createdAt': 1,
-                    'updatedAt': 1,
-                    'cwd': cwd,
-                    'ephemeral': params.get('ephemeral') is True,
-                    'modelProvider': 'openai',
-                    'preview': '',
-                    'projectId': None,
-                    'sessionId': 'integration-session',
-                    'source': 'appServer',
-                    'status': {'type': 'idle'},
-                    'turns': [],
-                },
-            },
-        )
+        state['threads'][thread_id] = {
+            'id': thread_id, 'cliVersion': '0.162.1', 'createdAt': 1, 'updatedAt': 1,
+            'cwd': cwd, 'ephemeral': params.get('ephemeral') is True,
+            'modelProvider': 'openai', 'preview': '', 'projectId': None,
+            'sessionId': 'integration-session', 'source': 'appServer',
+            'forkedFromId': None, 'parentThreadId': None, 'section': None,
+            'sectionEnteredAt': None, 'historyMode': 'legacy', 'recencyAt': None,
+            'model': 'gpt-6.1-sol', 'reasoningEffort': 'medium', 'path': None,
+            'originator': None, 'threadSource': None, 'agentNickname': None,
+            'agentRole': None, 'gitInfo': None, 'name': None,
+            'status': {'type': 'idle'}, 'turns': [],
+        }
+        persist()
+        reply(request, thread_response())
+    elif method == 'thread/resume':
+        # Actual pinned selector and metadata, not history-based reconstruction.
+        assert params['threadId'] in state['threads']
+        assert not params.get('history') and not params.get('path')
+        thread_id = params['threadId']
+        assert not state['threads'][thread_id]['ephemeral']
+        cwd = state['threads'][thread_id]['cwd']
+        assert params.get('cwd', cwd) == cwd
+        reply(request, thread_response(params.get('excludeTurns') is True))
+    elif method == 'thread/read':
+        assert params['threadId'] in state['threads']
+        original_id = thread_id
+        thread_id = params['threadId']
+        reply(request, {'thread': saved_thread(not params.get('includeTurns', False))})
+        thread_id = original_id
     elif method == 'thread/settings/update':
         assert params['threadId'] == thread_id
         assert params.get('approvalPolicy', 'never') == 'never'
@@ -292,6 +352,10 @@ for line in sys.stdin:
         turn_id = '019a0290-0000-7000-8000-' + f'{turn_number + 1:012d}'
         # The finite test may configure calls after account bootstrap, before its first turn.
         current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
+        config.update(current)
+        state['turn_number'] = turn_number
+        state['inputs'].append({'threadId': thread_id, 'turnId': turn_id, 'input': params.get('input')})
+        persist()
         calls = current['turns'][turn_number - 1]
         cursor['position'] = 0
         reply(request, {'turn': turn('inProgress')})
