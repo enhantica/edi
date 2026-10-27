@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-27T05:43:34Z
+# measured_utc = 2026-10-27T07:59:47Z
 #
-# Recorded from: measured test run (4 node(s) measured once, 16291 banked, 0 stale row(s) dropped)
+# Recorded from: measured test run (1 node(s) measured once, 16294 banked, 0 stale row(s) dropped)
 # Collected tests: 18748; with a reported duration: 10475
 # Module-scoped fixture costs recorded: 93
 #
@@ -5327,7 +5327,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_e04_t5_calculator_save.p
 0.040	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ferrite-austenite-beer]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ferrite-austenite-beer_joint]
 0.020	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_lbco-si-mcstas]
-0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-2bank_start-3]
+0.180	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-2bank_start-3]
 0.010	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-3bank_start-5]
 0.020	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-5bank_start-5]
 0.020	tests/integration/py/test_e05_t1_fit_result.py::test_persisted_cli_projection_survives_load_and_save[pd-neut-tof_ncaf-wish-5bank_start-fullprof]

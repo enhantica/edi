@@ -158,6 +158,10 @@ def carried_codec_reference(source, control_path, case, reference):
         control = rounded_input(source, control_path)
         derived = rounded_model_reference(edi, control, case['record'])
         points, free = int(derived['n_points_fitted']), int(reference['n_free_parameters'])
+        if points == 0:
+            # An empty assessment preserves the imported record, including absent
+            # factors; its historical fit count is not this truncated data's count.
+            return reference
         reference |= {
             'n_data_points': str(points),
             'degrees_of_freedom': str(max(points - free, 0)),
