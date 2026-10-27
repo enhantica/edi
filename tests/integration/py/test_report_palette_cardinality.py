@@ -1,4 +1,4 @@
-"""The real report's Bragg keys retain every frozen structure colour and whole-group gradient."""
+"""Report Bragg keys retain recorded shared colours and independent overflow shades."""
 
 import json
 from pathlib import Path
@@ -6,7 +6,7 @@ from pathlib import Path
 import edi
 import pytest
 
-from tests.fixtures.approved_palettes.reference import PALETTES, SCHEMES, assigned
+from tests.fixtures.chart_controls.reference import PALETTES, SCHEMES, assigned_structure
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -26,12 +26,13 @@ def test_captured_report_serializes_all_structure_styles_and_row_labels(multipha
     pattern = model['experiments'][0]['pattern']
     series = [row for row in pattern['series'] if row['kind'] == 'bragg']
     assert len(series) == len(multiphase.structures) and len(series) > 10, (
-        'Every real structure, the whole-group gradient beyond five, including the final '
-        'endpoint reach the report'
+        'Every real structure reaches the report across the eleven-colour boundary'
     )
     for place, row in enumerate(series):
         expected = {
-            theme: assigned(palette, 'structures', place, len(series), theme)
+            theme: assigned_structure(
+                palette, place, len(multiphase.experiments), len(series), theme
+            )
             for theme in ('light', 'dark')
         }
         assert styles[row['style']]['light'].lower() == expected['light'].lower(), (
