@@ -61,8 +61,9 @@ TestCase {
         click("appBar.tab." + name);
         const current = Ui.page(appWindow);
         if (tier) {
-            const tab = Ui.find(current, "sideBar.tab." + tier);
-            if (!tab || !tab.enabled)
+            let tab;
+            tryVerify(() => (tab = Ui.find(current, "sideBar.tab." + tier)) !== null, 2000, "The selected page finishes sliding into view before its sidebar tab is inspected: " + tier);
+            if (!tab.enabled)
                 return null;
             click("sideBar.tab." + tier);
         }
@@ -97,7 +98,9 @@ TestCase {
         exposed(button);
         mouseMove(button, button.width / 2, button.height / 2);
         tryVerify(() => {
-            const text = Probe.visiblePopups(appWindow).map(popup => Ui.text(popup.contentItem ?? popup)).join(" ");
+            // Qt's shared attached tooltip need not be a QObject child of the window.
+            const popups = Probe.visiblePopups(appWindow).concat([button.ToolTip.toolTip]);
+            const text = popups.filter(popup => popup && popup.visible && popup.opened).map(popup => Ui.text(popup.contentItem ?? popup)).join(" ");
             return /measur|observ/i.test(text) && /data|pattern/i.test(text) && /need|require|load|without|first|available/i.test(text);
         }, 2500, "Hovering disabled Estimate displays a tooltip explaining that measured data must be loaded");
         mouseMove(appWindow.contentItem, 1, 1);
@@ -251,15 +254,15 @@ TestCase {
     function test_calculation_constraints_remain_available() {
         const project = Session.project;
         project.analysis.aliases.append();
-        verify(project.analysis.aliases.setText(0, "id", "height"), "The calculation witness declares a named cell-height alias");
-        verify(project.analysis.aliases.setText(0, "parameter", "lbco.cell.length_c"), "The alias targets the simulation's independent c parameter");
+        verify(project.analysis.aliases.setText(0, "id", "edge"), "The calculation witness declares a named cubic-cell edge alias");
+        verify(project.analysis.aliases.setText(0, "parameter", "lbco.cell.length_a"), "The alias targets the cubic simulation's independent a parameter; symmetry ties b and c to a");
         project.analysis.constraints.append();
-        verify(project.analysis.constraints.setText(0, "expression", "height = 13.375"), "A nontrivial cell-height constraint is applied through the real project editor");
+        verify(project.analysis.constraints.setText(0, "expression", "edge = 4.125"), "A nontrivial independent cell-edge constraint is applied through the real project editor");
         ready();
-        compare(project.currentStructure.cell.lengthC.value, 13.375, "A calculation without observations actually adopts the declared constraint value");
+        compare(project.currentStructure.cell.lengthA.value, 4.125, "A calculation without observations actually adopts the declared constraint value");
         analysisControls(false, true);
         loadMeasurements();
         analysisControls(true, true);
-        compare(project.currentStructure.cell.lengthC.value, 13.375, "Loading measurements preserves the calculation's applied constraint");
+        compare(project.currentStructure.cell.lengthA.value, 4.125, "Loading measurements preserves the calculation's applied constraint");
     }
 }

@@ -1,6 +1,7 @@
 .pragma library
 
 function descendants(root) {
+    if (!root) return [];
     let result = [root];
     for (const child of root.children || []) result = result.concat(descendants(child));
     return result;
