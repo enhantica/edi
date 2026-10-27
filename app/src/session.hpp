@@ -81,6 +81,7 @@ class Session : public QObject {
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(edi_app::AssistantViewModel* assistant READ assistant CONSTANT)
+    Q_PROPERTY(bool assistantWorkReportsAutomatic READ assistantWorkReportsAutomatic CONSTANT)
     Q_PROPERTY(edi_app::ProjectViewModel* project READ project NOTIFY projectChanged)
     Q_PROPERTY(bool hasProject READ hasProject NOTIFY hasProjectChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
@@ -106,6 +107,7 @@ class Session : public QObject {
     explicit Session(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
     static Session* create(QQmlEngine* engine, QJSEngine* script_engine);
     AssistantViewModel* assistant() const { return assistant_; }
+    bool assistantWorkReportsAutomatic() const { return work_report_options_.automatic; }
 #ifndef __EMSCRIPTEN__
     Session(edi::assistant::native::NativeDependencies, QObject* parent=nullptr, AssistantWorkReportOptions options={});
 #endif
@@ -245,6 +247,7 @@ class Session : public QObject {
     void leaveTemporaryOrigin();
     bool saveCopy(const QString& target, bool zip);
 
+    const AssistantWorkReportOptions work_report_options_;
     void initializeSession();
     struct ProjectCreationOutcome;
     bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*);

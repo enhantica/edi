@@ -3,11 +3,11 @@
   "skills": [
     {
       "id": "project-assistance",
-      "version": "1.6.0",
+      "version": "1.6.1",
       "title": "Work with the displayed Edi project",
       "summary": "Work with the current native project, genuine CIF/data inputs, Estimate, ordinary saves and public scientific research.",
       "path": "project-assistance/SKILL.md",
-      "sha256": "b544d967d4ed574696c39a4f286e56a4795f70b275adb0ab72a0db0e7956d325",
+      "sha256": "824198c55b76d81bfd9c184d303ca5bf80c870441dd783a885855cbd2c3eda95",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -25,11 +25,11 @@
     },
     {
       "id": "fullprof-intake",
-      "version": "1.0.8",
+      "version": "1.0.9",
       "title": "Inspect a FullProf project",
       "summary": "Interpret actual selected text and scientific associations; use only offered app operations, with unsupported mappings explicit.",
       "path": "fullprof-intake/SKILL.md",
-      "sha256": "11340c5497ffd1d9654fe97bff3dd772bc2d65cbfebbbd1d90361b9a59b86a9b",
+      "sha256": "c4fd47272db387f973f277003276b624332a2405a9997a979d7ac79e25877379",
       "requires": [
         "selected_files"
       ],

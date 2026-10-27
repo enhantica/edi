@@ -390,7 +390,8 @@ bool persistable_name(const std::string& name);
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name);
 /// Same reader and assembly, with an internal approved-byte reader path and the original source path
-/// for file identity/naming. No second parser or input authority is introduced.
+/// for file identity/naming. A reflection capture must preserve the source's case-insensitive
+/// .int/plain suffix class; mismatch refuses before reading. No second parser or input authority is introduced.
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
                                          const std::string& source_path, bool take_file_name);
 

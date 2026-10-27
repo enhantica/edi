@@ -1430,11 +1430,26 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
                                          const std::string& source_path, bool take_file_name) {
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(source_path).filename().string()};
     if (experiment.reflections.has_value()) {
+        const auto fullprof=[](const std::string& path){
+            auto extension=std::filesystem::path(path).extension().string();
+            std::transform(extension.begin(),extension.end(),extension.begin(),[](unsigned char c){return static_cast<char>(std::tolower(c));});
+            return extension==".int";
+        };
+        if(fullprof(reader_path)!=fullprof(source_path))
+            throw IoError("The approved reflection capture must preserve the original FullProf/plain format selector");
         // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
         // reader), taking a FullProf file's wavelength at constant wavelength.
         const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
-        const crysta::ReflectionFile file = crysta::read_reflection_file(
-            reader_path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+        const crysta::ReflectionFile file = [&] {
+            try {
+                return crysta::read_reflection_file(reader_path,
+                    cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+            } catch (const std::invalid_argument& error) {
+                // The FIRST reader owns parsing/diagnostics; Edi owns its public
+                // file-load exception type, shared by ordinary and captured loads.
+                throw IoError(error.what());
+            }
+        }();
         load.unweighted = file.skipped_unweighted;
         load.skipped_lines = file.skipped_lines;
         load.skipped = file.skipped_lines.size();

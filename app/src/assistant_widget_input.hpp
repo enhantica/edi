@@ -27,6 +27,7 @@ class AssistantWidgetInput final : public QObject {
         Kind kind;
         QPointer<QQuickItem> target;
         int scrollDirection = 0; // One ordinary wheel detent (+1/-1), only at the sidebar gutter.
+        bool visualOnlyDisabledTarget = false;
         int option = -1; // Actual finite ComboBox option.
         QString value; // Actual numeric spelling, declaration text or popup search; never executable input.
         std::function<bool()> current;
@@ -59,7 +60,7 @@ class AssistantWidgetInput final : public QObject {
     // nullopt means genuine other-device input; true consumes stale own input.
     static std::optional<bool> rejectOwnedPoint(QObject* receiver, const QEventPoint& point) noexcept;
     bool active() const noexcept { return static_cast<bool>(request_); }
-    bool usableTarget(QQuickItem& item) const; // Same actual window/clip check used immediately before input.
+    bool usableTarget(QQuickItem& item, bool visualOnlySave = false) const; // Same actual window/clip check used immediately before input.
     bool manualDraftPresent() const; // App-private current-focus preflight, never a provider selector.
  signals:
     void activeChanged(bool active);
@@ -77,7 +78,7 @@ class AssistantWidgetInput final : public QObject {
     void pace(int milliseconds);
 
     bool current(std::uint64_t id) const;
-    bool visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter = false) const;
+    bool visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter = false, bool allowDisabledTarget = false) const;
     bool mouse(QEvent::Type type, Qt::MouseButton button);
     bool scroll();
     bool key(int code, Qt::KeyboardModifiers modifiers = Qt::NoModifier, const QString& text = {});

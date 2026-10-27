@@ -9,6 +9,29 @@ import edi.app
 EaComponents.ListView {
     id: table
 
+    function revealRow(index: int): bool {
+        if (index < 0 || index >= count) return false;
+        const originalModel = sourceModel;
+        positionViewAtIndex(index, ListView.Contain);
+        forceLayout();
+        const row = itemAtIndex(index);
+        if (sourceModel !== originalModel || row === null || row.index !== index) return false;
+        const top = row.mapToItem(table, 0, 0).y;
+        const header = headerItem ? headerItem.height : 0;
+        if (top < header) contentY -= header - top;
+        else if (top + row.height > height) contentY += top + row.height - height;
+        forceLayout();
+        return sourceModel === originalModel && itemAtIndex(index) === row && row.index === index;
+    }
+    function revealItem(item: Item): bool {
+        if (item === null) return false;
+        let row = item;
+        while (row !== null && row.parent !== contentItem) row = row.parent;
+        if (row === null || !("index" in row) || itemAtIndex(row.index) !== row) return false;
+        const index = row.index, originalModel = sourceModel;
+        return revealRow(index) && sourceModel === originalModel && itemAtIndex(index) === row;
+    }
+
     // The selection model needs an explicit empty model while a page is being attached.
     property var sourceModel: null
     model: sourceModel ?? null

@@ -2394,7 +2394,43 @@ Native Save delegates to current Session::save or Session::saveProjectAs. Fresh 
 
 Compound setup omits manual background by default, then calls the genuine ordinary Estimate with current saved settings after measured data is loaded. Supplied manual anchors retain exact values and manual ownership. The stock official runtime requests hosted live web search; bounded provider webSearch items, including their actual query/action/attribution payloads, remain ordinary history and report evidence. Public research must not transmit credentials, private paths or raw experiment data. Adaptive scientific guidance and final skill/tool/app improvement recommendations reuse the ordinary assessment.
 
-Automatic reports capture settled native/research steps and final outcomes through the existing writer. A busy writer retains one latest pending capture and catches up on its completion. The attempt's first available project root stays frozen for these captures across Save As/copy changes. Reporting failures remain diagnostics and cannot veto scientific execution.
+Automatic reports capture settled native/research steps and final outcomes through the existing writer. A busy writer retains one latest pending capture and catches up on its completion. Each admitted write freezes its original root; later captures derive the current saved owner/root after Save As or move, while copy leaves that root unchanged. A retired-scope writer completion also wakes a pending latest current-scope capture without presenting the old artifact as the new scope's result. Reporting failures remain diagnostics and cannot veto scientific execution.
 
 
 Both WorkStamps overloads are explicit friends of the editor identity owner. The shared membership helper receives the already captured editor record; it never reads private Project state or invokes unbounded capture. The approved-input data-reader overload reads only its immutable reader path while retaining the original source path for file identity and naming, through the same current powder/reflection assembly. The original three-argument entrance forwards with the same path for both roles. Peak registry enumeration reuses the existing single visitor. LivePreview retains its exact original one-argument apply member as a forwarder alongside explicit receipt overloads.
+
+### Current dev integration: native publication and editor contracts
+
+The current ListView editors own their project/member identity, original draft,
+IME state and once-only commit. Clean formatting never replaces a live draft;
+recycled delegates and late assistant cleanup cannot apply or clear a successor's
+input. The ordinary alias/constraint row actions consume their exact prearmed
+native semantic receipt. The existing free-header menu retains its actual
+fittable/free subset behavior, while the native receipt validates the complete
+requested final set before and after that ordinary action.
+
+Native Estimate returns an actual applied/published outcome. Its original Undo
+snapshot and outcome storage exist before the write; a failed publication or
+retired owner retains the real applied prefix and cannot become a no-effect
+refusal. Compound setup reports a refused/default Estimate as incomplete setup.
+The existing disabled Save button permits only an exact visual cue followed by
+the ordinary native save; no control is enabled or fake-clicked.
+
+Captured reflection input retains the FIRST reader's case-insensitive `.int`
+format selector, with the original source path used only for display identity.
+The four-argument reader requires the approved capture's selector class to match
+its source; it reads only that capture. Ordinary and captured reflection reads
+normalize the FIRST reader's file-read `invalid_argument` to the existing Edi
+`IoError` contract, retaining its diagnostic; independent API validation is not
+blanket-remapped. No original-file reopen or alternate scientific parser exists.
+
+Automatic reports retain actual hosted research settlement/query/source evidence
+through ordinary history. An admitted writer freezes its own root only; later
+captures use the current Session working directory after folder/ZIP Save As, and
+copy preserves it. Any old writer completion wakes the latest pending capture.
+Reports remain in the ZIP working directory until the ordinary Session Save
+owner packs them. Optional report failures never veto science.
+The historical page-first/one-group scientific workflow guidance above is
+superseded: active skills and compiled instructions choose supported actions from
+actual evidence, native prerequisites and explicit user scope. FullProf source
+normalization and scientific conventions remain authoritative.

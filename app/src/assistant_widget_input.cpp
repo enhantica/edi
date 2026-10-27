@@ -217,7 +217,7 @@ bool AssistantWidgetInput::current(std::uint64_t id) const {
     return self && valid && serial_ == id && request_ == request && window_ && request->target &&
         (!draft_ || commit_prepared_ || request->target->property("assistantEditing").toBool());
 }
-bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter) const {
+bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter, bool allowDisabledTarget) const {
     if (!window_ || item.window() != window_ || !window_->isVisible() || item.width() <= 0 || item.height() <= 0) return false;
     QPointF localCenter(scrollGutter ? std::min(1.0, item.width() / 2) : item.width() / 2, item.height() / 2);
     if (!scrollGutter && item.inherits("QQuickTextField")) {
@@ -238,14 +238,15 @@ bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool
     center = item.mapToScene(localCenter);
     if (!std::isfinite(center.x()) || !std::isfinite(center.y()) || !QRectF(0, 0, window_->width(), window_->height()).contains(center)) return false;
     for (auto* ancestor = &item; ancestor; ancestor = ancestor->parentItem()) {
-        if (!ancestor->isVisible() || !ancestor->isEnabled() || ancestor->opacity() <= 0) return false;
+        if (!ancestor->isVisible() || (!ancestor->isEnabled() && !(allowDisabledTarget && ancestor==&item)) || ancestor->opacity() <= 0) return false;
         if (ancestor->clip() && !ancestor->clipRect().contains(ancestor->mapFromScene(center))) return false;
     }
     return true;
 }
-bool AssistantWidgetInput::usableTarget(QQuickItem& item) const {
+bool AssistantWidgetInput::usableTarget(QQuickItem& item, bool visualOnlySave) const {
     QPointF center;
-    return visibleCenter(item, center);
+    if(visualOnlySave && item.objectName()!=QStringLiteral("appBar.button.save"))return false;
+    return visibleCenter(item, center, false, visualOnlySave);
 }
 bool AssistantWidgetInput::manualDraftPresent() const {
     if (!window_) return false;
@@ -266,12 +267,14 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if (request_ || !window_ || !request.target || !request.current || !request.prepareCommit ||
         !request.finishCommit || !request.completed || serial_ == UINT64_MAX)
         throw ControlInputRefusal(ControlCause::Unavailable,"A visible input owner is unavailable");
+    if(request.visualOnlyDisabledTarget && (request.kind!=Kind::FileLoadCue || request.target->objectName()!=QStringLiteral("appBar.button.save")))
+        throw ControlInputRefusal(ControlCause::Unavailable,"Only the existing Save control supports a disabled visual cue");
     const QPointer<AssistantWidgetInput> self(this);
     const auto originalSerial=serial_;
     const bool admitted=request.current();
     if(!self || serial_!=originalSerial || request_)return 0;
     QPointF center;
-    if (!admitted || !request.target || !visibleCenter(*request.target, center, request.kind == Kind::Scroll))
+    if (!admitted || !request.target || !visibleCenter(*request.target, center, request.kind == Kind::Scroll, request.visualOnlyDisabledTarget))
         throw ControlInputRefusal(admitted ? ControlCause::Unavailable : ControlCause::Superseded,"The genuine input control is not visible and current");
     if(!self || serial_!=originalSerial || request_)return 0;
     if (request.kind == Kind::Value || request.kind == Kind::Text)
@@ -404,7 +407,7 @@ void AssistantWidgetInput::advance() noexcept {
     try {
         const bool valid = current(id);
         if (!self) return;
-        if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll)) { if (self && serial_ == id && request_ == request) self->fail(request,id,valid ? ControlCause::Unavailable : ControlCause::Superseded, QT_TR_NOOP("Visible action target changed or is unavailable"), true); return; }
+        if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll, request->visualOnlyDisabledTarget)) { if (self && serial_ == id && request_ == request) self->fail(request,id,valid ? ControlCause::Unavailable : ControlCause::Superseded, QT_TR_NOOP("Visible action target changed or is unavailable"), true); return; }
         // Keep the same step and original authority while another application
         // is active. Never request activation or inject into an inactive window.
         if (!window_->isActive()) { timer_.start(navigation_ms); return; }
