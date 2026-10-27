@@ -5073,6 +5073,7 @@ class Project : public detail::ProjectAnchor {
    private:
     // ADR-0020 §1: the transaction reads and compares the editor record.
     friend WorkStamps work_stamps(const Project& live);
+    friend WorkStamps work_stamps(const Project& live, std::size_t construction_bytes);
     friend bool unchanged_since(const Project& live, const WorkStamps& stamps);
     friend PublishOutcome publish(Project& live, CalculationResult&& result);
     // calculate()'s body: converts, calculates and publishes every bank, or throws first.

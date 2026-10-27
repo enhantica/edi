@@ -150,6 +150,10 @@ LivePreview::~LivePreview() {
     }
 }
 
+void LivePreview::apply(const Edit& edit) {
+    apply(edit, nullptr, nullptr);
+}
+
 void LivePreview::apply(const Edit& edit, bool* applied) {
     apply(edit, applied, nullptr);
 }

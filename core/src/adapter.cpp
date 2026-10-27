@@ -1422,15 +1422,19 @@ PlainDataRows read_plain_data(const std::string& path) {
                          read.counts.reordered,     read.counts.derived};
 }
 
-PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
-                                         bool take_file_name) {
-    PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment,const std::string& path,bool take_file_name) {
+    return experiment_with_plain_data(experiment,path,path,take_file_name);
+}
+
+PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
+                                         const std::string& source_path, bool take_file_name) {
+    PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(source_path).filename().string()};
     if (experiment.reflections.has_value()) {
         // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
         // reader), taking a FullProf file's wavelength at constant wavelength.
         const bool cw = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
         const crysta::ReflectionFile file = crysta::read_reflection_file(
-            path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
+            reader_path, cw ? crysta::BeamModeEnum::ConstantWavelength : crysta::BeamModeEnum::TimeOfFlight);
         load.unweighted = file.skipped_unweighted;
         load.skipped_lines = file.skipped_lines;
         load.skipped = file.skipped_lines.size();
@@ -1473,7 +1477,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         }
         load.experiment.data_file = load.file_name;
         if (take_file_name) {
-            std::string stem = std::filesystem::path(path).stem().string();
+            std::string stem = std::filesystem::path(source_path).stem().string();
             for (char& character : stem) {
                 const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
                                   (character >= '0' && character <= '9') || character == '_' || character == '-';
@@ -1495,7 +1499,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
         }
         return load;
     }
-    PlainDataRows read = read_plain_data(path);
+    PlainDataRows read = read_plain_data(reader_path);
     load.points = read.x.size();
     load.skipped = read.skipped;
     load.nonpositive = read.nonpositive;
@@ -1513,7 +1517,7 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, co
     if (take_file_name) {
         // The file's stem, with anything a datablock name cannot hold made an underscore; a stem the save would
         // still refuse (a reserved device name) leaves the name as it was.
-        std::string stem = std::filesystem::path(path).stem().string();
+        std::string stem = std::filesystem::path(source_path).stem().string();
         for (char& character : stem) {
             const bool keep = (character >= 'a' && character <= 'z') || (character >= 'A' && character <= 'Z') ||
                               (character >= '0' && character <= '9') || character == '_' || character == '-';
@@ -4208,13 +4212,14 @@ void Project::publish_calculation(DueEstimates due) {
 // --- (edi ADR-0020 §1): the publication transaction -------------------------------
 
 namespace {
-void capture_work_memberships(const Project& live,WorkStamps& stamps) {
+void capture_work_memberships(const Project& live,WorkStamps& stamps,
+                              std::shared_ptr<const detail::EditRecord> edits) {
     stamps.experiments = live.experiments.record();
     stamps.structures = live.structures.record();
     stamps.experiments_generation = live.experiments.generation();
     stamps.structures_generation = live.structures.generation();
-    stamps.edits = live.edits_.record();
-    stamps.edits_at = live.edits_.record()->epoch.value();
+    stamps.edits = std::move(edits);
+    stamps.edits_at = stamps.edits->epoch.value();
     stamps.aliases = live.aliases.record();
     stamps.constraints = live.constraints.record();
 }
@@ -4230,7 +4235,7 @@ WorkStamps work_stamps(const Project& live) {
     for (const auto& structure_item : live.structures) {
         stamps.structure_inputs.push_back(detail::geometry_inputs(*structure_item));
     }
-    capture_work_memberships(live,stamps);
+    capture_work_memberships(live,stamps,live.edits_.record());
     stamps.relations = detail::relation_inputs(live.aliases, live.constraints);
     return stamps;
 }
@@ -4262,7 +4267,7 @@ WorkStamps work_stamps(const Project& live,std::size_t construction_bytes) {
     }
     stamps.relations.reserve(detail::relation_inputs_size(live.aliases,live.constraints,construction_bytes));
     detail::relation_inputs_into(stamps.relations,live.aliases,live.constraints);
-    capture_work_memberships(live,stamps);
+    capture_work_memberships(live,stamps,live.edits_.record());
     return stamps;
 }
 
