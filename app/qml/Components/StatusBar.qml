@@ -171,9 +171,11 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            if (progress.visible) {
-                width += progress.width;
-                shown += 1;
+            for (const extra of [showing, progress]) {
+                if (extra.visible) {
+                    width += extra.width;
+                    shown += 1;
+                }
             }
             if (fitButtons.visible) {
                 width += fitButtons.widthWith(itemWidth);
@@ -285,6 +287,18 @@ EaElements.StatusBar {
                 valueText: bar.fit ? bar.fit.goodnessOfFit.replace(/\s*→\s*/g, "→") : ""
                 ToolTip.text: fitArea.scanSummary ? qsTr("Reduced χ² over the scan's files, least to greatest") : qsTr("Reduced χ², before and after the fit")
             }
+        }
+        // Every pattern, display catches up: the patterns drawn of those the scan has sent, while some wait.
+        Text {
+            id: showing
+            width: Math.ceil(implicitWidth)
+            objectName: "statusBar.fit.showing"
+            anchors.verticalCenter: parent.verticalCenter
+            visible: bar.fit !== null && bar.fit.scanBehind
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            color: EaStyle.Colors.themeForeground
+            text: bar.fit !== null ? qsTr("Showing %1 of %2").arg(bar.fit.scanPatternUpdates).arg(bar.fit.scanReceived) : ""
         }
         // Before the fit buttons, at the right: the live values before it change width, and the bar stays where it is.
         FitProgressBar {

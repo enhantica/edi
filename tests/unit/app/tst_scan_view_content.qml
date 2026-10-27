@@ -50,6 +50,25 @@ Rectangle {
             AppPreferencesDialog {}
         }
         property var samples: JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/viridis.json")).samples
+        function test_private_copy_required() {
+            for (const root of ["", "experiments", "file://relative", "https://example.invalid/project"])
+                for (const generator of [Input.prepare, Input.joint, Input.dense, Input.edgeBanks, Input.gap, Input.coincident]) {
+                    let writes = 0, refused = false;
+                    const proof = {
+                        write: () => {
+                            ++writes;
+                            return true;
+                        }
+                    };
+                    try {
+                        generator(proof, root);
+                    } catch (error) {
+                        refused = String(error).includes("nonempty absolute private project URL");
+                    }
+                    verify(refused, "Every scan fixture generator refuses an absent or relative private-copy URL before using it");
+                    compare(writes, 0, "A failed private project copy cannot write fixture data into the caller's working tree");
+                }
+        }
         function logicalImage(item, image = grabImage(item)) {
             verify(image.width > 0 && image.height > 0 && item.width > 0 && item.height > 0, "The rendered observer requires a nonempty image and logical item");
             const sx = image.width / item.width, sy = image.height / item.height;
@@ -81,12 +100,13 @@ Rectangle {
             Style.Colors.theme = Style.Colors.LightTheme;
             Preferences.resetToDefaults();
             Preferences.patternYScale = "linear";
+            Preferences.chartHighlightSelected = false;
             if (typeof Preferences.scanMapColours === "string")
                 Preferences.scanMapColours = "viridis";
             if (typeof Preferences.scanStackedPalette === "string")
                 Preferences.scanStackedPalette = "ediNatural";
             const location = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/scan_template/project"));
-            Input.prepare(SettingsProof, location, kind);
+            Input.prepare(SettingsProof, location, mode === "stacked" && kind === "rows" ? "bounded-rows" : kind);
             verify(Session.openProject(location), "The scan actor opens a private real project with independent analytic datasets");
             compare(Session.project.experiments.count, 3, "Every analytic dataset appears in the real scan selector");
             Session.project.currentExperimentIndex = 1;
@@ -98,6 +118,7 @@ Rectangle {
             return Session.project.scanViews;
         }
         function ready(scan) {
+            Preferences.chartHighlightSelected = false;
             chart.shown = true;
             tryCompare(scan, "loaded", scan.count, 8000, "Every listed dataset finishes its asynchronous read");
             surface.Window.window.update();
@@ -109,72 +130,53 @@ Rectangle {
                 verify(waitForRendering(chart), "The forward palette setup reaches a completed frame");
             }
         }
+        function exposeStack() {
+            if (chart.mode === "stacked") {
+                chart.zoomY = [-.05, 1.05];
+                chart.Window.window.update();
+                verify(waitForPolish(chart) && waitForRendering(chart), "The colour witness gives boundary Stacked lines clear space from the plot frame");
+            }
+        }
+        function stackedAt(index, count, fraction) {
+            const offset = Preferences.scanStackedOffset / 100;
+            const height = Preferences.scanStackedSize === 0 ? 1 / (1 + (count - 1) * offset) : Preferences.scanStackedSize / 100;
+            return height * (index * offset + fraction);
+        }
+        function selectionLabel(index) {
+            const axes = named("axes"), coordinate = chart.mode === "stacked" ? stackedAt(index, chart.scan.count, 0) : chart.scan.rowOf(index);
+            if (coordinate < axes.axisY.min || coordinate > axes.axisY.max)
+                return null;
+            surface.Window.window.update();
+            verify(waitForPolish(chart) && waitForRendering(chart), "The selected row label reaches its actual rendered layout");
+            const matches = Render.descendants(chart).filter(item => item.objectName === "scanView." + chart.mode + ".rowLabel." + index && item.visible && item.opacity > 0);
+            compare(matches.length, 1, "Highlight off identifies exactly one shown label for the selected dataset");
+            const label = matches[0];
+            verify(label.segments.some(segment => segment.text && segment.bold === true), "The shown dataset's actual IconLine text segment is bold");
+            compare(String(label.textColor), String(Style.Colors.themeAccent), "The shown dataset's actual label uses the theme accent");
+            const text = Render.texts(label).find(item => item.font.family === Style.Fonts.ptSansBold.name && item.font.styleName === "Bold" && item.opacity > 0);
+            verify(text !== undefined && Ui.rendered(text), "The selected label loads the real bold face in the visible plot");
+            const root = Ui.windowRoot(chart.Window.window), at = text.mapToItem(root, 0, 0);
+            const opacity = label.opacity;
+            label.opacity = 0;
+            chart.Window.window.update();
+            verify(waitForRendering(chart), "The label ink reference captures the real underlay without its text");
+            const underlay = logicalImage(root);
+            label.opacity = opacity;
+            chart.Window.window.update();
+            verify(waitForRendering(chart), "The selected label is restored before its actual ink is compared");
+            const frame = logicalImage(root);
+            let drawn = false;
+            for (let y = 0; y < text.height && !drawn; ++y)
+                for (let x = 0; x < text.width && !drawn; ++x)
+                    drawn = ink(frame.pixel(Math.floor(at.x + x), Math.floor(at.y + y)), Style.Colors.themeAccent, underlay.pixel(Math.floor(at.x + x), Math.floor(at.y + y)));
+            verify(drawn, "The selected label has actual accent ink inside its rendered text bounds");
+            compare(findChild(chart, "scanView." + chart.mode + ".current"), null, "The retired selection rectangle is absent from the actual scan chart");
+            return label;
+        }
         function named(suffix) {
             const item = findChild(chart, "scanView." + chart.mode + "." + suffix);
             verify(item !== null, "The scan actor reaches its actual " + suffix + " item");
             return item;
-        }
-        function outlineBounds(mode, index, rows, levels) {
-            const low = mode === "map" ? (index ? (rows[index - 1] + rows[index]) / 2 : rows[0] - (rows[1] - rows[0]) / 2) : rows[index];
-            const high = mode === "map" ? (index + 1 < rows.length ? (rows[index] + rows[index + 1]) / 2 : rows[index] + (rows[index] - rows[index - 1]) / 2) : rows[index] + levels[index] / 255 * Session.project.scanViews.stackHeight;
-            return [low, high];
-        }
-        function outlineGeometry(mode, index, rows, levels) {
-            const marker = named("current"), layer = named("layer"), axes = named("axes"), limits = outlineBounds(mode, index, rows, levels);
-            verify(marker.visible && marker.height > 3, "Stacked and Map mark a selected dataset with a visible open rectangle even without a fit");
-            compare(marker.width, layer.width, "The selected dataset's open rectangle spans the full plot width");
-            const top = Math.max(0, (axes.axisY.max - limits[1]) / (axes.axisY.max - axes.axisY.min) * layer.height);
-            const bottom = Math.min(layer.height, (axes.axisY.max - limits[0]) / (axes.axisY.max - axes.axisY.min) * layer.height);
-            const actual = marker.mapToItem(layer, 0, 0);
-            const allowance = mode === "stacked" ? 3.5 : .75;
-            verify(Math.abs(actual.y - top) <= allowance && Math.abs(actual.y + marker.height - bottom) <= allowance, "The selected rectangle follows independently computed dataset-band or shown-curve bounds after coordinate changes");
-            return [top, bottom];
-        }
-        function outlinePixels(mode, index, dark, background) {
-            const layer = named("layer"), bounds = outlineGeometry(mode, index, [100, 250, 700], [0, 128, 255]), origin = layer.mapToItem(chart, 0, 0), frame = logicalImage(chart);
-            const core = dark ? 1 : 0, edge = 1 - core;
-            function actual(x, y) {
-                return frame.pixel(Math.floor(origin.x + x), Math.floor(origin.y + y));
-            }
-            function below(x, y) {
-                return background.pixel(Math.floor(origin.x + x), Math.floor(origin.y + y));
-            }
-            function coreAt(x, y) {
-                return ["r", "g", "b"].every(c => Math.abs(actual(x, y)[c] - core) <= 1 / 255);
-            }
-            for (const [bound, inside] of [[bounds[0], 1], [bounds[1], -1]]) {
-                const marker = named("current"), rectangle = marker.mapToItem(layer, 0, 0);
-                const near = Math.round(inside === 1 ? rectangle.y + 1 : rectangle.y + marker.height - 2);
-                const y = [near - 1, near, near + 1].filter(candidate => candidate >= 1 && candidate < layer.height - 1).find(candidate => [.25, .5, .75].every(place => coreAt(Math.round(layer.width * place), candidate)));
-                verify(y !== undefined, "Each horizontal rectangle border has one opaque pixel at its independent dataset edge" + "; expectedCore=" + core + " bound=" + bound + " candidates=" + JSON.stringify([near - 1, near, near + 1].filter(candidate => candidate >= 1 && candidate < layer.height - 1).map(candidate => ({
-                            y: candidate,
-                            pixels: [.25, .5, .75].map(place => ({
-                                        x: Math.round(layer.width * place),
-                                        colour: String(actual(Math.round(layer.width * place), candidate))
-                                    }))
-                        }))));
-                for (const place of [.25, .5, .75]) {
-                    const x = Math.round(layer.width * place);
-                    for (const offset of [-1, 1]) {
-                        const pixel = actual(x, y + offset), prior = below(x, y + offset);
-                        verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (edge + prior[c]) / 2) <= 1 / 255), "Exactly one half-transparent opposite-colour pixel lies outside and inside the rectangle border" + "; x=" + x + " y=" + (y + offset) + " expectedRGB=" + JSON.stringify(["r", "g", "b"].map(c => (edge + prior[c]) / 2)) + " read=" + pixel + " underlay=" + prior);
-                    }
-                    const second = actual(x, y + inside * 2), prior = below(x, y + inside * 2);
-                    verify(["r", "g", "b"].every(c => Math.abs(second[c] - prior[c]) <= 1 / 255), "The rectangle border is one opaque pixel plus one edge on either side, with no extra interior stripe" + "; x=" + x + " y=" + (y + inside * 2) + " expected=" + prior + " read=" + second);
-                }
-            }
-            for (const side of [1, Math.round(layer.width) - 2]) {
-                const y = Math.round((bounds[0] + bounds[1]) / 2);
-                verify(coreAt(side, y), "The selected dataset rectangle has a one-pixel opaque vertical side in the owner theme colour" + "; x=" + side + " y=" + y + " expectedCore=" + core + " read=" + actual(side, y));
-                for (const offset of [-1, 1]) {
-                    const pixel = actual(side + offset, y), prior = below(side + offset, y);
-                    verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (edge + prior[c]) / 2) <= 1 / 255), "The vertical rectangle sides have the same half-transparent opposite-colour inner and outer lines" + "; x=" + (side + offset) + " y=" + y + " expectedRGB=" + JSON.stringify(["r", "g", "b"].map(c => (edge + prior[c]) / 2)) + " read=" + pixel + " underlay=" + prior);
-                }
-            }
-            for (const place of [.25, .5, .75]) {
-                const x = Math.round(layer.width * place), y = Math.round((bounds[0] + bounds[1]) / 2), pixel = actual(x, y), prior = below(x, y);
-                verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - prior[c]) <= 1 / 255), "The open rectangle has an empty interior and preserves the actual data pixels underneath it" + "; x=" + x + " y=" + y + " expected=" + prior + " read=" + pixel);
-            }
         }
         function test_current_row_tracks_async_coordinates_data() {
             return [
@@ -190,13 +192,12 @@ Rectangle {
         }
         function test_current_row_tracks_async_coordinates(data) {
             const scan = open(data.mode);
-            const marker = named("current");
             compare(scan.loaded, 0, "The marker is observed before background reading starts");
             compare(scan.rowOf(1), 1, "The selected dataset begins at its independent file-index position");
             ready(scan);
             compare(Session.project.currentExperimentIndex, 1, "The selected dataset remains unchanged throughout asynchronous placement");
             compare(scan.rowOf(1), 250, "The second independent TEMP field becomes the scan coordinate");
-            outlineGeometry(data.mode, 1, [100, 250, 700], [255, 255, 255]);
+            selectionLabel(1);
         }
         function test_unreadable_pattern_is_visibly_refused_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -211,6 +212,7 @@ Rectangle {
         function test_map_key_and_image_use_frozen_interior_samples() {
             const scan = open("map");
             Preferences.patternYScale = "linear";
+            Preferences.chartHighlightSelected = false;
             ready(scan);
             const layer = named("layer"), image = logicalImage(chart);
             compare(scan.xMin, 10, "The analytic map reads its declared x minimum");
@@ -218,8 +220,7 @@ Rectangle {
             compare(layer.displayMin, 0, "The map normalization starts at the independent zero-intensity band");
             compare(layer.displayMax, 255, "The map normalization ends at the independent maximum-intensity band");
             verify(image.width > 300 && image.height > 100, "The colormap witness captures actual nonempty Map pixels");
-            const bars = Render.descendants(chart).filter(item => item !== chart && item.width > 2 && item.width < 40 && item.height > layer.height * 0.8 && item.x > 0);
-            const bar = bars.find(item => item.mapToItem(chart, 0, 0).x > layer.mapToItem(chart, layer.width, 0).x);
+            const bar = named("colourBar.colours");
             verify(bar !== undefined, "The quantitative colour key is a real drawn item beside the image");
             function pixel(item, x, y) {
                 const point = item.mapToItem(chart, x, y);
@@ -319,6 +320,7 @@ Rectangle {
         function test_every_pattern_is_drawn(data) {
             const scan = open(data.mode, "rows");
             ready(scan);
+            exposeStack();
             const layer = named("layer"), axes = named("axes");
             const colours = data.mode === "stacked" ? Approved.colours(SettingsProof, "ediNatural", "measured", 3, false) : ["#440154", "#21918c", "#fde725"];
             for (let index = 0; index < 3; ++index) {
@@ -327,7 +329,7 @@ Rectangle {
                     verify(waitForRendering(chart), "The selected-row overlay moves away from each independent map-row sample");
                 }
                 const frame = logicalImage(chart);
-                const coordinate = [100, 250, 700][index] + (data.mode === "stacked" ? [0, 128, 255][index] / 255 * scan.stackHeight : 0);
+                const coordinate = data.mode === "stacked" ? stackedAt(index, 3, [0, 128, 255][index] / 255) : [100, 250, 700][index];
                 const py = (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                 const at = layer.mapToItem(chart, layer.width * 0.4, py);
                 let present = false;
@@ -356,13 +358,13 @@ Rectangle {
                 verify(point.y >= 0 && point.y + text.height <= chart.height + 0.5, "Every scan label, including the Map maximum, fits inside the view");
             }
         }
-        function test_selected_map_rectangle_is_always_drawn() {
+        function test_selected_map_label_is_always_drawn() {
             const scan = open("map");
             ready(scan);
             for (const index of [0, 2, 1]) {
                 Session.project.currentExperimentIndex = index;
                 verify(waitForRendering(chart), "The newly selected Map dataset reaches a completed real frame");
-                outlineGeometry("map", index, [100, 250, 700], [255, 255, 255]);
+                selectionLabel(index);
             }
         }
         function axisControl(axis) {
@@ -464,7 +466,11 @@ Rectangle {
             ready(scan);
             const control = axisControl(data.axis), original = control.currentIndex, before = plotDigest();
             choose(control, (original + 1) % control.count);
-            tryVerify(() => plotDigest() !== before, 1000, "Changing the " + data.axis + " type changes actual scan plot pixels, beyond the button's label; selector=" + control.objectName + " originalIndex=" + original + " expectedIndex=" + ((original + 1) % control.count) + " readIndex=" + control.currentIndex + " displayText=" + control.displayText);
+            if (data.mode === "stacked" && data.axis === "y") {
+                compare(plotDigest(), before, "Switching from monotonic scientific values to file order preserves the new rank-based Stacked placement");
+                verify(rowLabels().some(item => /all594/.test(item.text)), "The Stacked row-order choice changes the actual row labels to file names");
+            } else
+                tryVerify(() => plotDigest() !== before, 1000, "Changing the " + data.axis + " type changes actual scan plot pixels, beyond the button's label; selector=" + control.objectName + " originalIndex=" + original + " expectedIndex=" + ((original + 1) % control.count) + " readIndex=" + control.currentIndex + " displayText=" + control.displayText);
             choose(control, original);
             tryVerify(() => plotDigest() === before, 1000, "Restoring the axis type restores the same actual analytic scan drawing");
         }
@@ -549,9 +555,9 @@ Rectangle {
             const scan = open("stacked", "rows");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
+            exposeStack();
             const choices = chart.stackedChoices, schemes = Approved.reference(SettingsProof).schemes;
             verify(choices.every(name => !String(name).startsWith("ramp:")), "Stacked offers no background-to-colour shades after the owner's removal decision");
-            named("current").opacity = 0;
             const selector = paletteSelector("stacked");
             const pattern = createTemporaryObject(patternReferenceFactory, surface, {
                 experiment: Session.project.currentExperiment
@@ -567,7 +573,7 @@ Rectangle {
                 const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
                 const colours = Approved.colours(SettingsProof, scheme.id, "measured", 3, data.dark);
                 for (let row = 0; row < 3; ++row) {
-                    const coordinate = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
+                    const coordinate = stackedAt(row, 3, [0, 128, 255][row] / 255);
                     const py = Math.round((axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height), px = Math.round(layer.width * .4), expected = rgb(colours[row]);
                     let coverage = 0;
                     for (let dy = -6; dy <= 6; ++dy) {
@@ -578,14 +584,14 @@ Rectangle {
                         verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (bg[c] + alpha * (expected[c] - bg[c]))) <= 3 / 255), "Every width sample is a composite of the independent scheme colour over the plot background");
                         coverage += Math.max(0, Math.min(1, alpha));
                     }
-                    verify(Math.abs(coverage - measured.width) <= .1, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + measured.width + " sampledBand=" + JSON.stringify({
+                    verify(Math.abs(coverage - measured.width) <= .15 * measured.width, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + measured.width + " sampledBand=" + JSON.stringify({
                         x: px,
                         yMin: py - 6,
                         yMax: py + 6,
                         coordinate: coordinate,
                         rowValue: [100, 250, 700][row],
                         level: [0, 128, 255][row],
-                        stackHeight: scan.stackHeight,
+                        patternHeight: layer.patternHeight,
                         domain: [axes.axisY.min, axes.axisY.max],
                         layerSize: [layer.width, layer.height]
                     }) + " expectedColour=" + expected + " pixels=" + JSON.stringify(Array.from({
@@ -618,6 +624,7 @@ Rectangle {
             const scan = open(data.mode, data.mode === "stacked" ? "rows" : "bands");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
+            exposeStack();
             const references = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json"));
             const choices = data.mode === "map" ? chart.mapChoices : chart.stackedChoices;
             verify(choices !== undefined && choices.length > 1, "The real view exposes its offered palette choices for independent source matching");
@@ -649,9 +656,9 @@ Rectangle {
                     for (let row = 0; row < 3; ++row) {
                         Session.project.currentExperimentIndex = (row + 1) % 3;
                         surface.Window.window.update();
-                        verify(waitForRendering(chart), "The selection outline moves away before observing each published Stacked curve colour");
+                        verify(waitForRendering(chart), "The dataset choice settles before observing each published Stacked curve colour");
                         const frame = logicalImage(chart);
-                        const coordinate = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
+                        const coordinate = stackedAt(row, 3, [0, 128, 255][row] / 255);
                         const py = (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                         const point = layer.mapToItem(chart, layer.width * 0.4, py);
                         const colour = reference.colours[Math.round((0.1 + 0.8 * row / 2) * 255)];
@@ -705,8 +712,7 @@ Rectangle {
             verify(pattern !== null, "Reversed ramps use the actual Pattern plot background as their relational input");
             const schemes = Approved.reference(SettingsProof).schemes;
             const layer = named("layer");
-            const bars = Render.descendants(chart).filter(item => item !== chart && item.width > 2 && item.width < 40 && item.height > layer.height * 0.8 && item.x > 0);
-            const bar = bars.find(item => item.mapToItem(chart, 0, 0).x > layer.mapToItem(chart, layer.width, 0).x);
+            const bar = named("colourBar.colours");
             verify(bar !== undefined, "The reverse witness reaches the actual drawn quantitative colour key");
             for (const requested of [!data.reverse, data.reverse]) {
                 if (toggle.checked !== requested)
@@ -738,14 +744,10 @@ Rectangle {
             return Render.descendants(root).find(item => typeof item.checked === "boolean" && /smooth|stepp|interpol/i.test(String(item.objectName) + " " + item.toolTip));
         }
         function mapStrip() {
-            const layer = named("layer"), axes = named("axes"), marker = named("current");
-            marker.visible = false;
+            const layer = named("layer"), axes = named("axes");
             verify(waitForRendering(chart), "Map interpolation samples exclude only the unrelated selection overlay");
             const frame = logicalImage(chart), strip = [];
             for (let py = 2; py < layer.height - 2; ++py) {
-                const top = marker.mapToItem(layer, 0, 0).y;
-                if (Math.abs(py - top) <= 2 || Math.abs(py - top - marker.height) <= 2)
-                    continue;
                 const at = layer.mapToItem(chart, layer.width * 0.4, py);
                 const value = axes.axisY.max - py / layer.height * (axes.axisY.max - axes.axisY.min);
                 strip.push({
@@ -754,7 +756,6 @@ Rectangle {
                     py
                 });
             }
-            marker.visible = true;
             return strip;
         }
         function smoothStrip(strip) {
@@ -781,8 +782,6 @@ Rectangle {
             return levels[own];
         }
         function checkEdgePixels(bounds, levels, supports, columns, smooth) {
-            const marker = named("current");
-            marker.visible = false;
             verify(waitForRendering(chart), "The independent band-colour observation has a completed frame without its selection overlay");
             const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
             const table = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
@@ -804,7 +803,6 @@ Rectangle {
                             verify(candidates.some(c => ["r", "g", "b"].every(k => Math.abs(c[k] - pixel[k]) <= 2 / 255)), "Map pixels retain their own dataset except inside the quarter-band edge zone; row=" + row + " fraction=" + fraction + " x=" + x + " smooth=" + smooth + " actual=" + pixel + " analytic intensity=" + value);
                         }
                     }
-            marker.visible = true;
         }
         function test_map_edge_bands_data() {
             const rows = [];
@@ -874,7 +872,6 @@ Rectangle {
                 mouseClick(toggle, toggle.width / 2, toggle.height / 2);
             const bounds = data.near ? [95, 105, 555, 1005] : [-345, 545, 995, 1005];
             chart.setZoom([30, 60], data.near ? [95, 235] : [860, 1005]);
-            named("current").visible = false;
             verify(waitForRendering(chart), "The highly uneven Map draws its zoomed edge without selection ink");
             const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
             const dy = (axes.axisY.max - axes.axisY.min) / layer.height;
@@ -1106,8 +1103,8 @@ Rectangle {
             const tools = row.children.filter(item => item.visible && item.width > 0);
             const left = Math.min(...tools.map(item => item.mapToItem(chart, 0, 0).x));
             const right = Math.max(...tools.map(item => item.mapToItem(chart, item.width, 0).x));
-            const layer = named("layer"), centre = layer.mapToItem(chart, layer.width / 2, 0).x;
-            verify(Math.abs((left + right) / 2 - centre) <= 1, "The second toolbar line is horizontally centred above its plot like the Pattern toolbar" + "; expectedPlotCentre=" + centre + " readLineCentre=" + ((left + right) / 2) + " readExtents=" + JSON.stringify([left, right]) + " plot=" + JSON.stringify({
+            const layer = named("layer"), centre = chart.width / 2;
+            verify(Math.abs((left + right) / 2 - centre) <= 1, "The wrapped button line shares the chart and dataset selector's horizontal centre" + "; expectedSelectorCentre=" + centre + " readLineCentre=" + ((left + right) / 2) + " readExtents=" + JSON.stringify([left, right]) + " plot=" + JSON.stringify({
                 left: layer.mapToItem(chart, 0, 0).x,
                 width: layer.width
             }) + " tools=" + JSON.stringify(tools.map(item => ({
@@ -1162,7 +1159,7 @@ Rectangle {
                     const colour = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[1];
                     const expected = rgb(colour);
                     for (const intensity of [low, high]) {
-                        const y = (axes.axisY.max - (250 + intensity / 255 * scan.stackHeight)) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                        const y = (axes.axisY.max - (stackedAt(1, 3, intensity / 255))) / (axes.axisY.max - axes.axisY.min) * layer.height;
                         const at = layer.mapToItem(chart, column + .5, y);
                         let hit = false;
                         for (let dx = -1; dx <= 1; ++dx)
@@ -1171,7 +1168,7 @@ Rectangle {
                         verify(hit, "A zoomed Stacked pixel column retains the true independently enumerated visible minimum and maximum");
                     }
                     for (const outside of [low - 40, high + 40].filter(value => value > 0 && value < 255)) {
-                        const y = (axes.axisY.max - (250 + outside / 255 * scan.stackHeight)) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                        const y = (axes.axisY.max - (stackedAt(1, 3, outside / 255))) / (axes.axisY.max - axes.axisY.min) * layer.height;
                         const at = layer.mapToItem(chart, column + .5, y);
                         verify(!ink(coarse.pixel(Math.round(at.x), Math.round(at.y)), expected, chart.colors.chartBackground), "A visible-range Stacked column has no spurious ink from extrema outside its actual visible samples");
                     }
@@ -1191,7 +1188,7 @@ Rectangle {
                 const px = (x - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
                 const intensity = values[i % 8];
                 if (data.mode === "stacked") {
-                    const at = layer.mapToItem(chart, px, (axes.axisY.max - (250 + intensity / 255 * scan.stackHeight)) / (axes.axisY.max - axes.axisY.min) * layer.height);
+                    const at = layer.mapToItem(chart, px, (axes.axisY.max - (stackedAt(1, 3, intensity / 255))) / (axes.axisY.max - axes.axisY.min) * layer.height);
                     const expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[1]);
                     let hit = false;
                     for (let dx = -1; dx <= 1; ++dx)
@@ -1228,6 +1225,16 @@ Rectangle {
             return cases;
         }
         function test_owner_indicator(data) {
+            if (data.mode !== "evolution") {
+                const scan = open(data.mode, "rows");
+                Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
+                ready(scan);
+                for (const row of [0, 2, 1]) {
+                    Session.project.currentExperimentIndex = row;
+                    selectionLabel(row);
+                }
+                return;
+            }
             let layer, axes, pointer, marker, value;
             if (data.mode === "evolution") {
                 const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/report_evolution/project"));
@@ -1241,14 +1248,6 @@ Rectangle {
                 pointer = findChild(chart, "evolution.pointer");
                 marker = findChild(chart, "evolution.current");
                 value = 311.75;
-            } else {
-                const scan = open(data.mode, "rows");
-                ready(scan);
-                layer = named("layer");
-                axes = named("axes");
-                pointer = named("pointer");
-                marker = named("current");
-                value = 250;
             }
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             verify(layer !== null && axes !== null && pointer !== null && marker !== null, "Each scan chart supplies a real selected-pattern indicator and plot for pixel inspection");
@@ -1264,10 +1263,6 @@ Rectangle {
             mouseClick(pointer, vertical ? position : pointer.width * .6, vertical ? pointer.height * .5 : position);
             tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Real chart input selects the middle independent dataset on every scan chart");
             verify(waitForRendering(chart), "The newly selected indicator has a completed actual frame");
-            if (!vertical) {
-                outlinePixels(data.mode, 1, data.dark, background);
-                return;
-            }
             compare(vertical ? marker.width : marker.height, 4, "Every selected-pattern indicator occupies exactly four logical pixels");
             const children = marker.children.filter(item => item.visible && item.color !== undefined);
             compare(children.length, 3, "The unified indicator draws one core and two border strips");
@@ -1346,11 +1341,10 @@ Rectangle {
                 activate(index, false);
             }
             activate(active, false);
-            named("current").opacity = 0;
-            verify(waitForRendering(chart), "The excluded-data observer captures the real plot without its separate selection outline");
+            verify(waitForRendering(chart), "The excluded-data observer captures the real plot with equal dataset colours");
             const layer = named("layer"), axes = named("axes");
             const x = value => Math.round((value - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * (layer.width - 1));
-            const traceY = 100 + 64 / 255 * scan.stackHeight;
+            const traceY = stackedAt(0, 3, 64 / 255);
             const y = Math.round((axes.axisY.max - (data.mode === "map" ? 175 : traceY)) / (axes.axisY.max - axes.axisY.min) * (layer.height - 1));
             function sample(image, x, y) {
                 const at = layer.mapToItem(chart, x, y);
@@ -1363,7 +1357,7 @@ Rectangle {
             const gap = logicalImage(chart), blank = sample(gap, x(41), y - 6);
             verify(blank.a > 0, "On draws a visible tint in the otherwise empty excluded gap");
             if (data.mode === "stacked")
-                verify([-2, -1, 0, 1, 2].some(dy => ink(sample(full, x(42), y + dy), expected, blank)), "Off draws the independently coloured measured trace over the same excluded-region tint retained by On; expected=" + expected + "; blank=" + blank + "; geometry=" + [x(42), y, scan.stackHeight, axes.axisY.min, axes.axisY.max] + "; samples=" + [-3, -2, -1, 0, 1, 2, 3].map(dy => String(sample(full, x(42), y + dy))));
+                verify([-2, -1, 0, 1, 2].some(dy => ink(sample(full, x(42), y + dy), expected, blank)), "Off draws the independently coloured measured trace over the same excluded-region tint retained by On; expected=" + expected + "; blank=" + blank + "; geometry=" + [x(42), y, layer.patternHeight, axes.axisY.min, axes.axisY.max] + "; samples=" + [-3, -2, -1, 0, 1, 2, 3].map(dy => String(sample(full, x(42), y + dy))));
             for (let px = x(40); px <= x(44); ++px)
                 for (let dy = -2; dy <= 2; ++dy)
                     compare(String(sample(gap, px, y + dy)), String(sample(gap, px, Math.floor(layer.height * .15))), "On removes all measured ink inside the independently specified excluded interval, leaving an empty uniformly tinted gap" + "; x=" + px + " y=" + (y + dy) + " read=" + sample(gap, px, y + dy) + " expected=" + sample(gap, px, Math.floor(layer.height * .15)) + " referenceY=" + Math.floor(layer.height * .15));
@@ -1467,9 +1461,10 @@ Rectangle {
                 const label = labels[0], left = label.mapToItem(chart, 0, 0), right = label.mapToItem(chart, label.width, label.height);
                 verify(left.x >= 0 && right.x < origin.x, "Every complete joint experiment name lies outside the plot to the left of its y axis");
                 const centre = label.mapToItem(chart, label.width / 2, data.mode === "stacked" ? label.height : label.height / 2).y;
-                const wanted = origin.y + (axes.axisY.max - row) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                const coordinate = data.mode === "stacked" ? stackedAt(row, 2, 0) : row;
+                const wanted = origin.y + (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                 verify(Math.abs(centre - wanted) <= 1, "Each joint label ends at its Stacked baseline or is centred on its Map row");
-                compare(String(label.color).toLowerCase(), expected[row], "Each joint dataset name uses its independently approved measured-data colour in both themes");
+                tryCompare(label, "color", row === Session.project.currentExperimentIndex ? Style.Colors.themeAccent : rgb(expected[row]), 2000, "Each joint dataset name settles to its dataset colour or the selected bold accent in both themes");
                 let parent = label.parent;
                 while (parent && parent.segments === undefined)
                     parent = parent.parent;
@@ -1477,9 +1472,9 @@ Rectangle {
                 const icons = Render.texts(parent).filter(item => item !== label && String(item.font.family).includes("Awesome"));
                 compare(icons.length, 1, "Every outside joint row label has exactly one real experiment icon");
                 verify(parent.segments.some(piece => piece.icon === "microscope"), "The joint row uses the prior experiment list's microscope icon");
-                compare(String(icons[0].color).toLowerCase(), expected[row], "The experiment icon and its name share the independent dataset colour");
+                compare(String(icons[0].color).toLowerCase(), row === Session.project.currentExperimentIndex ? String(Style.Colors.themeAccent).toLowerCase() : expected[row], "The experiment icon and its name share the independent dataset colour");
                 verify(icons[0].mapToItem(chart, icons[0].width, 0).x <= left.x, "The experiment icon precedes its name outside the axis");
-                const frame = logicalImage(chart), inkColour = rgb(expected[row]);
+                const frame = logicalImage(chart), inkColour = row === Session.project.currentExperimentIndex ? Style.Colors.themeAccent : rgb(expected[row]);
                 for (const item of [label, icons[0]]) {
                     const at = item.mapToItem(chart, 0, 0);
                     let painted = false;
@@ -1501,6 +1496,7 @@ Rectangle {
             });
             const scan = Session.project.scanViews;
             ready(scan);
+            exposeStack();
             compare(scan.count, 2, "Joint chart rows cover every project experiment exactly once");
             compare(scan.rowOf(0), 0, "The first joint experiment occupies index zero rather than a scan coordinate");
             compare(scan.rowOf(1), 1, "The second joint experiment follows the first in project order");
@@ -1520,7 +1516,7 @@ Rectangle {
             const frame = logicalImage(chart), measured = Approved.colours(SettingsProof, "ediNatural", "measured", 2, false);
             for (let row = 0; row < 2; ++row) {
                 const x = (1.8 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
-                const y = data.mode === "stacked" ? row + scan.stackHeight : row;
+                const y = data.mode === "stacked" ? stackedAt(row, 2, 1) : row;
                 const at = layer.mapToItem(chart, x, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height + (data.mode === "map" ? (row === 0 ? -5 : 5) : 0));
                 const expected = data.mode === "stacked" ? rgb(measured[row]) : rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 1, false)[0]);
                 let hit = false;
@@ -1535,11 +1531,11 @@ Rectangle {
                             colour: String(frame.pixel(Math.round(at.x) + i % 5 - 2, Math.round(at.y) + Math.floor(i / 5) - 2))
                         }))));
             }
-            const pointer = named("pointer"), marker = named("current");
+            const pointer = named("pointer");
             const py = (axes.axisY.max - 1) / (axes.axisY.max - axes.axisY.min) * pointer.height;
             mouseClick(pointer, pointer.width * .4, Math.max(2, py));
             tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Actual joint-chart input selects the second real experiment");
-            outlineGeometry(data.mode, 1, [0, 1], [255, 255]);
+            selectionLabel(1);
         }
         function rgb(hex) {
             return Qt.rgba(parseInt(hex.slice(1, 3), 16) / 255, parseInt(hex.slice(3, 5), 16) / 255, parseInt(hex.slice(5, 7), 16) / 255, 1);
@@ -1689,6 +1685,7 @@ Rectangle {
             const scan = open("stacked", "rows");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
+            exposeStack();
             const pattern = createTemporaryObject(patternReferenceFactory, surface, {
                 experiment: Session.project.currentExperiment,
                 visible: false,
@@ -1740,7 +1737,7 @@ Rectangle {
             const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
             const colours = Approved.colours(SettingsProof, refs[1].id, "measured", 3, data.dark);
             for (let row = 0; row < 3; ++row) {
-                const y = [100, 250, 700][row] + [0, 128, 255][row] / 255 * scan.stackHeight;
+                const y = stackedAt(row, 3, [0, 128, 255][row] / 255);
                 const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
                 let hit = false;
                 for (let dy = -2; dy <= 2; ++dy)
@@ -1864,6 +1861,7 @@ Rectangle {
             Preferences.resetToDefaults();
             Style.Colors.theme = Style.Colors.LightTheme;
             Preferences.patternYScale = "linear";
+            Preferences.chartHighlightSelected = false;
             Preferences.scanMapColours = "viridis";
             const root = SettingsProof.copyProject(Probe.repoUrl(data.project === "scan" ? "tests/fixtures/scan_template/project" : "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project"));
             if (data.project === "scan")
@@ -1907,9 +1905,9 @@ Rectangle {
             const palette = paletteSelector(data.mode);
             choose(palette, (palette.currentIndex + 1) % palette.count);
             const selectionPointer = named("pointer"), selectionAxes = named("axes");
-            const selectCoordinate = scan.rowOf(1);
+            const selectCoordinate = data.mode === "stacked" ? stackedAt(1, scan.count, 0) : scan.rowOf(1);
             const selectY = (selectionAxes.axisY.max - selectCoordinate) / (selectionAxes.axisY.max - selectionAxes.axisY.min) * selectionPointer.height;
-            mouseClick(selectionPointer, selectionPointer.width * .4, Math.max(2, Math.min(selectionPointer.height - 2, selectY)));
+            mouseClick(selectionPointer, selectionPointer.width * (data.mode === "stacked" ? (data.project === "scan" ? (scan.dShown ? .995 : .005) : (1.3 - selectionAxes.axisX.min) / (selectionAxes.axisX.max - selectionAxes.axisX.min)) : .4), Math.max(2, Math.min(selectionPointer.height - 2, selectY)));
             tryCompare(Session.project, "currentExperimentIndex", 1, 1000, "Real scan-view input selects a non-default measured dataset before changing pages; coordinate=" + selectCoordinate + " readIndex=" + Session.project.currentExperimentIndex);
             const pointer = named("pointer"), axes = named("axes");
             mouseDrag(pointer, pointer.width * .2, pointer.height * .2, pointer.width * .6, pointer.height * .6, Qt.LeftButton);
@@ -1917,9 +1915,7 @@ Rectangle {
             const controls = Render.descendants(chart).filter(item => item.visible && typeof item.currentIndex === "number" && String(item.objectName).includes("toolbar"));
             const types = controls.map(item => [item.objectName, item.currentIndex]);
             const row = Session.project.currentExperimentIndex;
-            const firstMarker = named("current"), firstLayer = named("layer");
-            const firstTop = firstMarker.mapToItem(firstLayer, 0, 0).y / firstLayer.height;
-            const firstBottom = firstTop + firstMarker.height / firstLayer.height;
+            selectionLabel(row);
             const next = data.origin === "experiment" ? "analysis" : "experiment";
             for (const pageName of [next, data.origin, next]) {
                 const shown = showSharedScan(pageName, data.mode), actual = named("axes");
@@ -1929,9 +1925,7 @@ Rectangle {
                 compare(Session.project.currentExperimentIndex, row, "The same selected measured dataset remains current across both scan-view pages");
                 const retained = Render.descendants(applicationWindow.contentItem).filter(item => item.objectName === "scanView." + data.mode);
                 compare(retained.filter(item => item.visible && item.shown).length, 1, "The shared-object or authorized retained-chart fallback has exactly one eligible shown view");
-                const marker = named("current"), layer = named("layer");
-                const top = marker.mapToItem(layer, 0, 0).y / layer.height;
-                verify(marker.visible && marker.width === layer.width && Math.abs(top - firstTop) <= 2 / layer.height && Math.abs(top + marker.height / layer.height - firstBottom) <= 2 / layer.height, "The selected dataset keeps the same open-rectangle bounds on both pages after the same user axes and zoom choices");
+                selectionLabel(row);
                 const p = named("pointer");
                 mouseClick(p, p.width * .5, p.height * .5, Qt.RightButton);
                 verify(waitForPolish(chart) && waitForRendering(chart), "Reset finishes the native-axis label layout before the next pixel drag");
@@ -2011,15 +2005,16 @@ Rectangle {
                 compare(matches.length, 1, "Every row uses its independent file, datablock or scan value with unit");
                 const label = matches[0], right = label.mapToItem(chart, label.width, chart.mode === "stacked" ? label.height : label.height / 2);
                 verify(right.x < origin.x && label.mapToItem(chart, 0, 0).x >= 0, "The complete row label lies left of the plot and inside the chart");
-                const wanted = origin.y + (axes.axisY.max - coordinates[i]) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                const coordinate = chart.mode === "stacked" ? stackedAt(i, expected.length, 0) : coordinates[i];
+                const wanted = origin.y + (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                 verify(Math.abs(right.y - wanted) <= 1, "A Stacked label's bottom sits on its independent baseline; a Map label stays centred on its row");
-                compare(String(label.color).toLowerCase(), colours[i], "Every row label uses its independently approved dataset colour");
+                tryCompare(label, "color", i === Session.project.currentExperimentIndex && !Preferences.chartHighlightSelected ? Style.Colors.themeAccent : rgb(colours[i]), 2000, "Every row label settles to its independently approved dataset colour or selected accent");
                 let parent = label.parent;
                 while (parent && parent.segments === undefined)
                     parent = parent.parent;
                 const icons = Render.texts(parent).filter(item => String(item.font.family).includes("Awesome"));
                 compare(icons.length, 1, "Every labelled row draws its experiment icon");
-                compare(String(icons[0].color).toLowerCase(), colours[i], "The experiment icon uses the same independent dataset colour as its row label");
+                compare(String(icons[0].color).toLowerCase(), i === Session.project.currentExperimentIndex && !Preferences.chartHighlightSelected ? String(Style.Colors.themeAccent).toLowerCase() : colours[i], "The experiment icon uses the same independent dataset colour as its row label");
                 verify(icons[0].mapToItem(chart, icons[0].width, 0).x <= label.mapToItem(chart, 0, 0).x, "The experiment icon precedes the name outside the y axis");
             }
         }
@@ -2141,31 +2136,31 @@ Rectangle {
             checkDatasetTicks([100, 250, 700], Approved.colours(SettingsProof, "ediNatural", "measured", 3, data.dark));
         }
         function checkDatasetTicks(rows, colours) {
-            const layer = named("layer"), axes = named("axes"), origin = layer.mapToItem(chart, 0, 0), right = origin.x + layer.width;
-            const candidates = Render.descendants(chart).filter(item => item.visible && item.width >= 2 && item.width <= chart.em && item.height > 0 && item.height <= 2 && item.color !== undefined).filter(item => {
-                const p = item.mapToItem(chart, 0, 0);
-                return p.x > right && p.x <= right + chart.em;
-            });
-            const indices = rows.map((value, index) => ({
-                        value,
-                        index
+            const layer = named("layer"), axes = named("axes"), ticks = named("rowTicks"), origin = layer.mapToItem(chart, 0, 0);
+            verify(ticks.visible && ticks.scanLayer === layer, "The named combined tick item draws the shown scan layer's dataset ticks");
+            const at = ticks.mapToItem(chart, 0, 0);
+            fuzzyCompare(at.x - origin.x - layer.width, 1, .01, "Dataset ticks stay one logical pixel right of the plot");
+            fuzzyCompare(at.y, origin.y, .01, "The combined tick strip starts at the actual plot top");
+            fuzzyCompare(ticks.height, layer.height, .01, "The combined tick strip spans the actual plot height");
+            const expected = rows.map((value, i) => ({
+                        value: chart.mode === "stacked" ? stackedAt(i, rows.length, 0) : value,
+                        i
                     })).filter(row => row.value >= axes.axisY.min && row.value <= axes.axisY.max);
-            compare(candidates.length, indices.length, "Exactly one right-hand tick remains for every in-range dataset, even when labels are thinned");
-            const leftTicks = Render.descendants(chart).filter(item => item.visible && /^scanView\..*\.rowTick\./.test(item.objectName)).filter(item => item.mapToItem(chart, 0, 0).x < origin.x);
-            compare(leftTicks.length, 0, "Dataset ticks replace the former left-hand Map ticks");
-            const frame = logicalImage(chart), matched = [];
-            for (const row of indices) {
-                const wanted = origin.y + (axes.axisY.max - row.value) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                const matches = candidates.filter(item => Math.abs(item.mapToItem(chart, 0, item.height / 2).y - wanted) <= 1);
-                compare(matches.length, 1, "Each dataset tick sits at its independent row coordinate within one raster pixel");
-                const tick = matches[0], top = tick.mapToItem(chart, 0, 0), centre = tick.mapToItem(chart, tick.width / 2, tick.height / 2);
-                verify(!matched.includes(tick), "Distinct dataset rows never reuse one tick");
-                matched.push(tick);
-                verify(top.y >= origin.y - .01 && top.y + tick.height <= origin.y + layer.height + .01, "Every complete tick stays between the plot top and x axis, including boundary rows");
-                fuzzyCompare(top.x - right, 1, .01, "Right-hand dataset ticks preserve the existing one-pixel clear gap from the axis line");
-                compare(String(tick.color).toLowerCase(), colours[row.index], "Every tick follows its independent dataset colour from the Stacked choice, including on Map");
-                verify(ink(frame.pixel(Math.floor(centre.x), Math.floor(centre.y)), rgb(colours[row.index]), chart.colors.chartBackground), "Each correctly placed dataset tick has actual ink in its independent colour");
+            const frame = logicalImage(chart), expectedPixels = new Map();
+            for (const row of expected) {
+                const y = Math.max(0, Math.min(Math.floor(layer.height) - 1, Math.floor((axes.axisY.max - row.value) / (axes.axisY.max - axes.axisY.min) * layer.height)));
+                // At subpixel spacing later rows legitimately paint over earlier ticks.
+                expectedPixels.set(y, row.i);
             }
+            for (const [y, index] of expectedPixels) {
+                const pixel = frame.pixel(Math.floor(at.x + ticks.width / 2), Math.floor(at.y + y));
+                verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - rgb(colours[index])[c]) <= 2 / 255), "Each visible tick has actual independent dataset colour at its closed-form baseline; row=" + index + " y=" + y + " pixel=" + pixel + " expected=" + colours[index]);
+            }
+            for (let y = 0; y < Math.floor(layer.height); ++y)
+                if (![...expectedPixels.keys()].some(at => Math.abs(at - y) <= 1)) {
+                    const pixel = frame.pixel(Math.floor(at.x + ticks.width / 2), Math.floor(at.y + y));
+                    compare(String(pixel), String(chart.colors.chartBackground), "The tick strip contains no extra row ticks outside independently expected raster positions");
+                }
         }
         function test_dataset_ticks_all_y_modes_data() {
             const cases = [];
@@ -2247,37 +2242,38 @@ Rectangle {
             }, (_, i) => Oklab.gradient(endpoints[0], endpoints[1], i / (count - 1))));
         }
         function heightSelector() {
-            const controls = Render.descendants(chart).filter(item => item.visible && typeof item.textAt === "function" && /height/i.test(String(item.objectName) + " " + item.toolTip));
-            compare(controls.length, 1, "The Stacked toolbar exposes exactly one pattern-height selector");
-            return controls[0];
+            const control = named("toolbar.height");
+            verify(control.visible && typeof control.textAt === "function", "The Stacked height gate reaches the named actual height combobox");
+            return control;
         }
         function test_stacked_height_default_and_memory() {
-            const location = Globals.Vars.settingsFile, code = 'import QtQuick; import edi.app; QtObject { property int saved:Preferences.scanStackedHeight }';
-            SettingsProof.erase(location, "ScanViews", "stackedHeight");
-            compare(SettingsProof.settingFacts(location, "ScanViews", "stackedHeight").type, "invalid", "The height default is observed with its actual saved key absent");
+            const location = Globals.Vars.settingsFile, code = 'import QtQuick; import edi.app; QtObject { property int saved:Preferences.scanStackedSize }';
+            SettingsProof.erase(location, "ScanViews", "stackedSize");
             const fresh = SettingsProof.restart(code);
-            verify(!fresh.error, "The height default loads in a fresh production Preferences engine");
-            compare(fresh.saved, 2, "An absent Stacked height setting defaults to twice the prior four-row rise");
+            verify(!fresh.error, "The absent height key is read by an actual fresh preferences engine");
+            compare(fresh.saved, 0, "An absent Stacked size setting defaults to Fit");
             const scan = open("stacked", "rows");
             ready(scan);
             const selector = heightSelector();
-            compare(selector.currentText, "2×", "The actual Stacked selector starts at the independent default");
-            compare(selector.count, 5, "The Stacked height selector offers exactly five steps");
-            for (let i = 0; i < 5; ++i)
-                compare(selector.textAt(i), (i + 1) + "×", "The height choices are the consecutive one-to-five multipliers");
-            for (const choice of [4, 0, 2]) {
+            compare(selector.count, 11, "The height selector offers Fit and ten percentage choices");
+            for (let i = 0; i < selector.count; ++i) {
+                const expected = i === 0 ? "Fit" : (i * 10) + "%";
+                compare(selector.textAt(i).replace(/\s/g, ""), expected, "Every height choice has its independently specified percentage or Fit label");
+            }
+            for (const choice of [10, 1, 0]) {
                 choose(selector, choice);
-                compare(selector.displayText, "height: " + (choice + 1) + "×", "The selected height uses the chart's axis-value caption form");
-                tryVerify(() => SettingsProof.value(location, "ScanViews", "stackedHeight") === choice + 1, 2000, "Real height-selector input reaches the remembered settings file");
+                const expected = choice * 10;
+                compare(Preferences.scanStackedSize, expected, "Actual height input commits the selected plot-height percentage");
+                tryVerify(() => SettingsProof.value(location, "ScanViews", "stackedSize") === expected, 2000, "The height percentage reaches the actual preferences file before restart");
                 const restored = SettingsProof.restart(code);
-                verify(!restored.error, "Each changed height is read by a fresh production Preferences engine");
-                compare(restored.saved, choice + 1, "The selected height survives a fresh settings engine in both directions");
+                verify(!restored.error, "The saved percentage loads in another real preferences engine");
+                compare(restored.saved, expected, "Fixed height and Fit both persist across an engine restart");
             }
             chart.mode = "map";
-            surface.Window.window.update();
-            verify(waitForRendering(chart), "The same view can display Map after changing Stacked height");
+            verify(waitForRendering(chart), "The chart switches to Map after height selection");
             verify(!Ui.rendered(selector), "The pattern-height selector is exposed only for Stacked");
         }
+
         function test_stacked_height_changes_rise_not_rows_data() {
             return [
                 {
@@ -2294,113 +2290,18 @@ Rectangle {
             const scan = open("stacked", "height");
             ready(scan);
             choose(axisControl("y"), data.byIndex ? 1 : 0);
-            Session.project.currentExperimentIndex = 0;
             const rows = data.byIndex ? [0, 1, 2] : [100, 250, 400], selector = heightSelector();
-            // Equally spaced rows make four row spacings exactly 4 or 600 (ADR-0041).
-            const priorRise = data.byIndex ? 4 : 600;
-            for (const factor of [1, 2, 3, 4, 5, 1]) {
-                choose(selector, factor - 1);
-                tryCompare(scan, "stackHeight", priorRise * factor, 1000, "Every selected height multiplies the independent four-row rise");
-                surface.Window.window.update();
-                verify(waitForRendering(chart), "Each new height reaches the actual Stacked rendering");
-                compare(rows.map((_, i) => scan.rowOf(i)), rows, "Height changes leave every independent dataset row fixed");
+            for (const choice of [1, 5, 10, 0]) {
+                choose(selector, choice);
+                const layer = named("layer");
+                compare(rows.map((_, i) => scan.rowOf(i)), rows, "Height changes preserve the actual scientific dataset coordinates");
+                for (let i = 0; i < rows.length; ++i)
+                    fuzzyCompare(layer.rowOf(i), stackedAt(i, rows.length, 0), 1e-9, "A changed height places each Stacked baseline at rank times height times offset");
+                fuzzyCompare(layer.patternHeight, choice === 0 ? 1 / 1.2 : choice / 10, 1e-9, "The actual height equals the fixed plot share or the closed-form Fit height");
                 checkDatasetTicks(rows, Approved.colours(SettingsProof, "ediNatural", "measured", 3, false));
-                const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart), expected = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false);
-                const y = rows[1] + 128 / 255 * priorRise * factor;
-                const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
-                let found = false;
-                for (let dy = -2; dy <= 2; ++dy)
-                    found = found || ink(frame.pixel(Math.round(at.x), Math.round(at.y) + dy), rgb(expected[1]), chart.colors.chartBackground);
-                verify(found, "The actual middle measured curve rises by the chosen factor above its unchanged row");
             }
         }
-        function boxPixels(marker, dark) {
-            const priorOpacity = marker.opacity;
-            marker.opacity = 0;
-            surface.Window.window.update();
-            verify(waitForRendering(chart), "The minimum-box witness captures the underlying data without the selected border");
-            const background = logicalImage(chart);
-            marker.opacity = priorOpacity;
-            surface.Window.window.update();
-            verify(waitForRendering(chart), "The selected minimum box has a completed visible frame");
-            const frame = logicalImage(chart), origin = marker.mapToItem(chart, 0, 0), ratio = frame.width / chart.width;
-            const core = dark ? 1 : 0, edge = 1 - core;
-            function pixel(image, x, y) {
-                return image.pixel(Math.floor((origin.x + x) * ratio), Math.floor((origin.y + y) * ratio));
-            }
-            function matches(x, y, target) {
-                const actual = pixel(frame, x, y), prior = pixel(background, x, y);
-                return ["r", "g", "b"].every(c => Math.abs(actual[c] - (target === "core" ? core : target === "edge" ? (edge + prior[c]) / 2 : prior[c])) <= 2 / 255);
-            }
-            for (const x of [marker.width * .25, marker.width * .5, marker.width * .75]) {
-                for (const y of [1.5, marker.height - 1.5])
-                    verify(matches(x, y, "core"), "Both horizontal borders retain their opaque one-pixel core on a dense selected row");
-                for (const y of [.5, 2.5, marker.height - 2.5, marker.height - .5])
-                    verify(matches(x, y, "edge"), "The inner and outer half-transparent lines remain distinct on both horizontal borders");
-                for (const y of [3.5, marker.height - 3.5])
-                    verify(matches(x, y, "inside"), "The minimum rectangle keeps empty interior pixels showing the unchanged underlying data");
-            }
-            const middle = marker.height / 2;
-            for (const x of [1.5, marker.width - 1.5])
-                verify(matches(x, middle, "core"), "The minimum rectangle retains its opaque vertical borders");
-            for (const x of [.5, 2.5, marker.width - 2.5, marker.width - .5])
-                verify(matches(x, middle, "edge"), "Both vertical borders retain their separate inner and outer translucent lines at x=" + x);
-        }
-        function test_dense_selected_box_minimum_data() {
-            const cases = [];
-            for (const row of test_joint_labels_outside_axis_data())
-                for (const pixels of [false, true])
-                    cases.push({
-                        tag: row.tag + (pixels ? "-pixels" : "-geometry"),
-                        mode: row.mode,
-                        dark: row.dark,
-                        pixels
-                    });
-            return cases;
-        }
-        function test_dense_selected_box_minimum(data) {
-            const root = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/scan_template/project"));
-            const count = Input.dense(SettingsProof, root, false, 162, [8, 80]);
-            verify(Session.openProject(root), "The minimum-box actor opens 162 independently authored measured patterns");
-            Preferences.resetToDefaults();
-            Preferences.scanMapColours = "viridis";
-            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            chart = factory.createObject(surface, {
-                project: Session.project,
-                mode: data.mode,
-                height: 500
-            });
-            ready(Session.project.scanViews);
-            compare(Session.project.scanViews.count, count, "The dense selected-box witness loads every authored dataset");
-            const marker = named("current"), axes = named("axes"), layer = named("layer");
-            for (const height of [500, 420]) {
-                chart.height = height;
-                for (const index of [8, 80]) {
-                    Session.project.currentExperimentIndex = index;
-                    surface.Window.window.update();
-                    verify(waitForRendering(chart), "The dense selected row is rendered at each chart size");
-                    const row = 100 + index * 7 + .345;
-                    const y = (axes.axisY.max - row) / (axes.axisY.max - axes.axisY.min) * layer.height;
-                    verify(marker.visible && marker.height >= 8 && marker.height <= 9, "A thin selected band reserves about eight logical pixels for both borders and an empty interior");
-                    fuzzyCompare(marker.mapToItem(layer, 0, marker.height / 2).y, y, 1, "A minimum-height rectangle is centred on its independent dataset row, not the old band's top or bottom");
-                    compare(marker.width, layer.width, "The minimum rectangle still spans the full measured plot");
-                    if (data.pixels)
-                        boxPixels(marker, data.dark);
-                }
-            }
-            const index = data.mode === "map" ? 80 : 81, row = 100 + index * 7 + .345;
-            Session.project.currentExperimentIndex = index;
-            chart.zoomY = data.mode === "map" ? [row - 21, row + 21] : [row - 7, row + 70];
-            surface.Window.window.update();
-            verify(waitForRendering(chart), "A zoomed taller band retains its natural selected rectangle");
-            const low = data.mode === "map" ? row - 3.5 : row, high = data.mode === "map" ? row + 3.5 : row + 56;
-            const top = (axes.axisY.max - high) / (axes.axisY.max - axes.axisY.min) * layer.height;
-            const bottom = (axes.axisY.max - low) / (axes.axisY.max - axes.axisY.min) * layer.height;
-            const actual = marker.mapToItem(layer, 0, 0), allowance = data.mode === "map" ? 1 : 3.5;
-            verify(marker.height > 16 && Math.abs(actual.y - top) <= allowance && Math.abs(actual.y + marker.height - bottom) <= allowance, "A band taller than the minimum keeps its independently derived natural bounds");
-            if (data.pixels)
-                boxPixels(marker, data.dark);
-        }
+
         function test_reverse_colour_group_and_memory_data() {
             return test_joint_labels_outside_axis_data();
         }
@@ -2408,20 +2309,9 @@ Rectangle {
             const scan = open(data.mode, "rows");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
+            exposeStack();
             const toggle = Render.descendants(chart).find(item => item.visible && typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip));
             verify(toggle !== undefined && toggle.enabled, "Both Stacked and Map expose a real reverse-colours button");
-            const group = toggle.parent, members = group.children.filter(item => item.visible && (typeof item.checked === "boolean" || typeof item.textAt === "function"));
-            compare(members.length, data.mode === "map" ? 2 : 1, "The colour group contains only the Map selector and reverse button, or the Stacked reverse button alone");
-            if (data.mode === "map")
-                verify(members.includes(named("toolbar.colourMap")), "The Map palette selector shares the reverse button's own colour group");
-            const others = group.parent.children.filter(item => item !== group && item.visible && item.width > 0 && item.height > 0);
-            verify(others.length > 0, "The colour group is separate from the other actual toolbar controls");
-            for (const other of others) {
-                const a = group.mapToItem(chart, 0, 0), b = other.mapToItem(chart, 0, 0);
-                const gapX = Math.max(a.x - b.x - other.width, b.x - a.x - group.width);
-                const gapY = Math.max(a.y - b.y - other.height, b.y - a.y - group.height);
-                verify(Math.max(gapX, gapY) >= AppSizes.toolbarSpacing, "The colour group has visible spacing from every other toolbar group");
-            }
             const colours = Approved.colours(SettingsProof, "ediNatural", "measured", 3, data.dark), location = Globals.Vars.settingsFile;
             const ownKey = data.mode === "map" ? "mapReversed" : "stackedReversed";
             for (const reversed of [true, false, true]) {
@@ -2438,7 +2328,7 @@ Rectangle {
                 const expected = data.mode === "stacked" && reversed ? colours.slice().reverse() : colours;
                 checkDatasetTicks([100, 250, 700], expected);
                 const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
-                const y = 700 + (data.mode === "stacked" ? scan.stackHeight : 0);
+                const y = data.mode === "stacked" ? stackedAt(2, 3, 1) : 700;
                 const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
                 const colour = data.mode === "stacked" ? expected[2] : reversed ? "#440154" : "#fde725";
                 let drawn = false;
@@ -2531,12 +2421,13 @@ Rectangle {
                 length: count - 8
             }, (_, i) => i + 4).find(i => !shown.includes(i));
             verify(selected !== undefined, "The dense witness chooses a dataset whose label was thinned out");
-            const axes = named("axes"), pointer = named("pointer"), row = data.kind === "value" ? 100 + selected * 7 + .345 : selected;
-            mouseClick(pointer, pointer.width * .5, (axes.axisY.max - row - (data.kind === "value" ? .7 : .1)) / (axes.axisY.max - axes.axisY.min) * pointer.height);
+            const axes = named("axes"), pointer = named("pointer"), row = data.mode === "stacked" ? stackedAt(selected, count, 0) : data.kind === "value" ? 100 + selected * 7 + .345 : selected;
+            mouseClick(pointer, pointer.width * (data.mode === "stacked" ? .001 : .5), (axes.axisY.max - row - (data.mode === "stacked" ? 0 : data.kind === "value" ? .7 : .1)) / (axes.axisY.max - axes.axisY.min) * pointer.height);
             tryCompare(Session.project, "currentExperimentIndex", selected, 1000, "Real plot input selects the independently chosen hidden-label dataset");
             verify(waitForRendering(chart), "The selected dense row has a completed frame");
             shown = visibleIndices();
             verify(shown.includes(selected), "Thinning always retains the selected dataset's label");
+            selectionLabel(selected);
             const regular = shown.filter(i => i !== selected), gaps = regular.slice(1).map((i, n) => i - regular[n]);
             verify(gaps.length > 0 && Math.max(...gaps) <= 2 * Math.min(...gaps), "Thinned row labels remain evenly spread, allowing the selected-row insertion");
             const labels = rowLabels().map(item => ({
@@ -2553,7 +2444,7 @@ Rectangle {
                         width: item.width,
                         height: item.height
                     }))));
-            const step = data.kind === "value" ? 7 : 1, top = (axes.axisY.max - (row + 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height, bottom = (axes.axisY.max - (row - 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height;
+            const step = data.mode === "stacked" ? stackedAt(1, count, 0) : data.kind === "value" ? 7 : 1, top = (axes.axisY.max - (row + 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height, bottom = (axes.axisY.max - (row - 3 * step)) / (axes.axisY.max - axes.axisY.min) * pointer.height;
             mouseDrag(pointer, pointer.width * .2, top, pointer.width * .6, bottom - top, Qt.LeftButton);
             verify(waitForRendering(chart), "Actual drag zoom gives the formerly crowded rows room to reappear");
             shown = visibleIndices();
@@ -2561,34 +2452,6 @@ Rectangle {
                 verify(shown.includes(i), "Every independently in-range row label reappears once zoom makes its spacing readable");
         }
 
-        function test_clipped_selected_box_data() {
-            return test_joint_labels_outside_axis_data();
-        }
-        function test_clipped_selected_box(data) {
-            const scan = open(data.mode, "rows");
-            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            ready(scan);
-            Session.project.currentExperimentIndex = 1;
-            const marker = named("current"), layer = named("layer");
-            const low = data.mode === "map" ? 175 : 250;
-            const high = data.mode === "map" ? 475 : 250 + 128 / 255 * scan.stackHeight;
-            const span = (high - low) * 2;
-            for (const edge of ["upper", "lower"]) {
-                const sliver = span / layer.height / 4;
-                chart.setZoom([20, 80], edge === "upper" ? [high - sliver, high - sliver + span] : [low + sliver - span, low + sliver]);
-                verify(waitForRendering(chart), "A zoom leaving only a quarter-pixel of the natural selected band completes rendering");
-                verify(marker.visible && marker.height >= 8, "A partly intersecting selected band retains eight pixels for its borders and open interior in both views");
-                const top = marker.mapToItem(layer, 0, 0).y;
-                verify(top >= 0 && top + marker.height <= layer.height + .01, "The minimum selected rectangle stays within the zoomed plot at either edge");
-                boxPixels(marker, data.dark);
-                chart.setZoom([20, 80], edge === "upper" ? [high + 1, high + 1 + span] : [low - 1 - span, low - 1]);
-                verify(waitForRendering(chart), "The control zoom moves the selected natural band fully outside the viewport");
-                verify(!marker.visible, "Minimum height never manufactures a marker for a wholly offscreen selected dataset");
-            }
-            chart.resetZoom();
-            verify(waitForRendering(chart), "Reset restores the fully visible natural selection");
-            verify(marker.visible && marker.height > 8, "An ordinary tall selected band keeps its natural height after the edge zoom resets");
-        }
         function test_coincident_dataset_identity_data() {
             const cases = [];
             for (const shape of ["all", "interior", "file"])
@@ -2606,6 +2469,7 @@ Rectangle {
             Style.Colors.theme = Style.Colors.LightTheme;
             Preferences.resetToDefaults();
             Preferences.patternYScale = "linear";
+            Preferences.chartHighlightSelected = false;
             Preferences.scanMapColours = "viridis";
             Preferences.scanStackedPalette = "ediNatural";
             const root = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/scan_template/project"));
@@ -2634,8 +2498,8 @@ Rectangle {
                 if (toggle.checked !== (data.style === "smooth"))
                     mouseClick(toggle, toggle.width / 2, toggle.height / 2);
             }
-            const layer = named("layer"), marker = named("current"), pointer = named("pointer");
-            marker.opacity = 0;
+            exposeStack();
+            const layer = named("layer"), pointer = named("pointer");
             verify(waitForRendering(chart), "The independent identity observer captures completed data pixels without the selection border");
             const frame = logicalImage(chart);
             const colours = chart.mode === "stacked" ? Approved.colours(SettingsProof, "ediNatural", "measured", fixture.intensities.length, false).map(rgb) : fixture.intensities.map(level => {
@@ -2665,22 +2529,14 @@ Rectangle {
                     verify(locations[row].length > 0, "Every dataset has its own independent constant-intensity Map pixels or approved Stacked ink, irrespective of coincident-coordinate layout; row=" + row + " level=" + fixture.intensities[row] + " temperatures=" + JSON.stringify(fixture.temperatures) + " pixelRows=" + JSON.stringify(locations));
                 return;
             }
-            marker.opacity = 1;
-            const boxes = [];
             for (let row = 0; row < colours.length; ++row) {
                 Session.project.currentExperimentIndex = row;
-                verify(waitForRendering(chart), "Every programmatically selected dataset publishes its actual open box");
-                verify(marker.visible && marker.height >= 8, "Every coincident dataset has a visible readable selection box");
-                const top = marker.mapToItem(layer, 0, 0).y;
-                const own = locations[row].filter(y => y >= top - 1 && y <= top + marker.height + 1);
-                verify(own.length > 0, "The selected dataset box identifies its own independently coloured data, rather than a coincident neighbour; row=" + row + " box=" + JSON.stringify([top, marker.height]) + " ownPixelRows=" + JSON.stringify(locations[row]));
-                const box = [Math.round(top), Math.round(marker.height)];
-                verify(!boxes.some(prior => prior[0] === box[0] && prior[1] === box[1]), "Changing the selected dataset cannot reuse an indistinguishable box for a different measurement; row=" + row + " boxes=" + JSON.stringify(boxes) + " current=" + JSON.stringify(box));
-                boxes.push(box);
+                selectionLabel(row);
+                const own = locations[row];
+                verify(own.length > 0, "The selected dataset retains independently identified data pixels beside its bold label");
                 Session.project.currentExperimentIndex = (row + 1) % colours.length;
                 verify(waitForRendering(chart), "The real-input witness starts with a different selected dataset");
-                const axes = named("axes");
-                const y = chart.mode === "map" ? own[Math.floor(own.length / 2)] : (axes.axisY.max - scan.rowOf(row)) / (axes.axisY.max - axes.axisY.min) * layer.height;
+                const y = own[Math.floor(own.length / 2)];
                 const point = layer.mapToItem(pointer, layer.width * .57, y);
                 mouseClick(pointer, point.x, point.y);
                 tryCompare(Session.project, "currentExperimentIndex", row, 1000, "Clicking each dataset's Map pixels or Stacked row selects that exact dataset; row=" + row + " level=" + fixture.intensities[row] + " click=" + JSON.stringify([point.x, point.y]));
@@ -2706,7 +2562,6 @@ Rectangle {
             const toggle = interpolationToggle(chart);
             if (toggle.checked !== data.smooth)
                 mouseClick(toggle, toggle.width / 2, toggle.height / 2);
-            named("current").opacity = 0;
             verify(waitForRendering(chart), "The failed-middle ownership witness captures the real Map without a selection overlay");
             const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
             function pixel(x, y) {
@@ -2747,7 +2602,6 @@ Rectangle {
             });
             const scan = Session.project.scanViews;
             ready(scan);
-            named("current").opacity = 0;
             const button = excludedButton(chart);
             verify(button !== undefined, "Each scan view exposes its ordinary included-only control");
             const layer = named("layer"), axes = named("axes");

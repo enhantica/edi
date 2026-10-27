@@ -39,6 +39,8 @@ def dependencies(owner, root):
         root / 'tools/ci/app-platform.sh',
     ]
     recipes.extend((root / 'tests/fixtures/app_environment').glob('*.py'))
+    if owner == 'screen':
+        recipes.append(root / 'tests/fixtures/fast_chart_redraws/rendering.py')
     if owner == 'selector':
         recipes.extend(
             root / 'tests/fixtures/scan_screen' / name for name in ('build.py', 'harness.py')

@@ -320,7 +320,6 @@ static void register_report_boundaries() {
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()); root.cd("../../..");
         QTemporaryDir scratch(QDir::tempPath() + "/edi-report-faults-XXXXXX");
         if (!scratch.isValid()) qFatal("Cannot create the report failure witness");
-        scratch.setAutoRemove(false);
         const QString library = scratch.filePath("faults.so");
         QStringList arguments;
 #ifdef Q_OS_MACOS
@@ -334,8 +333,12 @@ static void register_report_boundaries() {
 #endif
         QProcess compiler;
         compiler.start(QStandardPaths::findExecutable("cc"), arguments);
-        if (!compiler.waitForFinished(15000) || compiler.exitStatus() != QProcess::NormalExit || compiler.exitCode() != 0)
+        if (!compiler.waitForFinished(15000) || compiler.exitStatus() != QProcess::NormalExit || compiler.exitCode() != 0) {
+            compiler.kill();
+            compiler.waitForFinished(1000);
+            scratch.remove();
             qFatal("Cannot compile the report failure witness: %s", compiler.readAllStandardError().constData());
+        }
 #ifdef Q_OS_MACOS
         const char* key = "DYLD_INSERT_LIBRARIES";
         qputenv("DYLD_FORCE_FLAT_NAMESPACE", "1");
@@ -345,6 +348,7 @@ static void register_report_boundaries() {
         const QByteArray previous = qgetenv(key);
         qputenv(key, QFile::encodeName(library) + (previous.isEmpty() ? QByteArray{} : ":" + previous));
         qputenv("EDI_REPORT_ACCEPTANCE_PRELOADED", QFile::encodeName(scratch.path()));
+        qputenv("EDI_REPORT_ACCEPTANCE_OWNER_PID", QByteArray::number(QCoreApplication::applicationPid()));
         const auto strings = QCoreApplication::arguments();
         std::vector<QByteArray> bytes;
         for (const auto& argument : strings) bytes.push_back(argument.toLocal8Bit());
@@ -352,10 +356,19 @@ static void register_report_boundaries() {
         for (auto& argument : bytes) argv.push_back(argument.data());
         argv.push_back(nullptr);
         ::execv(QFile::encodeName(QCoreApplication::applicationFilePath()).constData(), argv.data());
+        scratch.remove();
         qFatal("Cannot relaunch the app test runner with its report failure witness");
     }
-    QObject::connect(QCoreApplication::instance(), &QCoreApplication::aboutToQuit, [] {
-        QDir(QString::fromLocal8Bit(qgetenv("EDI_REPORT_ACCEPTANCE_PRELOADED"))).removeRecursively();
+    // Qt Quick Test can return without QCoreApplication::exec(), hence without aboutToQuit.
+    // Post routines also run when the app object is destroyed after a failed test result.
+    qAddPostRoutine([] {
+        bool validOwner = false;
+        const auto owner = qgetenv("EDI_REPORT_ACCEPTANCE_OWNER_PID").toLongLong(&validOwner);
+        const QFileInfo folder(QString::fromLocal8Bit(qgetenv("EDI_REPORT_ACCEPTANCE_PRELOADED")));
+        if (validOwner && owner == QCoreApplication::applicationPid() && !folder.isSymLink()
+            && folder.fileName().startsWith("edi-report-faults-")
+            && QDir(folder.absolutePath()).canonicalPath() == QDir(QDir::tempPath()).canonicalPath())
+            QDir(folder.absoluteFilePath()).removeRecursively();
     });
 #endif
     qmlRegisterSingletonType<ReportBoundaryProof>("ReportBoundaryAcceptance", 1, 0, "BoundaryProof",

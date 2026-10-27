@@ -1,7 +1,13 @@
 .pragma library
+// A failed private copy must never turn a fixture write into a relative cwd write.
+function requirePrivateRoot(root) {
+    if (!/^file:\/\/\/.+/.test(String(root)))
+        throw Error("The scan fixture requires a nonempty absolute private project URL");
+}
 // Analytic input: the existing three-file scan container, hand-set temperatures
 // and complete intensity bands. No application calculation supplies expectations.
 function prepare(proof, root, kind) {
+    requirePrivateRoot(root);
     const files = ["all594687.dat", "all594791.dat", "all594842.dat"];
     const levels = [0, 32, 64, 96, 128, 192, 255];
     if (kind === "excluded") {
@@ -12,7 +18,7 @@ function prepare(proof, root, kind) {
     for (let row = 0; row < files.length; ++row) {
         let text = "XYDATA analytic scan\nTEMP " + (kind === "height" ? [100, 250, 400] : kind === "uneven-near" ? [100, 110, 1000] : kind === "uneven-far" ? [100, 990, 1000] : [100, 250, 700])[row] + "\n";
         for (let i = 0; i <= 4096; ++i) {
-            const value = kind === "zoom" ? [0, 17, 230, 41, 180, 64, 255, 11][i % 8] : (kind === "rows" || kind === "height" || kind === "edges" || kind.startsWith("uneven-")) ? [0, 128, 255][row] : levels[Math.min(6, Math.floor(i * 7 / 4097))];
+            const value = kind === "bounded-rows" ? (i === 0 ? 0 : i === 4096 ? 255 : [0, 128, 255][row]) : kind === "zoom" ? [0, 17, 230, 41, 180, 64, 255, 11][i % 8] : (kind === "rows" || kind === "height" || kind === "edges" || kind.startsWith("uneven-")) ? [0, 128, 255][row] : levels[Math.min(6, Math.floor(i * 7 / 4097))];
             text += (kind === "edges" ? [10,30,20][row] + i / 4096 * [40,60,60][row] : 10 + i / 40).toFixed(3) + " " + value + " 1\n";
         }
         if (!proof.write(root, "experiments/d20_scan/" + files[row], kind === "broken" && row === 1 ? "invalid pattern\n" : text))
@@ -20,6 +26,7 @@ function prepare(proof, root, kind) {
     }
 }
 function joint(proof, root, independent, axes = "tof") {
+    requirePrivateRoot(root);
     for (const [row, name] of [[0,"expt_n2"],[1,"expt_s2"]]) {
         const file="experiments/"+name+".edi";
         let text=proof.text(root,file);
@@ -52,6 +59,7 @@ function joint(proof, root, independent, axes = "tof") {
 }
 
 function dense(proof, root, jointRows, count = 48, lowRows = []) {
+    requirePrivateRoot(root);
     const pattern="XYDATA dense independent rows\n";
     if(!jointRows) {
         for(const name of ["all594687.dat","all594791.dat","all594842.dat"])
@@ -75,6 +83,7 @@ function dense(proof, root, jointRows, count = 48, lowRows = []) {
 
 // Unequal native supports: no band's missing column may borrow a neighbour.
 function edgeBanks(proof, root) {
+    requirePrivateRoot(root);
     joint(proof, root, false);
     for (const [row, name] of [[0,"expt_n2"],[1,"expt_s2"]]) {
         const file="experiments/"+name+".edi", old=proof.text(root,file);
@@ -88,6 +97,7 @@ function edgeBanks(proof, root) {
 
 // Gaps with no measured endpoint inside, or many samples per screen column.
 function gap(proof, root, dense, narrow = false) {
+    requirePrivateRoot(root);
     const names = ["all594687.dat", "all594791.dat", "all594842.dat"];
     const file = "experiments/d20.edi";
     const limits = narrow ? [14.1249, 14.1251] : [14, 16];
@@ -111,6 +121,7 @@ function gap(proof, root, dense, narrow = false) {
 }
 
 function coincident(proof, root, allEqual) {
+    requirePrivateRoot(root);
     const original = ["all594687.dat", "all594791.dat", "all594842.dat"];
     for (const name of original)
         if (!proof.remove(root, "experiments/d20_scan/" + name))

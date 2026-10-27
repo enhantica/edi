@@ -11,6 +11,7 @@ QtObject {
     readonly property bool isDarkPalette: !light && EaStyle.Colors.isDarkPalette
     readonly property color themeForeground: light ? "#333" : EaStyle.Colors.themeForeground
     readonly property color themeForegroundMinor: light ? "#aaa" : EaStyle.Colors.themeForegroundMinor
+    readonly property color themeForegroundDisabled: light ? "#bbb" : EaStyle.Colors.themeForegroundDisabled
     readonly property color appBorder: light ? "#ddd" : EaStyle.Colors.appBorder
     readonly property color mainContentBackgroundHalfTransparent: light ? "#E6ffffff" : EaStyle.Colors.mainContentBackgroundHalfTransparent
     readonly property color chartBackground: light ? "#fff" : EaStyle.Colors.chartBackground

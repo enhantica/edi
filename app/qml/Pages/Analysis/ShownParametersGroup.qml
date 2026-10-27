@@ -22,8 +22,8 @@ EaElements.GroupBox {
     readonly property real boxWidth: (EaStyle.Sizes.sideBarContentWidth - grid.columnSpacing) / 2
 
     objectName: "group.shownParameters"
-    collapsed: !SideBarGroups.isOpen(openKey)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
     title: qsTr("Parameters shown")
     icon: "filter"

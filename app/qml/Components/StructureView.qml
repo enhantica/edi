@@ -131,11 +131,12 @@ Rectangle {
             objectName: "structure.view.labels"
             anchors.fill: parent
             font.family: EaStyle.Fonts.fontFamily
-            font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.85
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
             font.weight: Font.DemiBold
-            letterFont.family: EaStyle.Fonts.ptSansBold.name
+            // The app's font and size, as every chart's labels (the owner, 2026-10-26); only bold, for the axis letters.
+            letterFont.family: EaStyle.Fonts.fontFamily
             letterFont.bold: true
-            letterFont.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
+            letterFont.pixelSize: EaStyle.Sizes.fontPixelSize
         }
         ChartLegend {
             id: legend
