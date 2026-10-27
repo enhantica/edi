@@ -154,8 +154,8 @@ class ParameterFilterModel : public QSortFilterProxyModel {
     // Rebuilds the pickers' lists and counts from the current selections; one that is no longer listed returns to all.
     void refresh();
     bool shownByGroup(bool free, int group) const;
-    // Not measured in this fit and setup values shown, symmetry and constraints not (the owner's defaults).
-    QList<bool> shown_groups_{true, false, false, true};
+    // Not measured in this fit shown, symmetry, constraints and setup values not (the owner's defaults).
+    QList<bool> shown_groups_{true, false, false, false};
     QString datablock_filter_;
     QStringList datablocks_{QString()};
     QList<CategoryGroup> datablock_groups_;
