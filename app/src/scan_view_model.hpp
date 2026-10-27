@@ -51,6 +51,8 @@ class ScanViewModel : public QObject {
     // Only the included range (the pattern charts' eraser button, one app setting): xMin and xMax run from the first
     // to the last point outside every excluded region.
     Q_PROPERTY(bool includedOnly READ includedOnly WRITE setIncludedOnly NOTIFY includedOnlyChanged)
+    // Some dataset has a background to subtract (Pattern::background): the subtract button is offered.
+    Q_PROPERTY(bool backgroundAvailable READ backgroundAvailable NOTIFY backgroundAvailableChanged)
     Q_PROPERTY(QString xTitle READ xTitle NOTIFY xTitleChanged)
     // Whether the pattern's own axis is time-of-flight (else 2θ), and the title of the extracted value the rows can
     // be placed by (empty without an extract rule).
@@ -124,6 +126,7 @@ class ScanViewModel : public QObject {
     bool dAvailable() const { return d_available_; }
     bool rowsByIndex() const { return rows_by_index_; }
     bool includedOnly() const { return included_only_; }
+    bool backgroundAvailable() const { return background_available_; }
     void setIncludedOnly(bool on);
     void setRowsByIndex(bool on);
     double rowMin() const { return row_min_; }
@@ -153,6 +156,9 @@ class ScanViewModel : public QObject {
         std::vector<double> x, intensity, shown;
         std::vector<std::pair<double, double>> excluded, excluded_shown;  // native, and on the axis shown
         std::vector<double> d;                                            // a joint fit's experiment's own d column
+        // The project's background at each point (edi::has_background, the calculated background column): a scan's
+        // template's, linear between its rows, NaN beyond them; a joint fit's experiment's own. Empty: none is set.
+        std::vector<double> background;
         // Changes whenever the points or their place on the axis shown change: a view's cached reduction of the
         // pattern holds while it is the same.
         std::uint64_t generation = 0;
@@ -193,6 +199,7 @@ class ScanViewModel : public QObject {
     void jointChanged();
     void nativeSharedChanged();
     void rowLabelsChanged();
+    void backgroundAvailableChanged();
 
    private:
     void start();
@@ -251,6 +258,9 @@ class ScanViewModel : public QObject {
     bool native_shared_ = true, included_only_ = false, rows_by_value_ = false;
     QStringList row_labels_;
     std::vector<double> template_x_, template_d_;  // the template's own axis and its current d column, where finite
+    std::vector<double> template_bx_, template_bkg_;  // the template's axis and its calculated background, where finite
+    bool background_available_ = false;
+    void publishBackground();
     std::vector<std::pair<double, double>> template_excluded_;  // a scan's excluded regions, the template's
     std::uint64_t generation_ = 0;  // bumped by every listing; a read delivers only to its own
     std::shared_ptr<std::atomic<bool>> stop_;

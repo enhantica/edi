@@ -16,6 +16,8 @@ EaElements.ComboBox {
     id: box
 
     property string toolTip: ""
+    // The toolbar group the box belongs to (ToolbarLines): boxes of different groups are a group's spacing apart.
+    property string toolbarGroup: ""
     // The index the box shows, bound by its user to where the choice is kept (a preference, the project). A ComboBox's
     // own currentIndex binding ends at the first choice made in it, after which a choice made elsewhere (Preferences)
     // would no longer show here; the binding is made again after each choice, once the choice has been kept, so the

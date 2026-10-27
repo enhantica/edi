@@ -302,8 +302,7 @@ Item {
         active: chart.shown && chart.visible && chart.Window.window !== null
         experiment: chart.experiment
         report: chart.report
-        colourScheme: Preferences.patternColours
-        structureColourScheme: Preferences.structureColours
+        colourScheme: Preferences.colourScheme
         // Each structure's curve, a report figure never (edi ADR-0017 §15).
         structureCurves: !chart.report && Preferences.structureCurves
         // Hiding a curve from the legend keeps the y range, or fits it to the curves still shown (Preferences).
@@ -311,6 +310,7 @@ Item {
         // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
         includedOnly: !chart.report && Preferences.chartIncludedOnly
+        subtractBackground: !chart.report && Preferences.chartSubtractBackground
         yScale: chart.settingsPage === "pattern" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.patternYScale)) : PatternChartController.Linear
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
@@ -476,8 +476,11 @@ Item {
             legendShown: false
             structureCurvesAvailable: !chart.report && controller.hasCalculated
             includedOnly: Preferences.chartIncludedOnly
+            subtractBackground: Preferences.chartSubtractBackground
+            backgroundAvailable: controller.backgroundAvailable
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
+            onSubtractBackgroundToggled: Preferences.chartSubtractBackground = !Preferences.chartSubtractBackground
         }
     }
 

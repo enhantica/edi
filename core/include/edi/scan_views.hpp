@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -74,30 +75,75 @@ struct ScanRowPair {
 };
 ScanRowPair scan_row_pair(std::span<const double> rising, double y, bool smooth);
 
-/// The 2D map's colour maps (data/colormaps/PROVENANCE.md), in the order the app offers them; viridis is the default.
-enum class ScanColourMap { Viridis, Magma, Inferno, Plasma };
-/// Every map's name, the enum's four first ("viridis", "magma", "inferno", "plasma"), then the candidates the owner
-/// chooses from (data/colormaps/PROVENANCE.md).
+/// The Stacked view's spacing steps (the owner, 2026-10-26), from overlaid to fully separated, s = 0, 0.25, 0.5, 0.75
+/// and 1; Wide is the default.
+enum class StackedSpacing { Overlay, Close, Medium, Wide, Separate };
+/// The steps' names, in the enum's order: "overlay", "close", "medium", "wide", "separate".
+const std::vector<std::string>& stacked_spacing_names();
+/// A step's title as the app lists it: "Overlay", "Close", "Medium", "Wide", "Separate".
+std::string stacked_spacing_title(StackedSpacing spacing);
+/// The step a stored name stands for; Wide for any other name.
+StackedSpacing stacked_spacing_or_default(std::string_view name);
+/// A step's s, from 0 (Overlay) to 1 (Separate).
+double stacked_spacing_share(StackedSpacing spacing);
+
+/// `count` stacked patterns on a plot `plot_height` tall at spacing `s` in [0, 1] (the linear rule, the owner,
+/// 2026-10-26): each pattern `height` = H (1 - s) + (H / N) s tall, and the i-th from the bottom with its baseline at
+/// i × `step`, step = s H / N, so the top pattern ends at H. s = 0 puts every baseline on one line; s = 1 makes the
+/// patterns H / N tall, each starting where the one below ends. No patterns: the plot's height and no step.
+struct StackedPlacement {
+    double height = 0.0;
+    double step = 0.0;
+};
+StackedPlacement stacked_placement(std::size_t count, double plot_height, double s);
+
+/// The scan views' colour maps (data/colormaps/PROVENANCE.md; ADR-0041), in the order the app lists them; Blue-Red is
+/// the default.
+enum class ScanColourMap { BlueRed, Viridis, Batlow, Inferno, Lapaz, Greys };
+/// Every map's name, in the enum's order: "blue-red", "viridis", "batlow", "inferno", "lapaz", "greys".
 const std::vector<std::string>& scan_colour_map_names();
-/// A map's title as the app lists it, naming its source ("batlow (Crameri)"); matplotlib's capitalised ("Viridis").
+/// A map's title as the app lists it: "Blue-Red", "Viridis", "Batlow", "Inferno", "Lapaz", "Greys"; any other name
+/// as it is.
 std::string scan_colour_map_title(std::string_view name);
-/// The enum value a saved name stands for; viridis for a name that is not one of the four.
+/// The map a name stands for; nullopt for any other name.
+std::optional<ScanColourMap> scan_colour_map_from_name(std::string_view name);
+/// The map a stored name stands for; Blue-Red for any other name, the maps offered before included.
 ScanColourMap scan_colour_map_or_default(std::string_view name);
 
 /// A colour map's colour of `t` in [0, 1], clamped to the ends; none (alpha 0) for a value that is not finite.
 struct ScanMapColour {
     std::uint8_t r = 0, g = 0, b = 0, a = 0;
 };
-ScanMapColour scan_map_colour(ScanColourMap map, double t);
+/// A map's 256 colours from its low end to its high end, as its name means them. Blue-Red runs from the chart's
+/// background through blue to red, mixed in Oklab, in the theme's colours: #FFFFFF, #3F7FBF, #C8323C in the light
+/// theme, #444444, #6AA6EA, #FC4F81 in the dark (the owner, 2026-10-26); the other maps are their tables in either
+/// theme.
+std::vector<ScanMapColour> scan_colour_map_table(ScanColourMap map, bool dark);
+/// The map's colour of `t` in the theme.
+ScanMapColour scan_map_colour(ScanColourMap map, double t, bool dark = false);
 /// viridis's colour of `t`.
 ScanMapColour scan_map_colour(double t);
 
-/// The scan views' colour choices (the owner, 2026-10-22): the four colour maps by name, then for each colour scheme
-/// a ramp from the chart's background to the scheme's first measured colour, `ramp:<scheme token>` ("ramp:ediNatural").
+/// Which way a map runs along the values: Auto, the default, puts the map's end nearest the chart's background at the
+/// low values, so it follows the theme; Normal runs it low to high as its name means; Inverted the other way.
+enum class ScanMapDirection { Auto, Normal, Inverted };
+/// The directions' names, in the enum's order: "auto", "normal", "inverted".
+const std::vector<std::string>& scan_map_direction_names();
+/// A direction's title as the app lists it: "Auto", "Normal", "Inverted".
+std::string scan_map_direction_title(ScanMapDirection direction);
+/// The direction a stored name stands for; Auto for any other name.
+ScanMapDirection scan_map_direction_or_default(std::string_view name);
+/// Whether `map` is drawn inverted, its high end at the low values, on `background` (`#RRGGBB`) in the theme. Auto
+/// inverts a map whose high end is nearer the background than its low end, by distance in Oklab.
+bool scan_map_inverted(ScanColourMap map, ScanMapDirection direction, const std::string& background, bool dark);
+
+/// The scan views' colour choices: the figure palettes' tokens (the Stacked view's only, edi::colour_scheme_names) and
+/// the colour maps' names.
 const std::vector<std::string>& scan_colour_choices();
-/// A choice's 256 colours from its low end to its high end: a map's table, or a ramp from `background` (`#RRGGBB`) to
-/// the scheme's first measured colour in the theme, mixed in Oklab. An unknown choice is viridis.
-std::vector<ScanMapColour> scan_colour_table(std::string_view choice, const std::string& background, bool dark);
+/// A map's 256 colours in the order the values take them, from the low values to the high: the map's table in the
+/// theme, inverted when `direction` inverts it on `background` (`#RRGGBB`). An unknown name is Blue-Red.
+std::vector<ScanMapColour> scan_colour_table(std::string_view map, const std::string& background, bool dark,
+                                             ScanMapDirection direction = ScanMapDirection::Normal);
 /// A table's colour of `t` in [0, 1], clamped to the ends; none (alpha 0) for a value that is not finite.
 ScanMapColour scan_table_colour(std::span<const ScanMapColour> table, double t);
 

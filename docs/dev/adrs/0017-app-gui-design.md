@@ -287,17 +287,17 @@ and `stepMaximum`.
 ### 8. Datablock colours and iconified names
 
 Every datablock has a colour and an icon, as in easydiffractionbeta (ideas 12 and 20), from
-`Style/AppColors.qml`. The colours are the colour scheme's (Preferences, Appearance: Edi Natural, the default, Edi
-Coast, Edi Garden, Edi Studio or Edi Contrast; ADR-0038), read from the palettes in `data/palettes` (PROVENANCE.md
-there) through the core's `pattern_colour` and `structure_colour`, which the charts' style table and the report read
-too. Datasets and structures are assigned separately, each by its place among its own kind: up to five take the first
-colours of their group in order, more a gradient from the group's first colour to its second. A report always takes
-the light colours:
+`Style/AppColors.qml`. The colours are the figure palette's (Preferences, Appearance: Earth, the default, Classic,
+Soft, Natural or Colour-blind safe; ADR-0038), read from the palettes in `data/palettes` (PROVENANCE.md there) through
+the core's `figure_colour`, which the charts' style table and the report read too. Experiments and structures share
+one order of eleven colours: each block holds a position (`colour_positions`), keeps it while it exists, and a new one
+takes the next free position, Earth keeping its first two for experiments; past eleven, shades of the first two. A
+report always takes the light colours:
 
-| Block | Icon | Colour by its place in the project's list (light / dark theme), Edi Natural |
+| Block | Icon | Colour at its position (light / dark theme), Earth |
 |---|---|---|
-| structure | `layer-group` | orange `#D26E3C` / `#F59B6F`, gold `#958508` / `#BAAD52`, brown `#936844` / `#BD9372`, amber `#C28B0A` / `#EBB352`, olive `#71964E` / `#98BB79`; past five, a gradient from orange to gold along the order |
-| experiment | `microscope` | slate `#829DB9` / `#B2C8E0`, blue `#039EDC` / `#71CBFE`, green `#6EA163` / `#A1CD97`, teal `#479F93` / `#81CAC2`, violet `#8989F7` / `#C0B6E8`; past five, a gradient from slate to blue along the order |
+| experiment | `microscope` | first `#618EC8` / `#6E92CB`, then `#8B9762` / `#94935C`, the two Earth keeps for experiments; a third experiment the next free position |
+| structure | `layer-group` | from the third position on: `#C58A03` / `#C58901`, then `#C877B7` / `#C375C2`, `#A27957` / `#C59B77`, … |
 
 An element's colour is the Jmol colour of the core's element table (`data/elements/element-styles.tsv`, ADR-0022
 §4, the same values as easydiffractionbeta's `Logic/Tables.py`), of the type symbol's element: its first capital
@@ -401,9 +401,10 @@ one selected row, and the row's number in the first column, bold in the accent c
   Appearance, Projects, Experimental, Develop. The base's `PreferencesDialog` offers no way to hide or add a row, and the base's
   window always creates it; it stays hidden, as the app bar's Preferences button opens edi's dialog
   (`Preferences.dialogShown`) instead of setting the base's flag.
-- **Appearance**: Theme; **Colour scheme — Edi Natural (the default), Edi Coast, Edi Garden, Edi Studio or Edi
-  Contrast** (the experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app
-  draws; ADR-0038), listed from the core; a stored scheme no longer offered reads and is kept as the default;
+- **Appearance**: Theme; **Palette — Earth (the default), Classic, Soft, Natural or Colour-blind safe** (the
+  experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app draws;
+  ADR-0038), listed from the core, with the colour order under it (ADR-0038 §7); a stored earlier palette reads and
+  is kept as its nearest new one;
   **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner,
   2026-09-29): edi has no choice of chart library.
 - **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
@@ -692,11 +693,11 @@ code (`QtCharts1dTab.qml` and the base's `QtCharts1dBase.qml`; the owner, 2026-1
 
 | Series | Colours | Mark |
 |---|---|---|
-| Measured, by the experiment's place (Edi Natural) | `#829DB9` / `#B2C8E0`, then `#039EDC` / `#71CBFE`, then `#6EA163` / `#A1CD97` (§8) | by the measured style: a band of 1 px edges and a 0.3 fill, a 2 px line, 5 px markers with 1 px bars, or line and points; drawn under the calculated curves |
-| Total calculation (Edi Natural) | the scheme's role colour, `#CA5C6E` / `#EE8795` | 2 px line, no fill |
-| Background (Edi Natural) | the scheme's role colour, `#8A8A8A` / `#969696` | 1 px dashed line, 4 px on and 3 off, its legend sample dashed too (the owner, 2026-10-22) |
-| Residual (Edi Natural) | the scheme's difference colour, `#737373` / `#B0B0B0` | 1 px line (the owner, 2026-10-02); in the band style a band as the measured one's |
-| Bragg ticks, by the structure's place (Edi Natural) | `#D26E3C` / `#F59B6F`, then `#958508` / `#BAAD52`, then `#936844` / `#BD9372` (§8) | 1 px ticks (the owner, 2026-10-02) |
+| Measured, at the experiment's position (Earth) | `#618EC8` / `#6E92CB`, then `#8B9762` / `#94935C` (§8) | by the measured style: a band of 1 px edges and a 0.3 fill, a 2 px line, 5 px markers with 1 px bars, or line and points; drawn under the calculated curves |
+| Total calculation (every palette) | the palette's role colour, `#AD1A6B` / `#FC4F81` | 2 px line, no fill |
+| Background (every palette) | the palette's role colour, `#8A8A8A` / `#969696` | 1 px dashed line, 4 px on and 3 off, its legend sample dashed too (the owner, 2026-10-22) |
+| Residual (every palette) | the palette's difference colour, `#737373` / `#B0B0B0` | 1 px line (the owner, 2026-10-02); in the band style a band as the measured one's |
+| Bragg ticks, at the structure's position (Earth) | `#C58A03` / `#C58901`, then `#C877B7` / `#C375C2`, then `#A27957` / `#C59B77` (§8) | 1 px ticks (the owner, 2026-10-02) |
 | Excluded band | `#8C8C8C` at opacity 0.15, both themes | a filled rectangle in each pane's plot area, under its grid and border (the owner, 2026-10-02: no band crosses the gaps between the panes) |
 
   An experiment's block colour (§8) is its measured series' colour, and a structure's is its ticks' colour.
@@ -790,7 +791,7 @@ computes no geometry: it draws what `edi::present_structure` and `edi::scene_dra
   all, asymmetric unit, none — *Atoms: all / asymmetric unit / none*, or *Atoms: show / hide* with no atom outside
   the asymmetric unit), labels (`tag`), bonds (`link`, when crysta found a bond), cell (`vector-square`), axes
   (`location-arrow`); a structure with no site has only cell and axes. A feature that is on shows its icon in the
-  accent colour. The colour scheme is a drop-down (`jmol`, `vesta`) before the buttons, in the toolbar drop-down style
+  accent colour. The colour scheme is a drop-down (Jmol, VESTA; ADR-0047) before the buttons, in the toolbar drop-down style
   (`ToolbarComboBox.qml`, shared with the pattern chart's y scale): the sidebar drop-downs' background, the base's
   translucent combo-box colour over the content background (the owner, 2026-10-02), at the buttons' height, as narrow as its
   widest entry with the arrow and the padding.

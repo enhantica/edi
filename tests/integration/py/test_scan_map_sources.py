@@ -14,13 +14,15 @@ OFFERED = sorted((ROOT / 'data/colormaps').glob('*.tsv'))
 
 
 def test_scan_retains_all_owner_selected_candidate_maps():
-    kept = json.loads((ROOT / 'tests/fixtures/scan_views/offered.json').read_text())
-    assert kept['authority'] == 'owner decision 3b42802d3', (
-        'The keep-all roster names its committed owner authority'
+    kept = json.loads((ROOT / 'tests/fixtures/chart_controls/owner.json').read_text())
+    assert kept['maps'] == ['Blue-Red', 'Viridis', 'Batlow', 'Inferno', 'Lapaz', 'Greys'], (
+        'The final owner selection contains exactly the six approved maps in display order'
     )
-    assert sorted(path.stem for path in OFFERED) == kept['maps'] and len(kept['maps']) == 28, (
-        'Every one of the 28 owner-retained candidate maps remains offered; '
-        'source/table correctness is checked independently below'
+    assert sorted(path.stem for path in OFFERED) == sorted(
+        name.lower() for name in kept['maps'] if name != 'Blue-Red'
+    ), (
+        'Each final published map keeps its table, without retired candidates; '
+        'the generated theme-aware Blue-Red is checked by the native colour witnesses'
     )
 
 
@@ -61,8 +63,7 @@ def test_light_ended_candidates_are_offered_without_fixing_their_names():
             assert reference['license'] and reference['license_source'], (
                 'Every offered light-ended candidate records its bundling licence'
             )
-    assert len(light) >= 2, (
-        'The owner comparison offers several light-ended candidates with independently sourced '
-        'low-end '
-        'Oklab lightness at least 0.85 and a darker high end, without a fixed final catalogue'
+    assert light == ['greys'], (
+        'The final map selection retains the independently sourced white-to-black Greys table; '
+        'theme-aware Blue-Red starts at the chart background in the separate native witnesses'
     )
