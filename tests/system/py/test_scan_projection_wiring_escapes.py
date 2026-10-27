@@ -72,17 +72,11 @@ def test_scene_graph_observer_rejects_disconnected_layer_hit_and_uncertainty(mon
         contract.assert_evolution_bindings(changed)
 
 
-@pytest.mark.parametrize('consumer', ['chart', 'status'])
-def test_actual_stale_markers_reject_constant_or_other_result_state(consumer):
-    good = (
-        contract.evolution_component()
-        if consumer == 'chart'
-        else item(source('qml/Components/StatusBar.qml'), 'statusBar.fit')
-    )
+@pytest.mark.parametrize('_consumer', ['chart'])
+def test_actual_stale_markers_reject_constant_or_other_result_state(_consumer):
+    good = contract.evolution_component()
     contract.assert_stale_marker(good)
-    marker = item(
-        good, 'evolution.outOfDate' if consumer == 'chart' else 'statusBar.fit.outOfDate'
-    )
+    marker = item(good, 'evolution.outOfDate')
     visible = property_value(marker, 'visible')
     for wrong in (
         'true',

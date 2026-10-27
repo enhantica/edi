@@ -282,7 +282,7 @@ EaElements.GroupBox {
                 }
                 SearchableComboBox {
                     id: variabilityPicker
-                    readonly property var titles: [qsTr("All parameters (%1)").arg(parameterFilter.variabilityCounts[0]), qsTr("Free parameters (%1)").arg(parameterFilter.variabilityCounts[1]), qsTr("Fixed parameters (%1)").arg(parameterFilter.variabilityCounts[2])]
+                    readonly property var titles: [qsTr("All parameters (%1)").arg(parameterFilter.variabilityCounts[0]), qsTr("Free parameters (%1)").arg(parameterFilter.variabilityCounts[1]), qsTr("Fixed parameters (%1)").arg(parameterFilter.variabilityCounts[2]), qsTr("Not fittable (%1)").arg(parameterFilter.variabilityCounts[3])]
                     function follow() {
                         currentIndex = Qt.binding(() => parameterFilter.variability);
                     }
@@ -335,6 +335,14 @@ EaElements.GroupBox {
             sourceModel: ParameterFilterModel {
                 id: parameterFilter
                 sourceModel: group.project ? group.project.parameters : null
+                // The Settings tab's show-filters, by ParameterItem.FitGroup from NotMeasured (edi ADR-0053).
+                readonly property var wanted: [Preferences.analysisShowNotMeasured, Preferences.analysisShowBySymmetry, Preferences.analysisShowByConstraint, Preferences.analysisShowFixedSettings]
+                function follow() {
+                    for (let i = 0; i < wanted.length; ++i)
+                        setShownGroup(i + 1, wanted[i]);
+                }
+                onWantedChanged: follow()
+                Component.onCompleted: follow()
             }
             marksCurrentRow: true
             currentRow: group.selectedRow
@@ -484,12 +492,29 @@ EaElements.GroupBox {
                     number: group.bound(row.maximum)
                     full: NumberText.plainFull(row.maximum)
                 }
-                EaComponents.ListViewCheckBox {
-                    horizontalAlignment: Text.AlignHCenter
-                    objectName: `parameters.free.${row.index}`
-                    enabled: group.measured
-                    checked: row.parameter ? row.parameter.free : false
-                    onToggled: row.parameter.free = checked
+                // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
+                // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053).
+                Item {
+                    property int horizontalAlignment: Text.AlignHCenter
+                    height: parent.height
+
+                    EaComponents.ListViewCheckBox {
+                        id: freeBox
+                        anchors.fill: parent
+                        horizontalAlignment: Text.AlignHCenter
+                        objectName: `parameters.free.${row.index}`
+                        enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free)
+                        checked: row.parameter ? row.parameter.free : false
+                        onToggled: row.parameter.free = checked
+                        ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason) : ""
+                    }
+                    HoverHandler {
+                        id: freeHover
+                    }
+                    EaElements.ToolTip {
+                        text: freeBox.ToolTip.text
+                        visible: text !== "" && freeHover.hovered && EaGlobals.Vars.showToolTips
+                    }
                 }
             }
         }
@@ -543,7 +568,8 @@ EaElements.GroupBox {
                 objectName: "parameters.slider"
                 width: EaStyle.Sizes.sideBarContentWidth - EaStyle.Sizes.fontPixelSize * 14
                 anchors.verticalCenter: parent.verticalCenter
-                enabled: sliderRow.selected !== null && !sliderRow.selected.estimated
+                // A value symmetry holds and a descriptor row's value are not moved here (edi ADR-0019, ADR-0053).
+                enabled: sliderRow.selected !== null && !sliderRow.selected.estimated && sliderRow.selected.refinable
                 from: sliderRow.lower
                 to: sliderRow.upper
                 // Clamped here to the limits, so the value is read again when they move: the slider clamps to the

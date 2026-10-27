@@ -189,9 +189,42 @@ TEST_CASE("CW native fixed BeBa setting stays outside Edi free walks") {
     project.experiment().data->intensity_meas =
         std::vector<double>(project.experiment().data->axis().size(), 1.0);
     project.minimizer_max_iterations = 1;
-    CHECK_NOTHROW_MESSAGE(
+    CHECK_THROWS_WITH_AS_MESSAGE(
         project.fit(),
-        "Edi fitting excludes the fixed limit before constructing a derivative chain");
+        doctest::Contains(
+            "bank.peak.asym_beba_limit cannot be fitted: a descriptor, never fitted"),
+        std::invalid_argument, "A descriptor marked free in memory must be refused at fit entry");
+    CHECK_MESSAGE(peak.asym_beba_limit->free,
+                  "A fit refusal preserves the caller's descriptor free flag");
+    const auto destination =
+        std::filesystem::temp_directory_path() /
+        ("cwl-edi-descriptor-load-" + std::to_string(reinterpret_cast<std::uintptr_t>(&project)));
+    std::filesystem::remove_all(destination);
+    peak.asym_beba_limit->uncertainty = .4;
+    edi::save_project(project, destination.string());
+    std::vector<std::string> warnings;
+    auto reloaded = edi::load_project(
+        destination.string(), [&](const std::string& warning) { warnings.push_back(warning); });
+    const auto& loaded_limit = *reloaded.experiment().peak.asym_beba_limit;
+    CHECK_MESSAGE(!loaded_limit.free, "A descriptor marked free on file must load fixed");
+    CHECK_MESSAGE(loaded_limit.value == 160,
+                  "Loading a free descriptor preserves its nondefault value");
+    CHECK_MESSAGE(loaded_limit.uncertainty == doctest::Approx(.4),
+                  "Loading a free descriptor preserves its uncertainty");
+    CHECK_MESSAGE(
+        std::count_if(warnings.begin(), warnings.end(),
+                      [](const std::string& warning) {
+                          return warning.find("crysta.domain.unfittable_free_ignored") !=
+                                     std::string::npos &&
+                                 warning.find(
+                                     "bank.peak.asym_beba_limit cannot be fitted: a descriptor, "
+                                     "never fitted; loaded fixed") != std::string::npos;
+                      }) == 1,
+        "Loading a free descriptor emits one coded note with its name and reason");
+    std::filesystem::remove_all(destination);
+    peak.asym_beba_limit->free = false;
+    CHECK_NOTHROW_MESSAGE(project.fit(),
+                          "Clearing the descriptor flag admits the free BeBa coefficient");
 }
 
 static void metadata_free_walk(edi::Project& project, bool experiment_walk,

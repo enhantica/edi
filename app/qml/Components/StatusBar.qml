@@ -129,7 +129,8 @@ EaElements.StatusBar {
         shown: bar.project !== null && valueText !== ""
         keyIcon: "th-list"
         keyText: qsTr("Parameters")
-        valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.count).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
+        // What a fit can vary: the free and the fixed; the rows no fit can vary are not counted (edi ADR-0053).
+        valueText: bar.project ? qsTr("%1 (%2 free, %3 fixed)").arg(bar.project.parameters.freeCount + bar.project.parameters.fixedCount).arg(bar.project.parameters.freeCount).arg(bar.project.parameters.fixedCount) : ""
         ToolTip.text: qsTr("Number of parameters: total, free and fixed")
     }
     // The fit area, right-aligned outside the base's row of items: the last fit's status and values as status items like
@@ -143,8 +144,9 @@ EaElements.StatusBar {
         anchors.right: parent.right
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
-        spacing: EaStyle.Sizes.fontPixelSize * 1.2
-        visible: bar.fit !== null && (running || bar.fit.outcome !== "")
+        spacing: Math.round(EaStyle.Sizes.fontPixelSize * 1.2)
+        // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one.
+        visible: bar.fit !== null && (AppState.analysisPageEnabled || running || bar.fit.outcome !== "")
 
         readonly property bool running: bar.fit !== null && bar.fit.running
         readonly property bool scanning: bar.fit !== null && bar.fit.scanning
@@ -169,11 +171,15 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            for (const extra of [outOfDate, showing, progress]) {
+            for (const extra of [showing, progress]) {
                 if (extra.visible) {
                     width += extra.width;
                     shown += 1;
                 }
+            }
+            if (fitButtons.visible) {
+                width += fitButtons.widthWith(itemWidth);
+                shown += 1;
             }
             return width + (shown - 1) * spacing;
         }
@@ -185,21 +191,25 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             color: EaStyle.Colors.appBarBorder
         }
-        // The last fit's outcome, in its colour.
+        // The last fit's outcome, in its colour, framed as a button that opens its results. Scan results the template
+        // has changed since read Outdated, in amber with the history icon, until the next run replaces them (the
+        // owner, 2026-10-26); the results window then says so above the old results.
         FitStatusItem {
             id: statusItem
             objectName: "statusBar.fit.outcome"
             readonly property string outcome: bar.fit ? bar.fit.outcome : ""
+            readonly property bool outdated: bar.fit !== null && bar.fit.outOfDate
             shown: fitArea.summary && outcome !== ""
             showKey: bar.keysFit
-            keyIcon: FitOutcomes.icon(outcome)
+            keyIcon: outdated ? "history" : FitOutcomes.icon(outcome)
             keyText: qsTr("Status")
-            valueText: FitOutcomes.word(outcome)
-            iconColor: FitOutcomes.color(outcome)
-            valueColor: FitOutcomes.color(outcome)
+            valueText: outdated ? qsTr("Outdated") : FitOutcomes.word(outcome)
+            iconColor: outdated ? EaStyle.Colors.orange : FitOutcomes.color(outcome, EaStyle.Colors.statusBarIconForeground)
+            valueColor: outdated ? EaStyle.Colors.orange : FitOutcomes.textColor(outcome)
             // The last fit's results table, also for a project opened with one.
             clickable: bar.fit !== null && bar.fit.results.count > 0
-            ToolTip.text: clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
+            framed: clickable
+            ToolTip.text: outdated ? qsTr("These results are from before your parameter changes: click to see them") : clickable ? qsTr("%1: click to see the results").arg(FitOutcomes.meaning(outcome)) : FitOutcomes.meaning(outcome)
             onClicked: fitResultsDialog.open()
         }
         Row {
@@ -278,20 +288,10 @@ EaElements.StatusBar {
                 ToolTip.text: fitArea.scanSummary ? qsTr("Reduced χ² over the scan's files, least to greatest") : qsTr("Reduced χ², before and after the fit")
             }
         }
-        // Scan results the template has changed since stay, marked out of date until the next run replaces them.
-        Text {
-            id: outOfDate
-            objectName: "statusBar.fit.outOfDate"
-            anchors.verticalCenter: parent.verticalCenter
-            visible: !fitArea.running && bar.fit !== null && bar.fit.outOfDate
-            font.family: EaStyle.Fonts.fontFamily
-            font.pixelSize: EaStyle.Sizes.fontPixelSize
-            color: EaStyle.Colors.orange
-            text: qsTr("out of date")
-        }
         // Every pattern, display catches up: the patterns drawn of those the scan has sent, while some wait.
         Text {
             id: showing
+            width: Math.ceil(implicitWidth)
             objectName: "statusBar.fit.showing"
             anchors.verticalCenter: parent.verticalCenter
             visible: bar.fit !== null && bar.fit.scanBehind
@@ -300,7 +300,7 @@ EaElements.StatusBar {
             color: EaStyle.Colors.themeForeground
             text: bar.fit !== null ? qsTr("Showing %1 of %2").arg(bar.fit.scanPatternUpdates).arg(bar.fit.scanReceived) : ""
         }
-        // Last, at the far right: the live values before it change width, and the bar stays where it is.
+        // Before the fit buttons, at the right: the live values before it change width, and the bar stays where it is.
         FitProgressBar {
             id: progress
             objectName: "statusBar.fit.progress"
@@ -314,6 +314,65 @@ EaElements.StatusBar {
             fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
             text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
+        }
+        // Last, at the bar's right end whatever the area's width (the owner, 2026-10-26): Reset and Follow in a scan
+        // project, then the Fit button in the corner. Fitting is run from here only; Reset and Follow give up their words
+        // first when the bar runs short of room.
+        Row {
+            id: fitButtons
+
+            readonly property bool scanMode: bar.fit !== null && bar.fit.scanMode
+            readonly property list<FitStatusItem> buttons: [resetButton, followButton, fitButton]
+
+            function widthWith(itemWidth) {
+                let width = 0;
+                let shown = 0;
+                for (const button of buttons) {
+                    if (button.shown) {
+                        width += itemWidth(button);
+                        shown += 1;
+                    }
+                }
+                return width + Math.max(0, shown - 1) * spacing;
+            }
+
+            objectName: "statusBar.fit.buttons"
+            visible: AppState.analysisPageEnabled
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Math.round(EaStyle.Sizes.fontPixelSize * 0.5)
+
+            StatusBarButton {
+                id: resetButton
+                objectName: "statusBar.fit.reset"
+                shown: fitButtons.scanMode
+                dropsWord: true
+                showWord: bar.keysFit
+                clickable: bar.fit !== null && bar.fit.canReset
+                keyIcon: "eraser"
+                valueText: qsTr("Reset")
+                ToolTip.text: qsTr("Clear every dataset's fit result")
+                onClicked: bar.fit.reset()
+            }
+            StatusBarButton {
+                id: followButton
+                objectName: "statusBar.fit.follow"
+                shown: fitButtons.scanMode
+                dropsWord: true
+                showWord: bar.keysFit
+                // Enabled while a scan runs; on, the pattern tab shows the dataset being fitted.
+                clickable: bar.fit !== null && bar.fit.scanning
+                checked: bar.fit !== null && bar.fit.scanning && bar.fit.following
+                keyIcon: "crosshairs"
+                valueText: qsTr("Follow")
+                ToolTip.text: qsTr("Show the dataset being fitted")
+                onClicked: bar.fit.following = !bar.fit.following
+            }
+            StatusBarFitButton {
+                id: fitButton
+                objectName: "statusBar.fit.button"
+                shown: AppState.analysisPageEnabled
+                fit: bar.fit
+            }
         }
     }
 

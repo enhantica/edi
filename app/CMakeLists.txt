@@ -122,6 +122,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
+        qml/Components/StatusBarButton.qml
+        qml/Components/StatusBarFitButton.qml
         qml/Components/StatusBarItem.qml
         qml/Components/StructureScene.qml
         qml/Components/StructureToolbar.qml
@@ -152,7 +154,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/AnalysisPage.qml
         qml/Pages/Analysis/ConstraintsGroup.qml
         qml/Pages/Analysis/FitStartGroup.qml
-        qml/Pages/Analysis/FittingGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml
         qml/Pages/Analysis/FreeHeaderMenu.qml
         qml/Pages/Analysis/JointFitGroup.qml
@@ -162,6 +163,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/RefinementGroup.qml
         qml/Pages/Analysis/SequentialExtractGroup.qml
         qml/Pages/Analysis/SequentialFitGroup.qml
+        qml/Pages/Analysis/ShownParametersGroup.qml
         qml/Pages/Experiment/AbsorptionGroup.qml
         qml/Pages/Experiment/ExtinctionGroup.qml
         qml/Pages/Experiment/ObservedThresholdRow.qml

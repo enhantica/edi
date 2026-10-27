@@ -31,6 +31,15 @@ QtObject {
     // How a followed scan redraws the pattern (Analysis, Settings; edi ADR-0029): FitViewModel.patternUpdates, 2 is
     // adaptive. The open project's fit takes it, whichever project is open.
     property int scanPatternUpdates: 2
+    // Which rows the Analysis table adds on top of what a fit can free (Analysis, Settings; the owner, 2026-10-26): the
+    // values this fit cannot determine and the setup values by default, those symmetry or a constraint sets on request.
+    property bool analysisShowNotMeasured: true
+    property bool analysisShowBySymmetry: false
+    property bool analysisShowByConstraint: false
+    property bool analysisShowFixedSettings: true
+    // Whether a finished fit opens its results window (Prompts; the owner, 2026-10-26). Off, the status bar's fit status
+    // still opens it.
+    property bool showFitResults: true
     // How the Stacked view draws its lines (Develop; edi ADR-0041): "auto" (the default) on the GPU when Qt draws with
     // one and painted without (RenderingInfo), "gpu" or "software" whatever was detected.
     property string scanRenderer: "auto"
@@ -59,6 +68,11 @@ QtObject {
         preferences.sideBarSide = "Right";
         preferences.engineThreads = 0;
         preferences.scanPatternUpdates = 2;
+        preferences.analysisShowNotMeasured = true;
+        preferences.analysisShowBySymmetry = false;
+        preferences.analysisShowByConstraint = false;
+        preferences.analysisShowFixedSettings = true;
+        preferences.showFitResults = true;
         preferences.scanRenderer = "auto";
         preferences.newProjectSuRule = "iucr_19";
         preferences.newReportLibraries = "online";
@@ -172,6 +186,11 @@ QtObject {
         location: EaGlobals.Vars.settingsFile
         category: "Analysis"
         property alias scanPatternUpdates: preferences.scanPatternUpdates
+        property alias showNotMeasured: preferences.analysisShowNotMeasured
+        property alias showBySymmetry: preferences.analysisShowBySymmetry
+        property alias showByConstraint: preferences.analysisShowByConstraint
+        property alias showFixedSettings: preferences.analysisShowFixedSettings
+        property alias showFitResults: preferences.showFitResults
     }
 
     property Settings patternChartSettings: Settings {

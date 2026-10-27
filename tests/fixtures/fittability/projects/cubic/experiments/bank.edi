@@ -1,0 +1,24 @@
+data_bank
+_edi.schema_version 3
+_experiment_type.sample_form "single crystal"
+_experiment_type.scattering_type bragg
+_experiment_type.radiation_probe neutron
+_experiment_type.beam_mode "constant wavelength"
+_instrument.setup_wavelength 1.6
+loop_
+_linked_structure.structure_id
+_linked_structure.scale
+_linked_structure.enabled
+phase 2.3 true
+_extinction.type becker-coppens-type-2
+_extinction.crystal_radius .12
+_extinction.domain_radius 28.4
+loop_
+_refln.index_h
+_refln.index_k
+_refln.index_l
+_refln.intensity_meas
+_refln.intensity_meas_su
+1 1 1 2.7 .3
+2 1 3 3.8 .4
+4 1 3 1.9 .2
