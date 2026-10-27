@@ -341,7 +341,10 @@ EaElements.GroupBox {
             currentRow: group.selectedRow
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
-            columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1].concat(group.measured ? [group.freeColumnWidth] : [])
+            // A layout of its own (the owner, 2026-10-27): the name as wide as its longest shown name, icons and text,
+            // the units as their text, and value, s.u., min and max sharing the rest equally; free at the right.
+            equalColumns: true
+            columns: [numberColumnWidth, (fittedWidths[1] ?? 0) + autoColumnPadding, -1, (fittedWidths[3] ?? 0) + autoColumnPadding, -1, -1, -1].concat(group.measured ? [group.freeColumnWidth] : [])
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -439,10 +442,13 @@ EaElements.GroupBox {
                 Item {
                     property int horizontalAlignment: Text.AlignLeft
                     objectName: `parameters.name.${row.index}`
+                    // As wide as its icons and text, which the table fits the column to.
+                    implicitWidth: nameLine.implicitWidth
                     height: parent.height
                     clip: true
 
                     IconLine {
+                        id: nameLine
                         anchors.verticalCenter: parent.verticalCenter
                         segments: ParameterNames.segments(row.parameter)
                     }
