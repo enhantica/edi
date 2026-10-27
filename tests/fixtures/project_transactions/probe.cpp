@@ -184,15 +184,21 @@ QJsonObject scientificState(const edi::Project& project) {
         banks.append(row);
     }
     const auto& fit = project.fit_result;
-    QJsonObject record{
-        {"kind", text(fit.result_kind)},          {"success", fit.success},
-        {"iterations", fit.iterations},           {"time", bits(fit.fitting_time)},
-        {"message", text(fit.message)},           {"exit", text(fit.exit_reason)},
-        {"objective", bits(fit.objective_value)}, {"chi", bits(fit.reduced_chi_square)},
-        {"rp", metric(fit.prof_r_factor)},        {"rwp", bits(fit.prof_wr_factor)},
-        {"rexp", metric(fit.prof_wr_expected)},   {"n", fit.n_data_points},
-        {"dof", fit.degrees_of_freedom},          {"cr", metric(fit.prof_cr_factor)},
-        {"cwr", metric(fit.prof_cwr_factor)}};
+    QJsonObject record{{"kind", text(fit.result_kind)},
+                       {"success", fit.success},
+                       {"iterations", fit.iterations},
+                       {"time", bits(fit.fitting_time)},
+                       {"message", text(fit.message)},
+                       {"exit", text(fit.exit_reason)},
+                       {"objective", metric(fit.objective_value)},
+                       {"chi", metric(fit.reduced_chi_square)},
+                       {"rp", metric(fit.prof_r_factor)},
+                       {"rwp", metric(fit.prof_wr_factor)},
+                       {"rexp", metric(fit.prof_wr_expected)},
+                       {"n", fit.n_data_points},
+                       {"dof", fit.degrees_of_freedom},
+                       {"cr", metric(fit.prof_cr_factor)},
+                       {"cwr", metric(fit.prof_cwr_factor)}};
     record["objectiveName"] = text(fit.objective_name);
     record["parameters"] = fit.n_parameters;
     record["freeParameters"] = fit.n_free_parameters;
