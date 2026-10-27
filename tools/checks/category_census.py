@@ -119,7 +119,7 @@ NOT_MODEL = {
 NOT_STORAGE = {
     'Structure::geometry_source': 'what the stored geometry was computed from',
     'ExperimentBase::computed_source': 'what the computed categories were computed from',
-    'ExperimentBase::carried_calculation': 'whether its file held calculated results, which the loader does not keep',
+    'ExperimentBase::carried_calculation': 'whether its file held calculated results',
     'Project::edits_': "the project's editor record",
     'Project::tail_': "the project's last member, which links its collections to its record",
     'FitResultRecord::scan_results': "a scan's results by file, shared, not saved (ADR-0034)",
