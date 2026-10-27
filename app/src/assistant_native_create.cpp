@@ -156,9 +156,9 @@ edi::Structure mapped_structure(const Object& source) {
     for(const auto& value:sites) {
         if(!value.isObject())throw RecipeRefusal(field,RecipeReason::ObjectRequired);
         const auto row=value.toObject();
-        QSet<QString> keys{"id","type_symbol","fract_x","fract_y","fract_z","occupancy"};
-        if (row.contains("wyckoff_letter")) keys.insert("wyckoff_letter");
-        exact(row, keys, field);
+        QSet<QString> allowed_keys{"id","type_symbol","fract_x","fract_y","fract_z","occupancy"};
+        if (row.contains("wyckoff_letter")) allowed_keys.insert("wyckoff_letter");
+        exact(row, allowed_keys, field);
         auto site=std::make_shared<edi::AtomSite>();site->id=token(row,"id");site->type_symbol=token(row,"type_symbol");
         if (row.contains("wyckoff_letter")) site->wyckoff_letter=token(row,"wyckoff_letter",true);
         const char* keys[]={"fract_x","fract_y","fract_z","occupancy"};auto parameters=site->parameters();
