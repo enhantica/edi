@@ -714,9 +714,12 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
             if (originalCreated) originalCreated->deleteLater();
             return false;
         }
-    } catch (const std::exception&) {
+    } catch (const std::exception& refusal) {
+        // Retain this original preparation's factual reason in its local outcome,
+        // never a replacement Session's mutable lastError.
+        if (outcome) outcome->error=QString::fromUtf8(refusal.what());
         if (originalCreated) originalCreated->deleteLater();
-        return false; // Original native receipt retains the failure; never use B's error.
+        return false;
     }
     if (!receiver || !originalCreated) return false;
     bool committed = false;

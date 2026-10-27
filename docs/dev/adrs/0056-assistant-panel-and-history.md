@@ -2981,6 +2981,11 @@ DiagnosticsDialog and the official runtime staging verifier. These owners remain
 - Ordinary empty-to-created setup retains the genuine task and admitted bytes. The replacement
   controller receives a fresh actual selected collection; preowned immutable input-origin wrappers
   bind that new collection/generation to duplicated original descriptors and physical identities.
+  Ordinary Create keeps its original preparation exception in the local outcome error; visible
+  refusal cannot replace an earlier factual preparation cause with a generic confirmation message.
+  Both prepared controller handoffs use the same complete context enrichment as ordinary outgoing
+  context, including their actual captured skill declarations/source fingerprint before disclosure
+  validation. A native-only partial envelope never bypasses the skill proof.
   Old captures retain their old identity. Unrelated project/account/Clear boundaries still retire it.
 - Fit reaches the current statusBar.fit.button and original FitViewModel on any ordinary enabled
   page; it does not require an obsolete Analysis tab. The persistent cue uses the Save highlight
@@ -2994,13 +2999,19 @@ DiagnosticsDialog and the official runtime staging verifier. These owners remain
   authentication, protocol and network operations retain their existing limits.
 - Local server-request retention exceptions retain account and task authority when the original
   channel survives. Return the same call's truthful partial/refused outcome and bounded app-owned
-  diagnostic; automatically retain first_stage/first_class. Do not reinterpret every allocation,
+  diagnostic; automatically retain first_stage/first_class in the existing projected workEvidence
+  without replacing unrelated evidence. A missing row/capacity gap remains explicit.
+  Do not reinterpret every allocation,
   unsupported native call or read refusal as expired authentication.
 - Initial official threads are durable (ephemeral=false). A recoverable transport failure can retain
   the original opaque thread ID only with the same actual project/model, generation, approved
   inputs/skills/disclosure and staging workspace. Reconnect verifies the actual managed account,
   then uses thread/resume(threadId, excludeTurns=true), preserving the once ledger and own visible
   conversation without importing a second history. No uncertain scientific call is replayed.
+  The same borrowed input identity covers powder and SC presence/sample form, integer h/k/l and
+  double measured intensity/sigma/per-reflection wavelength, with exact per-column written stamps
+  and typed byte widths. Equal-value writes recompute the same semantic digest; changed same-shape
+  observations cannot reuse old disclosure or recovery authority. Calculated columns are excluded.
   Explicit Clear/sign-out/account change/unrelated project retires resume authority. A failed or
   unsupported resume is not presented as a successful new instance of the old thread.
 - The existing bounded report snapshot supplies one in-memory current/last JSON document from
@@ -3008,7 +3019,9 @@ DiagnosticsDialog and the official runtime staging verifier. These owners remain
   the existing DiagnosticsDialog with this complete selectable document and Copy; there is no
   duplicate header button or automatic report chatter. Existing project reports/work-report.json
   remains the ordinary settled/final mirror. A capture gap preserves the last useful document and
-  records missing evidence, never a fabricated scientific outcome. Regression attempts retain
+  records missing evidence, never a fabricated scientific outcome. Opening a fresh retired scope
+  without an actual attempt preserves the original last document and its original scope/attempt;
+  genuine new work captures current evidence even before any provider row exists. Regression attempts retain
   their own exported artifacts; ordinary ZIP working-root/save-pack ownership is unchanged.
 
 Pixi's assistant-runtime task is the sole developer version/checksum source. Its developer-only
@@ -3028,3 +3041,12 @@ stock public JSONL API. No eager MCP discovery, global profile mutation, hidden 
 guessed allowlist flag or custom Rust runtime is used to claim that unresolved boundary closed.
 Actual advertisement/dispatch, same-thread resume, OFF/ON native behavior and model/scientific
 regressions require independent execution; this source decision alone certifies none of them.
+
+
+Direct refusal projection has one code owner: Result's existing closed status/code mapping.
+The fixed-field walker must not independently add code before that mapping: its borrowed size
+pass would count two JSON members while QJsonObject materialization overwrites one. Both normal
+and fallback/native refusals use this same exact byte/materialized-wire contract; Diagnostic's
+independent code field remains ordinary data. Project-required refusal records its actual stage,
+and local retention refusal uses the already declared retention_blocked code, without changing
+validation/admission ordering or replaying any action.

@@ -893,6 +893,7 @@ struct AssistantViewModel::State {
     void refresh_work_report_cache() noexcept {
 #ifndef __EMSCRIPTEN__
         const QPointer<AssistantViewModel> receiver(&owner);const auto binding=generation;const auto scope=work_reports.scope();
+        if(work_reports.attempt().isEmpty() && !work_report_cache.isEmpty())return;
         try {
             const auto snapshot=work_snapshot(Limits::record_bytes);
             if(!receiver || receiver->state_.get()!=this || generation!=binding || work_reports.scope()!=scope || snapshot.document.isEmpty())return;
@@ -1319,7 +1320,8 @@ struct AssistantViewModel::State {
     struct RawInputStamp {
         const edi::BraggPdExperiment* experiment = nullptr;
         quint64 name = 0, data = 0, theta = 0, tof = 0, intensity = 0, sigma = 0;
-        bool present = false, calculation_only = false;
+        quint64 h=0,k=0,l=0,reflection_intensity=0,reflection_sigma=0,wavelength=0;
+        bool present = false, reflections_present=false, calculation_only = false, powder=false;
         bool operator==(const RawInputStamp&) const = default;
     };
     struct RawInputCache {
@@ -1469,6 +1471,14 @@ struct AssistantViewModel::State {
             RawInputStamp result;
             result.experiment = experiment.get(); result.name = experiment->name.written();
             result.calculation_only = experiment->calculation_only; result.present = bool(experiment->data);
+            result.powder=experiment->experiment_type.effective_sample_form()==edi::SampleFormEnum::POWDER;
+            result.reflections_present=bool(experiment->reflections);
+            if(experiment->reflections) {
+                const auto& data=*experiment->reflections;
+                result.h=data.index_h.written();result.k=data.index_k.written();result.l=data.index_l.written();
+                result.reflection_intensity=data.intensity_meas.written();result.reflection_sigma=data.intensity_meas_su.written();
+                result.wavelength=data.wavelength.written();
+            }
             if (experiment->data) {
                 const auto& data = *experiment->data;
                 result.data = data.written.value(); result.theta = data.two_theta.written(); result.tof = data.time_of_flight.written();
@@ -1493,12 +1503,18 @@ struct AssistantViewModel::State {
             bytes += size;
         };
         const auto column = [&](const auto& values) {
-            if (values.size() > edi::assistant::SelectedFileLimits::collection_bytes / sizeof(double))
+            using Value=typename std::remove_cvref_t<decltype(values)>::value_type;
+            if (values.size() > edi::assistant::SelectedFileLimits::collection_bytes / sizeof(Value))
                 throw std::length_error("Project raw input column exceeds capacity");
-            admit(values.size() * sizeof(double));
+            admit(values.size() * sizeof(Value));
         };
         for (const auto& experiment : model->experiments) {
             admit(experiment->name.value().size());
+            if(experiment->reflections) {
+                const auto& data=*experiment->reflections;
+                column(data.index_h.get());column(data.index_k.get());column(data.index_l.get());
+                column(data.intensity_meas.get());column(data.intensity_meas_su.get());column(data.wavelength.get());
+            }
             if (!experiment->data) continue;
             const auto& data = *experiment->data;
             if (data.two_theta) column(*data.two_theta);
@@ -1513,11 +1529,20 @@ struct AssistantViewModel::State {
         scope_integer(hash, model->experiments.size());
         const auto values = [&](const auto& vector) {
             scope_integer(hash, vector.size());
-            scope_bytes(hash, reinterpret_cast<const char*>(vector.data()), vector.size() * sizeof(double));
+            using Value=typename std::remove_cvref_t<decltype(vector)>::value_type;
+            scope_bytes(hash, reinterpret_cast<const char*>(vector.data()), vector.size() * sizeof(Value));
         };
         for (const auto& experiment : model->experiments) {
             next.stamps.push_back(stamp(experiment));
-            scope_text(hash, experiment->name.value()); scope_integer(hash, experiment->calculation_only); scope_integer(hash, bool(experiment->data));
+            scope_text(hash, experiment->name.value());scope_integer(hash,experiment->calculation_only);
+            scope_integer(hash,experiment->experiment_type.effective_sample_form()==edi::SampleFormEnum::POWDER);
+            scope_integer(hash,bool(experiment->reflections));
+            if(experiment->reflections) {
+                const auto& data=*experiment->reflections;
+                values(data.index_h.get());values(data.index_k.get());values(data.index_l.get());
+                values(data.intensity_meas.get());values(data.intensity_meas_su.get());values(data.wavelength.get());
+            }
+            scope_integer(hash,bool(experiment->data));
             if (!experiment->data) continue;
             const auto& data = *experiment->data;
             scope_integer(hash, bool(data.two_theta)); if (data.two_theta) values(*data.two_theta);
@@ -1569,7 +1594,7 @@ struct AssistantViewModel::State {
         QJsonArray datasets;
         for (const auto& value : model.value("datasets").toArray()) {
             const auto row = value.toObject();
-            datasets.append(Object{{"id",row.value("id")},{"beam_mode",row.value("beam_mode")},
+            datasets.append(Object{{"id",row.value("id")},{"sample_form",row.value("sample_form")},{"beam_mode",row.value("beam_mode")},
                 {"probe",row.value("probe")},{"calculation_only",row.value("calculation_only")}});
         }
         const Object identity{{"structures",model.value("structures")},{"datasets",datasets}};
@@ -2047,6 +2072,18 @@ struct AssistantViewModel::State {
     }
 #endif
 
+    void append_outgoing_context(Object& context,ProjectViewModel* target,
+                                 std::shared_ptr<const AssistantSkillInventory> captured = {}) {
+        const auto original=file_projection();
+        (void)generic_size(context,Limits::context_bytes);
+        append_native_context(context,target);
+        const auto inventory=captured ? std::move(captured) : source_inventory();
+        if(!original.input_current())throw std::runtime_error("The original skill context owner changed");
+        (void)generic_size(inventory->declarations,Limits::context_bytes);
+        context["skills"]=inventory->declarations;
+        context["skill_sources"]=Object{{"sha256",QString::fromLatin1(inventory->fingerprint.toHex())},{"configured",source_disclosure()}};
+        generic_size(context,Limits::context_bytes);
+    }
     Object outgoing_context(std::shared_ptr<const AssistantSkillInventory> captured = {}) {
         const auto original=file_projection();
         const QPointer<CodexAgent> context_transport(agent.get());
@@ -2063,15 +2100,7 @@ struct AssistantViewModel::State {
         if (generic_mode && !context.contains("error")) {
             try {
 
-        (void)generic_size(context,Limits::context_bytes);
-                append_native_context(context,project);
-                const auto inventory=captured ? std::move(captured) : source_inventory();
-                if(!original.input_current())return {{"error","Skill source owner changed"}};
-                const auto declarations=generic_size(inventory->declarations,Limits::context_bytes);
-
-                context["skills"]=inventory->declarations;
-                context["skill_sources"]=Object{{"sha256",QString::fromLatin1(inventory->fingerprint.toHex())},{"configured",source_disclosure()}};
-                generic_size(context,Limits::context_bytes);
+                append_outgoing_context(context,project,std::move(captured));
             }
             catch (...) { return {{"error", "Complete project and native-action context is unavailable within its limit"}}; }
         }
@@ -6583,6 +6612,7 @@ struct AssistantViewModel::State {
             native_start_creation(rpc, id, purpose, original, args); return;
         }
         if (!project && name != "inspect_project") {
+            save_stage="PROJECT_REQUIRED";
             reply(false, {{"status", "unavailable"}, {"code", "project_required"}, {"message", "Use create_project to create a normal project in this current Edi session, then continue with the normal app actions."}}); return;
         }
         if(name=="show_report") {native_start_report(rpc,id,purpose,original);return;}
@@ -7059,7 +7089,7 @@ struct AssistantViewModel::State {
                 auto context = object(attachment->prepared_controller->context());
                 if (!current()) throw std::runtime_error("The original creation attachment retired");
                 if (context.contains("error")) throw std::length_error("Complete created-project context is unavailable");
-                append_native_context(context,target); // Same complete grant/data envelope, exact prepared owner.
+                append_outgoing_context(context,target,creation->receipt->disclosure->skills); // Same full context owner as ordinary disclosure.
                 attachment->context = QJsonDocument(context).toJson(QJsonDocument::Compact);
                 attachment->disclosure = prepare_disclosure_scope(target, context, generic_input_hashes);
                 if (!current()) throw std::runtime_error("The original creation attachment retired");
@@ -8656,7 +8686,7 @@ struct AssistantViewModel::State {
         if (!create_widget_owned(run)) return;
         const auto receiver = run->receiver;
         if(run->normal_project_only && run->owner_handoff) {
-            try {run->owner_handoff->ordinary_failure=message;}catch(...) {}
+            try {if(run->owner_handoff->ordinary_failure.isEmpty())run->owner_handoff->ordinary_failure=message;}catch(...) {}
             native_finish_normal_project(run->owner_handoff,false);return;
         }
         if (run->call.record->answered || run->call.record->discarded || run->call.record->completed) {
@@ -10124,12 +10154,17 @@ struct AssistantViewModel::State {
                             const auto row=record?record->row:generic_item_rows.value(params.value("callId").toString());
                             const Object failure{{"first_stage",work_report_observed(QLatin1StringView(diagnostic.first_stage))},
                                 {"first_class",work_report_observed(QLatin1StringView(diagnostic.first_class))}};
-                            if(!row.isEmpty())work_merge(row,{{"localRequestFailure",failure}});
+                            if(!row.isEmpty()) {
+                                Object evidence;
+                                for(const auto& value:history)if(value.toObject().value("id")==row){evidence=value.toObject().value("workEvidence").toObject();break;}
+                                evidence["local_request_failure"]=failure;
+                                work_merge(row,{{"workEvidence",evidence}});
+                            }
                             else {work_failure_row(QStringLiteral("client.request_retention"),message);work_reports.missEvidence();}
                             if(!publication.input_current() || !originalTransport || agent.get()!=originalTransport.data() || originalTransport->outputGeneration()!=transportGeneration)return;
                             if(record)native_supersede_operation(message); // Actual worker/fit/partial owner settles once.
                             else if(method==QStringLiteral("item/tool/call")) {
-                                const Object outcome{{"status","refused"},{"code","client_request_retention"},{"message",bounded_error(message)},
+                                const Object outcome{{"status","refused"},{"code","retention_blocked"},{"message",bounded_error(message)},
                                     {"stage",QLatin1StringView(diagnostic.first_stage)}};
                                 (void)originalTransport->answer(id,native_response(false,outcome));
                             } else (void)originalTransport->reject(id);
@@ -13009,7 +13044,7 @@ struct AssistantViewModel::State {
             if(!proof.input_current())return false;
             if(!selected.ok)throw std::runtime_error("The original selected collection could not enter the new empty project");
             const auto descriptor=object(selected.value);setupOrigins=rebind_input_origins(descriptor);setupReply=selected.value;
-            auto context=object(setupController->context());append_native_context(context,target);
+            auto context=object(setupController->context());append_outgoing_context(context,target,approved_scope->skills);
             generic_size(context,Limits::context_bytes);setupScope=prepare_disclosure_scope(target,context,generic_input_hashes);
             setupConsent=QJsonDocument(context).toJson(QJsonDocument::Compact);
             if(!proof.input_current())return false;
@@ -13146,10 +13181,15 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
     if(normal && normal->ordinary_project && normal->ordinary_intent==intent) {
         const auto visible=s->native_create_widget;
         if(s->show_actions && (!visible || !visible->normal_project_only || visible->owner_handoff!=normal || !visible->creating_project ||
-            !s->widget_input || !s->widget_input->injecting()))return false;
-        if(!target || !s->normal_project_create_current(normal) || !edi::empty_for_population(*target->assistantProject()) ||
+            !s->widget_input || !s->widget_input->injecting())) {
+            normal->ordinary_failure=QStringLiteral("The original normal Create dialog confirmation no longer owns this request.");return false;
+        }
+        if(!s->normal_project_create_current(normal))return false;
+        if(!target || !edi::empty_for_population(*target->assistantProject()) ||
             !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->description()!=normal->ordinary_description ||
-            location!=normal->ordinary_location)return false;
+            location!=normal->ordinary_location) {
+            normal->ordinary_failure=QStringLiteral("The original normal Create target or form defaults changed before adoption.");return false;
+        }
         if(!location.isEmpty() && QFileInfo::exists(location)) {
             normal->ordinary_failure=QStringLiteral("The normal Create destination already exists. Choose another project name; the existing destination was not replaced.");return false;
         }
