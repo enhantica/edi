@@ -1,19 +1,12 @@
 # The documentation site on GitHub Pages, with the web app at /webapp/. The site is built from main (or
 # by dispatch) with the notebooks executed for rendering, which needs crysta's SDK; the web app is built
-# as CI's `app · WebAssembly` job builds it and placed into the site (ADR-0023). A dispatch may name a
-# crysta commit to build the web app from instead of the pinned SDK, for a preview of unreleased crysta work;
-# the notebooks are then published unexecuted, as the native build would use the pin.
+# as CI's `app · WebAssembly` job builds it and placed into the site (ADR-0023).
 name: Pages
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-    inputs:
-      crysta_commit:
-        description: Build the web app from this crysta commit (a full sha) instead of the pinned SDK
-        required: false
-        default: ''
 
 permissions:
   contents: read
@@ -43,38 +36,42 @@ jobs:
           repositories: crysta
           permission-contents: read
           permission-actions: read
-      - name: Check the crysta commit
-        if: inputs.crysta_commit != ''
-        run: |
-          [[ "$CRYSTA_COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "crysta_commit must be a full 40-hex sha"; exit 1; }
-        env:
-          CRYSTA_COMMIT: ${{ inputs.crysta_commit }}
+      # Preview build: crysta from source at the branch's paired commit, no native build, so the notebooks are
+      # published unexecuted.
       - name: Check out crysta for the web app
-        if: inputs.crysta_commit != ''
         uses: actions/checkout@v5
         with:
           repository: enhantica/crysta
-          ref: ${{ inputs.crysta_commit }}
+          ref: da8a5cd5ede9acfee46cae96f264fad0137d66f2
           token: ${{ steps.crysta-token.outputs.token }}
           path: crysta-source
-      - name: Build the native code
-        if: inputs.crysta_commit == ''
-        run: pixi run core-build
-        env:
-          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
-      - name: Execute notebooks for rendering
-        if: inputs.crysta_commit == ''
-        run: pixi run notebook-exec-ci
-        env:
-          GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
       - name: Strict docs build
         run: pixi run docs-build
       - name: Install the WebAssembly toolchain  # Emscripten, Qt's wasm kits, Eigen, Chrome
         run: pixi run -e app wasm-toolchain
-      - name: Build both kits and pack the web app
-        run: pixi run -e app --skip-deps wasm-build
+      # dev only: a compiler cache kept between dev builds, so later builds recompile only what changed.
+      - id: ccache
+        uses: ./.github/actions/ccache
+        with:
+          max-size: 2G
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/edi-ccache
+          key: ccache-wasm-dev-${{ steps.ccache.outputs.key-prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            ccache-wasm-dev-${{ steps.ccache.outputs.key-prefix }}
+            ccache-wasm-dev-${{ runner.os }}-${{ runner.arch }}-
+            ccache-wasm-${{ runner.os }}-${{ runner.arch }}-
+      # dev only: the multithread kit alone (about half the build time); its files also fill the singlethread
+      # slot so the pack step runs. Browsers without cross-origin isolation are not served on dev.
+      - name: Build the multithread kit and pack the web app
+        run: |
+          pixi run -e app --skip-deps wasm-build multithread
+          mkdir -p build/wasm/singlethread/app/app
+          cp build/wasm/multithread/app/app/{edi_app.js,edi_app.wasm,qtloader.js,CRYSTA_SOURCE_SHA} build/wasm/singlethread/app/app/
+          pixi run -e app --skip-deps bash tools/ci/wasm-pack.sh
         env:
-          EDI_WASM_CRYSTA_SRC: ${{ inputs.crysta_commit != '' && format('{0}/crysta-source', github.workspace) || '' }}
+          EDI_WASM_CRYSTA_SRC: ${{ github.workspace }}/crysta-source
       - name: Place the web app at /webapp/
         run: bash tools/ci/docs-webapp.sh build/wasm/site site
       - name: Upload the site
