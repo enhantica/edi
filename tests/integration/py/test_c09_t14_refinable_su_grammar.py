@@ -228,11 +228,15 @@ def test_c09_t14_decimal_su_save_load_preserves_reference_value_exactly(
 
     destination = tmp_path / 'decimal-save-destination'
     source.save_as(destination)
-    # Read legacy decimals exactly, then save and adopt IUCr values.
-    value, su = rounded_pair(float.fromhex(case['value_hex']), float.fromhex(case['esd_hex']))
-    expected_token = rounded_record(f'_peak.broad_gauss_sigma_0 {token}'.encode()).split()[-1]
+    # Read legacy decimals exactly, then save and adopt the default two-s.u.-digit values.
+    value, su = rounded_pair(
+        float.fromhex(case['value_hex']), float.fromhex(case['esd_hex']), 'iucr_99'
+    )
+    expected_token = rounded_record(
+        f'_peak.broad_gauss_sigma_0 {token}'.encode(), 'iucr_99'
+    ).split()[-1]
     assert expected_token in _experiment_path(destination).read_bytes().split(), (
-        'A legacy decimal bracket must save with the independent IUCr spelling'
+        'A legacy decimal bracket must save with the independent default two-s.u.-digit spelling'
     )
     for parameter in (
         source.experiment.peak.broad_gauss_sigma_0,
@@ -349,7 +353,9 @@ def test_c09_t14_writer_tokens_always_reparse_bit_exactly(
         True,
     ), 'Legacy decimal input must retain the exact value, uncertainty and free state before saving'
 
-    value, su = rounded_pair(float(value_token), None if su_token is None else float(su_token))
+    value, su = rounded_pair(
+        float(value_token), None if su_token is None else float(su_token), 'iucr_99'
+    )
     expected = (value.hex(), None if su is None else su.hex(), True)
     destination = tmp_path / 'writer-matrix-destination'
     source.save_as(destination)
@@ -358,10 +364,13 @@ def test_c09_t14_writer_tokens_always_reparse_bit_exactly(
     assert saved_match is not None
     saved_token = saved_match.group(1)
     expected_token = (
-        rounded_record(f'_peak.broad_gauss_sigma_0 {source_token}'.encode()).split()[-1].decode()
+        rounded_record(f'_peak.broad_gauss_sigma_0 {source_token}'.encode(), 'iucr_99')
+        .split()[-1]
+        .decode()
     )
     assert saved_token == expected_token, (
-        'Saved tokens must follow the independent IUCr rule and retain all nonrounded grammar'
+        'Saved tokens follow the independent default two-s.u.-digit rule '
+        'and retain all nonrounded grammar'
     )
     assert (
         float(source_parameter.value).hex(),

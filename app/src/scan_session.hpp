@@ -48,6 +48,9 @@ class ScanSession : public QObject {
 
     // Lists the datasets and indexes the results; the refusal, if any (the index then holds no row).
     QString load(const edi::Project& project);
+    // What `listing` loaded of the same project in another place, taken whole: the datasets, the index and the run.
+    // Nothing is read, so a save takes the listing it read of its staged folder before it was published.
+    void take(ScanSession& listing);
     // Indexes the results again (after a run or an undo); the refusal, if any.
     QString reindex(const edi::Project& project, bool writing = false);
     const edi::ScanDatasets& datasets() const { return datasets_; }

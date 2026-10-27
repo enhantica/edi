@@ -28,6 +28,8 @@ class ExampleListModel : public RowTableModel {
    public:
     explicit ExampleListModel(QObject* parent);
     static QStringList bundledIds();
+    // A bundled example's title, its sample and origin as the list shows them; empty for an unknown id.
+    QString titleOf(const QString& id) const;
     QString searchText() const { return search_text_; }
     QString filterProperty() const { return filter_property_; }
     QString filterValue() const { return filter_value_; }

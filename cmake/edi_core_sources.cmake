@@ -29,6 +29,8 @@ function(edi_core_sources root out)
         ${root}/core/src/presentation.cpp
         ${root}/core/src/structure_scene.cpp
         ${root}/core/src/scan_views.cpp
+        ${root}/core/src/project_archive.cpp
+        ${root}/core/third_party/miniz/miniz.c
     )
 
     # ADR-0022: the element table (data/elements/element-styles.tsv, PROVENANCE.md beside it) is embedded in the core

@@ -915,5 +915,33 @@
     "context": "< const detail :: ProjectLink > own = link ( ) ; for ( detail :: KeyedBase",
     "offset": 8,
     "limit": 1
+  },
+  {
+    "name": "Single-crystal row membership: link 27139",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ; experiment . absorption . row . link ( record ) ; experiment . extinction .",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "Single-crystal row membership: link 27150",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ; experiment . extinction . row . link ( record ) ; } static void unlink",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "Single-crystal row membership: unlink 27192",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ; experiment . absorption . row . unlink ( ) ; experiment . extinction . row",
+    "offset": 8,
+    "limit": 1
+  },
+  {
+    "name": "Single-crystal row membership: unlink 27202",
+    "source": "core/include/edi/model.hpp",
+    "context": ") ; experiment . extinction . row . unlink ( ) ; } static const detail ::",
+    "offset": 8,
+    "limit": 1
   }
 ]

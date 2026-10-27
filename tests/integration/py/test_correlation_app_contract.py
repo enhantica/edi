@@ -100,9 +100,31 @@ def test_workflow_pages_follow_structure_and_experiment_presence(property_name, 
 def test_create_project_passes_the_chosen_location_to_the_session():
     source = text('Pages/Project/GetStartedGroup.qml')
     accepted = body(source, 'onAccepted:')
-    assert re.search(r'Session\.createProject\([^;]*createDialog\.projectLocation', accepted), (
-        'Create project must use the location chosen in its dialog'
+    script = """const queued=[],calls=[];
+    const Qt={callLater:callback=>queued.push(callback)};
+    const Preferences={newProjectSuRule:'iucr_99',newReportLibraries:'embedded'};
+    const AppState={createFailed(){throw Error('creation refused')}};
+    const createDialog={projectName:'first',projectDescription:'desc',
+      projectLocation:'/chosen/first',
+      projectTitle:'title',projectAuthors:'author'};
+    const WebFiles={available:false};
+    const Session={createProject(...args){calls.push(args);return true}};
+    function accept(){BODY}accept();
+    const before=calls.length;
+    createDialog.projectLocation='/other';createDialog.projectName='changed';
+    queued.splice(0).forEach(callback=>callback());
+    process.stdout.write(JSON.stringify([before,calls]));""".replace('BODY', accepted)
+    result = subprocess.run(
+        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
     )
+    assert result.returncode == 0, (
+        'The actual Create acceptance handler must execute with its captured dialog values: '
+        + result.stderr
+    )
+    assert json.loads(result.stdout) == [
+        0,
+        [['first', 'desc', '/chosen/first', 'iucr_99', 'title', 'author', True]],
+    ], 'Create must defer replacement and retain the accepted name, chosen location and metadata'
 
 
 def test_supported_only_selectors_are_disabled_and_explain_the_reason():
@@ -278,7 +300,7 @@ def test_create_location_joins_folder_and_edited_name_once(folder, name, expecte
 def test_save_asks_once_then_uses_the_existing_location():
     source = text('Main.qml')
     script = """let asks=0,saves=0;
-    const WebFiles={available:false};const saveFolder={open(){asks++}};
+    const WebFiles={available:false};const saveAsChoice={open(){asks++}};
     const saveError={open(){throw Error('save failed')}};
     const Session={project:{path:'/chosen/first'},needsSaveAs:true,save(){saves++;return true}};
     """
@@ -294,7 +316,43 @@ def test_save_asks_once_then_uses_the_existing_location():
         'The production Save action must execute through both lifecycle states'
     )
     assert json.loads(result.stdout) == [1, 1], (
-        'Save must ask for a directory once and save later changes in place without another dialog'
+        'Save must open the format dialog once and save later changes in '
+        'place without another dialog'
+    )
+    accepted = body(source[source.index('id: saveAsChoice') :], 'onAccepted:')
+    script = """let calls=[];
+    const saveAsChoice={zip:false,copy:false,diskWritable:true};const WebFiles={available:false};
+    const Session={downloadWebProject(){calls.push(['download'])},
+      saveWebProjectAs(...args){calls.push(['web',...args])},
+      suggestedSaveTarget(zip){return zip?'/chosen/name.zip':'/chosen/name'}};
+    const saveZip={openAt(path){calls.push(['zip',path])}};
+    const saveFolder={openAt(path){calls.push(['folder',path])}};
+    function accept(){with(saveAsChoice){BODY}}
+    for(const browser of [false,true])
+    for(const zip of [false,true])for(const copy of [false,true]){
+      WebFiles.available=browser;Object.assign(saveAsChoice,{zip,copy});accept();}
+    WebFiles.available=true;saveAsChoice.diskWritable=false;accept();
+    process.stdout.write(JSON.stringify(calls));""".replace('BODY', accepted)
+    outcome = subprocess.run(
+        ['node', '-e', script], capture_output=True, text=True, timeout=3, check=False
+    )
+    assert outcome.returncode == 0, (
+        'The actual Save-as acceptance must execute every desktop and browser destination: '
+        + outcome.stderr
+    )
+    assert json.loads(outcome.stdout) == [
+        ['folder', '/chosen/name'],
+        ['folder', '/chosen/name'],
+        ['zip', '/chosen/name.zip'],
+        ['zip', '/chosen/name.zip'],
+        ['web', 'folder', False],
+        ['web', 'folder', True],
+        ['web', 'zip', False],
+        ['web', 'zip', True],
+        ['download'],
+    ], (
+        'Save-as acceptance must preserve format and copy choices, suggested '
+        'targets and fallback download routing'
     )
 
 

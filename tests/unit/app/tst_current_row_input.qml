@@ -111,6 +111,10 @@ Item {
         id: makeReportTable
         ReportTable {}
     }
+    Component {
+        id: makeSingleCrystalTable
+        SingleCrystalTable {}
+    }
     TestCase {
         id: test
         name: "CurrentRowInput"
@@ -165,13 +169,18 @@ Item {
                     AboutDialog: makeAboutDialog,
                     WarningsDialog: makeWarningsDialog,
                     FitResultsDialog: makeFitResultsDialog,
-                    ReportTable: makeReportTable
+                    ReportTable: makeReportTable,
+                    SingleCrystalTable: makeSingleCrystalTable
                 });
             return factories[type];
         }
         function prepare(data) {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "Real input uses a loaded scientific project");
+            if (data.type === "SingleCrystalTable") {
+                const root = SettingsProof.copyProject(Probe.repoUrl("docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project"));
+                verify(Session.openProject(root), "Single-crystal row input uses the actual loaded reflection model");
+            } else
+                verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "Real input uses a loaded scientific project");
             const project = Session.project, structure = project.currentStructure, experiment = project.currentExperiment;
             if (data.table === "structures.list" || data.table === "linkedStructure.list")
                 verify(project.duplicateStructure(), "Selection has distinct real structure identities");

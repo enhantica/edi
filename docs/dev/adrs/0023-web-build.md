@@ -91,6 +91,9 @@ unexecuted, since the native build would use the pin (owner, 2026-10-23).
 
 ### 5. The browser's files and settings
 
+- **Opening and saving a project** are superseded by ADR-0052 §9 (owner, 2026-10-25): every project has a place, the
+  browser's own storage or, in Chrome and Edge, a folder or `.zip` on the disk, and Save writes into it. The two items
+  below record the first design.
 - **Opening a project** asks for a project folder, as the desktop's Open does (owner, 2026-10-03): a directory upload,
   `<input type="file" webkitdirectory>`, which Chrome, Edge, Firefox and Safari all offer. Its files are copied into
   the page's memory by their relative paths and the app opens the folder holding `project.edi` through the same

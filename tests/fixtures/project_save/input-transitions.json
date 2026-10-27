@@ -1,0 +1,358 @@
+{
+  "cases": {
+    "corpus:lam7o3-p021/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "487e082c579f3bbc602f285738f6169844c7413774acc1d9b1df60030054bd36",
+          "experiments/p021.edi": "740f8ad9a6a8f1da6ad348643c1de5fe831a17ba068e9bfa3c9342b29067de79",
+          "project.edi": "2dd84c953128d99c58a15736feabbf4bcb753b2c10cd741290949d74ef428580",
+          "structures/lam7o3.edi": "f3ac01debabaf3539ce5bb66a3cbb5f4974bd89ddec736b82bd94f2c10be4e47"
+        }
+      },
+      "before": null
+    },
+    "corpus:single-crystal-cwl-pr2nio4-basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "691ee631f8dce24d4086f73054423e26a14e96a1a5f4468bb5e306518d559396",
+          "structures/structure.edi": "6113d0a646b82a19593b9bae368627544d47670a5684c87264665ddb0eeab16c"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "c808457e038d82753212da93be56b2249df59a625c970b0233706fad65277604",
+          "structures/structure.edi": "6113d0a646b82a19593b9bae368627544d47670a5684c87264665ddb0eeab16c"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "corpus:single-crystal-cwl-tbti-anisotropic-adp/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "057ad56a8c6fee050b285323bc7401a8a52135107f5d54dc16c93d9cc2c95d73",
+          "structures/structure.edi": "e56a49bd372b55246e111de8059a5072ea85ed524f6cfe84268d706fcaecb98e"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "f708ae30a005dd970b446530a1f057fff2fd53549e9e135012c91b90e73b19c5",
+          "structures/structure.edi": "e56a49bd372b55246e111de8059a5072ea85ed524f6cfe84268d706fcaecb98e"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "corpus:single-crystal-cwl-tbti-basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "16b80423100d067b5145517c2ae9708b66dd7ca04b68d8a46a131e8d28f6f654",
+          "structures/structure.edi": "417123733271baf6cff5b100287882b32bab9fb59af72a8cde555a56d7103eec"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "321556dfccd63ff2e19f1ad733e132cb3ccf72478142816baa0bb9c3995e2412",
+          "structures/structure.edi": "417123733271baf6cff5b100287882b32bab9fb59af72a8cde555a56d7103eec"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "corpus:single-crystal-joint-larson/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "c25bd44ef714fcac25d1b1b72867dd7361927c573be6d17a86fe3ce1807a93f6",
+          "experiments/set1.edi": "0a6337fa7901c01d19a270dc8be99d82642242ee557caa057e444b6aab8fec98",
+          "experiments/set2.edi": "915758f55b3f20a97bee65f9568dadeccc6860edcc65171f21e5475e3b193bfa",
+          "structures/structure.edi": "a3e64a7145c4d3b61d9479fd8eb7a31a6473dcd760dfbf8c685ca09acdd37ab1"
+        }
+      },
+      "before": null
+    },
+    "corpus:single-crystal-page-cwl-pr2nio4-basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "642ec5484d21489145842775fff5516e3aab109dbb447d38901ecc4837ff48d8",
+          "structures/structure.edi": "6113d0a646b82a19593b9bae368627544d47670a5684c87264665ddb0eeab16c"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "e42841c659baca06f831c5670c983f9206deb9713b3c4add7481d7ba81375444",
+          "structures/structure.edi": "6113d0a646b82a19593b9bae368627544d47670a5684c87264665ddb0eeab16c"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "corpus:single-crystal-page-cwl-tbti-anisotropic-adp/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "938751bd4386e6d2f1fbf75f6d8ac2d732738a9a28c6f5fc0bc6f8fbff903c3e",
+          "structures/structure.edi": "e56a49bd372b55246e111de8059a5072ea85ed524f6cfe84268d706fcaecb98e"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "11ee58dc3bf3bb749f06098576fe37d0b3faa4f4849fbe72950f41fbf23a0dfa",
+          "structures/structure.edi": "e56a49bd372b55246e111de8059a5072ea85ed524f6cfe84268d706fcaecb98e"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "corpus:single-crystal-page-cwl-tbti-basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "97f1c40bfc41eb7924e23c88be8ea208b4683099a9f2540cd6596538f1d173aa",
+          "structures/structure.edi": "417123733271baf6cff5b100287882b32bab9fb59af72a8cde555a56d7103eec"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "755c47bba30a11bacd4366959d660882bcf1fb2fae5475a85b0e2c3383cda8f9",
+          "structures/structure.edi": "417123733271baf6cff5b100287882b32bab9fb59af72a8cde555a56d7103eec"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "corpus:single-crystal-page-cwl-tbti-isotropic-extinction/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "ec3d93cf4b02a5ae04c71b07d2068d8ddcc2c40477537d49576e376f55fcc666",
+          "experiments/experiment.edi": "0e3d0bae66069484362027bf051b5124dfe479ffbc978a1e97345b6813943f37",
+          "structures/structure.edi": "417123733271baf6cff5b100287882b32bab9fb59af72a8cde555a56d7103eec"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "ba33e3ea4529a2fbbcb4733568b45b47442a9f31d17029ece0e0e0274091db96",
+          "structures/structure.edi": "417123733271baf6cff5b100287882b32bab9fb59af72a8cde555a56d7103eec"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "corpus:single-crystal-page-tof-taurine-basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "9c098e146ff2ad4309154c91de8824fc4295d9f14fb5864ca26738acfd973025",
+          "structures/structure.edi": "3e2f8a9968586feaa8735e3f107ec5998b2fb5b43a7c76fda335674e541ea119"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "09aa013c4a27812c66aed8d19b01b5ac9da3ae195e5a0bbfa5b51e28b4fa68e3",
+          "structures/structure.edi": "3e2f8a9968586feaa8735e3f107ec5998b2fb5b43a7c76fda335674e541ea119"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "corpus:single-crystal-senju-taurine-converged/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469",
+          "experiments/senju_1.edi": "5ee2c0ebedb18740a456b09809666de5c1bcd35a94ec09fe15ee196cd1712910",
+          "experiments/senju_2.edi": "d29ee7274beb54e510b204c6b6c84a7f83956b3085e34532d2929508f6264c2f",
+          "experiments/senju_3.edi": "3995943a84cb9f9bd4d7129da719f2a0da45e94ed02734f223d624deff73ddbb",
+          "experiments/senju_4.edi": "5986ed046d87ca8888802f6d5f1345aac2d56fdab74ec0b91c1178fd86f0ad8c",
+          "experiments/senju_5.edi": "94ed0c48b0a0b4c22f492eb4869d5d60e8c5b6e050864cdb829364c056aa69cd",
+          "experiments/senju_6.edi": "3fb802f989059b3c5c6ac3ff3d0ae312ff7f226b7a47aa1426ecc3b8d3bee996",
+          "project.edi": "6c8f1aa8db1f136f24914cb6ddcbab01de0254d4a5f2ab41b10300cadfb9b094",
+          "structures/taurine.edi": "ad96a68e5f512dd6ee90b7c2863abb655d1e56da6f8bdfb00f72610ff59a409d"
+        }
+      },
+      "before": null
+    },
+    "corpus:single-crystal-tof-taurine-basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "923d3d5a0fc86e5c584535d6be6b7c9befcf41dd8602dd0ec76d2531d4ec9f23",
+          "structures/structure.edi": "3e2f8a9968586feaa8735e3f107ec5998b2fb5b43a7c76fda335674e541ea119"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "624fe6e80b488434a464728e8b94a14935531ff827194dd110447a4cd0c40621",
+          "experiments/experiment.edi": "625cc9ee40ef4cab5daf24a6d69e7eaed58b0d9844f8a0a99a3b86872c84de55",
+          "structures/structure.edi": "3e2f8a9968586feaa8735e3f107ec5998b2fb5b43a7c76fda335674e541ea119"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
+          "experiments/llb_5c2.edi": "ed6383986f5ce59be9f6c7f13c96178775ca5821ccbd9707bad26c58078d09c4",
+          "project.edi": "d6f0eceae9afdae4b8dd2569c5450a383d36bdcfb6ec6c83ab56c440fa67b57b",
+          "structures/pr2nio4.edi": "a37a18c113ba4738af270329671dfbed3992098d997d59deff3cd92f6bc016d6"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "7dfd1c71f7a79dd44b09f465e1728a71893eb3bfd2b30b79fc79110b8c852325",
+          "experiments/llb_5c2.edi": "a92015e243b6538c0eaf975cdd4913c79b69ecb4ec53d599a0ab97e3454ebc5a",
+          "project.edi": "7fd7ed14f9c50f3963e1a5769bc203ba309d39a31b10b593c9779d6b4f5166a8",
+          "structures/pr2nio4.edi": "27b55ca7cad6af444695d7e2881bae2d9ad454c42a92155ea10c4f35384a592f"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "28575aae0988f6239e31eec7e95cab0767838209b9508cd030d35d6b6d8d684a",
+          "experiments/pr2nio4.edi": "f46766cc6784c097c10fa90a1763ee630032c49e3630a34eef2beab7d8554ca7",
+          "project.edi": "1778edce9fc08982d51ff4cf45f4a3aa3f026085ffd479b66f7e244cbfd34f1b",
+          "structures/pr2nio4.edi": "9650cabf089c757fda805a194dfd0b8eac113a6e2c8f3c381110f61d705cd3b4"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "28575aae0988f6239e31eec7e95cab0767838209b9508cd030d35d6b6d8d684a",
+          "experiments/pr2nio4.edi": "deb6c159d59a8bb7c6518844f593681bb22f5fa5af480f56bb95a0ff10eca891",
+          "project.edi": "1778edce9fc08982d51ff4cf45f4a3aa3f026085ffd479b66f7e244cbfd34f1b",
+          "structures/pr2nio4.edi": "9650cabf089c757fda805a194dfd0b8eac113a6e2c8f3c381110f61d705cd3b4"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "83d055394bed5e3e403a9c7fef9758e71101330a81749bda12d44c8967d1438a",
+          "project.edi": "40e0e4326cb334009d65754838d2e0811d31b9317d8c2f2ad014b196245903d8",
+          "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "7515df473fe501d8a4ab63e720787a790090fa55ae510bf0b198a2f02f9216d3",
+          "project.edi": "4b152423748086ce80404e9daf3b2a99faeb755878f58d9423e19f4e90eb0cbc",
+          "structures/tb2ti2o7.edi": "b08d754705c5a5ad4f5ed79567fb90152f5be830af86fdd39f2614fc88bb3206"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "931f908709a0c86dbdc82d2b67e6cbd80170a948c40314cfd9ed2709d93db333",
+          "project.edi": "25ebbbdb3c692a4e6b4aff11d6d927f205e32f749d8853da89f9bfa9d1c418dd",
+          "structures/tb2ti2o7.edi": "66a2aeed88f6a63df7e56d83bcab248d47189c2f2d31a7e9368614a35ec5b626"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "efb12d752babb06a3c6ad4a3c965100bfb3b818c0e968f4622d5b8a09bf3d6d7",
+          "project.edi": "25ebbbdb3c692a4e6b4aff11d6d927f205e32f749d8853da89f9bfa9d1c418dd",
+          "structures/tb2ti2o7.edi": "66a2aeed88f6a63df7e56d83bcab248d47189c2f2d31a7e9368614a35ec5b626"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "c76d9ef8b326c211d302917ed324f1385a709c9719a18fc17cb4386967256619",
+          "project.edi": "ed312eb997ec3e6c238a93a6ede84d167fea35a4ee7bb66b1c2991eeaff1ca27",
+          "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "1648786c3188d365ba8318e0bde453e643194823955e15411aef836f146b2735",
+          "project.edi": "ed312eb997ec3e6c238a93a6ede84d167fea35a4ee7bb66b1c2991eeaff1ca27",
+          "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "722e871ba03c9b2ad66a7d52211143b7f09c368184ab8452ee6ad40a579caa82",
+          "experiments/heidi.edi": "378511b52bc9464ed2ae3833ce6bf3bb83a00f77e6b8898a80fbae8b89c1596d",
+          "project.edi": "0bea558c21b6db4aacadf945be5236b48b02cde7c2950309894134fbf784ee84",
+          "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "bbee6c124a9efa78411d31fb1eef11495ba2eadbd7172a36b30905f1484b9876",
+          "experiments/heidi.edi": "fa8996ae08f0230c5053f58d5660d2aa8039b18a0ec8cc9a3215d67e87a0d62f",
+          "project.edi": "0bea558c21b6db4aacadf945be5236b48b02cde7c2950309894134fbf784ee84",
+          "structures/tb2ti2o7.edi": "e2752395f4a64fd69d6bd481bdf6895a36a09248a37e7f0ba3e6c33a0785a0df"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-tof_taurine-senju/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "9deb6414e624b68b87e9519221d420dd314489f2d6afdea25d2d1f7d9f517469",
+          "experiments/senju_1.edi": "39035cc5318112ac8ff5546a3341bac766e0269a651ebfd092ec560d13a8f82d",
+          "experiments/senju_2.edi": "b6fcf89cf5387af7d0a9168ecd13e81710c3b66213aba0b05b9456c0a11cd119",
+          "experiments/senju_3.edi": "50c444b6ccc03e01907c24055d44bab891f3a6f32824c8732ff11c6bdfa3bcf3",
+          "experiments/senju_4.edi": "56dc2d603ec318ab9697ea9f368c0fd6690a85fed24fb223587131dd0ba4ba77",
+          "experiments/senju_5.edi": "bd8a6874ba85059564b90759f703edcd1a566d30baad0aa1985c3c06f9b0705c",
+          "experiments/senju_6.edi": "c595c707c74b08180091cf63a8afa8141f7f40a4b75c90a31e6821f2aa524328",
+          "project.edi": "507f44f5f4f5528b998aa45700b73589e3ebcaec4c785e962bec5e28a0b33021",
+          "structures/taurine.edi": "6c8f4067c2be3cecc08a60d72f7bbac4f0fa8c899112e82ec49eeb1e3ed7e372"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "eab6b12c24befbdd69b87e22904a912821737ea75285ff4afaf63eb1ad49f259",
+          "experiments/taurine.edi": "30dd7a3b44fb68fbfb13ef9df850236630867bf1d6d7346892e017db4954e8cb",
+          "project.edi": "f70488fb481a49930fe8e0e97419991a7e331ad397d10a5bf40abc5e133f3ffe",
+          "structures/taurine.edi": "f914da36d8e5553f5475e3e381e7cb6d0bd51b55ce56bf4bf98800b09a75e129"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    },
+    "repo:docs/user/cli/sc-neut-tof_taurine-unknown_basic/project": {
+      "after": {
+        "input_sha256": {
+          "analysis/analysis.edi": "ae65364d1535b5965587a3b644d97529106ac9f72fd8038099f838941cd65a24",
+          "experiments/senju.edi": "dfabd1d4faea02152f7b8c16d3a54b2745d00f11f739960f60bcc50da9598ed4",
+          "project.edi": "68792ca0fa9efa0755fe9e8867f5e21f673ef593be054783e48a318d12487476",
+          "structures/taurine.edi": "459d6697830c4fc48e3d2e892d296a98a5fe7e28d66ab60685eb6d727236ff32"
+        }
+      },
+      "before": {
+        "input_sha256": {
+          "analysis/analysis.edi": "eab6b12c24befbdd69b87e22904a912821737ea75285ff4afaf63eb1ad49f259",
+          "experiments/taurine.edi": "56c145643afef44cfcf0d606f669776b31f5234967141d40282d86d9ef2a8539",
+          "project.edi": "70e3370b5f52c8c1ff99216ba18d5ea2dee59da83fc770f6d2211206ca371f86",
+          "structures/taurine.edi": "459d6697830c4fc48e3d2e892d296a98a5fe7e28d66ab60685eb6d727236ff32"
+        },
+        "kind": "input-text hashes and second-save fixed-point invariant; no output pin"
+      }
+    }
+  },
+  "catalogue_identity_aliases": {
+    "sc-neut-cwl_pr2nio4-5c2_fit": "sc-neut-cwl_pr2nio4-5c2",
+    "sc-neut-cwl_tb2ti2o7-heidi_fit": "sc-neut-cwl_tb2ti2o7-heidi",
+    "sc-neut-tof_taurine_fit": "sc-neut-tof_taurine-senju"
+  },
+  "claim": "REGRESSION PIN: committed input bytes, with the historical witness retained; second-save equality is the serialization invariant."
+}
