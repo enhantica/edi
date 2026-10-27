@@ -253,6 +253,8 @@ int main(int argc,char** argv) {
             {"dialog_visible",dialog&&dialog->property("visible").toBool()},
             {"dialog_opened",dialog&&dialog->property("opened").toBool()},
             {"dialog_name",dialog?dialog->property("projectName").toString():QString()},
+            {"dialog_title",dialog?dialog->property("projectTitle").toString():QString()},
+            {"dialog_description",dialog?dialog->property("projectDescription").toString():QString()},
             {"focus",QGuiApplication::focusObject()?QGuiApplication::focusObject()->objectName():QString()}};
         if(event && (event->type()==QEvent::MouseButtonPress || event->type()==QEvent::MouseButtonRelease)) {
             const auto point=static_cast<QMouseEvent*>(event)->position();
