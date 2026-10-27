@@ -171,7 +171,7 @@ class AssistantViewModel : public QObject {
     bool commitNativeProject(ProjectViewModel* project) noexcept;
     // Existing ordinary Create dialog only; its captured original intent cannot
     // become an unauthenticated fallback after Stop/replacement.
-    bool prepareOrdinaryProjectCreation(ProjectViewModel*, const QString& intent);
+    bool prepareOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, const QString& location = {});
     void finishOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, bool committed) noexcept;
     bool resultSettledReady() const;
     struct State;

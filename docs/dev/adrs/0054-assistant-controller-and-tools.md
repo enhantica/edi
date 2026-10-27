@@ -2461,3 +2461,25 @@ preparation bounds used by native tool admission. The unchanged integrated
 Crysta vocabulary table is the source of the closed CW/TOF extent; this restores
 omitted declarations only. Actual option tokens still come from that vocabulary,
 with no duplicated selector list, science change or SDK pin substitution.
+
+### Ordinary current-session Create and picker presentation
+
+The FIRST normal Create owner is Session::createProjectWithOutcome, also used by
+the current Get started form. Native create_project exposes that same method with
+optional name/description and actual Preferences defaults through the existing
+Get started form (default native basename `project`). Its remembered parent or
+Documents, title/authors, uncertainty policy and report-library policy are the
+same normal form owners. It accepts only the original empty current Session and preserves
+selected inputs/conversation via the existing prepared attachment/commit handoff.
+It creates no scientific members and imports no files. Normal desktop Create
+saves immediately in that actual normal destination; an existing destination
+refuses before adoption rather than overwriting it. Browser Create remains
+in-memory as in the form. Actual Session success/current/owner/replacement and
+saved/path facts are retained; unknown save outcome is not reported as false.
+No CWL recipe is involved. Both modes call the same API; ON adds the real current Create visual
+cue without clicked/accepted synthesis or external app discovery. Actual adoption
+is latched before publication, and partial/changed-owner outcomes remain truthful.
+
+The model picker omits known unavailable/hidden catalogue rows; effort labels
+retain wire tokens, place Auto first and explicit highest efforts before lower
+ones, and display Ultra with its proper capital. No entitlement is inferred.

@@ -655,6 +655,8 @@ struct Session::ProjectCreationOutcome {
     quint64 replacement = 0;
     bool has_owner = false;
     QString error;
+    bool saved = false;
+    QString path;
 };
 bool Session::createProject(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
@@ -671,7 +673,7 @@ QVariantMap Session::createProjectWithOutcome(const QString& name, const QString
     if (!receiver) return {};
     const bool current = (!outcome.has_owner || outcome.owner) && project_ == outcome.owner &&
         replacement_generation_ == outcome.replacement;
-    return {{"success", success}, {"current", current}, {"error", outcome.error},
+    return {{"success", success}, {"current", current}, {"error", outcome.error}, {"saved", outcome.saved}, {"path", outcome.path},
         {"owner", QVariant::fromValue(static_cast<QObject*>(outcome.owner.data()))},
         {"has_owner", outcome.has_owner}, {"replacement", QString::number(outcome.replacement)}};
 }
@@ -706,7 +708,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     const QPointer<ProjectViewModel> originalCreated(created);
     const bool assistantCreation = !assistantIntent.isEmpty();
     try {
-        if (assistantCreation && (!location.isEmpty() || !assistant_->prepareOrdinaryProjectCreation(created, assistantIntent))) {
+        if (assistantCreation && !assistant_->prepareOrdinaryProjectCreation(created, assistantIntent, location)) {
             if (originalCreated) originalCreated->deleteLater();
             return false;
         }
@@ -729,7 +731,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
         return true;
     }
     const QString error = originalCreated->saveTo(location);
-    if (outcome) outcome->error = error;
+    if (outcome) { outcome->error = error; outcome->saved = error.isEmpty(); outcome->path = originalCreated ? originalCreated->path() : QString{}; }
     if (!current()) return false;
     setLastError(error);
     if (!current() || !error.isEmpty()) return false;
