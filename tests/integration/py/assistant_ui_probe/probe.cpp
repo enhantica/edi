@@ -209,8 +209,8 @@ int main(int argc,char** argv) {
                 Array sites;
                 for(const auto& site:structure->atom_sites)
                     sites.push_back(Object{{"id",QString::fromStdString(site->id.value())},
-                        {"type",QString::fromStdString(site->type_symbol.get())},
-                        {"wyckoff",QString::fromStdString(site->wyckoff_letter.get())},
+                        {"type",QString::fromStdString(site->type_symbol.value())},
+                        {"wyckoff",QString::fromStdString(site->wyckoff_letter.value())},
                         {"x",site->fract_x.value.get()},{"y",site->fract_y.value.get()},
                         {"z",site->fract_z.value.get()},{"occupancy",site->occupancy.value.get()}});
                 structures.push_back(Object{{"id",QString::fromStdString(structure->name.value())},
@@ -233,10 +233,10 @@ int main(int argc,char** argv) {
             }
             for(const auto& alias:model.aliases)
                 aliases.push_back(Object{{"id",QString::fromStdString(alias->id.value())},
-                    {"parameter",QString::fromStdString(alias->parameter_unique_name.get())}});
+                    {"parameter",QString::fromStdString(alias->parameter_unique_name.value())}});
             for(const auto& constraint:model.constraints)
                 constraints.push_back(Object{{"id",QString::fromStdString(constraint->id.value())},
-                    {"expression",QString::fromStdString(constraint->expression.get())},
+                    {"expression",QString::fromStdString(constraint->expression.value())},
                     {"enabled",constraint->enabled.get()}});
             for(const auto& bank:model.experiments) {
                 Array points,input_rows;

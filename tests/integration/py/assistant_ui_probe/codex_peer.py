@@ -18,7 +18,8 @@ turn_id = '019a0290-0000-7000-8000-000000000002'
 pending = {}
 calls = []
 turn_number = 0
-cursor = {'position': 0, 'sequence': 0, 'pending_final': False}
+thread_number = 0
+cursor = {'position': 0, 'sequence': 0, 'pending_final': False, 'research': None}
 native_ids = {}
 
 
@@ -57,6 +58,8 @@ def advance():
             cursor['pending_final'] = True
             return
         cursor['pending_final'] = False
+        if config.get('terminal_status') == 'process_exit':
+            sys.exit(23)
         text = config.get(
             'final_text', 'No supported improvement recommendation from this finite fixture.'
         )
@@ -67,10 +70,26 @@ def advance():
         notify('turn/completed', {'threadId': thread_id, 'turn': turn('completed')})
         return
     spec = calls[cursor['position']]
-    spec = {**spec, 'arguments': operands(spec['arguments'])}
     cursor['position'] += 1
     cursor['sequence'] += 1
     call_id = spec.get('call_id', 'integration-call-' + str(cursor['sequence']))
+    if 'research' in spec:
+        # Official 0.162.1 ThreadItem WebSearchItem + WebSearchAction. Results
+        # are opaque JSON; no invented typed status/refusal/citation fields.
+        completed = {'type': 'webSearch', 'id': call_id, **spec['research']}
+        started = {**completed, 'query': '', 'action': None, 'results': None}
+        binding = {'threadId': thread_id, 'turnId': turn_id}
+        notify('item/started', {**binding, 'item': started, 'startedAtMs': 1})
+        completion = {**binding, 'item': completed, 'completedAtMs': 2}
+        if spec.get('hold_complete') and not Path(spec['hold_complete']).exists():
+            cursor['research'] = (spec['hold_complete'], completion)
+            return
+        notify('item/completed', completion)
+        if spec.get('duplicate'):
+            notify('item/completed', completion)
+        advance()
+        return
+    spec = {**spec, 'arguments': operands(spec['arguments'])}
     item = {
         'type': 'dynamicToolCall',
         'id': call_id,
@@ -148,6 +167,10 @@ for line in sys.stdin:
         )
     elif method == 'account/rateLimits/read':
         reply(request, {'rateLimits': None, 'rateLimitsByLimitId': {}})
+        if cursor['research'] and Path(cursor['research'][0]).exists():
+            notify('item/completed', cursor['research'][1])
+            cursor['research'] = None
+            advance()
         if cursor['pending_final'] and Path(config['final_gate']).exists():
             advance()
     elif method == 'model/list':
@@ -196,6 +219,8 @@ for line in sys.stdin:
             },
         )
     elif method == 'thread/start':
+        thread_number += 1
+        thread_id = '019a0290-0000-7000-8000-' + f'{thread_number:012d}'
         cwd = params['cwd']
         reply(
             request,

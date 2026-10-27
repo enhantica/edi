@@ -7,8 +7,10 @@ Undo and filesystem conservation compare pre-action native state and planted dat
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
+import re
 import select
 import shutil
 import subprocess
@@ -147,6 +149,21 @@ def main_actor(tmp_path):
     yield create
     for actor in reversed(actors):
         actor.close()
+    coding_errors = []
+    for actor in actors:
+        coding_errors.extend(
+            line
+            for line in (actor.folder / 'host.stderr').read_text(errors='replace').splitlines()
+            if re.search(
+                r'ReferenceError|TypeError|Unable to assign \[undefined\]|'
+                r'Cannot assign to non-existent property|Detected function .*Connections',
+                line,
+            )
+        )
+    assert not coding_errors, (
+        'E11 F4 actual successful and intentional-refusal flows have no undefined QML hooks: '
+        + '\n'.join(coding_errors)
+    )
 
 
 def copied_estimate_project(tmp_path, *, overrides=True):
@@ -179,6 +196,30 @@ def objects(value):
     elif isinstance(value, list):
         for child in value:
             yield from objects(child)
+
+
+def qml(actor, expression):
+    return actor.command('evaluate', expression=expression)['reply']['value']
+
+
+def control_expression(name):
+    return (
+        '(function seek(item) { if (item.objectName === '
+        + json.dumps(name)
+        + ') return item; for (const child of (item.children || [])) '
+        '{ const found=seek(child); if(found) return found; } return null; })(contentItem)'
+    )
+
+
+def tool_call(tool, identity, **arguments):
+    return {
+        'tool': tool,
+        'call_id': identity,
+        'arguments': {
+            'purpose': 'Exercise the existing native boundary with explicit current inputs',
+            **arguments,
+        },
+    }
 
 
 def test_actual_registry_offers_closed_estimate_and_optional_compound_background(main_actor):
@@ -489,7 +530,7 @@ def test_current_disabled_relation_preserves_ordinary_rows_and_duplicate_call_is
         'call_id': 'same-native-disabled-relation',
         'arguments': {
             'purpose': 'Preserve the explicitly disabled ordinary relation',
-            'aliases': [{'id': 'manual_cell', 'parameter': 'phase.cell.length_a'}],
+            'aliases': [{'id': 'manual_cell', 'path': 'phase.cell.length_a'}],
             'constraints': [
                 {
                     'id': 'manual_disabled',
@@ -499,12 +540,18 @@ def test_current_disabled_relation_preserves_ordinary_rows_and_duplicate_call_is
             ],
         },
     }
-    actor = main_actor([[call, call]], show_actions=show_actions)
+    actor = main_actor([[]], show_actions=show_actions)
     project = tmp_path / 'relation-project'
     shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
     assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
     original = actor.last['ui']['project']
+    call['arguments']['aliases'][0]['path'] = next(
+        row['path']
+        for row in original['parameters']
+        if row['category'] == 'cell' and row['field'] == 'length_a'
+    )
+    actor.configure_turns([[call, call]])
     actor.connect()
     actor.request()
     actor.until(
@@ -1033,3 +1080,819 @@ def test_native_point_operations_respect_automatic_owner_and_keep_free_flag_cont
         assert current['backgrounds'][0]['points'] == expected, (
             'Manual native structural edits retain exact explicit operands and all unaffected rows'
         )
+
+
+@pytest.mark.parametrize('mode', ['throw', 'bad_alloc', 'retire'])
+def test_estimate_actual_postwrite_outcome_preowns_undo_and_survives_retirement(
+    main_actor, tmp_path, mode
+):
+    actor = main_actor([[]])
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F3 actual Estimate application, publication and preowned Undo remain truthful'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    before = point_rows(actor)
+    actor.command('arm_estimate_publication', mode=mode)
+    receipt = actor.command('estimate_outcome')['reply']
+    fault = actor.command('publication_fault')['reply']
+    assert fault['hits'] >= 1 and fault['undo_seen'], (
+        'Actual postwrite presentation is reached with ordinary Undo already owned'
+    )
+    assert receipt['applied'] and not receipt['published'] and receipt['message'], (
+        'Postwrite failure retains the real applied effect and failed publication'
+    )
+    if mode == 'retire':
+        assert not actor.last['ui']['project'], (
+            'The actual Session retirement must complete safely'
+        )
+    else:
+        assert point_rows(actor) != before, 'The failure witness follows a real scientific write'
+        actor.command('undo')
+        actor.until(lambda row: not row['ui']['project']['calculating'])
+        assert point_rows(actor) == before, (
+            'One real ordinary Undo restores the prewrite background'
+        )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_registered_estimate_partial_effects_are_not_relabelled_as_zero_steps(
+    main_actor, tmp_path, show_actions
+):
+    actor = main_actor(
+        [
+            [
+                tool_call('estimate_background', 'postwrite-estimate', experiment='bank'),
+                tool_call('inspect_project', 'after-postwrite-inspection'),
+            ]
+        ],
+        show_actions=show_actions,
+    )
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F3 actual Estimate application, publication and preowned Undo remain truthful'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    before = point_rows(actor)
+    actor.command('arm_estimate_publication', mode='throw')
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    payload = json.loads(actor.responses()[0]['result']['contentItems'][0]['text'])
+    receipts = [row for row in objects(payload) if 'applied' in row and 'steps_completed' in row]
+    assert receipts and any(
+        row['applied'] and row['steps_completed'] == 1 and not row.get('complete', True)
+        for row in receipts
+    ), 'Both registered modes disclose the actual applied Estimate despite failed presentation'
+    assert point_rows(actor) != before, (
+        'The registered refusal has a real independently visible effect'
+    )
+    native_result(actor.responses()[1])
+    actor.command('undo')
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    assert point_rows(actor) == before, 'Registered partial Estimate keeps its one ordinary Undo'
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+@pytest.mark.parametrize('route', ['cif', 'mapped'])
+def test_compound_default_estimate_refusal_preserves_and_discloses_actual_setup_prefix(
+    main_actor, tmp_path, show_actions, route
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    assert actor.command('create', name='compound-prefix')['reply']['created'], (
+        'The compound refusal witness starts from the actual ordinary empty project'
+    )
+    # One real observation is valid input for ordinary import but cannot supply
+    # the distinct endpoints required by the native background Estimate action.
+    data = tmp_path / 'one-observation.xye'
+    data.write_text('34.25 17.25 .75\n')
+    cif = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    token = actor.command('selected_begin')['reply']['token']
+    assert actor.command('selected_add', token=token, paths=[str(data), str(cif)])['reply'][
+        'added'
+    ], 'The compound witness uses actual selected immutable inputs'
+    files = actor.last['ui']['selected_files']
+    data_id = next(row['id'] for row in files if row['name'] == data.name)
+    cif_id = next(row['id'] for row in files if row['name'] == cif.name)
+    recipe = {
+        'project_name': 'compound-prefix',
+        'description': 'Explicit bounded input witness',
+        'experiment_name': 'one_point',
+        'sample_form': 'powder',
+        'beam_mode': 'constant wavelength',
+        'radiation_probe': 'neutron',
+        'scattering_type': 'bragg',
+        'peak_profile': 'cwl-tch-pseudo-voigt',
+        'wavelength': 1.237,
+        'zero_offset': 0.013,
+        'phase_scale': 1.1,
+        'exclusions': [],
+        'initial_parameters': [],
+    }
+    arguments = {'data_file_id': data_id, 'recipe': recipe}
+    if route == 'cif':
+        arguments['cif_file_id'] = cif_id
+    else:
+        arguments['mapped_structure'] = {
+            'name': 'manual_prefix',
+            'space_group': {'name_h_m': 'P 1', 'coord_system_code': ''},
+            'cell': {
+                'length_a': 6.173,
+                'length_b': 5.917,
+                'length_c': 4.863,
+                'angle_alpha': 86.3,
+                'angle_beta': 93.1,
+                'angle_gamma': 112.7,
+            },
+            'atom_sites': [
+                {
+                    'id': 'Si1',
+                    'type_symbol': 'Si',
+                    'fract_x': 0.173,
+                    'fract_y': 0.281,
+                    'fract_z': 0.419,
+                    'occupancy': 0.73,
+                }
+            ],
+            'atom_site_adps': [{'id': 'Si1', 'adp_type': 'Biso', 'adp_iso': 0.37}],
+        }
+    actor.configure_turns([
+        [tool_call('create_cwl_project', 'compound-default-estimate', **arguments)]
+    ])
+    actor.connect()
+    actor.request(
+        'Construct this explicit manual setup without CIF import.'
+        if route == 'mapped'
+        else 'Import the selected CIF and measurement and use native Estimate.'
+    )
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    payload = json.loads(actor.responses()[0]['result']['contentItems'][0]['text'])
+    current = actor.last['ui']['project']
+    assert current['structures'] == 1 and len(current['backgrounds']) == 1, (
+        'The real compound setup prefix must be adopted before the expected Estimate refusal'
+    )
+    receipts = [row for row in objects(payload) if 'complete' in row and 'steps_completed' in row]
+    assert any(not row['complete'] and row['steps_completed'] > 0 for row in receipts), (
+        'Default Estimate refusal cannot become completed setup or erase its actual applied prefix'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_relation_receipts_cover_all_existing_alias_and_constraint_operations(
+    main_actor, tmp_path, show_actions
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = tmp_path / 'ordinary-relations'
+    shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F6 actual current relation controls retain complete original row semantics'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    qml(
+        actor,
+        '(function(){ const rows=Session.project.analysis.aliases; rows.append(); '
+        'const n=rows.count-1; rows.setText(n,"id","fixture_unused"); '
+        'return rows.setText(n,"parameter","phase.cell.length_a"); })()',
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    original = actor.command('inspect')['ui']['project']
+    identity = original['constraints'][-1]['id']
+    edits = [
+        ('alias_rename', 'fixture_unused', 'fixture_renamed'),
+        (
+            'alias_target',
+            'fixture_renamed',
+            next(
+                row['path']
+                for row in original['parameters']
+                if row['category'] == 'cell' and row['field'] == 'length_b'
+            ),
+        ),
+        ('alias_remove', 'fixture_renamed', None),
+        ('constraint_rename', identity, 'changed_relation'),
+        ('constraint_expression', 'changed_relation', 'b = 2.75*a + 0.5'),
+        ('constraint_enabled', 'changed_relation', False),
+        ('constraint_enabled', 'changed_relation', True),
+        ('constraint_remove', 'changed_relation', None),
+    ]
+    calls = []
+    for index, (operation, target, value) in enumerate(edits):
+        arguments = {'operation': operation, 'id': target}
+        if value is not None:
+            arguments['value'] = value
+        calls.append(tool_call('edit_relation', f'ordinary-relation-{index}', **arguments))
+    actor.configure_turns([calls])
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: len(actor.responses()) == len(calls) and row['ui']['state'] == 'idle')
+    for response in actor.responses():
+        native_result(response)
+    current = actor.last['ui']['project']
+    assert current['aliases'] == original['aliases'][:-1], (
+        'Alias rename retarget and remove retain every unrelated original declaration'
+    )
+    assert current['constraints'] == original['constraints'][:-1], (
+        'Constraint id expression enabled and remove operations reach their ordinary receipts'
+    )
+    for _ in edits:
+        actor.command('undo')
+        actor.until(lambda row: not row['ui']['project']['calculating'])
+    restored = actor.last['ui']['project']
+    assert restored['aliases'] == original['aliases'], (
+        'E11 F6 actual current relation controls retain complete original row semantics'
+    )
+    assert restored['constraints'] == original['constraints'], (
+        'E11 F6 actual current relation controls retain complete original row semantics'
+    )
+    assert restored['parameters'] == original['parameters'], (
+        'The exact ordinary history restores all prior relation and scientific facts'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_grouped_fixed_and_free_use_exact_full_membership_with_mixed_and_subset_controls(
+    main_actor, tmp_path, show_actions
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F8 grouped flags preserve exact requested membership and final state'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    original = actor.last['ui']['project']['parameters']
+    group = [
+        row
+        for row in original
+        if row['category'] == 'background'
+        and row['refinable']
+        and row['fit_blocker'] == 0
+        and row['dependence'] == 0
+    ]
+    assert len(group) > 2, 'The native measured category supplies a genuine mixed full-set witness'
+    subset = [group[0], group[-1]]
+    mixed = [{'path': row['path'], 'free': index % 2 == 0} for index, row in enumerate(group)]
+    fixed = [{'path': row['path'], 'free': False} for row in reversed(group)]
+    free = [{'path': row['path'], 'free': True} for row in group]
+    actor.configure_turns([
+        [tool_call('set_free', 'prepare-real-mixed-category', flags=mixed)],
+        [tool_call('set_free', 'whole-mixed-category-fixed', flags=fixed)],
+        [tool_call('set_free', 'whole-already-fixed-noop', flags=fixed)],
+        [tool_call('set_free', 'whole-fixed-category-free', flags=free)],
+        [
+            tool_call(
+                'set_free',
+                'proper-reordered-subset',
+                flags=[{'path': row['path'], 'free': False} for row in reversed(subset)],
+            )
+        ],
+    ])
+    actor.connect()
+    for turn in range(5):
+        actor.request()
+        actor.until(
+            lambda row, turn=turn: (
+                len(actor.responses()) == turn + 1 and row['ui']['state'] == 'idle'
+            )
+        )
+        native_result(actor.responses()[-1])
+        by_path = {row['path']: row for row in actor.last['ui']['project']['parameters']}
+        wanted = (
+            mixed
+            if turn == 0
+            else fixed
+            if turn < 3
+            else free
+            if turn == 3
+            else [{'path': row['path'], 'free': row not in subset} for row in group]
+        )
+        assert all(by_path[row['path']]['free'] == row['free'] for row in wanted), (
+            'Every complete menu action or proper subset reaches exactly its requested final flags'
+        )
+        untouched = {row['path']: row for row in original if row not in group}
+        assert {path: by_path[path] for path in untouched} == untouched, (
+            'Grouped actions cannot broaden the proved category membership'
+        )
+        if turn == 2:
+            actor.command('undo')
+            actor.until(lambda row: not row['ui']['project']['calculating'])
+            current = {
+                row['path']: row['free'] for row in actor.last['ui']['project']['parameters']
+            }
+            assert all(current[row['path']] == row['free'] for row in mixed), (
+                'Already-fixed no-op contributes no extra Undo after one actual header action'
+            )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_native_clear_keeps_the_current_blocked_but_free_parameter_policy(
+    main_actor, tmp_path, show_actions
+):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = copied_estimate_project(tmp_path)
+    # Current-dev categories retain an out-of-profile stored free term, shown
+    # disabled for fitting while its flag can still be cleared (ADR0053).
+    with (project / 'experiments/bank.edi').open('a') as output:
+        output.write('\n_peak.broad_gauss_sigma_0 1.123()\n')
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'The independent inactive free-term fixture loads through the ordinary owner'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    original = actor.last['ui']['project']['parameters']
+    blocked = next(row for row in original if row['free'] and row['fit_blocker'] != 0)
+    actor.configure_turns([
+        [
+            tool_call(
+                'set_free',
+                'clear-original-blocked-free',
+                flags=[{'path': blocked['path'], 'free': False}],
+            )
+        ]
+    ])
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
+    assert not after[blocked['path']]['free'], (
+        'Current fittability refusal cannot prevent clearing an already stored free flag'
+    )
+    assert all(after[row['path']] == row for row in original if row['path'] != blocked['path']), (
+        'Clearing a blocked free member changes no unrelated parameter'
+    )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_unmodified_current_save_uses_the_same_ordinary_owner_once(
+    main_actor, tmp_path, show_actions
+):
+    call = tool_call('save_project', 'valid-current-unmodified-save', destination='current')
+    actor = main_actor([[call]], show_actions=show_actions)
+    project = copied_estimate_project(tmp_path, overrides=False)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F11 unchanged current Save uses the ordinary owned project in both modes'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    before = actor.last['ui']['project']
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    assert len(actor.responses()) == 1, (
+        'E11 F11 unchanged current Save uses the ordinary owned project in both modes'
+    )
+    assert actor.last['ui']['project']['path'] == str(project), (
+        'E11 F11 unchanged current Save uses the ordinary owned project in both modes'
+    )
+    assert actor.last['ui']['project']['parameters'] == before['parameters'], (
+        'E11 F11 unchanged current Save uses the ordinary owned project in both modes'
+    )
+    assert actor.last['ui']['project']['backgrounds'] == before['backgrounds'], (
+        'Disabled ordinary Save presentation does not veto or edit a valid current project'
+    )
+
+
+@pytest.mark.parametrize('zip_output', [False, True], ids=['folder', 'zip'])
+def test_later_automatic_captures_follow_actual_save_as_working_root(
+    main_actor, tmp_path, zip_output
+):
+    actor = main_actor(
+        [[tool_call('estimate_background', 'root-step', experiment='bank')]], hold_final=True
+    )
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F10 captures retain the actual current root, scope and latest terminal state'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.connect()
+    actor.request()
+    old_report = project / 'reports/work-report.json'
+    actor.until(lambda _row: bool(actor.responses()) and old_report.is_file())
+    native_result(actor.responses()[0])
+    destination = tmp_path / ('moved.zip' if zip_output else 'moved-folder')
+    assert actor.command('save_project_as', path=str(destination), zip=zip_output, copy=False)[
+        'reply'
+    ]['saved'], 'E11 F10 captures retain the actual current root, scope and latest terminal state'
+    working = Path(actor.last['ui']['project']['path'])
+    report = working / 'reports/work-report.json'
+    actor.gate.touch()
+    actor.command('refresh_usage')
+    actor.until(
+        lambda row: (
+            row['ui']['state'] == 'idle' and report.is_file() and FINAL in report.read_text()
+        )
+    )
+    assert actor.last['ui']['project']['path'] == str(working), (
+        'E11 F10 captures retain the actual current root, scope and latest terminal state'
+    )
+    if working != project:
+        assert not old_report.exists() or FINAL not in old_report.read_text(), (
+            'Admitted writers retain their root; later captures follow Save As'
+        )
+    assert actor.command('save')['reply']['saved'], (
+        'The existing explicit Session Save still owns normal archive packing'
+    )
+
+
+def test_busy_retired_scope_completion_retries_current_final_capture(main_actor, tmp_path):
+    actor = main_actor([
+        [tool_call('inspect_project', 'first-scope-inspection')],
+        [tool_call('inspect_project', 'successor-inspection')],
+    ])
+    project = copied_estimate_project(tmp_path)
+    successor = tmp_path / 'successor'
+    shutil.copytree(ROOT / 'tests/fixtures/background_estimate/projects/hrpt', successor)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F10 captures retain the actual current root, scope and latest terminal state'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.connect()
+    actor.request()
+    actor.until(
+        lambda row: (
+            len(actor.responses()) == 1
+            and row['ui']['state'] == 'idle'
+            and row['ui']['work_report'].get('phase') == 'terminal'
+        )
+    )
+    sequence = actor.command(
+        'capture_sequence',
+        successor=str(successor),
+        text='Inspect the new current owner and report its final state.',
+    )['reply']
+    assert sequence['opened'], (
+        'E11 F10 captures retain the actual current root, scope and latest terminal state'
+    )
+    assert sequence['receipts'][0]['phase'] == 'accepted', (
+        'The old writer is actually admitted before the successor capture'
+    )
+    assert sequence['receipts'][1]['disposition'] == 'busy', (
+        'The successor witness must reach the real single busy writer before owner delivery'
+    )
+    report = successor / 'reports/work-report.json'
+    actor.until(
+        lambda row: (
+            len(actor.responses()) == 2
+            and row['ui']['state'] == 'idle'
+            and report.is_file()
+            and 'successor-inspection' in report.read_text()
+        )
+    )
+    assert FINAL in report.read_text(), (
+        'The latest current final state is retried after retired completion'
+    )
+    assert 'first-scope-inspection' not in report.read_text(), (
+        'The old admitted receipt is never published as the new scope evidence'
+    )
+
+
+def test_compiled_registered_skill_bytes_and_effective_runtime_guidance_are_coherent(main_actor):
+    actor = main_actor([[tool_call('inspect_project', 'effective-guidance-inspection')]])
+    embedded = actor.command('embedded_skills')['reply']
+    resources = {row['id']: row for row in embedded['resources']}
+    for row in embedded['index']['skills']:
+        actual = resources[row['id']]
+        assert hashlib.sha256(actual['content'].encode()).hexdigest() == row['sha256'], (
+            'E11 F12 actual registered skill and effective instruction identities remain coherent'
+        )
+        assert actual['sha256'] == row['sha256'], (
+            'E11 F12 actual registered skill and effective instruction identities remain coherent'
+        )
+        assert (
+            actual['content'].encode()
+            == (ROOT / 'data/assistant/skills' / row['path']).read_bytes()
+        ), 'E11 F12 actual registered skill and effective instruction identities remain coherent'
+    active = '\n'.join(
+        resources[key]['content'] for key in ('project-assistance', 'refinement-strategy')
+    )
+    assert (
+        'Append creates a local Draft' not in active
+        and 'requires its original Confirm' not in active
+    ), 'Actual registered bodies cannot direct excluded manual relation controls'
+    assert 'Estimate' in active, 'Actual registered guidance uses the ordinary default estimator'
+    actor.command('create', name='effective-guidance-current-owner')
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    wire = [json.loads(line) for line in actor.trace.read_text().splitlines()]
+    starts = [row['params'] for row in wire if row.get('method') == 'thread/start']
+    assert len(starts) == 1, (
+        'The assembled instruction must be captured at its actual runtime entrance'
+    )
+    instructions = starts[0].get('developerInstructions')
+    assert isinstance(instructions, str) and instructions, (
+        'The effective developer instruction is present at its real runtime boundary'
+    )
+    text = ' '.join(instructions.lower().split())
+    assert 'only after all requested structure' not in text, (
+        'E11 F12 actual registered skill and effective instruction identities remain coherent'
+    )
+    assert 'finish all requested structure' not in text, (
+        'E11 F12 actual registered skill and effective instruction identities remain coherent'
+    )
+    assert 'then one fit and inspect before choosing the next' not in text, (
+        'Effective runtime guidance cannot mandate a fixed planning recipe'
+    )
+    tools = actor.command('tool_specs')['reply']['tools']
+    for tool in tools:
+        description = ' '.join(tool['description'].lower().split())
+        assert 'only after all requested structure' not in description, (
+            'Registered operation descriptions cannot reinstate the removed global sequence'
+        )
+
+
+@pytest.mark.parametrize('ending', ['completed', 'cancelled', 'process_exit'])
+def test_settled_public_research_retains_opaque_results_and_terminal_capture(
+    main_actor, tmp_path, ending
+):
+    actor = main_actor([[]], hold_final=True)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F10 captures retain the actual current root, scope and latest terminal state'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    release = actor.folder / 'release-search'
+    actions = [
+        {
+            'type': 'search',
+            'query': 'FullProf background estimation documentation',
+            'queries': None,
+        },
+        {'type': 'openPage', 'url': 'https://www.ill.eu/sites/fullprof/'},
+        {
+            'type': 'findInPage',
+            'url': 'https://www.ill.eu/sites/fullprof/',
+            'pattern': 'background',
+        },
+    ]
+    steps = []
+    for index, action in enumerate(actions):
+        steps.append({
+            'call_id': 'actual-research-' + str(index),
+            'research': {
+                'query': 'Public scientific software documentation',
+                'action': action,
+                'results': [
+                    {
+                        'type': 'text_result',
+                        'ref_id': f'turn0search{index}',
+                        'url': 'https://www.ill.eu/sites/fullprof/',
+                        'title': 'FullProf documentation',
+                        'snippet': 'Public background estimation reference',
+                        'future_field': {'preserved': True},
+                    },
+                    {'type': 'error', 'message': 'Public service unavailable'},
+                ],
+            },
+            **({'hold_complete': str(release)} if index == 0 else {}),
+            **({'duplicate': True} if index == 1 else {}),
+        })
+    actor.configure_turns([steps + [tool_call('inspect_project', 'after-public-research')]])
+    config_path = actor.folder / 'peer.json'
+    config = json.loads(config_path.read_text())
+    config['terminal_status'] = ending
+    config_path.write_text(json.dumps(config))
+    actor.connect()
+    actor.request(
+        'Consult public software documentation, retain citations, then inspect current state.'
+    )
+    actor.until(lambda row: row['ui']['can_cancel'])
+    report = project / 'reports/work-report.json'
+    if report.exists():
+        pending = json.loads(report.read_bytes())
+        assert 'turn0search0' not in json.dumps(pending['history_evidence']), (
+            'A started empty research item cannot fabricate its not-yet-delivered result'
+        )
+    release.touch()
+    actor.command('refresh_usage')
+    actor.until(
+        lambda _row: (
+            bool(actor.responses()) and report.is_file() and 'turn0search2' in report.read_text()
+        )
+    )
+    native_result(actor.responses()[0])
+    settled = json.loads(report.read_bytes())
+    assert settled['scope_coverage']['trigger'] == 'automatic', (
+        'E11 F10 captures retain the actual current root, scope and latest terminal state'
+    )
+    for index in range(3):
+        assert f'actual-research-{index}' in json.dumps(settled['history_evidence']), (
+            'E11 F10 captures retain the actual current root, scope and latest terminal state'
+        )
+        assert f'turn0search{index}' in report.read_text(), (
+            'E11 F10 captures retain the actual current root, scope and latest terminal state'
+        )
+    assert (
+        'future_field' in report.read_text() and 'Public service unavailable' in report.read_text()
+    ), 'Opaque result and unavailability evidence survive actual item settlement'
+    assert FINAL not in json.dumps(settled['agent_assessment']), (
+        'E11 F10 captures retain the actual current root, scope and latest terminal state'
+    )
+    if ending == 'cancelled':
+        actor.command('cancel')
+        actor.until(
+            lambda row: (
+                not row['ui']['can_cancel']
+                and any(word in report.read_text().lower() for word in ('cancel', 'interrupt'))
+            )
+        )
+    else:
+        actor.gate.touch()
+        actor.command('refresh_usage')
+        actor.until(
+            lambda row: (
+                not row['ui']['can_cancel']
+                and (
+                    FINAL in report.read_text()
+                    if ending == 'completed'
+                    else bool(row['ui']['last_error'])
+                    and row['ui']['last_error'] in report.read_text()
+                )
+            )
+        )
+    assert actor.last['ui']['project']['path'] == str(project), (
+        'Research or provider terminal failure never substitutes another scientific owner'
+    )
+
+
+def test_actual_manual_text_editor_preserves_composition_escape_and_real_commit(main_actor):
+    actor = main_actor([[]])
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/constraint_expressions/project'))[
+        'reply'
+    ]['opened'], 'E11 F4 actual manual composition, publication and member lifetime remain safe'
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    original = actor.last['ui']['project']['structure_rows'][0]['id']
+    actor.command('click', name='appBar.tab.structure')
+    actor.command('click', name='structures.name.0')
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text='uncommitted_owner')
+    actor.command('manual_ime', preedit='Q', commit='')
+    assert actor.command('focused_input')['reply']['preedit'] == 'Q', (
+        'E11 F4 actual manual composition, publication and member lifetime remain safe'
+    )
+    qml(actor, 'Session.project.currentStructure.cell.lengthA.value = 4.375')
+    assert actor.command('focused_input')['reply']['preedit'] == 'Q', (
+        'Ordinary clean scientific publication cannot erase real IME composition'
+    )
+    actor.command('manual_ime', preedit='', commit='')
+    actor.command('manual_key', key='escape')
+    assert actor.last['ui']['project']['structure_rows'][0]['id'] == original, (
+        'E11 F4 actual manual composition, publication and member lifetime remain safe'
+    )
+    actor.command('click', name='structures.name.0')
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text='committed_owner')
+    actor.command('manual_key', key='return')
+    assert actor.last['ui']['project']['structure_rows'][0]['id'] == 'committed_owner', (
+        'A genuine manual keyboard commit reaches the current text cell and its real model'
+    )
+
+
+def test_actual_parameter_cell_clean_publication_and_recycling_keep_original_member(main_actor):
+    actor = main_actor([[]])
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/constraint_expressions/project'))[
+        'reply'
+    ]['opened'], 'E11 F4 actual manual composition, publication and member lifetime remain safe'
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.command('click', name='appBar.tab.analysis')
+    table = control_expression('parameters.list')
+    qml(actor, f'{table}.sourceModel.nameFilter = "length_a"')
+    actor.command('click', name='parameters.value.0')
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text='9.125')
+    actor.command('manual_ime', preedit='7', commit='')
+    qml(actor, 'Session.project.currentStructure.cell.lengthA.value = 5.375')
+    focused = actor.command('focused_input')['reply']
+    assert focused['text'] == '9.125' and focused['preedit'] == '7', (
+        'Current parameter publication retains the actual manual draft and IME preedit'
+    )
+    actor.command('manual_ime', preedit='', commit='')
+    actor.command('manual_key', key='escape')
+    assert float(actor.command('focused_input')['reply']['text']) == 5.375, (
+        'E11 F4 actual manual composition, publication and member lifetime remain safe'
+    )
+    original_b = next(
+        row
+        for row in actor.last['ui']['project']['parameters']
+        if row['path'].endswith('cell.length_b')
+    )['value']
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text='11.625')
+    qml(actor, f'{table}.sourceModel.nameFilter = "length_b"')
+    actor.command('manual_key', key='return')
+    after_b = next(
+        row
+        for row in actor.last['ui']['project']['parameters']
+        if row['path'].endswith('cell.length_b')
+    )['value']
+    assert after_b == original_b, (
+        'A recycled delegate cannot commit an older member draft to its successor'
+    )
+
+
+@pytest.mark.parametrize('boundary', ['current_changes', 'removed', 'rejected'])
+def test_ordinary_measurement_picker_keeps_its_original_experiment_intent(
+    main_actor, tmp_path, boundary
+):
+    actor = main_actor([[]])
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F5 ordinary picker retains its exact original owner and selected bytes'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    assert qml(actor, 'Session.project.duplicateExperiment()'), (
+        'E11 F5 ordinary picker retains its exact original owner and selected bytes'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    original = actor.last['ui']['project']['backgrounds']
+    data = tmp_path / 'ordinary-picker.xye'
+    data.write_text('21.5 17.25 .75\n22.75 31.75 1.25\n25.125 23.5 1.5\n')
+    actor.command('click', name='appBar.tab.experiment')
+    actor.command('click', name='experiments.loadData.0')
+    if boundary == 'removed':
+        qml(actor, 'Session.project.removeExperiment(0)')
+    elif boundary == 'current_changes':
+        qml(actor, 'Session.project.currentExperimentIndex = 1')
+    answer = actor.command('file_answer', path=str(data), reject=boundary == 'rejected')['reply']
+    if boundary != 'removed':
+        assert answer['answered'], (
+            'The actual ordinary FileDialog consumes its real selection or rejection'
+        )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    after = actor.last['ui']['project']['backgrounds']
+    if boundary == 'current_changes':
+        assert after[0]['id'] == original[0]['id'] and after[0]['input_count'] == 3, (
+            'E11 F5 ordinary picker retains its exact original owner and selected bytes'
+        )
+        assert after[0]['input_first'] == [
+            [21.5, 17.25, 0.75],
+            [22.75, 31.75, 1.25],
+            [25.125, 23.5, 1.5],
+        ], 'E11 F5 ordinary picker retains its exact original owner and selected bytes'
+        assert after[1] == original[1], (
+            'Picker acceptance cannot substitute the newly selected experiment'
+        )
+    elif boundary == 'removed':
+        assert after == original[1:], (
+            'A removed picker owner cannot redirect its bytes into another row'
+        )
+    else:
+        assert after == original, 'Ordinary picker rejection changes no scientific input'
+
+
+@pytest.mark.parametrize('position', ['offscreen', 'clipped'])
+def test_on_native_parameter_target_is_revealed_from_real_virtualized_or_clipped_geometry(
+    main_actor, tmp_path, position
+):
+    actor = main_actor([[]], show_actions=True)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'E11 F7 actual clipped or virtualized member is revealed without broadening mutation'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.command('click', name='appBar.tab.analysis')
+    eligible = {
+        row['path']: row
+        for row in actor.last['ui']['project']['parameters']
+        if row['refinable'] and row['fit_blocker'] == 0 and row['dependence'] == 0
+    }
+    table = control_expression('parameters.list')
+    qml(actor, f'{table}.sourceModel.clearFilters()')
+    controls = actor.last['ui']['controls']
+    exposed = {row['parameter_path'] for row in controls if row['exposed']}
+    if position == 'offscreen':
+        target = next(row for path, row in reversed(list(eligible.items())) if path not in exposed)
+    else:
+        row = next(row for row in controls if row['exposed'] and row['parameter_path'] in eligible)
+        qml(actor, f'{table}.contentY += {row["height"] / 2}')
+        controls = actor.last['ui']['controls']
+        target_control = next(
+            row
+            for row in controls
+            if row['parameter_path'] in eligible and row['exposed'] and not row['fully_exposed']
+        )
+        target = eligible[target_control['parameter_path']]
+    before = actor.last['ui']['project']['parameters']
+    actor.configure_turns([
+        [
+            tool_call(
+                'set_free',
+                'actual-revealed-target',
+                flags=[{'path': target['path'], 'free': not target['free']}],
+            )
+        ]
+    ])
+    actor.connect()
+    actor.request()
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    native_result(actor.responses()[0])
+    after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
+    assert after[target['path']]['free'] is not target['free'], (
+        'E11 F7 actual clipped or virtualized member is revealed without broadening mutation'
+    )
+    assert all(after[row['path']] == row for row in before if row['path'] != target['path']), (
+        'Real row reveal changes only the original requested member'
+    )
+    assert any(
+        row['parameter_path'] == target['path'] and row['exposed']
+        for row in actor.last['ui']['controls']
+    ), 'The actual native ON route realizes and exposes its originally virtualized target'

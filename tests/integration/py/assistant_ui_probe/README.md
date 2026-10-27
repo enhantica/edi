@@ -44,3 +44,20 @@ generator records the original SHA-256 and relocates exports without changing
 the byte traversal. It is independent of the new bounded-capture implementation.
 No scheduling-exception contract is inferred for asynchronous threaded delivery;
 throwing scheduling Post cases belong to the supported owner-thread mode.
+
+The finite research peer uses the official Codex `rust-v0.162.1` contract at
+`092d3acd6bec3e3a14bdc7e7a2810ab628ab759d`: `WebSearchItem.ts`,
+`v2/WebSearchAction.ts`, `v2/ThreadItem.ts` and started/completed notifications
+under `codex-rs/app-server-protocol/schema/typescript/`. Search/Open/Find are
+actions of `webSearch`; results remain opaque JSON, including future fields and
+unavailability evidence. No typed status/refusal/citation field is invented.
+The process-exit fixture is an actual nonzero local peer termination; it does
+not claim a provider/search service ran.
+
+Interpreted actors also reuse actual manual Qt keyboard/IME input, the ordinary
+FileDialog methods and current model controls. Postwrite Estimate failures are
+raised from the real `projectEdited` publication callback and inspect the real
+applied/Undo boundary. Busy-report sequencing occurs before queued owner
+delivery; it neither polls a held writer nor adds a production test seam. Raw
+Qt/QML stderr is retained. Undefined hook/property coding errors fail separately
+from deliberate native tool refusals; other warnings remain available for audit.
