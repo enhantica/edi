@@ -3,6 +3,9 @@
 #include "session.hpp"
 #include "assistant_view_model.hpp"
 #include "assistant_native_tools.hpp"
+#include "assistant_outgoing.hpp"
+#include <cmath>
+#include <limits>
 #include "codex_agent.hpp"
 #include <chrono>
 #include <cstdio>
@@ -516,6 +519,65 @@ int main(int argc,char** argv) {
                 if(!composer || !composer->setProperty("text",input["text"].toString())) throw std::runtime_error("actual composer text property unavailable");
                 click(find("assistant.send"));
             } else if(op=="accept_dialog") result={{"accepted",accept_dialog()}};
+            else if(op=="sc_input") {
+                if(!observed->project())throw std::runtime_error("SC input witness requires actual current native project");
+                auto& model=*observed->project()->assistantProject();
+                if(model.experiments.empty()||!model.experiments.front()->reflections)throw std::runtime_error("published SC reflections unavailable");
+                auto& bank=*model.experiments.front();auto& data=*bank.reflections;
+                const auto mode=input["mode"].toString("snapshot"),field=input["field"].toString();
+                if(mode!="snapshot"&&mode!="column"&&mode!="equal"&&mode!="replace")throw std::invalid_argument("finite SC witness mode required");
+                if(mode!="snapshot") {
+                    if(field=="sample_form") {
+                        if(input["value"]!="powder"&&input["value"]!="single crystal")throw std::invalid_argument("finite declared sample form required");
+                        bank.experiment_type.sample_form=input["value"]=="powder"?edi::SampleFormEnum::POWDER:edi::SampleFormEnum::SINGLE_CRYSTAL;
+                    } else if(field=="computed") {
+                        auto values=data.intensity_calc.values();if(values.empty())throw std::runtime_error("published calculated control unavailable");
+                        values.front()+=input["value"].toDouble();data.intensity_calc=edi::ComputedColumn<double>(std::make_shared<const std::vector<double>>(std::move(values)));
+                    } else {
+                        const auto change=[&](auto& column) {
+                            auto values=column.get();using Value=typename std::remove_cvref_t<decltype(values)>::value_type;
+                            if(values.empty())throw std::runtime_error("genuine measured column required");
+                            if(mode!="equal") {
+                                const auto value=input["value"].toDouble(std::numeric_limits<double>::quiet_NaN());
+                                if(!std::isfinite(value))throw std::invalid_argument("finite measured replacement required");
+                                if constexpr(std::is_integral_v<Value>)if(value!=std::trunc(value)||value<std::numeric_limits<Value>::min()||value>std::numeric_limits<Value>::max())throw std::invalid_argument("int32 measured index required");
+                                values.front()=static_cast<Value>(value);
+                            }
+                            column=std::move(values);
+                        };
+                        if(field=="h")change(data.index_h);else if(field=="k")change(data.index_k);else if(field=="l")change(data.index_l);
+                        else if(field=="intensity")change(data.intensity_meas);else if(field=="sigma")change(data.intensity_meas_su);else if(field=="wavelength")change(data.wavelength);
+                        else throw std::invalid_argument("unknown measured SC column");
+                        if(mode=="replace") {auto replacement=data;bank.reflections.reset();bank.reflections.emplace(std::move(replacement));}
+                    }
+                }
+                const auto facts=[](const auto& column) {
+                    const auto& values=column.get();using Value=typename std::remove_cvref_t<decltype(values)>::value_type;
+                    return Object{{"count",static_cast<double>(values.size())},{"element_bytes",static_cast<int>(sizeof(Value))},
+                        {"first",values.empty()?QJsonValue():QJsonValue(static_cast<double>(values.front()))},
+                        {"last",values.empty()?QJsonValue():QJsonValue(static_cast<double>(values.back()))}};
+                };
+                const auto& now=*bank.reflections;
+                result={{"rectangular",now.rectangular()},{"sample_form",bank.experiment_type.effective_sample_form()==edi::SampleFormEnum::POWDER?"powder":"single crystal"},
+                    {"columns",Object{{"h",facts(now.index_h)},{"k",facts(now.index_k)},{"l",facts(now.index_l)},
+                        {"intensity",facts(now.intensity_meas)},{"sigma",facts(now.intensity_meas_su)},{"wavelength",facts(now.wavelength)}}}};
+                // Deliberately no projectEdited/revision/selected-file mutation: isolate borrowed raw identity.
+            }
+            else if(op=="outgoing_projection_cases") {
+                Array rows;
+                for(const auto& value:input["cases"].toArray()) {
+                    const auto entry=value.toObject();const auto source=entry.value("source").toObject();
+                    const auto role=entry.value("role")=="diagnostic"?edi_app::outgoing::Role::Diagnostic:edi_app::outgoing::Role::Result;
+                    try {
+                        const auto admitted=edi_app::outgoing::size(source,role);
+                        const auto projected=edi_app::outgoing::project(source,role,admitted);
+                        const auto bytes=QJsonDocument(projected).toJson(QJsonDocument::Compact);
+                        rows.append(Object{{"rejected",false},{"size",static_cast<double>(admitted)},
+                            {"wire_bytes",bytes.size()},{"wire",QString::fromUtf8(bytes)},{"projected",projected}});
+                    }catch(const std::exception&){rows.append(Object{{"rejected",true}});}
+                }
+                result={{"cases",rows}};
+            }
             else if(op=="transport_timing") {
                 auto* agent=observed->assistant()->findChild<edi_app::CodexAgent*>();
                 result=agent?edi_app::CodexAgentTestAccess::timing(*agent):Object{{"active",false},{"agent_present",false}};
