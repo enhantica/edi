@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.fixtures.table_display import gui_base
+from tests.integration.py.test_e04_t1_app_contract import GUI_ARCHIVE_SHA256, GUI_PIN
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -139,9 +139,9 @@ def assert_default_gui_fetch(fields):
             'GUI archive acquisition must declare each URL, digest and deadline exactly once'
         )
     assert fields[fields.index('URL') + 1] == (
-        'https://github.com/easyscience/gui-components/archive/' + gui_base.PIN + '.tar.gz'
+        'https://github.com/easyscience/gui-components/archive/' + GUI_PIN + '.tar.gz'
     ), 'Desktop builds must fetch the immutable upstream GUI commit from ADR-0015'
-    assert fields[fields.index('URL_HASH') + 1] == 'SHA256=' + gui_base.ARCHIVE_SHA256, (
+    assert fields[fields.index('URL_HASH') + 1] == 'SHA256=' + GUI_ARCHIVE_SHA256, (
         'Desktop GUI acquisition must verify the independently frozen upstream archive digest'
     )
     for name, bound in [('INACTIVITY_TIMEOUT', 60), ('TIMEOUT', 600)]:
@@ -201,9 +201,9 @@ def test_gui_archive_observer_refuses_url_digest_and_deadline_escapes(damage):
     fields = [
         'gui_components',
         'URL',
-        'https://github.com/easyscience/gui-components/archive/' + gui_base.PIN + '.tar.gz',
+        'https://github.com/easyscience/gui-components/archive/' + GUI_PIN + '.tar.gz',
         'URL_HASH',
-        'SHA256=' + gui_base.ARCHIVE_SHA256,
+        'SHA256=' + GUI_ARCHIVE_SHA256,
         'INACTIVITY_TIMEOUT',
         '60',
         'TIMEOUT',
@@ -211,7 +211,7 @@ def test_gui_archive_observer_refuses_url_digest_and_deadline_escapes(damage):
     ]
     assert_default_gui_fetch(fields)
     if damage == 'url':
-        fields[2] = fields[2].replace(gui_base.PIN, 'master')
+        fields[2] = fields[2].replace(GUI_PIN, 'master')
     elif damage == 'digest':
         fields[4] = 'SHA256=' + '0' * 64
     elif damage.startswith('missing-'):

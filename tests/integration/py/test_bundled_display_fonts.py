@@ -7,6 +7,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.integration.py.test_e04_t1_app_contract import GUI_ARCHIVE_SHA256
+
 ROOT = Path(__file__).resolve().parents[3]
 REFERENCE = json.loads((ROOT / 'tests/fixtures/display_fonts/cmaps.json').read_text())
 # A lexer alternation consumes whole strings before comment markers inside them.
@@ -127,7 +129,11 @@ def displayed_characters():
 
 def test_font_reference_is_bound_to_packaged_bytes_and_archive():
     cmake = (ROOT / 'cmake/EdiGuiBase.cmake').read_text()
-    assert REFERENCE['archive_sha256'] in cmake, (
+    # The new archive preserves every font byte from the original cmap reference.
+    assert REFERENCE['archive_sha256'] == (
+        'd8c70a7deae7f1beef8fa69cd7c6ecdb7142f006ba1d67661b7eca20aa62a095'
+    ), 'Display cmaps retain their original independently frozen font provenance'
+    assert GUI_ARCHIVE_SHA256 in cmake, (
         'Display cmap references must match the hash-verified gui-components archive'
     )
     for faces in REFERENCE['fonts'].values():
