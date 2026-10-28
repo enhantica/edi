@@ -408,3 +408,21 @@ route; setup descriptors retain their original owner.
 Project-assistance1.9.2 distinguishes a requested scientific size/radius from
 metadata, with actual family/options investigation when the current model hides
 the field. No extinction family, reference value or extra variable is forced.
+
+
+## 2026-10-28: distinct-site isotropic displacement candidates
+
+Refinement-strategy1.4.4 extends its existing mixed-site paragraph with a distinct
+scientific candidate, rather than requiring co-location for every shared ADP.
+Toby's International Tables H chapter4.7 (2019), section4.7.9, describes isotropic
+displacement grouping for the same atom type in similar bonding environments and
+warns that imposed constraints can conceal model defects:
+https://onlinelibrary.wiley.com/iucr/itc/Ha/ch4o7v0001/ .
+
+The skill treats weak identifiability/correlation and similar environment as
+evidence for a restorable trial, not a required model. It compares residuals,
+uncertainty and complexity, states the approximation, preserves independent
+coordinates/occupancies for that trial, and does not equate general anisotropic
+tensors across frames. Existing native affine relations remain the executable
+authority. No element/site IDs, reference result, forced family, fitted seed,
+solver bound or scientific API changes.
