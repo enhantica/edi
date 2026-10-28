@@ -6823,21 +6823,43 @@ struct AssistantViewModel::State {
         if(!widget_reveal_parameter(run,target))return;
         if(!receiver || receiver->state_.get()!=this || !target || !widget_relation_row_current(run) ||
             run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
-        if(run->relation_action.kind==K::AliasParameter) {
-            // Removing device choice delivery does not remove its actual offer proof.
+        const bool physicalChoice=run->relation_action.kind==K::AliasParameter;
+        int option=-1;
+        if(physicalChoice) {
+            // The actual current popup offers this exact canonical parameter.
             const auto options=target->property("model").toStringList();
             if(!receiver || receiver->state_.get()!=this || !target || !widget_relation_row_current(run) ||
                 run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
-            if(!options.contains(run->relation_action.text)){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The exact original alias parameter is unavailable"));return;}
+            option=options.indexOf(run->relation_action.text);
+            if(option<0 || options.count(run->relation_action.text)!=1){control_failure(run,ControlCause::Unavailable); widget_refuse(run,QObject::tr("The exact original alias parameter is unavailable"));return;}
         }
-        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
-        auto current=[this,run,target,row,field,base,key,constraint]{return run->receiver && run->receiver->state_.get()==this && target &&
-            run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run);};
-        auto restore=current;auto prepare=current;auto finish=[]{};
-        auto completed=[this,run,target,row,field,base,key,constraint](bool delivered,const QString& message, ControlCause cause) {
+        AssistantWidgetInput::Request request;request.kind=physicalChoice?(target->property("searchable").toBool()?AssistantWidgetInput::Kind::SearchChoice:AssistantWidgetInput::Kind::Choose):AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
+        if(physicalChoice){request.option=option;request.value=run->relation_action.text;}
+        auto current=[this,run,target,row,field,base,key,constraint,physicalChoice,option]{return run->receiver && run->receiver->state_.get()==this && target &&
+            run->relation_row==row && run->relation_field==field && run->relation_base==base && run->relation_key==key && run->relation_constraint==constraint && widget_relation_row_current(run) && (!physicalChoice || target->property("model").toStringList().indexOf(run->relation_action.text)==option);};
+        auto restore=current;
+        std::function<bool()> prepare=[this,run,current,physicalChoice] {if(!current())return false;if(physicalChoice)widget_commit_ready(run);return current();};
+        std::function<void()> finish=[this,run,receiver,physicalChoice] {
+            if(!physicalChoice)return;
+            const auto input=run->relation_input;const auto scope=run->edit_scope;const QPointer<ProjectViewModel> target(run->project);
+            if(target)target->finishWidgetRelations(input);
+            if(receiver && receiver->state_.get()==this && run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}
+        };
+        auto completed=[this,run,target,row,field,base,key,constraint,physicalChoice](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_owned(run) || run->relation_row!=row || run->relation_field!=field || run->relation_base!=base || run->relation_key!=key || run->relation_constraint!=constraint)return;
             if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
-            try {if(!delivered || !target || !widget_relation_row_current(run)){widget_refuse(run,message);return;}
+            try {
+                if(physicalChoice) {
+                    if(run->tool=="add_relations") {widget_relation_done(run,delivered,message);return;}
+                    const auto input=run->relation_input;
+                    const bool actual=target && input && input->consumed && input->outcome.applied && input->outcome.published &&
+                        widget_relation_edit_member(run) && run->project->assistantProject()->aliases[base]->parameter_unique_name.value()==run->relation_action.text.toStdString();
+                    const bool complete=delivered && actual && native_owner(run->call.receipt);
+                    native_call->may_have_written=input && input->outcome.applied;
+                    if(complete)run->completed_steps=1;
+                    native_finish(complete,widget_relation_edit_result(run,complete));return;
+                }
+                if(!delivered || !target || !widget_relation_row_current(run)){widget_refuse(run,message);return;}
                 widget_relation_edit_apply(run);}
             catch(...){if(widget_owned(run))widget_refuse(run,widget_outcome_error);}
         };

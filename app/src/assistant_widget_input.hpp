@@ -73,7 +73,7 @@ class AssistantWidgetInput final : public QObject {
     bool eventFilter(QObject* watched, QEvent* event) override;
  private:
     struct MouseOwnership;
-    enum class Step { Move, Press, Release, Select, Commit, ChooseHome, ChooseDown, ChooseCommit };
+    enum class Step { Move, Press, Release, Select, Commit, ChoiceReveal, ChoicePress, ChoiceRelease, ChooseCommit };
     void advance() noexcept;
     void pace(int milliseconds);
 
@@ -96,13 +96,16 @@ class AssistantWidgetInput final : public QObject {
     Step step_ = Step::Move;
     QString original_text_;
     QPointer<QObject> choice_popup_;
-    QPointer<QQuickItem> choice_content_;
-    int option_step_ = 0;
+    QPointer<QQuickItem> choice_content_, choice_row_;
+    QString choice_text_;
+    bool choicePopupOwned() const;
+    bool choiceRowOwned() const;
+    bool revealChoice();
     bool choiceKeyboardOwned() const;
     const QString failed_ = QStringLiteral("The visible action could not be completed; inspect the current project");
     const QString interrupted_ = QStringLiteral("Visible action interrupted");
     QPointF center_;
     bool cleanup_release_ = false;
-    bool injecting_ = false, draft_ = false, commit_prepared_ = false, pressed_ = false;
+    bool injecting_ = false, draft_ = false, commit_prepared_ = false, pressed_ = false, choice_releasing_ = false;
 };
 }
