@@ -12,6 +12,7 @@
 #include <QJsonArray>
 #include <QSet>
 #include <stdexcept>
+#include <optional>
 namespace edi_app {
 namespace {
 using Object = QJsonObject;
@@ -24,12 +25,12 @@ void exact(const Object& value, const QSet<QString>& keys, RecipeField field = R
     if (value.size() != keys.size()) throw RecipeRefusal(field, RecipeReason::Fields);
     for (auto i = value.constBegin(); i != value.constEnd(); ++i) if (!keys.contains(i.key())) throw RecipeRefusal(field, RecipeReason::Fields);
 }
-std::string text(const Object& value, const char* key, quint64 limit, bool empty = false) {
+std::string text(const Object& value, const char* key, std::optional<quint64> limit, bool empty = false) {
     const auto field = value.value(key);
-    if (!field.isString() || (!empty && field.toString().trimmed().isEmpty())) throw RecipeRefusal(recipe_field(key), RecipeReason::TextRequired);
-    if (static_cast<quint64>(field.toString().size()) > limit) throw RecipeRefusal(recipe_field(key), RecipeReason::TextCapacity);
+    if (!field.isString() || !field.toString().isValidUtf16() || (!empty && field.toString().trimmed().isEmpty())) throw RecipeRefusal(recipe_field(key), RecipeReason::TextRequired);
+    if (limit && static_cast<quint64>(field.toString().size()) > *limit) throw RecipeRefusal(recipe_field(key), RecipeReason::TextCapacity);
     const auto bytes = field.toString().toUtf8();
-    if (static_cast<quint64>(bytes.size()) > limit) throw RecipeRefusal(recipe_field(key), RecipeReason::TextCapacity);
+    if (limit && static_cast<quint64>(bytes.size()) > *limit) throw RecipeRefusal(recipe_field(key), RecipeReason::TextCapacity);
     if (bytes.contains('\0')) throw RecipeRefusal(recipe_field(key), RecipeReason::InvalidText);
     return bytes.toStdString();
 }
@@ -42,8 +43,6 @@ Array array(const Object& value, const char* key, int minimum) {
     const auto field = value.value(key);
     if (!field.isArray()) throw RecipeRefusal(recipe_field(key), RecipeReason::ArrayRequired);
     if (field.toArray().size() < minimum) throw RecipeRefusal(recipe_field(key), RecipeReason::MinimumItems, minimum);
-    if (field.toArray().size() > static_cast<qsizetype>(Limits::stream_items))
-        throw RecipeRefusal(recipe_field(key), RecipeReason::MaximumItems, static_cast<int>(Limits::stream_items));
     return field.toArray();
 }
 }
@@ -58,7 +57,7 @@ QJsonObject native_cwl_recipe_schema(bool include_profiles) {
     profile["description"] = "Use one exact supported CW profile token from this enum, not a prose label or guessed spelling";
 
     const auto pairs = [&](const char* first, const char* second, int minimum) {
-        return Object{{"type", "array"}, {"minItems", minimum}, {"maxItems", static_cast<int>(Limits::stream_items)},
+        return Object{{"type", "array"}, {"minItems", minimum},
             {"items", shape({{first, num}, {second, num}}, {first, second})}};
     };
     auto background = pairs("position", "intensity", 2);
@@ -66,14 +65,14 @@ QJsonObject native_cwl_recipe_schema(bool include_profiles) {
     auto background_point = background.value("items").toObject();
     background_point["description"] = "Exactly position and intensity numbers. No free, id, uncertainty or other keys; standalone edit_background has a separate explicit free field.";
     background["items"] = background_point;
-    return shape({{"project_name", shortText}, {"description", Object{{"type", "string"}, {"maxLength", static_cast<int>(Limits::context_bytes)}}},
+    return shape({{"project_name", shortText}, {"description", Object{{"type", "string"}}},
         {"experiment_name", shortText}, {"sample_form", Object{{"type", "string"}, {"enum", Array{"powder"}}}},
         {"beam_mode", Object{{"type", "string"}, {"enum", Array{"constant wavelength"}}}},
         {"radiation_probe", Object{{"type", "string"}, {"enum", Array{"neutron"}}}},
         {"scattering_type", Object{{"type", "string"}, {"enum", Array{"bragg"}}}},
         {"peak_profile", profile}, {"wavelength", num}, {"zero_offset", num}, {"phase_scale", num},
         {"background", background}, {"exclusions", pairs("first", "second", 0)},
-        {"initial_parameters", Object{{"type", "array"}, {"minItems", 0}, {"maxItems", static_cast<int>(Limits::stream_items)},
+        {"initial_parameters", Object{{"type", "array"}, {"minItems", 0},
             {"items", shape({{"path", shortText}, {"value", num}}, {"path", "value"})}}}},
         {"project_name", "description", "experiment_name", "sample_form", "beam_mode", "radiation_probe", "scattering_type",
             "peak_profile", "wavelength", "zero_offset", "phase_scale", "exclusions", "initial_parameters"});
@@ -83,7 +82,7 @@ QJsonObject native_mapped_structure_schema() {
     const Object optional{{"type","string"},{"maxLength",static_cast<int>(Limits::id_bytes)}};
     const Object num{{"type","number"}};
     const auto rows=[](Object item) {return Object{{"type","array"},{"minItems",1},
-        {"maxItems",static_cast<int>(Limits::stream_items)},{"items",item}};};
+        {"items",item}};};
     const auto iso=shape({{"id",token},{"adp_type",Object{{"enum",Array{"Biso","Uiso"}}}},{"adp_iso",num}},
         {"id","adp_type","adp_iso"});
     const auto aniso=shape({{"id",token},{"adp_type",Object{{"enum",Array{"Bani","Uani","beta"}}}},
@@ -135,7 +134,6 @@ edi::Structure mapped_structure(const Object& source) {
         if(!value.isArray())throw RecipeRefusal(field,RecipeReason::ArrayRequired);
         const auto rows=value.toArray();
         if(rows.isEmpty())throw RecipeRefusal(field,RecipeReason::MinimumItems,1);
-        if(rows.size()>static_cast<qsizetype>(Limits::stream_items))throw RecipeRefusal(field,RecipeReason::MaximumItems,static_cast<int>(Limits::stream_items));
         return rows;
     };
     edi::Structure result;result.name=token(source,"name");
@@ -195,7 +193,7 @@ NativeCwlRecipe parse_native_cwl_recipe(const Object& recipe) {
         "peak_profile", "wavelength", "zero_offset", "phase_scale", "exclusions", "initial_parameters"});
     NativeCwlRecipe result;
     result.project_name = text(recipe, "project_name", Limits::id_bytes);
-    result.description = text(recipe, "description", Limits::context_bytes, true);
+    result.description = text(recipe, "description", std::nullopt, true);
     result.experiment_name = text(recipe, "experiment_name", Limits::id_bytes);
     result.type.sample_form = text(recipe, "sample_form", Limits::id_bytes);
     result.type.beam_mode = text(recipe, "beam_mode", Limits::id_bytes);
@@ -231,9 +229,7 @@ NativeCwlCandidate prepare_native_cwl_project(const std::string& cif, const std:
     using Limits = edi::assistant::Limits;
     if ((cif.empty() && mapped.isEmpty()) || (!cif.empty() && !mapped.isEmpty()) || cif.size() > edi::assistant::SelectedFileLimits::file_bytes ||
         recipe.project_name.size() > Limits::id_bytes || recipe.experiment_name.size() > Limits::id_bytes ||
-        recipe.description.size() > Limits::context_bytes || recipe.peak_profile.size() > Limits::id_bytes ||
-        recipe.background.size() > Limits::stream_items || recipe.exclusions.size() > Limits::stream_items ||
-        recipe.initial_parameters.size() > Limits::stream_items)
+        recipe.peak_profile.size() > Limits::id_bytes)
         throw std::length_error("Native creation inputs exceed their existing limits");
     if (recipe.type.sample_form != "powder" || recipe.type.beam_mode != "constant wavelength" ||
         recipe.type.radiation_probe != "neutron" || recipe.type.scattering_type != "bragg")

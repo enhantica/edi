@@ -208,18 +208,30 @@ void Session::releaseTemporaryFolder() {
 }
 
 bool Session::openProject(const QUrl& location) {
-    if (openProjectAt(location)) {
-        return true;
-    }
-    emit loadFailed(last_error_.isEmpty() ? tr("The project could not be opened") : last_error_);
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> before(project_);
+    const auto binding=replacement_generation_;
+    if (openProjectAt(location)) return true;
+    // A stale outer Open neither reports its successor's error as its own nor
+    // decorates that successor. False does not imply no partial adoption.
+    if(!receiver || replacement_generation_!=binding || project_!=before)return false;
+    const auto message=last_error_.isEmpty()?tr("The project could not be opened"):last_error_;
+    if(!receiver || replacement_generation_!=binding || project_!=before)return false;
+    emit loadFailed(message);
     return false;
 }
 
 bool Session::openExample(const QString& exampleId) {
-    if (openExampleNamed(exampleId)) {
-        return true;
-    }
-    emit loadFailed(last_error_.isEmpty() ? tr("The project could not be opened") : last_error_);
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> before(project_);
+    const auto binding=replacement_generation_;
+    if (openExampleNamed(exampleId)) return true;
+    // A stale outer Open neither reports its successor's error as its own nor
+    // decorates that successor. False does not imply no partial adoption.
+    if(!receiver || replacement_generation_!=binding || project_!=before)return false;
+    const auto message=last_error_.isEmpty()?tr("The project could not be opened"):last_error_;
+    if(!receiver || replacement_generation_!=binding || project_!=before)return false;
+    emit loadFailed(message);
     return false;
 }
 
@@ -239,21 +251,25 @@ bool Session::openProjectAt(const QUrl& location) {
         if (!open(source, {})) {
             return false;
         }
-        temporary_folder_ = QString::fromStdString(project_->project().scan_data_root);
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+        const auto binding=replacement_generation_;
+        const auto current=[&]{return receiver && target && project_==target && replacement_generation_==binding;};
+        temporary_folder_ = QString::fromStdString(target->project().scan_data_root);
         // The archive is the project's location and Save rewrites it, unless it cannot be written back: a read-only
         // file or folder, or the browser's uploaded copy (owner, 2026-10-25).
         const QFileInfo folder(given.absolutePath());
         if (!WebFiles::available() && given.isWritable() && folder.isWritable()) {
-            project_->workIn(QString::fromStdString(project_->project().scan_data_root));
+            target->workIn(QString::fromStdString(target->project().scan_data_root));
+            if(!current())return false;
             archive_location_ = given.absoluteFilePath();
-            emit projectLocationChanged();
-            emit needsSaveAsChanged();
-            emit locationTextChanged();
-            emit projectDirectoryUsed(archive_location_);
+            emit projectLocationChanged();if(!current())return false;
+            emit needsSaveAsChanged();if(!current())return false;
+            emit locationTextChanged();if(!current())return false;
+            emit projectDirectoryUsed(archive_location_);if(!current())return false;
         } else {
             setOpenedArchive(given.fileName());
         }
-        return true;
+        return current();
     }
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
     // so a fit never writes into it; Save As writes the project where the user chooses.
@@ -270,18 +286,22 @@ bool Session::openProjectAt(const QUrl& location) {
         if (!openCopy(source, target, {})) {
             return false;
         }
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> openedOwner(project_);
+        const auto binding=replacement_generation_;
+        const auto current=[&]{return receiver && openedOwner && project_==openedOwner && replacement_generation_==binding;};
         read_only_copy_ = true;
         read_only_source_ = folder.absoluteFilePath();
-        emit needsSaveAsChanged();
-        emit locationTextChanged();
-        emit projectDirectoryUsed(folder.absoluteFilePath());
-        return true;
+        emit needsSaveAsChanged();if(!current())return false;
+        emit locationTextChanged();if(!current())return false;
+        emit projectDirectoryUsed(folder.absoluteFilePath());if(!current())return false;
+        return current();
     }
     const bool opened = open(source, {});
-    if (opened) {
-        emit projectDirectoryUsed(folder.absoluteFilePath());
-    }
-    return opened;
+    if(!opened)return false;
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const auto binding=replacement_generation_;
+    emit projectDirectoryUsed(folder.absoluteFilePath());
+    return receiver && target && project_==target && replacement_generation_==binding;
 }
 
 bool Session::copyTree(const QString& source, const QString& target, const QString& linked) {
@@ -806,8 +826,11 @@ QUrl Session::suggestedSaveTarget(bool zip) const {
 }
 
 bool Session::open(const QString& directory, const QString& example) {
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> before(project_);
+    const auto binding=replacement_generation_;
+    const auto preparing=[&]{return receiver && project_==before && replacement_generation_==binding;};
     QStringList warnings;
-    ProjectViewModel* opened = nullptr;
+    QPointer<ProjectViewModel> opened;
     try {
         edi::Project project = edi::load_project(directory.toStdString(), [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
@@ -822,16 +845,26 @@ bool Session::open(const QString& directory, const QString& example) {
         }
         opened = new ProjectViewModel(std::move(project), this);
     } catch (const std::exception& refusal) {
-        setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
+        if(preparing())setLastError(QString::fromUtf8(refusal.what())); // Never overwrite a successor's error.
         return false;
     }
-    replaceProject(opened, warnings, example);
-    return true;
+    if(!preparing()) {
+        if(receiver && opened && project_!=opened)opened->deleteLater();
+        return false;
+    }
+    bool adopted=false;
+    const auto cleanup=qScopeGuard([&] {
+        if(!adopted && receiver && opened && project_!=opened)opened->deleteLater();
+    });
+    return replaceProject(opened,warnings,example,false,&adopted);
 }
 
 bool Session::openCopy(const QString& source, const QString& target, const QString& example) {
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> before(project_);
+    const auto binding=replacement_generation_;
+    const auto preparing=[&]{return receiver && project_==before && replacement_generation_==binding;};
     QStringList warnings;
-    ProjectViewModel* opened = nullptr;
+    QPointer<ProjectViewModel> opened;
     try {
         edi::Project project = edi::load_project(source.toStdString(), [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
@@ -858,11 +891,18 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         }
         opened = new ProjectViewModel(std::move(project), this);
     } catch (const std::exception& refusal) {
-        setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
+        if(preparing())setLastError(QString::fromUtf8(refusal.what())); // Never overwrite a successor's error.
         return false;
     }
-    replaceProject(opened, warnings, example);
-    return true;
+    if(!preparing()) {
+        if(receiver && opened && project_!=opened)opened->deleteLater();
+        return false;
+    }
+    bool adopted=false;
+    const auto cleanup=qScopeGuard([&] {
+        if(!adopted && receiver && opened && project_!=opened)opened->deleteLater();
+    });
+    return replaceProject(opened,warnings,example,false,&adopted);
 }
 
 void Session::setOpenedArchive(const QString& name) {
@@ -968,34 +1008,41 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
 // ---- The web app's places (edi ADR-0052 §9) ---------------------------------------------------------
 
 void Session::setWebPlace(const WebPlace& place) {
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const auto binding=replacement_generation_;
     web_place_ = place;
     emit locationTextChanged();
+    if(!receiver || project_!=target || replacement_generation_!=binding)return;
     emit projectLocationChanged();
 }
 
 bool Session::openWebCopy(const QString& path, const WebPlace& place) {
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> before(project_);
+    const auto initial=replacement_generation_;
+    const auto preparing=[&]{return receiver && project_==before && replacement_generation_==initial;};
     const QFileInfo given(path);
     if (given.isFile() && edi::is_project_archive(path.toStdString())) {
-        if (!open(path, {})) {
-            return false;
-        }
-        // The project works in the folder the archive was unpacked into; a Save writes the archive from it.
-        const QString unpacked = QString::fromStdString(project_->project().scan_data_root);
-        project_->workIn(unpacked);
-        temporary_folder_ = unpacked;
-    } else {
-        QString error;
-        const QString folder = WebFiles::projectIn(path, error);
-        if (folder.isEmpty()) {
-            setLastError(QStringLiteral("cannot open %1: %2").arg(given.fileName(), error));
-            return false;
-        }
-        if (!open(folder, {})) {
-            return false;
-        }
+        if (!open(path, {}))return false;
+        const QPointer<ProjectViewModel> target(project_);const auto binding=replacement_generation_;
+        const auto current=[&]{return receiver && target && project_==target && replacement_generation_==binding;};
+        const QString unpacked=QString::fromStdString(target->project().scan_data_root);
+        target->workIn(unpacked);
+        if(!current())return false;
+        temporary_folder_=unpacked;
+        setWebPlace({place.key.isEmpty()?newWebKey():place.key,place.kind,place.name});
+        return current();
     }
-    setWebPlace({place.key.isEmpty() ? newWebKey() : place.key, place.kind, place.name});
-    return true;
+    QString error;
+    const QString folder=WebFiles::projectIn(path,error);
+    if(!preparing())return false;
+    if(folder.isEmpty()) {
+        setLastError(QStringLiteral("cannot open %1: %2").arg(given.fileName(),error));
+        return false;
+    }
+    if(!open(folder,{}))return false;
+    const QPointer<ProjectViewModel> target(project_);const auto binding=replacement_generation_;
+    setWebPlace({place.key.isEmpty()?newWebKey():place.key,place.kind,place.name});
+    return receiver && target && project_==target && replacement_generation_==binding;
 }
 
 void Session::openWebProject(const QString& kind) {
@@ -1038,24 +1085,25 @@ std::function<bool(const WebStorageAnswer&)> Session::openRequest(const QString&
 }
 
 WebStorage::Answer Session::webOpenAnswer(const QString& root) {
-    return [this, root, current = openRequest(root)](const WebStorageAnswer& answer) {
-        if (!current(answer)) {
-            return;
-        }
-        const WebPlace place{answer.key,
-                             answer.kind,
-                             answer.name};
-        if (!openWebCopy(answer.path, place)) {
+    const QPointer<Session> receiver(this);
+    return [this,receiver,root,current=openRequest(root)](const WebStorageAnswer& answer) {
+        if(!receiver || !current(answer))return;
+        const QPointer<ProjectViewModel> before(project_);const auto beforeBinding=replacement_generation_;
+        const WebPlace place{answer.key,answer.kind,answer.name};
+        if(!openWebCopy(answer.path,place)) {
+            if(!receiver || project_!=before || replacement_generation_!=beforeBinding)return;
+            // A failed parse owns no replacement. A false publication after
+            // adoption retains its original staging, never rolls back live data.
             QDir(root).removeRecursively();
             emit loadFailed(last_error_);
             return;
         }
-        web_copy_ = root;
-        // A project uploaded from the disk is kept in the browser at once (owner, 2026-10-25), where it can be.
-        web_from_file_ = true;
-        if (web_place_.kind == QStringLiteral("browser") && WebStorage::instance()->usable()) {
-            writeWebPlace(web_place_, project_->path(), nullptr);
-        }
+        const QPointer<ProjectViewModel> target(project_);const auto binding=replacement_generation_;
+        const auto owned=[&]{return receiver && target && project_==target && replacement_generation_==binding;};
+        web_copy_=root;web_from_file_=true;
+        const bool persist=web_place_.kind==QStringLiteral("browser") && WebStorage::instance()->usable();
+        if(!owned())return;
+        if(persist)writeWebPlace(web_place_,target->path(),nullptr);
     };
 }
 

@@ -6,6 +6,7 @@
 #include "edi/selectors.hpp"
 #include <map>
 #include <set>
+#include <limits>
 
 namespace edi::assistant::detail {
 struct NativeAliasInput { std::string id, path; };
@@ -20,13 +21,13 @@ inline Edit prepare_relation_append(Project& project, const std::vector<NativeAl
         refuse("invalid_argument", "The native constraint declaration must be nonempty");
     std::uint64_t bytes = sizeof("{\"aliases\":[],\"constraints\":[]}") - 1;
     const auto charge = [&](std::uint64_t n) {
-        if (n > Limits::context_bytes - bytes) refuse("resource_exhausted", "Native relation declaration exceeds capacity");
+        if (n > std::numeric_limits<std::uint64_t>::max() - bytes) throw std::overflow_error("Native relation byte count overflow");
         bytes += n;
     };
-    const auto text = [&](const std::string& value, std::uint64_t limit) {
-        if (value.empty() || value.size() > limit || value.find('\0') != std::string::npos || !utf8(value))
+    const auto text = [&](const std::string& value, std::optional<std::uint64_t> limit) {
+        if (value.empty() || (limit && value.size() > *limit) || value.find('\0') != std::string::npos || !utf8(value))
             refuse("invalid_argument", "Native relation text is empty, invalid or exceeds capacity");
-        charge(json::encoded_string_size(value, Limits::context_bytes));
+        charge(json::encoded_string_size(value));
     };
     bool first = true;
     for (const auto& row : aliases) {
@@ -38,7 +39,7 @@ inline Edit prepare_relation_append(Project& project, const std::vector<NativeAl
         if (!first) charge(sizeof(",") - 1); first = false;
         charge(sizeof("{\"id\":,\"expression\":,\"enabled\":}") - 1);
         charge(row.enabled ? sizeof("true") - 1 : sizeof("false") - 1);
-        text(row.id, Limits::id_bytes); text(row.expression, Limits::context_bytes);
+        text(row.id, Limits::id_bytes); text(row.expression, std::nullopt);
     }
     if (project.structures.empty())
         refuse("unsupported_model", "Native affine relations require a structure that the existing relation engine can validate");

@@ -25,6 +25,11 @@ EaElements.Dialog {
     function acceptsProjectName(value) {
         return typeof value === "string" && projectNameField.validator.regularExpression.test(value);
     }
+    function acceptsProjectTitle(value) {
+        return typeof value === "string" && value.length <= projectTitleField.maximumLength
+            && !/[\x00\r\n\t]/.test(value);
+    }
+    readonly property int projectTitleMaximumLength: projectTitleField.maximumLength
 
     property string projectLocation: ""
     property string projectParentDirectory: ""

@@ -3098,3 +3098,32 @@ in observation is not authentication revocation; genuine invalid protocol can re
 while preserving lawful same-project recovery. The owner's screenshot's exact trigger is not
 inferred from this correction. Source, native runtime, live science, CI and release qualification
 remain separate; this decision does not certify any pending gate or platform.
+
+
+### 2026-10-28: complete action admission and original deferred form outcomes
+
+The no-work-quota decision includes the live relation declaration/schema/preparation, optional
+compound row/description parser and shared FormText/Choose paths. Required shape/minimum rows,
+actual IDs/Unicode/overflow, scientific validation and original field acceptance remain distinct;
+selected-file/skill/consent/protocol boundaries are not removed by a blanket Limits search.
+
+Original Title is a single-line TextInput whose pinned Qt6.11.2 default maximumLength is32767
+UTF-16 units (qquicktextinput_p_p.h). The adapter describes that actual field and checks its live
+maximumLength and control-character acceptance before OFF/ON diverge. It never raises the manual
+limit or truncates supplied metadata. Multiline Description has no extra assistant work-byte quota.
+
+An EVENT failure before a user work attempt is retained in the existing canonical history under
+its actual current scope, with work attempt/turn identity explicitly not observed. It creates no
+user query or new once ledger. Current diagnostics can be materialized transiently for Preferences
+while the last useful attempt document remains cached unchanged; later genuine work and the
+ordinary project mirror include the original scoped row. Scope/account retirement cannot relabel
+older project evidence or copy old terminal metadata onto the new error. The last-cache guard stays.
+
+The FIRST AppState.afterChanges and normal dialog acceptance deliberately use Qt.callLater.
+Normal and compound Create therefore retain the original form/token and observe its actual
+opened/accepted/rejected outcomes. A real accepted physical confirmation owns one preprepared
+receipt for the later ordinary Session call; mouse-return is not proof of opening/adoption, and
+injecting() is not required after that original mouse stack has unwound. Existing Session facts
+settle the original Create or advance its compound continuation. No alternate Create button,
+generic click framework, guessed timer-success test, busy bypass or scientific replay is added.
+Stop/manual takeover and exact owner/currentness still retire only their original obligation.

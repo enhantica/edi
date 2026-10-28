@@ -277,13 +277,14 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if (!admitted || !request.target || !visibleCenter(*request.target, center, request.kind == Kind::Scroll, request.visualOnlyDisabledTarget))
         throw ControlInputRefusal(admitted ? ControlCause::Unavailable : ControlCause::Superseded,"The genuine input control is not visible and current");
     if(!self || serial_!=originalSerial || request_)return 0;
+    if(!request.value.isValidUtf16())throw std::invalid_argument("The original control text has invalid Unicode");
     if (request.kind == Kind::Value || request.kind == Kind::Text)
         throw std::invalid_argument("Scientific text uses its ordinary app setter, not draft input");
-    const qsizetype text_limit = (request.kind == Kind::StagedText || request.kind == Kind::FormText)
-        ? static_cast<qsizetype>(edi::assistant::Limits::context_bytes) : 256;
     if ((request.kind == Kind::ParameterFilter || request.kind == Kind::StagedText || request.kind == Kind::FormText) &&
-        ((request.value.isEmpty() && request.kind != Kind::FormText) || request.value.size() > text_limit))
+        (request.value.isEmpty() && request.kind != Kind::FormText))
         throw std::runtime_error("The numeric input spelling is unavailable");
+    if(request.kind==Kind::ParameterFilter && request.value.size()>static_cast<qsizetype>(edi::assistant::Limits::id_bytes))
+        throw std::invalid_argument("The parameter filter identifier is unavailable");
     if (request.kind == Kind::FormText &&
         (request.value.contains(QChar::Null) || ((request.value.contains('\n') || request.value.contains('\r') || request.value.contains('\t')) &&
             !(request.kind == Kind::FormText && request.target->inherits("QQuickTextEdit")))))
@@ -294,9 +295,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if (request.kind == Kind::Scroll && request.scrollDirection != 1 && request.scrollDirection != -1)
         throw std::runtime_error("The bounded viewport scroll is unavailable");
     original_text_ = request.kind == Kind::StagedText ? request.target->property("editText").toString() : QString{};
-    if (original_text_.size() > text_limit) throw std::runtime_error("The original numeric draft exceeds the visible input bound");
     if ((request.kind == Kind::Choose || request.kind == Kind::SearchChoice) && (request.option < 0 || request.option >= request.target->property("count").toInt() ||
-        (request.kind == Kind::Choose && request.target->property("count").toInt() > static_cast<int>(edi::assistant::Limits::stream_items)) ||
         (request.kind == Kind::SearchChoice && (!request.target->property("searchable").toBool() || request.value.isEmpty() || request.value.size() > static_cast<qsizetype>(edi::assistant::Limits::id_bytes)))))
         throw std::runtime_error("The actual ComboBox option is unavailable");
     request.failure=ControlCause::None;
