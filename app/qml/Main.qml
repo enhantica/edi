@@ -745,6 +745,8 @@ EaComponents.ApplicationWindow {
         enterAccepts: true
         property bool zip: false
         property bool copy: false
+        readonly property Item nativeAcceptButton: opened ? standardButton(Dialog.Ok) : null
+        onOpened: if (nativeAcceptButton) nativeAcceptButton.objectName = "saveAs.accept"
         // A browser without the File System Access API writes no folder and moves no project onto the disk: a copy
         // as a .zip download is all it offers.
         readonly property bool diskWritable: !WebFiles.available || WebStorage.diskAccess
@@ -758,6 +760,19 @@ EaComponents.ApplicationWindow {
             copy = !diskWritable;
         }
         onAccepted: {
+            // Delegated native Save uses this original selected/default format
+            // and its actual suggested destination. Manual Save As retains the
+            // original native picker, including its explicit overwrite choice.
+            const intent = window.assistantSaveIntent;
+            if (intent !== "" && !WebFiles.available) {
+                if (!Session.assistantSaveAsCurrent(intent)) {
+                    window.cancelAssistantSaveAs();
+                    return;
+                }
+                const target = Session.assistantSaveAsTarget(intent, zip);
+                window.finishAssistantSaveAs(target, zip, copy);
+                return;
+            }
             if (!diskWritable)
                 Session.downloadWebProject();
             else if (WebFiles.available)

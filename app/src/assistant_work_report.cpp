@@ -376,7 +376,8 @@ QVariantMap AssistantWorkReports::immediate(const Object& receipt) {
     const auto reply=receipt.toVariantMap();present(receipt,reply);return reply;
 }
 
-bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView storageRoot) const noexcept {
+bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView storageRoot) noexcept {
+    if(auto* app=QCoreApplication::instance();app && QThread::currentThread()==app->thread())return false;
 #if defined(Q_OS_UNIX) && !defined(__EMSCRIPTEN__)
     try {const auto path=artifact.value("path").toString();
         constexpr QStringView suffix=u"/reports/work-report.json";
@@ -401,7 +402,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         std::shared_ptr<WriterWorkerLease> lease;
         std::shared_ptr<Control> state;
         std::shared_ptr<WriterCompletion> completion;
-        Object document,receipt;
+        Object document,receipt,reuseArtifact;
         QString projectRoot,scope;
         QPointer<AssistantViewModel> receiver;
     };
@@ -465,12 +466,13 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
     if(state->busy && state->activeScope==state->scope && state->activeRevision==state->revision && QStringView(state->activeRoot)==storageRoot) {
         auto r=state->activeReceipt;r["disposition"]="coalesced";return immediate(r);
     }
+    Object reuseArtifact;
     if(!state->busy && state->last.value("scope_id").toObject().value("value")==state->scope &&
        state->last.value("snapshot_revision").toObject().value("value")==decimal(state->revision) &&
-       (state->last.value("disposition")=="saved" || state->last.value("disposition")=="saved_incomplete")) {
-        const auto artifact=state->last.value("artifact").toObject().value("value").toObject();
-        if(artifactCurrent(artifact,storageRoot))return state->lastVariant;
-    }
+       (state->last.value("disposition")=="saved" || state->last.value("disposition")=="saved_incomplete"))
+        reuseArtifact=state->last.value("artifact").toObject().value("value").toObject();
+    // Verification/readback belongs to the same original background writer,
+    // never a synchronous GUI prerequisite for reusing a prior receipt.
     if(automaticTrigger && state->busy)missedAutomaticCapture();
     const auto event=newEvent();
     if(event.isEmpty()){return work_report_serial_variant();}
@@ -534,7 +536,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         state->busy=true;state->activeScope=scope;state->activeRoot=projectRoot;state->activeRevision=revision;state->activeReceipt=receipt;state->completion=completion;
         const auto acceptedVariant=receipt.toVariantMap();acceptedReply=acceptedVariant;accepted=true;
         present(receipt,acceptedVariant);
-        const auto input=std::make_shared<WorkCapture>(WorkCapture{workerLease,state,completion,std::move(document),receipt,projectRoot,scope,receiver});
+        const auto input=std::make_shared<WorkCapture>(WorkCapture{workerLease,state,completion,std::move(document),receipt,reuseArtifact,projectRoot,scope,receiver});
         auto work=[input]() mutable {
             const auto& state=input->state;const auto& completion=input->completion;
             auto& document=input->document;const auto& receipt=input->receipt;const auto& projectRoot=input->projectRoot;
@@ -545,11 +547,16 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
                 auto terminal=receipt;bool fallbackOnly=false;
                 try {
                     terminal["phase"]="terminal";
-                    const auto bytes=QJsonDocument(document).toJson(QJsonDocument::Compact);
-                    if(bytes.size()<0 || static_cast<quint64>(bytes.size())>L::record_bytes)
-                        throw std::length_error("Report exceeds artifact capacity");
-                    const auto hash=QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex();
-                    auto result=publishFile(projectRoot,bytes,hash);
+                    FileResult result;
+                    if(!input->reuseArtifact.isEmpty() && artifactCurrent(input->reuseArtifact,projectRoot))
+                        result={input->reuseArtifact,"saved",false};
+                    else {
+                        const auto bytes=QJsonDocument(document).toJson(QJsonDocument::Compact);
+                        if(bytes.size()<0 || static_cast<quint64>(bytes.size())>L::record_bytes)
+                            throw std::length_error("Report exceeds artifact capacity");
+                        const auto hash=QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex();
+                        result=publishFile(projectRoot,bytes,hash);
+                    }
                     completion->publication(result); // POD latch BEFORE fallible receipt assembly.
                     terminal["disposition"]=QLatin1StringView(result.disposition);terminal["recovery_required"]=result.recovery;
                     if(!result.artifact.isEmpty()) {

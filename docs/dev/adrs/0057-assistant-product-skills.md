@@ -289,3 +289,16 @@ remain authoritative. The agent chooses useful work and its endpoint; this adds
 no fixed stage order, exploration count, reference objective, solver bound or
 specimen-specific values. The original catalogue version and content hash advance
 together, and this guidance change alone establishes no scientific or runtime pass.
+
+
+## 2026-10-28: delegated ordinary Save guidance
+
+Project-assistance1.8.2 (SHA256 `830c893b50cf75a8cb16a351f1775bab0a74fff11046bcc403db757d97d65823`) updates only the generic Save
+paragraph: a routine delegated Save completes the current app's original selected/default
+format, suggested target and normal OK/Session continuation, with actual commit/path/copy
+facts and existing collision/current-owner protections. It requires no repeated permission
+or human chooser step, does not authorize arbitrary paths or silent explicit-name changes,
+and preserves the current/native scientific strategy and conditional recovery guidance.
+The native tool description and compiled developer instruction follow the same contract.
+SkillCreator quick_validate and the exact catalog/body hash bond validate packaging; no
+specimen values, fit target, fixed procedure or phrase-mirroring behavior test is introduced.
