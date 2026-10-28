@@ -1676,7 +1676,7 @@ struct AssistantViewModel::State {
     }
     void update_thread_settings() {
         const auto publication=file_projection();
-        if (!generic_authenticated || generic_retiring || generic_thread.isEmpty() || generic_busy || generic_connecting) return;
+        if (account_confirmation_pending || !generic_authenticated || generic_retiring || generic_thread.isEmpty() || generic_busy || generic_connecting) return;
         if (policy_current()) return;
         if(!CodexAgent::policyPatch().isEmpty()) {
             generic_retire_context(false);
@@ -1718,6 +1718,8 @@ struct AssistantViewModel::State {
     bool generic_durable=false,generic_resuming=false;
     QString session_selection_target;
     quint64 session_operation=0;
+    struct AccountSelectionWait {QString target,thread;quint64 operation=0;FileProjection proof;};
+    std::optional<AccountSelectionWait> account_selection_wait;
 
     void mark_session_caches_cleared() noexcept {
         try {auto index=session_associations();if(index.isEmpty())return;auto rows=index.value("threads").toObject();
@@ -1864,12 +1866,17 @@ struct AssistantViewModel::State {
         SessionWorkspace workspace;
         std::shared_ptr<DisclosureScope> disclosure;
         Object context;
+        bool approved=false,cross_project=false,installed=false;
+        QPointer<ProjectViewModel> target;
+        const edi::Project* target_model=nullptr;
+        edi::assistant::Controller* installed_controller=nullptr;
+        QString unavailable_inputs;
     };
-    std::unique_ptr<SessionPreparation> session_preparation;
+    std::shared_ptr<SessionPreparation> session_preparation;
     QString session_opening_target;quint64 session_opening_operation=0;
     QPointer<ProjectViewModel> session_opened_project;
     bool session_opening_bound=false;
-    std::unique_ptr<SessionInputs> prepare_session_inputs(const Object& record) {
+    std::unique_ptr<SessionInputs> prepare_session_inputs(const Object& record,ProjectViewModel* target) {
 
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
         const auto values=record.value("files").toArray();
@@ -1897,7 +1904,7 @@ struct AssistantViewModel::State {
         }
         if(generation==UINT64_MAX)throw std::runtime_error("The original session binding retired");
         const auto binding=generation+1;auto active=std::make_shared<bool>(false);
-        auto prepared=make_controller(project,binding,active);
+        auto prepared=make_controller(target,binding,active);
         const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/input-cache";
         if(!QDir().mkpath(root))throw std::runtime_error("The attachment cache is unavailable");
         auto cache=std::make_unique<QTemporaryDir>(root+"/restored-XXXXXX");
@@ -1934,11 +1941,13 @@ struct AssistantViewModel::State {
         return result;
     }
     bool session_preparation_current(const SessionPreparation& prepared) const {
-        if(!prepared.proof.input_current() || prepared.operation!=session_operation || session_selection_target!=prepared.id || !controller)return false;
+        if(!prepared.proof.input_current() || prepared.operation!=session_operation || session_selection_target!=prepared.id || !controller ||
+            (prepared.target_model && (!prepared.target || prepared.target->assistantProject()!=prepared.target_model)))return false;
         const auto revision=controller->revision();
         return revision.project_id==prepared.revision.project_id && revision.revision==prepared.revision.revision;
     }
     void commit_session_preparation() {
+        if(account_confirmation_pending)return;
         if(!session_preparation || !session_preparation_current(*session_preparation))throw std::runtime_error("The original conversation selection or project changed before preparation completed");
         session_preparation_observation["stage"]="prepared_transfer";
         auto prepared=std::move(session_preparation);auto proof=prepared->proof;
@@ -1946,13 +1955,17 @@ struct AssistantViewModel::State {
         // is still viable. Only this final transfer commits its retirement.
         ResumeCheckpoint checkpoint{prepared->id,prepared->workspace.workspace,prepared->email,project,prepared->disclosure,
             prepared->inputs->generation,bool(project),true,false};
-        connect_project(project,prepared->inputs->generation,prepared->inputs->active);
+        if(!prepared->installed)connect_project(project,prepared->inputs->generation,prepared->inputs->active);
         if(!session_preparation_current(*prepared))return;
-        if(!generic_revoke_workspace(&proof,true) || !proof.retirement_current())return;
-        auto& inputs=*prepared->inputs;generation=inputs.generation;controller.swap(inputs.controller);*inputs.active=true;
-        generic_input_paths.swap(inputs.stage->paths);generic_input_hashes.swap(inputs.stage->hashes);
-        generic_input_physical.swap(inputs.stage->physical);generic_input_origins.swap(inputs.stage->origins);generic_input_cache.swap(inputs.cache);
-        inputs.stage->fresh.clear();selected_reply=std::move(inputs.reply);selected_rows_dirty=true;restored_consumed_inputs=std::move(inputs.consumed);
+        if(!generic_revoke_workspace(&proof,true) || !proof.retirement_current() || prepared->operation!=session_operation || session_selection_target!=prepared->id ||
+            prepared->target!=project || (prepared->target_model && (!prepared->target || prepared->target->assistantProject()!=prepared->target_model)))return;
+        auto& inputs=*prepared->inputs;
+        if(!prepared->installed) {
+            generation=inputs.generation;controller.swap(inputs.controller);*inputs.active=true;
+            generic_input_paths.swap(inputs.stage->paths);generic_input_hashes.swap(inputs.stage->hashes);
+            generic_input_physical.swap(inputs.stage->physical);generic_input_origins.swap(inputs.stage->origins);generic_input_cache.swap(inputs.cache);
+            inputs.stage->fresh.clear();selected_reply=std::move(inputs.reply);selected_rows_dirty=true;restored_consumed_inputs=std::move(inputs.consumed);
+        }
         disclosure_cache.reset();disclosure_raw.reset();
         prepared->disclosure->account=usage_epoch;
         approved_scope=prepared->disclosure;backend_scope=prepared->disclosure;
@@ -1962,6 +1975,56 @@ struct AssistantViewModel::State {
         resume_checkpoint=std::move(checkpoint);session_restore_target=prepared->id;sessions_loading=true;
         session_preparation_observation["stage"]="awaiting_original_runtime_resume";
         schedule_resume_connection();
+    }
+    std::unique_ptr<SessionPreparation> stage_session_preparation(const QString& id,ProjectViewModel* target,const Object& record,const QString& expectedEmail) {
+        const auto proof=file_projection();
+        const auto previousApproval=disclosure_approved()?approved_scope:std::shared_ptr<const DisclosureScope>{};
+        if(!proof.input_current())return {};
+        const auto previousFiles=generic_input_hashes;const auto previousSources=approved_source_locations();
+        auto candidate=std::make_unique<SessionPreparation>();candidate->id=id;candidate->email=expectedEmail;
+        candidate->operation=session_operation;candidate->proof=proof;candidate->revision=controller->revision();
+        candidate->target=target;candidate->target_model=target?target->assistantProject():nullptr;
+        session_preparation_observation["stage"]="input_snapshot";
+        QString unavailableInputs;
+        try {candidate->inputs=prepare_session_inputs(record,target);}
+        catch(const SessionInputUnavailable& failure) {
+            unavailableInputs=bounded_error(QString::fromUtf8(failure.what()));candidate->inputs=prepare_session_inputs({},target);
+        }
+        if(!candidate->inputs || !proof.input_current())return {};
+        session_preparation_observation["stage"]="disclosure_capture";
+        const auto inventory=source_inventory();if(!proof.input_current())return {};
+        candidate->context=object(candidate->inputs->controller->context());append_outgoing_context(candidate->context,target,inventory);
+        candidate->disclosure=prepare_disclosure_scope(target,candidate->context,candidate->inputs->stage->hashes);
+        session_preparation_observation["stage"]="instruction_workspace";
+        candidate->workspace=prepare_skill_workspace(inventory);
+        if(!session_preparation_current(*candidate))return {};
+        const auto approval=candidate->disclosure;
+        const auto& candidateFiles=candidate->inputs->stage->hashes;
+        bool subset=true;for(auto it=candidateFiles.cbegin();it!=candidateFiles.cend();++it)
+            if(!previousFiles.contains(it.key()) || previousFiles.value(it.key())!=it.value()){subset=false;break;}
+        const bool previouslyShared=previousApproval && previousApproval->project==target && previousApproval->model==(target?target->assistantProject():nullptr) &&
+            previousApproval->inputs==approval->inputs && previousApproval->selected==approval->selected && previousApproval->metadata==approval->metadata &&
+            previousApproval->capabilities==approval->capabilities && previousApproval->skill_configuration==approval->skill_configuration &&
+            previousApproval->skills && approval->skills && previousApproval->skills->fingerprint==approval->skills->fingerprint &&
+            subset && previousSources==approved_source_locations();
+        const bool sameScope=previouslyShared || (record.value("approved").toBool() && unavailableInputs.isEmpty() &&
+            record.value("inputs")==QString::fromLatin1(approval->inputs.toHex()) &&
+            record.value("metadata")==QString::fromLatin1(approval->metadata.toHex()) && record.value("sources").toArray()==approved_source_locations() &&
+            record.value("selected")==QString::fromLatin1(approval->selected.toHex()) && approval->skills &&
+            record.value("skills")==QString::fromLatin1(approval->skills->fingerprint.toHex()) &&
+            record.value("skillConfiguration")==QString::fromLatin1(session_skill_configuration()) &&
+            record.value("capabilities")==QString::fromLatin1(approval->capabilities.toHex()));
+        candidate->approved=sameScope;candidate->unavailable_inputs=unavailableInputs;
+        return candidate;
+    }
+    void offer_session_preparation() {
+        if(!session_preparation || !session_preparation_current(*session_preparation))throw std::runtime_error("The original prepared conversation changed before selection continued");
+        sessions_error=session_preparation->unavailable_inputs;
+        if(!session_preparation->approved) {
+            const auto proof=file_projection();const auto id=session_preparation->id;
+            emit owner.contextPreviewChanged();if(proof.input_current())emit owner.sessionConsentRequested(id);return;
+        }
+        commit_session_preparation();
     }
     bool begin_saved_session(const QString& id,bool automatic=false) {
         if(!session_switch_idle())return false;
@@ -2004,45 +2067,8 @@ struct AssistantViewModel::State {
         if(automatic && record.value("email").toString().isEmpty()){session_selection_target.clear();return false;}
         const auto expectedEmail=record.value("email").isString()?record.value("email").toString():email;
         sessions_loading=true;
-        const auto previousApproval=disclosure_approved()?approved_scope:std::shared_ptr<const DisclosureScope>{};
-        if(!proof.input_current())return true;
-        const auto previousFiles=generic_input_hashes;const auto previousSources=approved_source_locations();
-        auto candidate=std::make_unique<SessionPreparation>();candidate->id=id;candidate->email=expectedEmail;
-        candidate->operation=session_operation;candidate->proof=proof;candidate->revision=controller->revision();
-        session_preparation_observation["stage"]="input_snapshot";
-        QString unavailableInputs;
-        try {candidate->inputs=prepare_session_inputs(record);}
-        catch(const SessionInputUnavailable& failure) {
-            unavailableInputs=bounded_error(QString::fromUtf8(failure.what()));candidate->inputs=prepare_session_inputs({});
-        }
-        if(!candidate->inputs || !proof.input_current())return true;
-        session_preparation_observation["stage"]="disclosure_capture";
-        const auto inventory=source_inventory();if(!proof.input_current())return true;
-        candidate->context=object(candidate->inputs->controller->context());append_outgoing_context(candidate->context,project,inventory);
-        candidate->disclosure=prepare_disclosure_scope(project,candidate->context,candidate->inputs->stage->hashes);
-        session_preparation_observation["stage"]="instruction_workspace";
-        candidate->workspace=prepare_skill_workspace(inventory);
-        if(!session_preparation_current(*candidate))return true;
-        const auto approval=candidate->disclosure;
-        const auto& candidateFiles=candidate->inputs->stage->hashes;
-        session_restore_target=id;session_selection_target=id;sessions_loading=true;sessions_error=unavailableInputs;
-        bool subset=true;for(auto it=candidateFiles.cbegin();it!=candidateFiles.cend();++it)
-            if(!previousFiles.contains(it.key()) || previousFiles.value(it.key())!=it.value()){subset=false;break;}
-        const bool previouslyShared=previousApproval && previousApproval->project==project && previousApproval->model==(project?project->assistantProject():nullptr) &&
-            previousApproval->inputs==approval->inputs && previousApproval->selected==approval->selected && previousApproval->metadata==approval->metadata &&
-            previousApproval->capabilities==approval->capabilities && previousApproval->skill_configuration==approval->skill_configuration &&
-            previousApproval->skills && approval->skills && previousApproval->skills->fingerprint==approval->skills->fingerprint &&
-            subset && previousSources==approved_source_locations();
-        const bool sameScope=previouslyShared || (record.value("approved").toBool() && unavailableInputs.isEmpty() &&
-            record.value("inputs")==QString::fromLatin1(approval->inputs.toHex()) &&
-            record.value("metadata")==QString::fromLatin1(approval->metadata.toHex()) && record.value("sources").toArray()==approved_source_locations() &&
-            record.value("selected")==QString::fromLatin1(approval->selected.toHex()) && approval->skills &&
-            record.value("skills")==QString::fromLatin1(approval->skills->fingerprint.toHex()) &&
-            record.value("skillConfiguration")==QString::fromLatin1(session_skill_configuration()) &&
-            record.value("capabilities")==QString::fromLatin1(approval->capabilities.toHex()));
-        session_preparation=std::move(candidate);
-        if(!sameScope) {session_preparation_observation["stage"]="awaiting_original_consent";emit owner.contextPreviewChanged();if(proof.input_current())emit owner.sessionConsentRequested(id);return true;}
-        commit_session_preparation();
+        session_preparation=stage_session_preparation(id,project,record,expectedEmail);
+        if(session_preparation)offer_session_preparation();
         return true;
     }
     void start_session_account_check() {
@@ -2060,6 +2086,8 @@ struct AssistantViewModel::State {
         QString kind,target,cursor,currentThread,email,name;
         quint64 binding=0,account=0,transport=0,epoch=0,operation=0;
         QPointer<ProjectViewModel> project;
+        Object account_reply,account_params;QString account_method;
+        bool account_unwritten=false,account_issuing=false;
         bool operator==(const SessionRequest&) const = default;
     };
     QMap<QString,SessionRequest> session_requests;
@@ -2068,8 +2096,8 @@ struct AssistantViewModel::State {
     QSet<QString> sessions_seen_cursors;
     QMap<QString,QPair<QString,QString>> session_named; // Intended name + actual admitted RPC, not a guessed success.
     quint64 sessions_epoch=0;
-    bool session_switch_idle() const {
-        return !cache_clear_pending && !generic_busy && !generic_connecting && !generic_retiring &&
+    bool session_switch_idle(bool confirmed=true) const {
+        return (!confirmed || !account_confirmation_pending) && !cache_clear_pending && !generic_busy && !generic_connecting && !generic_retiring &&
             !generic_revoke_pending && !generic_clear_pending && !generic_context_pending &&
             !generic_held_row && generic_rpc_rows.isEmpty() && generic_rpc_turns.isEmpty() &&
             generic_question_id.isEmpty() && !file_selection && !file_staging && !native_worker_admitted() &&
@@ -2095,7 +2123,7 @@ struct AssistantViewModel::State {
         if(operation!=session_operation || (!sessions_loading && session_selection_target.isEmpty()) || (!target.isEmpty() && !session_selection_target.isEmpty() && session_selection_target!=target))return;
         sessions_loading=false;sessions_error=reason;
         if(!target.isEmpty() && session_selection_target==target) {
-            session_selection_target.clear();session_restore_target.clear();session_account_preflight=false;session_preparation.reset();session_account_target.clear();session_account_email.clear();
+            session_selection_target.clear();session_restore_target.clear();session_account_preflight=false;session_preparation.reset();account_selection_wait.reset();session_account_target.clear();session_account_email.clear();
             session_opening_target.clear();session_opened_project.clear();session_opening_bound=false;
             if(resume_checkpoint && resume_checkpoint->thread==target){resume_checkpoint.reset();generic_resuming=false;}
         }
@@ -2130,6 +2158,7 @@ struct AssistantViewModel::State {
         return text;
     }
     void name_current_session(const QString& semanticTitle={}) noexcept {
+        if(account_confirmation_pending)return;
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<CodexAgent> transport(agent.get());
         const auto proof=file_projection();
@@ -2268,11 +2297,24 @@ struct AssistantViewModel::State {
         QString rpc;
         try {rpc=transport->request(method,params,[&](const QString& id) {
             if(!current())return false;
+            if(account_confirmation_pending) {
+                request.account_method=method;request.account_params=params;
+                request.account_unwritten=true;request.account_issuing=true;
+            }
             session_requests.insert(id,request);prepared=id;
+            if(request.account_unwritten)return false;
             if(request.kind=="name")session_named.insert(request.target,qMakePair(request.name,id));
             return true;
         });}catch(...) {cleanup();if(current())throw;return {};}
         if(!current()){cleanup();return {};}
+        if(request.account_unwritten && !prepared.isEmpty()) {
+            auto held=session_requests.find(prepared);
+            if(held!=session_requests.end() && held.value()==request) {
+                held->account_issuing=false;
+                if(!account_confirmation_pending)resume_account_admissions();
+                return {};
+            }
+        }
         if(rpc.isEmpty()){cleanup();throw std::runtime_error("The session request could not be delivered; its outcome is unconfirmed");}
         return rpc;
     }
@@ -2283,7 +2325,10 @@ struct AssistantViewModel::State {
         (void)session_request("thread/list",params,"list");
     }
     void session_response(const QString& rpc,const QString& method,const Object& reply) noexcept {
-        const auto it=session_requests.find(rpc);if(it==session_requests.end())return;
+        auto it=session_requests.find(rpc);if(it==session_requests.end())return;
+        if(account_confirmation_pending && it->kind!="name" && it->kind!="history" && it->kind!="archive") {
+            it->account_reply=reply;it->account_method=method;return;
+        }
         const auto request=it.value();session_requests.erase(it);
         const QPointer<AssistantViewModel> receiver(&owner);const QPointer<CodexAgent> transport(agent.get());
         const auto current=[&] {return receiver && receiver->state_.get()==this && transport && agent.get()==transport && session_request_current(request);};
@@ -7878,7 +7923,9 @@ struct AssistantViewModel::State {
             generic_advance_clear();
         } catch (...) { if (completion_scope()) native_fence(); }
     }
-    void native_prepare(const QJsonValue& rpc, const QString& id, const QString& name, const QString& purpose, const Object& original) {
+    bool native_prepare(const QJsonValue& rpc, const QString& id, const QString& name, const QString& purpose, const Object& original) {
+        const auto admission=file_projection();
+        if(account_confirmation_pending){if(agent)(void)agent->deferServerRequest(rpc,agent->outputGeneration());return false;}
         generic_measured_size(original);
         auto record=std::make_shared<NativeRecord>();
         record->key=native_key(generic_thread,generic_turn,id);
@@ -7891,9 +7938,12 @@ struct AssistantViewModel::State {
         record->terminal=native_row(*record,record->outcome,false);
         record->control_capacity=(show_actions && (name=="set_parameters" || name=="set_free" || name=="add_relations" || name=="edit_relation" ||
             name=="edit_background" || name=="create_cwl_project" || name=="create_project" || name=="show_report" || name=="run_fit" || name=="undo_fit" || name=="save_project")) || individual_app_action(name);
+        if(!admission.input_current())return false;
+        if(account_confirmation_pending){if(agent)(void)agent->deferServerRequest(rpc,agent->outputGeneration());return false;}
         native_records.insert(record->key,record);
         try {native_call.emplace(NativeCall{rpc,record,native_receipt});}
         catch(...){native_records.remove(record->key);throw;}
+        return true;
     }
     void native_read_selected_file(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original,const Object& args) {
         using B=edi::assistant::SelectedFileLimits;
@@ -8044,7 +8094,7 @@ struct AssistantViewModel::State {
             if(!source_current())return;
             readStage="PREPARE_EXACT_RESULT";
             {
-                native_prepare(rpc, id, "read_selected_file", purpose, original);
+                if(!native_prepare(rpc, id, "read_selected_file", purpose, original))return;
                 if(!receiver || receiver->state_.get()!=this || !native_call || native_call->receipt!=receipt || native_call->rpc!=rpc)return;
                 record=native_call->record;
             }
@@ -8080,12 +8130,12 @@ struct AssistantViewModel::State {
         if(!source){
             outcome["code"]="invalid_arguments";
             outcome["message"]="The supplied scope_id does not match an input scope offered to this current call. Copy an exact input_scopes.sources.scope_id; if needed files are already in selected_files.files, use those admitted file IDs directly.";
-            native_prepare(rpc, id, "acquire_inputs", purpose, original);
+            if(!native_prepare(rpc, id, "acquire_inputs", purpose, original))return;
             if(receiver && publication.input_current() && native_call && native_call->receipt==callReceipt && native_call->rpc==rpc)
                 native_finish(false,outcome);return;}
         if(source->acquired){
             outcome=source->result;outcome["status"]="already_admitted";
-            native_prepare(rpc, id, "acquire_inputs", purpose, original);
+            if(!native_prepare(rpc, id, "acquire_inputs", purpose, original))return;
             if(receiver && publication.input_current() && native_call && native_call->receipt==callReceipt && native_call->rpc==rpc)
                 native_finish(true,outcome);return;
         }
@@ -8093,7 +8143,7 @@ struct AssistantViewModel::State {
         // Charge the actual bounded result representation before constructing
         // its maximum packet. The same native record owns it after prepare.
         constexpr quint64 descriptorCharacters=sizeof("file_idordinalreader_hintmeasurement")+36;
-        native_prepare(rpc, id, "acquire_inputs", purpose, original);
+        if(!native_prepare(rpc, id, "acquire_inputs", purpose, original))return;
         if(!receiver || !publication.input_current() || !native_call || native_call->receipt!=callReceipt)return;
         const auto originalCall=*native_call;
         const auto owned=[&]{return receiver && receiver->state_.get()==this && native_call && native_call->record==originalCall.record &&
@@ -8339,6 +8389,7 @@ struct AssistantViewModel::State {
     }
     void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage, const QString& expectedThread, const QString& expectedTurn) {
         const auto publication=file_projection();
+        if(account_confirmation_pending){(void)agent->deferServerRequest(rpc,agent->outputGeneration());return;}
         const auto reply=[&](bool success,const Object& outcome){native_reply(rpc,success,outcome,params.value("callId").toString(),params,expectedThread,expectedTurn);};
         const bool inspecting = params.value("tool") == "inspect_project" ||
             params.value("tool") == "list_parameters" || params.value("tool") == "diagnostics" || params.value("tool")=="inspect_data";
@@ -8428,8 +8479,8 @@ struct AssistantViewModel::State {
         }
         if(name=="show_report") {native_start_report(rpc,id,purpose,original);return;}
         if(name=="save_project") {native_start_save(rpc,id,purpose,original,args,save_stage);return;}
-        if(name=="undo_fit") {native_prepare(rpc,id,name,purpose,original);native_start_fit_undo();return;}
-        if(name=="edit_relation") {native_prepare(rpc,id,name,purpose,original);native_start_relation_edit(args);return;}
+        if(name=="undo_fit") {if(!native_prepare(rpc,id,name,purpose,original))return;native_start_fit_undo();return;}
+        if(name=="edit_relation") {if(!native_prepare(rpc,id,name,purpose,original))return;native_start_relation_edit(args);return;}
         std::vector<std::pair<std::string, bool>> beforeFlags;
         auto edit = project ? assistant_native_edit(*project->assistantProject(), name, args, beforeFlags) : std::optional<edi::Edit>{};
         Object read_result;
@@ -8477,7 +8528,7 @@ struct AssistantViewModel::State {
             else read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
             if(name=="diagnostics")read_result["native_state"]=context.value("native_state");
         }
-        native_prepare(rpc, id, name, purpose, original);
+        if(!native_prepare(rpc, id, name, purpose, original))return;
         if (inspecting) {
             if (!publication.input_current() || !native_call || native_call->receipt != original_receipt || native_call->record->call != id) return;
             native_call->inspection = std::move(inspection);
@@ -9274,13 +9325,13 @@ struct AssistantViewModel::State {
         auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;task->name=name;
         task->epoch=session->assistantEpoch();task->ordinary_current=current;task->current_destination=current;task->transport_generation=agent->outputGeneration();
         if(current)task->source_directory=project->path();
-        native_prepare(rpc,id,"save_project",purpose,original);if(!receiver || !admission.input_current() || !native_call)return;
+        if(!native_prepare(rpc,id,"save_project",purpose,original))return;if(!receiver || !admission.input_current() || !native_call)return;
         task->call=*native_call;native_save=task;
         try{native_start_ordinary_save(task);}catch(...){if(receiver && receiver->state_.get()==this)native_pending_save_cancelled(task);throw;}
     }
 
     void native_start_report(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original) {
-        native_prepare(rpc,id,"show_report",purpose,original);
+        if(!native_prepare(rpc,id,"show_report",purpose,original))return;
         if(!native_call)return;
         const auto call=*native_call;const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<ProjectViewModel> target(project);const QPointer<QQuickWindow> window(action_window);
@@ -9422,7 +9473,7 @@ struct AssistantViewModel::State {
             {"presentation_complete",false},{"message","The ordinary project was created; its presentation or original owner changed. Inspect the actual current session."}};
         creation->partial_outcomes[1]={{"status","refused"},{"adopted",false},{"complete",false},{"saved",false},
             {"message","The ordinary current-session Create did not commit; no project was replaced."}};
-        native_prepare(rpc,id,"create_project",purpose,original);
+        if(!native_prepare(rpc,id,"create_project",purpose,original))return;
         if(!receiver || !native_call)return;
         creation->record=native_call->record;creation->receipt=native_call->receipt;native_creation=creation;
         try {
@@ -9454,7 +9505,7 @@ struct AssistantViewModel::State {
         if(!project) {
             const auto nameError=ordinary_project_name_error(QString::fromStdString(recipe.project_name));
             if(!nameError.isEmpty()) {
-                native_prepare(rpc,id,"create_cwl_project",purpose,original);
+                if(!native_prepare(rpc,id,"create_cwl_project",purpose,original))return;
                 if(receiver && native_call && native_call->rpc==rpc && native_call->record->call==id)
                     native_finish(false,{{"status","refused"},{"adopted",false},{"complete",false},{"steps_completed",0},
                         {"target","createProject.name"},{"stage","PROJECT_NAME_VALIDATION"},{"message",nameError}});
@@ -9504,7 +9555,7 @@ struct AssistantViewModel::State {
 
         auto inputs = creation_input(creation, cifId, dataId);
         auto job = creation_job(creation, std::move(inputs.first), std::move(inputs.second), std::move(recipe), args.value("mapped_structure").toObject());
-        native_prepare(rpc, id, "create_cwl_project", purpose, original);
+        if(!native_prepare(rpc, id, "create_cwl_project", purpose, original))return;
         if (!receiver || !native_call || native_call->rpc != rpc || native_call->record->call != id)
             throw std::runtime_error("The original create request changed during preparation");
         creation->receipt = native_call->receipt; creation->record = native_call->record;
@@ -10373,7 +10424,7 @@ struct AssistantViewModel::State {
             Object result{{"status","refused"},{"applied",false},{"published",false},{"complete",false},
                 {"action_error",error},{"action_field",field}};
             if(!original_current())return;
-            native_prepare(rpc, id, name, purpose, original);
+            if(!native_prepare(rpc, id, name, purpose, original))return;
             if(receiver && publication.input_current() && native_call && native_call->record->call==id && native_call->receipt==receipt)
                 native_finish(false,result);
         };
@@ -10439,7 +10490,7 @@ struct AssistantViewModel::State {
             for(const auto& link:run->operation_member->linked_structures)
                 if(!edi::assistant::detail::utf8(link->structure_id.value()))throw std::invalid_argument("Original phase identity is not UTF-8");
         if(!original_current())return;
-        native_prepare(rpc, id, name, purpose, original);
+        if(!native_prepare(rpc, id, name, purpose, original))return;
         if(!receiver || !publication.input_current() || !native_call || native_call->record->call!=id || native_call->receipt!=receipt)return;
         if(no_change)run->visible_delivery=false;
         run->call=*native_call;run->fallback_outcome=run->call.record->outcome;run->fallback_response=run->call.record->response;
@@ -12137,6 +12188,40 @@ struct AssistantViewModel::State {
         } catch (...) {}
         if (publication.input_current()) generic_fail(QStringLiteral("The official agent reply could not be processed [UNEXPECTED_PROCESSING]."));
     }
+    void resume_account_admissions() {
+        const auto proof=file_projection();const QPointer<AssistantViewModel> receiver(&owner);
+        if(account_confirmation_pending || !generic_authenticated || generic_retiring)return;
+        const QPointer<CodexAgent> transport(agent.get());const auto output=transport?transport->outputGeneration():0;
+        if(transport)transport->resumeDeferredRequests(output);
+        if(!receiver || receiver->state_.get()!=this || !proof.input_current() || account_confirmation_pending)return;
+        const auto replies=session_requests.keys();
+        for(const auto& id:replies) {
+            if(!proof.input_current() || account_confirmation_pending)return;
+            const auto found=session_requests.constFind(id);
+            if(found==session_requests.cend() || found->account_method.isEmpty() || found->account_issuing)continue;
+            const auto held=found.value();
+            if(held.account_unwritten) {
+                session_requests.remove(id);
+                if(!session_request_current(held))continue;
+                try {(void)session_request(held.account_method,held.account_params,held.kind,held.target);}
+                catch(const std::exception& failure) {
+                    if(!receiver || receiver->state_.get()!=this || !proof.input_current())return;
+                    if(held.kind=="history") {session_history_loading=false;session_history_error=bounded_error(QString::fromUtf8(failure.what()));work_reports.missEvidence();history_error=session_history_error;emit owner.lastErrorChanged();}
+                    else if(held.kind!="name")fail_session_operation(held.operation,held.target,bounded_error(QString::fromUtf8(failure.what())));
+                }
+            } else session_response(id,held.account_method,held.account_reply);
+        }
+        if(!proof.input_current() || account_confirmation_pending)return;
+        if(account_selection_wait && session_switch_idle()) {
+            const auto waiting=*account_selection_wait;account_selection_wait.reset();
+            if(waiting.proof.input_current() && waiting.operation==session_operation && waiting.thread==generic_thread && session_selection_target==waiting.target && sessions_loading)
+                (void)session_request("thread/read",{{"threadId",waiting.target},{"includeTurns",false}},"select-read",waiting.target);
+            else fail_session_operation(waiting.operation,waiting.target,QObject::tr("The original conversation selection changed while its account was being verified."));
+        } else if(session_preparation && session_preparation->approved && session_switch_idle()) {
+            if(session_preparation_current(*session_preparation))commit_session_preparation();
+            else fail_session_operation(session_preparation->operation,session_preparation->id,QObject::tr("The project or inputs changed while the conversation was waiting for account confirmation."));
+        }
+    }
     void request_account_read() {
         const auto proof=file_projection();const QPointer<AssistantViewModel> receiver(&owner);const QPointer<CodexAgent> transport(agent.get());
         const auto output=transport?transport->outputGeneration():0;
@@ -12620,6 +12705,7 @@ struct AssistantViewModel::State {
                         const char* stage="ACCOUNT_CONFIRMED_BOOTSTRAP";generic_response(pending.id,pending.method,pending.reply,stage,pending.proof);
                     }
                 } else if(account_bootstrap_waiting) {account_bootstrap_waiting=false;generic_start_thread();}
+                if(publication.input_current())resume_account_admissions();
                 return;
             }
             account_confirmation_pending=false;
@@ -13472,6 +13558,10 @@ struct AssistantViewModel::State {
     void generic_server_request(const QJsonValue& id, const QString& method, const Object& params, ServerRequestFailure& diagnostic) {
         const auto publication = file_projection();
         if (!generic_bound(params) || generic_revoke_pending) { diagnostic.stage = "BOUND_REJECT"; agent->reject(id); return; }
+        if(account_confirmation_pending) {
+            diagnostic.stage="ACCOUNT_IDENTITY_WAIT";
+            (void)agent->deferServerRequest(id,agent->outputGeneration());return;
+        }
         if (method == "item/tool/call") {
             const auto binding = generation;
             const auto serial = native_serial;
@@ -13644,6 +13734,12 @@ struct AssistantViewModel::State {
     }
     QString generic_send(const QString& text, FileProjection& projection) {
         if(!message_input_ready(text,projection))return {};
+        if(!session_selection_target.isEmpty()) {
+            error=input_refusal(QObject::tr("Finish or cancel the conversation selection before sending. Your draft and attachments are retained."));notify();return {};
+        }
+        if(account_confirmation_pending) {
+            error=input_refusal(QObject::tr("The current account is being verified. Your draft and attachments are retained; send when ready."));notify();return {};
+        }
         if (generic_revoke_pending || generic_context_pending || generic_clear_pending || !generic_interrupt_rpc.isEmpty()) {
             error = input_refusal(QObject::tr("The previous interruption is still settling. Your draft is retained; send when ready."));
             notify(); return {}; // No new input or turn can reuse an older control's authority.
@@ -13787,7 +13883,7 @@ struct AssistantViewModel::State {
                     generic_policy_effort==originalEffectiveEffort && policy_current();
             };
             const auto admissible = [&] {
-                return settings_current() && generic_authenticated && !generic_retiring && !generic_revoke_pending &&
+                return settings_current() && !account_confirmation_pending && generic_authenticated && !generic_retiring && !generic_revoke_pending &&
                     !generic_context_pending && !generic_clear_pending && generic_busy == steering;
             };
             bool turn_owned=false,row_owned=false,native_owned=false,presented=false;
@@ -13850,7 +13946,11 @@ struct AssistantViewModel::State {
         });
         if (!projection.current()) return rpc.isEmpty() ? QString{} : publicId;
         if(!settings_current())return rpc.isEmpty()?QString{}:publicId; // Never settle a newer settings operation or overwrite its selection.
-        if (rpc.isEmpty()) { if (!steering && !generic_writing_input) agent->settleOperation(); throw std::runtime_error("Agent input could not be admitted"); }
+        if (rpc.isEmpty()) {
+            if(!steering && !generic_writing_input)agent->settleOperation();
+            if(account_confirmation_pending){error=input_refusal(QObject::tr("The account check is pending. Your draft was not sent and remains available."));notify();return {};}
+            throw std::runtime_error("Agent input could not be admitted");
+        }
         generic_writing_input = false;
         error.clear();
         try { notify(); } catch (...) {} // Presentation cannot revoke a real admitted row.
@@ -15229,6 +15329,10 @@ struct AssistantViewModel::State {
 #endif
         ordinary_empty_setup_target.clear();
 #ifndef __EMSCRIPTEN__
+        const auto preparedSession=session_preparation && session_preparation->cross_project && !session_preparation->installed &&
+            session_preparation->target==target && session_preparation_current(*session_preparation) &&
+            session_preparation->inputs->generation==generation+1?session_preparation:std::shared_ptr<SessionPreparation>{};
+
         if(!session_restore_target.isEmpty() && target!=project) {
             const bool opening=session_opening_target==session_restore_target && session_opening_operation==session_operation &&
                 (!session_opening_bound || session_opened_project==target);
@@ -15326,15 +15430,32 @@ struct AssistantViewModel::State {
             selected_rows_dirty=false;
         }
         project = target; plan = {}; question = {};
-        auto attached = preserveSetup?std::move(setupController):make_controller(target,binding);
+#ifndef __EMSCRIPTEN__
+        auto attached=preparedSession?std::move(preparedSession->inputs->controller):preserveSetup?std::move(setupController):make_controller(target,binding);
+#else
+        auto attached=preserveSetup?std::move(setupController):make_controller(target,binding);
+#endif
         if (!current()) return false;
 #ifndef __EMSCRIPTEN__
         if(preserveSetup) {selected_reply.swap(setupReply);generic_input_origins.swap(setupOrigins);selected_rows_dirty=true;}
 #endif
         controller = std::move(attached);
         if(setupActive)*setupActive=true;
-        connect_project(target, binding,setupActive);
+        connect_project(target,binding,
 #ifndef __EMSCRIPTEN__
+            preparedSession?preparedSession->inputs->active:
+#endif
+            setupActive);
+#ifndef __EMSCRIPTEN__
+        if(preparedSession) {
+            if(session_preparation!=preparedSession)return false;
+            auto& prepared=*preparedSession;auto& inputs=*prepared.inputs;*inputs.active=true;
+            generic_input_paths.swap(inputs.stage->paths);generic_input_hashes.swap(inputs.stage->hashes);
+            generic_input_physical.swap(inputs.stage->physical);generic_input_origins.swap(inputs.stage->origins);generic_input_cache.swap(inputs.cache);
+            inputs.stage->fresh.clear();selected_reply=inputs.reply;selected_rows_dirty=true;restored_consumed_inputs=inputs.consumed;
+            prepared.installed=true;prepared.installed_controller=controller.get();prepared.proof=file_projection();prepared.revision=controller->revision();
+        }
+
         const auto state = generic_mode ? generic_native : object(connection->state());
         if (!current()) return false;
         connection_scope = state.value("connection_id").toString();
@@ -15400,6 +15521,31 @@ bool AssistantViewModel::observeCreateDialog(QObject* form,const QString& intent
     return false;
 }
 
+bool AssistantViewModel::prepareSessionProjectRestore(ProjectViewModel* target,const QString& source) {
+#ifndef __EMSCRIPTEN__
+    const QPointer<AssistantViewModel> receiver(this);auto* s=state_.get();const auto proof=s->file_projection();
+    if(s->session_opening_target.isEmpty())return true;
+    const auto id=s->session_opening_target;const auto operation=s->session_operation;const auto record=s->saved_session(id);
+    const auto association=record.value("project").toObject();
+    const auto expected=association.value("location").toString();
+    if(s->session_opening_operation!=operation || s->session_restore_target!=id || source.isEmpty() ||
+        QFileInfo(source).canonicalFilePath()!=association.value("canonical") ||
+        State::session_object_identity(expected)!=association.value("identity")) {
+        s->fail_session_operation(operation,id,tr("The original project Open no longer owns this conversation selection."));return true;
+    }
+    if(s->account_confirmation_pending)return false;
+    try {
+        auto prepared=s->stage_session_preparation(id,target,record,record.value("email").isString()?record.value("email").toString():s->generic_native.value("account").toObject().value("email").toString());
+        if(!prepared || !proof.input_current() || s->account_confirmation_pending)return false;
+        prepared->cross_project=true;s->session_preparation=std::move(prepared);return true;
+    }catch(const std::exception& failure) {
+        if(receiver && receiver->state_.get()==s && proof.input_current())s->fail_session_operation(operation,id,s->bounded_error(QString::fromUtf8(failure.what())));
+        return false;
+    }
+#else
+    Q_UNUSED(target);Q_UNUSED(source);return true;
+#endif
+}
 bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target, const QString& intent, const QString& location) {
 #ifndef __EMSCRIPTEN__
     const QPointer<AssistantViewModel> receiver(this);
@@ -15805,7 +15951,7 @@ void AssistantViewModel::selectSession(const QString& threadId) {
     const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();const auto proof=original->file_projection();
     const auto current=[&]{return receiver && receiver->state_.get()==original && proof.input_current();};
     try {
-        if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
+        if(QThread::currentThread()!=thread() || (!original->session_switch_idle(false) || !original->generic_authenticated || !original->agent || original->agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Live) || original->sessions_loading)return;
         if(!original->owned_session(original->session_metadata.value(threadId)))return;
         if(original->session_operation==UINT64_MAX)return;++original->session_operation;
         original->session_history_explicit_target=threadId;
@@ -15814,7 +15960,11 @@ void AssistantViewModel::selectSession(const QString& threadId) {
         original->remember_current_session();
         if(!current())return;
         original->sessions_loading=true;original->sessions_error.clear();const auto epoch=original->sessions_epoch;emit sessionsChanged();
-        if(!current() || original->sessions_epoch!=epoch || !original->session_idle())return;
+        if(!current() || original->sessions_epoch!=epoch || !original->session_switch_idle(false))return;
+        if(original->account_confirmation_pending) {
+            original->session_selection_target=threadId;
+            original->account_selection_wait=State::AccountSelectionWait{threadId,original->generic_thread,original->session_operation,proof};return;
+        }
         (void)original->session_request("thread/read",{{"threadId",threadId},{"includeTurns",false}},"select-read",threadId);
     }catch(...) {if(current() && original->generic_authenticated && !original->generic_retiring) {
         original->sessions_loading=false;original->sessions_error=tr("The selected session could not be resumed. No earlier action was replayed.");emit sessionsChanged();}}
@@ -15849,7 +15999,7 @@ QString AssistantViewModel::sessionSelection() const {
 }
 bool AssistantViewModel::beginSessionProjectRestore(const QString& intent) {
 #ifndef __EMSCRIPTEN__
-    if(intent.isEmpty() || intent!=sessionSelection() || state_->session_restore_target.isEmpty())return false;
+    if(intent.isEmpty() || intent!=sessionSelection() || state_->session_restore_target.isEmpty() || !state_->session_switch_idle())return false;
     state_->session_opening_target=state_->session_restore_target;state_->session_opening_operation=state_->session_operation;
     state_->session_opened_project.clear();state_->session_opening_bound=false;return true;
 #else
@@ -15860,7 +16010,7 @@ void AssistantViewModel::cancelSessionSelection(const QString& intent) {
 #ifndef __EMSCRIPTEN__
     auto* const original=state_.get();
     if(!intent.isEmpty() && intent!=sessionSelection())return;
-    if(original->generic_connecting || original->generic_busy || original->native_worker_admitted() || original->session_selection_target.isEmpty())return;
+    if(original->session_selection_target.isEmpty() || (original->generic_connecting && original->resume_checkpoint && original->resume_checkpoint->thread==original->session_selection_target))return;
     const auto target=original->session_selection_target;
     original->sessions_loading=true; // Settle this waiting consent/Open intent through its original owner.
     original->fail_session_operation(original->session_operation,target,tr("Conversation selection was cancelled. No earlier action was replayed."));
@@ -15885,7 +16035,13 @@ void AssistantViewModel::continueSessionRestore(const QString& id) {
     const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();const auto operation=original->session_operation;
     try {if(original->session_restore_target==id) {
         original->session_opening_target.clear();original->session_opened_project.clear();original->session_opening_bound=false;
-        (void)original->begin_saved_session(id);
+        if(original->session_preparation && original->session_preparation->cross_project) {
+            auto& prepared=*original->session_preparation;
+            if(!prepared.installed || prepared.target!=original->project || prepared.installed_controller!=original->controller.get() ||
+                !prepared.target || prepared.target->assistantProject()!=prepared.target_model)throw std::runtime_error("The prepared project Open owner changed before conversation selection");
+            prepared.proof=original->file_projection();prepared.revision=original->controller->revision();prepared.disclosure->account=original->usage_epoch;
+            original->offer_session_preparation();
+        } else (void)original->begin_saved_session(id);
     }}
     catch(const std::exception& failure) {if(receiver && receiver->state_.get()==original) {
         original->fail_session_operation(operation,id,original->bounded_error(QString::fromUtf8(failure.what())));
@@ -16660,9 +16816,12 @@ void AssistantViewModel::signIn() {
     auto publication = state_->file_projection();
     if (!state_->controller) return;
 #ifndef __EMSCRIPTEN__
+    if(state_->account_confirmation_pending && !state_->session_preparation) {
+        state_->error=tr("The current account is being verified. Your conversation and inputs are preserved.");state_->notify();return;
+    }
     if(state_->session_preparation) {
         const QPointer<AssistantViewModel> receiver(this);auto* original=state_.get();const auto operation=original->session_operation;const auto target=original->session_selection_target;
-        try {original->commit_session_preparation();}
+        try {original->session_preparation->approved=true;original->commit_session_preparation();}
         catch(const std::exception& failure){if(receiver && receiver->state_.get()==original)original->fail_session_operation(operation,target,original->bounded_error(QString::fromUtf8(failure.what())));}
         if(receiver && receiver->state_.get()==original)original->notify();return;
     }
@@ -16735,7 +16894,7 @@ void AssistantViewModel::signIn() {
 void AssistantViewModel::signOut() {
 #ifndef __EMSCRIPTEN__
     state_->remember_current_session();state_->remember_session_draft();state_->forget_last_session();
-    state_->session_restore_target.clear();state_->session_selection_target.clear();state_->session_preparation.reset();state_->session_opening_target.clear();state_->session_account_target.clear();state_->session_account_email.clear();state_->session_account_preflight=false;
+    state_->session_restore_target.clear();state_->session_selection_target.clear();state_->session_preparation.reset();state_->account_selection_wait.reset();state_->session_opening_target.clear();state_->session_account_target.clear();state_->session_account_email.clear();state_->session_account_preflight=false;
     state_->resume_checkpoint.reset();state_->generic_resuming=false;
 #endif
     const QPointer<AssistantViewModel> receiver(this);auto* original=state_.get();const auto reportBinding=state_->generation;
@@ -16833,7 +16992,7 @@ bool AssistantViewModel::clearHistoryNow(bool* logicalDiscarded) {
         // owner's messages and never announce an unperformed logical discard; archive durability is separate.
         if (alive && state_.get()==original && discarded) {
 #ifndef __EMSCRIPTEN__
-            original->forget_last_session();original->session_restore_target.clear();original->session_selection_target.clear();original->session_preparation.reset();original->session_opening_target.clear();original->session_account_target.clear();original->session_account_email.clear();original->session_account_preflight=false;
+            original->forget_last_session();original->session_restore_target.clear();original->session_selection_target.clear();original->session_preparation.reset();original->account_selection_wait.reset();original->session_opening_target.clear();original->session_account_target.clear();original->session_account_email.clear();original->session_account_preflight=false;
             original->resume_checkpoint.reset();original->generic_resuming=false;
 #endif
         }
