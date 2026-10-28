@@ -718,11 +718,10 @@ Rectangle {
                 id: showActionsControl
                 objectName: "assistant.showActions"
                 Layout.minimumWidth: implicitWidth
-                Layout.maximumWidth: implicitWidth
                 Layout.minimumHeight: composer.actionSize
                 Layout.maximumHeight: composer.actionSize
-                implicitWidth: contentItem.implicitWidth + AppSizes.unit
-                implicitHeight: composer.actionSize
+                leftPadding: AppSizes.unit * 0.5
+                rightPadding: leftPadding
                 fontIcon: "eye"
                 text: qsTr("Show actions")
                 checkable: true

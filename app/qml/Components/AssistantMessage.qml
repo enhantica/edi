@@ -43,23 +43,46 @@ Rectangle {
     onPayloadChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
     onTextChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
     Timer { id: copyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: row.technicalCopied = false }
-    function humanActivityText() {
-        const lines = [activityCaption()];
+    function fullHumanDescription() {
+        const lines = [];
+        const add = value => { if (typeof value === "string" && value.trim().length && lines.indexOf(value) < 0) lines.push(value); };
+        const short = activityCaption();
         const description = activityDescription(true);
-        if (description.trim().length && lines.indexOf(description) < 0) lines.push(description);
-        const outcomeText = activityExplanation();
-        if (lines.indexOf(outcomeText) < 0) lines.push(outcomeText);
+        if (description.trim().length && shortActionObject(description, false) !== short) add(description);
+        // Only established human producers use row.text as a description.
+        // Generic/command activity text may contain shell or protocol bytes.
+        const humanRow = ["error", "plan", "question", "tool", "trial"].indexOf(kind) >= 0
+            || (decisionActivity && typeof payload.type === "undefined");
+        if (humanRow && shortActionObject(text, false) !== short) add(text);
+        if (!lines.length) {
+            if (payload && payload.type === "dynamicToolCall" && assistant)
+                add(assistant.nativeActionDescription(typeof payload.tool === "string" ? payload.tool : "", ""));
+            else if (payload && payload.type === "webSearch") add(qsTr("Find or read public sources relevant to the current task."));
+            else if (commandActivity) add(qsTr("Use the reported operation to support the current task."));
+            else add(qsTr("Carry out the requested assistant action for the current task."));
+        }
         const outcome = payload && payload.nativeOutcome;
         const message = outcome && typeof outcome.message === "string" ? outcome.message
                       : payload && payload.error && typeof payload.error.message === "string" ? payload.error.message : "";
-        if (message.trim().length && lines.indexOf(message) < 0) lines.push(message);
+        add(message);
+        if (humanRow && payload) add(payload.message);
+        const code = outcome && typeof outcome.code === "string" ? outcome.code
+                   : payload && typeof payload.code === "string" ? payload.code : "";
+        if (!message.trim().length && code === "project_required" && assistant)
+            add(assistant.nativeActionDescription(payload && typeof payload.tool === "string" ? payload.tool : "", code));
         return lines.join("\n");
+    }
+    function humanActivityText() {
+        const short = activityCaption(), full = fullHumanDescription();
+        return short === full ? full : short + "\n" + full;
     }
     function copyActivity() {
         const component = row, identity = row.disclosureIdentity, original = row.payload, owner = row.assistant;
+        const originalText = row.text, originalKind = row.kind, originalStatus = row.status;
         const human = row.humanActivityText();
         const current = () => Qt.isQtObject(component) && component.disclosureIdentity === identity
-            && component.payload === original && component.assistant === owner;
+            && component.payload === original && component.assistant === owner && component.text === originalText
+            && component.kind === originalKind && component.status === originalStatus;
         try {
             let literal = human;
             if (Preferences.assistantCopyTechnicalDetails) literal += "\n\n" + JSON.stringify(original, null, 2);
@@ -546,7 +569,7 @@ Rectangle {
                 x: AppSizes.unit
                 y: AppSizes.unit * 0.75
                 width: Math.max(0, parent.width - AppSizes.unit * 2)
-                text: visible ? row.humanActivityText() : ""
+                text: visible ? row.fullHumanDescription() : ""
                 textFormat: TextEdit.PlainText
                 readOnly: true
                 selectByMouse: true

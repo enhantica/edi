@@ -554,13 +554,13 @@ AppDialog {
                     wrapMode: Text.WrapAnywhere
                     color: EaStyle.Colors.red
                 }
+                EaElements.Label { text: qsTr("Diagnostics"); font.bold: true }
                 EaElements.CheckBox {
                     objectName: "preferences.ai.copyTechnicalDetails"
                     text: qsTr("Include technical details when copying steps")
                     checked: Preferences.assistantCopyTechnicalDetails
                     onToggled: Preferences.assistantCopyTechnicalDetails = checked
                 }
-                EaElements.Label { text: qsTr("Diagnostics"); font.bold: true }
                 EaElements.SideBarButton {
                     id: copyWorkReport
                     objectName: "preferences.ai.workReport"

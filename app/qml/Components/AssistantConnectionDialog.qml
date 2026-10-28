@@ -245,8 +245,8 @@ AppDialog {
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
                 text: dialog.assistant.connected
-                    ? qsTr("Allow Edi to use the current project and attached files for your message.")
-                    : qsTr("Sign in with your ChatGPT account. Edi uses your existing sign-in when available, or opens OpenAI to sign in.")
+                    ? qsTr("Allow the assistant to use current project information and attached files for your message.")
+                    : qsTr("Sign in with your ChatGPT account. Your existing sign-in is reused when available; otherwise OpenAI opens to sign in.")
             }
             EaElements.Label {
                 width: parent.width
@@ -259,13 +259,7 @@ AppDialog {
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
                 visible: dialog.disclosedContext.error === true
-                text: qsTr("Project context is unavailable. Nothing will be sent.")
-            }
-            EaElements.Label {
-                width: parent.width
-                wrapMode: Text.WordWrap
-                textFormat: Text.PlainText
-                text: qsTr("Cancel returns to Edi without sending a pending message. You can copy connection and context details from Preferences → AI → Diagnostics.")
+                text: qsTr("Project information is unavailable. Nothing will be sent.")
             }
         }
     }
