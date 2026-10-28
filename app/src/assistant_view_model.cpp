@@ -10565,9 +10565,15 @@ struct AssistantViewModel::State {
             throw; // Same original exception and outer refusal when scope survives.
         }
     }
+    const edi::ExperimentBase* individual_applied_member(const std::shared_ptr<NativeCreateWidget>& run) const {
+        const auto input=run?run->control_input:nullptr;
+        return input && input->applied_result.experiment && native_post_edit_current(run->call.receipt,input)
+            ?input->applied_result.experiment:nullptr;
+    }
     int individual_member_index(const std::shared_ptr<NativeCreateWidget>& run) const {
         if(!run || !run->project)return -1;
-        const auto* member=run->result_member?run->result_member:run->operation_member;
+        const auto* applied=individual_applied_member(run);
+        const auto* member=run->result_member?run->result_member:applied?applied:run->operation_member;
         const auto& members=run->project->assistantProject()->experiments;
         for(std::size_t i=0;i<members.size();++i)if(members[i].get()==member)return static_cast<int>(i);
         return -1;
@@ -10617,7 +10623,7 @@ struct AssistantViewModel::State {
                 if(removed?found:!found)return false;
             }
         }
-        if(run->result_member)return true; // Only an actual applied original input installs this pin.
+        if(run->result_member || individual_applied_member(run))return true; // Only an exact applied original input supplies this pin.
         return run->operation_view && run->operation_view->experiment()==run->operation_member &&
             index<run->project->experiment_models_.size() && run->project->experiment_models_.at(index)==run->operation_view;
     }
