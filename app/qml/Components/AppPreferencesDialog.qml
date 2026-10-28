@@ -833,23 +833,28 @@ AppDialog {
         parent: Overlay.overlay
         title: qsTr("Add skills from web")
         standardButtons: Dialog.Ok | Dialog.Cancel
-        contentWidth: dialog.controlWidth
-        contentHeight: webContent.implicitHeight
-        Column {
-            id: webContent
-            width: webSource.contentWidth
-            spacing: AppSizes.unit
-            EaElements.Label {
+        // The FIRST footer derives its available width from this dialog. Give
+        // the dialog one intrinsic upstream width, independent of that footer.
+        width: contentItem.implicitWidth + leftPadding + rightPadding
+        contentItem: Item {
+            implicitWidth: dialog.controlWidth
+            implicitHeight: webContent.implicitHeight
+            Column {
+                id: webContent
                 width: parent.width
-                text: qsTr("Public GitHub repository or skill folder URL. Companion files are captured; repository code is never run.")
-                wrapMode: Text.Wrap
-            }
-            EaElements.TextField {
-                id: sourceUrl
-                objectName: "preferences.ai.sources.webUrl"
-                width: parent.width
-                placeholderText: "https://github.com/owner/repo/tree/main/skills"
-                selectByMouse: true
+                spacing: AppSizes.unit
+                EaElements.Label {
+                    width: parent.width
+                    text: qsTr("Public GitHub repository or skill folder URL. Companion files are captured; repository code is never run.")
+                    wrapMode: Text.Wrap
+                }
+                EaElements.TextField {
+                    id: sourceUrl
+                    objectName: "preferences.ai.sources.webUrl"
+                    width: parent.width
+                    placeholderText: "https://github.com/owner/repo/tree/main/skills"
+                    selectByMouse: true
+                }
             }
         }
         onAccepted: {
