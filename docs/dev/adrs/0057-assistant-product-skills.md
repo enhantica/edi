@@ -367,3 +367,10 @@ reader discoverable; refinement-strategy1.4.2 keeps one concise scientific owner
 position/profile/background/intensity evidence, defaults-versus-known-calibration
 and physical trial/Undo/reassessment. No fixed stage order, parameter list, metric
 threshold, specimen value, reference result or mandatory extra trial is introduced.
+
+
+Project-assistance1.9.1 clarifies that free-flag eligibility is distinct from an
+independent numeric setup value, that applied user inputs require actual native
+readback, and that asymmetric site-row counts alone do not establish a formula.
+The supplied/native scientific model remains authoritative; no chemistry engine,
+new default, reference value or fitting constraint is added.

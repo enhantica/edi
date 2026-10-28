@@ -167,6 +167,7 @@ class AssistantViewModel : public QObject {
     bool eventFilter(QObject* watched, QEvent* event) override;
    private:
     friend class Session;
+    void finishHistoryInitialization() noexcept;
     bool ordinarySaveNotification(ProjectViewModel*) const noexcept;
     bool attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate = false); // Session-only exact attachment result.
     enum class AttachmentClear { NotRequested, Discarded, Failed };
