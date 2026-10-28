@@ -120,7 +120,7 @@ Fd childDirectory(int parent,const char* name,mode_t forbidden=0077) {
 }
 void privateFile(int fd) {
     struct stat s{};
-    if(::fstat(fd,&s) || !S_ISREG(s.st_mode) || s.st_uid!=::getuid() || s.st_nlink!=1 || (s.st_mode&0077) || s.st_size<0 || static_cast<quint64>(s.st_size)>L::record_bytes)
+    if(::fstat(fd,&s) || !S_ISREG(s.st_mode) || s.st_uid!=::getuid() || s.st_nlink!=1 || (s.st_mode&0077) || s.st_size<0)
         throw std::runtime_error("Work report file ownership");
 }
 QByteArray fileHash(int fd,quint64 expected) {
@@ -387,7 +387,7 @@ bool AssistantWorkReports::artifactCurrent(const Object& artifact,QStringView st
         auto dir=assistant_files::below(root.n,"reports",true);checkDirectory(dir.n,0);
         auto file=assistant_files::below(dir.n,"work-report.json");privateFile(file.n);const Identity id(file.n);
         bool ok=false;const auto bytes=artifact.value("bytes").toString().toULongLong(&ok);
-        return ok && bytes<=L::record_bytes && identityToken(id)==artifact.value("physical_identity").toString() &&
+        return ok && bytes==static_cast<quint64>(id.value.st_size) && identityToken(id)==artifact.value("physical_identity").toString() &&
             fileHash(file.n,bytes)==artifact.value("sha256").toString().toLatin1();
     }catch(...){return false;}
 #else
@@ -499,7 +499,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
             preparationCode="storage_root_unavailable";throw std::runtime_error("Report storage unavailable");
         }
         const auto projectRoot=storageRoot.toString();
-        const auto snapshot=build(L::record_bytes);
+        const auto snapshot=build(static_cast<quint64>(QByteArray::maxSize()));
         if(snapshot.scope!=scope || snapshot.revision!=revision || state->scope!=scope || state->revision!=revision) {
             receipt["disposition"]="superseded";receipt["coverage"]=work_report_receipt_coverage("superseded");
             return immediate(receipt);
@@ -515,8 +515,6 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         auto document=snapshot.document;
         document["artifact"]=Object{{"receipt_id",id},{"state","prepublication_snapshot"}};
         auto scopeData=document.value("scope_coverage").toObject();scopeData["trigger"]=automaticTrigger?"automatic":"manual";document["scope_coverage"]=scopeData;
-        quint64 artifactBytes=0;
-        if(!codex_encoded_size(document,L::record_bytes,artifactBytes))throw std::length_error("Report exceeds artifact capacity");
         const auto full=document.value("coverage").toObject();
         QString coverageReason="none";
         const auto gaps=full.value("gaps").toArray();
@@ -552,8 +550,7 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
                         result={input->reuseArtifact,"saved",false};
                     else {
                         const auto bytes=QJsonDocument(document).toJson(QJsonDocument::Compact);
-                        if(bytes.size()<0 || static_cast<quint64>(bytes.size())>L::record_bytes)
-                            throw std::length_error("Report exceeds artifact capacity");
+                        if(bytes.isEmpty())throw std::runtime_error("Report encoding failed");
                         const auto hash=QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex();
                         result=publishFile(projectRoot,bytes,hash);
                     }

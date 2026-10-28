@@ -733,11 +733,9 @@ struct AssistantViewModel::State {
         }}catch(...){counts.known=false;}return counts;
     }
 #ifndef __EMSCRIPTEN__
-    AssistantWorkReportSnapshot work_snapshot(quint64 room) {
+    AssistantWorkReportSnapshot work_snapshot(quint64) {
         AssistantWorkReportSnapshot snapshot;snapshot.scope=work_reports.scope();snapshot.revision=work_reports.revision();
         const auto counts=work_counts();
-        const qsizetype firstEvidence=0;
-        const bool includeRegistration=true;
         qsizetype firstCauseRow=-1;
         for(qsizetype i=0;i<history.size();++i) {
             const auto row=history[i].toObject();
@@ -762,12 +760,8 @@ struct AssistantViewModel::State {
             unknown=true;
             // A single bounded aggregate for each original gap class/reason.
             for(const auto& old:gaps)if(old.toObject().value("kind")==QLatin1StringView(kind) && old.toObject().value("reason")==QLatin1StringView(reason))return;
-            if(gaps.size()>=static_cast<qsizetype>(Limits::ui_messages))return;
             gaps.append(Object{{"kind",QLatin1StringView(kind)},{"first_id",row.isEmpty()?work_report_missing():work_report_observed(row)},
                 {"last_id",work_report_missing()},{"count",work_report_missing()},{"reason",QLatin1StringView(reason)}});
-        };
-        const auto fits=[&](const Object& value) {
-            quint64 bytes=0;return codex_encoded_size(value,std::min<quint64>(room,Limits::record_bytes),bytes);
         };
         if(firstCauseRow>=0) {
             const auto source=history[firstCauseRow].toObject().value("workTurn").toObject();
@@ -776,7 +770,6 @@ struct AssistantViewModel::State {
             if(parse.error!=QJsonParseError::NoError || !detached.isObject())throw std::runtime_error("Original turn cause could not be detached");
             turns.append(detached.object());
         }
-        if(firstEvidence>0)gap("first_cause","capacity");
         if(native_first_failure.stage)gap("native_first_cause","unbound_owner");
         auto identities=document.value("identity_inputs").toObject();auto build=identities.value("build").toObject();
         const auto builtCommit=QString::fromUtf8(edi::build_commit());
@@ -800,15 +793,13 @@ struct AssistantViewModel::State {
         runtime["adapter"]=generic_mode?"official":"restricted";
         // Selection is an original-boundary capture below, never a later
         // mutable settings read presented as the model used for earlier work.
-        if(includeRegistration)identities["tool_schema"]=work_registration.isEmpty()?identities.value("tool_schema"):QJsonValue(work_registration);
-        else {auto schema=identities.value("tool_schema").toObject();for(const char* key:{"sha256","count","body"})schema[key]=work_report_missing("capacity");identities["tool_schema"]=schema;gap("schema_body","capacity");}
+        identities["tool_schema"]=work_registration.isEmpty()?identities.value("tool_schema"):QJsonValue(work_registration);
 #else
         runtime["adapter"]="restricted";
 #endif
         identities["runtime"]=runtime;
         for(qsizetype i=0;i<history.size();++i) {
             const auto row=history[i].toObject();if(!work_eligible(row)){++excluded;continue;}++retained;
-            if(i<firstEvidence){++omitted;gap("history","capacity");continue;}
             const auto id=row.value("id").toString();const auto stamp=row.value("workScope").toObject();
             const auto payloadType=row.value("payload").toObject().value("type").toString();
             if(row.value("kind")=="activity" && payloadType!="dynamicToolCall" && payloadType!="webSearch") {++omitted;gap("history","not_observed",id);continue;}
@@ -822,16 +813,10 @@ struct AssistantViewModel::State {
                     {"native_settlement","unknown"},{"first_cause",work_report_missing()}}:actualTurn);
             }
             auto supplement=row.value("workEvidence").toObject();
-            quint64 sourceBytes=0;
-            if(!codex_encoded_size(row,Limits::record_bytes,sourceBytes)){++omitted;gap("history","capacity",id);continue;}
             Object item{{"row_id",id},{"ordinal",QString::number(i)},
                 {"attempt_id",attempt.isEmpty()?work_report_missing("not_observed"):work_report_observed(attempt)},
                 {"row",work_public_row(row)},{"work_evidence",supplement.isEmpty()?work_report_missing():work_report_observed(supplement)}};
-            auto candidate=evidence;candidate.append(item);auto trial=document;trial["history_evidence"]=candidate;
-            // Include all other already assembled sections in each admission.
-            trial["identity_inputs"]=identities;
-            if(!fits(trial)){++omitted;gap("history","capacity",id);continue;}
-            evidence=std::move(candidate);document=std::move(trial);
+            evidence.append(item);
             for(const auto& captured:row.value("workSkills").toArray()) {
                 const auto skill=captured.toObject();bool seen=false;
                 for(const auto& previous:capturedSkills){const auto old=previous.toObject();if(old.value("capture_id")==skill.value("capture_id") && old.value("skill_id")==skill.value("skill_id")){seen=true;break;}}
@@ -882,18 +867,15 @@ struct AssistantViewModel::State {
         if(!evidence.isEmpty()){coverage["first_retained_row"]=work_report_observed(evidence.first().toObject().value("row_id"));coverage["last_retained_row"]=work_report_observed(evidence.last().toObject().value("row_id"));}
         coverage["gaps"]=gaps;coverage["complete_evidence"]=false;coverage["missing_extent_unknown"]=unknown;
         document["coverage"]=coverage;
-        if(!fits(document)) {
-            for(qsizetype i=0;i<capturedSkills.size();++i){auto skill=capturedSkills[i].toObject();skill["body"]=work_report_missing("capacity");capturedSkills[i]=skill;}
-            identities["skills"]=capturedSkills;auto schema=identities.value("tool_schema").toObject();schema["body"]=work_report_missing("capacity");identities["tool_schema"]=schema;
-            document["identity_inputs"]=identities;gap("skill_body","capacity");gap("schema_body","capacity");
-            coverage["gaps"]=gaps;coverage["missing_extent_unknown"]=true;document["coverage"]=coverage;
-        }
-        if(!fits(document))throw std::length_error("Work report exceeds artifact capacity");
+        document["history_evidence"]=evidence;
         snapshot.document=std::move(document);
         return snapshot;
     }
 #endif
     QByteArray work_report_cache; // Last useful attempt; current diagnostics derive from canonical history.
+    const char* work_report_cache_error=nullptr;
+    QString work_report_cache_error_scope;
+    quint64 work_report_cache_error_revision=0;
     bool work_has_diagnostic() const noexcept {
         try {
             if(history_unqueued || (history_archive && history_archive->view().failure_stage))return true;
@@ -908,13 +890,19 @@ struct AssistantViewModel::State {
     QByteArray current_work_report_document() noexcept {
 #ifndef __EMSCRIPTEN__
         const QPointer<AssistantViewModel> receiver(&owner);const auto binding=generation;const auto scope=work_reports.scope();
+        const auto revision=work_reports.revision();
         try {
-            const auto snapshot=work_snapshot(Limits::record_bytes);
+            const auto snapshot=work_snapshot(static_cast<quint64>(QByteArray::maxSize()));
             if(!receiver || receiver->state_.get()!=this || generation!=binding || work_reports.scope()!=scope || snapshot.document.isEmpty())return {};
-            auto encoded=QJsonDocument(snapshot.document).toJson(QJsonDocument::Indented);
-            if(static_cast<quint64>(encoded.size())>Limits::record_bytes)encoded=QJsonDocument(snapshot.document).toJson(QJsonDocument::Compact);
-            if(static_cast<quint64>(encoded.size())<=Limits::record_bytes)return encoded;
-        }catch(...){work_reports.missEvidence();}
+            auto encoded=QJsonDocument(snapshot.document).toJson(QJsonDocument::Compact);
+            if(encoded.isEmpty())throw std::runtime_error("Work report encoding failed");
+            work_report_cache_error=nullptr;return encoded;
+        }catch(...) {
+            if(receiver && receiver->state_.get()==this && generation==binding && work_reports.scope()==scope) {
+                work_report_cache_error_scope=scope;work_report_cache_error_revision=revision;
+                work_report_cache_error="snapshot_unavailable";
+            }
+        }
 #endif
         return {};
     }
@@ -2658,13 +2646,13 @@ struct AssistantViewModel::State {
     }
     QString widget_parameter_tab(const ParameterItem& parameter, const QString& tool) const {
         if(tool=="set_free")return QStringLiteral("appBar.tab.analysis");
-        if(tool=="set_parameters" && parameter.isRefinable() && project &&
-            widget_workflow_page_current(widget_workflow_tab(QStringLiteral("appBar.tab.analysis")),project)) {
-            for(auto* cell:widget_items())
-                if(cell->objectName().startsWith("parameters.value.") && cell->window()==action_window && cell->isEnabled() &&
-                    !cell->property("locked").toBool() && cell->property("item").value<QObject*>()==&parameter &&
-                    cell->property("editOwner").value<QObject*>()==project)
-                    return QStringLiteral("appBar.tab.analysis");
+        if(tool=="set_parameters" && parameter.isRefinable() && !parameter.isEstimated() && project &&
+            widget_workflow_page_current(widget_workflow_tab(QStringLiteral("appBar.tab.analysis")),project) &&
+            project->parameters()->numberOf(&parameter)>0) {
+            for(auto* table:widget_items())if(table->objectName()=="parameters.list" && table->window()==action_window) {
+                const auto* filter=qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>());
+                if(filter && filter->sourceModel()==project->parameters())return QStringLiteral("appBar.tab.analysis");
+            }
         }
         const auto category=parameter.category();
         if(category=="cell" || category=="atom_site" || category=="atom_site_aniso")return QStringLiteral("appBar.tab.structure");
@@ -14669,12 +14657,29 @@ QString AssistantViewModel::submitDraft(const QString& text) {
 QString AssistantViewModel::workReportDocument() {
 #ifndef __EMSCRIPTEN__
     if(QThread::currentThread()!=thread())return {};
-    if(state_->work_reports.attempt().isEmpty() && state_->work_has_diagnostic()) {
-        const auto current=state_->current_work_report_document();
-        if(!current.isEmpty())return QString::fromUtf8(current);
-    }
-    state_->refresh_work_report_cache();
-    return QString::fromUtf8(state_->work_report_cache);
+    try {
+        QByteArray encoded;
+        if(state_->work_reports.attempt().isEmpty() && state_->work_has_diagnostic())
+            encoded=state_->current_work_report_document();
+        if(encoded.isEmpty()) {state_->refresh_work_report_cache();encoded=state_->work_report_cache;}
+        if(encoded.isEmpty())return {};
+        auto document=QJsonDocument::fromJson(encoded).object();
+        auto scope=document.value("scope_coverage").toObject();
+        const bool failed=state_->work_report_cache_error && state_->work_report_cache_error_scope==state_->work_reports.scope() &&
+            state_->work_report_cache_error_revision==state_->work_reports.revision();
+        const bool current=!failed && scope.value("scope_id")==state_->work_reports.scope() &&
+            scope.value("snapshot_revision").toString()==QString::number(state_->work_reports.revision());
+        scope["view"]=Object{{"state",current?"current_snapshot":"last_useful_snapshot"},
+            {"current_capture",failed?"failed":current?"captured":"not_requested"},
+            {"last_capture_failure",state_->work_report_cache_error?work_report_observed(Object{
+                {"code",QLatin1StringView(state_->work_report_cache_error)},
+                {"scope_id",state_->work_report_cache_error_scope},
+                {"snapshot_revision",QString::number(state_->work_report_cache_error_revision)}}):work_report_missing("not_present")},
+            {"requested_scope_id",state_->work_reports.scope()},
+            {"requested_snapshot_revision",QString::number(state_->work_reports.revision())}};
+        document["scope_coverage"]=scope;
+        return QString::fromUtf8(QJsonDocument(document).toJson(QJsonDocument::Indented));
+    }catch(...) {return {}; }
 #else
     return {};
 #endif
