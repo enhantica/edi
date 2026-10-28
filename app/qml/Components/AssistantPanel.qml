@@ -1104,6 +1104,12 @@ Popup {
                     wrapMode: Text.Wrap
                     color: EaStyle.Colors.red
                 }
+                EaElements.Button {
+                    text: qsTr("More sessions")
+                    visible: panel.assistant.sessionsHaveMore
+                    enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
+                    onClicked: panel.assistant.refreshSessions(true)
+                }
             }
             footer: EaElements.DialogButtonBox {
                 id: sessionButtons
@@ -1112,13 +1118,6 @@ Popup {
                     DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
                     enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
                     onClicked: panel.assistant.refreshSessions()
-                }
-                EaElements.Button {
-                    text: qsTr("More sessions")
-                    DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
-                    visible: panel.assistant.sessionsHaveMore
-                    enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
-                    onClicked: panel.assistant.refreshSessions(true)
                 }
                 readonly property real naturalButtonWidth: {
                     let total=0;
