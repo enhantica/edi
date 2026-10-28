@@ -639,49 +639,107 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
 }
 #endif
 
+// Display projection only. Full canonical diagnostics stay in State::history.
+Object message_payload(const Object& source,bool full) {
+    Object result;
+    auto strings=[&](const Object& from,Object& to,std::initializer_list<const char*> fields) {
+        for(const auto* key:fields)if(from.value(key).isString())to[key]=from.value(key);
+    };
+    strings(source,result,{"type","id","status","tool","decision","item_id"});
+    const auto outcome=source.value("nativeOutcome").toObject();Object shown;
+    strings(outcome,shown,full?std::initializer_list<const char*>{"status","message","code","action_error"}:
+        std::initializer_list<const char*>{"status"});
+    if(!shown.isEmpty())result["nativeOutcome"]=shown;
+    if(source.value("type")=="ediInput") {
+        QJsonArray files;
+        for(const auto& value:source.value("files").toArray()) {
+            const auto file=value.toObject();Object shownFile;
+            strings(file,shownFile,{"id","name","format"});
+            for(const auto* key:{"bytes","textReadable"})if(file.contains(key))shownFile[key]=file.value(key);
+            files.append(shownFile);
+        }
+        result["files"]=files;
+    }
+    if(source.value("type")=="commandExecution") {
+        QString category;bool first=true;
+        for(const auto& value:source.value("commandActions").toArray()) {
+            const auto type=value.toObject().value("type").toString();
+            if(first){category=type;first=false;}else if(category!=type){category.clear();break;}
+        }
+        result["commandCategory"]=category;
+    }
+    if(full) {
+        strings(source,result,{"purpose","description","message","code","title","actor","query"});
+        if(!result.contains("purpose")) {
+            const auto purpose=source.value("arguments").toObject().value("purpose");
+            if(purpose.isString())result["purpose"]=purpose;
+        }
+        Object error;strings(source.value("error").toObject(),error,{"message"});
+        if(!error.isEmpty())result["error"]=error;
+        if(source.value("type")=="webSearch") {
+            Object action;const auto original=source.value("action").toObject();
+            strings(original,action,{"type","query","url","pattern"});
+            if(original.value("queries").isArray()) {
+                QJsonArray queries;for(const auto& v:original.value("queries").toArray())if(v.isString())queries.append(v);
+                action["queries"]=queries;
+            }
+            result["action"]=action;
+        }
+    }
+    return result;
+}
+Object message_display_row(const Object& original) {
+    const auto kind=original.value("kind").toString();
+    return {{"id",original.value("id")},{"kind",kind},{"status",original.value("status")},
+        {"text",kind=="user" || kind=="assistant"?original.value("text"):QJsonValue(QString())},
+        {"payload",message_payload(original.value("payload").toObject(),false)}};
+}
 class Rows : public RowTableModel {
    public:
     Rows(const QStringList& names, QObject* parent, const QJsonArray* canonical = nullptr)
         : RowTableModel(names, parent), names_(names), canonical_(canonical) {}
     void assign(const QJsonArray& data) {
-        // Keys only: payloads belong to the canonical JSON array, not a second
-        // recursively converted QVariant snapshot in the model.
         if (!canonical_) own_ = data;
         pending_ = true;
         if (assigning_) return;
         assigning_ = true;
         const QPointer<Rows> alive(this);
         const auto release = qScopeGuard([this, alive] { if (alive) assigning_ = false; });
-        // Every model signal may synchronously request a newer projection. A
-        // nested request records that fact, but must not nest Qt begin/end row
-        // transactions. Complete the current transaction, then take ONLY the
-        // newest canonical source before announcing further row values.
         while (pending_) {
             pending_ = false;
             const auto& source = canonical_ ? *canonical_ : own_;
-            QList<Row> rows; rows.reserve(source.size());
-            for (qsizetype i = 0; i < source.size(); ++i)
+            QJsonArray projected;
+            for(const auto& value:source)projected.append(canonical_?message_display_row(value.toObject()):value);
+            visible_=std::move(projected); // Only lightweight display values reach the model.
+            QList<Row> rows; rows.reserve(visible_.size());
+            for (qsizetype i = 0; i < visible_.size(); ++i)
                 rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)), {}});
             setTableRows(rows);
             if (!alive) return;
             if (pending_) continue;
-            announceRows(0, count() - 1);
+            int first=-1,last=-1;QList<int> roles;
+            for(qsizetype i=0;i<visible_.size();++i) {
+                const auto before=i<announced_.size()?announced_.at(i).toObject():Object{};
+                const auto after=visible_.at(i).toObject();
+                for(int c=0;c<names_.size();++c)if(before.value(names_[c])!=after.value(names_[c])) {
+                    if(first<0)first=static_cast<int>(i);last=static_cast<int>(i);
+                    const auto role=Qt::UserRole+1+c;if(!roles.contains(role))roles.append(role);
+                }
+            }
+            announced_=visible_; // One complete notification; reentry schedules the newest projection.
+            if(first>=0)emit dataChanged(index(first),index(last),roles);
             if (!alive) return;
         }
     }
    protected:
-    QList<QVariant> rowValues(int row) const override {
-        const auto& source = canonical_ ? *canonical_ : own_;
-        if (row < 0 || row >= source.size()) return {};
-        const auto entry = source.at(row).toObject();
-        QList<QVariant> values; values.reserve(names_.size());
-        for (const auto& name : names_) values.append(entry.value(name).toVariant());
-        return values;
+    QVariant roleValue(int row,int column) const override {
+        if(row<0 || row>=visible_.size() || column<0 || column>=names_.size())return {};
+        return visible_.at(row).toObject().value(names_[column]).toVariant();
     }
    private:
     QStringList names_;
     const QJsonArray* canonical_;
-    QJsonArray own_;
+    QJsonArray own_,visible_,announced_; // Canonical message payloads are never copied into these display snapshots.
     bool assigning_ = false, pending_ = false;
 };}
 
@@ -14641,6 +14699,58 @@ QString AssistantViewModel::nativeActionDescription(const QString& action,const 
     Q_UNUSED(action);
     if(code=="project_required")return tr("This action needs an open project. Create or open a project before trying it.");
     return tr("Carry out the requested work using the app's supported project actions.");
+#endif
+}
+
+
+QVariantMap AssistantViewModel::activityHumanDetails(const QString& rowId,const QString& kind,const QString& status) const {
+#ifdef __EMSCRIPTEN__
+    Q_UNUSED(rowId);Q_UNUSED(kind);Q_UNUSED(status);
+    return {};
+#else
+    try {
+        if(QThread::currentThread()!=thread() || kind=="user" || kind=="assistant")return {};
+        const QPointer<const AssistantViewModel> receiver(this);const auto* original=state_.get();
+        const auto binding=original->generation;const auto account=original->usage_epoch;
+        const QPointer<ProjectViewModel> project(original->project);
+        for(const auto& value:original->history) {
+            const auto row=value.toObject();
+            if(row.value("id")!=rowId)continue;
+            if(row.value("kind")!=kind || row.value("status")!=status)return {};
+            const auto payload=row.value("payload").toObject();
+            const bool human=kind=="error" || kind=="plan" || kind=="question" || kind=="tool" || kind=="trial" ||
+                (kind=="activity" && !payload.contains("type") && payload.value("decision").isString() && payload.value("item_id").isString());
+            Object detail{{"row_id",rowId},{"kind",kind},{"status",status},{"text",human?row.value("text"):QJsonValue(QString())},
+                {"payload",message_payload(payload,true)}};
+            const auto result=detail.toVariantMap();
+            if(!receiver || receiver->state_.get()!=original || original->generation!=binding || original->usage_epoch!=account || original->project!=project)return {};
+            for(const auto& current:original->history)if(current.toObject().value("id")==rowId)return current==value?result:QVariantMap{};
+            return {};
+        }
+    }catch(...) {}
+    return {};
+#endif
+}
+QString AssistantViewModel::activityTechnicalDetails(const QString& rowId,const QString& kind,const QString& status) const {
+#ifdef __EMSCRIPTEN__
+    Q_UNUSED(rowId);Q_UNUSED(kind);Q_UNUSED(status);
+    return {};
+#else
+    try {
+        if(QThread::currentThread()!=thread() || kind=="user" || kind=="assistant")return {};
+        const QPointer<const AssistantViewModel> receiver(this);const auto* original=state_.get();
+        const auto binding=original->generation;const auto account=original->usage_epoch;
+        const QPointer<ProjectViewModel> project(original->project);
+        for(const auto& value:original->history) {
+            const auto row=value.toObject();if(row.value("id")!=rowId)continue;
+            if(row.value("kind")!=kind || row.value("status")!=status)return {};
+            const auto text=QString::fromUtf8(QJsonDocument(row).toJson(QJsonDocument::Indented));
+            if(!receiver || receiver->state_.get()!=original || original->generation!=binding || original->usage_epoch!=account || original->project!=project)return {};
+            for(const auto& current:original->history)if(current.toObject().value("id")==rowId)return current==value?text:QString();
+            return {};
+        }
+    }catch(...) {}
+    return {};
 #endif
 }
 
