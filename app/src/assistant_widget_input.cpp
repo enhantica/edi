@@ -200,6 +200,7 @@ void AssistantWidgetInput::pace(int milliseconds) {
     timer_.start(milliseconds); // Original pointer/choice pacing; text has no character clock.
 }
 AssistantWidgetInput::~AssistantWidgetInput() {
+    unwatchChoicePopup();
     if (auto* application = QCoreApplication::instance()) application->removeEventFilter(this);
     timer_.stop();
     if (mouse_owner_) {
@@ -376,8 +377,59 @@ bool AssistantWidgetInput::conflictsWith(const QQuickItem* item) const noexcept 
     return (target && (target == item || target->isAncestorOf(item))) ||
         (choice_content_ && (choice_content_ == item || choice_content_->isAncestorOf(item)));
 }
+void AssistantWidgetInput::unwatchChoicePopup() noexcept {
+    for(const auto& connection:{choice_hiding_,choice_closed_connection_,choice_reopening_,choice_destroyed_})QObject::disconnect(connection);
+    choice_hiding_={};choice_closed_connection_={};choice_reopening_={};choice_destroyed_={};
+    choice_observation_=0;choice_closing_=false;choice_closed_=false;
+}
+bool AssistantWidgetInput::watchChoicePopup() {
+    unwatchChoicePopup();
+    if(!request_ || !choice_popup_)return false;
+    choice_observation_=serial_;
+    choice_hiding_=QObject::connect(choice_popup_,SIGNAL(aboutToHide()),this,SLOT(choiceAboutToHide()),Qt::DirectConnection);
+    choice_closed_connection_=QObject::connect(choice_popup_,SIGNAL(closed()),this,SLOT(choiceClosed()),Qt::DirectConnection);
+    choice_reopening_=QObject::connect(choice_popup_,SIGNAL(aboutToShow()),this,SLOT(choiceReopened()),Qt::DirectConnection);
+    const QPointer<AssistantWidgetInput> self(this);const auto original=request_;const auto id=serial_;
+    choice_destroyed_=QObject::connect(choice_popup_,&QObject::destroyed,this,[self,original,id] {
+        if(self && self->request_==original && self->serial_==id)
+            self->fail(original,id,ControlCause::Unavailable,QT_TR_NOOP("The original popup was destroyed before its close was confirmed"),false);
+    });
+    if(!choice_hiding_ || !choice_closed_connection_ || !choice_reopening_ || !choice_destroyed_){unwatchChoicePopup();return false;}
+    return true;
+}
+void AssistantWidgetInput::choiceAboutToHide() {
+    if(request_ && choice_observation_==serial_ && sender()==choice_popup_)choice_closing_=true;
+}
+void AssistantWidgetInput::choiceClosed() {
+    if(!request_ || choice_observation_!=serial_ || sender()!=choice_popup_)return;
+    choice_closed_=true;
+    if(step_==Step::ChoiceSettle)timer_.start(0);
+}
+void AssistantWidgetInput::choiceReopened() {
+    if(request_ && choice_observation_==serial_ && sender()==choice_popup_)
+        fail(request_,serial_,ControlCause::Superseded,QT_TR_NOOP("The original choice popup was reopened before settlement"),false);
+}
+void AssistantWidgetInput::settleChoice(const std::shared_ptr<Request>& original,std::uint64_t id) {
+    const QPointer<AssistantWidgetInput> self(this);
+    if(!original || request_!=original || serial_!=id)return;
+    step_=Step::ChoiceSettle;
+    // No further device event belongs to this completed press/release. Refuse
+    // delayed private clones while the original native exit transition runs.
+    if(mouse_owner_)mouse_owner_->retire(*this,mouse_stamp_);
+    const bool owned=current(id);
+    if(!self || request_!=original || serial_!=id)return;
+    if(!owned || !choice_popup_ || !original->target ||
+        original->target->property(original->kind==Kind::DismissMenu?"contextMenu":"popup").value<QObject*>()!=choice_popup_) {
+        fail(original,id,ControlCause::Superseded,QT_TR_NOOP("The original popup owner changed during choice settlement"),false);return;
+    }
+    const bool selected=original->kind==Kind::DismissMenu || original->target->property("currentIndex").toInt()==original->option;
+    if(!selected){fail(original,id,ControlCause::Commit,QT_TR_NOOP("The actual popup click did not select the original offered option"),false);return;}
+    if(choice_closed_ || !choice_popup_->property("visible").toBool()) {stop(original,id,true,{},false);return;}
+    if(choice_closing_)return; // Only this exact popup's closed signal continues.
+    fail(original,id,ControlCause::Commit,QT_TR_NOOP("The actual popup choice did not begin closing its original popup"),false);
+}
 bool AssistantWidgetInput::choicePopupOwned() const {
-    if(!request_ || !window_ || !request_->target || !choice_popup_ || !choice_content_ ||
+    if(choice_closing_ || !request_ || !window_ || !request_->target || !choice_popup_ || !choice_content_ ||
         request_->option<0 || request_->option>=request_->target->property("count").toInt() ||
         request_->target->property("popup").value<QObject*>()!=choice_popup_ || !choice_popup_->property("visible").toBool() ||
         choice_popup_->property("contentItem").value<QQuickItem*>()!=choice_content_ || choice_content_->window()!=window_)return false;
@@ -495,7 +547,7 @@ void AssistantWidgetInput::advance() noexcept {
             if (request->kind == Kind::DismissMenu) {
                 choice_popup_ = request->target->property("contextMenu").value<QObject*>();
                 choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
-                if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !choiceKeyboardOwned()) { if(self)self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original parameter menu lost keyboard ownership"), false); return; }
+                if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !choiceKeyboardOwned() || !watchChoicePopup()) { if(self)self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original parameter menu lost keyboard ownership"), false); return; }
                 step_ = Step::ChooseCommit; timer_.start(0); return;
             }
             if (request->kind == Kind::Scroll) {
@@ -532,7 +584,7 @@ void AssistantWidgetInput::advance() noexcept {
             if (request_->kind == Kind::Choose || request_->kind == Kind::SearchChoice) {
                 choice_popup_ = request_->target->property("popup").value<QObject*>();
                 choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
-                if (!choice_popup_ || !choice_popup_->property("visible").toBool()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The genuine ComboBox popup did not open"), false); return; }
+                if (!choice_popup_ || !choice_popup_->property("visible").toBool() || !watchChoicePopup()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The genuine ComboBox popup did not open with its original completion owner"), false); return; }
                 step_ = request_->kind == Kind::SearchChoice ? Step::Select : Step::ChoiceReveal;
                 pace(click_relaxation_ms); return;
             }
@@ -565,22 +617,17 @@ void AssistantWidgetInput::advance() noexcept {
                 const auto release=qScopeGuard([self]{if(self)self->choice_releasing_=false;});
                 if(!mouse(QEvent::MouseButtonRelease,Qt::LeftButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup choice did not receive its release"),false);return;}
             }
-            if(self && serial_==id && request_==request) {
-                const bool selected=request->target && request->target->property("currentIndex").toInt()==request->option && choice_popup_ && !choice_popup_->property("visible").toBool();
-                self->stop(request,id,selected,selected?QString{}:tr("The actual popup click did not confirm the original offered option"),false,selected?ControlCause::None:ControlCause::Commit);
-            }
+            if(self && serial_==id && request_==request)settleChoice(request,id);
             return;
+        case Step::ChoiceSettle:
+            settleChoice(request,id);return;
         case Step::ChooseCommit:
             commit_prepared_ = true;
             if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original ComboBox choice was retired"), false); return; }
             if (!self || serial_ != id || request_ != request) return;
             { const bool owned=current(id);
             if (!owned || !key(request->kind == Kind::DismissMenu ? Qt::Key_Escape : Qt::Key_Return)) { if (self && serial_ == id && request_ == request) self->fail(request,id,owned ? ControlCause::Delivery : ControlCause::Superseded, QT_TR_NOOP("The actual menu key could not be delivered"), false); return; } }
-            if (self && serial_ == id && request_ == request) {
-                const bool selected=request->kind == Kind::DismissMenu ? choice_popup_ && !choice_popup_->property("visible").toBool()
-                    : request->target && request->target->property("currentIndex").toInt() == request->option;
-                if(self)self->stop(request,id,selected,{},false,ControlCause::Commit);
-            }
+            if (self && serial_ == id && request_ == request)settleChoice(request,id);
             return;
         case Step::Select: {
             if (request->kind == Kind::StagedText) {
@@ -689,6 +736,7 @@ void AssistantWidgetInput::stop(const std::shared_ptr<Request>& expected, std::u
     if (!self || request_ != original || serial_ != id) return;
     if (restore) restoreDraft();
     if (!self || request_ != original || serial_ != id) return;
+    unwatchChoicePopup();
     request_.reset();
     const bool prepared = commit_prepared_; commit_prepared_ = false; draft_ = false; original_text_.clear(); choice_popup_.clear(); choice_content_.clear(); choice_row_.clear(); choice_text_.clear();
     if (prepared) try { original->finishCommit(); } catch (...) { delivered = false; }

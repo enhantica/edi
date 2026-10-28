@@ -73,8 +73,16 @@ class AssistantWidgetInput final : public QObject {
     bool eventFilter(QObject* watched, QEvent* event) override;
  private:
     struct MouseOwnership;
-    enum class Step { Move, Press, Release, Select, Commit, ChoiceReveal, ChoicePress, ChoiceRelease, ChooseCommit };
+    enum class Step { Move, Press, Release, Select, Commit, ChoiceReveal, ChoicePress, ChoiceRelease, ChoiceSettle, ChooseCommit };
     void advance() noexcept;
+    void settleChoice(const std::shared_ptr<Request>&,std::uint64_t);
+    bool watchChoicePopup();
+    void unwatchChoicePopup() noexcept;
+ private slots:
+    void choiceAboutToHide();
+    void choiceClosed();
+    void choiceReopened();
+ private:
     void pace(int milliseconds);
 
     bool current(std::uint64_t id) const;
@@ -98,6 +106,9 @@ class AssistantWidgetInput final : public QObject {
     QPointer<QObject> choice_popup_;
     QPointer<QQuickItem> choice_content_, choice_row_;
     QString choice_text_;
+    QMetaObject::Connection choice_hiding_,choice_closed_connection_,choice_reopening_,choice_destroyed_;
+    std::uint64_t choice_observation_=0;
+    bool choice_closing_=false,choice_closed_=false;
     bool choicePopupOwned() const;
     bool choiceRowOwned() const;
     bool revealChoice();
