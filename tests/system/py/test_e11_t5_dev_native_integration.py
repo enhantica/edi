@@ -81,6 +81,8 @@ class MainActor:
         path.write_text(json.dumps(value), encoding='utf-8')
 
     def command(self, op, **arguments):
+        if getattr(self, '_stream_unusable', None):
+            raise RuntimeError('Main command stream is unusable after an unsettled original request; no successor command was sent')
         # Manual GUI fixtures must enter the normal app before choosing its
         # tabs. This is driver input, never assistant-driven OFF presentation.
         if op == 'click' and arguments.get('name', '').startswith('appBar.tab.') and hasattr(self, 'last'):
@@ -88,31 +90,73 @@ class MainActor:
                    for row in self.last['ui'].get('controls', [])):
                 self.command('click', name='home.start')
         assert self.process.poll() is None, 'The real Main host must remain alive'
+        sequence = getattr(self, '_command_sequence', 0) + 1
+        self._command_sequence = sequence
+        started = time.monotonic()
+        reads = []
+        def unsettled(reason, pending):
+            self._stream_unusable = {'sequence': sequence, 'op': op, 'reason': reason}
+            (self.folder / 'unsettled-command-bytes.bin').write_bytes(pending)
+            (self.folder / 'unsettled-command.json').write_text(json.dumps({
+                **self._stream_unusable, 'started_monotonic': started,
+                'failed_monotonic': time.monotonic(), 'read_chunks': reads,
+                'pending_bytes': len(pending), 'pid': self.process.pid,
+                'process_exit': self.process.poll(),
+            }, indent=2) + '\n')
         (self.folder / 'command-boundary.json').write_text(json.dumps({
             'op': op, 'pid': self.process.pid, 'started_monotonic': time.monotonic(),
             'reply_observed': False, 'process_exit_before_command': self.process.poll(),
         }, indent=2))
-        self.process.stdin.write(json.dumps({'op': op, **arguments}) + '\n')
-        self.process.stdin.flush()
+        request = json.dumps({'op': op, **arguments}) + '\n'
+        try:
+            self.process.stdin.write(request)
+            self.process.stdin.flush()
+        except (OSError, ValueError):
+            unsettled('command write failed with uncertain delivery', getattr(self, '_stdout_bytes', b''))
+            raise
         deadline = time.monotonic() + 10
         buffered = getattr(self, '_stdout_bytes', b'')
         while time.monotonic() < deadline:
             if b'\n' not in buffered:
-                ready, _, _ = select.select([self.process.stdout], [], [], max(0, deadline - time.monotonic()))
-                assert ready, f'The finite Main command {op} must return a complete observation'
-                chunk = os.read(self.process.stdout.fileno(), 65536)
-                assert chunk, f'The actual Main host closed during {op}'
+                try:
+                    ready, _, _ = select.select([self.process.stdout], [], [], max(0, deadline - time.monotonic()))
+                except (OSError, ValueError):
+                    unsettled('stdout readiness failed before original reply', buffered)
+                    raise
+                if not ready:
+                    unsettled('stdout observation boundary expired before a complete reply', buffered)
+                    raise AssertionError(f'The finite Main command {op} must return a complete observation')
+                try:
+                    chunk = os.read(self.process.stdout.fileno(), 65536)
+                except OSError:
+                    unsettled('stdout read failed before original reply', buffered)
+                    raise
+                if not chunk:
+                    unsettled('stdout EOF before the original complete reply', buffered)
+                    raise AssertionError(f'The actual Main host closed during {op}')
+                reads.append({'monotonic': time.monotonic(), 'bytes': len(chunk)})
                 buffered += chunk
                 self._stdout_bytes = buffered
                 continue
             raw, buffered = buffered.split(b'\n', 1)
             self._stdout_bytes = buffered
-            line = raw.decode('utf-8')
+            try:
+                line = raw.decode('utf-8')
+            except UnicodeDecodeError:
+                unsettled('invalid UTF-8 reply framing', raw + b'\n' + buffered)
+                raise
             if not line.startswith('{'):
                 with (self.folder / 'host.stdout-diagnostics').open('a') as output:
                     output.write(line + '\n')
                 continue
-            value = json.loads(line)
+            try:
+                value = json.loads(line)
+            except json.JSONDecodeError:
+                unsettled('invalid JSON reply framing', raw + b'\n' + buffered)
+                raise
+            if not isinstance(value, dict) or ('host_error' not in value and not {'ui','reply'} <= value.keys()):
+                unsettled('unrecognized original reply envelope', raw + b'\n' + buffered)
+                raise AssertionError('The Main reply must retain its actual ui/reply envelope')
             assert 'host_error' not in value, value
             self.last = value
             ui = value.get('ui', {})
@@ -126,12 +170,15 @@ class MainActor:
                 ) if key in ui},
             }, indent=2))
             (self.folder / 'command-boundary.json').write_text(json.dumps({
-                'op': op, 'pid': self.process.pid, 'completed_monotonic': time.monotonic(),
+                'sequence': sequence, 'op': op, 'pid': self.process.pid, 'started_monotonic': started,
+                'read_chunks': reads, 'reply_sha256': hashlib.sha256(raw).hexdigest(),
+                'completed_monotonic': time.monotonic(),
                 'reply_observed': True, 'process_exit': self.process.poll(),
             }, indent=2))
             if 'ui_sequence' in value.get('ui', {}):
                 (self.folder / 'ui-sequence.json').write_text(json.dumps(value['ui']['ui_sequence'], indent=2))
             return value
+        unsettled('original command deadline expired with no assigned complete reply', buffered)
         raise AssertionError(f'No actual observation returned for {op}')
 
     def until(self, predicate, *, seconds=10, visible_progress=False):
@@ -167,7 +214,13 @@ class MainActor:
                 'reason':'finite outer observation bound' if time.monotonic()>=outer else 'no semantic progress',
                 'stall_seconds':seconds,'outer_seconds':120}
             (self.folder/'visible-observation-boundary.json').write_text(json.dumps(receipt,indent=2)+'\n')
-        raise AssertionError('The actual native lifecycle did not settle: ' + json.dumps(self.last))
+        receipt = self.folder / 'last-lifecycle-receipt.json'
+        receipt.write_text(json.dumps(self.last, indent=2) + '\n')
+        ui = self.last.get('ui', {})
+        summary = {key: ui.get(key) for key in ('state','connected','can_cancel','last_error')}
+        summary['project_name'] = (ui.get('project') or {}).get('name')
+        raise AssertionError('The actual native lifecycle did not settle: ' + json.dumps(summary)
+                             + '; complete receipt: ' + str(receipt))
 
     def connect(self):
         if not self.last['ui']['connected']:
@@ -215,7 +268,7 @@ class MainActor:
     def close(self):
         # Read-only failure-tail evidence before this host's temporary Documents
         # disappears. Never Save, create science, follow links or alter the owner.
-        if self.process.poll() is None:
+        if self.process.poll() is None and not getattr(self, '_stream_unusable', None):
             try:
                 final = self.command('evaluate', expression='Session.lastError')
                 (self.folder / 'final-owner-error.json').write_text(
@@ -3629,8 +3682,8 @@ def test_original_estimate_member_survives_ordinary_selection_callback_before_ef
     actor.configure_turns([[tool_call('estimate_background','original-member-before-selection',experiment=requested),tool_call('inspect_project','continue-after-selected-member-refusal')]])
     actor.connect()
     marker='e11.estimate.selection'
-    signal='pointer.visibleChanged' if show_actions else 'Session.assistant.actionPageRequested'
-    callback=('function(){if(!o.fired && pointer.visible){o.fired=true;o.before=Session.project.currentExperimentIndex;Session.project.currentExperimentIndex=1;o.after=Session.project.currentExperimentIndex;}}' if show_actions else
+    signal='Session.assistant.actionPointerMoved' if show_actions else 'Session.assistant.actionPageRequested'
+    callback=('function(position){if(!o.fired){o.fired=true;o.before=Session.project.currentExperimentIndex;Session.project.currentExperimentIndex=1;o.after=Session.project.currentExperimentIndex;}}' if show_actions else
               'function(page,extra){if(!o.fired && page==="experiment"){o.fired=true;o.before=Session.project.currentExperimentIndex;Session.project.currentExperimentIndex=1;o.after=Session.project.currentExperimentIndex;}}')
     setup='(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"'+marker+'";property bool fired:false;property int before:-1;property int after:-1;property var callback:null}\',contentItem);const pointer=assistantPointer;o.callback='+callback+';'+signal+'.connect(o.callback);return true;})()'
     assert qml(actor,setup), 'The actual ordinary selection callback is attached to the current visible cue or OFF follow-page boundary'
@@ -3698,7 +3751,12 @@ DataTable {
         qml(actor,'(function(){const w='+control_expression(witness)+';w.held.destroy();w.armed=true;})()')
         assert create_table(), 'A fresh ordinary row reaches its first genuine padding setter after the lifetime witness is armed'
     else:
-        qml(actor,'(function(){const w='+control_expression(witness)+';w.armed=true;width=width+103;})()')
+        qml(actor,'('+control_expression(witness)+').armed=true')
+        previous_width=actor.last['ui']['width']
+        actor.command('resize',width=previous_width-103)
+        assert actor.last['ui']['width']!=previous_width, (
+            'The original ordinary window resize actually changes the live fitted-header geometry before claiming a width-setter retirement'
+        )
     actor.until(lambda row:qml(actor,'('+control_expression(witness)+').hits')==1)
     observed=qml(actor,'(function(){const w='+control_expression(witness)+';return {hits:w.hits,opened:w.opened,retired:!Qt.isQtObject(w.held)};})()')
     assert observed=={'hits':1,'opened':True,'retired':True}, (
@@ -3791,3 +3849,102 @@ def test_direct_compound_population_stop_retains_prefix_without_default_estimate
             )
     finally:
         qml(actor,'(function(){const o='+control_expression(marker)+';Session.projectChanged.disconnect(o.watch);if(o.owner)o.owner.projectEdited.disconnect(o.attempt);o.destroy();})()')
+
+
+@pytest.mark.parametrize('prefix',[b'',b'{"ui":'],ids=['zero','partial'])
+def test_main_reader_unsettled_original_reply_cannot_poison_a_successor_or_cleanup(tmp_path,monkeypatch,prefix):
+    evidence=tmp_path/'server-evidence.json'
+    program="import sys,json;first=json.loads(sys.stdin.readline());sys.stdout.buffer.write(bytes.fromhex(sys.argv[2]));sys.stdout.buffer.flush();rest=sys.stdin.read();reply={'ui':{'alive':True},'reply':{'op':first['op'],'later_input':rest}};open(sys.argv[1],'w').write(json.dumps(reply));sys.stdout.write(json.dumps(reply)+'\\n');sys.stdout.flush()"
+    actor=MainActor.__new__(MainActor);actor.folder=tmp_path
+    actor.process=subprocess.Popen([sys.executable,'-c',program,str(evidence),prefix.hex()],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1)
+    actor.stderr=actor.process.stderr
+    actor.last={'ui':{'controls':[{'name':'home.start','visible':True,'enabled':True}]}}
+    actual_select=select.select;calls=0
+    def finite_boundary(*args):
+        nonlocal calls
+        calls+=1
+        return actual_select(*args) if prefix and calls==1 else ([],[],[])
+    monkeypatch.setattr(select,'select',finite_boundary)
+    try:
+        with pytest.raises(AssertionError,match='complete observation'):
+            actor.command('original')
+        boundary=json.loads((tmp_path/'command-boundary.json').read_text())
+        assert (tmp_path/'unsettled-command-bytes.bin').read_bytes()==prefix, (
+            'Actually received zero or partial bytes remain attached to the original outstanding command'
+        )
+        with pytest.raises(RuntimeError,match='no successor command was sent'):
+            actor.command('click',name='appBar.tab.structure')
+        assert json.loads((tmp_path/'command-boundary.json').read_text())==boundary, (
+            'The automatic Home Start prelude cannot replace an unsettled original boundary or send another command'
+        )
+        monkeypatch.setattr(select,'select',actual_select)
+        actor.close()
+        late=json.loads(evidence.read_text())
+        assert late['reply']=={'op':'original','later_input':''}, (
+            'Independent child stdin proves neither successor nor automatic cleanup query was sent before its late original reply'
+        )
+        assert json.loads((tmp_path/'command-boundary.json').read_text())==boundary, (
+            'Cleanup retires the owned process without relabeling original bytes as a Session last-error result'
+        )
+        assert json.loads((tmp_path/'host-exit.json').read_text())['exit']==0, (
+            'The finite actual pipe server closes normally after its original late reply and stdin EOF'
+        )
+    finally:
+        if actor.process.poll() is None:
+            if not actor.process.stdin.closed:actor.process.stdin.close()
+            actor.process.wait(timeout=2)
+        if not actor.process.stdout.closed:actor.process.stdout.close()
+        if not actor.stderr.closed:actor.stderr.close()
+
+
+@pytest.mark.parametrize('packet',[b'{"ui":',b'{bad json}\n',b'{"ui":"\xff"}\n'],ids=['eof_partial','malformed_json','malformed_utf8'])
+def test_main_reader_broken_frame_retains_original_bytes_and_refuses_reuse(tmp_path,packet):
+    program="import sys;sys.stdin.readline();sys.stdout.buffer.write(bytes.fromhex(sys.argv[1]));sys.stdout.buffer.flush()"
+    actor=MainActor.__new__(MainActor);actor.folder=tmp_path
+    actor.process=subprocess.Popen([sys.executable,'-c',program,packet.hex()],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1);actor.stderr=actor.process.stderr
+    try:
+        with pytest.raises((AssertionError,UnicodeDecodeError,json.JSONDecodeError)):
+            actor.command('broken-original')
+        assert (tmp_path/'unsettled-command-bytes.bin').read_bytes()==packet, (
+            'EOF, UTF-8 and JSON failures preserve the actual original raw frame before decoding or cleanup can discard it'
+        )
+        with pytest.raises(RuntimeError,match='no successor command was sent'):
+            actor.command('successor')
+        actor.close()
+        assert json.loads((tmp_path/'unsettled-command.json').read_text())['op']=='broken-original', (
+            'A broken original frame cannot become a successful response under another command label'
+        )
+    finally:
+        if actor.process.poll() is None:actor.process.wait(timeout=2)
+        if not actor.process.stdout.closed:actor.process.stdout.close()
+        if not actor.stderr.closed:actor.stderr.close()
+
+
+def test_main_reader_complete_fifo_and_predicate_timeout_keep_usable_ownership(tmp_path):
+    program="import sys,json\nfor line in sys.stdin:\n x=json.loads(line);o=x['op'];print('ordinary library notice',flush=True);print(json.dumps({'host_error':'complete deliberate host failure'} if o=='host_failure' else {'ui':{'alive':True,'controls':[],'state':'idle','last_error':'','project':None},'reply':{'op':o,'value':''},'test_storage':sys.argv[1]}),flush=True)"
+    actor=MainActor.__new__(MainActor);actor.folder=tmp_path
+    actor.process=subprocess.Popen([sys.executable,'-c',program,str(tmp_path)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1);actor.stderr=actor.process.stderr
+    try:
+        assert actor.command('first')['reply']['op']=='first', (
+            'A normal complete FIFO reply remains correctly assigned while non-object diagnostic lines are retained'
+        )
+        with pytest.raises(AssertionError,match='did not settle'):
+            actor.until(lambda value:False,seconds=0.001)
+        assert json.loads((tmp_path/'command-boundary.json').read_text())['reply_observed'], (
+            'The lifecycle predicate fails only after an actual complete response, leaving no unread command obligation'
+        )
+        with pytest.raises(AssertionError,match='complete deliberate host failure'):
+            actor.command('host_failure')
+        assert actor.command('successor')['reply']['op']=='successor', (
+            'Fully replied predicate and correctly framed host errors do not poison a valid subsequent FIFO command'
+        )
+        assert (tmp_path/'last-lifecycle-receipt.json').is_file(), (
+            'Compact lifecycle diagnostics retain the complete original receipt in their existing local artifact'
+        )
+        actor.close()
+    finally:
+        if actor.process.poll() is None:
+            if not actor.process.stdin.closed:actor.process.stdin.close()
+            actor.process.wait(timeout=2)
+        if not actor.process.stdout.closed:actor.process.stdout.close()
+        if not actor.stderr.closed:actor.stderr.close()
