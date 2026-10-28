@@ -11,6 +11,7 @@
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 #include <memory>
+#include <functional>
 
 #include "edi/assistant.hpp"
 #include "row_table_model.hpp"
@@ -94,6 +95,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void archiveSession(const QString& threadId);
     Q_INVOKABLE void selectSession(const QString& threadId);
     QString sessionSelection() const;
+    Q_INVOKABLE bool sessionProjectRestorePending(const QString& intent = {}) const;
     Q_INVOKABLE bool beginSessionProjectRestore(const QString& intent);
     Q_INVOKABLE void cancelSessionSelection(const QString& intent = {});
     QString sessionDraft() const;
@@ -215,7 +217,8 @@ class AssistantViewModel : public QObject {
     bool commitNativeProject(ProjectViewModel* project) noexcept;
     // Existing ordinary Create dialog only; its captured original intent cannot
     // become an unauthenticated fallback after Stop/replacement.
-    bool prepareSessionProjectRestore(ProjectViewModel*,const QString& source);
+    bool prepareSessionProjectRestore(ProjectViewModel*,const QString& source,const std::function<bool()>& commit);
+    bool retainsSessionProject(ProjectViewModel*) const;
     bool prepareOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, const QString& location = {});
     void finishOrdinaryProjectCreationOutcome(const QString& intent, const QVariantMap& outcome) noexcept;
     void finishOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, bool committed) noexcept;

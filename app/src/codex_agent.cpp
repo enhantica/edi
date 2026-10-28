@@ -546,14 +546,20 @@ QString CodexAgent::request(const QString& method, const QJsonObject& params, co
 bool CodexAgent::notification(const QString& method, const QJsonObject& params) {
     return write({{QStringLiteral("method"), method}, {QStringLiteral("params"), params}});
 }
-bool CodexAgent::answer(const QJsonValue& originalId, const QJsonObject& result, void* preparation,
-                        bool (*handoff)(void*) noexcept) {
-    const auto key = idKey(originalId);
-    if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_))) return false;
-    if(native_work_id_==key && !endNativeWork(originalId,generation_))return false;
-    // Retire before delivery: an uncertain write never permits a repeated answer.
-    const auto id = server_requests_.take(key).id; pending_bytes_ -= server_sizes_.take(key);
-    return write({{QStringLiteral("id"), id}, {QStringLiteral("result"), result}}, {}, false, false, preparation, handoff);
+bool CodexAgent::answer(const QJsonValue& originalId,const QJsonObject& result,void* preparation,
+                        bool (*handoff)(void*) noexcept,const std::function<bool()>& admit) {
+    const auto key=idKey(originalId);const QPointer<CodexAgent> receiver(this);const QPointer<QProcess> process(process_);const auto epoch=generation_;
+    if(key.isEmpty() || !server_requests_.contains(key))return false;
+    // Account/current-question admission happens after optional-usage callbacks,
+    // before detaching the question or consuming the original response owner.
+    return write({{QStringLiteral("id"),originalId},{QStringLiteral("result"),result}},[&] {
+        if(admit && !admit())return false;
+        if(!receiver || process_!=process || generation_!=epoch || failed_ || !server_requests_.contains(key))return false;
+        if(human_wait_start_>=0 && human_wait_id_==key && !endHumanWait(originalId,epoch))return false;
+        if(native_work_id_==key && !endNativeWork(originalId,epoch))return false;
+        // Retire before actual delivery: an uncertain write still permits no repeat.
+        server_requests_.remove(key);pending_bytes_-=server_sizes_.take(key);return true;
+    },false,false,preparation,handoff);
 }
 bool CodexAgent::reject(const QJsonValue& originalId) {
     const auto key = idKey(originalId);

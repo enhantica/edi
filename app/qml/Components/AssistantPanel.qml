@@ -211,7 +211,7 @@ Popup {
                 if(!original.beginSessionProjectRestore(intent)){abandon();return;}
                 const opened=Session.openProject(location);
                 if(opened && Qt.isQtObject(original) && panel.assistant===original && original.sessionSelection===intent)original.continueSessionRestore(threadId);
-                else abandon();
+                else if(!Qt.isQtObject(original) || !original.sessionProjectRestorePending(intent))abandon();
             },abandon);
         }
         function onSessionConsentRequested(threadId) {
