@@ -171,6 +171,12 @@ class SingleCrystalReflectionModel : public RowTableModel {
     double low() const { return low_; }
     double high() const { return high_; }
     bool calculatedShown() const { return calculated_shown_; }
+    /// Original native reflection order, before optional table sorting.
+    qsizetype fileRowCount() const noexcept { return file_rows_.size(); }
+    /// Actual published cell; invalid for an absent row/role. Does not sync or sort.
+    QVariant fileValue(qsizetype row, const QString& role) const;
+    /// Whether calculated cells currently display a running fit frame.
+    bool showingFrame() const noexcept { return bool(frame_); }
     // The hover read-out of one reflection: h k l, the measured value with its su by the project's IUCr rule and the
     // calculated value to the same decimals, in F² or F; rich text, one line each.
     Q_INVOKABLE QString hoverText(int row, bool squared) const;

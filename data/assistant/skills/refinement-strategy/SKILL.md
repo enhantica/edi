@@ -5,7 +5,7 @@ description: Choose and revise a refinement strategy from actual model, data, na
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.4.1. This is scientific guidance for actually offered operations. The agent chooses the steps and stopping point from evidence and the user's goal; no finite staged recipe or pass count is mandatory.
+Version: 1.4.2. This is scientific guidance for actually offered operations. The agent chooses the steps and stopping point from evidence and the user's goal; no finite staged recipe or pass count is mandatory.
 
 Inspect the measured shape, units, weighting, exclusions, structure, calibration, current fit variables, constraints and diagnostics. Preserve input provenance and compare like objectives on comparable observations. A lower residual or a saved project alone does not establish a physically meaningful model. Distinguish an unavailable action, an unidentifiable variable and an observed scientific defect.
 
@@ -13,7 +13,7 @@ Import a supplied CIF by default unless manual entry is requested. Use the ordin
 
 Choose identifiable variable groups. With a credible model, cumulative release may be useful; divergence or strong correlations may justify a smaller temporary group and renewed diagnosis. Alternative starts or model families require actual supported operations and a restorable state. Ordinary fit Undo is a single current opportunity, not a checkpoint bank. Respect actual native fittability and preserve explicit calibration anchors, chemical composition, symmetry constraints and requested flags.
 
-For powder data, use actual peak alignment and residual shape to distinguish position, profile and relative-intensity problems when choosing a group. Preserve supplied calibration anchors; broadening a displaced calculated pattern is not an alignment correction.
+For powder data, distinguish peak-position, width/shape, background and relative-intensity mismatch using actual measured/calculated/residual slices from inspect_data. Structural refinement can require diagnosing instrument/profile terms as well as the structure. Native defaults and values entered for setup, including zero, are starts unless the user or input establishes them as calibration anchors. Preserve genuinely known wavelength/calibration, composition and symmetry; broadening a displaced calculated pattern is not an alignment correction.
 
 Assess each trial before another fit: inspect adoption, actual parameter changes and physical profile behavior over the measured range through available native evidence. Signed profile coefficients alone do not establish an invalid profile. If an adopted trial is unphysical or otherwise rejected and its native fit Undo is available, use it before another fit consumes that opportunity, then inspect the restored state. A refused or unadopted trial does not authorize undoing earlier accepted science. Do not continue refining on a rejected profile or claim an unavailable physical check.
 
