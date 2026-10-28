@@ -709,7 +709,10 @@ class Rows : public RowTableModel {
             pending_ = false;
             const auto& source = canonical_ ? *canonical_ : own_;
             QJsonArray projected;
-            for(const auto& value:source)projected.append(canonical_?message_display_row(value.toObject()):value);
+            for(const auto& value:source) {
+                if(canonical_)projected.append(message_display_row(value.toObject()));
+                else projected.append(value);
+            }
             visible_=std::move(projected); // Only lightweight display values reach the model.
             QList<Row> rows; rows.reserve(visible_.size());
             for (qsizetype i = 0; i < visible_.size(); ++i)
