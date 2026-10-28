@@ -1320,6 +1320,9 @@ struct AssistantViewModel::State {
 #endif
     struct SkillSourceSelection {QString id;FileProjection proof;quint64 serial=0;};
     std::optional<SkillSourceSelection> skill_source_selection;
+    void release_skill_source_selection(const QString& token) noexcept {
+        if(skill_source_selection && skill_source_selection->id==token)skill_source_selection.reset();
+    }
 #ifndef __EMSCRIPTEN__
     std::shared_ptr<AssistantSkillWebImport> skill_web_import;
     QString skill_web_token;
@@ -16759,14 +16762,17 @@ bool AssistantViewModel::addWebSkillSource(const QString& token,const QUrl& url)
     const QPointer<AssistantViewModel> receiver(this);auto* original=state_.get();
     if(QThread::currentThread()!=thread() || !original->skill_source_selection || original->skill_source_selection->id!=token || original->skill_web_import)return false;
     const auto proof=original->skill_source_selection->proof;const auto serial=original->skill_source_selection->serial;
-    if(!proof.input_current() || serial!=original->skill_source_serial || canCancel())return false;
+    if(!proof.input_current() || serial!=original->skill_source_serial || canCancel()) {
+        original->release_skill_source_selection(token);emit skillSourcesChanged();return false;
+    }
     try {
         auto task=AssistantSkillWebImport::start(this,url,[receiver,original,proof,serial,token](std::unique_ptr<QTemporaryDir> folder,QString label,QString failure) {
             if(!receiver || receiver->state_.get()!=original)return;
             const auto owned=[&]{return proof.input_current() && serial==original->skill_source_serial &&
                 original->skill_source_selection && original->skill_source_selection->id==token;};
             original->retire_web_skill_import(token);
-            if(!owned()){emit receiver->skillSourcesChanged();return;}
+            if(!receiver || receiver->state_.get()!=original)return;
+            if(!owned()){original->release_skill_source_selection(token);emit receiver->skillSourcesChanged();return;}
             try {
                 if(!failure.isEmpty())throw std::runtime_error(failure.toStdString());
                 if(!folder || receiver->canCancel())throw std::runtime_error("The original skill import changed before admission.");
@@ -16776,7 +16782,7 @@ bool AssistantViewModel::addWebSkillSource(const QString& token,const QUrl& url)
                 // The SAME original parser captures complete companion files and
                 // validates names/duplicates/bytes before any configuration write.
                 (void)capture_skill_sources(rows);
-                if(!owned())return;
+                if(!owned()) {original->release_skill_source_selection(token);emit receiver->skillSourcesChanged();return;}
                 // A later uncertain settings write may refer to this exact path;
                 // retain it rather than delete a potentially admitted source.
                 folder->setAutoRemove(false);
@@ -16788,26 +16794,39 @@ bool AssistantViewModel::addWebSkillSource(const QString& token,const QUrl& url)
                 throw std::runtime_error("Skill source capture is unavailable on this platform.");
 #endif
             }catch(const std::exception& error) {
-                if(!receiver || receiver->state_.get()!=original || !proof.input_current() || original->skill_source_serial!=serial)return;
-                if(original->skill_source_selection && original->skill_source_selection->id==token)original->skill_source_selection.reset();
+                if(!receiver || receiver->state_.get()!=original)return;
+                original->release_skill_source_selection(token);
+                if(!proof.input_current() || original->skill_source_serial!=serial){emit receiver->skillSourcesChanged();return;}
                 original->skill_source_error=State::bounded_error(QString::fromUtf8(error.what()));emit receiver->skillSourcesChanged();
             }catch(...) {
-                if(receiver && receiver->state_.get()==original && proof.input_current() && original->skill_source_serial==serial) {
-                    original->skill_source_selection.reset();original->skill_source_error=tr("The web skill source could not be captured or validated.");emit receiver->skillSourcesChanged();
+                if(receiver && receiver->state_.get()==original) {
+                    original->release_skill_source_selection(token);
+                    if(proof.input_current() && original->skill_source_serial==serial)original->skill_source_error=tr("The web skill source could not be captured or validated.");
+                    emit receiver->skillSourcesChanged();
                 }
             }
         });
-        if(!proof.input_current() || original->skill_source_serial!=serial || !original->skill_source_selection || original->skill_source_selection->id!=token){task->cancel();return false;}
+        if(!proof.input_current() || original->skill_source_serial!=serial || !original->skill_source_selection || original->skill_source_selection->id!=token) {
+            task->cancel();
+            if(receiver && receiver->state_.get()==original){original->release_skill_source_selection(token);emit skillSourcesChanged();}
+            return false;
+        }
         original->skill_web_import=std::move(task);original->skill_web_token=token;
         original->skill_web_retirement=QObject::connect(this,&AssistantViewModel::skillSourceSelectionRetired,this,[receiver,original,token](const QString& retired) {
             if(retired==token && receiver && receiver->state_.get()==original){original->retire_web_skill_import(token);emit receiver->skillSourcesChanged();}
         });
         emit skillSourcesChanged();return receiver && receiver->state_.get()==original && bool(original->skill_web_import);
     }catch(const std::exception& failure) {
-        if(receiver && receiver->state_.get()==original && proof.input_current() && original->skill_source_serial==serial) {
-            original->skill_source_selection.reset();original->skill_source_error=State::bounded_error(QString::fromUtf8(failure.what()));emit skillSourcesChanged();
+        if(receiver && receiver->state_.get()==original) {
+            original->release_skill_source_selection(token);
+            if(proof.input_current() && original->skill_source_serial==serial)original->skill_source_error=State::bounded_error(QString::fromUtf8(failure.what()));
+            emit skillSourcesChanged();
         }
-    }catch(...) {if(receiver && receiver->state_.get()==original && proof.input_current()) {original->skill_source_selection.reset();original->skill_source_error=original->skill_source_operation_error;emit skillSourcesChanged();}}
+    }catch(...) {if(receiver && receiver->state_.get()==original) {
+        original->release_skill_source_selection(token);
+        if(proof.input_current() && original->skill_source_serial==serial)original->skill_source_error=original->skill_source_operation_error;
+        emit skillSourcesChanged();
+    }}
 #else
     Q_UNUSED(token);Q_UNUSED(url);
 #endif
