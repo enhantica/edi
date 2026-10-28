@@ -5453,3 +5453,87 @@ def test_native_estimate_then_ids_matches_separate_original_methods_and_undo_seq
     (actor.folder / 'ordinary-estimate-name-reference.json').write_text(json.dumps({
         'original': original, 'raw_estimate': raw, 'named': named, 'undo_states': undo_states,
         'mode': show_actions, 'native_receipt': result}, indent=2))
+
+
+def _session_page_fixture(actor, *, foreign=24, owned=96, page=12):
+    original = _session_fixture(actor)
+    template = original['thread_list']['threads'][0]
+    rows = []
+    for index in range(foreign + owned):
+        is_foreign = index < foreign
+        row = {**template, 'id': '019a0290-0000-7000-a000-' + f'{index + 1:012d}',
+               'name': ('Foreign' if is_foreign else 'App conversation') + ' ' + str(index),
+               'originator': 'unrelated-editor' if is_foreign else 'edi',
+               'updatedAt': 1800000000 - index, 'parentThreadId': None}
+        rows.append(row)
+    path = actor.folder / 'peer.json';config = json.loads(path.read_bytes())
+    config['session_fixture'].update(threads=rows, page_size=page, list_only_fixture_threads=True)
+    path.write_text(json.dumps(config))
+    return rows
+
+
+def test_sessions_prefetch_near_real_scroll_boundary_and_skip_empty_filtered_pages(main_actor):
+    actor = main_actor([[]]);fixture = _session_page_fixture(actor)
+    actor.connect();actor.command('click', name='assistant.sessions')
+    actor.until(lambda _value: _rows_probe(actor, model='sessions')['count'] > 0
+                and not qml(actor, 'Session.assistant.sessionsLoading'))
+    initial = _rows_probe(actor, model='sessions')['count']
+    owned = [row for row in fixture if row['originator'] == 'edi']
+    assert 0 < initial < len(owned) and qml(actor, 'Session.assistant.sessionsHaveMore'), (
+        'Open follows initial/empty filtered pages but does not eagerly drain all runtime pages at the top')
+    requests = lambda: [row for row in map(json.loads, actor.trace.read_text().splitlines())
+                       if row.get('method') == 'thread/list']
+    assert len(requests()) >= 3, 'Empty foreign-only initial pages advance automatically before concluding the table is empty'
+    more = qml(actor, _whole_window_objects_expression()
+               + '.filter(x=>x.visible&&typeof x.text==="string"&&x.text==="More sessions").length')
+    assert more == 0, 'The ordinary scrollable session browser exposes no manual More link'
+    original_count = len(requests());samples=[];deadline=time.monotonic()+10
+    while time.monotonic() < deadline and len(requests()) == original_count:
+        samples.append(actor.command('session_wheel', angle_y=-120)['reply'])
+    assert samples and any(row['accepted'] and row['content_y_after'] > row['content_y_before'] for row in samples), (
+        'Prefetch is judged only after a real wheel is accepted and moves the original exposed session viewport')
+    assert all(row['same_window'] and row['same_source_model'] for row in samples), (
+        'Ordinary wheel delivery stays on its exact original Main viewport/model owner')
+    actor.until(lambda _value: not qml(actor, 'Session.assistant.sessionsLoading'))
+    after = [_rows_values(actor, 'sessions', i) for i in range(_rows_probe(actor, model='sessions')['count'])]
+    assert len(requests()) > original_count and len(after) > initial, (
+        'Approaching the actual scroll boundary asynchronously requests and publishes the next supported cursor page')
+    expected = {row['id']: row['updatedAt'] for row in owned}
+    assert len({row['id'] for row in after}) == len(after) and all(row['id'] in expected for row in after), (
+        'Prefetch retains unique app-owned rows without admitting foreign metadata')
+    assert [expected[row['id']] for row in after] == sorted((expected[row['id']] for row in after), reverse=True), (
+        'Actual last-modified ordering survives incremental page publication')
+    (actor.folder / 'session-wheel-prefetch.json').write_text(json.dumps({
+        'initial_rows':initial,'after_rows':len(after),'wheel':samples,
+        'list_requests':[row['params'] for row in requests()]},indent=2))
+
+
+def test_session_names_keep_semantic_prefix_strip_legacy_context_and_center_archive(main_actor):
+    actor = main_actor([[]]);original = _session_fixture(actor)
+    rows = original['thread_list']['threads'][:3]
+    rows[0].update(name='Powder refinement')
+    rows[1].update(name='Shared displacement comparison\n\nEDI_APPROVED_CONTEXT {"path":"/tmp/private-stage","files":[1]}')
+    rows[2].update(name=None, preview='Compare the measured profile.\n\nEDI_APPROVED_CONTEXT\n{"path":"/tmp/private-stage"}')
+    path=actor.folder/'peer.json';config=json.loads(path.read_bytes())
+    config['session_fixture'].update(threads=rows,page_size=12,list_only_fixture_threads=True);path.write_text(json.dumps(config))
+    actor.connect();actor.command('click',name='assistant.sessions');published=_session_wait(actor)
+    actual={row['id']:row['name'] for row in published}
+    assert actual[rows[0]['id']]=='Powder refinement', 'An already concise meaningful runtime title retains its actual human text'
+    assert 'Shared displacement comparison' in actual[rows[1]['id']], (
+        'Legacy technical suffix stripping preserves the original meaningful human title prefix')
+    assert all(name and '\n' not in name and 'EDI_APPROVED_CONTEXT' not in name and '/tmp/' not in name
+               and '{' not in name and '"files"' not in name for name in actual.values()), (
+        'Session display names never expose serialized approved context, machine paths or multiline technical payload')
+    state=json.loads(actor.trace.with_suffix('.provider-state.json').read_bytes())
+    assert all(state['threads'][row['id']]['name']==row['name'] and state['threads'][row['id']]['preview']==row['preview']
+               for row in rows), 'Readonly display fallback keeps the full original runtime metadata bytes separately'
+    button=control_expression('assistant.session.archive.0')
+    icon=qml(actor,'(function(){const b='+button+';if(!b||!b.contentItem)return null;const c=b.contentItem,p=c.mapToItem(b,0,0);'
+             'return {visible:b.visible,enabled:b.enabled,width:b.width,height:b.height,x:p.x,y:p.y,cw:c.width,ch:c.height,'
+             'textWidth:c.contentWidth,textHeight:c.contentHeight,horizontal:c.horizontalAlignment,vertical:c.verticalAlignment};})()')
+    assert icon and icon['visible'] and icon['enabled'], 'The Archive centering witness reaches the genuine original idle row button'
+    assert abs(icon['x']+icon['cw']/2-icon['width']/2)<=1 and abs(icon['y']+icon['ch']/2-icon['height']/2)<=1, (
+        'Original Archive content remains centered in its actual same-sized table button')
+    assert (icon['horizontal'] & 4 or abs(icon['cw']-icon['textWidth'])<=1) \
+        and (icon['vertical'] & 128 or abs(icon['ch']-icon['textHeight'])<=1), (
+        'Actual archive glyph alignment is centered, rather than only a full-width left-aligned content box')

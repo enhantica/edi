@@ -419,6 +419,14 @@ for line in sys.stdin:
         thread_id = params['threadId']
         reply(request, {'thread': saved_thread(not params.get('includeTurns', False))})
         thread_id = original_id
+    elif method == 'thread/name/set':
+        assert set(params) == {'threadId', 'name'} and isinstance(params['name'], str)
+        if params['threadId'] not in state['threads']:
+            emit({'id': request['id'], 'error': {'code': -32000, 'message': 'Original session unavailable'}})
+        else:
+            state['threads'][params['threadId']]['name'] = params['name']
+            persist()
+            reply(request, {})
     elif method == 'thread/settings/update':
         assert params['threadId'] == thread_id
         assert params.get('approvalPolicy', 'never') == 'never'
