@@ -5556,6 +5556,31 @@ def _session_configure(actor, **settings):
     path.write_text(json.dumps(value))
 
 
+def _session_request_with_original_disclosure(actor, text):
+    # Positive fixture prelude only. Genuine current dialog acceptance preserves
+    # the captured draft; neither approval state nor provider inputs are seeded.
+    required = actor.last['ui']['context_consent_required']
+    actor.request(text)
+    if required and actor.last['ui']['context_consent_required']:
+        def current_disclosure(value):
+            controls = value['ui']['controls']
+            def exposed(name):
+                return any(row['name'] == name and row['fully_exposed'] and row['enabled']
+                           for row in controls)
+            return exposed('AssistantConnectionDialog') and exposed('assistant.contextDisclosureScroll')
+        actor.until(current_disclosure)
+        before = len(_session_state(actor)['inputs'])
+        assert actor.command('accept_dialog')['reply']['accepted'], (
+            'The original currently exposed disclosure owner accepts its captured fixture draft through the normal dialog operation')
+        actor.until(lambda value: not value['ui']['context_consent_required'])
+        (actor.folder / ('original-disclosure-acceptance-' + str(before) + '.json')).write_text(json.dumps({
+            'original_pending_input_count': before,
+            'disclosure_owner': 'AssistantConnectionDialog',
+            'scope': 'positive fixture prelude; no seeded approval or injected user input',
+            'after': {'connected': actor.last['ui']['connected'],
+                      'context_consent_required': actor.last['ui']['context_consent_required']}}, indent=2))
+
+
 def _session_completed(actor, count):
     actor.until(lambda value: value['ui']['state'] == 'idle'
                 and len(_session_state(actor)['inputs']) == count
@@ -6426,7 +6451,7 @@ def test_ordinary_restart_reopens_actual_last_thread_project_all_history_and_ori
     file_id = actor.last['ui']['selected_files'][0]['id']
     actor.configure_turns([[tool_call('read_selected_file', 'original-pre-restart-native-read', file_id=file_id, offset=0, max_bytes=source.stat().st_size)]])
     original_task = 'Keep this actual original project and attached CIF for a later continuation.'
-    actor.request(original_task);_session_completed(actor, 1);native_result(actor.responses()[0])
+    _session_request_with_original_disclosure(actor, original_task);_session_completed(actor, 1);native_result(actor.responses()[0])
     first = _session_state(actor)['inputs'][0];thread = first['threadId']
     original_manifest = actor.command('inspect')['ui']['selected_files']
     first_rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
@@ -6610,43 +6635,69 @@ def test_same_account_mode_notification_before_cold_selection_read_preserves_exa
 
 
 def test_failed_original_input_preparation_preserves_usable_current_thread_and_precise_cause(main_actor, tmp_path):
+    # The old changed-input premise is retained in the app18-critical2 preimage:
+    # unavailable old attachments may honestly permit a partial restore. This
+    # case requires a real fatal preparation failure, not that stronger policy.
     actor = main_actor([[], [], []]);_session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
     actor.connect();source = _attachment_fixtures(tmp_path, 1)[0];original_bytes = source.read_bytes()
     token = actor.begin_current_file_selection()
     assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
         'Target preparation is associated with an actually admitted original file, not a fabricated saved record')
-    actor.request('Original target conversation retains this exact admitted input identity.');_session_completed(actor, 1)
+    _session_request_with_original_disclosure(actor, 'Original target conversation retains this exact admitted input identity.');_session_completed(actor, 1)
     target = _session_state(actor)['inputs'][0]['threadId']
     actor.command('click', name='assistant.clear');actor.until(lambda value: not value['ui']['messages'])
     actor.request('The current separate conversation remains usable if the target cannot prepare.');_session_completed(actor, 2)
     current = _session_state(actor)['inputs'][1]['threadId'];account = qml(actor, 'Session.assistant.account')
-    original_stat = source.stat();source.write_bytes(original_bytes + b'\n_audit_update_record "explicit changed-input negative fixture"\n')
+    original_stat = source.stat()
+    starts = _session_wire(actor, 'thread/start')
+    current_workspace = Path(starts[-1]['params']['cwd']).resolve()
+    storage = Path(actor.last['test_storage']).resolve()
+    parent = current_workspace.parent.parent
+    assert current_workspace.is_relative_to(storage) and parent.is_relative_to(storage) \
+        and parent.name == 'agent' and parent.parent.name == 'assistant', (
+            'The storage fault targets only the exact genuine fixture-owned preparation parent recorded by the real thread bootstrap')
+    original_mode = parent.stat().st_mode & 0o777
+    assert os.geteuid() != 0 and parent.stat().st_uid == os.geteuid() \
+        and os.access(current_workspace, os.R_OK | os.W_OK | os.X_OK), (
+            'The actual fixture user owns the narrowly scoped parent and the existing current workspace remains usable before the fault')
+    actor.command('click', name='assistant.sessions');_session_wait(actor)
+    parent.chmod(original_mode & ~0o222)
     try:
-        assert source.stat().st_ino == original_stat.st_ino and source.read_bytes() != original_bytes, (
-            'The negative preparation witness genuinely changes the original file bytes without substituting a new identity or editing saved settings')
-        actor.command('click', name='assistant.sessions');_session_wait(actor)
-        boundary = len(_session_wire(actor, 'thread/resume'))
+        assert not os.access(parent, os.W_OK) and os.access(current_workspace, os.R_OK | os.W_OK | os.X_OK), (
+            'Only new preparation-directory creation is denied; existing current workspace access is preserved')
+        before = len(_session_wire(actor, 'thread/resume'))
         click = actor.command('session_row_click', thread_id=target)['reply']
-        assert click['reached'] and click['actual_pressed_changes'] > 0, 'Failed target preparation is reached through actual original session selection input'
+        assert click['reached'] and click['actual_pressed_changes'] > 0, (
+            'Fatal target preparation is reached through actual original session-selection input')
         actor.until(lambda _value: not qml(actor, 'Session.assistant.sessionsLoading'))
         cause = qml(actor, 'Session.assistant.sessionsError')
-        assert cause and re.search(r'\b(input|file|attachment|identity|changed)\b', cause, re.I), (
-            'The actual changed-input preparation cause survives as a bounded concrete diagnostic instead of a generic abandoned-selector fallback')
+        assert cause and re.search(r'\b(workspace|storage|prepar\w*|permission|directory|writ\w*)\b', cause, re.I), (
+            'The actual fatal target workspace/storage preparation cause survives instead of a generic abandoned-selector fallback')
         assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
-            'Fallible original-input preparation must finish before retiring the still-usable actual current connection')
-        assert len(_session_wire(actor, 'thread/resume')) == boundary, 'An unprepared target cannot be falsely adopted or resumed against replacement current inputs'
-        actor.command('manual_key', key='escape')
-        actor.request('Continue the still-current original conversation after the refused target.')
-        _session_completed(actor, 3)
-        followup = _session_state(actor)['inputs'][-1]
-        assert followup['threadId'] == current and followup['actual_prior_input_count'] == 1, (
-            'After target refusal, genuine next work remains on the previous viable thread and does not execute an abandoned target intent')
-        (actor.folder / 'failed-target-usable-original.json').write_text(json.dumps({
+            'Fatal target preparation finishes before retiring the still-usable actual current connection')
+        assert len(_session_wire(actor, 'thread/resume')) == before, (
+            'An unprepared target cannot be falsely adopted or resumed')
+        assert source.read_bytes() == original_bytes and source.stat().st_ino == original_stat.st_ino, (
+            'Original admitted bytes and physical input identity stay unchanged throughout the storage-only fault')
+        (actor.folder / 'fatal-target-preparation-boundary.json').write_text(json.dumps({
             'target': target, 'surviving_current': current, 'actual_error': cause,
+            'actual_current_workspace': str(current_workspace), 'preparation_parent': str(parent),
+            'parent_mode_before': original_mode, 'parent_mode_during': parent.stat().st_mode & 0o777,
+            'existing_workspace_accessible': os.access(current_workspace, os.R_OK | os.W_OK | os.X_OK),
             'original_file_sha256': hashlib.sha256(original_bytes).hexdigest(),
-            'changed_file_sha256': hashlib.sha256(source.read_bytes()).hexdigest(), 'actual_followup': followup}, indent=2))
+            'actual_physical_click': click}, indent=2))
     finally:
-        source.write_bytes(original_bytes)
+        parent.chmod(original_mode)
+    actor.command('manual_key', key='escape')
+    actor.request('Continue the still-current original conversation after the refused target.')
+    _session_completed(actor, 3)
+    followup = _session_state(actor)['inputs'][-1]
+    assert followup['threadId'] == current and followup['actual_prior_input_count'] == 1, (
+        'After target refusal, genuine next work remains on the previous viable thread without executing an abandoned target intent')
+    (actor.folder / 'failed-target-usable-original.json').write_text(json.dumps({
+        'target': target, 'surviving_current': current, 'actual_followup': followup,
+        'fault_boundary': 'fatal-target-preparation-boundary.json',
+        'original_file_sha256': hashlib.sha256(original_bytes).hexdigest()}, indent=2))
 
 # Actual FIRST message/document/resource/input owners, not a TeX test parser.
 def _genuine_math_message(main_actor, source):
