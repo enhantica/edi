@@ -8,7 +8,8 @@
 #include <vector>
 #include "edi/edit.hpp"
 namespace edi_app {
-// Only these concrete implemented actions are registered with the official agent.
+// These concrete actions form the default official-agent advertisement.
+// Strict compatibility dispatch is separate from this names/specification list.
 // Names-only discovery never constructs registry-backed schemas.
 QJsonArray assistant_native_tool_names();
 // Callback-free preflight over borrowed registered tokens. Caller reserves this
