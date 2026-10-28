@@ -2228,7 +2228,7 @@ struct AssistantViewModel::State {
         }catch(const std::exception& error) {
             if(!current()) {
                 if(receiver && receiver->state_.get()==this && request.kind=="select-read")fail_session_operation(request.operation,request.target,
-                    error.isEmpty()?QObject::tr("The selected conversation could not be prepared. No earlier action was replayed."):error);
+                    this->error.isEmpty()?QObject::tr("The selected conversation could not be prepared. No earlier action was replayed."):this->error);
                 return;
             }
             if(request.kind=="name"){retireName();return;}
@@ -2237,7 +2237,7 @@ struct AssistantViewModel::State {
         }catch(...) {
             if(!current()) {
                 if(receiver && receiver->state_.get()==this && request.kind=="select-read")fail_session_operation(request.operation,request.target,
-                    error.isEmpty()?QObject::tr("The selected conversation could not be prepared. No earlier action was replayed."):error);
+                    this->error.isEmpty()?QObject::tr("The selected conversation could not be prepared. No earlier action was replayed."):this->error);
                 return;
             }
             if(request.kind=="name"){retireName();return;}

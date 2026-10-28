@@ -5,6 +5,7 @@
 #include <QPointer>
 #include <QString>
 #include <vector>
+#include <utility>
 #include <cstdint>
 #include <functional>
 #include <memory>
