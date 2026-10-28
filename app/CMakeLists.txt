@@ -5,6 +5,7 @@
 
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml)
 include(${PROJECT_SOURCE_DIR}/cmake/EdiGuiBase.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/EdiAssistantMath.cmake)
 
 # What the app tells its user about itself (ApplicationInfo): configured once, from git when available.
 execute_process(COMMAND git -C ${PROJECT_SOURCE_DIR} describe --tags --always --dirty
@@ -251,6 +252,10 @@ target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR}
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
+if(NOT EMSCRIPTEN)
+    target_link_libraries(edi_app_module PRIVATE EdiMath::JKQTMathTextEdi)
+    target_compile_definitions(edi_app_module PRIVATE EDI_HAS_NATIVE_MATH=1)
+endif()
 if(EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE Qt6::GuiPrivate)
 endif()
@@ -324,7 +329,9 @@ qt_add_resources(edi_app_module "edi_example_index" PREFIX "/edi/examples"
 # ...), beside the built app, and installed with it.
 set(EDI_APP_LICENCE_FILES
     ${PROJECT_SOURCE_DIR}/COPYING ${PROJECT_SOURCE_DIR}/LICENSE ${PROJECT_SOURCE_DIR}/THIRD-PARTY-NOTICES
-    ${PROJECT_SOURCE_DIR}/DEPENDENCIES.md ${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md)
+    ${PROJECT_SOURCE_DIR}/DEPENDENCIES.md ${PROJECT_SOURCE_DIR}/app/DISTRIBUTION-LICENSE.md
+    ${PROJECT_SOURCE_DIR}/data/assistant/math/JKQtPlotter-LICENSE
+    ${PROJECT_SOURCE_DIR}/data/assistant/math/XITS-OFL.txt)
 # Stored uncompressed, so the texts stay readable in the binary itself as well.
 qt_add_resources(edi_app_module "edi_licences" PREFIX "/" BASE ${PROJECT_SOURCE_DIR}
                  OPTIONS --no-compress FILES ${EDI_APP_LICENCE_FILES})
