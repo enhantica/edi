@@ -3,6 +3,7 @@
 #include "background_input.hpp"
 #include "assistant_recipe_refusal.hpp"
 #include "../../core/src/assistant_parameter_edits.hpp"
+#include "../../core/src/import_symmetry.hpp"
 #include "edi/assistant_files.hpp"
 #include "edi/assistant_limits.hpp"
 #include "edi/selectors.hpp"
@@ -163,6 +164,7 @@ edi::Structure mapped_structure(const Object& source) {
         if (row.contains("wyckoff_letter")) site->wyckoff_letter=token(row,"wyckoff_letter",true);
         const char* keys[]={"fract_x","fract_y","fract_z","occupancy"};auto parameters=site->parameters();
         for(std::size_t i=0;i<4;++i)edi::assign_value(*parameters[i],finite(row,keys[i]));
+        if(!row.contains("wyckoff_letter"))site->wyckoff_letter=edi::detail::inferred_wyckoff_letter(result,*site);
         result.atom_sites.push_back(std::move(site)); // original ItemVec rejects duplicate keys
     }
     for(qsizetype index=0;index<adps.size();++index) {

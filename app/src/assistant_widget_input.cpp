@@ -235,6 +235,16 @@ bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool
         if (!std::isfinite(box.width()) || !std::isfinite(box.height()) || box.width() <= 0 || box.height() <= 0) return false;
         localCenter = box.center();
     }
+    if(item.inherits("QQuickTextEdit")) {
+        // A multiline editor can grow beyond its unchanged ScrollView. Its
+        // actual clipped editor area remains the genuine pointer target.
+        auto exposed=item.mapRectToScene(QRectF(0,0,item.width(),item.height()));
+        exposed=exposed.intersected(QRectF(0,0,window_->width(),window_->height()));
+        for(auto* ancestor=&item;ancestor;ancestor=ancestor->parentItem())
+            if(ancestor->clip())exposed=exposed.intersected(ancestor->mapRectToScene(ancestor->clipRect()));
+        if(exposed.isEmpty())return false;
+        localCenter=item.mapFromScene(exposed.center());
+    }
     center = item.mapToScene(localCenter);
     if (!std::isfinite(center.x()) || !std::isfinite(center.y()) || !QRectF(0, 0, window_->width(), window_->height()).contains(center)) return false;
     for (auto* ancestor = &item; ancestor; ancestor = ancestor->parentItem()) {

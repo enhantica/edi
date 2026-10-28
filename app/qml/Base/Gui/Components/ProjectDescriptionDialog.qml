@@ -144,7 +144,7 @@ EaElements.Dialog {
             MultiLineField {
                 id: projectDescriptionField
 
-                objectName: "createProject.description"
+                editorObjectName: "createProject.description"
                 implicitWidth: dialog.inputFieldWidth
                 placeholderText: qsTr("Enter project description here")
             }
