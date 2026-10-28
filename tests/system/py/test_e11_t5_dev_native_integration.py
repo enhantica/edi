@@ -4087,3 +4087,197 @@ def test_recognized_preparation_categories_survive_actual_wire_and_byte_projecti
         assert wire['code']==code and wire['diagnostics'][0]['code']==diagnostic and wire['message']=='Scoped native validation Ω', (
             'Literal original category meanings survive real materialization rather than only a constructed catch object'
         )
+
+
+"""Private assembly for the existing Main actor; no product state or new runner."""
+class HistorySyncGate:
+    def __init__(self, folder):
+        self.folder = folder
+        self.control = folder / 'history-sync-control'
+        self.receipt = folder / 'history-sync-receipt.jsonl'
+        self.release = folder / 'release-history-sync'
+        self.epoch = 0
+        self.target = None
+
+    def rows(self):
+        return [json.loads(line) for line in self.receipt.read_text().splitlines()] if self.receipt.exists() else []
+
+    def arm(self, actor, mode):
+        storage = Path(actor.last['test_storage']).resolve()
+        candidates = list(storage.rglob('assistant/history.json'))
+        assert len(candidates) == 1, 'The hold targets the actual normal canonical file created by genuine prior user work'
+        self.target = candidates[0]
+        assert self.target.resolve().is_relative_to(storage) and not self.target.is_symlink()
+        assert self.target.stat().st_mode & 0o777 == 0o600
+        assert '\n' not in str(self.target) and '\n' not in str(self.release)
+        self.epoch += 1
+        (self.folder / f'history-before-{self.epoch}.json').write_bytes(self.target.read_bytes())
+        (self.folder / f'history-target-{self.epoch}.json').write_text(json.dumps({'target':str(self.target),'mode':mode,'epoch':self.epoch})+'\n')
+        self.release.unlink(missing_ok=True)
+        temporary = self.control.with_suffix('.new')
+        temporary.write_text(f'{mode}\n{self.target}\n{self.release}\n{self.epoch}\n')
+        temporary.replace(self.control)
+
+    def opened(self):
+        return any(row['epoch'] == self.epoch and row['phase'] == 'entered' for row in self.rows())
+
+    def disk(self):
+        return json.loads(self.target.read_text())
+
+    def finish(self):
+        self.release.touch()
+        self.control.unlink(missing_ok=True)
+        if self.target and self.target.is_file():
+            (self.folder / f'history-at-release-{self.epoch}.json').write_bytes(self.target.read_bytes())
+
+
+def seeded_history_actor(main_actor, gate, *, calls, project, hold_final=True):
+    actor = main_actor([[], calls], hold_final=hold_final)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    actor.gate.touch()
+    actor.connect()
+    actor.request('Establish ordinary canonical history before the independent persistence boundary.')
+    actor.until(lambda row: row['ui']['state'] == 'idle' and not row['ui']['can_cancel'])
+    candidates = list(Path(actor.last['test_storage']).rglob('assistant/history.json'))
+    actor.until(lambda row: bool(list(Path(row['test_storage']).rglob('assistant/history.json'))))
+    gate.target = next(Path(actor.last['test_storage']).rglob('assistant/history.json'))
+    actor.until(lambda row: any(x.get('text') == 'Establish ordinary canonical history before the independent persistence boundary.' for x in gate.disk()))
+    actor.gate.unlink()
+    return actor
+
+
+def canonical_row_map(rows):
+    return {row['id']: row for row in rows}
+
+
+def assert_canonical_disk_row(disk, expected):
+    rows = canonical_row_map(disk)
+    assert expected['id'] in rows, 'The actual native receipt survives the full canonical disk snapshot'
+    actual = rows[expected['id']]
+    for key in ('kind', 'status', 'text', 'payload', 'workScope'):
+        if key in expected:
+            assert actual[key] == expected[key], 'Disk retains exact canonical native/evidence fields, not a producer success flag'
+
+
+@pytest.fixture(scope='module')
+def history_sync_library(tmp_path_factory):
+    folder=tmp_path_factory.mktemp('canonical-history-actual-sync')
+    library=folder/'history-sync.so'
+    command=['cc','-shared','-fPIC','-std=c11','-Wall','-Wextra','-Werror','-I',str(ROOT/'tests/fixtures/report_storage'),str(ROOT/'tests/fixtures/report_storage/history_sync.c'),'-o',str(library),*([] if sys.platform=='darwin' else ['-ldl'])]
+    result=subprocess.run(command,capture_output=True,text=True,timeout=20)
+    assert result.returncode==0,result.stderr
+    (folder/'compile-command.json').write_text(json.dumps(command)+'\n')
+    return library
+
+@pytest.fixture
+def history_sync_gate(tmp_path,monkeypatch,history_sync_library):
+    gate=HistorySyncGate(tmp_path)
+    monkeypatch.setenv('DYLD_INSERT_LIBRARIES' if sys.platform=='darwin' else 'LD_PRELOAD',str(history_sync_library))
+    monkeypatch.setenv('EDI_TEST_HISTORY_CONTROL',str(gate.control))
+    monkeypatch.setenv('EDI_TEST_HISTORY_RECEIPT',str(gate.receipt))
+    yield gate
+    gate.finish()
+
+
+def history_poll(predicate,seconds=30):
+    end=time.monotonic()+seconds
+    while time.monotonic()<end:
+        try:
+            value=predicate()
+            if value:return value
+        except (FileNotFoundError,json.JSONDecodeError):pass
+        time.sleep(.005)
+    raise AssertionError('Actual bounded history-file/receipt condition was not observed')
+
+
+def test_history_sync_keeps_main_heartbeat_stop_native_once_and_complete_disk_rows(main_actor,tmp_path,history_sync_gate):
+    gate=history_sync_gate
+    project=copied_estimate_project(tmp_path)
+    calls=[tool_call('set_free','history-once-free',flags=[{'path':'experiment.instrument.calib_twotheta_offset','free':True}])]
+    actor=seeded_history_actor(main_actor,gate,calls=calls,project=project)
+    baseline=gate.disk()
+    qml(actor,'Qt.createQmlObject(\'import QtQuick; Item { objectName: "e11.history.heartbeat"; visible:false; property int ticks:0; Timer { interval:1; repeat:true; running:true; onTriggered:parent.ticks++ } }\',contentItem) !== null')
+    heartbeat=control_expression('e11.history.heartbeat')+'.ticks'
+    before=qml(actor,heartbeat)
+    try:
+        gate.arm(actor,'hold')
+        actor.request('Change this exact native flag once and retain the actual step evidence while history persistence is held.')
+        history_poll(gate.opened,seconds=3)
+        assert actor.command('inspect')['ui']['connected'],'Held archive I/O cannot retire the real account or stop Main observations'
+        actor.until(lambda row:len(actor.responses())==1)
+        native_result(actor.responses()[0])
+        assert qml(actor,heartbeat)>before,'The real current Main Qt timer advances while the actual history sync remains held'
+        assert not any(row['phase'] in {'released','auto_release'} for row in gate.rows()),'The writer is still actually held during the native/heartbeat observations'
+        native=next(row for row in actor.last['ui']['messages'] if (row.get('payload') or {}).get('tool')=='set_free')
+        changed=next(x for x in actor.last['ui']['project']['parameters'] if x['path']=='experiment.instrument.calib_twotheta_offset')
+        assert changed['free'] is True
+        actor.command('cancel')
+        actor.until(lambda row:not row['ui']['can_cancel'] and row['ui']['state']=='idle')
+        assert len(actor.responses())==1,'Genuine native Stop never replays the already applied native call'
+        expected={row['id']:row for row in actor.last['ui']['messages']}
+        gate.finish()
+        history_poll(lambda:set(expected).issubset(canonical_row_map(gate.disk())))
+        disk=gate.disk()
+        for row in expected.values():
+            assert_canonical_disk_row(disk,row)
+        actual=canonical_row_map(disk)[native['id']]
+        assert actual.get('workEvidence') and actual.get('workInputs') and actual.get('workRuntime'),'The latest canonical file retains the real supplement fields as well as primary native receipts'
+        assert all(not row['main_thread'] for row in gate.rows() if row['phase']=='entered'),'Actual canonical sync happens off the GUI owner thread'
+        assert any(row['phase']=='sync_returned' for row in gate.rows())
+        assert not any(row['phase']=='auto_release' for row in gate.rows())
+        assert baseline and actor.last['ui']['project']['parameters'],'Neither retained baseline nor scientific owner is replaced by the writer'
+    finally:gate.finish()
+
+
+def test_failed_clear_preserves_original_disk_cause_then_new_conversation_is_durable(main_actor,tmp_path,history_sync_gate):
+    gate=history_sync_gate
+    actor=seeded_history_actor(main_actor,gate,calls=[],project=copied_estimate_project(tmp_path))
+    before=gate.disk();old_ids=set(canonical_row_map(before));model=actor.last['ui']['project']
+    try:
+        gate.arm(actor,'fail')
+        actor.command('clear_history')
+        history_poll(lambda:any(row['phase']=='failed' for row in gate.rows()),seconds=3)
+        assert gate.disk()==before,'Failed atomic Clear preserves the exact previous canonical file before any diagnostic assertion'
+        actor.until(lambda row:bool(row['ui']['last_error']),seconds=3)
+        assert not actor.last['ui']['messages'],'Explicit logical Clear retires the old conversation immediately despite its failed disk replacement'
+        assert gate.disk()==before,'Failed atomic Clear preserves the exact previously published canonical bytes/rows'
+        assert actor.last['ui']['connected'] and actor.last['ui']['project']==model,'Storage failure cannot sign out or alter the current scientific owner'
+        gate.finish()
+        actor.gate.touch();actor.connect()
+        actor.request('New conversation after the failed durable Clear, without replaying the discarded native authority.')
+        actor.until(lambda row:row['ui']['state']=='idle' and not row['ui']['can_cancel'])
+        expected={row['id']:row for row in actor.last['ui']['messages']}
+        history_poll(lambda:set(expected).issubset(canonical_row_map(gate.disk())) and not (old_ids&set(canonical_row_map(gate.disk()))))
+        for row in expected.values():
+            assert_canonical_disk_row(gate.disk(),row)
+        assert not old_ids&set(canonical_row_map(gate.disk())),'A later accepted full snapshot cannot resurrect pre-Clear canonical rows'
+    finally:gate.finish()
+
+
+def test_held_old_history_clear_new_conversation_and_vm_destruction_flush_latest(main_actor,tmp_path,history_sync_gate):
+    gate=history_sync_gate
+    actor=seeded_history_actor(main_actor,gate,calls=[tool_call('inspect_project','old-history-step')],project=copied_estimate_project(tmp_path))
+    try:
+        gate.arm(actor,'hold')
+        actor.request('Old original conversation while the actual archive writer is held.')
+        history_poll(gate.opened,seconds=3)
+        actor.until(lambda row:len(actor.responses())==1)
+        old_ids={row['id'] for row in actor.last['ui']['messages']}
+        actor.command('clear_history')
+        assert not actor.last['ui']['messages'],'Clear retires memory/authority before durable I/O can complete'
+        actor.append_turn([tool_call('inspect_project','new-history-step')]);actor.gate.touch();actor.connect()
+        actor.request('New original conversation that must survive owner destruction and supersede the held pre-Clear file.')
+        actor.until(lambda row:len(actor.responses())==2 and row['ui']['state']=='idle')
+        expected={row['id']:row for row in actor.last['ui']['messages']}
+        assert expected and not old_ids&set(expected)
+        native=next(row for row in expected.values() if (row.get('payload') or {}).get('tool')=='inspect_project')
+        actor.command('destroy')
+        assert actor.process.poll() is None,'Real VM/engine destruction returns while an accepted archive sync is still held'
+        assert not any(row['phase'] in {'released','auto_release'} for row in gate.rows())
+        gate.finish()
+        history_poll(lambda:set(expected).issubset(canonical_row_map(gate.disk())) and not (old_ids&set(canonical_row_map(gate.disk()))))
+        for row in expected.values():
+            assert_canonical_disk_row(gate.disk(),row)
+        assert not any(row['phase']=='auto_release' for row in gate.rows())
+    finally:gate.finish()
