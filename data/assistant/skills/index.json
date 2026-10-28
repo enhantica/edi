@@ -71,11 +71,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.4.3",
+      "version": "1.4.4",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "0d82a01c1259d67136980fd0bfea37fe5a665e9fb19128f6afd1bfb905160323",
+      "sha256": "2d60bf8655ece4e800acb6ea73a1049263e031759221a02ba397d9745ab2fdea",
       "requires": [],
       "capabilities": [
         "inspect_project",
@@ -100,6 +100,10 @@
         {
           "title": "IUCr atomic displacement parameters",
           "url": "https://www.iucr.org/who-we-are/commissions/commission-on-crystallographic-nomenclature/published-reports/adp"
+        },
+        {
+          "title": "Toby, International Tables H: Rietveld refinement (2019)",
+          "url": "https://onlinelibrary.wiley.com/iucr/itc/Ha/ch4o7v0001/"
         }
       ]
     }
