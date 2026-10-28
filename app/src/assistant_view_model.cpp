@@ -1548,7 +1548,7 @@ struct AssistantViewModel::State {
             generic_question_id.isEmpty() && !file_selection && !file_staging && !native_worker_admitted() &&
             (!native_fit || !native_fit->nativeRunning()) &&
             (!native_call || (native_call->resolved && native_call->record->answered)) && agent &&
-            agent->outputOwnerState()==CodexAgent::OutputOwnerState::Released;
+            agent->outputOwnerState()==CodexAgent::OutputOwnerState::Live;
     }
     static QJsonArray session_source_kinds() {
         return {"cli","vscode","exec","appServer","subAgent","subAgentReview","subAgentCompact","subAgentThreadSpawn","subAgentOther","unknown"};
