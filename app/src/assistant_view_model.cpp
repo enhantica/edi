@@ -3786,11 +3786,11 @@ struct AssistantViewModel::State {
         };
         control_start(run->call,control_target(run),std::move(request));
     }
-    std::pair<std::size_t,std::size_t> widget_free_group_range(const std::shared_ptr<NativeWidget>& run) const {
+    std::pair<std::size_t,std::size_t> widget_free_group_range(const std::shared_ptr<NativeWidget>& run,ParameterFilterModel* originalFilter=nullptr) const {
         const auto at=run->parameter_at;
         if(run->tool!="set_free" || at>=run->parameter_entries.size())return {at,at};
-        auto* table=widget_named("parameters.list");
-        auto* filter=table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr;
+        auto* table=originalFilter?nullptr:widget_named("parameters.list");
+        auto* filter=originalFilter?originalFilter:table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr;
         if(!filter || filter->sourceModel()!=run->project->parameters())return {at,at};
         const auto& entry=run->parameter_entries[at];
         const auto category=filter->categoryFor(entry.parameter);
@@ -3803,14 +3803,14 @@ struct AssistantViewModel::State {
         while(last<run->parameter_entries.size() && same(last))++last;
         return {first,last};
     }
-    bool widget_free_group_matches(const std::shared_ptr<NativeWidget>& run) const {
+    bool widget_free_group_matches(const std::shared_ptr<NativeWidget>& run,ParameterFilterModel* originalFilter=nullptr) const {
         if(run->parameter_entries.empty() || run->parameter_at>=run->parameter_entries.size() || run->tool!="set_free")return false;
         const auto* entry=widget_parameter_entry(run);
         if(!widget_entry_current(run,entry))return false;
-        auto* table=widget_named("parameters.list");
-        auto* filter=table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr;
+        auto* table=originalFilter?nullptr:widget_named("parameters.list");
+        auto* filter=originalFilter?originalFilter:table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr;
         if(!filter || filter->sourceModel()!=run->project->parameters())return false;
-        const auto range=widget_free_group_range(run);
+        const auto range=widget_free_group_range(run,filter);
         if(range.second<=run->parameter_at)return false;
         std::size_t eligible=0;
         for(int row=0;row<filter->rowCount();++row) {
@@ -3829,22 +3829,52 @@ struct AssistantViewModel::State {
         }
         return eligible>1 && eligible==range.second-range.first;
     }
-    void widget_free_group(const std::shared_ptr<NativeWidget>& run,bool opened) {
+    void widget_free_group(const std::shared_ptr<NativeWidget>& run,bool opened,
+            QPointer<QQuickItem> originalHeader={},QPointer<QObject> originalMenu={},QPointer<ParameterFilterModel> originalFilter={}) {
         const auto* entry=widget_parameter_entry(run);
-        if(!widget_free_group_matches(run) || !widget_input){widget_refuse(run,widget_outcome_error);return;}
-        const QPointer<QQuickItem> header(widget_named("parameters.freeHeader"));
-        const QPointer<QObject> menu(header?header->findChild<QObject*>(QStringLiteral("parameters.freeHeader.menu")):nullptr);
-        const QPointer<QQuickItem> target(opened?widget_named(entry->free?"parameters.freeHeader.free":"parameters.freeHeader.fixed"):header.data());
-        if(!menu || !target){control_failure(run,ControlCause::Unavailable);widget_refuse(run,widget_outcome_error);return;}
-        if(!widget_reveal_parameter(run,target))return;
+        if(!widget_input || !entry || !widget_entry_current(run,entry) || !widget_page_selected(run)) {widget_refuse(run,widget_outcome_error);return;}
+        const QPointer<QQuickItem> header(opened?originalHeader.data():widget_named("parameters.freeHeader"));
+        const QPointer<QObject> menu(opened?originalMenu.data():header?header->findChild<QObject*>(QStringLiteral("parameters.freeHeader.menu")):nullptr);
+        const QPointer<ParameterFilterModel> filter(opened?originalFilter.data():menu?qobject_cast<ParameterFilterModel*>(menu->property("filter").value<QObject*>()):nullptr);
+        const char* ownership_failure=!header?"The original Free-column header is unavailable in the current window":
+            header->window()!=run->window?"The original Free-column header belongs to another window":
+            !menu?"The original Free-column menu is unavailable":
+            header->findChild<QObject*>(QStringLiteral("parameters.freeHeader.menu"))!=menu?"The original Free-column menu no longer belongs to its header":
+            !filter || menu->property("project").value<QObject*>()!=run->project || menu->property("filter").value<QObject*>()!=filter?
+                "The original Free-column menu project or filter changed":
+            !widget_free_group_matches(run,filter)?"The original Free-column eligible members changed":nullptr;
+        if(ownership_failure) {
+            control_failure(run,ControlCause::Unavailable);widget_refuse(run,QString::fromLatin1(ownership_failure));return;
+        }
+        QPointer<QQuickItem> target(header),content;
+        if(opened) {
+            content=qobject_cast<QQuickItem*>(menu->property("contentItem").value<QObject*>());
+            target.clear();
+            const auto wanted=entry->free?QStringLiteral("parameters.freeHeader.free"):QStringLiteral("parameters.freeHeader.fixed");
+            for(auto* item:widget_items())if(item->objectName()==wanted) {
+                bool own=false;for(auto* parent=item;parent;parent=parent->parentItem())if(parent==content){own=true;break;}
+                if(!own)continue;
+                if(target){control_failure(run,ControlCause::Unavailable);widget_refuse(run,QObject::tr("The original Free-column popup choice is ambiguous"));return;}
+                target=item;
+            }
+            if(!menu->property("visible").toBool() || !content || !target || !widget_input->usableTarget(*target)) {
+                control_failure(run,ControlCause::Unavailable);widget_refuse(run,QObject::tr("The original Free-column popup choice is not visible and enabled in this window"));return;
+            }
+        }else if(!widget_reveal_parameter(run,target))return;
         AssistantWidgetInput::Request request;
         request.kind=opened?AssistantWidgetInput::Kind::FileLoadCue:AssistantWidgetInput::Kind::Navigate;request.target=target;
-        auto captured_current=[this,run,entry,target,menu,opened] {
-            return target && menu && widget_entry_current(run,entry) && widget_free_group_matches(run) &&
-                (!opened || menu->property("visible").toBool());
+        auto captured_current=[this,run,entry,header,target,content,menu,filter,opened] {
+            if(!header || !target || !menu || !filter || !widget_entry_current(run,entry) || !widget_page_selected(run) ||
+                header->window()!=run->window || header->findChild<QObject*>(QStringLiteral("parameters.freeHeader.menu"))!=menu ||
+                menu->property("project").value<QObject*>()!=run->project || menu->property("filter").value<QObject*>()!=filter ||
+                !widget_free_group_matches(run,filter))return false;
+            if(!opened)return true;
+            if(!content || !menu->property("visible").toBool() || menu->property("contentItem").value<QObject*>()!=content)return false;
+            for(auto* parent=target.data();parent;parent=parent->parentItem())if(parent==content)return true;
+            return false;
         };
         auto captured_prepareCommit=[] {return true;};auto captured_finishCommit=[] {};
-        auto captured_completed=[this,run,entry,menu,opened](bool delivered,const QString& message, ControlCause cause) {
+        auto captured_completed=[this,run,entry,header,menu,filter,opened,captured_current](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_entry_owned(run,entry))return;
             if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
@@ -3855,15 +3885,15 @@ struct AssistantViewModel::State {
                                 if(menu && widget_entry_current(run,entry))QMetaObject::invokeMethod(menu,"close",Qt::DirectConnection);
                             } catch (...) {} // Cleanup must preserve the original failure/outcome.
                         });
-                        if(delivered)widget_apply_parameter(run,true,menu);
+                        if(delivered)widget_apply_parameter(run,true,menu,filter,captured_current);
                     }
                     if(!run->receiver || run->receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
                     widget_input_finished(run,delivered,message);return;
                 }
                 if(!delivered || !widget_entry_current(run,entry)){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
-                QTimer::singleShot(500,&owner,[this,run,entry] {
+                QTimer::singleShot(500,&owner,[this,run,entry,header,menu,filter] {
                     if(!widget_entry_owned(run,entry))return;
-                    try{widget_free_group(run,true);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
+                    try{widget_free_group(run,true,header,menu,filter);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
                 });
             }catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
         };
@@ -3876,7 +3906,8 @@ struct AssistantViewModel::State {
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
         control_start(run->call,control_target(run),std::move(request));
     }
-    void widget_apply_parameter(const std::shared_ptr<NativeWidget>& run,bool group,const QPointer<QObject>& menu={}) {
+    void widget_apply_parameter(const std::shared_ptr<NativeWidget>& run,bool group,const QPointer<QObject>& menu={},
+            const QPointer<ParameterFilterModel>& originalFilter={},const std::function<bool()>& originalPopupCurrent={}) {
         const auto* entry=widget_parameter_entry(run);
         if(!widget_entry_current(run,entry) || !widget_page_selected(run))throw std::runtime_error("The original parameter action or workflow page changed");
         const QPointer<AssistantViewModel> receiver(run->receiver);
@@ -3901,10 +3932,15 @@ struct AssistantViewModel::State {
             }
         });
         if(group) {
-            if(!menu || menu->property("project").value<QObject*>()!=target ||
-               !widget_entry_current(run,entry) || !widget_free_group_matches(run))
-                throw std::runtime_error("The original free-header set changed");
-            const auto range=widget_free_group_range(run);const auto count=range.second-range.first;
+            const auto menu_current=[&] {return originalPopupCurrent && originalPopupCurrent();};
+            if(!menu_current()) {
+                if(receiver && receiver->state_.get()==this && widget_entry_owned(run,entry)) {
+                    control_failure(run,ControlCause::Superseded);
+                    widget_refuse(run,QStringLiteral("The original visible Free-column menu, choice or eligible members changed before preparation"));
+                }
+                return;
+            }
+            const auto range=widget_free_group_range(run,originalFilter);const auto count=range.second-range.first;
             std::vector<const edi::Parameter*> members;members.reserve(count);
             for(std::size_t at=range.first;at<range.second;++at) {
                 const auto& original=run->parameter_entries[at];
@@ -3914,7 +3950,15 @@ struct AssistantViewModel::State {
             input=target->prepareWidgetFreeGroup(std::move(members),entry->free);run->input=input;
             run->parameter_group=true;run->parameter_uncertain=true;
 
-            if(!receiver || receiver->state_.get()!=this || !menu || !widget_entry_current(run,entry) || !widget_free_group_matches(run))return;
+            if(!receiver || receiver->state_.get()!=this)return;
+            if(!menu_current()) {
+                if(receiver && receiver->state_.get()==this && widget_entry_owned(run,entry)) {
+                    run->parameter_uncertain=input && input->outcome.applied;
+                    control_failure(run,ControlCause::Superseded);
+                    widget_refuse(run,QStringLiteral("The original visible Free-column menu, choice or eligible members changed before the group action"));
+                }
+                return;
+            }
             scope=begin_own_edit();run->edit_scope=scope;native_call->may_have_written=true;
             // The same original menu action used by a manual choice supplies
             // its shown members to setParametersFree and closes its own menu.

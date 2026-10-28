@@ -3444,3 +3444,22 @@ live ancestor. The existing Session pending-source/origin lifetime pin spans
 ZIP commit/adoption/final bookkeeping. Actual partial commits and successor
 ownership remain factual; no rollback, repeated write, second serializer, SDK
 patch, general reservation manager or whole-Open policy change is introduced.
+
+
+## 2026-10-28: the original Free-column popup owns its choice
+
+The first group action remains the current ParametersGroup Free header and its
+FreeHeaderMenu.apply, with the existing exact-member prepared receipt and ordinary
+Undo. Opening it retains the original header/menu/filter. Choice lookup is scoped
+to that same visible popup's actual content, not a re-discovered background
+workflow viewport. Original project/window/call/filter/eligible membership and
+choice ownership are checked through the visual cue and after preparation before
+the existing once action. An unavailable/changed header, menu, filter, membership
+or choice reports its actual bounded cause; no forced open, new input, style,
+geometry change or fallback after uncertainty is introduced.
+
+Corrected manual evidence proved this original menu works when the normal sidebar
+is exposed. This repairs a source owner mismatch; the retained live failure did
+not capture enough popup state to assign an exclusive cause. The later isolated
+native discriminator stopped at an earlier sidebar prerequisite and did not reach
+the popup boundary. Neither run justifies changing the manual header itself.
