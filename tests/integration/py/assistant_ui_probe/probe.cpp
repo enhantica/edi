@@ -340,9 +340,10 @@ int main(int argc,char** argv) {
             for(const auto& bank:model.experiments) {
                 Array points,input_rows;
                 if(bank->data) {
-                    const auto available=std::min({bank->data->axis().size(),bank->data->intensity_meas.size(),bank->data->intensity_meas_su.size(),std::size_t{4}});
+                    const auto available=std::min({bank->data->axis().size(),bank->data->intensity_meas.size(),std::size_t{4}});
                     for(std::size_t i=0;i<available;++i)
-                        input_rows.push_back(Array{bank->data->axis()[i],bank->data->intensity_meas[i],bank->data->intensity_meas_su[i]});
+                        input_rows.push_back(Array{bank->data->axis()[i],bank->data->intensity_meas[i],
+                            i<bank->data->intensity_meas_su.size()?QJsonValue(bank->data->intensity_meas_su[i]):QJsonValue()});
                 }
                 for(const auto& point:bank->background)
                     points.push_back(Object{{"id",QString::fromStdString(point->id.value())},
