@@ -14626,7 +14626,12 @@ void AssistantViewModel::refreshUsage() {
 }
 
 QString AssistantViewModel::nativeActionLabel(const QString& action) const {
+#ifndef __EMSCRIPTEN__
     return assistant_native_purpose({},action);
+#else
+    Q_UNUSED(action);
+    return tr("Work on the current project");
+#endif
 }
 
 QString AssistantViewModel::contextPreview() const {
