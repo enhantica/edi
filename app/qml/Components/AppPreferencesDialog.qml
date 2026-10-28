@@ -554,6 +554,24 @@ AppDialog {
                     wrapMode: Text.WrapAnywhere
                     color: EaStyle.Colors.red
                 }
+                EaElements.Label { text: qsTr("History"); font.bold: true }
+                EaElements.SideBarButton {
+                    objectName: "preferences.ai.clearCachedHistory"
+                    width: parent.width
+                    text: Session.assistant.cachedHistoryClearing ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
+                    fontIcon: "eraser"
+                    enabled: !Session.assistant.canCancel && !Session.assistant.cachedHistoryClearing
+                    ToolTip.text: qsTr("Clear the app's saved chat display only. Projects, reports, runtime sessions and sign-in are kept.")
+                    onClicked: Session.assistant.clearCachedHistory()
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: Session.assistant.cachedHistoryError
+                    visible: text.length > 0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
+                    color: EaStyle.Colors.red
+                }
                 EaElements.Label { text: qsTr("Diagnostics"); font.bold: true }
                 EaElements.CheckBox {
                     objectName: "preferences.ai.copyTechnicalDetails"

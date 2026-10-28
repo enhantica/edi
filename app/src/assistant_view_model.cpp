@@ -769,8 +769,8 @@ Object message_display_row(const Object& original) {
 }
 class Rows : public RowTableModel {
    public:
-    Rows(const QStringList& names, QObject* parent, const QJsonArray* canonical = nullptr, bool messageProjection = false, const QString* session = nullptr)
-        : RowTableModel(names, parent), names_(names), canonical_(canonical), message_projection_(messageProjection), session_(session) {}
+    Rows(const QStringList& names, QObject* parent, const QJsonArray* canonical = nullptr, bool messageProjection = false, const QString* session = nullptr, const QSet<QString>* hidden = nullptr)
+        : RowTableModel(names, parent), names_(names), canonical_(canonical), message_projection_(messageProjection), session_(session), hidden_(hidden) {}
     void assign(const QJsonArray& data) {
         if (!canonical_) own_ = data;
         pending_ = true;
@@ -785,7 +785,7 @@ class Rows : public RowTableModel {
             for(const auto& value:source) {
                 if(message_projection_) {
                     const auto original=value.toObject();
-                    if(session_ && history_thread(original)!=*session_)continue;
+                    if((session_ && history_thread(original)!=*session_) || (hidden_ && hidden_->contains(original.value("id").toString())))continue;
                     projected.append(message_display_row(original));
                 }
                 else projected.append(value);
@@ -833,6 +833,7 @@ class Rows : public RowTableModel {
     const QJsonArray* canonical_;
     const bool message_projection_;
     const QString* session_;
+    const QSet<QString>* hidden_ = nullptr;
     QJsonArray own_,visible_,announced_; // Canonical message payloads are never copied into these display snapshots.
     bool assigning_ = false, pending_ = false;
 };}
@@ -1137,7 +1138,8 @@ struct AssistantViewModel::State {
 #endif
     QJsonArray history;
     QString history_session;
-    Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history, true, &history_session};
+    QSet<QString> hidden_cached_rows;
+    Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history, true, &history_session, &hidden_cached_rows};
     Rows sessions{{"id","name","modified","current","canArchive"},&owner};
     bool sessions_loading=false,sessions_more=false;
     QString sessions_error;
@@ -1372,6 +1374,8 @@ struct AssistantViewModel::State {
             // Read the current cell, not an older queued notification. This
             // updates metadata/presentation only, never persists another ack.
             const auto view=history_archive->view();
+            cache_clear_completed();
+            if(!receiver || receiver->state_.get()!=this)return;
             if(view.loaded && !history_base_included) {
                 auto merged=view.initial_rows;QSet<QString> ids;
                 for(const auto& row:merged)ids.insert(row.toObject().value("id").toString());
@@ -1429,7 +1433,8 @@ struct AssistantViewModel::State {
             if(!history_archive || history_archive_thread!=history_session)initialize_history(false);
             if(history_initialized && history_archive)history_archive->activate();
             QJsonArray captured;
-            for(const auto& value:rows)if(history_session.isEmpty() || history_thread(value.toObject())==history_session)captured.append(value);
+            for(const auto& value:rows)if(!hidden_cached_rows.contains(value.toObject().value("id").toString()) &&
+                (history_session.isEmpty() || history_thread(value.toObject())==history_session))captured.append(value);
             if(!history_archive || history_archive_thread!=history_session || !history_archive->retain(captured,history_base_included,logicalClear)) {
                 history_unqueued=true;history_retry_revision=0;history_error=storage_error;return false;
             }
@@ -1456,6 +1461,88 @@ struct AssistantViewModel::State {
         }}
     }
 #endif
+    struct CacheClearTarget {
+        std::unique_ptr<AssistantHistoryArchive> archive;
+        quint64 revision=0;
+    };
+    std::vector<CacheClearTarget> cache_clear_targets;
+    quint64 cache_clear_current_revision=0;
+    QString cache_clear_current_path,cache_clear_error;
+    bool cache_clear_pending=false;
+    void cache_clear_completed() noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        try {
+            if(!cache_clear_pending)return;
+            bool pending=false;QString failure=cache_clear_error;
+            const auto inspect=[&](const AssistantHistoryArchive::View& view,quint64 revision) {
+                if(view.durable>=revision)return;
+                pending=true;
+                if(view.failure_stage)failure=QObject::tr("The local chat cache could not be cleared (%1). Projects, reports and runtime sessions were not deleted.").arg(QLatin1StringView(view.failure_stage));
+            };
+            if(cache_clear_current_revision) {
+                if(history_archive && history_archive->view().path==cache_clear_current_path)inspect(history_archive->view(),cache_clear_current_revision);
+                else {pending=true;failure=QObject::tr("The local history owner changed before cache clearing was confirmed.");}
+            }
+            for(const auto& target:cache_clear_targets)inspect(target.archive->view(),target.revision);
+            const bool changed=cache_clear_pending!=pending || cache_clear_error!=failure;
+            cache_clear_pending=pending;cache_clear_error=std::move(failure);
+            if(changed && receiver && receiver->state_.get()==this)emit owner.cachedHistoryChanged();
+        }catch(...) {if(receiver && receiver->state_.get()==this) {
+            cache_clear_error=QObject::tr("The local cache clear could not be confirmed; no runtime session was deleted.");
+            emit owner.cachedHistoryChanged();
+        }}
+    }
+    void clear_cached_history() {
+#ifndef __EMSCRIPTEN__
+        if(generic_busy || generic_connecting || generic_retiring || generic_revoke_pending || generic_clear_pending ||
+            generic_context_pending || generic_held_row || !generic_rpc_rows.isEmpty() || !generic_rpc_turns.isEmpty() ||
+            !generic_question_id.isEmpty() || file_selection || file_staging || native_worker_admitted() ||
+            (native_fit && native_fit->nativeRunning()) || (native_call && (!native_call->resolved || !native_call->record->answered)))
+            throw std::runtime_error("Finish the current operation before clearing cached chat history");
+#else
+        if(owner.canCancel())throw std::runtime_error("Finish the current operation before clearing cached chat history");
+#endif
+        if(cache_clear_pending)return;
+        const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
+        const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
+        QSet<QString> paths{root+"/history.json"};
+        const QDir directory(root+"/history");
+        for(const auto& file:directory.entryInfoList({QStringLiteral("*.json")},QDir::Files|QDir::NoSymLinks)) {
+            const auto base=file.completeBaseName();
+            bool generated=base.size()==64;
+            if(generated)for(const auto ch:base)if(!((ch>='0' && ch<='9') || (ch>='a' && ch<='f'))){generated=false;break;}
+            if(!generated && base.startsWith("draft-"))generated=!QUuid(base.mid(6)).isNull();
+            if(generated)paths.insert(file.absoluteFilePath());
+        }
+        if(history_archive)paths.insert(history_archive->view().path);
+        std::vector<CacheClearTarget> prepared;
+        for(const auto& path:paths) {
+            if(history_archive && path==history_archive->view().path)continue;
+            auto archive=std::make_unique<AssistantHistoryArchive>(&owner,path,[this,receiver](const AssistantHistoryArchive::View&) {
+                if(receiver && receiver->state_.get()==this)cache_clear_completed();
+            },true);
+            prepared.push_back({std::move(archive),0});
+        }
+        if(!proof.input_current())return;
+        // Hide only rows that existed at this admitted clear; later rows remain visible.
+        for(const auto& value:history)hidden_cached_rows.insert(value.toObject().value("id").toString());
+        cache_clear_targets=std::move(prepared);cache_clear_pending=true;cache_clear_error.clear();
+        cache_clear_current_revision=0;cache_clear_current_path.clear();
+        history_base_included=true;
+        if(history_archive) {
+            if(!history_archive->retain({},true,true))cache_clear_error=QObject::tr("The current local cache clear could not be retained.");
+            else {const auto view=history_archive->view();cache_clear_current_path=view.path;cache_clear_current_revision=view.accepted;}
+        }
+        for(auto& target:cache_clear_targets) {
+            target.archive->activate();
+            if(!target.archive->retain({},true,true))cache_clear_error=QObject::tr("A local cache clear could not be retained.");
+            else target.revision=target.archive->view().accepted;
+        }
+        messages.assign(history);
+        if(!proof.input_current())return;
+        cache_clear_completed();
+        if(receiver && receiver->state_.get()==this && proof.input_current())emit owner.cachedHistoryChanged();
+    }
     QByteArray consented_context;
     bool archive_refused = false;
     using Limits = edi::assistant::Limits;
@@ -1601,7 +1688,7 @@ struct AssistantViewModel::State {
     QMap<QString,QPair<QString,QString>> session_named; // Intended name + actual admitted RPC, not a guessed success.
     quint64 sessions_epoch=0;
     bool session_idle() const {
-        return generic_authenticated && !generic_busy && !generic_connecting && !generic_retiring &&
+        return !cache_clear_pending && generic_authenticated && !generic_busy && !generic_connecting && !generic_retiring &&
             !generic_revoke_pending && !generic_clear_pending && !generic_context_pending &&
             !generic_held_row && generic_rpc_rows.isEmpty() && generic_rpc_turns.isEmpty() &&
             generic_question_id.isEmpty() && !file_selection && !file_staging && !native_worker_admitted() &&
@@ -15153,6 +15240,17 @@ void AssistantViewModel::archiveSession(const QString& threadId) {
 #else
     Q_UNUSED(threadId);
 #endif
+}
+
+bool AssistantViewModel::cachedHistoryClearing() const { return state_->cache_clear_pending; }
+QString AssistantViewModel::cachedHistoryError() const { return state_->cache_clear_error; }
+void AssistantViewModel::clearCachedHistory() {
+    const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();
+    try { original->clear_cached_history(); }
+    catch(...) {if(receiver && receiver->state_.get()==original) {
+        original->cache_clear_error=tr("The local chat cache could not be cleared. Projects, reports, runtime sessions and sign-in were preserved.");
+        emit cachedHistoryChanged();
+    }}
 }
 
 RowTableModel* AssistantViewModel::selectedFiles() const { return &state_->selected_files; }
