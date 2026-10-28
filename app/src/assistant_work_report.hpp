@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 #include <QObject>
+#include <QByteArray>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QVariantMap>
@@ -64,6 +65,8 @@ public:
     QString beginAttempt();
     const QString& attempt() const noexcept;
     QVariantMap receipt() const;
+    /// Original worker-encoded current/last snapshot, without re-encoding on the GUI thread.
+    QByteArray lastDocument() const;
     // An exhausted ID has no fabricated correlation token. No accepted worker
     // or artifact can originate from that immediate refusal.
     QVariantMap capture(bool automaticTrigger, AssistantWorkReportCoverage counts,QStringView storageRoot,

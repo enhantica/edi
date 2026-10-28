@@ -1107,7 +1107,7 @@ struct AssistantViewModel::State {
             if(target->project().path.size()<=Limits::message_bytes)root=target->path();
             if(!receiver || receiver->state_.get()!=this || project!=target)return work_report_capacity_variant();
         }
-        if(!projectionBlocked){refresh_work_report_cache();work_reports.bindStorageRoot(root);}
+        if(!projectionBlocked)work_reports.bindStorageRoot(root);
         const auto expectedRevision=work_reports.revision();
 #ifndef __EMSCRIPTEN__
         const auto result=work_reports.capture(automatic,work_counts(),root,[this](quint64 capacity){return work_snapshot(capacity);},expectedScope,expectedRevision,projectionBlocked);
@@ -16193,7 +16193,9 @@ QString AssistantViewModel::workReportDocument() {
         QByteArray encoded;
         if(state_->work_reports.attempt().isEmpty() && state_->work_has_diagnostic())
             encoded=state_->current_work_report_document();
+        if(encoded.isEmpty() && state_->work_reports.attempt().isEmpty())encoded=state_->work_reports.lastDocument();
         if(encoded.isEmpty()) {state_->refresh_work_report_cache();encoded=state_->work_report_cache;}
+        if(encoded.isEmpty())encoded=state_->work_reports.lastDocument();
         if(encoded.isEmpty())return {};
         auto document=QJsonDocument::fromJson(encoded).object();
         auto scope=document.value("scope_coverage").toObject();
