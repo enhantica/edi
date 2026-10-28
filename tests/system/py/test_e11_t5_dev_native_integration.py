@@ -3708,3 +3708,83 @@ DataTable {
     assert create_table(), 'A new current ordinary table still owns valid layout after the retired helper has settled'
     actor.until(lambda row:qml(actor,'(function(){const w='+control_expression(witness)+';return w.held.fittedWidths.length===3&&w.held.fittedWidths.every(x=>Number.isFinite(x)&&x>0);})()'))
     assert qml(actor,'('+control_expression(witness)+').held.count')==2, 'Normal current native row/column layout remains available after retiring the original callback owner'
+
+
+@pytest.mark.parametrize('initial',['existing_empty','fresh'])
+def test_direct_compound_population_stop_retains_prefix_without_default_estimate_or_successor_retarget(main_actor,tmp_path,initial):
+    actor=main_actor([[]],show_actions=False)
+    if initial=='existing_empty':
+        assert actor.command('create',name='stoppedprefix')['reply']['created'], (
+            'The existing-empty cancellation channel starts through the ordinary current Session Create owner'
+        )
+    original=actor.last['ui']['project']
+    data=ROOT/'tests/fixtures/background_estimate/meas-lbco-hrpt.xye'
+    cif=ROOT/'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    token=actor.begin_current_file_selection()
+    assert actor.command('selected_add',token=token,paths=[str(data),str(cif)])['reply']['added'], (
+        'The canceled compound uses genuine admitted measured and CIF inputs, with no preconstructed scientific graph'
+    )
+    selected=actor.last['ui']['selected_files']
+    recipe={'project_name':'stoppedprefix','description':'Native population cancellation witness',
+        'experiment_name':'stoppedbank','sample_form':'powder','beam_mode':'constant wavelength',
+        'radiation_probe':'neutron','scattering_type':'bragg','peak_profile':'cwl-tch-pseudo-voigt',
+        'wavelength':1.237,'zero_offset':0.013,'phase_scale':1.1,'exclusions':[],'initial_parameters':[]}
+    actor.configure_turns([[tool_call('create_cwl_project','stop-before-next-default-estimate',
+        recipe=recipe,data_file_id=next(r['id'] for r in selected if r['name']==data.name),
+        cif_file_id=next(r['id'] for r in selected if r['name']==cif.name))]])
+    marker='e11.compound.population.stop'
+    setup=r'''(function(){const o=Qt.createQmlObject('import QtQuick; Item {objectName:"e11.compound.population.stop";property bool fired:false;property bool cancellable:false;property var owner:null;property var before:null;property var watch:null;property var attempt:null;property var snapshot:null}',contentItem);
+    o.snapshot=function(p){if(!p||p.experiments.count!==1)return null;const e=p.experiments.item(0,"experiment");if(!e)return null;const points=[];for(let i=0;i<e.background.count;++i){const v=e.background.item(i,"intensity");points.push({id:e.background.text(i,"id"),position:e.background.text(i,"position"),intensity:v.value,free:v.free});}return {name:p.name,structures:p.structures.count,experiments:p.experiments.count,experiment:e.name,calculation_only:e.calculationOnly,data_file:e.dataFile,points:points};};
+    o.attempt=function(){if(o.fired)return;const p=Session.project;const state=o.snapshot(p);if(!state||state.structures!==1||state.calculation_only||!state.data_file)return;o.fired=true;o.owner=p;o.before=state;o.cancellable=Session.assistant.canCancel;Session.assistant.cancel();};
+    o.watch=function(){const p=Session.project;if(p)p.projectEdited.connect(o.attempt);o.attempt();};Session.projectChanged.connect(o.watch);o.watch();return true;})()'''
+    assert qml(actor,setup), 'A genuine public population/adoption callback is armed before the requested native creation begins'
+    try:
+        actor.request('Import the selected CIF and measured data into the current app project and use native Estimate.')
+        actor.until(lambda r: r['ui']['state']=='idle' and not r['ui']['can_cancel'])
+        stopped=qml(actor,'(function(){const o='+control_expression(marker)+';return {fired:o.fired,cancellable:o.cancellable,before:o.before,after:o.snapshot(Session.project),same_owner:Session.project===o.owner};})()')
+        assert stopped['fired'] and stopped['cancellable'], (
+            'Stop actually executes inside publication of an adopted populated measured prefix, before the next distinct Estimate operation'
+        )
+        assert stopped['same_owner'] and stopped['after']==stopped['before'], (
+            'Cancellation retains the actual adopted setup and every original background point, without a later default Estimate write'
+        )
+        prefix=actor.last['ui']['project']
+        assert prefix['structures']==1 and len(prefix['backgrounds'])==1, (
+            'A real canceled population remains an honest partial scientific prefix rather than fabricated rollback'
+        )
+        measured=[list(map(float,line.split())) for line in data.read_text().splitlines() if line.strip() and not line.lstrip().startswith('#')]
+        assert prefix['backgrounds'][0]['input_intensity_count']==len(measured) and prefix['backgrounds'][0]['input_first']==measured[:4], (
+            'The canceled retained prefix contains the actual independently supplied measurements, not merely a populated filename or placeholder grid'
+        )
+        original_rows=[r for r in actor.last['ui']['messages'] if (r.get('payload') or {}).get('tool')=='create_cwl_project']
+        assert len(original_rows)==1 and any(not v['complete'] and v.get('steps_completed',0)>0 for v in objects(original_rows[0]) if isinstance(v,dict) and 'complete' in v), (
+            'The original once row retains incomplete applied-prefix facts after its genuine Stop boundary'
+        )
+        settled_original=json.loads(json.dumps(original_rows[0].get('payload',{}).get('nativeOutcome')))
+        response_count=len(actor.responses())
+        actor.append_turn([tool_call('inspect_project','inspect-successor-after-stopped-population')])
+        actor.request('Inspect the actual retained partial setup without editing or repeating the canceled operation.')
+        actor.until(lambda r: len(actor.responses())==response_count+1 and r['ui']['state']=='idle' and not r['ui']['can_cancel'])
+        native_result(actor.responses()[-1])
+        later=actor.last['ui']['project']
+        assert later['backgrounds']==prefix['backgrounds'] and later['parameters']==prefix['parameters'], (
+            'A later admitted read cannot receive the old canceled Estimate effect or silently replay its scientific write'
+        )
+        later_original=[r for r in actor.last['ui']['messages'] if (r.get('payload') or {}).get('tool')=='create_cwl_project']
+        assert len(later_original)==1 and later_original[0].get('payload',{}).get('nativeOutcome')==settled_original, (
+            'Refreshing a successor call cannot overwrite or relabel the original canceled once receipt'
+        )
+        if initial=='existing_empty':
+            assert later['name']==original['name'] and later['path']==original['path'] and later['can_undo'], (
+                'Current empty-project population preserves its original owner/location and retains its real setup Undo'
+            )
+            actor.command('undo');actor.until(lambda r:not r['ui']['project']['calculating'])
+            assert actor.last['ui']['project']['structures']==0 and actor.last['ui']['project']['backgrounds']==[], (
+                'One ordinary population Undo restores the genuine empty graph; no extra canceled Estimate Undo may intervene'
+            )
+        else:
+            assert not later['can_undo'], (
+                'Fresh adopted setup has no extra default Estimate Undo after cancellation of that next separate write'
+            )
+    finally:
+        qml(actor,'(function(){const o='+control_expression(marker)+';Session.projectChanged.disconnect(o.watch);if(o.owner)o.owner.projectEdited.disconnect(o.attempt);o.destroy();})()')
