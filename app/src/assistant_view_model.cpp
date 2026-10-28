@@ -1050,7 +1050,8 @@ struct AssistantViewModel::State {
         scope["turns"]=turns;scope["history_persistence"]=history_persistence();
 #ifndef __EMSCRIPTEN__
         scope["current_session_browser"]=Object{{"operation",QString::number(session_operation)},
-            {"target",session_selection_target},{"loading",sessions_loading},{"error",sessions_error},
+            {"target",session_selection_target},{"loading",sessions_loading},{"error",session_browser_error()},
+            {"archive_persistence_failures",session_archive_persistence_errors},
             {"account_check",session_account_observation},{"preparation",session_preparation_observation},{"history_target",session_history_thread},{"history_loading",session_history_loading},{"history_error",session_history_error}};
 #endif
         document["scope_coverage"]=scope;
@@ -1185,6 +1186,14 @@ struct AssistantViewModel::State {
     Rows sessions{{"id","name","modified","current","canArchive"},&owner};
     bool sessions_loading=false,sessions_more=false;
     QString sessions_error;
+    Object session_archive_persistence_errors;
+    QString session_browser_error() const {
+        QStringList messages;if(!sessions_error.isEmpty())messages.append(sessions_error);
+        for(const auto& value:session_archive_persistence_errors) {
+            const auto message=value.toString();if(!messages.contains(message))messages.append(message);
+        }
+        return messages.join(QLatin1Char('\n'));
+    }
     Rows models{{"id", "displayName", "efforts", "available"}, &owner};
     QJsonArray skill_catalog_rows;
     Rows skills{{"id", "version", "title", "summary", "path", "sha256", "requires", "capabilities", "references", "content", "available", "blocked_reason"}, &owner,&skill_catalog_rows};
@@ -1806,7 +1815,8 @@ struct AssistantViewModel::State {
     }
     void forget_last_session(const QString& archived={}) noexcept {
         try {
-            auto index=session_associations();if(index.isEmpty())return;
+            auto index=session_associations();
+            if(index.isEmpty()){if(!archived.isEmpty())session_archive_persistence_errors.remove(archived);return;}
             bool changed=false;
             if(archived.isEmpty() || index.value("last")==archived){changed=index.contains("last");index.remove("last");}
             if(!archived.isEmpty()) {
@@ -1816,7 +1826,8 @@ struct AssistantViewModel::State {
                 }
             }
             if(changed)store_session_associations(index);
-        }catch(...) {if(!archived.isEmpty())sessions_error=QObject::tr("The session was archived, but its automatic-reopen preference could not be saved. Its retained history and project were preserved.");}
+            if(!archived.isEmpty())session_archive_persistence_errors.remove(archived);
+        }catch(...) {if(!archived.isEmpty())try{session_archive_persistence_errors[archived]=QObject::tr("The session was archived, but its automatic-reopen preference could not be saved. Its retained history and project were preserved.");}catch(...) {}}
     }
     void remember_current_session() noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
@@ -2224,9 +2235,13 @@ struct AssistantViewModel::State {
     QString session_history_explicit_target;
     QString session_history_thread;
     bool session_history_loading=false;
-    void retire_session_history() {
-        session_history_loading=false;session_history_waiting.clear();session_history_thread.clear();session_history_cursors.clear();
-        for(auto it=session_requests.begin();it!=session_requests.end();)if(it->kind=="history")it=session_requests.erase(it);else ++it;
+    void retire_session_history(const QString& thread={}) {
+        if(thread.isEmpty() || session_history_thread==thread) {
+            session_history_loading=false;session_history_thread.clear();session_history_cursors.clear();
+        }
+        if(thread.isEmpty() || session_history_waiting==thread)session_history_waiting.clear();
+        for(auto it=session_requests.begin();it!=session_requests.end();)
+            if(it->kind=="history" && (thread.isEmpty() || it->target==thread))it=session_requests.erase(it);else ++it;
     }
     void restore_runtime_history(const QString& thread) noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
@@ -2373,9 +2388,17 @@ struct AssistantViewModel::State {
         if(!current())return false;
         const auto record=saved_session(id);
         if(!owned_session(session_metadata.value(id)) && record.isEmpty() && id!=generic_thread)return true;
+        if(generic_thread==id) {
+            // Mark before callback-capable retirement: every original start AND
+            // steer owns a NativeReceipt; generic_rpc_turns owns only steers.
+            for(auto it=generic_rpc_turns.begin();it!=generic_rpc_turns.end();++it)if(it->thread==id)it->archived=true;
+            for(const auto& input:native_pending)if(input && input->thread==id){input->archived=true;input->retired=true;}
+        }
         forget_last_session(id); // Only the matching durable automatic target, not its saved evidence.
         if(!current())return false;
         session_metadata.remove(id);
+        retire_session_history(id);
+        if(session_history_explicit_target==id)session_history_explicit_target.clear();
         if(resume_checkpoint && resume_checkpoint->thread==id){resume_checkpoint.reset();generic_resuming=false;}
         if(session_restore_target==id || session_selection_target==id) {
             fail_session_operation(session_operation,id,QObject::tr("The selected conversation was archived. Its saved project and activity were preserved."));
@@ -2399,7 +2422,6 @@ struct AssistantViewModel::State {
         if(!questionRpc.isNull() && !questionRpc.isUndefined())transport->resolved(questionRpc);
         if(!current())return false;
         (void)generic_interrupt_rows();if(!current())return false;
-        for(auto it=generic_rpc_turns.begin();it!=generic_rpc_turns.end();++it)if(it->thread==id)it->archived=true;
         retire_result();if(!current())return false;
         if(generic_thread!=id)return false;
         generic_thread.clear();generic_turn.clear();generic_terminal_turn.clear();generic_thread_has_input=false;
@@ -3471,7 +3493,7 @@ struct AssistantViewModel::State {
         QPointer<ExperimentViewModel> data_view;
         const edi::ExperimentBase* data_member=nullptr;
         quint64 data_generation=0;
-        bool retired = false, stale = false;
+        bool retired = false, stale = false, archived = false;
     };
     // Fixed fit-only settlement payload belongs to the original record, not
     // the disposable widget. The ordinary input may outlive synchronous cleanup.
@@ -12806,7 +12828,9 @@ struct AssistantViewModel::State {
             generic_start_thread();return;
         }
         if(method=="thread/list" || method=="thread/read" || method=="thread/items/list" || method=="thread/archive" || method=="thread/name/set") {session_response(id,method,reply);return;}
-        if((method=="turn/start" || method=="turn/steer") && generic_rpc_turns.value(id).archived) {
+        const auto pendingInput=native_pending.value(id);
+        if((method=="turn/start" || method=="turn/steer") &&
+            ((pendingInput && pendingInput->archived) || generic_rpc_turns.value(id).archived)) {
             const auto original=generic_rpc_turns.take(id);
             if(reply.contains("error")) {
                 const auto failure=reply.value("error").toObject();const auto code=failure.value("code");
@@ -16161,7 +16185,7 @@ RowTableModel* AssistantViewModel::messages() const { return &state_->messages; 
 RowTableModel* AssistantViewModel::sessions() const { return &state_->sessions; }
 bool AssistantViewModel::sessionsLoading() const { return state_->sessions_loading; }
 bool AssistantViewModel::sessionsHaveMore() const { return state_->sessions_more; }
-QString AssistantViewModel::sessionsError() const { return state_->sessions_error; }
+QString AssistantViewModel::sessionsError() const { return state_->session_browser_error(); }
 void AssistantViewModel::refreshSessions(bool nextPage) {
 #ifndef __EMSCRIPTEN__
     const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();
