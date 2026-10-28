@@ -1034,7 +1034,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
     QPointer<ProjectViewModel> opened;
     auto adopted=std::make_shared<bool>(false);
     try {
-        edi::Project project = edi::load_project(directory.toStdString(), [&warnings](const std::string& message) {
+        edi::Project project = edi::load_project(directory.toStdString(), edi::ProjectLoadMode::Construction, [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
         });
         // A project loads with any value it holds; the warnings that hold for them post once, the loader's own range
@@ -1079,7 +1079,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
     QPointer<ProjectViewModel> opened;
     auto adopted=std::make_shared<bool>(false);
     try {
-        edi::Project project = edi::load_project(source.toStdString(), [&warnings](const std::string& message) {
+        edi::Project project = edi::load_project(source.toStdString(), edi::ProjectLoadMode::Construction, [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
         });
         QString data;  // the scan data directory, linked rather than copied

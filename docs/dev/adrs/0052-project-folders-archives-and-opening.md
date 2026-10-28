@@ -142,11 +142,17 @@ bookkeeping and failure notifications. A stale outer Open cannot decorate a succ
 origin, location or error, nor delete staging after another actual replacement. Unadopted local
 candidates can be retired, while actual adopted state is never rolled back to manufacture no effect.
 
-This does not change the original whole-project Open policy or introduce a loader/format. Save
-and readback continue to accept construction states; ordinary Open still requires structures,
-experiments and their measured-data/calculation-grid prerequisites. The retained app6 partial
-one-structure/zero-experiment reopen refusal was not writer corruption. Complete persistence
-verification uses a genuinely complete native project and retains incomplete refusal separately.
+The original complete-only GUI Open policy below is superseded by the owner's construction-state
+roundtrip requirement (2026-10-28). FIRST load_project now has an explicit Construction role for
+ordinary Session Open/Open-copy and Text scratch reload. Saved empty, structure-only and
+not-yet-loaded experiment states restore their actual members, with no placeholders or promised
+unserialized UI selection. Present data/grid/category/scan/template/relation content and held
+structure links still pass the original parser/integrity checks. This is distinct from saved-value
+readback, whose prior reference policy is unchanged. The original default load_project overload,
+Python/CLI consumers and strict captured assistant-result loader retain complete-model semantics.
+Folder/project-record/archive, read-only/example/web/recovery and session restoration converge on
+the same ordinary Session role. The older app6 refusal identified that former completeness policy,
+not writer corruption. Actual partial-state roundtrip/tab qualification remains required.
 
 Picked-file and stored/recovery Open answers share that same guarded webOpenAnswer continuation.
 Recovery marks only its actual successfully adopted current target unsaved. Shared openRequest

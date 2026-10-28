@@ -7368,6 +7368,7 @@ struct AssistantViewModel::State {
         if (method == "item/reasoning/summaryPartAdded") return "REASONING_PART";
         if (method == "turn/plan/updated") return "PLAN_UPDATE";
         if (method == "turn/completed") return "TURN_COMPLETE";
+        if (method == "error") return "PROVIDER_ERROR";
         return "OTHER";
     }
     static const char* native_failure_class() noexcept {
@@ -13341,6 +13342,60 @@ struct AssistantViewModel::State {
             return;
         }
     }
+    struct ProviderErrorObservation {QString message,cause;};
+    ProviderErrorObservation retain_provider_error(const QJsonValue& supplied,const char* source,bool willRetry) noexcept {
+        const auto proof=file_projection();const auto thread=generic_thread,turn=generic_turn;
+        const auto scope=work_reports.scope(),attempt=work_reports.attempt();
+        const auto current=[&]{return proof.input_current() && generic_thread==thread && generic_turn==turn &&
+            !thread.isEmpty() && !turn.isEmpty() && work_reports.scope()==scope && work_reports.attempt()==attempt;};
+        ProviderErrorObservation observation;
+        try {
+            if(!current())return {};
+            Object payload{{"type","providerError"},{"source",QLatin1StringView(source)},{"threadId",thread},{"turnId",turn},{"willRetry",willRetry}};
+            payload["error_presence"]=supplied.isUndefined()?"absent":supplied.isNull()?"null":supplied.isObject()?"object":"invalid";
+            const auto errorObject=supplied.toObject();const auto message=errorObject.value("message");
+            if(supplied.isObject() && message.isString()) {
+                observation.message=bounded_error(message.toString());
+                payload["message"]=observation.message;payload["message_complete"]=observation.message==message.toString();
+            } else if(supplied.isObject()) {payload["message_presence"]="invalid";work_reports.missEvidence();}
+            // Codex092's public enum only: never retain unknown object fields,
+            // additionalDetails, misalignment bodies, requests or headers.
+            const auto info=errorObject.value("codexErrorInfo");QString code;
+            static constexpr const char* simple[]={"contextWindowExceeded","sessionBudgetExceeded","usageLimitExceeded","rateLimitExceeded",
+                "flexUnavailable","serverOverloaded","cyberPolicy","misalignmentPolicyViolation","tooManyDenials","internalServerError",
+                "unauthorized","badRequest","threadRollbackFailed","sandboxError","other"};
+            if(info.isString()) {
+                code="other";
+                for(const auto* known:simple)if(info==QLatin1StringView(known)){code=QLatin1StringView(known);break;}
+            } else if(info.isObject()) {
+                code="other";const auto fields=info.toObject();
+                for(const auto* known:{"httpConnectionFailed","responseStreamConnectionFailed","responseStreamDisconnected","responseTooManyFailedAttempts","activeTurnNotSteerable"})
+                    if(fields.size()==1 && fields.value(QLatin1StringView(known)).isObject()) {
+                        code=QLatin1StringView(known);const auto details=fields.value(code).toObject();const auto http=details.value("httpStatusCode");
+                        if(http.isDouble() && std::isfinite(http.toDouble()) && std::floor(http.toDouble())==http.toDouble() && http.toDouble()>=0 && http.toDouble()<=65535)
+                            payload["httpStatusCode"]=http;
+                        const auto kind=details.value("turnKind");if(code=="activeTurnNotSteerable" && (kind=="review" || kind=="compact"))payload["turnKind"]=kind;
+                        break;
+                    }
+            } else if(!info.isUndefined() && !info.isNull()) {payload["code_presence"]="invalid";work_reports.missEvidence();}
+            if(!code.isEmpty()) {payload["code"]=code;observation.cause="provider."+code;}
+            else if(!observation.message.isEmpty())observation.cause=observation.message;
+            const QString description=observation.message.isEmpty()
+                ?QObject::tr("The agent reported no usable public error explanation; retained work was preserved."):observation.message;
+            const auto text=willRetry?QObject::tr("The agent reported an error and will retry automatically: %1").arg(description):description;
+            // Repeated identical observations retain one original row. Different
+            // facts and a terminal carrier remain distinct; neither replays input.
+            for(const auto& value:history) {
+                const auto row=value.toObject();if(row.value("payload").toObject()==payload && history_thread(row)==thread)return observation;
+            }
+            auto row=public_row("error",text,payload,willRetry?"retrying":"failed");row["workDiagnostic"]=true;
+            const bool retained=generic_present(std::move(row));
+            if(!current())return {};
+            if(!retained)work_reports.missEvidence();
+            if(!supplied.isObject())observation.cause.clear(); // Absence is not a provider root cause.
+            observation.message=text;return observation;
+        }catch(...) {if(current())work_reports.missEvidence();return {};}
+    }
     bool generic_bound(const Object& params) const {
         return generic_authenticated && !generic_retiring && !generic_thread.isEmpty() && !generic_turn.isEmpty() &&
             params.value("threadId").isString() && params.value("threadId") == generic_thread &&
@@ -13687,7 +13742,17 @@ struct AssistantViewModel::State {
         if (method == "turn/completed") {
             if (!generic_authenticated || generic_retiring || params.value("threadId") != generic_thread || generic_turn.isEmpty()) return;
         } else if (!generic_bound(params)) return;
-        if (method == "item/started" || method == "item/completed") {
+        if(method=="error") {
+            diagnostic.stage="PROVIDER_ERROR_VALIDATE";
+            if(!params.value("willRetry").isBool())throw std::runtime_error("Agent error notification has no retry disposition");
+            const auto originalThread=generic_thread,originalTurn=generic_turn;
+            const bool retry=params.value("willRetry").toBool();
+            const auto observed=retain_provider_error(params.value("error"),"notification",retry);
+            if(!publication.input_current() || generic_thread!=originalThread || generic_turn!=originalTurn)return;
+            if(!retry && work_first_cause.isEmpty() && !observed.cause.isEmpty())work_first_cause=observed.cause;
+            // willRetry is the runtime's observation, never a client retry or a
+            // terminal/scientific failure transition.
+        } else if (method == "item/started" || method == "item/completed") {
             diagnostic.stage = "ITEM_ENTER";
             const bool changed = generic_item(params.value("item").toObject(), method == "item/completed", false, diagnostic);
             diagnostic.stage = "ITEM_ACTIVITY";
@@ -13783,6 +13848,11 @@ struct AssistantViewModel::State {
             if (generic_id(turn.value("id")) != generic_turn) return;
             const auto status = turn.value("status").toString();
             if (status != "completed" && status != "interrupted" && status != "failed") throw std::runtime_error("Agent terminal status is invalid");
+            diagnostic.stage="TURN_END_ERROR";
+            const auto originalThread=generic_thread,originalTurn=generic_turn;
+            const auto observedError=(status!="completed" || (turn.contains("error") && !turn.value("error").isNull()))
+                ?retain_provider_error(turn.value("error"),"terminal",false):ProviderErrorObservation{};
+            if(!publication.input_current() || generic_thread!=originalThread || generic_turn!=originalTurn)return;
             diagnostic.stage = "TURN_END_NATIVE";
             if (native_fit || native_worker_admitted()) {
                 if (status == "completed") throw std::runtime_error("Agent completed before its native action result");
@@ -13836,7 +13906,7 @@ struct AssistantViewModel::State {
             if (generic_interrupt_thread == generic_thread && generic_interrupt_turn == generic_turn) {
                 generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
             }
-            work_end(status=="completed"?"completed":status=="interrupted"?"interrupted":"failed");
+            work_end(status=="completed"?"completed":status=="interrupted"?"interrupted":"failed",status=="completed"?QString{}:observedError.cause);
             if(!publication.input_current())return;
             generic_terminal_turn = generic_turn;
             generic_busy = false; generic_turn.clear(); generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); /* Explicit Stop remains the only input-caused revoke latch. */
@@ -13848,7 +13918,8 @@ struct AssistantViewModel::State {
             if (generic_revoke_pending) generic_settle_revoke();
             else agent->settleOperation();
             if (!publication.input_current()) return;
-            if (status != "completed") { if (!generic_clear_pending) error = QObject::tr("The official agent turn was interrupted or failed. Retained work is preserved."); }
+            if(status!="completed" && !generic_clear_pending)error=!observedError.message.isEmpty()?observedError.message:
+                QObject::tr("The official agent turn was interrupted or failed without an available explanation. Retained work is preserved.");
         }
         diagnostic.stage = "EVENT_PRESENT";
         if (!publication.input_current()) return;
