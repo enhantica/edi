@@ -64,6 +64,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
     Q_PROPERTY(QVariantMap account READ account NOTIFY accountChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
+    Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextPreviewChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
     Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextPreviewChanged)
 
@@ -130,6 +131,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void refreshSkillSources();
     Q_INVOKABLE void refreshUsage();
     QString contextPreview() const;
+    QString contextConsentIdentity() const;
     bool contextConsentRequired() const;
     bool contextApprovalBlocked() const;
     void setSelectedModel(const QString& model);

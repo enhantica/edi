@@ -2617,6 +2617,9 @@ struct AssistantViewModel::State {
     std::shared_ptr<const DisclosureScope> approved_scope, backend_scope, bootstrap_scope, clear_scope;
     std::shared_ptr<DisclosureScope> login_scope;
     std::shared_ptr<const DisclosureScope> disclosure_cache;
+    std::shared_ptr<const DisclosureScope> consent_identity_scope;
+    QString consent_identity;
+    quint64 consent_identity_generation=0;
     edi::assistant::Revision disclosure_revision;
     QByteArray disclosure_capabilities;
     bool generic_context_reuse = false;
@@ -14973,6 +14976,7 @@ struct AssistantViewModel::State {
             if (!property("canCancel", &AssistantViewModel::canCancel, &AssistantViewModel::canCancelChanged)) return;
             if (!property("lastError", &AssistantViewModel::lastError, &AssistantViewModel::lastErrorChanged)) return;
             if (!property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
+            if (!property("contextConsentIdentity", &AssistantViewModel::contextConsentIdentity, &AssistantViewModel::contextPreviewChanged)) return;
             if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextPreviewChanged)) return;
             if (!property("contextApprovalBlocked", &AssistantViewModel::contextApprovalBlocked, &AssistantViewModel::contextPreviewChanged)) return;
         } catch (...) {
@@ -16831,6 +16835,24 @@ QString AssistantViewModel::contextPreview() const {
     if (state_->generic_mode) return QString::fromUtf8(QJsonDocument(state_->session_preparation?state_->session_preparation->context:state_->outgoing_context()).toJson(QJsonDocument::Compact));
 #endif
     return state_->controller ? QString::fromStdString(state_->controller->context()) : QString();
+}
+QString AssistantViewModel::contextConsentIdentity() const {
+#ifndef __EMSCRIPTEN__
+    if(state_->generic_mode)try {
+        const auto proof=state_->file_projection();
+        const auto actual=state_->session_preparation?state_->session_preparation->disclosure:state_->current_disclosure();
+        if(!proof.input_current() || !actual)return {};
+        // The FIRST backend disclosure owns consent. Presentation timestamps,
+        // calculation readiness and refreshed account labels are not a new offer.
+        if(state_->consent_identity.isEmpty() || state_->consent_identity_generation!=state_->generation ||
+            !State::same_disclosure(state_->consent_identity_scope,actual)) {
+            state_->consent_identity_scope=actual;state_->consent_identity_generation=state_->generation;
+            state_->consent_identity=QUuid::createUuid().toString(QUuid::WithoutBraces);
+        }
+        return state_->consent_identity;
+    }catch(...) {return {};}
+#endif
+    return contextPreview(); // The portable original context has no volatile native presentation.
 }
 bool AssistantViewModel::contextApprovalBlocked() const {
 #ifndef __EMSCRIPTEN__

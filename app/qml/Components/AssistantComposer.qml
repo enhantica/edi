@@ -501,7 +501,7 @@ Rectangle {
             files: consentFileRevision, project: Session.project,
             model: assistant.selectedModel, effort: assistant.selectedEffort,
             email: assistant.account.email, plan: assistant.account.planType };
-        const context = draft.owner.contextPreview;
+        const context = draft.owner.contextConsentIdentity;
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draft.owner) || draft.owner !== component.assistant) return null;
         draft.context = context;
         const owned = component.ownsConsentDraft(draft);
@@ -511,12 +511,12 @@ Rectangle {
     function ownsConsentDraft(draft) {
         if (draft === null || draft.owner !== assistant) return false;
         const original = assistant;
-        const context = original.contextPreview;
+        const context = original.contextConsentIdentity;
         return Qt.isQtObject(composer) && Qt.isQtObject(original) && original === assistant
             && draft.owner === original && draft.text === editor.text
             && draft.revision === textRevision && draft.ownerRevision === draftOwnerRevision
             && draft.files === consentFileRevision && draft.project === Session.project
-            && draft.context === context && draft.model === assistant.selectedModel
+            && draft.context.length > 0 && draft.context === context && draft.model === assistant.selectedModel
             && draft.effort === assistant.selectedEffort && draft.email === assistant.account.email
             && draft.plan === assistant.account.planType
             && !editor.inputMethodComposing && editor.preeditText.length === 0;

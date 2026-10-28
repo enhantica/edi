@@ -138,11 +138,11 @@ Popup {
         const draftOwned = draftComponent.ownsConsentDraft(intent.draft);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !draftOwned
             || !Qt.isQtObject(dialog) || intent.offer !== dialog.approvalOwner) return false;
-        const context = original.contextPreview;
+        const context = original.contextConsentIdentity;
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
             || !Qt.isQtObject(dialog) || component.consentSend !== intent || intent.owner !== original
             || intent.offer !== dialog.approvalOwner) return false;
-        if (intent.project !== Session.project || !original.connected || context !== intent.context
+        if (intent.project !== Session.project || !context.length || context !== intent.context
             || original.selectedModel !== intent.model || original.selectedEffort !== intent.effort) return false;
         const stillDraftOwned = draftComponent.ownsConsentDraft(intent.draft);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return false;
@@ -160,7 +160,7 @@ Popup {
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
         const stillOwned = component.ownsConsentSend(intent);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
-        if (required || original.state !== "idle" || original.canCancel) return;
+        if (!original.connected || required || original.state !== "idle" || original.canCancel) return;
         // Consume before submission: queued readiness notifications cannot send twice.
         component.consentSend = null;
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
@@ -171,8 +171,8 @@ Popup {
     Connections {
         target: panel.assistant
         function onConversationRetired() { panel.retireConsentSend(); panel.noticeState = null; panel.captureNotice(); }
-        function onConnectedChanged() { panel.retireConsentSend(); }
-        function onAccountChanged() { panel.retireConsentSend(); panel.noticeState = null; panel.captureNotice(); }
+        function onConnectedChanged() { panel.scheduleConsentSend(); }
+        function onAccountChanged() { panel.scheduleConsentSend(); panel.noticeState = null; panel.captureNotice(); }
         function onSelectedModelChanged() { panel.retireConsentSend(); }
         function onSelectedEffortChanged() { panel.retireConsentSend(); }
         function onStateChanged() { panel.scheduleConsentSend(); }
