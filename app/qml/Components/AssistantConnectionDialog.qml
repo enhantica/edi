@@ -79,8 +79,26 @@ AppDialog {
         id: connectionButtons
         visible: count > 0
         delegate: EaElements.Button {
+            id: connectionChoice
+            property string fontIcon: ""
             highlighted: true
             padding: EaStyle.Sizes.fontPixelSize * 0.5
+            contentItem: Row {
+                spacing: EaStyle.Sizes.fontPixelSize * 0.5
+                EaElements.Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: connectionChoice.fontIcon
+                    font.family: EaStyle.Fonts.iconsFamily
+                    color: connectionChoice.foregroundColor()
+                    Accessible.ignored: true
+                }
+                EaElements.Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: connectionChoice.text
+                    font: connectionChoice.font
+                    color: connectionChoice.foregroundColor()
+                }
+            }
         }
         // Measure standard buttons independently of the view's laid-out width.
         readonly property real naturalButtonWidth: {
@@ -104,9 +122,12 @@ AppDialog {
     function updateAcceptButton() {
         const acceptButton = standardButton(Dialog.Ok);
         if (acceptButton) {
-            acceptButton.text = assistant.connected ? qsTr("Approve context") : qsTr("Connect ChatGPT");
+            acceptButton.text = assistant.connected ? qsTr("Share project information") : qsTr("Connect ChatGPT");
+            acceptButton.fontIcon = assistant.connected ? "check" : "comment-dots";
             acceptButton.enabled = !assistant.contextApprovalBlocked;
         }
+        const cancelButton = standardButton(Dialog.Cancel);
+        if (cancelButton) cancelButton.fontIcon = "times";
     }
     onAboutToShow: updateAcceptButton()
     onOpened: {
