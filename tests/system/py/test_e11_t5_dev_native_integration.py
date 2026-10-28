@@ -428,6 +428,9 @@ def _scene_control_expression(name):
     # data graph, aliases or Set identity traversal. The finite acyclic parent
     # tree bounds the read, and absence still returns null without creating UI.
     return ("(function(){const root=window.contentItem,queue=root?[root]:[];"
+            "const panel=typeof assistantPanel==='undefined'?null:assistantPanel;"
+            "if(panel&&panel.assistant===Session.assistant&&panel.parent&&panel.parent.Window.window===window){"
+            "const content=panel.contentItem;if(content&&content!==root)queue.push(content);}"
             "while(queue.length){const x=queue.shift();if(x.objectName===" + json.dumps(name) + ")return x;"
             "const children=x.children;for(let i=0;i<children.length;i++){const child=children[i];"
             "if(child&&child.parent===x)queue.push(child);}}return null;})()")
@@ -7479,7 +7482,7 @@ def test_failed_durable_archive_last_write_survives_successful_ordinary_browser_
     actor.connect();actor.request('One genuine current conversation retained by the original normal session settings owner.')
     _session_completed(actor, 1);original = _session_state(actor)['inputs'][0]['threadId']
     observed = actor.command('inspect');identity = observed['test_settings'];settings = Path(identity['path'])
-    assert settings.name == identity['application_name'] + '.ini' and settings.parent.name == identity['organization_name'] \
+    assert settings.name == 'EasyDiffraction.ini' and settings.parent.name == 'EasyScience' \
         and settings.stat().st_uid == os.geteuid() and not settings.is_symlink() and os.geteuid() != 0, (
             'The storage fault is confined to the exact genuine isolated fixture QSettings file reported by its current Main owner')
     original_bytes = settings.read_bytes();saved = actor.folder / 'genuine-settings-before-archive.ini';saved.write_bytes(original_bytes)
@@ -8327,7 +8330,7 @@ def _watch_original_offered_choices(actor, marker):
             for(let p=item;p;p=p.parent){if(!p.visible||p.opacity===0)return false;if(p.clip){const r=rect(p);clip.x=Math.max(clip.x,r.x);clip.y=Math.max(clip.y,r.y);clip.right=Math.min(clip.right,r.x+r.width);clip.bottom=Math.min(clip.bottom,r.y+r.height);}}
             return b.x>=clip.x&&b.y>=clip.y&&b.x+b.width<=clip.right&&b.y+b.height<=clip.bottom;}
         function snap(kind,box,row,index){const p=box.popup;return {kind:kind,control:box.objectName,controlObject:String(box),popupObject:String(p),
-            popupOpened:p.opened,popupVisible:p.visible,popupWindow:String(p.Window.window),sameWindow:box.Window.window===window,
+            popupOpened:p.opened,popupVisible:p.visible,popupWindow:String(p.contentItem?p.contentItem.Window.window:null),sameWindow:box.Window.window===window,
             rowObject:row?String(row):null,rowText:row&&typeof row.text==='string'?row.text:null,index:index,
             offered:index>=0&&index<box.count?box.textAt(index):null,searchText:box.searchText,
             rowVisible:row?visible(row):false,rowBounds:row?rect(row):null,pointer:probe.lastPointer,ownerCurrent:current()};}
@@ -8336,7 +8339,8 @@ def _watch_original_offered_choices(actor, marker):
             probe.rows.push(row);row.pressedChanged.connect(function(){if(current()&&Qt.isQtObject(box)&&Qt.isQtObject(row)&&row.pressed){const index=typeof row.index==='number'?row.index:box.find(row.text);probe.facts.push(snap('real_delegate_pressed',box,row,index));}});}
         function bind(box){if(probe.combos.indexOf(box)>=0||!box.popup||!box.activated)return;
             probe.combos.push(box);box.popup.visibleChanged.connect(function(){if(current()&&box.popup.visible)probe.facts.push(snap('original_popup_visible',box,null,-1));});
-            box.activated.connect(function(index){if(current())probe.facts.push(snap('original_choice_activated',box,null,index));});}
+            box.activated.connect(function(index){if(current())probe.facts.push(snap('original_choice_activated',box,null,index));});
+            box.popup.closed.connect(function(){if(current())probe.facts.push(snap('original_popup_closed',box,null,-1));});}
         probe.scan=function(){if(!current()||probe.finished)return;
             const stack=[window.contentItem];while(stack.length){const item=stack.pop();
                 if(item.objectName==='parameters.category'||String(item.objectName).startsWith('alias.parameter.'))bind(item);
@@ -8354,6 +8358,10 @@ def test_show_on_alias_search_physically_chooses_actual_offered_row_once(main_ac
     assert actor.command('open', path=str(project))['reply']['opened'], (
         'Visible offered choices begin with a genuine ordinary project and its original Analysis owners')
     actor.until(lambda value: not value['ui']['project']['calculating'])
+    if any(row['name'] == 'home.start' and row['visible'] and row['enabled'] for row in actor.last['ui']['controls']):
+        actor.command('click', name='home.start')
+    actor.until(lambda value: any(row['name'] == 'appBar.tab.analysis' and row['enabled'] and row['fully_exposed']
+        for row in value['ui']['controls']))
     actor.command('click', name='appBar.tab.analysis')
     actor.until(lambda value: any(row['name'] == 'parameters.category' and row['visible']
         for row in value['ui']['controls']))
@@ -8400,6 +8408,10 @@ def test_show_on_original_background_filter_choice_has_visible_row_pointer_and_p
     assert actor.command('open', path=str(project))['reply']['opened'], (
         'Whole-group visible choice begins with an actual ordinary saved background model')
     actor.until(lambda value: not value['ui']['project']['calculating'])
+    if any(row['name'] == 'home.start' and row['visible'] and row['enabled'] for row in actor.last['ui']['controls']):
+        actor.command('click', name='home.start')
+    actor.until(lambda value: any(row['name'] == 'appBar.tab.analysis' and row['enabled'] and row['fully_exposed']
+        for row in value['ui']['controls']))
     actor.command('click', name='appBar.tab.analysis')
     actor.until(lambda value: any(row['name'] == 'parameters.category' and row['visible']
         for row in value['ui']['controls']))
@@ -8428,6 +8440,13 @@ def test_show_on_original_background_filter_choice_has_visible_row_pointer_and_p
         assert point and bounds['x'] <= point['x'] <= bounds['x'] + bounds['width'] \
             and bounds['y'] <= point['y'] <= bounds['y'] + bounds['height'], (
             'The original assistant pointer reaches the real category row before its ordinary press')
+    category_events = [row for row in facts if row['control'] == 'parameters.category']
+    activated = [index for index, row in enumerate(category_events) if row['kind'] == 'original_choice_activated']
+    closed = [index for index, row in enumerate(category_events) if row['kind'] == 'original_popup_closed']
+    assert activated and closed and activated[0] < closed[-1], (
+        'The genuine selected popup reaches its original asynchronous closed signal after activation, before this native caller is accepted as settled')
+    assert not category_events[closed[-1]]['popupVisible'], (
+        'The actual original closed signal, rather than an immediate post-click visibility guess or a fixed sleep, establishes the popup exit boundary')
     after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
     targeted = {row['path'] for row in group}
     assert all(after[row['path']]['free'] is requested for row in group), (
@@ -8578,3 +8597,85 @@ def test_present_invalid_relation_purpose_refuses_before_original_effect_or_pres
     (actor.folder / 'invalid-present-purpose-original-relation.json').write_text(json.dumps({
         'actual_call': call, 'actual_refusal': response, 'actual_ui_sequence': actor.last['ui']['ui_sequence'],
         'saved_source_sha256': {name: hashlib.sha256(raw).hexdigest() for name, raw in saved.items()}}, indent=2))
+
+
+# Added distinct regression: original manually connected restart gate above remains unchanged.
+def test_actual_auto_restart_first_send_keeps_original_thread_history_and_inputs_without_manual_connect(main_actor, tmp_path, monkeypatch):
+    actor = main_actor([[]]);_session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], 'Restart positive begins with an actual saved ordinary project outside temporary app storage'
+    actor.connect();source = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], 'Original restart inputs are genuinely admitted from their unchanged physical source files'
+    file_id = actor.last['ui']['selected_files'][0]['id']
+    actor.configure_turns([[tool_call('read_selected_file', 'original-pre-restart-native-read', file_id=file_id, offset=0, max_bytes=source.stat().st_size)]])
+    original_task = 'Keep this actual original project and attached CIF for a later continuation.'
+    _session_request_with_original_disclosure(actor, original_task);_session_completed(actor, 1);native_result(actor.responses()[0])
+    first = _session_state(actor)['inputs'][0];thread = first['threadId']
+    original_manifest = actor.command('inspect')['ui']['selected_files']
+    first_rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
+    assert {'user', 'assistant', 'activity'} <= {row['kind'] for row in first_rows}, 'The actual first run reaches user, assistant and native activity before restart capture'
+    _capture_genuine_archive(actor, 'restart-full-current')
+    manifest = _capture_exact_cache_manifest(actor, 'full-current')
+    sources = _finish_genuine_restart_sources(actor, manifest)
+    restored = _start_exact_original_fixture_restart(tmp_path, monkeypatch, sources,
+        [tool_call('read_selected_file', 'actual-post-restart-native-read', file_id=file_id, offset=0, max_bytes=source.stat().st_size)])
+    try:
+        # Observe the owner's actual startup path; manual Connect, Sessions,
+        # selectSession and forced project Open would mask this regression.
+        restored.until(lambda value: original_task in json.dumps(value['ui']['messages'], ensure_ascii=False)
+            and any(row['name'] == 'assistant.send' and row['enabled'] and row['fully_exposed']
+                for row in value['ui']['controls']))
+        auto = _session_wire(restored)
+        startup = restored.command('inspect')['ui']
+        followup_text = 'Continue the same original task by reading the original attached file.'
+        restored.command('click', name='assistant.composer')
+        restored.command('manual_text', text=followup_text)
+        assert qml(restored, '(' + _scene_control_expression('assistant.composer') + ').text') == followup_text, (
+            'Actual physical typing reaches the exposed original composer before its first startup continuation')
+        restored.command('click', name='assistant.send')
+        if any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
+               for row in restored.last['ui']['controls']):
+            approval = restored.command('dialog_ok', name='AssistantConnectionDialog', role='ok')['reply']
+            assert approval['pressed_changes'] > 0, (
+                'If original startup requires sharing, one genuine current Share click authorizes the captured first draft without a second Send')
+        _session_completed(restored, 2)
+        wire = _session_wire(restored)
+        assert not any(row.get('method') == 'thread/start' for row in wire), 'Actual last-session restoration must not disguise a fresh provider thread as the resumed conversation'
+        resumes = _session_wire(restored, 'thread/resume')
+        assert qml(restored, 'Session.assistant.account') == sources['actual_account'], 'A genuine cold restart establishes the same actual account by its correlated read rather than treating helper readiness as an identity change'
+        assert resumes and resumes[-1]['params']['threadId'] == thread, 'Normal login/restart cold-resumes the actual original last-connected runtime ID'
+        assert len(_session_wire(restored, 'turn/start')) == 1, 'Startup restoration admits only the one actual first followup and never replays the original user request or native read'
+        current = restored.command('inspect')['ui']
+        assert current['selected_files'] == original_manifest, 'Restart restores original opaque input identities and consumed markers rather than substituting copied files or labels'
+        displayed = [_rows_values(restored, 'messages', index) for index in range(_rows_probe(restored)['count'])]
+        by_id = {row['id']: row for row in displayed}
+        assert all(by_id.get(row['id']) == row for row in first_rows), 'Genuine full app cache restores all original user, assistant and native activity rows exactly after runtime confirmation'
+        followup = _session_state(restored)['inputs'][-1]
+        assert followup['threadId'] == thread and followup['actual_prior_input_count'] == 1, 'The actual next request is a continuation of the original persisted conversation rather than a new first message'
+        readback = native_result(restored.responses()[-1])
+        assert any(value == source.read_text() for row in objects(readback) for value in row.values() if isinstance(value, str)), 'The genuine resumed Controller can still read approved original bytes at unchanged physical identity'
+        (restored.folder / 'actual-auto-startup-first-send.json').write_text(json.dumps({
+            'original_sources': sources, 'auto_events_before_manual_connect': auto,
+            'actual_startup_before_first_send': startup, 'manual_connect_or_session_selection': False,
+            'first_send_count': 1, 'actual_resumes': resumes, 'original_rows': first_rows, 'restored_rows': displayed,
+            'actual_followup': followup}, indent=2))
+    finally:
+        _close_explicit_restart_actor(restored)
+
+
+def test_actual_main_engine_load_emits_owned_first_reply_without_component_errors(main_actor):
+    actor = main_actor([[]])
+    first = actor.last
+    assert all(first['ui'][key] for key in ('singleton_identity', 'engine_parent', 'cpp_ownership')), (
+        'The first actual Main protocol reply must come from the prepared Session/module/Main owner after real QQmlApplicationEngine load')
+    assert not first['ui']['project'], 'The startup component check observes the genuine empty Main before any project or provider request'
+    stderr = (actor.folder / 'host.stderr').read_text(errors='replace')
+    bad = [line for line in stderr.splitlines() if re.search(
+        r'QQmlApplicationEngine failed to load component|Type [^\n]+ unavailable|Invalid property assignment[^\n]*(?:read.only|read only)', line)]
+    assert not bad, (
+        'Real Main startup must reject unavailable components/read-only QML assignments; qmlcache compile success alone is not component-load evidence')
+    (actor.folder / 'actual-main-component-load.json').write_text(json.dumps({
+        'host_pid': actor.process.pid, 'first_owned_reply': True,
+        'owner_checks': {key: first['ui'][key] for key in ('singleton_identity', 'engine_parent', 'cpp_ownership')},
+        'actual_stderr': str(actor.folder / 'host.stderr'), 'component_errors': bad}, indent=2))
