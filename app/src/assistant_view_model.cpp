@@ -1554,23 +1554,13 @@ struct AssistantViewModel::State {
         return {"cli","vscode","exec","appServer","subAgent","subAgentReview","subAgentCompact","subAgentThreadSpawn","subAgentOther","unknown"};
     }
     bool owned_session(const Object& thread) const {
-        if(thread.value("originator")!="edi" || thread.value("ephemeral")!=false ||
-            !thread.value("id").isString() || thread.value("id").toString().isEmpty())return false;
+        // Runtime metadata records the creation-time client. Discovery and
+        // exact-target Archive do not require a still-usable scientific workspace.
+        if(thread.value("originator")!="edi" || !thread.value("id").isString() ||
+            thread.value("id").toString().isEmpty())return false;
         const auto modified=thread.value("updatedAt").toDouble(std::numeric_limits<double>::quiet_NaN());
-        if(!std::isfinite(modified) || std::floor(modified)!=modified || modified < -8640000000000.0 || modified > 8640000000000.0)return false;
-        const auto cwd=thread.value("cwd").toString();
-        const auto root=QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/agent").canonicalFilePath();
-        const QFileInfo workspace(cwd);const auto canonical=workspace.canonicalFilePath();
-        if(root.isEmpty() || canonical!=cwd || !workspace.isDir() || workspace.fileName()!="workspace")return false;
-        const auto issued=workspace.dir();const auto token=issued.dirName();const QUuid uuid(token);
-        if(uuid.isNull() || uuid.toString(QUuid::WithoutBraces)!=token || issued.absolutePath()!=root+u'/'+token)return false;
-        const QFileInfo instruction(cwd+"/.agents/skills/project-assistance/SKILL.md");
-        if(!instruction.isFile() || instruction.isSymLink() || instruction.canonicalFilePath()!=instruction.absoluteFilePath())return false;
-#if defined(Q_OS_UNIX)
-        struct stat identity{};const auto bytes=QFile::encodeName(issued.absolutePath());
-        if(::lstat(bytes.constData(),&identity) || !S_ISDIR(identity.st_mode) || identity.st_uid!=::getuid() || (identity.st_mode&0077))return false;
-#endif
-        return true;
+        return std::isfinite(modified) && std::floor(modified)==modified &&
+            modified>=-8640000000000.0 && modified<=8640000000000.0;
     }
     bool session_request_current(const SessionRequest& request) const {
         return publishing && generic_authenticated && !generic_retiring && request.epoch==sessions_epoch &&
