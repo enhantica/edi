@@ -5,6 +5,7 @@
 #include <QObject>
 #include <QPointer>
 #include <QString>
+#include <QStringList>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QUrl>
@@ -239,7 +240,7 @@ class Session : public QObject {
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
     bool openCopy(const QString& source, const QString& target, const QString& example);
-    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false);
+    bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={});
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);
     bool saveInto(const QString& folder);
@@ -289,6 +290,9 @@ class Session : public QObject {
     // The temporary folder the project works in (an unpacked archive), removed when it is no longer the project's.
     QString temporary_folder_;
     void releaseTemporaryFolder();
+    // Cleanup authority only: never an inherited origin/Save destination.
+    QStringList retained_temporary_roots_;
+    void releaseTemporaryRoots(const QStringList& candidates, const QString& openedFrom = {}) noexcept;
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
     bool read_only_copy_ = false;
     // Copies every file under `source` to `target`, writable by the owner; those under `linked` are hard links.
@@ -342,6 +346,7 @@ class Session : public QObject {
     QTimer* keep_timer_ = nullptr;
     // The memory folder the browser copied the open project into, released with it.
     QString web_copy_;
+    QString web_source_path_; // Current Open/staged input dependency, never a displayed origin.
 };
 
 }  // namespace edi_app

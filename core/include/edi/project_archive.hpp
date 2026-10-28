@@ -50,6 +50,13 @@ std::string fresh_archive_directory(const std::string& kind);
 // project may sit in its one top folder); nothing for any other path.
 void remove_archive_directory(const std::string& path);
 
+namespace detail {
+// App cleanup needs the actual recorded ancestor remove_archive_directory would
+// remove, not merely the supplied descendant. Read-only; no new cleanup owner.
+std::string archive_directory_root(const std::string& path);
+}
+
+
 // Remove the temporary directories whose process is no longer running: what a crash left behind.
 void remove_stale_archive_directories();
 

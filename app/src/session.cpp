@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "session.hpp"
+#include "assistant_result.hpp"
 #include "../../core/src/canonical_encoding.hpp"
 #include <limits>
 #include <tuple>
@@ -195,16 +196,96 @@ void Session::initializeSession() {
 }
 
 Session::~Session() {
-    delete assistant_;
-    assistant_ = nullptr;
-    releaseTemporaryFolder();
+    delete assistant_;assistant_=nullptr;
+    // QObject normally deletes children after members. The workers/models must
+    // stop before owned QTemporaryDir members or archive roots remove their files.
+    project_=nullptr;
+    while(auto* model=findChild<ProjectViewModel*>(QString{},Qt::FindDirectChildrenOnly)) {
+        disconnect(model,nullptr,this,nullptr);model->blockSignals(true);delete model;
+    }
+    releaseTemporaryRoots({std::exchange(temporary_folder_,QString{}),std::exchange(web_copy_,QString{})});
 }
 
 void Session::releaseTemporaryFolder() {
-    if (!temporary_folder_.isEmpty()) {
-        edi::remove_archive_directory(temporary_folder_.toStdString());
-        temporary_folder_.clear();
-    }
+    releaseTemporaryRoots({std::exchange(temporary_folder_,QString{})});
+}
+
+void Session::releaseTemporaryRoots(const QStringList& candidates,const QString& openedFrom) noexcept {
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+    const auto binding=replacement_generation_;
+    const auto current=[&]{return receiver && project_==target && replacement_generation_==binding;};
+    try {
+        for(const auto& candidate:candidates)if(!candidate.isEmpty()) {
+            const auto root=QString::fromStdString(edi::detail::archive_directory_root(candidate.toStdString()));
+            if(!root.isEmpty() && !retained_temporary_roots_.contains(root))retained_temporary_roots_.append(root);
+        }
+        if(retained_temporary_roots_.isEmpty())return;
+        QStringList closure;
+        const auto add=[&](const QString& path){if(!path.isEmpty() && !closure.contains(path))closure.append(path);};
+        add(openedFrom);
+        const auto addModel=[&](ProjectViewModel* owner) {
+            const auto& model=owner->project();
+            add(owner->path());add(QString::fromStdString(model.metadata.path));
+            add(QString::fromStdString(model.scan_data_root));add(QString::fromStdString(model.archive));
+            if(model.sequential_fit.declared()) {
+                const auto scan=edi::scan_datasets(model);add(QString::fromStdString(scan.directory));
+                for(const auto& file:scan.files)add(QDir(QString::fromStdString(scan.directory)).filePath(QString::fromStdString(file)));
+            }
+            if(const auto& staged=owner->retired_result_) {
+                add(staged->directory);add(staged->recovery_directory);
+                if(staged->lease)add(staged->lease->path());
+            }
+            // The ordinary archive owner supplies the actual file/link closure.
+            for(const auto& folder:{owner->path(),QString::fromStdString(model.scan_data_root)})if(!folder.isEmpty())
+                for(const auto& file:edi::project_archive_members(folder.toStdString()))add(QDir(folder).filePath(QString::fromStdString(file)));
+        };
+        if(target) {
+            addModel(target);
+            add(archive_location_);if(read_only_copy_)add(read_only_source_);
+            add(temporary_folder_);add(web_copy_);add(web_source_path_);
+        }
+        // A retired publication stack can still own staged reads until its
+        // deferred destruction; do not delete its backing data mid-callback.
+        for(QObject* child:children())if(auto* held=qobject_cast<ProjectViewModel*>(child))
+            if(held!=target && (held->publication_depth_!=0 || held->editing_))addModel(held);
+        const auto physical=[](const QString& path) {
+            std::error_code error;
+            auto result=std::filesystem::weakly_canonical(std::filesystem::u8path(path.toUtf8().constData()),error);
+            if(error)throw std::runtime_error("Temporary backing-root independence is unavailable");
+            return result;
+        };
+        const auto used=[&](const QString& root) {
+            const auto directory=physical(root);
+            std::error_code error;
+            const bool exists=std::filesystem::exists(directory,error);
+            if(error)return true;
+            for(const auto& path:closure) {
+                auto cursor=physical(path);
+                // Canonical ancestors plus filesystem equivalence cover aliases,
+                // directory mounts, descendant paths and not-yet-written leaves.
+                for(;;) {
+                    if(exists && std::filesystem::exists(cursor,error)) {
+                        if(std::filesystem::equivalent(directory,cursor,error))return true;
+                        if(error)return true;
+                    } else if(error)return true;
+                    if(!exists) {
+                        const auto [inside,outside]=std::mismatch(directory.begin(),directory.end(),cursor.begin(),cursor.end());
+                        if(inside==directory.end())return true;
+                    }
+                    const auto parent=cursor.parent_path();if(parent==cursor || parent.empty())break;cursor=parent;
+                }
+            }
+            return false;
+        };
+        for(qsizetype i=0;i<retained_temporary_roots_.size();) {
+            if(!current())return;
+            const auto root=retained_temporary_roots_.at(i);
+            if(used(root)){++i;continue;}
+            if(!current())return;
+            edi::remove_archive_directory(root.toStdString());
+            retained_temporary_roots_.removeAt(i);
+        }
+    }catch(...) {} // Unproved independence keeps the existing registered owner.
 }
 
 bool Session::openProject(const QUrl& location) {
@@ -269,6 +350,8 @@ bool Session::openProjectAt(const QUrl& location) {
         } else {
             setOpenedArchive(given.fileName());
         }
+        if(!current())return false;
+        releaseTemporaryRoots({});
         return current();
     }
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
@@ -294,6 +377,8 @@ bool Session::openProjectAt(const QUrl& location) {
         emit needsSaveAsChanged();if(!current())return false;
         emit locationTextChanged();if(!current())return false;
         emit projectDirectoryUsed(folder.absoluteFilePath());if(!current())return false;
+        if(!current())return false;
+        releaseTemporaryRoots({});
         return current();
     }
     const bool opened = open(source, {});
@@ -565,10 +650,9 @@ bool Session::takeWebSave(const Staged& staged, quint64 revision) {
     }
     project_->takeStaged(staged.folder, *staged.project, staged.scan);
     releaseTemporaryFolder();
-    if (!web_copy_.isEmpty()) {
-        QDir(web_copy_).removeRecursively();
-    }
-    web_copy_ = staged.root;
+    const auto previousWeb=std::exchange(web_copy_,staged.root);
+    web_source_path_=staged.folder;
+    releaseTemporaryRoots({previousWeb});
     return true;
 }
 
@@ -856,7 +940,7 @@ bool Session::open(const QString& directory, const QString& example) {
     const auto cleanup=qScopeGuard([&] {
         if(!adopted && receiver && opened && project_!=opened)opened->deleteLater();
     });
-    return replaceProject(opened,warnings,example,false,&adopted);
+    return replaceProject(opened,warnings,example,false,&adopted,nullptr,false,directory);
 }
 
 bool Session::openCopy(const QString& source, const QString& target, const QString& example) {
@@ -902,7 +986,7 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
     const auto cleanup=qScopeGuard([&] {
         if(!adopted && receiver && opened && project_!=opened)opened->deleteLater();
     });
-    return replaceProject(opened,warnings,example,false,&adopted);
+    return replaceProject(opened,warnings,example,false,&adopted,nullptr,false,source);
 }
 
 void Session::setOpenedArchive(const QString& name) {
@@ -913,7 +997,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom) {
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     if(replacement_generation_==UINT64_MAX)throw std::length_error("Session replacement identity is exhausted");
@@ -927,7 +1011,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     // In the web app a project starts in the browser's own storage; an open from the disk or from a stored place
     // names its place once it is open.
     web_place_ = {};
-    web_from_file_ = false;
+    web_from_file_ = false;web_source_path_.clear();
     if (project != nullptr && WebFiles::available()) {
         web_place_ = {newWebKey(), QStringLiteral("browser"), folderNameFor(project->name())};
         connect(project, &ProjectViewModel::edited, keep_timer_, qOverload<>(&QTimer::start));
@@ -943,6 +1027,9 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     const QString previous_example = opened_example_;
     const bool previous_idle=previous==nullptr || (previous->publication_depth_==0 && !previous->editing_);
     if(previous){disconnect(previous,nullptr,this,nullptr);previous->retire();}
+    if(previous && !previous_idle)try {
+        connect(previous,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
+    }catch(...) {} // Existing registered ownership safely outlives failed cleanup scheduling.
     if(!nativePrepared){emit projectAboutToChange();if(!current())return false;}
     if(nativePrepared && !assistant_->commitNativeProject(target))return false;
     project_ = target;
@@ -997,12 +1084,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
     if(!current() || project_!=target)return false;
-    if (!previous_folder.isEmpty()) {
-        edi::remove_archive_directory(previous_folder.toStdString());
-    }
-    if (!previous_web_copy.isEmpty()) {
-        QDir(previous_web_copy).removeRecursively();
-    }
+    releaseTemporaryRoots({previous_folder,previous_web_copy},openedFrom);
     return current() && project_==target;
 }
 
@@ -1111,11 +1193,13 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root, bool fromFile, bo
         }
         const QPointer<ProjectViewModel> target(project_);const auto binding=replacement_generation_;
         const auto owned=[&]{return receiver && target && project_==target && replacement_generation_==binding;};
-        web_copy_=root;web_from_file_=fromFile;
+        web_copy_=root;web_from_file_=fromFile;web_source_path_=answer.path;
         if(recovery) {
             target->markUnsaved();
             if(!owned())return;
         }
+        releaseTemporaryRoots({});
+        if(!owned())return;
         if(!fromFile)return; // Stored/recovery places already own their backing record.
         const bool persist=web_place_.kind==QStringLiteral("browser") && WebStorage::instance()->usable();
         if(!owned())return;
