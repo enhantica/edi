@@ -7,6 +7,7 @@ import QtQuick.Layouts
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
+import EasyApplication.Gui.Components as EaComponents
 import edi.app
 
 Popup {
@@ -312,6 +313,29 @@ Popup {
                     anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.5
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: AppSizes.unit * 0.5
+                    EaElements.Button {
+                        id: sessionsButton
+                        objectName: "assistant.sessions"
+                        visible: panel.assistant.connected
+                        text: qsTr("Sessions")
+                        leftPadding: AppSizes.unit * 0.75
+                        rightPadding: leftPadding
+                        enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
+                        contentItem: RowLayout {
+                            spacing: AppSizes.unit * 0.4
+                            EaElements.Label { text: "history"; font.family: EaStyle.Fonts.iconsFamily; color: sessionsButton.foregroundColor(); Accessible.ignored: true }
+                            EaElements.Label { text: sessionsButton.text; color: sessionsButton.foregroundColor() }
+                        }
+                        background: Rectangle {
+                            border.width: 0
+                            implicitHeight: EaStyle.Sizes.toolButtonHeight * 0.75
+                            radius: height * 0.5
+                            color: sessionsButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
+                        }
+                        ToolTip.text: qsTr("Browse this application's saved assistant sessions")
+                        Accessible.name: text
+                        onClicked: { sessionsDialog.open(); panel.assistant.refreshSessions(); }
+                    }
                     EaElements.Button {
                         id: clearButton
                         visible: panel.assistant.connected
@@ -1016,6 +1040,72 @@ Popup {
                         Accessible.name: text
                         onClicked: panel.assistant.signOut()
                     }
+                }
+            }
+        }
+        AppDialog {
+            id: sessionsDialog
+            objectName: "assistant.sessionsDialog"
+            parent: Overlay.overlay
+            title: qsTr("Assistant sessions")
+            width: Math.min(AppSizes.unit * 64, Math.max(0, parent.width-AppSizes.unit*2))
+            readonly property real viewportHeight: Math.max(0, parent.height-AppSizes.unit*2)
+            contentHeight: Math.min(sessionsContent.implicitHeight, Math.max(0, viewportHeight-topPadding-bottomPadding
+                - (implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)
+                - (implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+            standardButtons: Dialog.Close
+            Column {
+                id: sessionsContent
+                width: sessionsDialog.contentWidth
+                spacing: AppSizes.unit * 0.5
+                DataTable {
+                    id: sessionsTable
+                    objectName: "assistant.sessions.list"
+                    width: parent.width
+                    maxRowCountShow: 8
+                    sourceModel: panel.assistant.sessions
+                    defaultInfoText: panel.assistant.sessionsLoading ? qsTr("Loading sessions…") : qsTr("No app-created sessions")
+                    columns: [numberColumnWidth, -1, AppSizes.unit*14, AppSizes.iconColumnWidth]
+                    header: EaComponents.ListViewHeader {
+                        EaComponents.ListViewLabel {}
+                        EaComponents.ListViewLabel { text: qsTr("Session"); horizontalAlignment: Text.AlignLeft }
+                        EaComponents.ListViewLabel { text: qsTr("Last modified"); horizontalAlignment: Text.AlignLeft }
+                        EaComponents.ListViewLabel {}
+                    }
+                    delegate: TableRow {
+                        id: sessionRow
+                        required property var model
+                        readonly property string threadId: model.id
+                        required property string name
+                        required property string modified
+                        required property bool canArchive
+                        EaComponents.ListViewLabel { text: sessionRow.index+1; horizontalAlignment: Text.AlignHCenter }
+                        EaComponents.ListViewLabel {
+                            text: sessionRow.name
+                            horizontalAlignment: Text.AlignLeft
+                            ToolTip.text: text
+                        }
+                        EaComponents.ListViewLabel { text: sessionRow.modified; horizontalAlignment: Text.AlignLeft }
+                        EaComponents.ListViewButton {
+                            objectName: "assistant.session.archive."+sessionRow.index
+                            fontIcon: "archive"
+                            enabled: sessionRow.canArchive && !panel.assistant.canCancel && !panel.assistant.sessionsLoading
+                            ToolTip.text: qsTr("Archive session")
+                            onClicked: panel.assistant.archiveSession(sessionRow.threadId)
+                        }
+                    }
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: panel.assistant.sessionsError
+                    visible: text.length > 0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
+                    color: EaStyle.Colors.red
+                }
+                RowLayout {
+                    EaElements.Button { text: qsTr("Refresh"); enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel; onClicked: panel.assistant.refreshSessions() }
+                    EaElements.Button { text: qsTr("More sessions"); visible: panel.assistant.sessionsHaveMore; enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel; onClicked: panel.assistant.refreshSessions(true) }
                 }
             }
         }

@@ -43,6 +43,10 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QString selectedEffort READ selectedEffort WRITE setSelectedEffort NOTIFY selectedEffortChanged)
     Q_PROPERTY(QStringList availableEfforts READ availableEfforts NOTIFY availableEffortsChanged)
     Q_PROPERTY(edi_app::RowTableModel* messages READ messages CONSTANT)
+    Q_PROPERTY(edi_app::RowTableModel* sessions READ sessions CONSTANT)
+    Q_PROPERTY(bool sessionsLoading READ sessionsLoading NOTIFY sessionsChanged)
+    Q_PROPERTY(bool sessionsHaveMore READ sessionsHaveMore NOTIFY sessionsChanged)
+    Q_PROPERTY(QString sessionsError READ sessionsError NOTIFY sessionsChanged)
     Q_PROPERTY(edi_app::RowTableModel* selectedFiles READ selectedFiles CONSTANT)
     Q_PROPERTY(edi_app::RowTableModel* skills READ skills CONSTANT)
     Q_PROPERTY(QString selectedSkill READ selectedSkill NOTIFY selectedSkillChanged)
@@ -78,6 +82,12 @@ class AssistantViewModel : public QObject {
     QString selectedEffort() const;
     QStringList availableEfforts() const;
     RowTableModel* messages() const;
+    RowTableModel* sessions() const;
+    bool sessionsLoading() const;
+    bool sessionsHaveMore() const;
+    QString sessionsError() const;
+    Q_INVOKABLE void refreshSessions(bool nextPage = false);
+    Q_INVOKABLE void archiveSession(const QString& threadId);
     RowTableModel* selectedFiles() const;
     RowTableModel* skills() const;
     QString selectedSkill() const;
@@ -136,6 +146,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool removeSelectedFile(const QString& id);
 
    signals:
+    void sessionsChanged();
     void workReportFinished(QVariantMap receipt);
     void workReportReceiptChanged();
     void accountChanged();
