@@ -292,6 +292,10 @@ class Session : public QObject {
     void releaseTemporaryFolder();
     // Cleanup authority only: never an inherited origin/Save destination.
     QStringList retained_temporary_roots_;
+    void retainTemporaryRoots(const QStringList& candidates);
+    struct PendingOpenSource;
+    QStringList pending_open_sources_;
+    quint64 path_generation_=0;
     void releaseTemporaryRoots(const QStringList& candidates, const QString& openedFrom = {}) noexcept;
     // The open project is a temporary copy of a folder this user may not write: Save As is its way out.
     bool read_only_copy_ = false;

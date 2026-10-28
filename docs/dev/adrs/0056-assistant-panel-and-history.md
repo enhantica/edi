@@ -3134,3 +3134,33 @@ preparation. Equal programmatically assigned text is not an acceptableInput rece
 describes the fresh-name rule; completing an existing owned partial project keeps that project's
 actual name/metadata and never applies a new-project validator to rename it. Global core/rename
 rules stay broader and unchanged.
+
+
+### 2026-10-28: original multiline editor and complete background projection
+
+The original ProjectDescriptionDialog Description is a MultiLineField ScrollView containing an
+existing TextArea. Its native control name belongs to that actual editor through editorObjectName,
+not to the scrolling wrapper. Normal and optional compound Create reuse that one target and the
+shared genuine click, active-focus, IME, multiline and exact-owner checks. The original field's
+text alias and dialog acceptance still own metadata and Create; no focus forcing, new widget or
+alternate input/action path is introduced. As a multiline TextArea grows beyond its original
+ScrollView, the pointer point uses the actual editor/viewport clip intersection. The existing
+final ancestor visibility checks remain, so long accepted text cannot turn its genuine focused
+editor into a false off-screen target. Neither field size nor scroll/focus state is assigned.
+
+The closed outgoing Background role carries the core's actual terms and estimate metadata as
+well as anchors. BackgroundTerm and BackgroundEstimate reuse the same typed measuring and
+materialization walk for approved thread context and inspect_project results. Only actual core
+fields and null/value semantics are projected; unknown fields remain excluded. This closes the
+gap where core context was current but the model-visible projection omitted native ownership
+mode, saved estimate settings or polynomial/Chebyshev coefficients.
+
+Genuinely omitted mapped atom Wyckoff declarations use Crysta's existing wyckoff_position_of
+matcher, the owner used by native CIF import. Its CIF site tolerance is 0.01 Angstrom divided
+by completed cell lengths (Crysta src/core/cif_import.cpp, kWyckoffTolerance and tolerance setup;
+ADR-0103). This is a native import convention, not a specimen-specific fitted value. Explicit
+declarations remain unchanged. Only the inferred letter is supplied; existing native completion
+and mapped exact-coordinate/occupancy/ADP checks still reject a requested literal the native
+constraints would change. Show actions applies the resolved declaration through the original
+atom-row method, with no mandatory manual Wyckoff entry, extra parser or independent matcher.
+The ordinary native first-atom factory and CIF importer retain their original behavior.

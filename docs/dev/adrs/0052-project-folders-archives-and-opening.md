@@ -168,3 +168,22 @@ through the existing QObject lifetime. Session stops/deletes its owned model wor
 archive cleanup or QTemporaryDir member destruction, so automatic temporary ownership cannot
 remove their backing files first. No directory relocation, new registry or whole-loader change
 is introduced.
+
+
+### 2026-10-28: live retirement and pending Open source lifetime
+
+Retirement stops old presentation; only ProjectViewModel destruction closes its fit and joins
+the Worker. Every live Session child therefore contributes its actual backing closure, including
+idle retired models. Replacement preowns both old temporary-root obligations before callbacks and
+a QPointer-based unwind obligation schedules an idle retired model even when publication is
+superseded. Active publication scopes retain their original deferred destruction rule. Actual
+destruction retries the existing root cleanup; final Session teardown still joins workers first.
+
+An actual Open source stays in scoped Session ownership through the original caller's final
+archive/web/location bookkeeping, including nested Open scopes and same-owner SaveAs callbacks.
+Scope release removes only that original dependency and retries ordinary unused-root reclamation.
+The actual current model's pathChanged writes also carry a Session-private identity. Open permits
+its own workIn notification, but an additional genuine path write retires the old continuation,
+even if the project pointer is unchanged. It cannot reinstall an old archive origin over a
+completed SaveAs. Replacement/project identity, explicit SaveAs effects, loader completeness,
+filesystem permissions and displayed origin policy remain unchanged.

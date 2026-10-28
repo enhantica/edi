@@ -12,6 +12,7 @@ ScrollView {
     id: field
 
     property alias text: area.text
+    property alias editorObjectName: area.objectName
     property alias placeholderText: area.placeholderText
     property int minimumLines: 3
     property int maximumLines: 10

@@ -19,7 +19,7 @@ namespace edi_app::outgoing {
 // Closed roles over already-owned native data. Never recursively copy an
 // unknown object or string, and never encode the unprojected native result.
 enum class Role { Context, Project, Structure, SpaceGroup, Site, Dataset, Axis,
-    Observations, Region, Phase, Background, Anchor, Relations, Alias, Constraint,
+    Observations, Region, Phase, Background, Anchor, BackgroundTerm, BackgroundEstimate, Relations, Alias, Constraint,
     Parameter, Diagnostic, Selection, File, Skill, InputScopes, InputSource,
     NativeState, Calculation, InterfaceGroup, Result, Fit, ReaderFacts, SelectedText };
 inline constexpr std::string_view wire_schema="edi.assistant.outgoing/1";
@@ -82,7 +82,9 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Observations: { ROWS(N("intensity_count"),N("sigma_count"),T("weighting")); }
     case Role::Region: { ROWS(T("id"),N("first"),N("second")); }
     case Role::Phase: { ROWS(T("structure_id"),B("enabled")); }
-    case Role::Background: { ROWS(T("type"),N("origin"),N("x_min"),N("x_max"),A("anchors",Anchor)); }
+    case Role::Background: { ROWS(T("type"),N("origin"),N("x_min"),N("x_max"),A("anchors",Anchor),A("terms",BackgroundTerm),O("estimate",BackgroundEstimate)); }
+    case Role::BackgroundTerm: { ROWS(T("id"),N("order"),N("coefficient"),N("uncertainty"),B("free"),T("dependence")); }
+    case Role::BackgroundEstimate: { ROWS(T("mode"),T("method"),N("width"),N("smoothness"),N("n_points"),N("tolerance"),T("in_peaks"),T("use_model"),N("max_terms")); }
     case Role::Anchor: { ROWS(T("id"),N("position"),N("intensity"),N("uncertainty"),B("free"),T("dependence")); }
     case Role::Relations: { ROWS(A("aliases",Alias),A("constraints",Constraint)); }
     case Role::Alias: { ROWS(T("id"),T("parameter_unique_name")); }

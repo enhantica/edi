@@ -36,6 +36,7 @@
 #include "number_token.hpp"
 #include "canonical_encoding.hpp"
 #include "assistant_project_io.hpp"  // edi-only logic: core/src-private, never installed
+#include "import_symmetry.hpp"
 #include "identity_bridge.hpp"  // The loader's reach into crysta's identity rules
 #include "crysta/adp.hpp"
 #include "crysta/analysis.hpp"
@@ -416,6 +417,22 @@ const std::vector<std::string>& new_site_elements() {
 }
 
 }  // namespace
+
+std::string detail::inferred_wyckoff_letter(const Structure& structure,const AtomSite& site) {
+    const auto group=resolve_group(structure);
+    const auto cell=completed_cell(structure);
+    // Crysta's CIF site policy is 0.01 Angstrom (ADR-0103); use its
+    // matcher rather than adding a positional classifier here (edi ADR-0056).
+    constexpr double native_site_tolerance_angstrom=0.01;
+    std::array<double,3> tolerance{};
+    for(std::size_t axis=0;axis<tolerance.size();++axis) {
+        const double length=cell.parameters[axis].value();
+        if(!std::isfinite(length) || length<=0)throw std::invalid_argument("Automatic Wyckoff assignment needs a valid native cell");
+        tolerance[axis]=native_site_tolerance_angstrom/length;
+    }
+    const std::array<double,3> fract{site.fract_x.value.get(),site.fract_y.value.get(),site.fract_z.value.get()};
+    return crysta::wyckoff_position_of(group,fract,tolerance).letter;
+}
 
 AtomSite new_atom_site(const Structure& structure, const std::function<double()>& random) {
     const auto draw_index = [&random](std::size_t count) {
