@@ -361,7 +361,7 @@ Rectangle {
     property int consentFileRevision: 0
     property int pendingFileCount: 0
     readonly property bool canSteer: assistant.state === "agent_active"
-    readonly property bool hasDraft: editor.text.trim().length > 0
+    readonly property bool hasDraft: editor.text.trim().length > 0 || pendingFileCount > 0
     function chooseFiles() {
         if (WebFiles.available || !assistant.connected || assistant.canCancel || nativeFiles.requestId.length) return;
         const original=assistant;

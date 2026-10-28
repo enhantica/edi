@@ -20,6 +20,7 @@ struct SelectedFiles {
 /// Inclusive local-input policy, independent of provider/token capacity.
 struct SelectedFileLimits {
     static constexpr std::size_t files = 32;
+    static constexpr std::size_t message_files = 6; // Pending attachments in one user message, not retained task files.
     static constexpr std::size_t file_bytes = 16 * 1024 * 1024;
     static constexpr std::size_t collection_bytes = 64 * 1024 * 1024;
     static constexpr std::size_t name_bytes = 512;
