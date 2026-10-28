@@ -6961,11 +6961,8 @@ struct AssistantViewModel::State {
     void native_start_relation_edit(const Object& args) {
         if(!project || !native_call || native_widget)throw ActionRefusal("target_unavailable","relation");
         const auto projection=file_projection();
-        // Only the validated scalar strings acquire decoded text owners.
-        // Enabled has a boolean value; remove has no value string.
-        const auto text_units=skill_json_text_units(args.value(QLatin1StringView{"purpose"}))+
-            skill_json_text_units(args.value(QLatin1StringView{"id"}))+skill_json_text_units(args.value(QLatin1StringView{"operation"}))+
-            (args.value(QLatin1StringView{"value"}).isString()?skill_json_text_units(args.value(QLatin1StringView{"value"})):0);
+        // Original admission already validates operands and optional purpose;
+        // no later reader may turn omitted reporting metadata into a refusal.
         auto run=std::make_shared<NativeWidget>();run->call=*native_call;run->receiver=&owner;run->project=project;
         run->tool=QStringLiteral("edit_relation");run->tab=QStringLiteral("appBar.tab.analysis");run->relation_args=args;
         run->relation_visible=show_actions;run->window=show_actions?action_window:nullptr;
@@ -15699,7 +15696,11 @@ struct AssistantViewModel::State {
         }
     }
     QPointer<ProjectViewModel> ordinary_empty_setup_target;
-    bool bind(ProjectViewModel* next, bool managedResult = false, bool preserveNativeSettlement = false, bool ordinaryEmptyCreate = false) {
+    bool bind(ProjectViewModel* next, bool managedResult = false, bool preserveNativeSettlement = false, bool ordinaryEmptyCreate = false
+#ifndef __EMSCRIPTEN__
+        , SessionInputs* resetInputs = nullptr
+#endif
+    ) {
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<ProjectViewModel> target(next);
         const bool has_target = next != nullptr;
@@ -15763,11 +15764,16 @@ struct AssistantViewModel::State {
         work_cancel_failure();work_reports.retireScope();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();work_registration={};
         const auto binding = ++generation;
 #ifndef __EMSCRIPTEN__
+        const auto resetAccount=usage_epoch;const auto resetWindow=action_window;auto resetFiles=file_epoch;
         if(!preserveSetup){approved_scope.reset();backend_scope.reset();bootstrap_scope.reset();}
         disclosure_cache.reset();generic_context_reuse=false;
 #endif
         own_edit.reset();
-        const auto current = [&] { return receiver && receiver->state_.get() == this && generation == binding && (!has_target || target); };
+        const auto current = [&] { return receiver && receiver->state_.get() == this && generation == binding && (!has_target || target)
+#ifndef __EMSCRIPTEN__
+            && (!resetInputs || (usage_epoch==resetAccount && action_window==resetWindow && file_epoch==resetFiles))
+#endif
+            ; };
 #ifndef __EMSCRIPTEN__
         const bool replacedNativeOwner = target != project;
         if (generic_mode) try { native_retire(true, true); } catch (...) { if (!current()) return false; generic_fail(QObject::tr("The native request could not be retired during project replacement.")); }
@@ -15807,6 +15813,9 @@ struct AssistantViewModel::State {
             if (!generic_context_retention_pending) { generic_held_row.reset(); generic_blocked = false; }
         }
 #endif
+#ifndef __EMSCRIPTEN__
+        if(resetInputs) {if(resetFiles==UINT64_MAX)return false;++resetFiles;}
+#endif
         retire_file_selection();
         if (!current()) return false;
 #ifndef __EMSCRIPTEN__
@@ -15832,14 +15841,18 @@ struct AssistantViewModel::State {
             catch (...) { if (!current()) return false; throw; }
         }
         if (!current()) return false;
-        if(!preserveSetup) {
+        if(!preserveSetup
+#ifndef __EMSCRIPTEN__
+            && !resetInputs
+#endif
+        ) {
             selected_reply.clear();auto projection=file_projection();
             if(!publish_selected_rows({},projection) || !current())return false;
             selected_rows_dirty=false;
         }
         project = target; plan = {}; question = {};
 #ifndef __EMSCRIPTEN__
-        auto attached=preparedSession?std::move(preparedSession->inputs->controller):preserveSetup?std::move(setupController):make_controller(target,binding);
+        auto attached=resetInputs?std::move(resetInputs->controller):preparedSession?std::move(preparedSession->inputs->controller):preserveSetup?std::move(setupController):make_controller(target,binding);
 #else
         auto attached=preserveSetup?std::move(setupController):make_controller(target,binding);
 #endif
@@ -15849,9 +15862,16 @@ struct AssistantViewModel::State {
 #endif
         controller = std::move(attached);
         if(setupActive)*setupActive=true;
+#ifndef __EMSCRIPTEN__
+        if(resetInputs) {
+            *resetInputs->active=true;generic_input_paths.swap(resetInputs->stage->paths);generic_input_hashes.swap(resetInputs->stage->hashes);
+            generic_input_physical.swap(resetInputs->stage->physical);generic_input_origins.swap(resetInputs->stage->origins);generic_input_cache.swap(resetInputs->cache);
+            resetInputs->stage->fresh.clear();selected_reply.swap(resetInputs->reply);selected_rows_dirty=true;
+        }
+#endif
         connect_project(target,binding,
 #ifndef __EMSCRIPTEN__
-            preparedSession?preparedSession->inputs->active:
+            resetInputs?resetInputs->active:preparedSession?preparedSession->inputs->active:
 #endif
             setupActive);
 #ifndef __EMSCRIPTEN__
@@ -15892,6 +15912,50 @@ struct AssistantViewModel::State {
         return current();
     }
 };
+
+struct AssistantViewModel::ProjectResetInputs {
+#ifndef __EMSCRIPTEN__
+    State::FileProjection proof;
+    QPointer<QQuickWindow> window;
+    std::unique_ptr<State::SessionInputs> inputs;
+#endif
+    bool consumed=false;
+};
+std::shared_ptr<AssistantViewModel::ProjectResetInputs> AssistantViewModel::prepareProjectResetInputs() {
+    const QPointer<AssistantViewModel> receiver(this);auto* original=state_.get();
+    try {
+        if(QThread::currentThread()!=thread())return {};
+        auto result=std::make_shared<ProjectResetInputs>();
+#ifndef __EMSCRIPTEN__
+        result->proof=original->file_projection();result->window=original->action_window;
+        if(original->generic_mode && original->controller) {
+            if(original->generation==UINT64_MAX || original->file_epoch==UINT64_MAX)throw std::runtime_error("The original draft attachment identity is exhausted");
+            auto files=original->selected_snapshot(original->file_context(),original->generic_input_hashes);
+            std::erase_if(files,[&](const auto& file){return original->file_was_sent(QString::fromStdString(file.id));});
+            if(files.empty())return result->proof.input_current() && result->window==original->action_window?result:nullptr;
+            auto input=std::make_unique<State::SessionInputs>();input->generation=original->generation+1;input->active=std::make_shared<bool>(false);
+            input->controller=original->make_controller(nullptr,input->generation,input->active);
+            const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/input-cache";
+            if(!QDir().mkpath(root))throw std::runtime_error("The pending attachment cache is unavailable; the project was kept");
+            input->cache=std::make_unique<QTemporaryDir>(root+"/reset-XXXXXX");
+            if(!input->cache->isValid())throw std::runtime_error("The pending attachment cache could not be prepared; the project was kept");
+            input->stage=original->generic_stage_files(files,original->generic_input_physical,{},input->cache->path());
+            input->reply=State::restore_selected_collection(*input->controller,std::move(files),{});
+            input->stage->origins=original->rebind_input_origins(object(input->reply));
+            const auto ids=input->stage->origins.keys();
+            for(auto it=input->stage->paths.begin();it!=input->stage->paths.end();)if(!ids.contains(it.key()))it=input->stage->paths.erase(it);else ++it;
+            for(auto it=input->stage->hashes.begin();it!=input->stage->hashes.end();)if(!ids.contains(it.key()))it=input->stage->hashes.erase(it);else ++it;
+            for(auto it=input->stage->physical.begin();it!=input->stage->physical.end();)if(!ids.contains(it.key()))it=input->stage->physical.erase(it);else ++it;
+            result->inputs=std::move(input);
+        }
+        if(!result->proof.input_current() || result->window!=original->action_window)return {};
+#endif
+        return result;
+    }catch(const std::exception& error) {
+        if(receiver && receiver->state_.get()==original) {original->error=State::bounded_error(QString::fromUtf8(error.what()));original->notify();}
+    }catch(...) {if(receiver && receiver->state_.get()==original){original->error=tr("The pending attachments could not be retained; the project was kept.");original->notify();}}
+    return {};
+}
 
 bool AssistantViewModel::observeCreateDialog(QObject* form,const QString& intent,const QString& outcome) {
 #ifndef __EMSCRIPTEN__
@@ -16913,12 +16977,20 @@ void AssistantViewModel::selectSkill(const QString& id) {
     } catch (...) { if (!publication.input_current()) return; state_->error = state_->storage_error; state_->notify(); }
 }
 void AssistantViewModel::setProject(ProjectViewModel* project) { state_->bind(project); }
-bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate) {
+bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate, const std::shared_ptr<ProjectResetInputs>& resetInputs) {
     const QPointer<AssistantViewModel> receiver(this);
     auto* const original = state_.get();
     const auto receiver_current = [&] { return receiver && receiver->state_.get() == original; };
     const QPointer<ProjectViewModel> target(project);
     const bool has_target = project != nullptr;
+    if(resetInputs) {
+        if(resetInputs->consumed || project || managedResult || ordinaryEmptyCreate)return false;
+#ifndef __EMSCRIPTEN__
+        if(!resetInputs->proof.input_current() || resetInputs->window!=state_->action_window ||
+            (resetInputs->inputs && resetInputs->inputs->generation!=state_->generation+1))return false;
+#endif
+        resetInputs->consumed=true;
+    }
     if (state_->session_attachment_depth == std::numeric_limits<unsigned>::max())
         throw std::length_error("Session attachment depth is exhausted");
     ++state_->session_attachment_depth;
@@ -16926,7 +16998,7 @@ bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedRe
     try {
 #ifndef __EMSCRIPTEN__
         if (managedResult && state_->generic_mode && state_->generic_authenticated) (void)state_->bind(target, true);
-        else (void)state_->bind(target,false,false,ordinaryEmptyCreate);
+        else (void)state_->bind(target,false,false,ordinaryEmptyCreate,resetInputs?resetInputs->inputs.get():nullptr);
 #else
         (void)managedResult;(void)ordinaryEmptyCreate;
         (void)state_->bind(target);

@@ -220,7 +220,9 @@ class AssistantViewModel : public QObject {
     friend class Session;
     void finishHistoryInitialization() noexcept;
     bool ordinarySaveNotification(ProjectViewModel*) const noexcept;
-    bool attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate = false); // Session-only exact attachment result.
+    struct ProjectResetInputs;
+    std::shared_ptr<ProjectResetInputs> prepareProjectResetInputs();
+    bool attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate = false, const std::shared_ptr<ProjectResetInputs>& resetInputs = {}); // Session-only exact attachment result.
     enum class AttachmentClear { NotRequested, Discarded, Failed };
     AttachmentClear drainAttachmentClear() noexcept;
     bool clearHistoryNow(bool* logicalDiscarded = nullptr);

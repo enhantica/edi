@@ -968,7 +968,13 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     return true;
 }
 
-void Session::closeProject() { replaceProject(nullptr, {}, {}); }
+void Session::closeProject() {
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> original(project_);
+    const auto binding=replacement_generation_;
+    auto pending=assistant_->prepareProjectResetInputs();
+    if(!receiver || !pending || project_!=original || replacement_generation_!=binding)return;
+    replaceProject(nullptr, {}, {}, false, nullptr, nullptr, false, {}, pending);
+}
 
 void Session::syncCalculationMessages() {
     // One message per distinct refusal: a project-wide refusal reaches every experiment's pattern alike.
@@ -1148,7 +1154,7 @@ void Session::setOpenedArchive(const QString& name) {
     }
 }
 
-bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom) {
+bool Session::replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared, bool* committed, quint64* committedReplacement, bool ordinaryEmptyCreate, const QString& openedFrom, const std::shared_ptr<AssistantViewModel::ProjectResetInputs>& resetInputs) {
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     const QPointer<ProjectViewModel> previous(project_);
@@ -1198,7 +1204,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     project_ = target;
     if(committed)*committed=true;
     if(committedReplacement)*committedReplacement=replacement;
-    if(!nativePrepared && !assistant_->attachProject(target,false,ordinaryEmptyCreate && previous==nullptr))return false;
+    if(!nativePrepared && !assistant_->attachProject(target,false,ordinaryEmptyCreate && previous==nullptr,resetInputs))return false;
     if(!current() || project_!=target)return false;
     opened_example_ = example;
     warnings_->setMessages(warnings);
