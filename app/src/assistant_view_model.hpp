@@ -94,7 +94,8 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void archiveSession(const QString& threadId);
     Q_INVOKABLE void selectSession(const QString& threadId);
     QString sessionSelection() const;
-    Q_INVOKABLE void cancelSessionSelection();
+    Q_INVOKABLE bool beginSessionProjectRestore(const QString& intent);
+    Q_INVOKABLE void cancelSessionSelection(const QString& intent = {});
     QString sessionDraft() const;
     void setSessionDraft(const QString&);
     Q_INVOKABLE void restoreLastSession();

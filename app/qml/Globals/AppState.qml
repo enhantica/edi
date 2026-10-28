@@ -77,12 +77,12 @@ QtObject {
     signal saveAsRequested
     // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are
     // dealt with: at once when there are none, else after the window asks to save or discard them.
-    signal changesQuestion(var action)
+    signal changesQuestion(var action, var abandoned)
     // An action that replaces the project runs on the next turn of the event loop, never inside the handler that asked
     // for it: replacing the project rebuilds the pages, and the page holding that handler with them.
-    function afterChanges(action) {
+    function afterChanges(action, abandoned) {
         if (Session.project !== null && Session.project.modified)
-            changesQuestion(action);
+            changesQuestion(action, abandoned);
         else
             Qt.callLater(action);
     }
