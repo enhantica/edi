@@ -1804,9 +1804,19 @@ struct AssistantViewModel::State {
         }
         return QCryptographicHash::hash(QJsonDocument(configuration).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex();
     }
-    void forget_last_session() noexcept {
-        try {auto index=session_associations();if(index.isEmpty())return;index.remove("last");store_session_associations(index);}
-        catch(...) {} // A local preference failure never changes account or scientific authority.
+    void forget_last_session(const QString& archived={}) noexcept {
+        try {
+            auto index=session_associations();if(index.isEmpty())return;
+            bool changed=false;
+            if(archived.isEmpty() || index.value("last")==archived){changed=index.contains("last");index.remove("last");}
+            if(!archived.isEmpty()) {
+                auto records=index.value("threads").toObject();auto record=records.value(archived).toObject();
+                if(record.value("thread")==archived && record.value("originator")=="edi") {
+                    record["archived"]=true;records[archived]=record;index["threads"]=records;changed=true;
+                }
+            }
+            if(changed)store_session_associations(index);
+        }catch(...) {if(!archived.isEmpty())sessions_error=QObject::tr("The session was archived, but its automatic-reopen preference could not be saved. Its retained history and project were preserved.");}
     }
     void remember_current_session() noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
@@ -2057,6 +2067,7 @@ struct AssistantViewModel::State {
         const QPointer<AssistantViewModel> receiver(&owner);auto proof=file_projection();
         session_preparation_observation={{"operation",QString::number(session_operation)},{"stage","association_metadata"}};
         auto record=saved_session(id);
+        if(automatic && record.value("archived").toBool())return false;
         if(record.isEmpty() && !owned_session(session_metadata.value(id)))return false;
         const auto previous=generic_thread;session_selection_target=id;sessions_loading=true;
         if(session_history_thread!=id)session_history_loading=false;
@@ -2113,7 +2124,7 @@ struct AssistantViewModel::State {
         quint64 binding=0,account=0,transport=0,epoch=0,operation=0;
         QPointer<ProjectViewModel> project;
         Object account_reply,account_params;QString account_method;
-        bool account_unwritten=false,account_issuing=false;
+        bool account_unwritten=false,account_issuing=false,current_thread_archived=false;
         bool operator==(const SessionRequest&) const = default;
     };
     QMap<QString,SessionRequest> session_requests;
@@ -2158,7 +2169,7 @@ struct AssistantViewModel::State {
     bool session_request_current(const SessionRequest& request) const {
         return publishing && generic_authenticated && !generic_retiring && (request.kind=="history" || request.epoch==sessions_epoch) &&
             request.binding==generation && request.account==usage_epoch && request.project==project &&
-            (request.kind=="name" || request.kind=="history" || request.operation==session_operation) && request.currentThread==generic_thread && agent && request.transport==agent->outputGeneration() &&
+            (request.kind=="name" || request.kind=="history" || request.operation==session_operation) && (request.currentThread==generic_thread || (request.kind=="archive" && request.current_thread_archived && generic_thread.isEmpty())) && agent && request.transport==agent->outputGeneration() &&
             request.email==generic_native.value("account").toObject().value("email").toString();
     }
     static QString session_caption(QString text) {
@@ -2350,6 +2361,49 @@ struct AssistantViewModel::State {
         if(!cursor.isEmpty())params["cursor"]=cursor;
         (void)session_request("thread/list",params,"list");
     }
+    bool settle_archived_session(const QString& id) {
+        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<CodexAgent> transport(agent.get());
+        const auto proof=file_projection();const auto output=transport?transport->outputGeneration():0;
+        const auto current=[&]{return receiver && receiver->state_.get()==this && proof.retirement_current() && transport && agent.get()==transport && transport->outputGeneration()==output;};
+        if(!current())return false;
+        const auto record=saved_session(id);
+        if(!owned_session(session_metadata.value(id)) && record.isEmpty() && id!=generic_thread)return true;
+        forget_last_session(id); // Only the matching durable automatic target, not its saved evidence.
+        if(!current())return false;
+        session_metadata.remove(id);
+        if(resume_checkpoint && resume_checkpoint->thread==id){resume_checkpoint.reset();generic_resuming=false;}
+        if(session_restore_target==id || session_selection_target==id) {
+            fail_session_operation(session_operation,id,QObject::tr("The selected conversation was archived. Its saved project and activity were preserved."));
+            if(!current())return false;
+        }
+        if(generic_thread!=id)return true;
+        // Actual subtree notifications may retire the current child before the
+        // clicked parent's ACK. Preserve that original Archive correlation only.
+        for(auto it=session_requests.begin();it!=session_requests.end();++it)
+            if(it->kind=="archive" && it->currentThread==id && session_request_current(*it))it->current_thread_archived=true;
+        const bool wasRetiring=generic_retiring;generic_retiring=true;
+        const auto restoreRetirement=qScopeGuard([&]{if(current() && !generic_revoke_pending)generic_retiring=wasRetiring;});
+        if(native_call && native_call->record->thread==id) {
+            native_call->resolved=true;native_call->retiring=true;native_call->receipt->retired=true;
+            transport->resolved(native_call->rpc);
+            if(!current())return false;
+            native_supersede_operation(QObject::tr("The runtime archived this conversation; its actual partial work was retained."));
+            if(!current())return false;
+        }
+        const auto questionRpc=generic_detach_question();
+        if(!questionRpc.isNull() && !questionRpc.isUndefined())transport->resolved(questionRpc);
+        if(!current())return false;
+        (void)generic_interrupt_rows();if(!current())return false;
+        for(auto it=generic_rpc_turns.begin();it!=generic_rpc_turns.end();++it)if(it->thread==id)it->archived=true;
+        retire_result();if(!current())return false;
+        if(generic_thread!=id)return false;
+        generic_thread.clear();generic_turn.clear();generic_terminal_turn.clear();generic_thread_has_input=false;
+        generic_durable=false;generic_resuming=false;generic_busy=false;generic_connecting=false;
+        invalidate_policy();backend_scope.reset();bootstrap_scope.reset();generic_native["connection_id"]=QString();
+        generic_items.clear();generic_item_rows.clear();generic_final_items.clear();generic_summary_parts.clear();
+        generic_retiring=wasRetiring;transport->settleOperation();
+        return current();
+    }
     void session_response(const QString& rpc,const QString& method,const Object& reply) noexcept {
         auto it=session_requests.find(rpc);if(it==session_requests.end())return;
         if(account_confirmation_pending && it->kind!="name" && it->kind!="history" && it->kind!="archive") {
@@ -2407,12 +2461,8 @@ struct AssistantViewModel::State {
                 if(!result.isEmpty())throw std::runtime_error("The runtime archive acknowledgment was unexpected");
                 // This is the correlated acknowledgment for the exact original ID,
                 // never disappearance from a page or another thread's notification.
-                session_metadata.remove(request.target);sessions_loading=false;sessions_error.clear();
-                if(request.target==generic_thread) {
-                    retire_result();if(!current())return;
-                    resume_checkpoint.reset();generic_thread.clear();generic_thread_has_input=false;
-                    generic_durable=false;invalidate_policy();generic_native["connection_id"]=QString();
-                }
+                if(!settle_archived_session(request.target))return;
+                sessions_loading=false;
                 const auto proof=file_projection();const auto operation=session_operation;
                 publish_sessions();
                 // The acknowledged target alone is known here. Ordinary runtime
@@ -2980,6 +3030,7 @@ struct AssistantViewModel::State {
         QString thread, turn;
         bool terminal_retained = false;
         bool terminal_observed = false;
+        bool archived = false;
     };
     QMap<QString, PendingSteer> generic_rpc_turns;
     QSet<QString> generic_final_items;
@@ -12703,6 +12754,21 @@ struct AssistantViewModel::State {
             generic_start_thread();return;
         }
         if(method=="thread/list" || method=="thread/read" || method=="thread/items/list" || method=="thread/archive" || method=="thread/name/set") {session_response(id,method,reply);return;}
+        if((method=="turn/start" || method=="turn/steer") && generic_rpc_turns.value(id).archived) {
+            const auto original=generic_rpc_turns.take(id);
+            if(reply.contains("error")) {
+                const auto failure=reply.value("error").toObject();const auto code=failure.value("code");
+                if(!reply.value("error").isObject() || !code.isDouble() || !std::isfinite(code.toDouble()) ||
+                    std::floor(code.toDouble())!=code.toDouble() || code.toDouble()<-2147483648.0 || code.toDouble()>2147483647.0 || !failure.value("message").isString())
+                    throw std::runtime_error("The archived input refusal was invalid");
+                generic_rpc_rows.remove(id);native_pending.remove(id);return; // Retained interruption does not claim no effects.
+            }
+            if(!reply.value("result").isObject())throw std::runtime_error("The archived input acknowledgment was invalid");
+            const auto result=reply.value("result").toObject();
+            const auto turn=generic_id(method=="turn/start"?result.value("turn").toObject().value("id"):result.value("turnId"));
+            if(method=="turn/steer" && original.turn!=turn)throw std::runtime_error("The archived input acknowledgment changed its original turn");
+            generic_acknowledge(id,turn);return;
+        }
         if (reply.contains("error")) {
             reason_code = "RESULT_SHAPE";
             const auto failure = reply.value("error").toObject();
@@ -13426,6 +13492,14 @@ struct AssistantViewModel::State {
         }
         if (!publishing) return;
         const auto publication = file_projection();
+        if(method=="thread/archived") {
+            diagnostic.stage="THREAD_ARCHIVED";
+            if(!generic_authenticated || generic_retiring || !agent || agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Live)return;
+            const auto id=generic_id(params.value("threadId"));
+            if(!settle_archived_session(id) || !publication.input_current())return;
+            publish_sessions(); // Notification is not the ACK of another outstanding operation.
+            if(publication.input_current())notify();return;
+        }
         if (method == "account/rateLimits/updated") {
             diagnostic.stage = "USAGE_UPDATE";
             if (usage_account_ready && !generic_retiring) usage_updated();
