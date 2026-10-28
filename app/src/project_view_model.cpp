@@ -3104,7 +3104,13 @@ ProjectViewModel::EditOutcome ProjectViewModel::applyEdit(const edi::Edit& chang
         std::vector<std::pair<std::string, std::string>> reasons;
         bool refreshed = false;
         try {
-            preview_->apply(edi::Edit::refresh_background_estimates(*project_, &reasons));
+            edi::Edit::AppliedResult followup;
+            preview_->apply(edi::Edit::refresh_background_estimates(*project_, &reasons),nullptr,applied_result?&followup:nullptr);
+            if(applied_result && applied_result->editor_after) {
+                if(applied_result->editor_after==followup.editor_before && applied_result->editor_after_epoch==followup.editor_before_epoch) {
+                    applied_result->editor_after=followup.editor_after;applied_result->editor_after_epoch=followup.editor_after_epoch;
+                }else applied_result->editor_after.reset(); // An intervening external edit cannot join the original chain.
+            }
             refreshed = true;
         } catch (const std::exception& refusal) {
             emit message(QString::fromUtf8(refusal.what()));
