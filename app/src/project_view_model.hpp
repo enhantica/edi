@@ -27,6 +27,7 @@
 #include <variant>
 #include <vector>
 
+#include "edi/calculation.hpp"
 #include "analysis_view_model.hpp"
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -603,13 +604,20 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool fit_undo_invoking_ = false;
     std::shared_ptr<FitUndoInput> prepareFitUndo();
     void finishFitUndo(const std::shared_ptr<FitUndoInput>&) noexcept;
+    struct WidgetEditProof {
+        edi::WorkStamps before;
+        std::optional<edi::WorkStamps> after;
+    };
+    void captureWidgetEditProof(WidgetEditProof&) noexcept;
     struct WidgetRelationInput {
+        WidgetEditProof proof;
         edi::Edit::AppliedResult applied_result;
         ProjectEditor::RelationAction expected;
         bool consumed = false;
         EditOutcome outcome;
     };
     struct WidgetCreationInput {
+        WidgetEditProof proof;
         CreationAction expected;
         // Opted in only by individual assistant actions; manual/compound readers unchanged.
         bool bounded_result = false, result_identity_refused = false;
