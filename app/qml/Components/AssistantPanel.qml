@@ -204,9 +204,9 @@ Popup {
     Connections {
         target: panel.assistant
         function onSessionProjectRequested(threadId,location,intent) {
-            const original=panel.assistant;
+            const original=panel.assistant;const originalProject=Session.project;
             AppState.afterChanges(function() {
-                if(!Qt.isQtObject(panel) || !Qt.isQtObject(original) || panel.assistant!==original || original.sessionSelection!==intent)return;
+                if(!Qt.isQtObject(panel) || !Qt.isQtObject(original) || panel.assistant!==original || original.sessionSelection!==intent || Session.project!==originalProject)return;
                 if(Session.openProject(location) && Qt.isQtObject(original) && panel.assistant===original && original.sessionSelection===intent)original.continueSessionRestore(threadId);
             });
         }
