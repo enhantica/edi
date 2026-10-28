@@ -1982,6 +1982,7 @@ struct AssistantViewModel::State {
     void commit_session_preparation() {
         if(account_confirmation_pending)return;
         if(!session_preparation || !session_preparation_current(*session_preparation))throw std::runtime_error("The original conversation selection or project changed before preparation completed");
+        if(session_preparation->email.isEmpty())throw std::runtime_error("The original managed account identity is unavailable; the current conversation was preserved");
         session_preparation_observation["stage"]="prepared_transfer";
         auto prepared=std::move(session_preparation);auto proof=prepared->proof;
         // All input, disclosure and workspace I/O is complete while the old helper
@@ -2010,6 +2011,7 @@ struct AssistantViewModel::State {
         schedule_resume_connection();
     }
     std::unique_ptr<SessionPreparation> stage_session_preparation(const QString& id,ProjectViewModel* target,const Object& record,const QString& expectedEmail) {
+        if(expectedEmail.isEmpty())throw std::runtime_error("The original managed account identity is unavailable; sign in with that account before selecting another conversation");
         const auto proof=file_projection();
         const auto previousApproval=disclosure_approved()?approved_scope:std::shared_ptr<const DisclosureScope>{};
         if(!proof.input_current())return {};
@@ -2094,6 +2096,8 @@ struct AssistantViewModel::State {
         const auto savedEmail=record.value("email").toString();
         const bool verified=session_account_target==id && session_account_operation==session_operation &&
             session_account_email==savedEmail && !savedEmail.isEmpty();
+        if(generic_authenticated && email.isEmpty())
+            throw std::runtime_error("The current managed account did not provide an identity that can confirm this selection; the original conversation and project were preserved");
         if(generic_authenticated && !savedEmail.isEmpty() && savedEmail!=email)
             throw std::runtime_error("That conversation belongs to another managed account; its project was not opened");
         if(!generic_authenticated && !verified) {
@@ -2118,7 +2122,7 @@ struct AssistantViewModel::State {
             if(!available)throw std::runtime_error("The conversation's original project is unavailable or changed. Its saved association was preserved; no other project was substituted.");
         }
         if(automatic && record.value("email").toString().isEmpty()){session_selection_target.clear();return false;}
-        const auto expectedEmail=record.value("email").isString()?record.value("email").toString():email;
+        const auto expectedEmail=!savedEmail.isEmpty()?savedEmail:email;
         sessions_loading=true;
         session_preparation=stage_session_preparation(id,project,record,expectedEmail);
         if(session_preparation)offer_session_preparation();
@@ -3034,7 +3038,8 @@ struct AssistantViewModel::State {
             calculations.append(std::move(row));
         }
         if(!current())throw std::runtime_error("The original calculation read owner changed");
-        Object native_state{{"calculating",target && target->calculating()},
+        Object native_state{{"creation_timestamp_utc",QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-HHmmss"))},
+            {"calculating",target && target->calculating()},
             {"fitting",target && target->fit()->nativeRunning()},{"fit_undo_available",target && target->fitUndoAvailable()},{"show_actions",show_actions},{"calculations",calculations},{"interface_groups",interface_groups}};
         if(!selected_structure_id.isEmpty())native_state["selected_structure_id"]=selected_structure_id;
         if(!selected_experiment_id.isEmpty())native_state["selected_experiment_id"]=selected_experiment_id;
@@ -7250,6 +7255,9 @@ struct AssistantViewModel::State {
         QPointer<ProjectViewModel> original_project;
         bool had_original_project=false,ordinary_waiting=false,prior_saved=false,prior_save_attempted=false,prior_save_uncertain=false;
         QSet<QString> consumed_inputs;
+        QPointer<QObject> ordinary_guard;
+        QPointer<QQuickItem> ordinary_save;
+        bool ordinary_guard_accepted=false;
         QString ordinary_name, ordinary_title, ordinary_description, ordinary_intent, ordinary_location, ordinary_failure, ordinary_failure_target;
         QVariantMap ordinary_facts;
         bool ordinary_returned = false, ordinary_settling = false, ordinary_title_supplied=false;
@@ -9594,6 +9602,9 @@ struct AssistantViewModel::State {
         if(creation->ordinary_edit_scope){end_own_edit(creation->ordinary_edit_scope);creation->ordinary_edit_scope=0;}
         if(native_attachment && native_attachment->creation==creation)native_attachment.reset();
         if(native_creation==creation)native_creation.reset();
+        if(action_window)try{QMetaObject::invokeMethod(action_window,"finishNativeProjectCreateGuard",Qt::DirectConnection,
+            Q_ARG(QVariant,QVariant(creation->ordinary_intent)));}catch(...){}
+        if(!owned())return;
         const auto run=native_create_widget;
         if(run && run->normal_project_only && run->owner_handoff==creation)create_widget_end(run);
         if(!owned())return;
@@ -9660,32 +9671,32 @@ struct AssistantViewModel::State {
             creation->ordinary_failure=QObject::tr("The original Create guard could not be entered");native_finish_normal_project(creation,false);
         }
     }
-    void native_preserve_before_create(const std::shared_ptr<NativeCreation>& creation) {
-        if(!normal_project_create_current(creation)){native_finish_normal_project(creation,false);return;}
-        if(!project || !project->modified()){native_prepare_normal_project(creation);return;}
-        auto* session=result_session();auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;
-        task->epoch=creation->epoch;task->ordinary_current=!session->needsSaveAs();task->current_destination=task->ordinary_current;
+    bool native_save_guarded_original(const std::shared_ptr<NativeCreation>& creation) {
+        if(!normal_project_create_current(creation) || !creation->ordinary_waiting || !creation->ordinary_guard ||
+            !creation->ordinary_save || creation->ordinary_guard->property("result").toInt()!=1 || !project || !result_session() || result_session()->needsSaveAs())return false;
+        const QPointer<AssistantViewModel> receiver(&owner);
+        auto task=std::make_shared<NativeSave>();task->receiver=&owner;task->project=project;
+        task->epoch=creation->epoch;task->ordinary_current=true;task->current_destination=true;
         task->transport_generation=agent->outputGeneration();task->call=*native_call;task->creation_owner=creation;
-        if(task->ordinary_current)task->source_directory=project->path();
+        task->source_directory=project->path();
         task->continuation=[this,creation](const std::shared_ptr<NativeSave>& saved) {
             const auto receiver=saved->receiver;
             if(!receiver || receiver->state_.get()!=this || native_creation!=creation || !native_call ||
                 native_call->record!=creation->record || native_call->receipt!=creation->receipt)return;
             creation->prior_saved=saved->committed;creation->prior_save_attempted=saved->call.may_have_written;
             creation->prior_save_uncertain=!saved->committed && saved->call.may_have_written;
-            if(saved->committed && saved->active && !saved->copy && !creation->cancelled && project==creation->original_project &&
-                result_session() && result_session()->assistantOwner(creation->epoch,creation->original_project)) {
-                native_refresh(*native_call);
-                if(!receiver || receiver->state_.get()!=this || native_creation!=creation)return;
-                if(normal_project_create_current(creation) && !project->modified()) {native_prepare_normal_project(creation);return;}
-            }
-            creation->ordinary_failure=saved->committed?QObject::tr("The previous project was saved, but the original Create continuation was cancelled or remains unsaved; no new project was created."):
-                QObject::tr("The previous project's Save was cancelled or could not be confirmed; no new project was created.");
-            native_finish_normal_project(creation,false);
+            if(saved->committed && saved->active && !creation->cancelled && project==creation->original_project &&
+                result_session() && result_session()->assistantOwner(creation->epoch,creation->original_project))native_refresh(*native_call);
         };
-        native_save=task;
-        try {native_start_ordinary_save(task);}catch(...) {if(native_save==task)native_pending_save_cancelled(task);}
+        // Only the FIRST dialog's accepted Save role reaches this owner. The
+        // original QML handler retains continuation/abandonment (including SaveAs).
+        creation->ordinary_guard_accepted=true;native_save=task;
+        bool saved=false;
+        try{saved=native_execute_save(task);}catch(...){if(receiver && receiver->state_.get()==this && native_save==task && !task->submitting)native_save_finished(task);throw;}
+        return receiver && receiver->state_.get()==this && native_creation==creation && saved &&
+            normal_project_create_current(creation) && project && !project->modified();
     }
+
     void native_start_normal_project(const QJsonValue& rpc,const QString& id,const QString& purpose,const Object& original,const Object& args) {
         auto* session=result_session();
         if(!session || session->project()!=project || !session->assistantOwner(session->assistantEpoch(),project))
@@ -9706,7 +9717,7 @@ struct AssistantViewModel::State {
         if(!native_prepare(rpc,id,"create_project",purpose,original))return;
         if(!receiver || !native_call)return;
         creation->record=native_call->record;creation->receipt=native_call->receipt;native_creation=creation;
-        try {native_preserve_before_create(creation);}
+        try {native_prepare_normal_project(creation);}
         catch(const std::exception& failure) {if(receiver && receiver->state_.get()==this && native_creation==creation){creation->ordinary_failure=QString::fromUtf8(failure.what());native_finish_normal_project(creation,false);}}
         catch(...) {if(receiver && receiver->state_.get()==this && native_creation==creation)native_finish_normal_project(creation,false);}
     }
@@ -12399,6 +12410,18 @@ struct AssistantViewModel::State {
     void generic_response_failure(const QString& method, const char* reason) noexcept {
         const auto publication = file_projection();
         try {
+            if(method=="account/read") {
+                QString cause;
+                const QLatin1StringView code(reason);
+                if(code=="ACCOUNT_IDENTITY_UNAVAILABLE")cause=QObject::tr("The original managed account identity is unavailable. Sign in with that account before resuming this conversation.");
+                else if(code=="ACCOUNT_SAVED_MISMATCH")cause=QObject::tr("The confirmed managed account differs from this saved conversation's original account. Its saved association was preserved.");
+                else if(code=="ACCOUNT_LOGIN_NOT_ESTABLISHED")cause=QObject::tr("Managed ChatGPT sign-in was not established. Complete sign-in with the intended account and reconnect.");
+                else if(code=="ACCOUNT_DISCLOSURE_CHANGED")cause=QObject::tr("The information selected for sign-in changed. Review the current sharing choice before reconnecting.");
+                else if(code=="ACCOUNT_SHAPE" || code=="ACCOUNT_EMAIL_SHAPE" || code=="ACCOUNT_PUBLIC_METADATA")cause=QObject::tr("The managed account reply contains invalid metadata. No conversation was resumed.");
+                else if(code=="ACCOUNT_UNSUPPORTED_KIND")cause=QObject::tr("This connection requires managed ChatGPT sign-in; the returned account kind is unsupported.");
+                else cause=QObject::tr("The managed account check could not be completed. Its actual processing stage is retained in diagnostics.");
+                generic_fail(cause+QStringLiteral(" [account/read: %1]").arg(QString::fromLatin1(reason)));return;
+            }
             if (const auto* stage = generic_bootstrap_stage(method)) {
                 generic_fail(QObject::tr("ChatGPT sign-in could not continue while %1 [%2: %3].")
                     .arg(QString::fromLatin1(stage), method, QString::fromLatin1(reason)));
@@ -12930,16 +12953,40 @@ struct AssistantViewModel::State {
         } else if (method == "account/read") {
             if(id!=account_read_rpc)return; // A newer readiness event owns its own actual read.
             account_read_rpc.clear();
-            reason_code = "ACCOUNT_KIND";
-            const auto account_value = result.value("account");
-            const auto account = account_value.toObject();
-            session_account_observation["stage"]="correlated_identity_read";
-            session_account_observation["account_kind"]=account.value("type");
+            const auto accountStage=[&](const char* stage){reason_code=stage;session_account_observation["stage"]=QLatin1StringView(stage);};
+            accountStage("ACCOUNT_LOCAL_PROCESSING");
+            const auto account_value=result.value("account");const auto account=account_value.toObject();
+            const auto kind=account.value("type");const auto email=account.value("email");
+            const bool emailProof=email.isString() && !email.toString().isEmpty();
+            session_account_observation["read_role"]=account_read_check_only?"current_confirmation":session_account_preflight?"saved_preflight":generic_resuming?"saved_resume":"initial";
+            session_account_observation["account_shape"]=account_value.isNull()?"null":account_value.isObject()?"object":"invalid";
+            session_account_observation["account_kind"]=(kind=="chatgpt" || kind=="apiKey" || kind=="amazonBedrock")?kind:QJsonValue("unsupported");
+            session_account_observation["email_presence"]=email.isUndefined()?"missing":email.isNull()?"null":email.isString()?(emailProof?"string":"empty_string"):"invalid";
+            accountStage("ACCOUNT_SHAPE");
+            if((!account_value.isNull() && !account_value.isObject()) || (account_value.isObject() && !kind.isString()))
+                throw std::runtime_error("The managed account response has invalid metadata");
+            if(kind=="chatgpt") {
+                accountStage("ACCOUNT_EMAIL_SHAPE");
+                if(!email.isNull() && !email.isString())throw std::runtime_error("The managed account identity field has invalid metadata");
+            }
+            accountStage("ACCOUNT_IDENTITY_COMPARE");
             if(account_read_check_only) {
                 const auto expected=generic_native.value("account").toObject().value("email");
-                const bool same=account.value("type")=="chatgpt" && expected.isString() && account.value("email")==expected;
+                const bool expectedProof=expected.isString() && !expected.toString().isEmpty();
+                session_account_observation["expected_identity_present"]=expectedProof;
+                if(kind=="chatgpt" && (!expectedProof || !emailProof)) {
+                    accountStage("ACCOUNT_IDENTITY_UNAVAILABLE");session_account_observation["same_identity"]="unknown";
+                    account_confirmation_pending=true;
+                    error=QObject::tr("The managed account did not provide the identity needed to confirm new actions. The current conversation and accepted work were preserved; reconnect with the original account to continue.");
+                    notify();return;
+                }
+                const bool same=kind=="chatgpt" && expectedProof && emailProof && email==expected;
                 session_account_observation["same_identity"]=same;account_confirmation_pending=false;
-                if(!same) {generic_fail(QObject::tr("The correlated account read no longer confirms the original managed account. Reconnect with that account; no conversation action was replayed."));return;}
+                if(!same) {
+                    accountStage(kind=="chatgpt"?"ACCOUNT_CURRENT_MISMATCH":"ACCOUNT_MANAGED_UNAVAILABLE");
+                    generic_fail(kind=="chatgpt"?QObject::tr("The confirmed managed account differs from the original account. Reconnect with the original account; no conversation action was replayed."):
+                        QObject::tr("The correlated read no longer has the original managed ChatGPT account. Sign in with that account; accepted work was retained."));return;
+                }
                 session_account_observation["stage"]="same_current_account";
                 if(account_bootstrap_reply) {
                     auto pending=std::move(*account_bootstrap_reply);account_bootstrap_reply.reset();
@@ -12954,49 +13001,53 @@ struct AssistantViewModel::State {
             if(session_account_preflight) {
                 const auto target=session_account_target;const auto operation=session_account_operation;const auto automatic=session_account_automatic;
                 if(operation!=session_operation || session_restore_target!=target) {
+                    accountStage("ACCOUNT_SELECTION_CHANGED");
                     generic_fail(QObject::tr("The original conversation selection changed during account verification; no saved project was opened."));return;
                 }
-                if(account.value("type")!="chatgpt" || account.value("email").toString()!=saved_session(target).value("email").toString() || account.value("email").toString().isEmpty()) {
-                    generic_fail(QObject::tr("Sign in with the conversation's original managed account before opening its saved project. The saved association was preserved."));return;
+                const auto expected=saved_session(target).value("email").toString();
+                session_account_observation["expected_identity_present"]=!expected.isEmpty();
+                if(kind!="chatgpt" || !emailProof || expected.isEmpty()) {
+                    accountStage("ACCOUNT_IDENTITY_UNAVAILABLE");
+                    generic_fail(QObject::tr("The original managed account identity could not be confirmed before opening this conversation's saved project. Sign in with that account; its saved association was preserved."));return;
                 }
-                session_account_email=account.value("email").toString();session_account_preflight=false;
+                if(email.toString()!=expected) {
+                    accountStage("ACCOUNT_SAVED_MISMATCH");
+                    generic_fail(QObject::tr("The confirmed account differs from this conversation's original managed account. Its saved project was not opened."));return;
+                }
+                session_account_email=email.toString();session_account_preflight=false;
                 generic_connecting=false;agent->settleOperation();
                 if(!publication.input_current())return;
                 agent->retire();
                 if(!publication.input_current() || operation!=session_operation || session_restore_target!=target || session_selection_target!=target)return;
                 (void)begin_saved_session(target,automatic);return;
             }
-            if (account.value("type") == "chatgpt") {
-                if(generic_resuming && (!resume_checkpoint || (!resume_checkpoint->email.isEmpty() && account.value("email").toString()!=resume_checkpoint->email))) {
-                    resume_checkpoint.reset();generic_resuming=false;
-                    throw std::runtime_error("The current managed account differs; the previous session was not resumed");
+            if(kind=="chatgpt") {
+                if(generic_resuming) {
+                    const bool expected=resume_checkpoint && !resume_checkpoint->email.isEmpty();
+                    session_account_observation["expected_identity_present"]=expected;
+                    accountStage("ACCOUNT_IDENTITY_UNAVAILABLE");
+                    if(!expected || !emailProof)throw std::runtime_error("The original managed account identity is unavailable; the saved conversation was not resumed");
+                    accountStage("ACCOUNT_SAVED_MISMATCH");
+                    if(email.toString()!=resume_checkpoint->email)throw std::runtime_error("The current managed account differs; the previous session was not resumed");
                 }
-                account_bootstrap_verified=true;
-                usage_read_epoch = usage_epoch;
+                accountStage("ACCOUNT_PUBLIC_METADATA");
+                account_bootstrap_verified=true;usage_read_epoch=usage_epoch;
                 Object public_account;
-                for (const auto* field : {"email", "planType"}) {
-                    if (account.value(field).isString()) public_account[field]=usage_text(account.value(field));
-                }
-                generic_native["account"]=public_account;
-                generic_native["accountEpoch"]=QString::number(usage_epoch);
-                generic_native["label"] = account.value("email").isString() ? account.value("email") : QJsonValue("ChatGPT");
-                generic_native["models"] = QJsonArray{};
-                reason_code = "REQUEST_ADMISSION";
-                generic_request("model/list", {{"includeHidden", true}});
-            } else if (account_value.isNull() || (account_value.isObject() &&
-                (account.value("type") == "apiKey" || (account.value("type") == "amazonBedrock" && (!account.contains("usesCodexManagedCredentials") || account.value("usesCodexManagedCredentials").isBool()))))) {
-                // The user selected managed ChatGPT sign-in. Never infer/use
-                // API billing or remove another credential to make it succeed.
-                if (generic_login_attempted) throw std::runtime_error("Managed ChatGPT login was not established");
-                const bool still_approved=disclosure_approved();
-                if(!publication.input_current())return;
-                if (!still_approved) throw std::runtime_error("The selected login disclosure changed");
-
-                login_scope = std::make_shared<DisclosureScope>(*approved_scope); // Preown before any login publication.
-                generic_login_attempted = true;
-                reason_code = "REQUEST_ADMISSION";
-                generic_request("account/login/start", {{"type", "chatgpt"}});
-            } else throw std::runtime_error("Managed ChatGPT login is required");
+                for(const auto* field:{"email","planType"})if(account.value(field).isString())public_account[field]=usage_text(account.value(field));
+                generic_native["account"]=public_account;generic_native["accountEpoch"]=QString::number(usage_epoch);
+                generic_native["label"]=emailProof?email:QJsonValue("ChatGPT");generic_native["models"]=QJsonArray{};
+                accountStage("REQUEST_ADMISSION");generic_request("model/list",{{"includeHidden",true}});
+            } else if(account_value.isNull() || (account_value.isObject() &&
+                (kind=="apiKey" || (kind=="amazonBedrock" && (!account.contains("usesCodexManagedCredentials") || account.value("usesCodexManagedCredentials").isBool()))))) {
+                accountStage("ACCOUNT_LOGIN_NOT_ESTABLISHED");
+                if(generic_login_attempted)throw std::runtime_error("Managed ChatGPT login was not established");
+                accountStage("ACCOUNT_DISCLOSURE_CHANGED");
+                const bool still_approved=disclosure_approved();if(!publication.input_current())return;
+                if(!still_approved)throw std::runtime_error("The selected login disclosure changed");
+                accountStage("ACCOUNT_LOCAL_PROCESSING");
+                login_scope=std::make_shared<DisclosureScope>(*approved_scope);generic_login_attempted=true;
+                accountStage("REQUEST_ADMISSION");generic_request("account/login/start",{{"type","chatgpt"}});
+            } else {accountStage("ACCOUNT_UNSUPPORTED_KIND");throw std::runtime_error("Managed ChatGPT login is required");}
         } else if (method == "account/login/start") {
             reason_code = "LOGIN_KIND";
             if (result.value("type") != "chatgpt") throw std::runtime_error("Managed ChatGPT login is required");
@@ -16939,6 +16990,57 @@ void AssistantViewModel::nativeProjectCreateReady(const QString& intent,bool rea
     });
 #else
     Q_UNUSED(intent);Q_UNUSED(ready);
+#endif
+}
+void AssistantViewModel::nativeProjectCreateSaveChoice(const QString& intent,QObject* form,QObject* button) {
+#ifndef __EMSCRIPTEN__
+    const QPointer<AssistantViewModel> receiver(this);auto* s=state_.get();const auto creation=s->native_creation;
+    const QPointer<QObject> guard(form);const QPointer<QQuickItem> target(qobject_cast<QQuickItem*>(button));
+    const QPointer<QQuickWindow> window(s->action_window);
+    if(!creation || creation->ordinary_intent!=intent || !creation->ordinary_waiting || creation->ordinary_guard ||
+        !guard || guard->objectName()!=QStringLiteral("unsavedChanges") || !target || !window || target->window()!=window ||
+        !s->normal_project_create_current(creation))return;
+    creation->ordinary_guard=guard;creation->ordinary_save=target;
+    const auto current=[s,receiver,creation,guard,target,window,intent] {
+        if(!receiver || receiver->state_.get()!=s || !window || s->action_window!=window || !s->normal_project_create_current(creation))return false;
+        if(creation->ordinary_guard_accepted)return true; // Actual Save may close its original dialog.
+        if(!creation->ordinary_waiting || !guard || !target || creation->ordinary_guard!=guard || creation->ordinary_save!=target || target->window()!=window)return false;
+        QVariant valid;
+        const bool invoked=QMetaObject::invokeMethod(window,"nativeProjectCreateSaveCurrent",Qt::DirectConnection,Q_RETURN_ARG(QVariant,valid),
+            Q_ARG(QVariant,QVariant(intent)),Q_ARG(QVariant,QVariant::fromValue(static_cast<QObject*>(target.data()))));
+        return receiver && receiver->state_.get()==s && s->normal_project_create_current(creation) && invoked && valid.toBool();
+    };
+    try {
+        if(!current())throw std::runtime_error("The original unsaved-work Save choice changed before delivery");
+        if(!s->show_actions) {
+            QVariant chosen;const bool invoked=QMetaObject::invokeMethod(window,"chooseNativeProjectCreateSave",Qt::DirectConnection,Q_RETURN_ARG(QVariant,chosen),
+                Q_ARG(QVariant,QVariant(intent)),Q_ARG(QVariant,QVariant::fromValue(static_cast<QObject*>(target.data()))));
+            if(receiver && receiver->state_.get()==s && s->native_creation==creation && (!invoked || !chosen.toBool()))
+                throw std::runtime_error("The original unsaved-work Save role could not be chosen");
+            return;
+        }
+        AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::Navigate;request.target=target;
+        request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
+        request.completed=[s,receiver,creation](bool delivered,const QString&,ControlCause) {
+            if(!receiver || receiver->state_.get()!=s || s->native_creation!=creation || creation->ordinary_guard_accepted)return;
+            if(!delivered || !creation->ordinary_guard_accepted){creation->ordinary_failure=QObject::tr("The original unsaved-work Save choice did not complete; no new project was created.");s->native_finish_normal_project(creation,false);}
+        };
+        s->control_start(*s->native_call,ControlField::Project,std::move(request));
+    }catch(const std::exception& error) {
+        if(receiver && receiver->state_.get()==s && s->native_creation==creation){creation->ordinary_failure=State::bounded_error(QString::fromUtf8(error.what()));s->native_finish_normal_project(creation,false);}
+    }catch(...) {if(receiver && receiver->state_.get()==s && s->native_creation==creation)s->native_finish_normal_project(creation,false);}
+#else
+    Q_UNUSED(intent);Q_UNUSED(form);Q_UNUSED(button);
+#endif
+}
+bool AssistantViewModel::nativeProjectCreateSave(const QString& intent) {
+#ifndef __EMSCRIPTEN__
+    const QPointer<AssistantViewModel> receiver(this);auto* s=state_.get();const auto creation=s->native_creation;
+    if(!creation || creation->ordinary_intent!=intent)return false;
+    try{return s->native_save_guarded_original(creation);}
+    catch(...) {if(receiver && receiver->state_.get()==s && s->native_creation==creation)s->native_finish_normal_project(creation,false);return false;}
+#else
+    Q_UNUSED(intent);return false;
 #endif
 }
 void AssistantViewModel::answerQuestion(const QString& id, const QString& answer) {

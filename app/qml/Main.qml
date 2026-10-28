@@ -22,18 +22,45 @@ EaComponents.ApplicationWindow {
 
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
+    property var assistantCreateGuard: null
     function prepareNativeProjectCreate(intent) {
         const original=Session.assistant, before=Session.project;
-        if(!original.nativeProjectCreateCurrent(intent))return false;
+        if(!original.nativeProjectCreateCurrent(intent) || assistantCreateGuard!==null)return false;
+        const token={assistant:original,project:before,intent:intent,action:null};
         const current=() => Qt.isQtObject(window) && Qt.isQtObject(original) && Session.assistant===original
             && Session.project===before && original.nativeProjectCreateCurrent(intent);
-        AppState.afterChanges(() => {
+        const release=() => {if(window.assistantCreateGuard===token)window.assistantCreateGuard=null;};
+        token.action=() => {
+            release();
             if(!current()){if(Qt.isQtObject(original))original.nativeProjectCreateReady(intent,false);return;}
             if(original.showActions)AppState.open(AppState.Page.Project);
             else AppState.reached=Math.max(AppState.reached,AppState.Page.Project);
             if(current())original.nativeProjectCreateReady(intent,true);
-        },() => {if(Qt.isQtObject(original))original.nativeProjectCreateReady(intent,false);});
+        };
+        assistantCreateGuard=token;
+        AppState.afterChanges(token.action,() => {release();if(Qt.isQtObject(original))original.nativeProjectCreateReady(intent,false);});
         return true; // Original deferred guard, not a created/adopted result.
+    }
+    function nativeProjectCreateSaveCurrent(intent,control) {
+        const token=assistantCreateGuard;
+        return token!==null && token.intent===intent && unsavedChanges.nativeCreation===token
+            && Qt.isQtObject(token.assistant) && Session.assistant===token.assistant && Session.project===token.project
+            && token.assistant.nativeProjectCreateCurrent(intent) && unsavedChanges.visible && unsavedChanges.opened
+            && unsavedChanges.standardButton(Dialog.Save)===control;
+    }
+    function chooseNativeProjectCreateSave(intent,control) {
+        if(!nativeProjectCreateSaveCurrent(intent,control))return false;
+        control.click(); // FIRST original Save role; OFF has no physical cue.
+        return true;
+    }
+    function finishNativeProjectCreateGuard(intent) {
+        const token=assistantCreateGuard;
+        if(token===null || token.intent!==intent)return;
+        assistantCreateGuard=null;
+        if(unsavedChanges.nativeCreation!==token)return;
+        unsavedChanges.nativeCreation=null;
+        if(unsavedChanges.action!==token.action)return;
+        unsavedChanges.action=null;unsavedChanges.abandoned=null;unsavedChanges.close();
     }
 
     function createNativeProject(values,intent) {
@@ -681,6 +708,8 @@ EaComponents.ApplicationWindow {
             const previous=unsavedChanges.abandoned;unsavedChanges.abandoned=null;
             if(previous)previous();
             unsavedChanges.abandoned=abandoned;
+            const token=window.assistantCreateGuard;
+            unsavedChanges.nativeCreation=token!==null && token.action===action ? token : null;
             unsavedChanges.action = action;
             unsavedChanges.open();
         }
@@ -690,6 +719,12 @@ EaComponents.ApplicationWindow {
         objectName: "unsavedChanges"
         property var action: null
         property var abandoned: null
+        property var nativeCreation: null
+        onOpened: {
+            const token=nativeCreation;
+            if(token!==null && token===window.assistantCreateGuard && Qt.isQtObject(token.assistant))
+                token.assistant.nativeProjectCreateSaveChoice(token.intent,unsavedChanges,standardButton(Dialog.Save));
+        }
         function abandonAction() {const callback=abandoned;abandoned=null;action=null;if(callback)callback();}
         onRejected: abandonAction()
         title: qsTr("Save the changes?")
@@ -703,13 +738,23 @@ EaComponents.ApplicationWindow {
         property var afterSave: null
         property var afterSaveAbandoned: null
         onAccepted: {
+            const original=nativeCreation, waiting=action;
             if (Session.needsSaveAs) {
-                abandonAction();window.saveProjectAs();
-            } else if (Session.save()) {
-                if (WebFiles.available) {afterSave=action;afterSaveAbandoned=abandoned;abandoned=null;}
-                else {const waiting=action;abandoned=null;action=null;Qt.callLater(waiting);}
-            } else {abandonAction();if(Session.lastError!=="")saveError.open();}
+                abandonAction();if(Qt.isQtObject(window))window.saveProjectAs();
+            } else {
+                const saved=original!==null
+                    ? (Qt.isQtObject(original.assistant) && Session.assistant===original.assistant
+                        && Session.project===original.project && original.assistant.nativeProjectCreateSave(original.intent))
+                    : Session.save();
+                if(original!==null && (nativeCreation!==original || window.assistantCreateGuard!==original || action!==waiting
+                    || !Qt.isQtObject(original.assistant) || Session.assistant!==original.assistant || Session.project!==original.project))return;
+                if(saved) {
+                    if (WebFiles.available) {afterSave=action;afterSaveAbandoned=abandoned;abandoned=null;}
+                    else {abandoned=null;action=null;Qt.callLater(waiting);}
+                } else {abandonAction();if(Session.lastError!=="")saveError.open();}
+            }
         }
+
         Connections {
             target: Session
             function onWebSaveFinished(saved) {
