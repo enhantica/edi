@@ -17,6 +17,8 @@ trace = Path(config['trace'])
 thread_id = '019a0290-0000-7000-8000-000000000001'
 turn_id = '019a0290-0000-7000-8000-000000000002'
 pending = {}
+retry_after_response = {}
+first_response_for_retry = {}
 calls = []
 turn_number = 0
 thread_number = 0
@@ -171,7 +173,12 @@ def advance():
     binding = {'threadId': thread_id, 'turnId': turn_id, 'item': item}
     request_id = 'integration-envelope-' + str(cursor['sequence'])
     pending[request_id] = binding
-    notify('item/started', binding)
+    if spec.get('replay_request_once'):
+        retry_after_response[request_id] = {
+            'threadId': thread_id, 'turnId': turn_id, 'callId': call_id,
+            'namespace': None, 'tool': spec['tool'], 'arguments': spec['arguments'],
+        }
+    notify('item/started', {**binding, 'startedAtMs': 1})
     emit({
         'id': request_id,
         'method': 'item/tool/call',
@@ -193,6 +200,16 @@ for line in sys.stdin:
     if 'method' not in request:
         original = pending.pop(request['id'])
         result = request.get('result', {})
+        retry = retry_after_response.pop(request['id'], None)
+        if retry is not None:
+            # Simulate retransmission while the ONE logical item is still in
+            # progress. Never reopen a completed item with item/started.
+            retry_id = request['id'] + '-retry'
+            pending[retry_id] = original
+            first_response_for_retry[retry_id] = result
+            emit({'id': retry_id, 'method': 'item/tool/call', 'params': retry})
+            continue
+        result = first_response_for_retry.pop(request['id'], result)
         if original['item']['tool'] == 'create_structure' and result.get('success'):
             result_value = json.loads(result['contentItems'][0]['text'])
             assert len(result_value['structures']) == 1
