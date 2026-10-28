@@ -214,8 +214,9 @@ bool AssistantWidgetInput::current(std::uint64_t id) const {
     const auto request = request_; // Keep callback ownership through reentrant retirement.
     if (serial_ != id || !request || !window_ || !request->target || !request->current) return false;
     const bool valid = request->current();
-    return self && valid && serial_ == id && request_ == request && window_ && request->target &&
-        (!draft_ || commit_prepared_ || request->target->property("assistantEditing").toBool());
+    if(!self || !valid || serial_!=id || request_!=request || !window_ || !request->target)return false;
+    if((step_==Step::ChoicePress || step_==Step::ChoiceRelease) && !choice_releasing_ && !choiceRowOwned())return false;
+    return self && (!draft_ || commit_prepared_ || request->target->property("assistantEditing").toBool());
 }
 bool AssistantWidgetInput::visibleCenter(QQuickItem& item, QPointF& center, bool scrollGutter, bool allowDisabledTarget) const {
     if (!window_ || item.window() != window_ || !window_->isVisible() || item.width() <= 0 || item.height() <= 0) return false;
@@ -308,6 +309,15 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     if ((request.kind == Kind::Choose || request.kind == Kind::SearchChoice) && (request.option < 0 || request.option >= request.target->property("count").toInt() ||
         (request.kind == Kind::SearchChoice && (!request.target->property("searchable").toBool() || request.value.isEmpty() || request.value.size() > static_cast<qsizetype>(edi::assistant::Limits::id_bytes)))))
         throw std::runtime_error("The actual ComboBox option is unavailable");
+    QString optionText;
+    if((request.kind==Kind::Choose || request.kind==Kind::SearchChoice) &&
+        !QMetaObject::invokeMethod(request.target,"textAt",Qt::DirectConnection,Q_RETURN_ARG(QString,optionText),Q_ARG(int,request.option)))
+        throw ControlInputRefusal(ControlCause::Unavailable,"The original offered choice text is unavailable");
+    if(!self || serial_!=originalSerial || request_)return 0;
+    if(request.kind==Kind::SearchChoice && optionText!=request.value)
+        throw ControlInputRefusal(ControlCause::Unavailable,"The exact search text does not match the original offered option");
+    if(!request.current())throw ControlInputRefusal(ControlCause::Superseded,"The original offered choice changed");
+    if(!self || serial_!=originalSerial || request_)return 0;
     request.failure=ControlCause::None;
     auto prepared = std::make_shared<Request>(std::move(request)); // All job/callback allocation precedes visibility.
     if (!mouse_owner_) throw ControlInputRefusal(ControlCause::Unavailable,"The visible mouse window is unavailable");
@@ -315,7 +325,7 @@ std::uint64_t AssistantWidgetInput::start(Request request) {
     request_ = std::move(prepared);
     const auto original = request_;
     const auto id = ++serial_;
-    choice_popup_.clear(); choice_content_.clear(); option_step_ = 0;
+    choice_popup_.clear(); choice_content_.clear(); choice_row_.clear(); choice_text_=std::move(optionText);
     center_ = center; step_ = Step::Move; draft_ = false; commit_prepared_ = false;
     emit activeChanged(true);
     if (!self) return id;
@@ -365,6 +375,46 @@ bool AssistantWidgetInput::conflictsWith(const QQuickItem* item) const noexcept 
     const auto* target = request_->target.data();
     return (target && (target == item || target->isAncestorOf(item))) ||
         (choice_content_ && (choice_content_ == item || choice_content_->isAncestorOf(item)));
+}
+bool AssistantWidgetInput::choicePopupOwned() const {
+    if(!request_ || !window_ || !request_->target || !choice_popup_ || !choice_content_ ||
+        request_->option<0 || request_->option>=request_->target->property("count").toInt() ||
+        request_->target->property("popup").value<QObject*>()!=choice_popup_ || !choice_popup_->property("visible").toBool() ||
+        choice_popup_->property("contentItem").value<QQuickItem*>()!=choice_content_ || choice_content_->window()!=window_)return false;
+    const QPointer<const AssistantWidgetInput> self(this);const auto request=request_;const auto serial=serial_;
+    QString text;
+    const bool read=QMetaObject::invokeMethod(request->target,"textAt",Qt::DirectConnection,Q_RETURN_ARG(QString,text),Q_ARG(int,request->option));
+    return self && request_==request && serial_==serial && read && text==choice_text_;
+}
+bool AssistantWidgetInput::choiceRowOwned() const {
+    if(!choicePopupOwned() || !choice_row_)return false;
+    const QPointer<const AssistantWidgetInput> self(this);const auto request=request_;const auto serial=serial_;
+    const QPointer<QQuickItem> list(choice_content_),row(choice_row_);QQuickItem* actual=nullptr;
+    const bool read=QMetaObject::invokeMethod(list,"itemAtIndex",Qt::DirectConnection,Q_RETURN_ARG(QQuickItem*,actual),Q_ARG(int,request->option));
+    if(!self || request_!=request || serial_!=serial || !list || !row || list!=choice_content_ || row!=choice_row_ ||
+        !read || actual!=row || row->window()!=window_ || !list->isAncestorOf(row))return false;
+    QPointF center;if(!visibleCenter(*row,center))return false;
+    // The original searchable list uses an overlay header; an option behind
+    // that real editor is not an exposed choice even when its delegate exists.
+    const QPointer<QQuickItem> header(list->property("headerItem").value<QQuickItem*>());
+    return !header || !header->isVisible() || header->opacity()<=0 ||
+        !header->mapRectToScene(QRectF(0,0,header->width(),header->height())).contains(center);
+}
+bool AssistantWidgetInput::revealChoice() {
+    if(!choicePopupOwned())return false;
+    const QPointer<AssistantWidgetInput> self(this);const auto request=request_;const auto serial=serial_;
+    const QPointer<QQuickItem> list(choice_content_);
+    const auto owned=[&] {return self && request_==request && serial_==serial && current(serial) && list && list==choice_content_ && choicePopupOwned();};
+    if(!owned())return false;
+    list->ensurePolished();if(!owned())return false;
+    if(!QMetaObject::invokeMethod(list,"forceLayout",Qt::DirectConnection) || !owned())return false;
+    // Public ListView.Center (Qt's QML position mode), not a guessed row coordinate.
+    if(!QMetaObject::invokeMethod(list,"positionViewAtIndex",Qt::DirectConnection,Q_ARG(int,request->option),Q_ARG(int,1)) || !owned())return false;
+    if(!QMetaObject::invokeMethod(list,"forceLayout",Qt::DirectConnection) || !owned())return false;
+    QQuickItem* row=nullptr;
+    if(!QMetaObject::invokeMethod(list,"itemAtIndex",Qt::DirectConnection,Q_RETURN_ARG(QQuickItem*,row),Q_ARG(int,request->option)) || !owned() || !row)return false;
+    const QPointer<QQuickItem> actual(row);choice_row_=actual;
+    return choiceRowOwned() && actual && visibleCenter(*actual,center_);
 }
 bool AssistantWidgetInput::choiceKeyboardOwned() const {
     if (!window_ || !request_ || !request_->target) return false;
@@ -416,7 +466,9 @@ void AssistantWidgetInput::advance() noexcept {
     try {
         const bool valid = current(id);
         if (!self) return;
-        if (!valid || !request || !request->target || !visibleCenter(*request->target, center_, request->kind == Kind::Scroll, request->visualOnlyDisabledTarget)) { if (self && serial_ == id && request_ == request) self->fail(request,id,valid ? ControlCause::Unavailable : ControlCause::Superseded, QT_TR_NOOP("Visible action target changed or is unavailable"), true); return; }
+        const bool rowStep=step_==Step::ChoicePress || step_==Step::ChoiceRelease;
+        const auto geometryTarget=rowStep?choice_row_:request?request->target:QPointer<QQuickItem>{};
+        if (!valid || !request || !request->target || (rowStep && !choiceRowOwned()) || !geometryTarget || !visibleCenter(*geometryTarget, center_, request->kind == Kind::Scroll, request->visualOnlyDisabledTarget)) { if (self && serial_ == id && request_ == request) self->fail(request,id,valid ? ControlCause::Unavailable : ControlCause::Superseded, QT_TR_NOOP("Visible action target changed or is unavailable"), true); return; }
         // Keep the same step and original authority while another application
         // is active. Never request activation or inject into an inactive window.
         if (!window_->isActive()) { timer_.start(navigation_ms); return; }
@@ -481,22 +533,43 @@ void AssistantWidgetInput::advance() noexcept {
                 choice_popup_ = request_->target->property("popup").value<QObject*>();
                 choice_content_ = choice_popup_ ? choice_popup_->property("contentItem").value<QQuickItem*>() : nullptr;
                 if (!choice_popup_ || !choice_popup_->property("visible").toBool()) { if(self)self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The genuine ComboBox popup did not open"), false); return; }
-                step_ = request_->kind == Kind::SearchChoice ? Step::Select : Step::ChooseHome;
+                step_ = request_->kind == Kind::SearchChoice ? Step::Select : Step::ChoiceReveal;
                 pace(click_relaxation_ms); return;
             }
             if (request_->kind != Kind::ParameterFilter && request_->kind != Kind::StagedText && request_->kind != Kind::Choose && request_->kind != Kind::SearchChoice && request_->kind != Kind::FormText) { if(self)self->stop(request,id,true, {}, false); return; }
             step_ = Step::Select; pace(click_relaxation_ms); return;
-        case Step::ChooseHome:
-            if (!key(Qt::Key_Home)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original ComboBox lost keyboard ownership"), false); return; }
-            if (self && serial_ == id && request_ == request) { step_ = Step::ChooseDown; pace(navigation_ms); }
-            return;
-        case Step::ChooseDown:
-            if (option_step_ < request->option) {
-                if (!key(Qt::Key_Down)) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original ComboBox lost keyboard ownership"), false); return; }
-                if (self && serial_ == id && request_ == request) { ++option_step_; pace(navigation_ms); }
-                return;
+        case Step::ChoiceReveal:
+            if(!revealChoice()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Unavailable,QT_TR_NOOP("The exact offered popup row could not be revealed"),false);return;}
+            if(!self || serial_!=id || request_!=request)return;
+            emit pointerMoved(center_);
+            if(!self || serial_!=id || request_!=request)return;
+            step_=Step::ChoicePress;pace(move_ms);return;
+        case Step::ChoicePress:
+            if(!choiceRowOwned() || !mouse(QEvent::MouseMove,Qt::NoButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The offered popup row did not receive pointer movement"),false);return;}
+            if(!self || serial_!=id || request_!=request)return;
+            if(!current(id) || !choiceRowOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original offered row changed before its press"),false);return;}
+            emit pointerPressed();
+            if(!self || serial_!=id || request_!=request)return;
+            if(!current(id) || !choiceRowOwned()){if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The original offered row changed during its cue"),false);return;}
+            pressed_=true;
+            if(!mouse(QEvent::MouseButtonPress,Qt::LeftButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup choice did not receive its press"),false);return;}
+            if(self && serial_==id && request_==request){step_=Step::ChoiceRelease;pace(press_ms);}return;
+        case Step::ChoiceRelease:
+            commit_prepared_=true;
+            if(!request->prepareCommit()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Commit,QT_TR_NOOP("The original popup choice could not admit its ordinary commit"),false);return;}
+            if(!self || serial_!=id || request_!=request)return;
+            if(!current(id) || !choiceRowOwned()) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Superseded,QT_TR_NOOP("The prepared original popup choice changed"),false);return;}
+            pressed_=false;
+            {
+                choice_releasing_=true;
+                const auto release=qScopeGuard([self]{if(self)self->choice_releasing_=false;});
+                if(!mouse(QEvent::MouseButtonRelease,Qt::LeftButton)) {if(self && serial_==id && request_==request)self->fail(request,id,ControlCause::Delivery,QT_TR_NOOP("The original popup choice did not receive its release"),false);return;}
             }
-            step_ = Step::ChooseCommit; timer_.start(0); return;
+            if(self && serial_==id && request_==request) {
+                const bool selected=request->target && request->target->property("currentIndex").toInt()==request->option && choice_popup_ && !choice_popup_->property("visible").toBool();
+                self->stop(request,id,selected,selected?QString{}:tr("The actual popup click did not confirm the original offered option"),false,selected?ControlCause::None:ControlCause::Commit);
+            }
+            return;
         case Step::ChooseCommit:
             commit_prepared_ = true;
             if (!request->prepareCommit()) { if (self && serial_ == id && request_ == request) self->fail(request,id,ControlCause::Commit, QT_TR_NOOP("The original ComboBox choice was retired"), false); return; }
@@ -518,8 +591,8 @@ void AssistantWidgetInput::advance() noexcept {
             }
             // Only genuine form/filter/staged drafts are edited here. Scientific
             // declarations use the adapter's original ordinary model methods.
-            // Search stays on the actual popup editor; its Return handler below
-            // still validates and activates the offered choice exactly once.
+            // Search stays on the actual popup editor; the offered result is
+            // revealed and clicked below without a second acceptance handler.
             const QPointer<QQuickItem> editor(request->kind == Kind::SearchChoice ? window_->activeFocusItem() : request->target.data());
             if (!editor || (!editor->inherits("QQuickTextInput") && !editor->inherits("QQuickTextEdit")) ||
                 !choiceKeyboardOwned() || editor->property("inputMethodComposing").toBool()) { if(self)self->fail(request,id,ControlCause::Delivery, QT_TR_NOOP("The original draft lost keyboard ownership"), true); return; }
@@ -542,7 +615,7 @@ void AssistantWidgetInput::advance() noexcept {
             }
             emit inputProgress();
             if (!self || serial_ != id || request_ != request) return;
-            step_ = Step::Commit; timer_.start(0); return;
+            step_ = request->kind==Kind::SearchChoice?Step::ChoiceReveal:Step::Commit; timer_.start(0); return;
         }
         case Step::Commit:
             commit_prepared_ = true;
@@ -617,7 +690,7 @@ void AssistantWidgetInput::stop(const std::shared_ptr<Request>& expected, std::u
     if (restore) restoreDraft();
     if (!self || request_ != original || serial_ != id) return;
     request_.reset();
-    const bool prepared = commit_prepared_; commit_prepared_ = false; draft_ = false; original_text_.clear(); choice_popup_.clear(); choice_content_.clear();
+    const bool prepared = commit_prepared_; commit_prepared_ = false; draft_ = false; original_text_.clear(); choice_popup_.clear(); choice_content_.clear(); choice_row_.clear(); choice_text_.clear();
     if (prepared) try { original->finishCommit(); } catch (...) { delivered = false; }
     if (!self) return;
     if (serial_ == id && !request_) {
