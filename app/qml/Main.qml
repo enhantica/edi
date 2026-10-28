@@ -22,17 +22,24 @@ EaComponents.ApplicationWindow {
 
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
-    function prepareNativeProjectCreate() {
-        if (Session.project !== null) return false;
-        if (Session.assistant.showActions) AppState.open(AppState.Page.Project);
-        else AppState.reached = Math.max(AppState.reached, AppState.Page.Project);
-        return Session.project === null;
+    function prepareNativeProjectCreate(intent) {
+        const original=Session.assistant, before=Session.project;
+        if(!original.nativeProjectCreateCurrent(intent))return false;
+        const current=() => Qt.isQtObject(window) && Qt.isQtObject(original) && Session.assistant===original
+            && Session.project===before && original.nativeProjectCreateCurrent(intent);
+        AppState.afterChanges(() => {
+            if(!current()){if(Qt.isQtObject(original))original.nativeProjectCreateReady(intent,false);return;}
+            if(original.showActions)AppState.open(AppState.Page.Project);
+            else AppState.reached=Math.max(AppState.reached,AppState.Page.Project);
+            if(current())original.nativeProjectCreateReady(intent,true);
+        },() => {if(Qt.isQtObject(original))original.nativeProjectCreateReady(intent,false);});
+        return true; // Original deferred guard, not a created/adopted result.
     }
 
-    function createNativeProject(values, intent) {
-        if (Session.project !== null) return ({});
-        return Session.createProjectWithOutcome(values.name, values.description, values.location, values.suRule,
-            values.title, values.authors, values.reportLibraries, intent);
+    function createNativeProject(values,intent) {
+        if(!Session.assistant.nativeProjectCreateCurrent(intent) || (Session.project!==null && Session.project.modified))return ({});
+        return Session.createProjectWithOutcome(values.name,values.description,values.location,values.suRule,
+            values.title,values.authors,values.reportLibraries,intent);
     }
     function showNativeReport(project) {
         if (project === null || Session.project !== project || !reportTab.enabled) return false;

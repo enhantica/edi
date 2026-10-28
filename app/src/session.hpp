@@ -254,6 +254,7 @@ class Session : public QObject {
     bool createProjectImpl(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&,ProjectCreationOutcome*);
     friend class AssistantViewModel;
     quint64 assistantEpoch() const noexcept { return assistant_epoch_; }
+    bool assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept;
     bool emptyAssistantOwner(quint64 epoch) const noexcept;
     void retireAssistantIntent() noexcept;
     std::unique_ptr<ProjectViewModel> prepareAssistantNativeModel(edi::Project, quint64, const std::function<bool()>&);
