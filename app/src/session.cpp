@@ -324,6 +324,7 @@ bool Session::openProject(const QUrl& location) {
     const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;
     if (openProjectAt(location)) return true;
+    if(receiver && assistant_->sessionProjectRestorePending())return false;
     // A stale outer Open neither reports its successor's error as its own nor
     // decorates that successor. False does not imply no partial adoption.
     if(!receiver || replacement_generation_!=binding || project_!=before)return false;
@@ -361,9 +362,7 @@ bool Session::openProjectAt(const QUrl& location) {
     if (given.isFile() && given.fileName() == QStringLiteral("project.edi")) {
         source = given.absolutePath();
     } else if (given.isFile() && edi::is_project_archive(source.toStdString())) {
-        if (!open(source, {})) {
-            return false;
-        }
+        return open(source,{},[this,given] {
         const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
         const auto binding=replacement_generation_;auto pathBinding=path_generation_;
         const auto current=[&]{return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
@@ -387,6 +386,7 @@ bool Session::openProjectAt(const QUrl& location) {
         if(!current())return false;
         releaseTemporaryRoots({});
         return current();
+        });
     }
     // A project in a folder this user may not write (a read-only tree) runs in a temporary copy, as an example does,
     // so a fit never writes into it; Save As writes the project where the user chooses.
@@ -398,9 +398,7 @@ bool Session::openProjectAt(const QUrl& location) {
         const QPointer<Session> copyOwner(this);
         const auto cleanup=qScopeGuard([copyOwner,copyRoot]{if(copyOwner)copyOwner->releaseTemporaryRoots({copyRoot});});
         const QString target=QDir(copyRoot).filePath(folder.fileName());
-        if (!openCopy(source, target, {})) {
-            return false;
-        }
+        return openCopy(source,target,{},[this,folder] {
         const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> openedOwner(project_);
         const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
         const auto current=[&]{return receiver && openedOwner && project_==openedOwner && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
@@ -412,13 +410,14 @@ bool Session::openProjectAt(const QUrl& location) {
         if(!current())return false;
         releaseTemporaryRoots({});
         return current();
+        });
     }
-    const bool opened = open(source, {});
-    if(!opened)return false;
-    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
-    const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
-    emit projectDirectoryUsed(folder.absoluteFilePath());
-    return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;
+    return open(source,{},[this,folder] {
+        const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> target(project_);
+        const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
+        emit projectDirectoryUsed(folder.absoluteFilePath());
+        return receiver && target && project_==target && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;
+    });
 }
 
 bool Session::copyTree(const QString& source, const QString& target, const QString& linked) {
@@ -1026,13 +1025,14 @@ QUrl Session::suggestedSaveTarget(bool zip) const {
     return QUrl::fromLocalFile(QDir(folder).filePath(zip ? name + QStringLiteral(".zip") : name));
 }
 
-bool Session::open(const QString& directory, const QString& example) {
+bool Session::open(const QString& directory,const QString& example,const std::function<bool()>& afterOpen) {
     const PendingOpenSource pending(*this,directory);
     const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     const auto preparing=[&]{return receiver && project_==before && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
     QStringList warnings;
     QPointer<ProjectViewModel> opened;
+    auto adopted=std::make_shared<bool>(false);
     try {
         edi::Project project = edi::load_project(directory.toStdString(), [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
@@ -1054,20 +1054,30 @@ bool Session::open(const QString& directory, const QString& example) {
         if(receiver && opened && project_!=opened)opened->deleteLater();
         return false;
     }
-    bool adopted=false;
     const auto cleanup=qScopeGuard([&] {
-        if(!adopted && receiver && opened && project_!=opened)opened->deleteLater();
+        if(!*adopted && receiver && opened && project_!=opened && !assistant_->retainsSessionProject(opened))opened->deleteLater();
     });
-    return replaceProject(opened,warnings,example,false,&adopted,nullptr,false,directory);
+    retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
+    connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
+    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,example,source=directory,afterOpen,adopted] {
+        if(!receiver || !opened || receiver->project_!=before || receiver->replacement_generation_!=binding ||
+            pathBinding==UINT64_MAX || receiver->path_generation_!=pathBinding)return false;
+        const PendingOpenSource pending(*receiver,source);
+        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
+        return !afterOpen || afterOpen();
+    };
+    if(!assistant_->prepareSessionProjectRestore(opened,directory,commit))return false;
+    return commit();
 }
 
-bool Session::openCopy(const QString& source, const QString& target, const QString& example) {
+bool Session::openCopy(const QString& source,const QString& target,const QString& example,const std::function<bool()>& afterOpen) {
     const PendingOpenSource pending(*this,source);
     const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> before(project_);
     const auto binding=replacement_generation_;const auto pathBinding=path_generation_;
     const auto preparing=[&]{return receiver && project_==before && replacement_generation_==binding && pathBinding!=UINT64_MAX && path_generation_==pathBinding;};
     QStringList warnings;
     QPointer<ProjectViewModel> opened;
+    auto adopted=std::make_shared<bool>(false);
     try {
         edi::Project project = edi::load_project(source.toStdString(), [&warnings](const std::string& message) {
             warnings.append(QString::fromStdString(message));
@@ -1111,11 +1121,20 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         if(receiver && opened && project_!=opened)opened->deleteLater();
         return false;
     }
-    bool adopted=false;
     const auto cleanup=qScopeGuard([&] {
-        if(!adopted && receiver && opened && project_!=opened)opened->deleteLater();
+        if(!*adopted && receiver && opened && project_!=opened && !assistant_->retainsSessionProject(opened))opened->deleteLater();
     });
-    return replaceProject(opened,warnings,example,false,&adopted,nullptr,false,source);
+    retainTemporaryRoots({QString::fromStdString(opened->project().scan_data_root)});
+    connect(opened,&QObject::destroyed,this,[this]{releaseTemporaryRoots({});},Qt::QueuedConnection);
+    const auto commit=[receiver,before,binding,pathBinding,opened,warnings,example,source=source,afterOpen,adopted] {
+        if(!receiver || !opened || receiver->project_!=before || receiver->replacement_generation_!=binding ||
+            pathBinding==UINT64_MAX || receiver->path_generation_!=pathBinding)return false;
+        const PendingOpenSource pending(*receiver,source);
+        if(!receiver->replaceProject(opened,warnings,example,false,adopted.get(),nullptr,false,source))return false;
+        return !afterOpen || afterOpen();
+    };
+    if(!assistant_->prepareSessionProjectRestore(opened,source,commit))return false;
+    return commit();
 }
 
 void Session::setOpenedArchive(const QString& name) {
@@ -1133,12 +1152,6 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     const QPointer<ProjectViewModel> previous(project_);
-    const auto beforePreparation=replacement_generation_,beforePreparationPath=path_generation_;
-    // The original native Open has loaded its target, but has not retired or
-    // published the old project. A pending conversation stages ALL local target
-    // resources here; ordinary non-session replacements use the same no-op hook.
-    if(!nativePrepared && !assistant_->prepareSessionProjectRestore(target,openedFrom))return false;
-    if(!receiver || project_!=previous || replacement_generation_!=beforePreparation || path_generation_!=beforePreparationPath || (hasTarget && !target))return false;
     const QString previous_example=opened_example_;
     const bool previous_idle=!previous || (previous->publication_depth_==0 && !previous->editing_);
     const auto retire_previous=qScopeGuard([receiver,previous] {

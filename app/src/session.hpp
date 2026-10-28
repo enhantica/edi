@@ -235,10 +235,10 @@ class Session : public QObject {
    private:
     bool openProjectAt(const QUrl& directory);
     bool openExampleNamed(const QString& exampleId);
-    bool open(const QString& directory, const QString& example);
+    bool open(const QString& directory,const QString& example,const std::function<bool()>& afterOpen = {});
     // Opens `source` (a read-only folder) from a writable copy at `target`: the project and its results are copied, and
     // a scan's data files linked, not duplicated.
-    bool openCopy(const QString& source, const QString& target, const QString& example);
+    bool openCopy(const QString& source,const QString& target,const QString& example,const std::function<bool()>& afterOpen = {});
     bool replaceProject(ProjectViewModel* project, const QStringList& warnings, const QString& example, bool nativePrepared=false, bool* committed=nullptr, quint64* committedReplacement=nullptr, bool ordinaryEmptyCreate=false, const QString& openedFrom={});
     void setLastError(const QString& error);
     void setOpenedArchive(const QString& name);

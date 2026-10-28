@@ -34,9 +34,11 @@ public:
     QString request(const QString& method, const QJsonObject& params, const std::function<bool(const QString&)>& prepare = {});
     bool notification(const QString& method, const QJsonObject& params = {});
     // Borrowed synchronous preparation runs only after the original wire peak fits.
-    // No callback/context is retained or wrapped in an allocating std::function.
+    // No callback/context is retained. The native handoff remains a borrowed
+    // function pointer; human answers may add a synchronous admission predicate.
     bool answer(const QJsonValue& originalId, const QJsonObject& result, void* preparation = nullptr,
-                bool (*handoff)(void*) noexcept = nullptr);
+                bool (*handoff)(void*) noexcept = nullptr,
+                const std::function<bool()>& admit = {});
     bool reject(const QJsonValue& originalId);
     void resolved(const QJsonValue& originalId);
     bool deferServerRequest(const QJsonValue& originalId,quint64 originalGeneration);
