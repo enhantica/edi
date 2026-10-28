@@ -3400,3 +3400,23 @@ public key ordering. They identify the exact current scope and are explicitly a 
 publication list, potentially historical within that project, not a new current-error
 classification. They do not clear/recolor warnings or enter default provider context.
 Missing/current-owner failures stay explicit and do not veto scientific work.
+
+
+## 2026-10-28: complete local work-report snapshots
+
+The first local report producer is State::work_snapshot, its last-useful cache,
+and AssistantWorkReports' existing immutable background file writer. The prior
+1 MiB record quota could omit otherwise retained rows, strip skill/schema bodies,
+then prevent a later snapshot while the Preferences reader silently returned an
+older useful document. Local reports now retain all eligible evidence and bodies
+without aggregate admission quotas or the separate provider JSON-depth walk.
+Actual Qt encoding/allocation, filesystem ownership and atomic publication may
+still fail factually; identity, exact byte count and streamed hash verification
+remain authoritative. No provider payload policy, source scope or scientific
+admission changes. The original worker still owns its immutable accepted write.
+
+Preferences annotates a returned copy with current-versus-last-useful freshness
+and the fixed cause/scope/revision of a failed capture. It does not relabel the
+original report's project/account/scope, overwrite useful history on failure,
+create a second log, or turn diagnostic failure into a scientific veto. A failed
+cache attempt does not itself advance history/report revision indefinitely.

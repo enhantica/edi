@@ -33,8 +33,9 @@ struct AssistantWorkReportSnapshot {
 };
 
 // One local file writer. This is not a provider/controller or scientific actor.
-// The build callback is synchronous and must perform original-owner checks and
-// bound the actual encoded artifact before handing it to the writer.
+// The build callback is synchronous and retains an original-owner snapshot.
+// The existing background writer performs actual Qt encoding, atomic publication
+// and identity/hash verification; protocol work quotas do not bound local reports.
 class AssistantWorkReports final {
 public:
     explicit AssistantWorkReports(AssistantWorkReportOptions, AssistantViewModel* owner) noexcept;

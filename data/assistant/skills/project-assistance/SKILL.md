@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.9.1. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
+Version: 1.9.2. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
 
 ## Inputs and setup
 
@@ -21,7 +21,7 @@ The specialized complete create_cwl_project operation is available only for its 
 
 Use ordinary native estimate_background after measured data is loaded for initial background setup unless manual anchors were explicitly supplied. The optional complete create_cwl_project operation uses the same native Estimate when recipe.background is omitted. Preserve explicitly supplied manual anchors exactly through that alternative. Standalone estimate_background operates on the exact current selected experiment and its saved estimation mode, type and settings. After estimating, inspect actual anchors/terms and eligibility. Automatic ownership can refuse direct point/term values or structural edits; it does not authorize changing mode, inventing anchors or freeing every point to bypass that refusal. Explicit manual requests retain their supplied IDs, positions, intensities and free flags.
 
-Preserve requested refinement flags. Current native refinable/fittable/fit_reason, dependency and data requirements govern whether a flag can be freed; they do not forbid a supported independent numeric setup value, such as a supplied descriptor. A visible parameter is not necessarily eligible to vary. Verify the actual native presence/value before claiming that an explicit user input was applied. Use actual control identities and the current sidebar/category order when showing actions. Finish genuine type/data prerequisites before dependent settings, inspect defaults reset by a type/profile change, and skip equal values. There is no mandatory number of setup or refinement stages.
+Preserve requested refinement flags. Current native refinable/fittable/fit_reason, dependency and data requirements govern whether a flag can be freed; they do not forbid a supported independent numeric setup value, such as a supplied descriptor. A visible parameter is not necessarily eligible to vary. Verify the actual native presence/value before claiming that an explicit user input was applied; writing a requested size/radius into metadata is not entering its scientific field. If the current model family hides that field, inspect its actual options and evidence for a scientifically appropriate supported model rather than claiming the value was retained. Use actual control identities and the current sidebar/category order when showing actions. Finish genuine type/data prerequisites before dependent settings, inspect defaults reset by a type/profile change, and skip equal values. There is no mandatory number of setup or refinement stages.
 
 ## Scientific reasoning and discovery
 

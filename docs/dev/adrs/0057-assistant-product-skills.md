@@ -394,3 +394,17 @@ after rejected trials. Coordinate/displacement isolation and joint refinement ar
 evidence-dependent choices; signed coefficients alone do not prove an unphysical
 profile. No specimen values, fixed stage order, fit target or new solver policy
 is introduced.
+
+
+The current-Analysis value preference follows actual ParameterTableModel membership
+and the original ParameterCell template's refinable/not-estimated contract, not
+whether virtualization has instantiated the requested row. The actual original
+table/filter must still belong to the current project workflow. Existing category,
+filter and virtual-row reveal reach the cell before any input. This covers an
+offscreen row or another category without inventing an editor or falling back
+after an uncertain write. Matching set_parameters guidance describes this same
+route; setup descriptors retain their original owner.
+
+Project-assistance1.9.2 distinguishes a requested scientific size/radius from
+metadata, with actual family/options investigation when the current model hides
+the field. No extinction family, reference value or extra variable is forced.
