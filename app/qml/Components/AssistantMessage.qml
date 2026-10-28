@@ -185,58 +185,6 @@ Rectangle {
         if (typeof value !== "string") return "";
         return value.trim().replace(/\s+/g, " ");
     }
-    function usableCommandAction(action) {
-        if (!action || typeof action !== "object" || Array.isArray(action) ||
-            typeof action.command !== "string") return false;
-        if (action.type === "read") return typeof action.name === "string" && typeof action.path === "string";
-        if (action.type === "listFiles" || action.type === "search") {
-            if (action.path !== undefined && action.path !== null && typeof action.path !== "string") return false;
-            return action.type !== "search" || action.query === undefined || action.query === null || typeof action.query === "string";
-        }
-        return action.type === "unknown";
-    }
-    function guidanceReadCaption(workflow, refinement) {
-        return workflow && refinement ? qsTr("Read assistant workflow and refinement instructions")
-             : workflow ? qsTr("Read assistant workflow instructions")
-             : refinement ? qsTr("Read assistant refinement instructions") : "";
-    }
-    function knownGuidanceCommandCaption(command) {
-        // Closed whole-command identities only; never tokenize or execute shell text.
-        const workflow = "cat .agents/skills/project-assistance/SKILL.md";
-        const refinement = "cat .agents/skills/refinement-strategy/SKILL.md";
-        if (command === workflow) return guidanceReadCaption(true, false);
-        if (command === refinement) return guidanceReadCaption(false, true);
-        if (command === workflow + " .agents/skills/refinement-strategy/SKILL.md"
-            || command === refinement + " .agents/skills/project-assistance/SKILL.md") return guidanceReadCaption(true, true);
-        return "";
-    }
-    function declaredCommandPurpose(command) {
-        const marker = "# Edi purpose: ";
-        if (typeof command !== "string" || !command.startsWith(marker)) return "";
-        // Existing native-purpose bounds; never scan or copy the whole script.
-        const first = command.slice(0, marker.length + 120 + 2);
-        const newline = first.indexOf("\n");
-        if (newline < 0) return "";
-        let goal = first.slice(marker.length, newline);
-        if (goal.endsWith("\r")) goal = goal.slice(0, -1);
-        if (!goal.length || goal.length > 120 || !goal.trim().length || goal.endsWith("\\")) return "";
-        let utf8 = 0;
-        for (let i = 0; i < goal.length; ++i) {
-            const c = goal.charCodeAt(i);
-            if (c < 0x20 || c >= 0x7f && c <= 0x9f || c === 0x2028 || c === 0x2029
-                || c === 0xfeff || c === 0x061c || c === 0x200e || c === 0x200f
-                || c >= 0x202a && c <= 0x202e || c >= 0x2066 && c <= 0x2069) return "";
-            if (c >= 0xd800 && c <= 0xdbff) {
-                if (++i >= goal.length) return "";
-                const low = goal.charCodeAt(i);
-                if (low < 0xdc00 || low > 0xdfff) return "";
-                utf8 += 4;
-            } else if (c >= 0xdc00 && c <= 0xdfff) return "";
-            else utf8 += c < 0x80 ? 1 : c < 0x800 ? 2 : 3;
-            if (utf8 > 480) return "";
-        }
-        return goal; // Supplied goal only; never status, authority or verified intent.
-    }
     function webSearchCaption(source) {
         const payload = source || row.payload;
         const action = payload.action;
@@ -279,30 +227,7 @@ Rectangle {
         if (supplied.trim().length) return full ? supplied : shortActionObject(supplied, false);
         if (payload.type === "webSearch") return webSearchCaption(payload);
         if (!commandActivity) return "";
-        const guidance = knownGuidanceCommandCaption(payload.command);
-        if (guidance.length) return guidance;
-        // Exact structured action metadata may supply a purpose when the pinned
-        // runtime has no explicit one. Never parse shell text or infer an outcome.
-        const actions = JSON.parse(JSON.stringify(payload.commandActions || []));
-        if (!Array.isArray(actions) || actions.length === 0 || !actions.every(usableCommandAction)) return "";
-        if (actions.length === 1 && actions[0].type === "unknown") {
-            const declared = declaredCommandPurpose(actions[0].command);
-            if (declared.length) return declared;
-        }
-        const labels = [];
-        for (const action of actions) {
-            if (action.type === "read") {
-                const path = action.path.replace(/\\/g, "/");
-                if (/(^|\/)project-assistance\/SKILL\.md$/.test(path)) labels.push(guidanceReadCaption(true, false));
-                else if (/(^|\/)refinement-strategy\/SKILL\.md$/.test(path)) labels.push(guidanceReadCaption(false, true));
-                else if (action.name === "SKILL.md") labels.push(qsTr("Read assistant instructions"));
-                else labels.push(qsTr("Read %1").arg(action.name || action.path));
-            }
-            else if (action.type === "listFiles") labels.push(action.path ? qsTr("List %1").arg(action.path) : qsTr("List files"));
-            else if (action.type === "search") labels.push(action.query ? qsTr("Search for %1").arg(action.query) : qsTr("Search files"));
-            else if (action.type === "unknown") labels.push(qsTr("Run shell command"));
-        }
-        return shortActionObject(labels.join(" · "), false);
+        return typeof payload.commandDescription === "string" ? payload.commandDescription : "";
     }
     function activityCaption() {
         const kinds = {error: qsTr("Assistant error"), plan: qsTr("Review work plan"), question: qsTr("Assistant question"),

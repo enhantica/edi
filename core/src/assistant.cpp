@@ -422,7 +422,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
     J question_record;
     SelectedFiles selected;
     J selected_manifest; // bounded descriptors only; canonical bytes live once in selected.files
-    void clear_selected() noexcept { selected = SelectedFiles{}; selected_manifest = J{}; }
+    std::set<std::string> consumed_selected; // Message consumption, independent of retained task bytes.
+    std::string selected_consumption_request;
+    void clear_selected() noexcept { selected = SelectedFiles{}; selected_manifest = J{}; consumed_selected.clear(); selected_consumption_request.clear(); }
     J selection() const {
         if (!selected_manifest.is_null()) return selected_manifest;
         return O{{"collection_id", ""}, {"generation", "0"}, {"files", A{}}};
@@ -600,6 +602,15 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
                 refuse("invalid_argument", "Conflicting selected-file identity or name");
             add_bytes(file);
         }
+        std::size_t pending = added.size();
+        std::set<std::string> next_consumed;
+        for (const auto index : kept) {
+            const auto& id = selected.files[index].id;
+            if (consumed_selected.count(id)) next_consumed.insert(id);
+            else ++pending;
+        }
+        if (pending > SelectedFileLimits::message_files)
+            refuse("invalid_argument", "A message can include at most six pending attachments");
         if (added.empty() && removed.empty()) return success(selection());
         if (selected.generation == UINT64_MAX) refuse("resource_exhausted", "Selected-file generation exhausted");
         const auto generation = selected.generation + 1;
@@ -618,7 +629,7 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         static_assert(std::is_nothrow_move_assignable_v<J>);
         for (const auto index : kept) next.files.push_back(std::move(selected.files[index]));
         for (auto& file : added) next.files.push_back(std::move(file));
-        selected = std::move(next); selected_manifest = std::move(next_manifest);
+        selected = std::move(next); selected_manifest = std::move(next_manifest); consumed_selected = std::move(next_consumed);
         return reply;
     }
 
@@ -1419,8 +1430,20 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
             refuse("out_of_scope", "Attachment transfer requires the pending selected-handle unit");
         // Selected handles are already admitted context, not a new attachments wire.
         // Literal empty text carries no scientific instruction of its own.
-        auto next_text = string(command, "text", !this->selected.files.empty());
+        auto next_consumed = consumed_selected;
+        std::size_t pending = 0;
+        for (const auto& file : this->selected.files) {
+            if (!consumed_selected.count(file.id)) ++pending;
+            next_consumed.insert(file.id);
+        }
+        if (pending > SelectedFileLimits::message_files)
+            refuse("invalid_argument", "A message can include at most six pending attachments");
+        auto next_text = string(command, "text", pending != 0);
+        const auto selected_collection = this->selected.collection_id;
+        const auto selected_generation = this->selected.generation;
         auto next_turn = id("turn"), next_request = id("request");
+        auto next_consumption_request = next_request;
+        const auto consumption_request = next_request;
         auto next_conversation = conversation.empty() ? id("conversation") : conversation;
         const J user_row = O{{"type", "message"}, {"role", "user"}, {"text", next_text}, {"turn_id", next_turn}, {"request_id", ""}};
         check_history({&user_row});
@@ -1436,8 +1459,18 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         turn = std::move(next_turn); request = std::move(next_request); conversation = std::move(next_conversation);
         history_used += growth;
         history = std::move(next_history); request_trial = std::move(next_trial); request_version = std::move(captured); response_done = false; had_tools = false;
-        if (!status("streaming")) return output_refusal();
-        if (!dispatch_request(outgoing)) return output_refusal();
+        // Consume before observable dispatch: a synchronous completed provider
+        // callback cannot submit these same retained files as another empty draft.
+        consumed_selected.swap(next_consumed);
+        selected_consumption_request.swap(next_consumption_request);
+        if (!status("streaming") || !dispatch_request(outgoing)) {
+            if (this->selected.collection_id == selected_collection && this->selected.generation == selected_generation &&
+                selected_consumption_request == consumption_request) {
+                consumed_selected.swap(next_consumed);
+                selected_consumption_request.swap(next_consumption_request);
+            }
+            return output_refusal();
+        }
         return admitted_message;
     }
     Reply provider(const J& event) {
