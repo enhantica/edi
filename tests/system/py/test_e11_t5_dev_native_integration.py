@@ -3265,3 +3265,85 @@ def test_ordinary_open_reentry_preserves_adopted_successor_and_its_real_origin(m
                 outer.chmod(0o755)
                 for file in outer.rglob('*'):file.chmod(0o755 if file.is_dir() else 0o644)
             if source_kind == 'readonly_archive':source.chmod(0o644)
+
+
+@pytest.mark.parametrize('target_kind', ['working_folder', 'working_record', 'symlink_alias', 'descendant_copy', 'archive_inside'])
+def test_open_current_archive_backing_root_preserves_real_files_and_current_data(main_actor, tmp_path, target_kind):
+    import zipfile
+    actor = main_actor([[]])
+    source = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(source))['reply']['opened'], (
+        'The backing-root cleanup control starts from a genuinely complete ordinary native project'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    archive = tmp_path / 'actual-current.zip'
+    assert actor.command('save_project_as', path=str(archive), zip=True, copy=True)['reply']['saved'], (
+        'The actual ordinary archive writer produces the complete input before its working root is reopened'
+    )
+    assert actor.command('open', path=str(archive))['reply']['opened'], (
+        'Ordinary archive Open adopts its actual writable temporary working folder'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    working = Path(actor.last['ui']['project']['path'])
+    assert working.is_dir() and (working / 'project.edi').is_file() and working != source, (
+        'The witness reaches a real current archive backing root rather than an unrelated saved folder'
+    )
+    target = working
+    if target_kind == 'working_record':
+        target = working / 'project.edi'
+    elif target_kind == 'symlink_alias':
+        target = tmp_path / 'same-backing-alias'
+        target.symlink_to(working, target_is_directory=True)
+    elif target_kind == 'descendant_copy':
+        target = working / 'explicit-child-project'
+        assert actor.command('save_project_as', path=str(target), zip=False, copy=True)['reply']['saved'], (
+            'A separate ordinary Save copy establishes the explicit complete descendant without fabricated science'
+        )
+    elif target_kind == 'archive_inside':
+        target = working / 'nested-origin.zip'
+        assert actor.command('save_project_as', path=str(target), zip=True, copy=True)['reply']['saved'], (
+            'A real ordinary archive Save copy establishes its future origin inside the existing backing ancestor'
+        )
+    archive_bytes = target.read_bytes() if target_kind == 'archive_inside' else None
+    before = actor.last['ui']['project']
+    files = {str(path.relative_to(target if target.is_dir() else target.parent)): path.read_bytes()
+             for path in (target if target.is_dir() else target.parent).rglob('*.edi')}
+    assert files, 'The real target owns persisted scientific files before the same-backing Open'
+    assert actor.command('open', path=str(target))['reply']['opened'], (
+        'The actual ordinary same-backing Open reports its real adopted current project'
+    )
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    current = actor.last['ui']['project']
+    actual = Path(current['path'])
+    assert working.is_dir() and actual.is_dir() and (actual / 'project.edi').is_file(), (
+        'Previous archive/copy cleanup cannot delete the actual backing ancestor used by the adopted current project'
+    )
+    if target_kind == 'archive_inside':
+        assert actual.resolve() != working.resolve() and target.is_file() and target.read_bytes() == archive_bytes, (
+            'A newly unpacked working root retains its real archive origin inside the previous backing ancestor'
+        )
+        assert qml(actor, 'Session.locationText') == str(target), (
+            'The actual current archive location remains the original future Save target, not merely the new path'
+        )
+    else:
+        assert actual.resolve() == (target if target.is_dir() else target.parent).resolve(), (
+            'The adopted normal owner retains the actual requested backing identity through aliases and descendant copies'
+        )
+    assert {str(path.relative_to(actual)): path.read_bytes() for path in actual.rglob('*.edi')} == files, (
+        'The original complete scientific files survive cleanup byte-for-byte without rollback or regeneration'
+    )
+    assert current['structure_rows'] == before['structure_rows'] and current['backgrounds'] == before['backgrounds'], (
+        'Same-backing adoption retains actual structures, measured data counts and sample values'
+    )
+    assert actor.command('save')['reply']['saved'], (
+        'A subsequent ordinary Save still has its real current files and source data after same-backing adoption'
+    )
+    if target_kind == 'archive_inside':
+        assert target.is_file() and working.is_dir() and actual.is_dir(), (
+            'Ordinary subsequent Save preserves both the retained archive origin ancestor and the current working closure'
+        )
+        with zipfile.ZipFile(target) as saved_archive:
+            for relative, content in files.items():
+                assert saved_archive.read(relative) == content, (
+                    'The original future archive target actually receives the unchanged scientific files on ordinary Save'
+                )
