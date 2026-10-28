@@ -5,12 +5,15 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonParseError>
 #include <QMetaObject>
 #include <QPointer>
 #include <QSaveFile>
+#include <QStandardPaths>
+#include <algorithm>
 #include <QUuid>
 #include <atomic>
 #include <limits>
@@ -21,8 +24,21 @@
 #include <utility>
 
 namespace edi_app {
+QJsonArray merge_assistant_history(const QJsonArray& initial,const QJsonArray& current) {
+    QJsonArray result;QHash<QString,qsizetype> positions;
+    const auto append=[&](const QJsonArray& rows) {
+        for(const auto& value:rows) {const auto id=value.toObject().value("id").toString();
+            const auto found=positions.constFind(id);
+            if(!id.isEmpty() && found!=positions.cend())result[found.value()]=value;
+            else {if(!id.isEmpty())positions.insert(id,result.size());result.append(value);}
+        }
+    };
+    append(initial);append(current);return result;
+}
 struct AssistantHistoryArchive::Control {
     struct Snapshot { QJsonArray rows; std::uint64_t revision = 0; bool includes_initial = false; };
+    static std::mutex owners_mutex;
+    static std::map<QString,std::shared_ptr<Control>> owners;
     mutable std::mutex mutex;
     QString requested, path;
     QJsonArray initial;
@@ -32,12 +48,16 @@ struct AssistantHistoryArchive::Control {
     bool loaded = false, running = false, recovered = false;
     const char* failure_stage = nullptr;
     Notice notice;
-    QPointer<QObject> receiver;
+    QPointer<QObject> receiver,clear_receiver;
+    Notice clear_notice;
+    std::uint64_t clear_notice_revision=0;
     View view() const {
-        return {path,initial,latest.rows,latest.revision,durable,clear,failure_revision,
-            loaded,latest.includes_initial,latest.revision>durable,recovered,failure_stage};
+        return {path,clear?QJsonArray{}:initial,latest.rows,latest.revision,durable,clear,failure_revision,
+            loaded,latest.includes_initial,latest.revision>durable,recovered,failure_stage,running};
     }
 };
+std::mutex AssistantHistoryArchive::Control::owners_mutex;
+std::map<QString,std::shared_ptr<AssistantHistoryArchive::Control>> AssistantHistoryArchive::Control::owners;
 namespace {
 const char* write_history_file(const QString& path,const QJsonArray& rows) {
     if(!QDir().mkpath(QFileInfo(path).absolutePath()))return "directory";
@@ -61,11 +81,9 @@ AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,QString reque
     : pending_receiver_(receiver),pending_notice_(std::move(notice)) {
     // A replacement VM reuses the same file owner, including its accepted final
     // snapshot. An older worker can never land after a newer archive revision.
-    static std::mutex ownersMutex;
-    static std::map<QString,std::shared_ptr<Control>> owners;
     {
-        std::lock_guard lock(ownersMutex);
-        auto& cell=owners[requested];
+        std::lock_guard lock(Control::owners_mutex);
+        auto& cell=Control::owners[requested];
         if(!cell) {cell=std::make_shared<Control>();cell->requested=requested;cell->path=requested;}
         control_=cell;
     }
@@ -79,6 +97,72 @@ AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,QString reque
     }
     if(start)launch(control_);
     if(!provisional)activate();
+}
+AssistantHistoryArchive::ClearBarrier::~ClearBarrier() {
+    try {if(state_) {std::lock_guard lock(state_->mutex);
+        if(state_->clear_notice_revision==revision_) {state_->clear_notice={};state_->clear_receiver.clear();}
+    }}catch(...) {}
+}
+AssistantHistoryArchive::ClearBarrier& AssistantHistoryArchive::ClearBarrier::operator=(ClearBarrier&& other) noexcept {
+    if(this==&other)return *this;
+    try {if(state_) {std::lock_guard lock(state_->mutex);
+        if(state_->clear_notice_revision==revision_) {state_->clear_notice={};state_->clear_receiver.clear();}
+    }}catch(...) {}
+    state_=std::move(other.state_);revision_=std::exchange(other.revision_,0);return *this;
+}
+AssistantHistoryArchive::View AssistantHistoryArchive::ClearBarrier::view() const {
+    if(!state_)return {};
+    std::lock_guard lock(state_->mutex);return state_->view();
+}
+bool AssistantHistoryArchive::ClearBarrier::retry() noexcept {
+    try {
+        if(!state_ || !revision_)return false;
+        bool start=false;
+        {std::lock_guard lock(state_->mutex);
+            if(state_->durable>=revision_)return true;
+            if(!state_->running) {state_->pending=state_->latest;state_->running=true;start=true;}
+        }
+        if(start)AssistantHistoryArchive::launch(state_);
+        return true;
+    }catch(...) {return false;}
+}
+std::vector<AssistantHistoryArchive::ClearBarrier> AssistantHistoryArchive::clearCaches(QObject* receiver,Notice notice) {
+    const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
+    QStringList paths{root+"/history.json"};
+    const auto recovery=[](const QString& name) {return name.startsWith("history-recovered-") && !QUuid(name.mid(18)).isNull();};
+    for(const auto& folder:{root,root+"/history"})for(const auto& file:QDir(folder).entryInfoList({QStringLiteral("*.json")},QDir::Files|QDir::NoSymLinks)) {
+        const auto base=file.completeBaseName();bool generated=base.size()==64;
+        if(generated)for(const auto ch:base)if(!((ch>='0' && ch<='9') || (ch>='a' && ch<='f'))){generated=false;break;}
+        if(generated || recovery(base) || (base.startsWith("draft-") && !QUuid(base.mid(6)).isNull()))paths.append(file.absoluteFilePath());
+    }
+    std::vector<std::shared_ptr<Control>> states;
+    {std::lock_guard lock(Control::owners_mutex);
+        for(const auto& [path,state]:Control::owners)states.push_back(state);
+    }
+    // Reuse an actual requested/current-path owner, including its accepted-but-unwritten snapshot.
+    for(const auto& path:paths) {
+        bool known=false;
+        for(const auto& state:states) {std::lock_guard lock(state->mutex);if(state->requested==path || state->path==path){known=true;break;}}
+        if(known)continue;
+        AssistantHistoryArchive provisional(receiver,path,{},true);
+        if(std::none_of(states.begin(),states.end(),[&](const auto& state){return state==provisional.control_;}))states.push_back(provisional.control_);
+    }
+    std::vector<ClearBarrier> barriers;barriers.reserve(states.size());
+    for(const auto& state:states) {
+        std::lock_guard lock(state->mutex);
+        if(state->latest.revision==std::numeric_limits<std::uint64_t>::max())throw std::overflow_error("History revision exhausted");
+        barriers.push_back(ClearBarrier(state,state->latest.revision+1));
+    }
+    for(auto& barrier:barriers) {
+        const auto& state=barrier.state_;bool start=false;
+        {std::lock_guard lock(state->mutex);
+            Control::Snapshot empty{{},barrier.revision_,true};state->pending=empty;state->latest=std::move(empty);state->clear=barrier.revision_;
+            state->clear_receiver=receiver;state->clear_notice=notice;state->clear_notice_revision=barrier.revision_;
+            if(!state->running){state->running=true;start=true;}
+        }
+        if(start)launch(state);
+    }
+    return barriers;
 }
 void AssistantHistoryArchive::activate() {
     if(owner_)return; // A committed predecessor cannot reclaim a newer owner's token.
@@ -113,7 +197,7 @@ bool AssistantHistoryArchive::retain(QJsonArray rows,bool includesInitial,bool l
         {
             std::lock_guard lock(state->mutex);
             if(!owner_ || state->owner!=owner_ || state->latest.revision==std::numeric_limits<std::uint64_t>::max())return false;
-            Control::Snapshot next{std::move(rows),state->latest.revision+1,includesInitial || logicalClear};
+            Control::Snapshot next{std::move(rows),state->latest.revision+1,includesInitial || logicalClear || state->clear!=0};
             state->pending=next;state->latest=std::move(next);
             if(logicalClear)state->clear=state->latest.revision;
             if(!state->running) {state->running=true;start=true;}
@@ -149,15 +233,21 @@ void AssistantHistoryArchive::launch(const std::shared_ptr<Control>& state) noex
 }
 void AssistantHistoryArchive::notify(const std::shared_ptr<Control>& state) noexcept {
     try {
-        QPointer<QObject> receiver;Notice notice;std::uint64_t owner=0;View view;
-        {std::lock_guard lock(state->mutex);receiver=state->receiver;notice=state->notice;owner=state->owner;view=state->view();}
-        if(!notice)return;
-        if(auto* app=QCoreApplication::instance())QMetaObject::invokeMethod(app,[state,receiver,notice=std::move(notice),owner,view=std::move(view)] {
+        QPointer<QObject> receiver,clear_receiver;Notice notice,clear_notice;std::uint64_t owner=0,clearRevision=0;View view;
+        {std::lock_guard lock(state->mutex);receiver=state->receiver;notice=state->notice;owner=state->owner;
+            clear_receiver=state->clear_receiver;clear_notice=state->clear_notice;clearRevision=state->clear_notice_revision;view=state->view();}
+        auto* app=QCoreApplication::instance();if(!app)return;
+        if(notice)QMetaObject::invokeMethod(app,[state,receiver,notice=std::move(notice),owner,view] {
             if(!receiver)return;
             {std::lock_guard lock(state->mutex);if(state->owner!=owner || !state->notice || state->receiver!=receiver)return;}
-            try {notice(view);}catch(...) {} // Metadata only; never republishes history.
+            try {notice(view);}catch(...) {}
         },Qt::QueuedConnection);
-    }catch(...) {} // Actual file outcome remains available to the archive owner.
+        if(clear_notice)QMetaObject::invokeMethod(app,[state,clear_receiver,notice=std::move(clear_notice),clearRevision,view] {
+            if(!clear_receiver)return;
+            {std::lock_guard lock(state->mutex);if(state->clear_notice_revision!=clearRevision || state->clear_receiver!=clear_receiver)return;}
+            try {notice(view);}catch(...) {}
+        },Qt::QueuedConnection);
+    }catch(...) {} // Actual file outcome remains available to each original revision owner.
 }
 void AssistantHistoryArchive::drain(const std::shared_ptr<Control>& state) noexcept {
     try {
@@ -173,7 +263,7 @@ void AssistantHistoryArchive::drain(const std::shared_ptr<Control>& state) noexc
                     valid=saved.error()==QFileDevice::NoError && parsing.error==QJsonParseError::NoError && document.isArray();
                     if(valid)for(const auto& row:document.array())
                         if(!row.isObject() || !row.toObject().value("text").isString() || !row.toObject().value("kind").isString()){valid=false;break;}
-                    if(valid)initial=document.array();
+                    if(valid)initial=merge_assistant_history({},document.array());
                 }
                 if(!valid) {
                     path=QFileInfo(path).absolutePath()+"/history-recovered-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".json";
@@ -191,7 +281,8 @@ void AssistantHistoryArchive::drain(const std::shared_ptr<Control>& state) noexc
                 if(!state->pending) {state->running=false;break;}
                 snapshot=std::move(*state->pending);state->pending.reset();path=state->path;initial=state->initial;}
             QJsonArray rows=std::move(snapshot.rows);
-            if(!snapshot.includes_initial) {auto merged=std::move(initial);for(const auto& row:rows)merged.append(row);rows=std::move(merged);}
+            if(!snapshot.includes_initial)rows=merge_assistant_history(initial,rows);
+            else rows=merge_assistant_history({},rows);
             const char* failure=nullptr;
             try {failure=write_history_file(path,rows);}catch(...) {failure="encode_or_write";}
             {std::lock_guard lock(state->mutex);

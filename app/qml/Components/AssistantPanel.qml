@@ -204,11 +204,11 @@ Popup {
     Component.onCompleted: Qt.callLater(function() {if(Qt.isQtObject(panel) && Qt.isQtObject(panel.assistant))panel.assistant.restoreLastSession();})
     Connections {
         target: panel.assistant
-        function onSessionProjectRequested(threadId,location) {
+        function onSessionProjectRequested(threadId,location,intent) {
             const original=panel.assistant;
             AppState.afterChanges(function() {
-                if(!Qt.isQtObject(panel) || !Qt.isQtObject(original) || panel.assistant!==original)return;
-                if(Session.openProject(location) && Qt.isQtObject(original) && panel.assistant===original)original.continueSessionRestore(threadId);
+                if(!Qt.isQtObject(panel) || !Qt.isQtObject(original) || panel.assistant!==original || original.sessionSelection!==intent)return;
+                if(Session.openProject(location) && Qt.isQtObject(original) && panel.assistant===original && original.sessionSelection===intent)original.continueSessionRestore(threadId);
             });
         }
         function onSessionConsentRequested(threadId) {
@@ -1182,6 +1182,7 @@ Popup {
         }
         AssistantConnectionDialog {
             id: connectionDialog
+            onRejected: if(Qt.isQtObject(panel.assistant))panel.assistant.cancelSessionSelection()
             assistant: panel.assistant
             onRejected: panel.retireConsentSend()
             onContextApproved: offer => {

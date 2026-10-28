@@ -1399,14 +1399,8 @@ struct AssistantViewModel::State {
                 const auto legacy=history_legacy_archive->view();
                 if(legacy.loaded) {
                     if(!history_cache_was_cleared) {
-                        QSet<QString> ids;for(const auto& value:history)ids.insert(value.toObject().value("id").toString());
-                        auto merged=legacy.initial_rows;
-                        for(const auto& value:history) {
-                            const auto id=value.toObject().value("id").toString();
-                            for(qsizetype i=merged.size();i-->0;)if(merged.at(i).toObject().value("id")==id)merged.removeAt(i);
-                            merged.append(value);
-                        }
-                        history=std::move(merged);associate_history_threads(history);mergedLegacy=true;
+                        history=merge_assistant_history(legacy.initial_rows,history);
+                        associate_history_threads(history);mergedLegacy=true;
                     }
                     history_legacy_archive.reset();
                 }
@@ -1417,12 +1411,7 @@ struct AssistantViewModel::State {
             cache_clear_completed();
             if(!receiver || receiver->state_.get()!=this)return;
             if(view.loaded && !history_base_included) {
-                auto merged=view.initial_rows;QSet<QString> ids;
-                for(const auto& row:merged)ids.insert(row.toObject().value("id").toString());
-                for(const auto& row:history)if(!ids.contains(row.toObject().value("id").toString())) {
-                    merged.append(row);ids.insert(row.toObject().value("id").toString());
-                }
-                history.swap(merged);associate_history_threads(history);history_base_included=true;
+                history=merge_assistant_history(view.initial_rows,history);associate_history_threads(history);history_base_included=true;
                 (void)queue_render();
                 if(!receiver || receiver->state_.get()!=this)return;
             }
@@ -1469,8 +1458,7 @@ struct AssistantViewModel::State {
         if(adoptInitial) {
             if(original.isEmpty())history=view.latest_rows;
             else {
-                QSet<QString> ids;for(const auto& value:history)ids.insert(value.toObject().value("id").toString());
-                for(const auto& value:view.latest_rows)if(!ids.contains(value.toObject().value("id").toString()))history.append(value);
+                history=merge_assistant_history(view.latest_rows,history);
             }
             history_base_included=view.includes_initial;
         }
@@ -1511,29 +1499,20 @@ struct AssistantViewModel::State {
         }}
     }
 #endif
-    struct CacheClearTarget {
-        std::unique_ptr<AssistantHistoryArchive> archive;
-        quint64 revision=0;
-    };
-    std::vector<CacheClearTarget> cache_clear_targets;
-    quint64 cache_clear_current_revision=0;
-    QString cache_clear_current_path,cache_clear_error;
+    std::vector<AssistantHistoryArchive::ClearBarrier> cache_clear_targets;
+    QString cache_clear_error;
     bool cache_clear_pending=false;
     void cache_clear_completed() noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);
         try {
             if(!cache_clear_pending)return;
-            bool pending=false;QString failure=cache_clear_error;
-            const auto inspect=[&](const AssistantHistoryArchive::View& view,quint64 revision) {
-                if(view.durable>=revision)return;
-                pending=true;
-                if(view.failure_stage)failure=QObject::tr("The local chat cache could not be cleared (%1). Projects, reports and runtime sessions were not deleted.").arg(QLatin1StringView(view.failure_stage));
-            };
-            if(cache_clear_current_revision) {
-                if(history_archive && history_archive->view().path==cache_clear_current_path)inspect(history_archive->view(),cache_clear_current_revision);
-                else {pending=true;failure=QObject::tr("The local history owner changed before cache clearing was confirmed.");}
+            bool pending=false;QString failure;
+            for(const auto& target:cache_clear_targets) {
+                const auto view=target.view();if(view.durable>=target.revision())continue;
+                if(view.working)pending=true;
+                if(view.failure_stage)failure=QObject::tr("The local chat cache could not be cleared (%1). You can retry; projects, reports, runtime sessions and sign-in were preserved.").arg(QLatin1StringView(view.failure_stage));
+                else if(!view.working)failure=QObject::tr("The original local cache clear could not be confirmed. You can retry without clearing newer messages.");
             }
-            for(const auto& target:cache_clear_targets)inspect(target.archive->view(),target.revision);
             const bool changed=cache_clear_pending!=pending || cache_clear_error!=failure;
             cache_clear_pending=pending;cache_clear_error=std::move(failure);
             if(changed && receiver && receiver->state_.get()==this)emit owner.cachedHistoryChanged();
@@ -1554,43 +1533,24 @@ struct AssistantViewModel::State {
 #endif
         if(cache_clear_pending)return;
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
-        const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant";
-        QSet<QString> paths{root+"/history.json"};
-        const QDir directory(root+"/history");
-        for(const auto& file:directory.entryInfoList({QStringLiteral("*.json")},QDir::Files|QDir::NoSymLinks)) {
-            const auto base=file.completeBaseName();
-            bool generated=base.size()==64;
-            if(generated)for(const auto ch:base)if(!((ch>='0' && ch<='9') || (ch>='a' && ch<='f'))){generated=false;break;}
-            if(!generated && base.startsWith("draft-"))generated=!QUuid(base.mid(6)).isNull();
-            if(generated)paths.insert(file.absoluteFilePath());
+        if(!cache_clear_targets.empty() && !cache_clear_error.isEmpty()) {
+            bool accepted=true;for(auto& target:cache_clear_targets)accepted=target.retry() && accepted;
+            if(!accepted)cache_clear_error=QObject::tr("The original cache-clear retry could not be retained. Newer messages were preserved.");
+            cache_clear_pending=true;cache_clear_completed();
+            if(proof.input_current())emit owner.cachedHistoryChanged();
+            return;
         }
-        if(history_archive)paths.insert(history_archive->view().path);
-        std::vector<CacheClearTarget> prepared;
-        for(const auto& path:paths) {
-            if(history_archive && path==history_archive->view().path)continue;
-            auto archive=std::make_unique<AssistantHistoryArchive>(&owner,path,[this,receiver](const AssistantHistoryArchive::View&) {
-                if(receiver && receiver->state_.get()==this)cache_clear_completed();
-            },true);
-            prepared.push_back({std::move(archive),0});
-        }
+        auto prepared=AssistantHistoryArchive::clearCaches(&owner,[this,receiver](const AssistantHistoryArchive::View&) {
+            if(receiver && receiver->state_.get()==this)cache_clear_completed();
+        });
         if(!proof.input_current())return;
-        // Hide only rows that existed at this admitted clear; later rows remain visible.
         for(const auto& value:history)hidden_cached_rows.insert(value.toObject().value("id").toString());
         cache_clear_targets=std::move(prepared);cache_clear_pending=true;cache_clear_error.clear();
-        cache_clear_current_revision=0;cache_clear_current_path.clear();
         history_base_included=true;history_cache_was_cleared=true;history_legacy_archive.reset();
 #ifndef __EMSCRIPTEN__
-        session_history_loading=false;session_history_explicit_target.clear();++sessions_epoch;mark_session_caches_cleared();
+        session_history_loading=false;session_history_explicit_target.clear();
+        if(sessions_epoch!=UINT64_MAX)++sessions_epoch;mark_session_caches_cleared();
 #endif
-        if(history_archive) {
-            if(!history_archive->retain({},true,true))cache_clear_error=QObject::tr("The current local cache clear could not be retained.");
-            else {const auto view=history_archive->view();cache_clear_current_path=view.path;cache_clear_current_revision=view.accepted;}
-        }
-        for(auto& target:cache_clear_targets) {
-            target.archive->activate();
-            if(!target.archive->retain({},true,true))cache_clear_error=QObject::tr("A local cache clear could not be retained.");
-            else target.revision=target.archive->view().accepted;
-        }
         messages.assign(history);
         if(!proof.input_current())return;
         cache_clear_completed();
@@ -1727,6 +1687,7 @@ struct AssistantViewModel::State {
     std::optional<ResumeCheckpoint> resume_checkpoint;
     bool generic_durable=false,generic_resuming=false;
     QString session_selection_target;
+    quint64 session_operation=0;
 
     void mark_session_caches_cleared() noexcept {
         try {auto index=session_associations();if(index.isEmpty())return;auto rows=index.value("threads").toObject();
@@ -1904,7 +1865,8 @@ struct AssistantViewModel::State {
         const QPointer<AssistantViewModel> receiver(&owner);auto proof=file_projection();
         auto record=saved_session(id);
         if(record.isEmpty() && !owned_session(session_metadata.value(id)))return false;
-        const auto previous=generic_thread;
+        const auto previous=generic_thread;session_selection_target=id;
+        if(session_history_thread!=id)session_history_loading=false;
         if(!previous.isEmpty() && previous!=id)remember_current_session();
         if(history_session!=id)remember_session_draft();
         if(!proof.input_current())return true;
@@ -1916,17 +1878,18 @@ struct AssistantViewModel::State {
             const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
             const auto current=session && session->project()==project?session->projectLocation():QString();
             if(available && (current.isEmpty() || QFileInfo(current).canonicalFilePath()!=association.value("canonical"))) {
-                session_restore_target=id;
-                emit owner.sessionProjectRequested(id,QUrl::fromLocalFile(path));
+                session_restore_target=id;sessions_loading=false;
+                emit owner.sessionProjectRequested(id,QUrl::fromLocalFile(path),owner.sessionSelection());
                 return true;
             }
             if(automatic && !available) {sessions_error=QObject::tr("The last conversation is available in Sessions, but its original project is unavailable; it was not opened or replaced.");emit owner.sessionsChanged();return false;}
         }
-        if(automatic && record.value("email").toString().isEmpty())return false;
+        if(automatic && record.value("email").toString().isEmpty()){session_selection_target.clear();return false;}
         const auto email=generic_native.value("account").toObject().value("email").toString();
         if(generic_authenticated && record.value("email").isString() && record.value("email").toString()!=email)
             throw std::runtime_error("That conversation belongs to another managed account");
         const auto expectedEmail=record.value("email").isString()?record.value("email").toString():email;
+        sessions_loading=true;
         const auto previousApproval=disclosure_approved()?approved_scope:std::shared_ptr<const DisclosureScope>{};
         if(!proof.input_current())return true;
         const auto previousFiles=generic_input_hashes;const auto previousSources=approved_source_locations();
@@ -1960,7 +1923,7 @@ struct AssistantViewModel::State {
     }
     struct SessionRequest {
         QString kind,target,cursor,currentThread,email,name;
-        quint64 binding=0,account=0,transport=0,epoch=0;
+        quint64 binding=0,account=0,transport=0,epoch=0,operation=0;
         QPointer<ProjectViewModel> project;
         bool operator==(const SessionRequest&) const = default;
     };
@@ -1993,10 +1956,19 @@ struct AssistantViewModel::State {
         return std::isfinite(modified) && std::floor(modified)==modified &&
             modified>=-8640000000000.0 && modified<=8640000000000.0;
     }
+    void fail_session_operation(quint64 operation,const QString& target,const QString& reason) noexcept {
+        if(operation!=session_operation || !sessions_loading || (!target.isEmpty() && !session_selection_target.isEmpty() && session_selection_target!=target))return;
+        sessions_loading=false;sessions_error=reason;
+        if(!target.isEmpty() && session_selection_target==target) {
+            session_selection_target.clear();session_restore_target.clear();
+            if(resume_checkpoint && resume_checkpoint->thread==target){resume_checkpoint.reset();generic_resuming=false;}
+        }
+        try {emit owner.sessionsChanged();}catch(...) {}
+    }
     bool session_request_current(const SessionRequest& request) const {
-        return publishing && generic_authenticated && !generic_retiring && request.epoch==sessions_epoch &&
+        return publishing && generic_authenticated && !generic_retiring && (request.kind=="history" || request.epoch==sessions_epoch) &&
             request.binding==generation && request.account==usage_epoch && request.project==project &&
-            request.currentThread==generic_thread && agent && request.transport==agent->outputGeneration() &&
+            (request.kind=="name" || request.kind=="history" || request.operation==session_operation) && request.currentThread==generic_thread && agent && request.transport==agent->outputGeneration() &&
             request.email==generic_native.value("account").toObject().value("email").toString();
     }
     static QString session_caption(QString text) {
@@ -2144,7 +2116,7 @@ struct AssistantViewModel::State {
         const QPointer<CodexAgent> transport(agent.get());
         SessionRequest request{kind,target,params.value("cursor").toString(),generic_thread,
             generic_native.value("account").toObject().value("email").toString(),params.value("name").toString(),generation,usage_epoch,
-            transport?transport->outputGeneration():0,sessions_epoch,project};
+            transport?transport->outputGeneration():0,sessions_epoch,session_operation,project};
         const auto current=[&] {return receiver && receiver->state_.get()==this && transport && agent.get()==transport && session_request_current(request);};
         if(!current())return {};
         QString prepared;
@@ -2254,12 +2226,20 @@ struct AssistantViewModel::State {
                 publish_sessions();return;
             }
         }catch(const std::exception& error) {
-            if(!current())return;
+            if(!current()) {
+                if(receiver && receiver->state_.get()==this && request.kind=="select-read")fail_session_operation(request.operation,request.target,
+                    error.isEmpty()?QObject::tr("The selected conversation could not be prepared. No earlier action was replayed."):error);
+                return;
+            }
             if(request.kind=="name"){retireName();return;}
             if(request.kind=="history")session_history_loading=false;
             sessions_loading=false;sessions_error=bounded_error(QString::fromUtf8(error.what()));emit owner.sessionsChanged();
         }catch(...) {
-            if(!current())return;
+            if(!current()) {
+                if(receiver && receiver->state_.get()==this && request.kind=="select-read")fail_session_operation(request.operation,request.target,
+                    error.isEmpty()?QObject::tr("The selected conversation could not be prepared. No earlier action was replayed."):error);
+                return;
+            }
             if(request.kind=="name"){retireName();return;}
             if(request.kind=="history")session_history_loading=false;
             sessions_loading=false;sessions_error=QObject::tr("Session information is unavailable; no archive outcome was assumed.");emit owner.sessionsChanged();
@@ -2271,7 +2251,9 @@ struct AssistantViewModel::State {
         if(id==generic_thread) {
             const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
             history_for_session(id);
-            if(receiver && receiver->state_.get()==this && proof.input_current() && generic_thread==id)emit owner.sessionSelected(id);
+            if(!proof.input_current())return;
+            restore_runtime_history(id);
+            if(receiver && receiver->state_.get()==this && proof.input_current() && generic_authenticated && generic_thread==id)emit owner.sessionSelected(id);
             return;
         }
         (void)begin_saved_session(id);
@@ -2298,7 +2280,10 @@ struct AssistantViewModel::State {
         try {
             if(!resume_checkpoint || resume_checkpoint->attempted || generic_connecting || generic_retiring || generic_busy ||
                 native_call || native_fit || native_worker_admitted() || !agent || agent->outputOwnerState()!=CodexAgent::OutputOwnerState::Released)return;
-            if(!resume_identity_current()){resume_checkpoint.reset();return;}
+            if(!resume_identity_current()) {
+                const auto target=resume_checkpoint->thread;resume_checkpoint.reset();
+                fail_session_operation(session_operation,target,QObject::tr("The original project or disclosure changed before this conversation could resume."));return;
+            }
             resume_checkpoint->attempted=true;
             const QPointer<AssistantViewModel> receiver(&owner);const auto binding=generation;const auto thread=resume_checkpoint->thread;
             QTimer::singleShot(0,&owner,[this,receiver,binding,thread] {
@@ -11462,13 +11447,22 @@ struct AssistantViewModel::State {
         return publication.input_current() && generation == epoch && generic_thread == thread &&
             generic_authenticated == authenticated && generic_retiring == retiring;
     }
+    bool owns_live_history_row(const Object& row) const {
+        if(generic_thread.isEmpty() || history_thread(row)!=generic_thread)return false;
+        const auto id=row.value("id").toString();
+        if(!generic_turn.isEmpty() && history_turn(row)==generic_turn)return true;
+        for(auto it=generic_item_rows.cbegin();it!=generic_item_rows.cend();++it)if(it.value()==id)return true;
+        for(auto it=generic_rpc_rows.cbegin();it!=generic_rpc_rows.cend();++it)if(it.value()==id)return true;
+        if(generic_held_row && generic_held_row->value("id")==id)return true;
+        return native_call && native_call->record->row==id && native_call->record->thread==generic_thread;
+    }
     bool generic_interrupt_rows() noexcept {
         const auto publication=file_projection();
         try {
             bool pending=false;
             for(const auto& value:history) {
                 const auto status=value.toObject().value("status");
-                if(status=="pending" || status=="in_progress"){pending=true;break;}
+                if((status=="pending" || status=="in_progress") && owns_live_history_row(value.toObject())){pending=true;break;}
             }
             if(!pending)return true;
             if(!publication.input_current())return false;
@@ -11476,7 +11470,7 @@ struct AssistantViewModel::State {
             const auto drop=qScopeGuard([&next]{next={};});
             for (qsizetype i = 0; i < next.size(); ++i) {
                 auto row = next[i].toObject();
-                if (row.value("status") == "pending" || row.value("status") == "in_progress") {
+                if ((row.value("status") == "pending" || row.value("status") == "in_progress") && owns_live_history_row(row)) {
                     row["status"] = "interrupted"; next[i] = row;
                 }
             }
@@ -11533,6 +11527,7 @@ struct AssistantViewModel::State {
         try {
             projection = file_projection();
             const auto original_explanation = explanation;
+            const auto browserOperation=session_operation;const auto browserTarget=session_selection_target;
             capture_resume_checkpoint();generic_resuming=false;
             // Transport failure retires execution; the verified recovery checkpoint is a separate owner.
             // Revocation is already factual before any presentation observer.
@@ -11571,6 +11566,8 @@ struct AssistantViewModel::State {
             generic_turn.clear(); generic_thread.clear(); generic_thread_has_input=false; invalidate_policy();
             generic_native["status"] = "disconnected"; native = generic_native;
             generic_retiring = false; generic_revoke_pending = false; generic_stop_requested = false;
+            fail_session_operation(browserOperation,browserTarget,bounded_error(original_explanation));
+            if(!projection.retirement_current())return;
             notify();
         } catch (...) {} // Original failure cannot unwind a receiver or clean up B.
     }
@@ -13241,7 +13238,7 @@ struct AssistantViewModel::State {
             auto next = history;
             for (qsizetype i = 0; i < next.size(); ++i) {
                 auto row = next[i].toObject();
-                if (row.value("status") == "in_progress") { row["status"] = status; next[i] = row; }
+                if (row.value("status") == "in_progress" && owns_live_history_row(row)) { row["status"] = status; next[i] = row; }
             }
             // Retired UI context settles its real protocol without a new archive write.
             const bool discarded = generic_clear_pending || generic_context_pending;
@@ -14499,7 +14496,8 @@ struct AssistantViewModel::State {
                         if(old.contains(field) && !row.contains(field)){row[field]=old.value(field);changed=true;}
                     break;
                 }
-                if(!existing && !generic_thread.isEmpty()){row["sessionThread"]=generic_thread;changed=true;}
+                if(!existing && !generic_thread.isEmpty()){row["sessionThread"]=generic_thread;changed=true;
+                    if(!row.contains("sessionTurn") && !generic_turn.isEmpty())row["sessionTurn"]=generic_turn;}
                 if(!existing && work_scope_bound && row.value("historyOrigin")!="runtime"){row["workScope"]=work_reports.stamp();changed=true;}
                 if(changed)next[i]=row;
             }
@@ -15380,16 +15378,11 @@ void AssistantViewModel::finishHistoryInitialization() noexcept {
     try {
         if(!original->history_archive)original->initialize_history();
         const auto view=original->history_archive->view();
-        auto merged=view.latest_rows;
-        QSet<QString> previousIds,latestIds;
-        for(const auto& row:original->history_initial_snapshot)previousIds.insert(row.toObject().value("id").toString());
-        for(const auto& row:merged)latestIds.insert(row.toObject().value("id").toString());
-        for(qsizetype i=0;i<original->history.size();++i) {
-            const auto row=original->history[i];const auto id=row.toObject().value("id").toString();
-            if((!id.isEmpty() && !previousIds.contains(id) && !latestIds.contains(id)) ||
-               (id.isEmpty() && i>=original->history_initial_snapshot.size()))merged.append(row);
-        }
-        original->history=std::move(merged);associate_history_threads(original->history);original->history_base_included=view.includes_initial;
+        QMap<QString,QJsonValue> previous;
+        for(const auto& row:original->history_initial_snapshot)previous[row.toObject().value("id").toString()]=row;
+        QJsonArray changed;
+        for(const auto& row:original->history)if(!previous.contains(row.toObject().value("id").toString()) || previous.value(row.toObject().value("id").toString())!=row)changed.append(row);
+        original->history=merge_assistant_history(view.latest_rows,changed);associate_history_threads(original->history);original->history_base_included=view.includes_initial;
         original->messages.assign(original->history);
         if(!receiver || receiver->state_.get()!=original)return;
         original->history_archive->activate();
@@ -15587,6 +15580,7 @@ void AssistantViewModel::refreshSessions(bool nextPage) {
     try {
         if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
         if(nextPage && !original->sessions_more)return;
+        if(original->session_operation==UINT64_MAX)return;++original->session_operation;
         original->sessions_loading=true;original->sessions_error.clear();
         if(!nextPage) {
             if(original->sessions_epoch==UINT64_MAX)throw std::runtime_error("The session browser identity is unavailable");
@@ -15611,6 +15605,7 @@ void AssistantViewModel::selectSession(const QString& threadId) {
     try {
         if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
         if(!original->owned_session(original->session_metadata.value(threadId)))return;
+        if(original->session_operation==UINT64_MAX)return;++original->session_operation;
         original->session_history_explicit_target=threadId;
         emit sessionSelectionStarted(threadId);
         if(!current())return;
@@ -15632,6 +15627,7 @@ void AssistantViewModel::archiveSession(const QString& threadId) {
     try {
         if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
         if(!original->owned_session(original->session_metadata.value(threadId)))return;
+        if(original->session_operation==UINT64_MAX)return;++original->session_operation;
         original->sessions_loading=true;original->sessions_error.clear();const auto epoch=original->sessions_epoch;emit sessionsChanged();
         if(!current() || original->sessions_epoch!=epoch || !original->session_idle())return;
         (void)original->session_request("thread/read",{{"threadId",threadId},{"includeTurns",false}},"archive-read",threadId);
@@ -15642,6 +15638,22 @@ void AssistantViewModel::archiveSession(const QString& threadId) {
 #endif
 }
 
+QString AssistantViewModel::sessionSelection() const {
+#ifndef __EMSCRIPTEN__
+    return state_->session_restore_target.isEmpty()?QString():QString::number(state_->session_operation)+":"+state_->session_restore_target;
+#else
+    return {};
+#endif
+}
+void AssistantViewModel::cancelSessionSelection() {
+#ifndef __EMSCRIPTEN__
+    auto* const original=state_.get();
+    if(original->generic_connecting || original->generic_busy || original->native_worker_admitted() || original->session_selection_target.isEmpty())return;
+    const auto target=original->session_selection_target;
+    original->sessions_loading=true; // Settle this waiting consent/Open intent through its original owner.
+    original->fail_session_operation(original->session_operation,target,tr("Conversation selection was cancelled. No earlier action was replayed."));
+#endif
+}
 QString AssistantViewModel::sessionDraft() const {
 #ifndef __EMSCRIPTEN__
     return state_->session_draft;
@@ -15658,10 +15670,10 @@ void AssistantViewModel::setSessionDraft(const QString& text) {
 }
 void AssistantViewModel::continueSessionRestore(const QString& id) {
 #ifndef __EMSCRIPTEN__
-    const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();
+    const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();const auto operation=original->session_operation;
     try {if(original->session_restore_target==id)(void)original->begin_saved_session(id);}
     catch(...) {if(receiver && receiver->state_.get()==original) {
-        original->sessions_loading=false;original->sessions_error=tr("The selected session could not reconnect. Original projects and attachments were preserved; no action was replayed.");emit sessionsChanged();}}
+        original->fail_session_operation(operation,id,tr("The selected session could not reconnect. Original projects and attachments were preserved; no action was replayed."));}}
 #else
     Q_UNUSED(id);
 #endif
@@ -15672,6 +15684,7 @@ void AssistantViewModel::restoreLastSession() {
     try {
         if(original->restore_last_attempted || original->generic_authenticated || !original->session_switch_idle())return;
         original->restore_last_attempted=true;
+        if(original->session_operation==UINT64_MAX)return;++original->session_operation;
         const auto id=original->session_associations().value("last").toString();
         if(id.isEmpty())return;
         emit sessionSelectionStarted(id);
@@ -16397,9 +16410,13 @@ void AssistantViewModel::cancel() {
 }
 bool AssistantViewModel::resumeConnection() {
 #ifndef __EMSCRIPTEN__
-    auto* s=state_.get();const QPointer<AssistantViewModel> receiver(this);
+    auto* s=state_.get();const QPointer<AssistantViewModel> receiver(this);const auto operation=s->session_operation;const auto target=s->session_selection_target;
     try {
-        if(!s->resume_identity_current())return false;
+        if(!s->resume_identity_current()) {
+            const auto target=s->session_selection_target;
+            s->fail_session_operation(s->session_operation,target,tr("The original conversation scope changed before reconnecting."));
+            return false;
+        }
         if(s->generic_connecting)return true;
         s->resume_checkpoint->attempted=true;
         auto proof=s->file_projection();auto approval=std::make_shared<State::DisclosureScope>(*s->resume_checkpoint->disclosure);
@@ -16407,7 +16424,11 @@ bool AssistantViewModel::resumeConnection() {
         s->generic_sign_in(std::move(approval),proof);
         return true;
     }catch(...) {
-        if(receiver && state_.get()==s){s->error=tr("The retained session could not reconnect. Its task and inputs remain; no uncertain action was replayed.");s->notify();}
+        if(receiver && state_.get()==s){
+            const auto reason=tr("The retained session could not reconnect. Its task and inputs remain; no uncertain action was replayed.");
+            s->error=reason;s->fail_session_operation(operation,target,reason);
+            if(receiver && state_.get()==s)s->notify();
+        }
         return true;
     }
 #else
