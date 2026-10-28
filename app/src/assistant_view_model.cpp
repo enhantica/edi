@@ -2399,6 +2399,7 @@ struct AssistantViewModel::State {
         std::size_t parameter_at = 0;
         bool parameter_applied = false, parameter_uncertain = false;
         bool parameter_group = false, fit_undo_visible = false;
+        bool parameter_filter_pending = false;
         NativeCall call;
         QPointer<AssistantViewModel> receiver; // Prepared before any visibility/input publication.
         QPointer<ProjectViewModel> project;
@@ -3340,6 +3341,7 @@ struct AssistantViewModel::State {
         else if(run->tool=="background_names")widget_background_names(run);
         else if(run->tool=="estimate_background")widget_estimate_background(run);
         else if (run->tool == "add_relations" || run->tool == "edit_relation") widget_relation_step(run);
+        else if(run->parameter_filter_pending)widget_reset_parameter_filters(run);
         else widget_reach_parameter(run); // Preserve a live initial-parameter child too.
     }
     static std::pair<QQuickItem*,QQuickItem*> widget_row_scope(QQuickItem* field) {
@@ -3988,10 +3990,12 @@ struct AssistantViewModel::State {
         QPointer<QObject> source;
         int row=-1;
         if(run->tab=="appBar.tab.analysis") {
-            table=widget_named("parameters.list");
-            filter=table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr;
-            row=filter?filter->rowOf(run->parameter):-1;
-            if(!table || !filter || filter->sourceModel()!=run->project->parameters() || row<0){widget_refuse(run,widget_outcome_error);return;}
+            if(!widget_parameter_filter_owner(run,"parameter_row_admission",table,filter))return;
+            row=filter->rowOf(run->parameter);
+            if(row<0) {
+                widget_parameter_admission_refuse(run,"parameter_row_admission","row_not_shown",table,"parameters.list",
+                    QObject::tr("The original Analysis filters do not show the exact requested parameter; no parameter input was sent"));return;
+            }
             source=filter;
         } else {
             const auto editor=widget_parameter_editor(run->tab,run->parameter);
@@ -4033,21 +4037,85 @@ struct AssistantViewModel::State {
         if(!receiver || receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
         QTimer::singleShot(500,&owner,std::move(next));
     }
+    QQuickItem* widget_analysis_control(const std::shared_ptr<NativeWidget>& run,const QString& name,bool* ambiguous=nullptr) const {
+        if(ambiguous)*ambiguous=false;
+        if(!widget_owned(run) || !run->project || run->tab!="appBar.tab.analysis" || !widget_page_selected(run))return nullptr;
+        QQuickItem* found=nullptr;
+        for(auto* item:widget_items()) {
+            if(item->objectName()!=name || item->window()!=run->window)continue;
+            const QPointer<QQuickItem> candidate(item);
+            bool scoped=false,owned=false,otherTier=false;
+            for(QPointer<QQuickItem> a=item;a;a=a->parentItem()) {
+                if(a->objectName()=="group.parameters")owned=a->property("project").value<ProjectViewModel*>()==run->project;
+                if(a->objectName()=="workflow.analysis.manualSidebar")scoped=true;
+                if(!widget_owned(run) || !candidate || !a)return nullptr;
+                const auto tier=a->property("shownTier");
+                if(!widget_owned(run) || !candidate || !a)return nullptr;
+                if(tier.isValid() && tier.toString()!="Basic")otherTier=true;
+            }
+            if(!owned || !scoped || otherTier)continue;
+            if(found){if(ambiguous)*ambiguous=true;return nullptr;}
+            found=item;
+        }
+        return found;
+    }
+    void widget_parameter_admission_refuse(const std::shared_ptr<NativeWidget>& run,const char* phase,const char* cause,
+            const QPointer<QQuickItem>& target,const QString& wanted,const QString& message) {
+        if(!widget_owned(run))return;
+        work_latch_control(run->call,target,phase,cause,{},wanted);
+        if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
+        control_failure(run,ControlCause::Unavailable);widget_refuse(run,message);
+    }
+    bool widget_parameter_filter_owner(const std::shared_ptr<NativeWidget>& run,const char* phase,
+            QPointer<QQuickItem>& table,QPointer<ParameterFilterModel>& filter) {
+        bool ambiguous=false;table=widget_analysis_control(run,"parameters.list",&ambiguous);
+        if(!widget_entry_current(run,widget_parameter_entry(run))) {
+            if(widget_owned(run)){control_failure(run,ControlCause::Superseded);widget_refuse(run,QObject::tr("The original Analysis parameter owner changed before filter admission"));}
+            return false;
+        }
+        if(!table) {
+            widget_parameter_admission_refuse(run,phase,ambiguous?"table_ambiguous":"table_absent",table,"parameters.list",
+                ambiguous?QObject::tr("The current Analysis parameter table is ambiguous; no parameter input was sent"):
+                    QObject::tr("The original current Analysis parameter table is not instantiated; no parameter input was sent"));return false;
+        }
+        filter=qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>());
+        if(!widget_entry_current(run,widget_parameter_entry(run)) || !table) {
+            if(widget_owned(run)){control_failure(run,ControlCause::Superseded);widget_refuse(run,QObject::tr("The original Analysis parameter table changed during filter admission"));}
+            return false;
+        }
+        if(!filter || filter->sourceModel()!=run->project->parameters()) {
+            widget_parameter_admission_refuse(run,phase,filter?"source_model_mismatch":"filter_unbound",table,"parameters.list",
+                filter?QObject::tr("The Analysis parameter table does not reference this project's parameter model; no input was sent"):
+                    QObject::tr("The original Analysis parameter filter is not bound; no parameter input was sent"));return false;
+        }
+        return true;
+    }
     void widget_filter_parameter(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input || !run->parameter) { widget_refuse(run, QObject::tr("The visible parameter owner changed")); return; }
-        auto* table=widget_named("parameters.list");
-        const QPointer<ParameterFilterModel> filter(table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr);
-        const QPointer<QQuickItem> target(widget_named("parameters.category"));
-        if(!filter || filter->sourceModel()!=run->project->parameters() || !target) {widget_refuse(run,widget_outcome_error);return;}
+        QPointer<QQuickItem> table;QPointer<ParameterFilterModel> filter;
+        if(!widget_parameter_filter_owner(run,"parameter_category_admission",table,filter))return;
         const auto category=filter->categoryFor(run->parameter);
         const auto option=filter->categories().indexOf(category);
-        if(option<0) {widget_refuse(run,widget_outcome_error);return;}
-        if(filter->categoryFilter()==category) {widget_reach_parameter(run);return;}
+        if(option<0) {
+            widget_parameter_admission_refuse(run,"parameter_category_admission","category_not_offered",table,"parameters.category",
+                QObject::tr("The original Analysis parameter filter does not offer the target's category; no parameter input was sent"));return;
+        }
+        if(filter->categoryFilter()==category) {run->parameter_filter_pending=false;widget_reach_parameter(run);return;}
+        bool ambiguous=false;const QPointer<QQuickItem> target(widget_analysis_control(run,"parameters.category",&ambiguous));
+        if(!widget_entry_current(run,entry))return;
+        if(!target) {
+            widget_parameter_admission_refuse(run,"parameter_category_admission",ambiguous?"category_ambiguous":"category_absent",target,"parameters.category",
+                QObject::tr("The original current Analysis category selector is unavailable; no parameter input was sent"));return;
+        }
+        run->parameter_filter_pending=true;
+        if(!widget_reveal_parameter(run,target))return;
         AssistantWidgetInput::Request request;
         request.kind=AssistantWidgetInput::Kind::Choose;request.target=target;request.option=option;
-        auto captured_current=[this,run,entry,filter,target,option] {
-            return widget_entry_current(run,entry) && filter && target && filter->sourceModel()==run->project->parameters() &&
+        auto captured_current=[this,run,entry,table,filter,target,option] {
+            return widget_entry_current(run,entry) && table && filter && target &&
+                widget_analysis_control(run,"parameters.list")==table && table->property("sourceModel").value<QObject*>()==filter &&
+                widget_analysis_control(run,"parameters.category")==target && filter->sourceModel()==run->project->parameters() &&
                 filter->categories().indexOf(filter->categoryFor(run->parameter))==option;
         };
         auto captured_prepareCommit=[] {return true;};auto captured_finishCommit=[] {};
@@ -4060,7 +4128,7 @@ struct AssistantViewModel::State {
                     filter->categoryFilter()!=filter->categoryFor(run->parameter)) {if(delivered)control_failure(run,ControlCause::Commit);widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
                 QTimer::singleShot(500,&owner,[this,run,entry] {
                     if(!widget_entry_owned(run,entry))return;
-                    try {widget_reach_parameter(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
+                    try {run->parameter_filter_pending=false;widget_reach_parameter(run);}catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
                 });
             }catch(...){if(widget_entry_owned(run,entry))widget_refuse(run,widget_outcome_error);}
         };
@@ -4080,21 +4148,28 @@ struct AssistantViewModel::State {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
         if (run->tab != "appBar.tab.analysis" || !run->parameter) { widget_reach_parameter(run); return; }
-        const QPointer<ParameterFilterModel> filter([&]() -> ParameterFilterModel* {
-            auto* table=widget_named("parameters.list");
-            return table?qobject_cast<ParameterFilterModel*>(table->property("sourceModel").value<QObject*>()):nullptr;
-        }());
-        if(!filter || filter->sourceModel()!=run->project->parameters()) {widget_refuse(run,widget_outcome_error);return;}
+        run->parameter_filter_pending=true;
+        QPointer<QQuickItem> table;QPointer<ParameterFilterModel> filter;
+        if(!widget_parameter_filter_owner(run,"parameter_filter_admission",table,filter))return;
         // Category selection below can change its own filter. Reset only other
         // conflicting live filters; consecutive rows retain the current category.
         if(filter->nameFilter().isEmpty() && filter->variability()==ParameterFilterModel::All) {
             widget_filter_parameter(run);return;
         }
-        auto* target = widget_named("parameters.clearFilters");
-        if (!target) { control_failure(run,ControlCause::Unavailable); widget_refuse(run, QObject::tr("The genuine parameter filter reset is unavailable")); return; }
+        bool ambiguous=false;const QPointer<QQuickItem> target(widget_analysis_control(run,"parameters.clearFilters",&ambiguous));
+        if(!widget_entry_current(run,entry))return;
+        if(!target) {
+            widget_parameter_admission_refuse(run,"parameter_filter_admission",ambiguous?"reset_ambiguous":"reset_absent",target,"parameters.clearFilters",
+                QObject::tr("The original current Analysis filter-reset control is unavailable; no parameter input was sent"));return;
+        }
+        if(!widget_reveal_parameter(run,target))return;
         AssistantWidgetInput::Request request;
         request.kind = AssistantWidgetInput::Kind::Navigate; request.target = target;
-        request.current = [this, run, entry] { return widget_entry_current(run, entry); };
+        request.current = [this,run,entry,table,filter,target] {
+            return widget_entry_current(run,entry) && table && filter && target &&
+                widget_analysis_control(run,"parameters.list")==table && table->property("sourceModel").value<QObject*>()==filter &&
+                filter->sourceModel()==run->project->parameters() && widget_analysis_control(run,"parameters.clearFilters")==target;
+        };
         request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
         request.completed = [this, run, entry](bool delivered, const QString& message, ControlCause cause) noexcept {
             if (!widget_entry_owned(run, entry)) return;
@@ -4265,7 +4340,6 @@ struct AssistantViewModel::State {
                 work_first_cause=QString::fromLatin1(cause);
             QJsonArray events;
             for(const auto& value:history){const auto row=value.toObject();if(row.value("id")==run->call.record->row){events=row.value("workUI").toArray();break;}}
-            if(events.size()>=static_cast<qsizetype>(Limits::stream_events)){work_reports.missEvidence();return;}
             events.append(event);work_merge(run->call.record->row,{{"workUI",events}});
         }catch(...){work_reports.missEvidence();}
     }
