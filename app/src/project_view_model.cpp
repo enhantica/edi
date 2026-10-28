@@ -473,6 +473,45 @@ UncertaintyText ProjectViewModel::suText(double value, double su) const {
     return {QString::fromStdString(text.value), QString::fromStdString(text.su), QString::fromStdString(text.bracket)};
 }
 
+QJsonArray ProjectViewModel::assistantParameterText(const QJsonArray& rows) const {
+    QJsonArray plain;
+    for(const auto& value:rows) {
+        auto row=value.toObject();row.remove("file_value");row.remove("file_su");plain.append(row);
+    }
+    if(retired_ || editing_ || !registry_ || !registry_->fileTextCurrent(*project_))return plain;
+    std::map<std::string,const edi::Parameter*> actual;
+    for(const auto& entry:edi::parameter_entries(*project_))actual.emplace(entry.path,entry.parameter);
+    const auto dependence=[](edi::Dependence value) {
+        switch(value) {
+        case edi::Dependence::Independent:return QStringLiteral("independent");
+        case edi::Dependence::SymmetryFixed:return QStringLiteral("symmetry_fixed");
+        case edi::Dependence::SymmetryTied:return QStringLiteral("symmetry_tied");
+        case edi::Dependence::Constrained:return QStringLiteral("constrained");
+        }
+        return QStringLiteral("unknown");
+    };
+    QJsonArray result;
+    for(const auto& value:plain) {
+        auto row=value.toObject();const auto path=row.value("path").toString();const auto found=actual.find(path.toStdString());
+        if(found!=actual.end()) {
+            const auto* parameter=found->second;const auto* item=registry_->find(parameter);
+            const auto& uncertainty=parameter->uncertainty.get();const auto given=row.value("uncertainty");
+            const bool sameSu=uncertainty?given.isDouble() && given.toDouble()==*uncertainty:given.isNull();
+            if(item && item->parameter()==parameter && !item->isDescriptorValue() && item->path()==path &&
+                row.value("value").isDouble() && row.value("value").toDouble()==parameter->value.get() && sameSu &&
+                row.value("free").isBool() && row.value("free").toBool()==parameter->free.get() &&
+                row.value("dependence").toString()==dependence(parameter->dependence) &&
+                item->value()==parameter->value.get() && item->hasUncertainty()==uncertainty.has_value() &&
+                (!uncertainty || item->uncertainty()==*uncertainty) && item->isFree()==parameter->free.get() && !item->fileValue().isEmpty()) {
+                row["file_value"]=item->fileValue();
+                row["file_su"]=item->fileSu().isEmpty()?QJsonValue(QJsonValue::Null):QJsonValue(item->fileSu());
+            }
+        }
+        result.append(row);
+    }
+    return registry_->fileTextCurrent(*project_)?result:plain;
+}
+
 void ProjectViewModel::setName(const QString& name) {
     edi::Project& project = *project_;
     apply_setting(edi::Edit::project_name(project, name.toStdString()));

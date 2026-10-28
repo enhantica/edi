@@ -82,3 +82,9 @@ exception list must stay short and reasoned; a new entry is a decision, not a fi
 | Keep edi's tables and check them against the dictionary | Rejected: two copies kept in step by a gate are still two copies, and the QML literals had no table to check. |
 | Round in QML with the dictionary's formats | Rejected: QML rounds ties differently from C++ and Python, so the surfaces would disagree. |
 | Show the display format in input fields | Rejected (owner, 2026-10-24): a field would differ from the file and the Text tab, and an edit would start from a rounded value. |
+
+### Assistant inspection reuses already-published native file spelling
+
+FIRST ParameterRegistry::refreshSpelling and ParameterItem::refreshFileText already combine save_spelling(project), written_exactly and file_text(parameter, project.su_rule, exact). Assistant inspection reuses the resulting published fileValue/fileSu pair, not another invocation of save_spelling/file_text. The registry binds its existing whole publication to the exact original project/work stamps, rule and calculated-source identities; it remains unavailable during publication, failed/stale completion or a successor publication. No second numeric value/SU store or formatter is introduced.
+
+Current canonical path/pointer/raw-value/SU/free/dependence and displayed raw fields must match before optional file_value/file_su are attached. An absent displayed SU maps to null; an engaged native zero remains the zero string. Raw numeric uncertainty remains independent of whether a fixed/constrained parameter's file spelling carries it. No inspection-time rounded-copy calculation, project Save, mutation, adoption or additional uncertainty estimate occurs.

@@ -5,6 +5,9 @@
 #include <QList>
 #include <QObject>
 #include <map>
+#include <memory>
+#include <vector>
+#include "edi/calculation.hpp"
 #include <unordered_map>
 #include <unordered_set>
 #include <string>
@@ -33,12 +36,27 @@ class ParameterRegistry : public QObject {
     void publish(edi::Project& project);
     const QList<ParameterItem*>& items() const { return items_; }
     ParameterItem* find(const edi::Parameter* parameter) const;
+    // Whether these already-published fileValue/fileSu pairs describe this exact
+    // live owner. Inspection never recalculates its save-spelling decision.
+    bool fileTextCurrent(const edi::Project& project) const noexcept;
 
    signals:
     // After a rebuild that added or removed items; removed ones are deleted later.
     void itemsChanged();
 
    private:
+    struct FileTextPublication {
+        const edi::Project* project=nullptr;
+        edi::WorkStamps stamps;
+        std::string rule;
+        std::vector<std::pair<std::shared_ptr<const edi::detail::ComputedSource>,bool>> calculations;
+        bool ready=false;
+    };
+    std::shared_ptr<FileTextPublication> beginFileText(const edi::Project& project) noexcept;
+    void finishFileText(const std::shared_ptr<FileTextPublication>& publication,const edi::Project& project) noexcept;
+    bool matchesFileText(const FileTextPublication& publication,const edi::Project& project) const;
+    std::shared_ptr<FileTextPublication> file_text_publication_;
+    std::size_t file_text_publication_depth_=0;
     void refreshElements(const edi::Project& project);
     void refreshRefinable(edi::Project& project);
     void refreshFittability(edi::Project& project);
