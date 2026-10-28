@@ -250,36 +250,49 @@ bool assistant_native_tool(const QString& name) {
     return name=="show_report" || name=="create_project" || individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "inspect_data" || name == "list_parameters" || name == "diagnostics" ||
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "undo_fit" || name == "create_cwl_project" || name == "add_relations" || name == "edit_relation" || name == "save_project" || name == "edit_background" || name == "estimate_background";
 }
+namespace {
+struct NativeActionText { const char* name; const char* label; const char* description; };
+constexpr NativeActionText nativeActionTexts[] = {
+    {"create_project",QT_TRANSLATE_NOOP("AssistantActions","Create a project"),QT_TRANSLATE_NOOP("AssistantActions","Set up a new project with its name, title and description using the normal creation form.")},
+    {"show_report",QT_TRANSLATE_NOOP("AssistantActions","Show the project report"),QT_TRANSLATE_NOOP("AssistantActions","Open the current project report in the app.")},
+    {"inspect_project",QT_TRANSLATE_NOOP("AssistantActions","Inspect the current project"),QT_TRANSLATE_NOOP("AssistantActions","Read the current structures, experiments and model state to decide the next useful action.")},
+    {"inspect_data",QT_TRANSLATE_NOOP("AssistantActions","Inspect diffraction data"),QT_TRANSLATE_NOOP("AssistantActions","Read the requested measured and calculated diffraction rows to assess the current model.")},
+    {"list_parameters",QT_TRANSLATE_NOOP("AssistantActions","Inspect model parameters"),QT_TRANSLATE_NOOP("AssistantActions","Read current parameter values, uncertainties and refinement eligibility.")},
+    {"diagnostics",QT_TRANSLATE_NOOP("AssistantActions","Check the current model"),QT_TRANSLATE_NOOP("AssistantActions","Read the app's current model and calculation diagnostics.")},
+    {"set_parameters",QT_TRANSLATE_NOOP("AssistantActions","Update parameter values"),QT_TRANSLATE_NOOP("AssistantActions","Enter the requested values in the current model through the app's parameter editors.")},
+    {"set_free",QT_TRANSLATE_NOOP("AssistantActions","Choose parameters to refine"),QT_TRANSLATE_NOOP("AssistantActions","Choose which eligible parameters the next refinement may adjust, keeping the remaining values fixed.")},
+    {"run_fit",QT_TRANSLATE_NOOP("AssistantActions","Refine the current model"),QT_TRANSLATE_NOOP("AssistantActions","Fit the selected free parameters to the measured data and inspect the resulting model.")},
+    {"undo_fit",QT_TRANSLATE_NOOP("AssistantActions","Undo the latest refinement"),QT_TRANSLATE_NOOP("AssistantActions","Restore the model state retained by the latest available refinement Undo.")},
+    {"load_structure",QT_TRANSLATE_NOOP("AssistantActions","Load a structure"),QT_TRANSLATE_NOOP("AssistantActions","Import the selected structure file into the current project using the normal structure loader.")},
+    {"create_experiment",QT_TRANSLATE_NOOP("AssistantActions","Add an experiment"),QT_TRANSLATE_NOOP("AssistantActions","Add an experiment to the current project using the app's experiment controls.")},
+    {"set_experiment_type",QT_TRANSLATE_NOOP("AssistantActions","Choose the experiment type"),QT_TRANSLATE_NOOP("AssistantActions","Select the experiment's sample form, measurement mode or radiation using the available native options.")},
+    {"load_data",QT_TRANSLATE_NOOP("AssistantActions","Load diffraction data"),QT_TRANSLATE_NOOP("AssistantActions","Load the selected measurements into the requested current experiment.")},
+    {"read_selected_file",QT_TRANSLATE_NOOP("AssistantActions","Read an attached file"),QT_TRANSLATE_NOOP("AssistantActions","Read the admitted attached file to understand its contents before using it.")},
+    {"create_structure",QT_TRANSLATE_NOOP("AssistantActions","Create a structure"),QT_TRANSLATE_NOOP("AssistantActions","Enter the supplied cell and atomic-site information using the normal structure editors.")},
+    {"edit_structure",QT_TRANSLATE_NOOP("AssistantActions","Edit the structure"),QT_TRANSLATE_NOOP("AssistantActions","Change the requested structure information through the app's ordinary editors.")},
+    {"edit_atom",QT_TRANSLATE_NOOP("AssistantActions","Edit an atomic site"),QT_TRANSLATE_NOOP("AssistantActions","Change the requested atomic-site information while retaining the model's scientific constraints.")},
+    {"edit_experiment",QT_TRANSLATE_NOOP("AssistantActions","Edit the experiment"),QT_TRANSLATE_NOOP("AssistantActions","Change the requested experiment setting using its current available options.")},
+    {"acquire_inputs",QT_TRANSLATE_NOOP("AssistantActions","Inspect input files"),QT_TRANSLATE_NOOP("AssistantActions","Discover or admit the requested input files within the selected input scope.")},
+    {"save_project",QT_TRANSLATE_NOOP("AssistantActions","Save the project"),QT_TRANSLATE_NOOP("AssistantActions","Save the current project through the app's normal save operation and report its actual outcome.")},
+    {"add_relations",QT_TRANSLATE_NOOP("AssistantActions","Add parameter relationships"),QT_TRANSLATE_NOOP("AssistantActions","Add the requested aliases or mathematical constraints between current model parameters.")},
+    {"edit_relation",QT_TRANSLATE_NOOP("AssistantActions","Edit a parameter relationship"),QT_TRANSLATE_NOOP("AssistantActions","Update the requested existing parameter relationship through the normal controls.")},
+    {"edit_background",QT_TRANSLATE_NOOP("AssistantActions","Edit the background"),QT_TRANSLATE_NOOP("AssistantActions","Change the requested background model entries through the app's current background controls.")},
+    {"estimate_background",QT_TRANSLATE_NOOP("AssistantActions","Estimate the background"),QT_TRANSLATE_NOOP("AssistantActions","Estimate the experiment background using its current native method and saved settings.")},
+    {"create_cwl_project",QT_TRANSLATE_NOOP("AssistantActions","Prepare a diffraction project"),QT_TRANSLATE_NOOP("AssistantActions","Prepare the supplied diffraction project through the supported project-setup operation.")},
+};
+QString native_action_text(const QString& action,bool full) {
+    for(const auto& text:nativeActionTexts)if(action==QLatin1StringView(text.name))
+        return QCoreApplication::translate("AssistantActions",full?text.description:text.label);
+    return full ? QCoreApplication::translate("AssistantActions","Carry out the requested work using the app's supported project actions.")
+                : QCoreApplication::translate("AssistantActions","Work on the current project");
+}
+} // namespace
+QString assistant_native_description(const QString& action,const QString& code) {
+    if(code=="project_required")return QCoreApplication::translate("AssistantActions","This action needs an open project. Create or open a project before trying it.");
+    return native_action_text(action,true);
+}
 QString assistant_native_purpose(const Object& args,const QString& action) {
-    if(!args.contains("purpose")) {
-        if(action=="create_project")return QCoreApplication::translate("AssistantActions","Create a project");
-        if(action=="show_report")return QCoreApplication::translate("AssistantActions","Show the project report");
-        if(action=="inspect_project")return QCoreApplication::translate("AssistantActions","Inspect the current project");
-        if(action=="inspect_data")return QCoreApplication::translate("AssistantActions","Inspect diffraction data");
-        if(action=="list_parameters")return QCoreApplication::translate("AssistantActions","Inspect model parameters");
-        if(action=="diagnostics")return QCoreApplication::translate("AssistantActions","Check the current model");
-        if(action=="set_parameters")return QCoreApplication::translate("AssistantActions","Update parameter values");
-        if(action=="set_free")return QCoreApplication::translate("AssistantActions","Choose parameters to refine");
-        if(action=="run_fit")return QCoreApplication::translate("AssistantActions","Refine the current model");
-        if(action=="undo_fit")return QCoreApplication::translate("AssistantActions","Undo the latest refinement");
-        if(action=="load_structure")return QCoreApplication::translate("AssistantActions","Load a structure");
-        if(action=="create_experiment")return QCoreApplication::translate("AssistantActions","Add an experiment");
-        if(action=="set_experiment_type")return QCoreApplication::translate("AssistantActions","Choose the experiment type");
-        if(action=="load_data")return QCoreApplication::translate("AssistantActions","Load diffraction data");
-        if(action=="read_selected_file")return QCoreApplication::translate("AssistantActions","Read an attached file");
-        if(action=="create_structure")return QCoreApplication::translate("AssistantActions","Create a structure");
-        if(action=="edit_structure")return QCoreApplication::translate("AssistantActions","Edit the structure");
-        if(action=="edit_atom")return QCoreApplication::translate("AssistantActions","Edit an atomic site");
-        if(action=="edit_experiment")return QCoreApplication::translate("AssistantActions","Edit the experiment");
-        if(action=="acquire_inputs")return QCoreApplication::translate("AssistantActions","Inspect input files");
-        if(action=="save_project")return QCoreApplication::translate("AssistantActions","Save the project");
-        if(action=="add_relations")return QCoreApplication::translate("AssistantActions","Add parameter relationships");
-        if(action=="edit_relation")return QCoreApplication::translate("AssistantActions","Edit a parameter relationship");
-        if(action=="edit_background")return QCoreApplication::translate("AssistantActions","Edit the background");
-        if(action=="estimate_background")return QCoreApplication::translate("AssistantActions","Estimate the background");
-        if(action=="create_cwl_project")return QCoreApplication::translate("AssistantActions","Prepare a diffraction project");
-        return QCoreApplication::translate("AssistantActions","Work on the current project");
-    }
+    if(!args.contains("purpose"))return native_action_text(action,false);
     const auto value = args.value("purpose");
     if (!value.isString()) throw std::invalid_argument("Native action requires its purpose");
     const auto text = value.toString();

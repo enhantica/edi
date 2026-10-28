@@ -326,10 +326,10 @@ Popup {
                                 text: "eraser"
                                 font.family: EaStyle.Fonts.iconsFamily
                                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-                                color: EaStyle.Colors.themeForegroundMinor
+                                color: clearButton.foregroundColor()
                                 Accessible.ignored: true
                             }
-                            EaElements.Label { text: clearButton.text; color: EaStyle.Colors.themeForegroundMinor }
+                            EaElements.Label { text: clearButton.text; color: clearButton.foregroundColor() }
                         }
                         background: Rectangle {
                             border.width: 0
@@ -384,22 +384,39 @@ Popup {
                         enabled: !pendingConnection || panel.assistant.canCancel
                         leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
                         rightPadding: leftPadding
-                        contentItem: RowLayout {
-                            spacing: AppSizes.unit * 0.4
+                        contentItem: Item {
+                            implicitWidth: connectionButton.accountView ? avatarText.implicitWidth : connectionText.implicitWidth
+                            implicitHeight: connectionButton.accountView ? avatarText.implicitHeight : connectionText.implicitHeight
                             EaElements.Label {
-                                visible: !connectionButton.accountView
-                                text: connectionButton.pendingConnection ? "times" : "comment-dots"
-                                font.family: EaStyle.Fonts.iconsFamily
-                                color: EaStyle.Colors.isDarkPalette ? "black" : "white"
-                                Accessible.ignored: true
-                            }
-                            EaElements.Label {
-                                text: connectionButton.accountView ? (panel.accountInitial.length ? panel.accountInitial : "user") : connectionButton.text
-                                font.family: connectionButton.accountView && !panel.accountInitial.length ? EaStyle.Fonts.iconsFamily : EaStyle.Fonts.fontFamily
+                                id: avatarText
+                                anchors.fill: parent
+                                visible: connectionButton.accountView
+                                text: panel.accountInitial.length ? panel.accountInitial : "user"
+                                font.family: panel.accountInitial.length ? EaStyle.Fonts.fontFamily : EaStyle.Fonts.iconsFamily
                                 font.pixelSize: EaStyle.Sizes.fontPixelSize
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
-                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
+                                    : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                            }
+                            RowLayout {
+                                id: connectionText
+                                anchors.centerIn: parent
+                                visible: !connectionButton.accountView
+                                spacing: AppSizes.unit * 0.4
+                                EaElements.Label {
+                                    text: connectionButton.pendingConnection ? "times" : "comment-dots"
+                                    font.family: EaStyle.Fonts.iconsFamily
+                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
+                                        : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                    Accessible.ignored: true
+                                }
+                                EaElements.Label {
+                                    text: connectionButton.text
+                                    font: connectionButton.font
+                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
+                                        : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                }
                             }
                         }
                         Layout.preferredWidth: connectionButton.accountView ? panel.headerActionExtent : implicitWidth

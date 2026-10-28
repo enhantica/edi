@@ -14634,6 +14634,16 @@ QString AssistantViewModel::nativeActionLabel(const QString& action) const {
 #endif
 }
 
+QString AssistantViewModel::nativeActionDescription(const QString& action,const QString& code) const {
+#ifndef __EMSCRIPTEN__
+    return assistant_native_description(action,code);
+#else
+    Q_UNUSED(action);
+    if(code=="project_required")return tr("This action needs an open project. Create or open a project before trying it.");
+    return tr("Carry out the requested work using the app's supported project actions.");
+#endif
+}
+
 QString AssistantViewModel::contextPreview() const {
 #ifndef __EMSCRIPTEN__
     if (state_->generic_mode) return QString::fromUtf8(QJsonDocument(state_->outgoing_context()).toJson(QJsonDocument::Compact));

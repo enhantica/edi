@@ -18,6 +18,7 @@ quint64 assistant_native_tool_specs_preparation_bytes();
 QJsonArray assistant_native_tool_specs();
 bool assistant_native_tool(const QString& name);
 QString assistant_native_purpose(const QJsonObject& arguments, const QString& action = {});
+QString assistant_native_description(const QString& action, const QString& code = {});
 std::optional<edi::Edit> assistant_native_edit(edi::Project& project, const QString& name, const QJsonObject& arguments, std::vector<std::pair<std::string, bool>>& beforeFlags);
 struct NativeBackgroundInput { edi::ExperimentBase* experiment = nullptr; edi::BackgroundPointInput input; bool names=false; };
 NativeBackgroundInput assistant_native_background(edi::Project&, const QJsonObject&);
