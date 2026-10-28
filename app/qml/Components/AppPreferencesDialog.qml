@@ -837,7 +837,6 @@ AppDialog {
         contentHeight: webContent.implicitHeight
         Column {
             id: webContent
-            implicitWidth: webSource.contentWidth
             width: webSource.contentWidth
             spacing: AppSizes.unit
             EaElements.Label {
