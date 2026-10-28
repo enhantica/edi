@@ -12,6 +12,7 @@
 
 #include <QFile>
 #include <QCoreApplication>
+#include <QQmlComponent>
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QSettings>
@@ -2308,6 +2309,7 @@ struct AssistantViewModel::State {
         QPointer<ParameterItem> parameter;
         QPointer<QQuickWindow> window;
         QString tool, tab, valueText, parameterFilter;
+        QPointer<QTimer> page_wait;
         std::weak_ptr<NativeCreateWidget> create_parent;
         bool create_counted = false;
         QString save_intent;
@@ -2374,6 +2376,7 @@ struct AssistantViewModel::State {
         bool fallback_ready = false;
         bool completed_existing = false;
         QString page;
+        QPointer<QTimer> page_wait;
         std::shared_ptr<NativeCreation> owner_handoff;
         bool creating_project = false;
         QUrl structure_path;
@@ -2768,6 +2771,7 @@ struct AssistantViewModel::State {
     void widget_end(const std::shared_ptr<NativeWidget>& run) noexcept {
         if (native_widget != run || !run) return;
         const auto receiver = run->receiver;
+        widget_end_page_wait(run);
         // Same original settlement owner, before disposable input cleanup.
         native_retain_fit_undo(run->call);
         QObject::disconnect(run->save_ready); run->save_ready={};
@@ -3152,6 +3156,8 @@ struct AssistantViewModel::State {
     void widget_commit_ready(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run,entry)) throw std::runtime_error("The visible native request or exact live parameter binding is no longer current");
+        if(run->tool!="run_fit" && (run->tool!="edit_relation" || run->relation_visible) && !widget_page_selected(run))
+            throw std::runtime_error("The original workflow page is no longer current; no control edit was prepared");
         if (run->tool == "edit_background") {
             run->background_input.reset(); run->input.reset(); run->step_counted = false;
             auto* point = widget_background_point(run);
@@ -3747,7 +3753,7 @@ struct AssistantViewModel::State {
     }
     void widget_apply_parameter(const std::shared_ptr<NativeWidget>& run,bool group,const QPointer<QObject>& menu={}) {
         const auto* entry=widget_parameter_entry(run);
-        if(!widget_entry_current(run,entry))throw std::runtime_error("The original parameter action changed");
+        if(!widget_entry_current(run,entry) || !widget_page_selected(run))throw std::runtime_error("The original parameter action or workflow page changed");
         const QPointer<AssistantViewModel> receiver(run->receiver);
         const QPointer<ProjectViewModel> target(run->project);
         QPointer<ParameterItem> parameter(run->parameter);
@@ -4106,9 +4112,69 @@ struct AssistantViewModel::State {
         }
         return nullptr;
     }
+    template<class Frame>
+    static void widget_end_page_wait(const std::shared_ptr<Frame>& run) noexcept {
+        const auto wait=run->page_wait;run->page_wait.clear();
+        if(wait){wait->stop();wait->deleteLater();}
+    }
+    QQuickItem* widget_workflow_tab(const QString& name) const {
+        if(!name.startsWith("appBar.tab."))return nullptr;
+        QQuickItem* found=nullptr;
+        for(auto* item:widget_items())if(item->objectName()==name && item->window()==action_window) {
+            if(found)return nullptr;
+            found=item;
+        }
+        return found;
+    }
+    bool widget_workflow_page_current(QQuickItem* tab, ProjectViewModel* expected) const {
+        if(!tab || !tab->isEnabled() || tab->property("preparing").toBool() || !tab->property("checked").toBool())return false;
+        const auto* loader=tab->property("page").value<QObject*>();
+        const auto* page=loader?qobject_cast<QQuickItem*>(loader->property("item").value<QObject*>()):nullptr;
+        return page && page->property("current").toBool() && page->isEnabled() && page->property("project").value<ProjectViewModel*>()==expected;
+    }
+    template<class Frame,class Current,class Resume,class Refuse>
+    bool widget_wait_workflow_page(const std::shared_ptr<Frame>& run,const QPointer<QQuickItem>& tab,Current current,Resume resume,Refuse refuse) {
+        if(!tab){refuse(QObject::tr("The original workflow tab is unavailable"));return true;}
+        if(!current()){refuse(QObject::tr("The original workflow navigation owner changed"),ControlCause::Superseded);return true;}
+        if(!tab->property("preparing").toBool()) {
+            if(tab->isEnabled())return false;
+            refuse(QObject::tr("The original workflow tab is disabled by the current project prerequisites"));return true;
+        }
+        const QPointer<QObject> loader(tab->property("page").value<QObject*>());
+        if(!loader || loader->property("status").toInt()==QQmlComponent::Error) {
+            refuse(QObject::tr("The original workflow page could not be loaded"));return true;
+        }
+        if(run->page_wait)return true;
+        const QPointer<QTimer> wait(new QTimer(&owner));wait->setSingleShot(true);wait->setInterval(0);run->page_wait=wait;
+        const auto receiver=run->receiver;
+        QObject::connect(wait,&QTimer::timeout,&owner,[this,run,receiver,tab,loader,wait,current,resume,refuse] {
+            if(!receiver || receiver->state_.get()!=this || !wait || run->page_wait!=wait)return;
+            try {
+                if(!current() || !tab || !loader || tab->property("page").value<QObject*>()!=loader) {
+                    widget_end_page_wait(run);refuse(QObject::tr("The original workflow navigation owner changed"),ControlCause::Superseded);return;
+                }
+                if(loader->property("status").toInt()==QQmlComponent::Error) {
+                    widget_end_page_wait(run);refuse(QObject::tr("The original workflow page could not be loaded"));return;
+                }
+                if(tab->property("preparing").toBool())return;
+                widget_end_page_wait(run);
+                if(!tab->isEnabled()){refuse(QObject::tr("The original workflow tab is disabled by the current project prerequisites"));return;}
+                resume();
+            } catch(...) {
+                if(receiver && receiver->state_.get()==this && run->page_wait==wait)widget_end_page_wait(run);
+                if(receiver && receiver->state_.get()==this)refuse(QObject::tr("The original workflow readiness could not be retained"));
+            }
+        });
+        QObject::connect(tab,&QQuickItem::enabledChanged,wait,qOverload<>(&QTimer::start));
+        QObject::connect(tab,&QObject::destroyed,wait,qOverload<>(&QTimer::start));
+        QObject::connect(loader,&QObject::destroyed,wait,qOverload<>(&QTimer::start));
+        if(!QObject::connect(loader,SIGNAL(statusChanged()),wait,SLOT(start()))) {
+            widget_end_page_wait(run);refuse(QObject::tr("The original workflow readiness notification is unavailable"));
+        }
+        return true;
+    }
     bool widget_page_selected(const std::shared_ptr<NativeWidget>& run) const {
-        auto* page = run ? widget_named(run->tab) : nullptr;
-        return page && page->property("checked").toBool();
+        return run && widget_workflow_page_current(widget_workflow_tab(run->tab),run->project);
     }
     void widget_main_ready(const std::shared_ptr<NativeWidget>& run, const QPointer<QQuickItem>& target) {
         const auto* entry=widget_parameter_entry(run);
@@ -4194,7 +4260,7 @@ struct AssistantViewModel::State {
         AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
         auto current=[this,run,target]{return target && widget_entry_current(run,nullptr) && target==widget_background_named(run,"background.estimate");};
         request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
-        request.completed=[this,run](bool delivered,const QString& message,ControlCause cause){if(!widget_owned(run))return;control_failure(run,delivered?ControlCause::None:cause);if(!delivered){widget_refuse(run,message);return;}if(!native_estimate_target_current(run->call)){widget_refuse(run,QObject::tr("The originally requested Estimate experiment is no longer selected"));return;}native_apply_estimate();};
+        request.completed=[this,run](bool delivered,const QString& message,ControlCause cause){if(!widget_owned(run))return;control_failure(run,delivered?ControlCause::None:cause);if(!delivered){widget_refuse(run,message);return;}if(!widget_page_selected(run) || !native_estimate_target_current(run->call)){widget_refuse(run,QObject::tr("The originally requested Estimate experiment or workflow page is no longer current"));return;}native_apply_estimate();};
         control_start(run->call,ControlField::Background,std::move(request));
     }
     void widget_click_main(const std::shared_ptr<NativeWidget>& run) {
@@ -4277,7 +4343,7 @@ struct AssistantViewModel::State {
                 run->project->currentExperiment()->experiment()==run->background_experiment;
         };
         auto captured_prepareCommit=[this,run] {
-            if(!widget_entry_current(run,nullptr) || !run->project->currentExperiment() || run->project->currentExperiment()->experiment()!=run->background_experiment)return false;
+            if(!widget_entry_current(run,nullptr) || !widget_page_selected(run) || !run->project->currentExperiment() || run->project->currentExperiment()->experiment()!=run->background_experiment)return false;
             const auto count=run->background_experiment->background.size();
             run->background_input=run->project->prepareWidgetBackgroundNames(*run->background_experiment);
             if(!widget_entry_current(run,nullptr))return false;
@@ -5201,8 +5267,12 @@ struct AssistantViewModel::State {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
         if(run->tool=="run_fit"){widget_reach_parameter(run);return;}
-        const QPointer<QQuickItem> target(widget_named(run->tab));
+        const QPointer<QQuickItem> target(widget_workflow_tab(run->tab));
         if (!target) { control_failure(run,ControlCause::WorkflowPage); widget_refuse(run, QObject::tr("The actual workflow tab is unavailable")); return; }
+        auto refuse=[this,run](const QString& message,ControlCause cause=ControlCause::WorkflowPage){if(widget_owned(run)){control_failure(run,cause);widget_refuse(run,message);}};
+        if(widget_wait_workflow_page(run,target,[this,run,entry,target]{return target && widget_entry_current(run,entry) && widget_workflow_tab(run->tab)==target;},
+            [this,run,refuse]{try{widget_click_tab(run);}catch(...){refuse(widget_outcome_error);}},refuse))return;
+        if (target->property("checked").toBool() && !widget_page_selected(run)) {refuse(QObject::tr("The original checked workflow tab does not own the current page"));return;}
         if (target->property("checked").toBool()) { if (run->tool == "add_relations" || run->tool == "edit_relation") widget_relation_extra(run); else widget_click_main(run); return; }
         AssistantWidgetInput::Request request;
         request.kind = AssistantWidgetInput::Kind::Navigate; request.target = target;
@@ -5217,7 +5287,7 @@ struct AssistantViewModel::State {
                     if (!widget_entry_owned(run, entry)) return;
                     try {
                         if (!widget_entry_current(run, entry)) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
-                        if (!target || widget_named(run->tab) != target || !target->property("checked").toBool()) {
+                        if (!target || widget_workflow_tab(run->tab) != target || !widget_page_selected(run)) {
                             control_failure(run,ControlCause::WorkflowPage); widget_refuse(run, QObject::tr("The genuine workflow click did not select the expected page; no parameter input was sent")); return;
                         }
                         if (run->tool == "add_relations" || run->tool == "edit_relation") widget_relation_extra(run); else widget_click_main(run);
@@ -8222,6 +8292,7 @@ struct AssistantViewModel::State {
     }
     bool structure_control_current(const std::shared_ptr<NativeCreateWidget>& run,QQuickItem* target) const {
         if(!run->receiver || run->receiver->state_.get()!=this || !target || !create_widget_current(run))return false;
+        if(run->visible_delivery && !widget_workflow_page_current(widget_workflow_tab("appBar.tab."+run->page),run->project))return false;
         if(selection_action(run))return selection_row_current(run,target);
         if(run->individual_tool=="edit_experiment") {
             if(run->project->currentExperiment()!=run->operation_view)return false;
@@ -8776,6 +8847,7 @@ struct AssistantViewModel::State {
         const auto entries = native_records.size();
         const auto child = native_widget && native_widget->create_parent.lock()==run ? native_widget : std::shared_ptr<NativeWidget>{};
         QObject::disconnect(run->calculation_wait); run->calculation_wait = {};
+        widget_end_page_wait(run);
         if (run->ordinary) try {
             if (native_widget && native_widget->create_parent.lock() == run) create_widget_take_child(run, native_widget);
             create_widget_capture_step(run);
@@ -8940,7 +9012,8 @@ struct AssistantViewModel::State {
             const auto receiver=run->receiver;
             if(!receiver || receiver->state_.get()!=this || !load)return false;
             const bool original=create_widget_current(run);
-            if(!receiver || receiver->state_.get()!=this || !original || !load || load->objectName()!=target_name)return false;
+            if(!receiver || receiver->state_.get()!=this || !original || !load || load->objectName()!=target_name ||
+                !widget_workflow_page_current(widget_workflow_tab("appBar.tab."+run->page),run->project))return false;
             if(!measured)return true;
             if(!row || !targetExperiment || !row->isAncestorOf(load))return false;
             const auto member=row->property("experiment").value<QObject*>();
@@ -9068,7 +9141,9 @@ struct AssistantViewModel::State {
         if(run->origin_unavailable || (run->file_input && run->file_input->source_changed && !run->file_input->outcome.applied)) {
             result["action_error"]="input_unavailable";result["action_field"]="file_id";
         }
-        if(!run->individual_tool.isEmpty())return individual_progress(run,complete);
+        if(!run->individual_tool.isEmpty()) {
+            auto individual=individual_progress(run,complete);if(!complete)individual["message"]=bounded_error(message);return individual;
+        }
         return result;
     }
     void create_widget_retain(const std::shared_ptr<NativeCreateWidget>& run) {
@@ -9237,6 +9312,8 @@ struct AssistantViewModel::State {
     bool create_widget_prepare_control(const std::shared_ptr<NativeCreateWidget>& run,
         const NativeCreateWidget::Input& step, const QPointer<QQuickItem>& target) {
         if (!create_widget_current(run) || !target) return false;
+        if(run->visible_delivery && !step.target.startsWith("appBar.tab.") && !run->page.isEmpty() &&
+            !widget_workflow_page_current(widget_workflow_tab("appBar.tab."+run->page),run->project))return false;
         if (!run->individual_tool.isEmpty()) {
             if(!individual_member_current(run))return false;
             if(step.target.startsWith("structures.row.") && target->property("structure").value<QObject*>()!=run->structure_view)return false;
@@ -9315,6 +9392,11 @@ struct AssistantViewModel::State {
             return;
         }
         const auto step = run->inputs.at(run->step);
+        if(!step.target.startsWith("appBar.tab.") && !run->page.isEmpty() &&
+            !widget_workflow_page_current(widget_workflow_tab("appBar.tab."+run->page),run->project)) {
+            control_failure(run,ControlCause::WorkflowPage);
+            create_widget_refuse(run,QObject::tr("The original workflow page is not current; no control input was sent"));return;
+        }
         if(step.structure_action && *step.structure_action!=ProjectEditor::CreationAction::Kind::StructureAppend &&
             *step.structure_action!=ProjectEditor::CreationAction::Kind::AtomAppend && setup_structure_matches(run,step)) {create_widget_advance(run);return;}
         if (step.target.startsWith("$value.") || step.target.startsWith("$background.") || step.target=="$background_names") { create_widget_child(run, step); return; }
@@ -9352,6 +9434,15 @@ struct AssistantViewModel::State {
                 step.target=="sideBar.tab.basic"?ControlCause::MainSidebar:step.target=="sideBar.tab.extras"?ControlCause::ExtraSidebar:ControlCause::Unavailable;
             control_failure(run,cause);
             throw std::runtime_error("The original human control is unavailable");
+        }
+        if(step.target.startsWith("appBar.tab.")) {
+            const auto step_index=run->step;
+            auto refuse=[this,run](const QString& message,ControlCause cause=ControlCause::WorkflowPage){if(create_widget_owned(run)){control_failure(run,cause);create_widget_refuse(run,message);}};
+            if(widget_wait_workflow_page(run,target,[this,run,target,step_index,step]{return target && run->step==step_index && create_widget_current(run) && create_widget_named(run,step.target)==target;},
+                [this,run,refuse]{try{create_widget_next(run);}catch(...){refuse(widget_outcome_error);}},refuse))return;
+            if(target->property("checked").toBool() && !widget_workflow_page_current(target,run->project)) {
+                refuse(QObject::tr("The original checked workflow tab does not own the current page"));return;
+            }
         }
         if ((step.target.startsWith("appBar.tab.") || step.target == "sideBar.tab.basic" || step.target == "sideBar.tab.extras") && target->property("checked").toBool()) { create_widget_advance(run); return; }
         if (!run->individual_tool.isEmpty() && step.target.startsWith("experimentType.")) {
@@ -9462,7 +9553,8 @@ struct AssistantViewModel::State {
                 branch="control.delivery";
                 if (!delivered || !target) { if(delivered)control_failure(run,ControlCause::Commit); create_widget_refuse(run, message.isEmpty() ? widget_outcome_error : message, false, "control-delivery", int(delivered), int(bool(target))); return; }
                 branch="control.tab";
-                if ((step.target.startsWith("appBar.tab.") || step.target == "sideBar.tab.basic" || step.target == "sideBar.tab.extras") && !target->property("checked").toBool()) {
+                if ((step.target.startsWith("appBar.tab.") && !widget_workflow_page_current(target,run->project)) ||
+                    ((step.target == "sideBar.tab.basic" || step.target == "sideBar.tab.extras") && !target->property("checked").toBool())) {
                     const auto cause=step.target.startsWith("appBar.tab.")?ControlCause::WorkflowPage:step.target=="sideBar.tab.basic"?ControlCause::MainSidebar:ControlCause::ExtraSidebar;
                     control_failure(run,cause);throw std::runtime_error("The original tab was not selected");
                 }
@@ -11572,6 +11664,7 @@ struct AssistantViewModel::State {
                         const auto message=object(refusal.value).value("message").toString();
                         outcome["code"]=core_refusal->code=="invalid_argument"?"invalid_arguments":
                             core_refusal->code=="unsupported_model"?"unavailable":core_refusal->code=="resource_exhausted"?"resource_exhausted":"refused";
+                        if(core_refusal->code=="unsupported_model")outcome["status"]="unavailable";
                         outcome["message"]=message;outcome["target"]=parameter_preparation?"parameter":"relation";
                         outcome["diagnostics"]=QJsonArray{Object{{"code",QString::fromStdString(core_refusal->code)},
                             {"message",message},{"severity","error"},{"actionable",true}}};
