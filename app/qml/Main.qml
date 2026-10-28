@@ -670,7 +670,10 @@ EaComponents.ApplicationWindow {
     }
     Connections {
         target: AppState
-        function onChangesQuestion(action) {
+        function onChangesQuestion(action, abandoned) {
+            const previous=unsavedChanges.abandoned;unsavedChanges.abandoned=null;
+            if(previous)previous();
+            unsavedChanges.abandoned=abandoned;
             unsavedChanges.action = action;
             unsavedChanges.open();
         }
@@ -679,6 +682,9 @@ EaComponents.ApplicationWindow {
         id: unsavedChanges
         objectName: "unsavedChanges"
         property var action: null
+        property var abandoned: null
+        function abandonAction() {const callback=abandoned;abandoned=null;action=null;if(callback)callback();}
+        onRejected: abandonAction()
         title: qsTr("Save the changes?")
         standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
         // As wide as its line (owner, 2026-10-25).
@@ -688,32 +694,32 @@ EaComponents.ApplicationWindow {
         // ask again. In the web app the place is written after Save returns: the action waits until it is, and is
         // dropped if it is not (the window says why).
         property var afterSave: null
+        property var afterSaveAbandoned: null
         onAccepted: {
             if (Session.needsSaveAs) {
-                window.saveProjectAs();
+                abandonAction();window.saveProjectAs();
             } else if (Session.save()) {
-                if (WebFiles.available)
-                    afterSave = action;
-                else
-                    Qt.callLater(action);
-            } else if (Session.lastError !== "") {
-                saveError.open();
-            }
+                if (WebFiles.available) {afterSave=action;afterSaveAbandoned=abandoned;abandoned=null;}
+                else {const waiting=action;abandoned=null;action=null;Qt.callLater(waiting);}
+            } else {abandonAction();if(Session.lastError!=="")saveError.open();}
         }
         Connections {
             target: Session
             function onWebSaveFinished(saved) {
                 const waiting = unsavedChanges.afterSave;
-                unsavedChanges.afterSave = null;
+                const abandoned=unsavedChanges.afterSaveAbandoned;
+                unsavedChanges.afterSave=null;unsavedChanges.afterSaveAbandoned=null;
                 // An edit made while the place was written is asked about again.
                 if (saved && waiting !== null)
-                    AppState.afterChanges(waiting);
+                    AppState.afterChanges(waiting,abandoned);
+                else if(abandoned)abandoned();
             }
         }
         onDiscarded: {
+            const waiting=action;action=null;abandoned=null;
             close();
             Session.discardKeptChanges();
-            Qt.callLater(action);
+            Qt.callLater(waiting);
         }
 
         // The app's warning icon, then the project's name in bold (owner, 2026-10-25).
