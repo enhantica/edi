@@ -1093,6 +1093,14 @@ Popup {
                         required property string name
                         required property string modified
                         required property bool canArchive
+                        MouseArea {
+                            parent: sessionRow
+                            height: sessionRow.height
+                            width: Math.max(0,sessionRow.width-AppSizes.iconColumnWidth-sessionsTable.rowPadding-EaStyle.Sizes.tableColumnSpacing)
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
+                            onClicked: {sessionRow.activated();panel.assistant.selectSession(sessionRow.threadId);}
+                        }
                         EaComponents.ListViewLabel { text: sessionRow.index+1; horizontalAlignment: Text.AlignHCenter }
                         EaComponents.ListViewLabel {
                             text: sessionRow.name
@@ -1127,6 +1135,7 @@ Popup {
                     color: EaStyle.Colors.red
                 }
             }
+            Connections {target: panel.assistant;function onSessionSelected(threadId) {sessionsDialog.accept();}}
             footer: EaElements.DialogButtonBox {
                 id: sessionButtons
                 EaElements.Button {
