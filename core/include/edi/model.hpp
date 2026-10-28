@@ -5128,6 +5128,9 @@ class Project : public detail::ProjectAnchor {
     void adopt_experiments() noexcept { link_rows(); }
 
    private:
+    // The original editor door records its exact before/after identity in its
+    // owner-local applied receipt before observable publication.
+    friend class LivePreview;
     // ADR-0020 §1: the transaction reads and compares the editor record.
     friend WorkStamps work_stamps(const Project& live);
     friend WorkStamps work_stamps(const Project& live, std::size_t construction_bytes);

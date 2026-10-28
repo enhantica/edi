@@ -166,6 +166,8 @@ void LivePreview::apply(const Edit& edit, bool* applied, Edit::AppliedResult* re
     if (!s.open) return;
     s.trace(work::EventKind::Input, s.newest + 1);
     if (!s.open) return;
+    const auto editor_before=s.live.edits_.record();
+    const auto editor_before_epoch=editor_before->epoch.value();
     // An Edit refuses before it writes (edi/edit.hpp), so a refusal leaves nothing to undo: the model,
     // its publication and a calculation in flight are untouched because nothing touched them (I10).
     try {
@@ -177,6 +179,10 @@ void LivePreview::apply(const Edit& edit, bool* applied, Edit::AppliedResult* re
     }
     if (applied != nullptr) *applied = true;
     s.live.note_edit();
+    if(result) {
+        result->editor_before=editor_before;result->editor_before_epoch=editor_before_epoch;
+        result->editor_after=s.live.edits_.record();result->editor_after_epoch=result->editor_after->epoch.value();
+    }
     ++s.newest;
     s.trace(work::EventKind::Applied, s.newest);
     if (!s.open) return;

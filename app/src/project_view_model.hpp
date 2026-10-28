@@ -608,7 +608,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         edi::WorkStamps before;
         std::optional<edi::WorkStamps> after;
     };
-    void captureWidgetEditProof(WidgetEditProof&) noexcept;
+    void captureWidgetEditProof(WidgetEditProof&,const edi::Edit::AppliedResult&) noexcept;
     struct WidgetRelationInput {
         WidgetEditProof proof;
         edi::Edit::AppliedResult applied_result;
