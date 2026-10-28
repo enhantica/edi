@@ -153,3 +153,18 @@ Recovery marks only its actual successfully adopted current target unsaved. Shar
 checks receiver/project/request again after setLastError notifications, and a stale/duplicate
 answer never removes an accepted or successor's staging root. Only a still-current failed parse
 with genuinely unadopted local staging may clean it up; no false publication result is rollback.
+
+Replacement cleanup proves filesystem independence as well as currentness. The existing archive
+owner exposes, read-only, the exact recorded ancestor its remover would delete; Session retains
+that ownership while any current project/file/scan/data/retained-result closure still uses it.
+Canonical ancestors and filesystem equivalence cover same roots, descendants and alias spellings.
+An unresolved closure keeps ownership safely; it never causes deletion or a scientific veto.
+Actual pending Open source is part of that proof before outer archive/web origin bookkeeping,
+including an archive inside an older root whose unpacked work folder is elsewhere. Retention is
+cleanup authority only and does not give a successor another project's displayed origin or Save
+location. Later independent replacement/closure reclaims genuinely unused registered roots.
+Active retired publication stacks keep their reads until deferred destruction; cleanup retries
+through the existing QObject lifetime. Session stops/deletes its owned model workers before
+archive cleanup or QTemporaryDir member destruction, so automatic temporary ownership cannot
+remove their backing files first. No directory relocation, new registry or whole-loader change
+is introduced.

@@ -419,6 +419,13 @@ struct Made {
     }
 };
 
+auto recorded_root(std::vector<fs::path>& paths,const fs::path& given) {
+    return std::find_if(paths.begin(),paths.end(),[&](const auto& root) {
+        const auto [inner,outer]=std::mismatch(root.begin(),root.end(),given.begin(),given.end());
+        return inner==root.end();
+    });
+}
+
 Made& made() {
     static Made directories;
     return directories;
@@ -445,19 +452,23 @@ std::string fresh_archive_directory(const std::string& kind) {
     throw IoError("cannot create a temporary directory for an archive");
 }
 
-void remove_archive_directory(const std::string& path) {
-    const fs::path given = fs::path(path).lexically_normal();
+namespace detail {
+std::string archive_directory_root(const std::string& path) {
+    const fs::path given=fs::path(path).lexically_normal();
     const std::lock_guard lock(made().mutex);
-    auto& paths = made().paths;
-    for (auto it = paths.begin(); it != paths.end(); ++it) {
-        const auto [inner, outer] =
-            std::mismatch(it->begin(), it->end(), given.begin(), given.end());
-        if (inner == it->end()) {
-            std::error_code ignored;
-            fs::remove_all(*it, ignored);
-            paths.erase(it);
-            return;
-        }
+    auto& paths=made().paths;
+    const auto found=recorded_root(paths,given);
+    return found==paths.end()?std::string{}:found->string();
+}
+} // namespace detail
+
+void remove_archive_directory(const std::string& path) {
+    const fs::path given=fs::path(path).lexically_normal();
+    const std::lock_guard lock(made().mutex);
+    auto& paths=made().paths;
+    const auto found=recorded_root(paths,given);
+    if(found!=paths.end()) {
+        std::error_code ignored;fs::remove_all(*found,ignored);paths.erase(found);
     }
 }
 
