@@ -478,7 +478,7 @@ AppDialog {
                         }
                         EaComponents.TableViewLabel {
                             objectName: "preferences.ai.source.label."+sourceRow.sourceId
-                            text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.path
+                            text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.label.startsWith("https://github.com/") ? sourceRow.label : sourceRow.path
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideMiddle
                             ToolTip.text: text+(sourceRow.status.length ? "\n"+sourceRow.status : "")
@@ -527,12 +527,15 @@ AppDialog {
                         }
                     }
                 }
-                EaElements.SideBarButton {
-                    objectName: "preferences.ai.sources.add"
+                Row {
                     width: parent.width
+                    spacing: AppSizes.unit
+                    EaElements.SideBarButton {
+                    objectName: "preferences.ai.sources.add"
+                    width: (parent.width-parent.spacing)/2
                     text: qsTr("Add skill source")
                     fontIcon: "plus-circle"
-                    enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
+                    enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel && !Session.assistant.skillSourceImporting
                     onClicked: {
                         const original=Session.assistant;
                         const token=original.beginSkillSourceSelection();
@@ -546,28 +549,28 @@ AppDialog {
                         else if (Qt.isQtObject(original)) original.cancelSkillSourceSelection(token);
                     }
                 }
+                    EaElements.SideBarButton {
+                        objectName: "preferences.ai.sources.web"
+                        width: (parent.width-parent.spacing)/2
+                        text: Session.assistant.skillSourceImporting ? qsTr("Cancel web import") : qsTr("Add skills from web")
+                        fontIcon: Session.assistant.skillSourceImporting ? "times-circle" : "globe"
+                        enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
+                        onClicked: {
+                            const original=Session.assistant;
+                            if(original.skillSourceImporting){original.cancelWebSkillSourceImport();return;}
+                            const token=original.beginSkillSourceSelection();
+                            if(!Qt.isQtObject(original) || Session.assistant!==original || !token.length || webSource.selection!==null) {
+                                if(Qt.isQtObject(original))original.cancelSkillSourceSelection(token);
+                                return;
+                            }
+                            webSource.selection={owner:original,id:token};webSource.open();
+                        }
+                    }
+                }
                 EaElements.Label {
                     width: parent.width
                     text: Session.assistant.skillSourceError
                     visible: text.length>0
-                    textFormat: Text.PlainText
-                    wrapMode: Text.WrapAnywhere
-                    color: EaStyle.Colors.red
-                }
-                EaElements.Label { text: qsTr("History"); font.bold: true }
-                EaElements.SideBarButton {
-                    objectName: "preferences.ai.clearCachedHistory"
-                    width: parent.width
-                    text: Session.assistant.cachedHistoryClearing ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
-                    fontIcon: "eraser"
-                    enabled: !Session.assistant.canCancel && !Session.assistant.cachedHistoryClearing
-                    ToolTip.text: qsTr("Clear the app's saved chat display only. Projects, reports, runtime sessions and sign-in are kept.")
-                    onClicked: Session.assistant.clearCachedHistory()
-                }
-                EaElements.Label {
-                    width: parent.width
-                    text: Session.assistant.cachedHistoryError
-                    visible: text.length > 0
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
                     color: EaStyle.Colors.red
@@ -579,12 +582,15 @@ AppDialog {
                     checked: Preferences.assistantCopyTechnicalDetails
                     onToggled: Preferences.assistantCopyTechnicalDetails = checked
                 }
+                Row {
+                    width: parent.width
+                    spacing: AppSizes.unit
                 EaElements.SideBarButton {
                     id: copyWorkReport
                     objectName: "preferences.ai.workReport"
-                    width: parent.width
+                    width: (parent.width-parent.spacing)/2
                     property bool copied: false
-                    text: copied ? qsTr("Copied") : qsTr("Copy current or last work report")
+                    text: copied ? qsTr("Copied") : qsTr("Copy work report")
                     fontIcon: copied ? "check" : "copy"
                     contentItem: Item {
                         implicitWidth: copyWorkReportContent.implicitWidth
@@ -612,9 +618,9 @@ AppDialog {
                 EaElements.SideBarButton {
                     id: copyConnection
                     objectName: "preferences.ai.copyConnection"
-                    width: parent.width
+                    width: (parent.width-parent.spacing)/2
                     property bool copied: false
-                    text: copied ? qsTr("Copied") : qsTr("Copy connection and context details")
+                    text: copied ? qsTr("Copied") : qsTr("Copy connection details")
                     fontIcon: copied ? "check" : "copy"
                     contentItem: Item {
                         implicitWidth: copyConnectionContent.implicitWidth
@@ -639,12 +645,31 @@ AppDialog {
                     onClicked: aiPage.copyDiagnostics(copyConnection, false)
                     Timer { id: connectionCopyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: copyConnection.copied = false }
                 }
+                }
                 EaElements.Label {
                     width: parent.width
                     text: aiPage.copyError
                     visible: text.length > 0
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
+                    color: EaStyle.Colors.red
+                }
+                EaElements.Label { text: qsTr("History"); font.bold: true }
+                EaElements.SideBarButton {
+                    objectName: "preferences.ai.clearCachedHistory"
+                    width: parent.width
+                    text: Session.assistant.cachedHistoryClearing ? qsTr("Clearing cached chat history…") : qsTr("Clear cached chat history")
+                    fontIcon: "eraser"
+                    enabled: !Session.assistant.canCancel && !Session.assistant.cachedHistoryClearing
+                    ToolTip.text: qsTr("Clear the app's saved chat display only. Projects, reports, runtime sessions and sign-in are kept.")
+                    onClicked: Session.assistant.clearCachedHistory()
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: Session.assistant.cachedHistoryError
+                    visible: text.length > 0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.WrapAnywhere
                     color: EaStyle.Colors.red
                 }
             }
@@ -792,6 +817,49 @@ AppDialog {
                     text: qsTr("Reset to defaults")
                     onClicked: resetConfirm.open()
                 }
+            }
+        }
+    }
+
+    AppDialog {
+        id: webSource
+        objectName: "preferences.ai.sources.webDialog"
+        property var selection: null
+        readonly property string intent: selection ? selection.id : ""
+        readonly property var original: selection ? selection.owner : null
+        parent: Overlay.overlay
+        title: qsTr("Add skills from web")
+        standardButtons: Dialog.Ok | Dialog.Cancel
+        contentWidth: dialog.controlWidth
+        contentHeight: webContent.implicitHeight
+        Column {
+            id: webContent
+            width: parent.width
+            spacing: AppSizes.unit
+            EaElements.Label {
+                width: parent.width
+                text: qsTr("Public GitHub repository or skill folder URL. Companion files are captured; repository code is never run.")
+                wrapMode: Text.Wrap
+            }
+            EaElements.TextField {
+                id: sourceUrl
+                objectName: "preferences.ai.sources.webUrl"
+                width: parent.width
+                placeholderText: "https://github.com/owner/repo/tree/main/skills"
+                selectByMouse: true
+            }
+        }
+        onAccepted: {
+            const target=original, token=intent, url=sourceUrl.text;selection=null;
+            if(Qt.isQtObject(target))target.addWebSkillSource(token,url);
+        }
+        onRejected: {const target=original,token=intent;selection=null;if(Qt.isQtObject(target))target.cancelSkillSourceSelection(token);}
+        Component.onDestruction: {const target=original,token=intent;selection=null;if(Qt.isQtObject(target))target.cancelSkillSourceSelection(token);}
+        Connections {
+            target: webSource.original
+            function onSkillSourceSelectionRetired(token) {
+                if(webSource.intent!==token)return;
+                webSource.selection=null;webSource.reject();
             }
         }
     }
