@@ -2656,8 +2656,16 @@ struct AssistantViewModel::State {
         }
         return found;
     }
-    static QString widget_parameter_tab(const ParameterItem& parameter, const QString& tool) {
+    QString widget_parameter_tab(const ParameterItem& parameter, const QString& tool) const {
         if(tool=="set_free")return QStringLiteral("appBar.tab.analysis");
+        if(tool=="set_parameters" && parameter.isRefinable() && project &&
+            widget_workflow_page_current(widget_workflow_tab(QStringLiteral("appBar.tab.analysis")),project)) {
+            for(auto* cell:widget_items())
+                if(cell->objectName().startsWith("parameters.value.") && cell->window()==action_window && cell->isEnabled() &&
+                    !cell->property("locked").toBool() && cell->property("item").value<QObject*>()==&parameter &&
+                    cell->property("editOwner").value<QObject*>()==project)
+                    return QStringLiteral("appBar.tab.analysis");
+        }
         const auto category=parameter.category();
         if(category=="cell" || category=="atom_site" || category=="atom_site_aniso")return QStringLiteral("appBar.tab.structure");
         if(category=="instrument" || category=="peak" || category=="background" || category=="linked_structure" || category=="extinction")return QStringLiteral("appBar.tab.experiment");

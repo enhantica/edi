@@ -374,3 +374,23 @@ independent numeric setup value, that applied user inputs require actual native
 readback, and that asymmetric site-row counts alone do not establish a formula.
 The supplied/native scientific model remains authoritative; no chemistry engine,
 new default, reference value or fitting constraint is added.
+
+
+## 2026-10-28: retain the current Analysis value editor
+
+The first Analysis numeric owner is ParametersGroup's ordinary ParameterCell,
+bound to the same current ParameterItem and project as its value setter. Numeric
+set_parameters admission prefers that existing unlocked, enabled original cell
+when Analysis is already the current project workflow. The selected route remains
+pinned in the admitted entry; absent cells, descriptors and setup-only controls
+retain the original Structure/Experiment mapping. There is no fallback after an
+uncertain write, new editor, styling change or scientific mutation path. Both
+ordinary page following and Show actions use the same route selector.
+
+Refinement-strategy1.4.3 replaces its existing evidence/stopping guidance: establish
+measured/calculated alignment and shape before intensity/ADP attribution unless
+already established, use whole eligible groups, and reassess temporary freezes
+after rejected trials. Coordinate/displacement isolation and joint refinement are
+evidence-dependent choices; signed coefficients alone do not prove an unphysical
+profile. No specimen values, fixed stage order, fit target or new solver policy
+is introduced.
