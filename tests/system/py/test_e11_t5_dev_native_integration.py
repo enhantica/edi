@@ -8672,9 +8672,9 @@ def test_actual_main_engine_load_emits_owned_first_reply_without_component_error
     assert not first['ui']['project'], 'The startup component check observes the genuine empty Main before any project or provider request'
     stderr = (actor.folder / 'host.stderr').read_text(errors='replace')
     bad = [line for line in stderr.splitlines() if re.search(
-        r'QQmlApplicationEngine failed to load component|Type [^\n]+ unavailable|Invalid property assignment[^\n]*(?:read.only|read only)', line)]
+        r'QQmlApplicationEngine failed to load component|Type [^\n]+ unavailable|Invalid property assignment[^\n]*(?:read.only|read only)|(?:AppPreferencesDialog|AppDialog)[^\n]*Binding loop detected for property', line)]
     assert not bad, (
-        'Real Main startup must reject unavailable components/read-only QML assignments; qmlcache compile success alone is not component-load evidence')
+        'Real Main startup must reject unavailable components/read-only QML assignments and original Preferences/dialog binding loops; qmlcache compile success alone is not component-load evidence')
     (actor.folder / 'actual-main-component-load.json').write_text(json.dumps({
         'host_pid': actor.process.pid, 'first_owned_reply': True,
         'owner_checks': {key: first['ui'][key] for key in ('singleton_identity', 'engine_parent', 'cpp_ownership')},
