@@ -2,6 +2,10 @@
 #include "assistant_markdown.hpp"
 
 #include <QImage>
+#include <QGuiApplication>
+#include <QClipboard>
+#include <QMimeData>
+#include <QTextDocumentFragment>
 #include <QPainter>
 #include <QQuickWindow>
 #include <QTextImageFormat>
@@ -9,6 +13,7 @@
 #include <QEvent>
 #include <QHash>
 #include <limits>
+#include <memory>
 #ifdef EDI_HAS_NATIVE_MATH
 #include <jkqtmathtext/jkqtmathtext.h>
 #endif
@@ -39,7 +44,7 @@ bool escapedAt(QStringView text,qsizetype at) {
 }
 MathSource captureMath(QStringView source) {
     MathSource result;const auto nonce=QUuid::createUuid().toString(QUuid::Id128);
-    QChar fence;qsizetype fenceLength=0,inlineTicks=0;
+    QChar fence;qsizetype fenceLength=0;
     for(qsizetype i=0;i<source.size();) {
         const bool lineStart=i==0 || source[i-1]==u'\n';
         if(lineStart) {
@@ -47,21 +52,51 @@ MathSource captureMath(QStringView source) {
             const auto end=source.indexOf(u'\n',i);const auto lineEnd=end<0?source.size():end+1;
             const auto marker=first<source.size()?source[first]:QChar{};
             qsizetype count=0;while(first+count<source.size() && source[first+count]==marker)++count;
-            if(!inlineTicks && first-i<=3 && (marker==u'`' || marker==u'~') && count>=3) {
+            if(first-i<=3 && (marker==u'`' || marker==u'~') && count>=3) {
                 if(fence.isNull()){fence=marker;fenceLength=count;}
                 else if(fence==marker && count>=fenceLength && source.mid(first+count,lineEnd-first-count).trimmed().isEmpty()){fence=QChar{};fenceLength=0;}
                 result.markdown+=source.mid(i,lineEnd-i);i=lineEnd;continue;
             }
-            if(!fence.isNull() || (!inlineTicks && (first-i>=4 || marker==u'\t'))) {
+            if(!fence.isNull() || (first-i>=4 || marker==u'\t')) {
                 result.markdown+=source.mid(i,lineEnd-i);i=lineEnd;continue;
             }
         }
+        // Keep actual inline link/image destinations untouched. Qt still parses
+        // their escapes, nesting and optional titles from the original bytes.
+        if(source[i]==u']' && !escapedAt(source,i) && i+1<source.size() && source[i+1]==u'(') {
+            qsizetype end=i+2;int depth=1;QChar quote;
+            for(;end<source.size();++end) {
+                if(escapedAt(source,end))continue;
+                if(!quote.isNull()){if(source[end]==quote)quote=QChar{};continue;}
+                if(end==i+2 && source[end]==u'<'){quote=u'>';continue;}
+                if((source[end]==u'"' || source[end]==u'\'') && end>i+2 && source[end-1].isSpace()){quote=source[end];continue;}
+                if(source[end]==u'(')++depth;
+                if(source[end]==u')'){if(--depth==0){++end;break;}}
+            }
+            result.markdown+=source.mid(i,end-i);i=end;continue;
+        }
+        if(source[i]==u']' && !escapedAt(source,i) && i+1<source.size() && source[i+1]==u':') {
+            const auto end=source.indexOf(u'\n',i);const auto lineEnd=end<0?source.size():end+1;
+            result.markdown+=source.mid(i,lineEnd-i);i=lineEnd;continue;
+        }
         if(source[i]==u'`' && !escapedAt(source,i)) {
             qsizetype count=1;while(i+count<source.size() && source[i+count]==u'`')++count;
-            if(!inlineTicks)inlineTicks=count;else if(inlineTicks==count)inlineTicks=0;
+            // An unmatched opener is literal, not ownership of every later paragraph.
+            qsizetype close=i+count;
+            for(;close<source.size();) {
+                if(source[close]==u'\n') {auto next=close+1;while(next<source.size() && (source[next]==u' ' || source[next]==u'\t'))++next;
+                    if(next==source.size() || source[next]==u'\n')break;
+                }
+                if(source[close]!=u'`'){++close;continue;}
+                qsizetype run=1;while(close+run<source.size() && source[close+run]==u'`')++run;
+                if(run==count)break;close+=run;
+            }
+            if(close<source.size() && source[close]==u'`') {
+                result.markdown+=source.mid(i,close+count-i);i=close+count;continue;
+            }
             result.markdown+=source.mid(i,count);i+=count;continue;
         }
-        if(inlineTicks || escapedAt(source,i)){result.markdown+=source[i++];continue;}
+        if(escapedAt(source,i)){result.markdown+=source[i++];continue;}
         qsizetype opening=0;QString closing;bool display=false;
         if(source[i]==u'\\' && i+1<source.size() && (source[i+1]==u'(' || source[i+1]==u'[')) {
             opening=2;display=source[i+1]==u'[';closing=display?QStringLiteral("\\]"):QStringLiteral("\\)");
@@ -73,16 +108,31 @@ MathSource captureMath(QStringView source) {
         qsizetype end=source.indexOf(closing,i+opening);
         while(end>=0 && (escapedAt(source,end) || (opening==1 && (source[end-1].isSpace() || (end+1<source.size() && source[end+1].isDigit())))))end=source.indexOf(closing,end+closing.size());
         if(end<0 && opening==1){result.markdown+=source[i++];continue;}
-        const auto consumed=end<0?source.size()-i:end+closing.size()-i;
+        const auto consumed=end<0?opening:end+closing.size()-i;
         const auto formula=end<0?QString():source.mid(i+opening,end-i-opening).toString();
         const auto token=QStringLiteral("EdiMath")+nonce+QString::number(result.spans.size());
         result.spans.push_back({token,source.mid(i,consumed).toString(),formula,display});
-        if(display && !result.markdown.endsWith(u'\n'))result.markdown+='\n';
         result.markdown+=token;
-        if(display)result.markdown+='\n';
         i+=consumed;
     }
     return result;
+}
+// This is a conservative parser-stack eligibility boundary, not a TeX parser
+// or a limit on messages/work. Each recursive grammar entrance consumes a brace,
+// instruction, script marker, bracket or math delimiter in the pinned parser.
+// Count all such tokens (even escaped ones) before native parse/tree/layout.
+// Large or structurally costly expressions remain complete literal source.
+bool nativeMathEligible(QStringView formula) {
+    constexpr qsizetype maxPresentationUnits=4096, maxRecursiveSyntax=64;
+    if(formula.size()>maxPresentationUnits)return false;
+    qsizetype syntax=0;
+    for(const auto c:formula)if(c==u'\\' || c==u'{' || c==u'}' || c==u'[' || c==u']' || c==u'^' || c==u'_' || c==u'$')
+        if(++syntax>maxRecursiveSyntax)return false;
+    return true;
+}
+QString restoreMathTokens(QString value,const MathSource& captured) {
+    for(const auto& span:captured.spans)value.replace(span.token,span.literal);
+    return value;
 }
 class PassiveDocument final : public QTextDocument {
  public:
@@ -90,24 +140,31 @@ class PassiveDocument final : public QTextDocument {
     explicit PassiveDocument(QObject* parent) : QTextDocument(parent),nonce_(QUuid::createUuid().toString(QUuid::Id128)) {setUndoRedoEnabled(false);}
     void beginMath() {
         for(const auto& url:resources_)addResource(ImageResource,url,QVariant::fromValue(QImage{}));
-        resources_.clear();nextPictures_.clear();newBytes_=0;
+        resources_.clear();nextPictures_.clear();newBytes_=0;resourceBytes_=0;
     }
     void endMath(){pictures_.swap(nextPictures_);nextPictures_.clear();}
     QUrl install(const QImage& image) {
+        const auto bytes=static_cast<quint64>(image.sizeInBytes());
+        if(bytes>edi::assistant::Limits::ui_history_bytes-resourceBytes_)throw std::length_error("Formula image presentation is unavailable");
+        resourceBytes_+=bytes;
         const QUrl url("edi-generated-math:"+nonce_+"/"+QString::number(resources_.size()));
         addResource(ImageResource,url,image);resources_.append(url);return url;
     }
     Picture picture(const QString& formula,const QFont& font,const QColor& color,qreal dpr) {
 #ifdef EDI_HAS_NATIVE_MATH
+        if(!nativeMathEligible(formula))return {};
         const auto key=font.toString()+QChar(0)+QString::number(color.rgba())+QChar(0)+QString::number(dpr,'g',16)+QChar(0)+formula;
         if(nextPictures_.contains(key))return nextPictures_.value(key);
         if(pictures_.contains(key)) {const auto result=pictures_.value(key);nextPictures_.insert(key,result);return result;}
         quint64 retained=newBytes_;for(auto it=pictures_.cbegin();it!=pictures_.cend();++it)retained+=static_cast<quint64>(it.value().image.sizeInBytes());
         constexpr auto capacity=edi::assistant::Limits::ui_history_bytes;
-        JKQTMathText math;math.useXITS();
+        JKQTMathText math;math.useXITS(); // Genuine mathematical-symbol fallback.
+        math.useAnyUnicode(font.family(),font.family());
+        math.setFontOption(JKQTMathText::BaseFontBold,font.bold());
+        math.setFontOption(JKQTMathText::BaseFontItalic,font.italic());
         // A pixel-sized body font is the original editor's source of scale.
         math.setFontSizePixels(font.pixelSize()>0?font.pixelSize():QFontMetricsF(font).height());math.setFontColor(color);
-        if(!math.parse("$"+formula+"$"))return {};
+        if(!math.parse("$"+formula+"$") || math.hadErrors() || !math.getErrorList().isEmpty())return {};
         QImage probe(1,1,QImage::Format_ARGB32_Premultiplied);probe.setDevicePixelRatio(dpr);
         probe.setDotsPerMeterX(96*(10000/254));probe.setDotsPerMeterY(96*(10000/254));
         QPainter painter(&probe);double width=0,ascent=0,descent=0,strike=0;math.getSizeDetail(painter,width,ascent,descent,strike);painter.end();
@@ -115,8 +172,15 @@ class PassiveDocument final : public QTextDocument {
         if(!std::isfinite(pixelsWide) || !std::isfinite(pixelsHigh) || pixelsWide<=0 || pixelsHigh<=0 ||
             pixelsWide>std::numeric_limits<int>::max() || pixelsHigh>std::numeric_limits<int>::max() ||
             retained>capacity || pixelsWide*pixelsHigh*4>static_cast<double>(capacity-retained))return {};
-        Picture result{math.drawIntoImage(false,Qt::transparent,1,dpr),descent+1};
+        Picture result;
+        result.image=QImage(QSize(static_cast<int>(std::ceil(pixelsWide)),static_cast<int>(std::ceil(pixelsHigh))),QImage::Format_ARGB32_Premultiplied);
         if(result.image.isNull())return {};
+        result.image.setDevicePixelRatio(dpr);result.image.setDotsPerMeterX(probe.dotsPerMeterX());result.image.setDotsPerMeterY(probe.dotsPerMeterY());
+        result.image.fill(Qt::transparent);
+        QPainter output(&result.image);output.setRenderHints(QPainter::Antialiasing|QPainter::TextAntialiasing|QPainter::SmoothPixmapTransform);
+        math.draw(output,1,ascent+1,false);output.end(); // Actual measured native baseline, no centering roundoff.
+        if(math.hadErrors() || !math.getErrorList().isEmpty())return {};
+        result.descent=result.image.deviceIndependentSize().height()-(ascent+1);
         newBytes_+=static_cast<quint64>(result.image.sizeInBytes());nextPictures_.insert(key,result);return result;
 #else
         Q_UNUSED(formula);Q_UNUSED(font);Q_UNUSED(color);Q_UNUSED(dpr);return {};
@@ -131,13 +195,16 @@ class PassiveDocument final : public QTextDocument {
  private:
     QString nonce_;QList<QUrl> resources_;
     QHash<QString,Picture> pictures_,nextPictures_;
-    quint64 newBytes_=0;
+    quint64 newBytes_=0,resourceBytes_=0;
 };
 }
 AssistantMarkdown::AssistantMarkdown(QQuickItem* parent) : QQuickItem(parent) {
     setFlag(ItemHasContents, true);
     setAcceptedMouseButtons(Qt::NoButton);
     setZ(-1);
+#ifndef __EMSCRIPTEN__
+    if(auto* clipboard=QGuiApplication::clipboard())connect(clipboard,&QClipboard::changed,this,[this](QClipboard::Mode mode){restoreClipboardSource(static_cast<int>(mode));});
+#endif
     connect(this,&QQuickItem::windowChanged,this,[this](QQuickWindow* next) {
         if(observed_window_)observed_window_->removeEventFilter(this);
         observed_window_=next;if(next)next->installEventFilter(this);
@@ -290,6 +357,58 @@ QString AssistantMarkdown::selectedSource(int start,int end) const {
         else result+=cursor.selectedText().replace(QChar::ParagraphSeparator,u'\n');
     }
     return result;
+}
+QQuickItem* AssistantMarkdown::editor() const {return editor_;}
+void AssistantMarkdown::setEditor(QQuickItem* editor) {editor_=editor;}
+void AssistantMarkdown::restoreClipboardSource(int requestedMode) noexcept {
+#ifndef __EMSCRIPTEN__
+    if(copying_ || !editor_ || !document_)return;
+    const auto mode=static_cast<QClipboard::Mode>(requestedMode);
+    if(mode!=QClipboard::Clipboard && mode!=QClipboard::Selection)return;
+    const QPointer<AssistantMarkdown> receiver(this);const QPointer<QQuickItem> editor(editor_);const QPointer<QTextDocument> document(document_);
+    const auto revision=presentation_revision_;
+    try {
+        const int start=editor->property("selectionStart").toInt(),end=editor->property("selectionEnd").toInt();
+        if(start<0 || end<=start || end>=document->characterCount())return;
+        const auto current=[&]{return receiver && editor && document && receiver->editor_==editor && receiver->document_==document &&
+            receiver->presentation_revision_==revision && editor->property("selectionStart").toInt()==start && editor->property("selectionEnd").toInt()==end;};
+        auto* clipboard=QGuiApplication::clipboard();if(!clipboard)return;
+        if((mode==QClipboard::Clipboard && !clipboard->ownsClipboard()) || (mode==QClipboard::Selection && !clipboard->ownsSelection()))return;
+        const QPointer<const QMimeData> original(clipboard->mimeData(mode));if(!original || !original->hasText() || !original->hasHtml())return;
+        const auto plain=original->text();if(!current() || !original || clipboard->mimeData(mode)!=original)return;
+        const auto html=original->html();if(!current() || !original || clipboard->mimeData(mode)!=original)return;
+        QTextCursor selection(document);selection.setPosition(start);selection.setPosition(end,QTextCursor::KeepAnchor);
+        const QTextDocumentFragment fragment(selection);
+        if(plain!=fragment.toPlainText())return;
+        bool formula=false;
+        for(int i=start;i<end;++i) {QTextCursor cell(document);cell.setPosition(i);cell.setPosition(i+1,QTextCursor::KeepAnchor);const auto format=cell.charFormat();
+            if(!format.hasProperty(mathSourceProperty))continue;
+            if(!format.isImageFormat() || !html.contains(format.toImageFormat().name().toHtmlEscaped()))return;
+            formula=true;
+        }
+        if(!formula || !current())return;
+        // Preserve native selection HTML structure, replacing only our image
+        // objects with their original TeX. Other MIME formats/modes stay native.
+        QTextDocument copied;QTextCursor copiedCursor(&copied);copiedCursor.insertFragment(fragment);
+        for(;;) {auto image=copied.find(QString(QChar::ObjectReplacementCharacter));if(image.isNull())break;
+            const auto format=image.charFormat();if(!format.hasProperty(mathSourceProperty))break;
+            image.insertText(format.stringProperty(mathSourceProperty),QTextCharFormat{});
+        }
+        auto data=std::make_unique<QMimeData>();
+        const auto formats=original->formats();
+        for(const auto& format:formats)if(format!="text/plain" && format!="text/html" && format!="text/markdown") {
+            if(!current() || !original || clipboard->mimeData(mode)!=original)return;
+            const auto bytes=original->data(format);if(!current() || !original || clipboard->mimeData(mode)!=original)return;
+            data->setData(format,bytes);
+        }
+        data->setText(selectedSource(start,end));data->setHtml(copied.toHtml());
+        if(!current() || !original || clipboard->mimeData(mode)!=original)return;
+        copying_=true;clipboard->setMimeData(data.release(),mode);
+        if(receiver)receiver->copying_=false;
+    }catch(...) {if(receiver)receiver->copying_=false;}
+#else
+    Q_UNUSED(requestedMode);
+#endif
 }
 QColor AssistantMarkdown::accentColor() const { return accent_color_; }
 void AssistantMarkdown::setAccentColor(const QColor& color) {
@@ -513,6 +632,28 @@ void AssistantMarkdown::render() noexcept {
         const auto captured=captureMath(source_);
         document->setMarkdown(captured.markdown, QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub) | QTextDocument::MarkdownNoHTML);
         if (!current()) return;
+        // Qt owns Markdown semantics. Tokens in href/title/reference metadata
+        // are restored there, never installed as formulas or changed destinations.
+        struct Metadata {int position,length;QTextCharFormat format;};
+        std::vector<Metadata> metadata;
+        for(auto block=document->begin();block.isValid();block=block.next())for(auto it=block.begin();!it.atEnd();++it) {
+            const auto fragment=it.fragment();if(!fragment.isValid())continue;
+            auto format=fragment.charFormat();bool changed=false;
+            const auto properties=format.properties();
+            for(auto property=properties.cbegin();property!=properties.cend();++property) {
+                if(property.value().metaType().id()==QMetaType::QString) {
+                    const auto original=property.value().toString();const auto restored=restoreMathTokens(original,captured);
+                    if(original!=restored){format.setProperty(property.key(),restored);changed=true;}
+                } else if(property.value().metaType().id()==QMetaType::QStringList) {
+                    auto values=property.value().toStringList();const auto original=values;
+                    for(auto& value:values)value=restoreMathTokens(value,captured);
+                    if(values!=original){format.setProperty(property.key(),values);changed=true;}
+                }
+            }
+            if(changed)metadata.push_back({fragment.position(),fragment.length(),format});
+        }
+        for(const auto& value:metadata) {QTextCursor target(document);target.setPosition(value.position);target.setPosition(value.position+value.length,QTextCursor::KeepAnchor);
+            target.setCharFormat(value.format);if(!current())return;}
         // Qt owns Markdown parsing. Replace only its parsed image objects with
         // literal alternative text; no URI is fetched or second HTML parse made.
         QTextCursor cursor(document);
@@ -529,19 +670,50 @@ void AssistantMarkdown::render() noexcept {
         const auto dpr=window()?window()->effectiveDevicePixelRatio():qreal(1);
         for(const auto& span:captured.spans) {
             auto slot=document->find(span.token);if(slot.isNull())continue;
-            const auto picture=span.formula.isEmpty()?PassiveDocument::Picture{}:passive->picture(span.formula,document->defaultFont(),text_color_.isValid()?text_color_:QColor(Qt::black),dpr);
+            const auto originalFormat=slot.charFormat();const auto blockFormat=slot.blockFormat();
+            const bool code=originalFormat.fontFixedPitch() || blockFormat.hasProperty(QTextFormat::BlockCodeLanguage) || blockFormat.hasProperty(QTextFormat::BlockCodeFence);
+            const auto picture=span.formula.isEmpty() || code?PassiveDocument::Picture{}:passive->picture(span.formula,document->defaultFont(),text_color_.isValid()?text_color_:QColor(Qt::black),dpr);
             if(!current())return;
-            if(picture.image.isNull())slot.insertText(span.literal,QTextCharFormat{});
+            if(picture.image.isNull())slot.insertText(span.literal,originalFormat);
             else {
                 const auto logical=picture.image.deviceIndependentSize();const auto available=std::max(qreal(1),document->textWidth());
                 const auto scale=logical.width()>available?available/logical.width():qreal(1);
-                QTextImageFormat image;image.merge(slot.charFormat());image.setName(passive->install(picture.image).toString());
-                image.setWidth(logical.width()*scale);image.setHeight(logical.height()*scale);
+                const auto descent=picture.descent*scale;
+                auto placementFont=document->defaultFont();const auto base=QFontMetricsF(placementFont);
+                if(base.descent()<=0 || !std::isfinite(descent)){slot.insertText(span.literal,originalFormat);continue;}
+                if(base.descent()<descent) {
+                    const auto pixels=placementFont.pixelSize()>0?placementFont.pixelSize():base.height();
+                    placementFont.setPixelSize(static_cast<int>(std::ceil(pixels*descent/base.descent()))+1);
+                }
+                const auto fontDescent=QFontMetricsF(placementFont).descent();
+                if(fontDescent<descent){slot.insertText(span.literal,originalFormat);continue;}
+                // Qt Quick ImageObject uses imageHeight - FORMAT font descent.
+                // Pad/paint the image so that this supported baseline is the actual
+                // measured formula baseline, including width scaling and DPR rounding.
+                const auto width=std::ceil(logical.width()*scale*dpr),height=std::ceil((logical.height()*scale+fontDescent-descent)*dpr);
+                if(!std::isfinite(width) || !std::isfinite(height) || width<=0 || height<=0 ||
+                    width>std::numeric_limits<int>::max() || height>std::numeric_limits<int>::max() || width*height*4>edi::assistant::Limits::ui_history_bytes) {
+                    slot.insertText(span.literal,originalFormat);continue;
+                }
+                QImage aligned(QSize(static_cast<int>(width),static_cast<int>(height)),QImage::Format_ARGB32_Premultiplied);
+                if(aligned.isNull()){slot.insertText(span.literal,originalFormat);continue;}
+                aligned.setDevicePixelRatio(dpr);aligned.fill(Qt::transparent);
+                const auto size=aligned.deviceIndependentSize();const auto top=size.height()-fontDescent-(logical.height()-picture.descent)*scale;
+                QPainter painter(&aligned);painter.setRenderHint(QPainter::SmoothPixmapTransform);
+                painter.drawImage(QRectF(0,top,logical.width()*scale,logical.height()*scale),picture.image);painter.end();
+                QTextImageFormat image;image.merge(originalFormat);image.setFont(placementFont);image.setName(passive->install(aligned).toString());
+                image.setWidth(size.width());image.setHeight(size.height());
                 image.setProperty(mathSourceProperty,span.literal);image.setProperty(QTextFormat::ImageAltText,span.literal);
                 image.setVerticalAlignment(QTextCharFormat::AlignBaseline);
-                image.setBaselineOffset(-100*picture.descent*scale/std::max(qreal(1),QFontMetricsF(document->defaultFont()).height()));
-                slot.insertImage(image);
-                if(span.display){auto format=slot.blockFormat();format.setAlignment(Qt::AlignHCenter);slot.setBlockFormat(format);}
+                const auto imagePosition=slot.selectionStart();slot.insertImage(image);
+                if(!current())return;
+                if(span.display) {
+                    QTextCursor display(document);display.setPosition(imagePosition);
+                    if(display.position()>display.block().position()){display.insertBlock();if(!current())return;}
+                    const auto position=display.position();display.setPosition(position+1);
+                    if(display.position()<display.block().position()+display.block().length()-1){display.insertBlock();if(!current())return;}
+                    display.setPosition(position);auto format=display.blockFormat();format.setAlignment(Qt::AlignHCenter);display.setBlockFormat(format);
+                }
             }
             if(!current())return;
         }

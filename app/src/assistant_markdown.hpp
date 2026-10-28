@@ -18,6 +18,7 @@ class AssistantMarkdown : public QQuickItem {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QQuickTextDocument* document READ document WRITE setDocument)
+    Q_PROPERTY(QQuickItem* editor READ editor WRITE setEditor)
     Q_PROPERTY(QString source READ source WRITE setSource)
     Q_PROPERTY(bool markdown READ markdown WRITE setMarkdown)
     Q_PROPERTY(QColor textColor READ textColor WRITE setTextColor)
@@ -30,6 +31,8 @@ class AssistantMarkdown : public QQuickItem {
  public:
     explicit AssistantMarkdown(QQuickItem* parent = nullptr);
     QQuickTextDocument* document() const;
+    QQuickItem* editor() const;
+    void setEditor(QQuickItem* editor);
     QString source() const;
     bool markdown() const;
     QColor textColor() const;
@@ -62,6 +65,9 @@ class AssistantMarkdown : public QQuickItem {
     std::size_t decoration_high_water_ = 0;
     std::uint64_t presentation_revision_ = 0;
     void render() noexcept;
+    void restoreClipboardSource(int mode) noexcept;
+    QPointer<QQuickItem> editor_;
+    bool copying_=false;
     void formatPresentation();
     QPointer<QQuickTextDocument> target_;
     QPointer<QTextDocument> document_;
