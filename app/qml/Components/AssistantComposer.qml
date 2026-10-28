@@ -646,16 +646,16 @@ Rectangle {
                 topPadding: AppSizes.unit * 0.5
             Repeater {
                 model: composer.assistant.selectedFiles
-                delegate: RowLayout {
+                delegate: Row {
                     required property var model
                     objectName: "assistant.file." + model.id
                     width: selectedChips.width
                     visible: model.pending !== false
-                    spacing: AppSizes.unit * 0.125
+                    spacing: attachmentMetrics.advanceWidth("  ")
+                    FontMetrics { id: attachmentMetrics; font: selectedFileLabel.font }
                     EaElements.Label {
                         id: selectedFileLabel
-                        Layout.preferredWidth: Math.min(implicitWidth, Math.max(0, selectedChips.width - removeFileButton.implicitWidth - parent.spacing))
-                        Layout.minimumWidth: 0
+                        width: Math.min(implicitWidth, Math.max(0, selectedChips.width - removeFileButton.implicitWidth - parent.spacing))
                         text: qsTr("%1 (%2)%3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes))
                             .arg(model.textReadable ? "" : qsTr(" · text export required"))
                         textFormat: Text.PlainText
@@ -665,6 +665,8 @@ Rectangle {
                     }
                     EaElements.ToolButton {
                         id: removeFileButton
+                        leftPadding: 0
+                        rightPadding: 0
                         fontIcon: "times"
                         implicitWidth: composer.actionSize
                         implicitHeight: selectedFileLabel.implicitHeight

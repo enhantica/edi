@@ -1105,7 +1105,8 @@ Popup {
                     color: EaStyle.Colors.red
                 }
             }
-            footer: DialogButtonBox {
+            footer: EaElements.DialogButtonBox {
+                id: sessionButtons
                 EaElements.Button {
                     text: qsTr("Refresh")
                     DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
@@ -1118,6 +1119,23 @@ Popup {
                     visible: panel.assistant.sessionsHaveMore
                     enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
                     onClicked: panel.assistant.refreshSessions(true)
+                }
+                readonly property real naturalButtonWidth: {
+                    let total=0;
+                    for(let index=0;index<count;++index) {
+                        const button=itemAt(index);
+                        if(button && button.visible)total+=button.implicitWidth;
+                    }
+                    return total+Math.max(0,count-1)*spacing;
+                }
+                contentWidth: naturalButtonWidth
+                contentItem: ListView {
+                    implicitWidth: sessionButtons.naturalButtonWidth
+                    model: sessionButtons.contentModel
+                    spacing: sessionButtons.spacing
+                    orientation: ListView.Horizontal
+                    boundsBehavior: Flickable.StopAtBounds
+                    snapMode: ListView.SnapToItem
                 }
                 standardButtons: Dialog.Close
                 onRejected: sessionsDialog.reject()
