@@ -457,3 +457,20 @@ elected default. The compiled purpose instruction follows the existing optional
 metadata contract; actual objective, scientific operands and owner authority are
 unchanged. The default-advertisement change does not qualify runtime behavior or
 the separate dedicated package.
+
+
+### SC residual evidence and current calculation adequacy
+
+Refinement-strategy1.4.6 clarifies the existing adaptive paragraph: use actual
+F-squared residual/intensity evidence for supported extinction/displacement
+choices, obey native fittability and enter requested descriptors in actual fields.
+Zero-start sensitivity is conditional on the chosen native family and other
+values, not a mixed-family-only rule or a mandate to change every zero. The
+original native extinction_formula.hpp remains the formula owner; no new
+derivative, parameter bounds, type sequence or fitted start is introduced.
+
+A fit termination/statistic is distinct from the current edited/saved model's
+calculation and residual evidence. Poor agreement may require data/uncertainty/
+model diagnosis instead of forcing a statistic to unity. Scientific choice and
+public research remain available; no specimen values, fixed free-count goal,
+mandatory extra pass or completion metric is added.
