@@ -156,7 +156,7 @@ EaElements.StatusBar {
             + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
-        anchors.right: parent.right
+        anchors.right: fitArea.visible ? fitArea.left : openingProgress.visible ? openingProgress.left : parent.right
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         Rectangle {
@@ -224,7 +224,7 @@ EaElements.StatusBar {
 
         objectName: "statusBar.fit"
         parent: bar
-        anchors.right: assistantGroup.visible ? assistantGroup.left : parent.right
+        anchors.right: parent.right
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         spacing: Math.round(EaStyle.Sizes.fontPixelSize * 1.2)
@@ -465,7 +465,7 @@ EaElements.StatusBar {
         id: openingProgress
         objectName: "statusBar.opening"
         parent: bar
-        anchors.right: assistantGroup.visible ? assistantGroup.left : parent.right
+        anchors.right: parent.right
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         visible: bar.opening

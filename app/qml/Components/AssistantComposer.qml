@@ -644,7 +644,7 @@ Rectangle {
                     spacing: AppSizes.unit * 0.125
                     EaElements.Label {
                         id: selectedFileLabel
-                        Layout.fillWidth: true
+                        Layout.preferredWidth: Math.min(implicitWidth, Math.max(0, selectedChips.width - removeFileButton.implicitWidth - parent.spacing))
                         Layout.minimumWidth: 0
                         text: qsTr("%1 (%2)%3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes))
                             .arg(model.textReadable ? "" : qsTr(" · text export required"))
