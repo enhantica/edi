@@ -54,7 +54,7 @@ Rectangle {
         const humanRow = ["error", "plan", "question", "tool", "trial"].indexOf(kind) >= 0
             || (decisionActivity && typeof payload.type === "undefined");
         if (humanRow && shortActionObject(text, false) !== short) add(text);
-        if (!lines.length) {
+        if (!lines.some(line => shortActionObject(line, false).length > short.length)) {
             if (payload && payload.type === "dynamicToolCall" && assistant)
                 add(assistant.nativeActionDescription(typeof payload.tool === "string" ? payload.tool : "", ""));
             else if (payload && payload.type === "webSearch") add(qsTr("Find or read public sources relevant to the current task."));
@@ -66,7 +66,8 @@ Rectangle {
                       : payload && payload.error && typeof payload.error.message === "string" ? payload.error.message : "";
         add(message);
         if (humanRow && payload) add(payload.message);
-        const code = outcome && typeof outcome.code === "string" ? outcome.code
+        const code = outcome && typeof outcome.action_error === "string" ? outcome.action_error
+                   : outcome && typeof outcome.code === "string" ? outcome.code
                    : payload && typeof payload.code === "string" ? payload.code : "";
         if (!message.trim().length && code === "project_required" && assistant)
             add(assistant.nativeActionDescription(payload && typeof payload.tool === "string" ? payload.tool : "", code));
