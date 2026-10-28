@@ -27,6 +27,13 @@ def wanted(path: PurePosixPath) -> bool:
 p=argparse.ArgumentParser();p.add_argument('--source',type=Path,required=True);p.add_argument('--prefix',type=Path,required=True)
 a=p.parse_args();commit='9e9f0af8b140192e3de7ff866a0013e7da5e1e93'
 root=a.prefix/'share/edi/assistant/mathtext'/commit;destination=root/'source';members={}
+# Only this recipe's namespaced BUILD output is replaced on a reused prefix.
+if root.exists() or root.is_symlink():
+    if root.is_symlink() or not root.is_dir():raise RuntimeError('Math build output is not an owned regular tree')
+    for existing in root.rglob('*'):
+        mode=existing.lstat().st_mode
+        if not (stat.S_ISDIR(mode) or stat.S_ISREG(mode)):raise RuntimeError('Math build output contains a non-regular member')
+    shutil.rmtree(root)
 for path in sorted(a.source.rglob('*')):
     relative=path.relative_to(a.source);mode=path.lstat().st_mode
     if not wanted(PurePosixPath(relative.as_posix())) or stat.S_ISDIR(mode):continue

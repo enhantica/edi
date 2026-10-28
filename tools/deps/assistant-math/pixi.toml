@@ -3,8 +3,7 @@ name = "edi-assistant-math-source"
 version = "5.0.0"
 
 [package.build]
-backend = { name = "pixi-build-rattler-build", version = "==0.4.5" }
-channels = ["https://conda.anaconda.org/conda-forge"]
+backend = { name = "pixi-build-rattler-build", version = "==0.4.5", channels = ["https://conda.anaconda.org/conda-forge"] }
 
 [package.build.config]
 extra-input-globs = ["install.py"]

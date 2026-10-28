@@ -27,3 +27,9 @@ Edi keeps its own existing public rows and never synthesizes or replays uncertai
 Ordinary work has no task idle/total timeout; individual protocol/startup/auth limits remain bounded.
 Preferences AI offers the current-or-last bounded diagnostic JSON and Copy, independently of a
 saved project. Project-local settled/final reports continue through the same native writer.
+
+Windows dependency coverage uses `pixi lock --manifest-path tools/deps/assistant-packages/pixi.toml`
+and the generated adjacent lock. This dependency-only workspace reuses the same two recipes;
+it does not add Windows to the current application/toolchain platforms. Recipe commands use
+native Windows environment-variable syntax there and POSIX syntax on the existing platforms.
+Backend channels are declared under package.build.backend, not the deprecated top-level field.
