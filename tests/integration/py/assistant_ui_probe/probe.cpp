@@ -210,13 +210,13 @@ int main(int argc,char** argv) {
         QFile original(settings_restore_source);
         if(!QFileInfo(settings_restore_source).isAbsolute() || !original.open(QIODevice::ReadOnly))return 83;
         const auto bytes=original.readAll();original.close();
-        const auto destination=QSettings().fileName();
+        const auto destination=edi_app::settings_store_path();
         if(QFileInfo::exists(destination) || !QDir().mkpath(QFileInfo(destination).absolutePath()))return 82;
         QFile copy(destination);if(!copy.open(QIODevice::WriteOnly)||copy.write(bytes)!=bytes.size())return 81;copy.close();
-        {QSettings reload;reload.sync();if(reload.status()!=QSettings::NoError)return 80;}
+        {QSettings reload(destination,QSettings::IniFormat);reload.sync();if(reload.status()!=QSettings::NoError)return 80;}
         QFile verify(destination);if(!verify.open(QIODevice::ReadOnly)||verify.readAll()!=bytes)return 79;
         settings_restore_info={{"source",settings_restore_source},{"destination",destination},
-            {"source_application_name_from_actual_filename",QFileInfo(settings_restore_source).completeBaseName()},
+            {"source_settings_basename",QFileInfo(settings_restore_source).completeBaseName()},
             {"destination_application_name",QGuiApplication::applicationName()},
             {"bytes",static_cast<double>(bytes.size())},
             {"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())},
@@ -1547,7 +1547,7 @@ int main(int argc,char** argv) {
             drain();
             auto output=fixture.snapshot();output["reply"]=result;
             output["ui"]=(op=="messages_probe" || op=="message_input") ? Object{{"alive",bool(observed)&&bool(window)},{"state",observed?observed->assistant()->state():QString()},{"connected",observed&&observed->assistant()->connected()},{"can_cancel",observed&&observed->assistant()->canCancel()}} : ui_snapshot();
-            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["cache_restore"]=cache_restore_info;output["initial_cache_read_binding"]=initial_cache_read_binding;output["test_settings"]=Object{{"path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()},{"application_name_override",test_application_name},{"app_local_data",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)}};
+            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["cache_restore"]=cache_restore_info;output["initial_cache_read_binding"]=initial_cache_read_binding;output["test_settings"]=Object{{"path",edi_app::settings_file_path()},{"native_store_path",edi_app::settings_store_path()},{"default_qsettings_path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()},{"application_name_override",test_application_name},{"app_local_data",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)}};
             output["state"]=observed ? Object{{"last_error",observed->assistant()->lastError()}} : QJsonValue();
             output["image_requests"]=urls.image_requests;output["activated_urls"]=urls.activated;
             output["image_url"]=QString("http://127.0.0.1:%1/untrusted.png").arg(urls.images.serverPort());
