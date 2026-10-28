@@ -112,6 +112,8 @@ class AssistantViewModel : public QObject {
     /// Display-only intent label for a native action identifier; no action is executed.
     Q_INVOKABLE QString nativeActionLabel(const QString& action) const;
     Q_INVOKABLE QString nativeActionDescription(const QString& action, const QString& code) const;
+    Q_INVOKABLE QVariantMap activityHumanDetails(const QString& rowId, const QString& kind, const QString& status) const;
+    Q_INVOKABLE QString activityTechnicalDetails(const QString& rowId, const QString& kind, const QString& status) const;
     // Original normal-dialog observations only; this is not a model tool.
     Q_INVOKABLE bool observeCreateDialog(QObject* form, const QString& intent, const QString& outcome);
     Q_INVOKABLE bool openReport(const QString& rowId, const QString& link);

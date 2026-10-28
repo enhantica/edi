@@ -325,7 +325,7 @@ Popup {
                             EaElements.Label {
                                 text: "eraser"
                                 font.family: EaStyle.Fonts.iconsFamily
-                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75 * 1.25
                                 color: clearButton.foregroundColor()
                                 Accessible.ignored: true
                             }
@@ -676,6 +676,10 @@ Popup {
                     }
                     ScrollBar.vertical: EaElements.ScrollBar {
                         id: historyScrollBar
+                        parent: assistantSheet
+                        x: assistantSheet.width - width
+                        y: chatBody.y + conversation.y
+                        height: conversation.height
                         policy: ScrollBar.AsNeeded
                         interactive: false
                         onPressedChanged: {

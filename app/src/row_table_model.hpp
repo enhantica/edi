@@ -55,6 +55,7 @@ class RowTableModel : public QAbstractListModel {
     const void* keyAt(int row) const { return row >= 0 && row < rows_.size() ? rows_.at(row).key : nullptr; }
     // A row's values as data() and get() read them: those the row holds, unless a model builds them on demand.
     virtual QList<QVariant> rowValues(int row) const { return rows_.at(row).values; }
+    virtual QVariant roleValue(int row, int column) const { return rowValues(row).value(column); }
     // Every role of rows first..last changed (a model that builds its values on demand announces them so).
     void announceRows(int first, int last) {
         if (first <= last) {

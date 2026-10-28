@@ -39,15 +39,31 @@ Rectangle {
     readonly property bool summarizedActivity: decisionActivity || kind === "activity" && payload &&
         ["commandExecution", "fileChange", "webSearch", "mcpToolCall", "dynamicToolCall", "collabAgentToolCall", "plan", "ediOutcome"].indexOf(payload.type) >= 0
     readonly property string disclosureIdentity: rowId + "\n" + (payload && typeof payload.id === "string" ? payload.id : "")
+    property var humanDetailsSnapshot: null
     property bool technicalCopied: false
-    onPayloadChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
+    onPayloadChanged: { technicalCopied = false; humanDetailsSnapshot = null; if (copyFeedback) copyFeedback.stop(); if (commandDisclosure && commandDisclosure.checked) refreshHumanDetails(); }
     onTextChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
+    onStatusChanged: { humanDetailsSnapshot = null; if (commandDisclosure && commandDisclosure.checked) refreshHumanDetails(); }
     Timer { id: copyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: row.technicalCopied = false }
-    function fullHumanDescription() {
+    function readHumanDetails() {
+        const component = row, original = row.assistant, id = row.rowId, kind = row.kind, status = row.status;
+        if (!original) return null;
+        const value = original.activityHumanDetails(id, kind, status);
+        return Qt.isQtObject(component) && component.assistant === original && component.rowId === id
+            && component.kind === kind && component.status === status && value.row_id === id
+            && value.kind === kind && value.status === status ? value : null;
+    }
+    function refreshHumanDetails() {
+        const detail = readHumanDetails();
+        if (commandDisclosure && commandDisclosure.checked) humanDetailsSnapshot = detail;
+    }
+    function fullHumanDescription(detail) {
+        if (!detail) return qsTr("This step's description is currently unavailable.");
+        const payload = detail.payload || {}, text = typeof detail.text === "string" ? detail.text : "";
         const lines = [];
         const add = value => { if (typeof value === "string" && value.trim().length && lines.indexOf(value) < 0) lines.push(value); };
         const short = activityCaption();
-        const description = activityDescription(true);
+        const description = activityDescription(true, payload);
         if (description.trim().length && shortActionObject(description, false) !== short) add(description);
         // Only established human producers use row.text as a description.
         // Generic/command activity text may contain shell or protocol bytes.
@@ -73,20 +89,26 @@ Rectangle {
             add(assistant.nativeActionDescription(payload && typeof payload.tool === "string" ? payload.tool : "", code));
         return lines.join("\n");
     }
-    function humanActivityText() {
-        const short = activityCaption(), full = fullHumanDescription();
+    function humanActivityText(detail) {
+        const short = activityCaption(), full = fullHumanDescription(detail);
         return short === full ? full : short + "\n" + full;
     }
     function copyActivity() {
         const component = row, identity = row.disclosureIdentity, original = row.payload, owner = row.assistant;
         const originalText = row.text, originalKind = row.kind, originalStatus = row.status;
-        const human = row.humanActivityText();
+        const detail = row.readHumanDetails();
+        if (!detail) return;
+        const human = row.humanActivityText(detail);
         const current = () => Qt.isQtObject(component) && component.disclosureIdentity === identity
             && component.payload === original && component.assistant === owner && component.text === originalText
             && component.kind === originalKind && component.status === originalStatus;
         try {
             let literal = human;
-            if (Preferences.assistantCopyTechnicalDetails) literal += "\n\n" + JSON.stringify(original, null, 2);
+            if (Preferences.assistantCopyTechnicalDetails) {
+                const technical = owner.activityTechnicalDetails(row.rowId, originalKind, originalStatus);
+                if (!technical.length || !current()) return;
+                literal += "\n\n" + technical;
+            }
             if (typeof literal !== "string" || !current()) return;
             ApplicationInfo.copyText(literal);
             if (!current()) return;
@@ -112,6 +134,7 @@ Rectangle {
     signal reportRequested(string sourceRowId, string link)
     function resetDetails() {
         technicalCopied = false;
+        humanDetailsSnapshot = null;
         if (copyFeedback) copyFeedback.stop();
         if (commandDisclosure) commandDisclosure.checked = false;
         if (body) body.deselect();
@@ -151,16 +174,7 @@ Rectangle {
                 collabAgentToolCall: qsTr("Agent activity"), plan: qsTr("Plan update")};
             return names[payload && payload.type] || qsTr("Activity");
         }
-        // Retained JSON arrays arrive as QVariantList/QML sequences, which
-        // need not satisfy Array.isArray. Project this bounded JSON field only;
-        // canonical payload bytes and shell text remain untouched.
-        const actions = JSON.parse(JSON.stringify(payload.commandActions || []));
-        let category = "";
-        if (Array.isArray(actions) && actions.length > 0) {
-            category = actions[0] && typeof actions[0].type === "string" ? actions[0].type : "";
-            for (const action of actions)
-                if (!action || action.type !== category) { category = ""; break; }
-        }
+        const category = payload && typeof payload.commandCategory === "string" ? payload.commandCategory : "";
         if (category === "read") return running ? qsTr("Reading files") : qsTr("Read files");
         if (category === "listFiles") return running ? qsTr("Listing files") : qsTr("Listed files");
         if (category === "search") return running ? qsTr("Searching files") : qsTr("Searched files");
@@ -223,7 +237,8 @@ Rectangle {
         }
         return goal; // Supplied goal only; never status, authority or verified intent.
     }
-    function webSearchCaption() {
+    function webSearchCaption(source) {
+        const payload = source || row.payload;
         const action = payload.action;
         if (action !== undefined && action !== null && (typeof action !== "object" || Array.isArray(action))) return "";
         if (!action || action.type === "search") {
@@ -253,7 +268,8 @@ Rectangle {
         const action = payload && typeof payload.tool === "string" ? payload.tool : "";
         return assistant ? assistant.nativeActionLabel(action) : qsTr("Work on the current project");
     }
-    function activityDescription(full) {
+    function activityDescription(full, source) {
+        const payload = source || row.payload;
         if (!payload || typeof payload !== "object") return "";
         const supplied = typeof payload.purpose === "string" ? payload.purpose
                        : typeof payload.description === "string" ? payload.description
@@ -261,7 +277,7 @@ Rectangle {
         if (payload.type === "dynamicToolCall" && (supplied === "Edi native action"
                 || supplied === "Edi native action: " + payload.tool)) return nativeActionCaption();
         if (supplied.trim().length) return full ? supplied : shortActionObject(supplied, false);
-        if (payload.type === "webSearch") return webSearchCaption();
+        if (payload.type === "webSearch") return webSearchCaption(payload);
         if (!commandActivity) return "";
         const guidance = knownGuidanceCommandCaption(payload.command);
         if (guidance.length) return guidance;
@@ -289,6 +305,9 @@ Rectangle {
         return shortActionObject(labels.join(" · "), false);
     }
     function activityCaption() {
+        const kinds = {error: qsTr("Assistant error"), plan: qsTr("Review work plan"), question: qsTr("Assistant question"),
+            tool: qsTr("Project action"), trial: qsTr("Review refinement trial")};
+        if (Object.prototype.hasOwnProperty.call(kinds, kind)) return kinds[kind];
         if (decisionActivity) return qsTr("Review requested action");
         if (commandActivity) return activityLabel(false);
         if (payload && payload.type === "dynamicToolCall") return nativeActionCaption();
@@ -422,7 +441,7 @@ Rectangle {
         TextEdit {
             id: body
             width: parent.width
-            visible: row.kind !== "activity"
+            visible: row.kind === "user" || row.kind === "assistant"
             AssistantMarkdown {
                 anchors.fill: parent
                 document: body.textDocument
@@ -532,6 +551,10 @@ Rectangle {
                 Accessible.checked: checked
                 Accessible.description: checked ? qsTr("Hide activity details") : qsTr("Show activity details")
                 onPressed: row.detailsChanging()
+                onCheckedChanged: {
+                    if (checked) row.refreshHumanDetails();
+                    else row.humanDetailsSnapshot = null;
+                }
             }
             EaElements.ToolButton {
                 id: activityCopy
@@ -570,7 +593,7 @@ Rectangle {
                 x: AppSizes.unit
                 y: AppSizes.unit * 0.75
                 width: Math.max(0, parent.width - AppSizes.unit * 2)
-                text: visible ? row.fullHumanDescription() : ""
+                text: visible ? row.fullHumanDescription(row.humanDetailsSnapshot) : ""
                 textFormat: TextEdit.PlainText
                 readOnly: true
                 selectByMouse: true

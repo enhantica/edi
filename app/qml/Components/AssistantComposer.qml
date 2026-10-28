@@ -720,7 +720,7 @@ Rectangle {
                 Layout.minimumWidth: implicitWidth
                 Layout.minimumHeight: composer.actionSize
                 Layout.maximumHeight: composer.actionSize
-                leftPadding: AppSizes.unit * 0.5
+                leftPadding: AppSizes.unit * 0.75
                 rightPadding: leftPadding
                 fontIcon: "eye"
                 text: qsTr("Show actions")
