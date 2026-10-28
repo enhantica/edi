@@ -15054,7 +15054,9 @@ struct AssistantViewModel::State {
     std::unique_ptr<edi::assistant::Controller> make_controller(ProjectViewModel* target, std::uint64_t binding,
                                                                std::shared_ptr<bool> active = {}) {
         const QPointer<AssistantViewModel> receiver(&owner);
+        const auto preparation=file_projection();
         const QPointer<ProjectViewModel> bound_project(target);
+        const auto* const prepared_model=target?target->assistantProject():nullptr;
         edi::assistant::Hooks hooks;
         hooks.reserve_terminal = [this, receiver, binding, bound_project, active](const std::string& input) {
             if (!receiver || receiver->state_.get() != this || generation != binding || (active && !*active) || project != bound_project) throw std::runtime_error("The assistant owner was replaced");
@@ -15120,7 +15122,8 @@ struct AssistantViewModel::State {
             const auto reply = prepared->attach(bound_project->assistantProject(), QUuid::createUuid().toString(QUuid::WithoutBraces).toStdString());
             if (!reply.ok) throw std::runtime_error("Native project context could not be prepared");
         }
-        if (!receiver || receiver->state_.get() != this || generation != binding || (target && !bound_project)) throw std::runtime_error("Native project attachment was superseded");
+        if (!preparation.input_current() || (target && !bound_project) ||
+            (bound_project && bound_project->assistantProject()!=prepared_model))throw std::runtime_error("Native project attachment was superseded");
         return prepared;
     }
     void connect_project(ProjectViewModel* target, std::uint64_t binding, std::shared_ptr<bool> active = {}) {
