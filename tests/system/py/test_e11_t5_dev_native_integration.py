@@ -4539,3 +4539,396 @@ def test_original_reveal_accepts_same_exposed_target_after_real_window_resize_wi
             qml(actor, '(function(){const o='+control_expression(marker)+';if(o){'
                 'Session.assistant.actionPointerMoved.disconnect(o.callback);o.destroy();}'
                 'window.height='+json.dumps(initial['before'])+';return true;})()')
+
+# Independent H92/H937 regressions. Reference: original public Rows role lists
+# at Edi9d06c4eb; pinned092d WebSearchItem.results are opaque JSON. The probe's
+# model counter measures actual public Qt data/get reads, never ui_snapshot.
+def _rows_probe(actor, mode='snapshot', **values):
+    return actor.command('messages_probe', mode=mode, **values)['reply']
+
+
+def _rows_wait(actor, predicate, *, seconds=10):
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        value = _rows_probe(actor)
+        if predicate(value):
+            return value
+    raise AssertionError('The finite public messages-model boundary did not reach its stated condition; '
+                         + str(actor.folder / 'last-observation.json'))
+
+
+def _rows_read(actor, row, role, *, model='messages', api='get', repetitions=1):
+    return _rows_probe(actor, 'read', row=row, role=role, model=model,
+                       api=api, repetitions=repetitions)['read']
+
+
+def _rows_values(actor, model, row):
+    names = (_rows_probe(actor, model=model)['role_names'] if model != 'messages'
+             else ['id', 'kind', 'text', 'status'])
+    return {name: _rows_read(actor, row, name, model=model)['scalar'] for name in names}
+
+
+def _rows_history_file(actor):
+    paths = list(Path(actor.last['test_storage']).rglob('assistant/history.json'))
+    assert len(paths) == 1, 'Canonical history has one actual run-owned normal app-storage owner'
+    return paths[0]
+
+
+def _rows_research(identity, *, opaque='', held=None):
+    result = {'type': 'text_result', 'ref_id': 'source-' + identity,
+              'url': 'https://www.ill.eu/sites/fullprof/', 'title': 'Public reference',
+              'snippet': 'Independent finite public-source result',
+              'future_field': {'literal': opaque, 'null_value': None, 'values': [3, False]}}
+    return {'call_id': identity, 'research': {
+        'query': 'Public diffraction documentation ' + identity,
+        'action': {'type': 'search', 'query': 'Public diffraction documentation', 'queries': None},
+        'results': [result]}, **({'hold_complete': str(held)} if held else {})}
+
+
+def test_message_scalar_roles_keep_opaque_backend_and_announce_only_changed_rows(main_actor, tmp_path):
+    # One genuinely large opaque event, not multiplied into every history row.
+    marker = 'independent-opaque-backend-only-7ec635e6:'
+    opaque = marker + 'x' * (1024 * 1024)
+    actor = main_actor([[]])
+    actor.connect()
+    release = actor.folder / 'release-second-research'
+    actor.configure_turns([[_rows_research('small'), _rows_research('large', opaque=opaque)],
+                           [_rows_research('held', held=release)]])
+    actor.request('Read the public references and preserve their literal result evidence.')
+    _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] >= 4)
+    count = _rows_probe(actor)['count']
+    initial = [_rows_values(actor, 'messages', row) for row in range(count)]
+    activities = [row for row in initial if row['kind'] == 'activity']
+    assert len(activities) == 2, 'Both actual pinned research items are distinct retained activities'
+    indices = [next(i for i, row in enumerate(initial) if row['id'] == item['id']) for item in activities]
+    measurements = []
+    for index in indices:
+        roles = _rows_probe(actor, 'roles', row=index, marker=marker)['roles']
+        assert not any(role['marker_present'] for role in roles), (
+            'Collapsed presentation roles expose no full opaque technical result from canonical backend')
+        for role in ('id', 'kind', 'text', 'status'):
+            for api in ('data', 'get'):
+                sample = _rows_read(actor, index, role, api=api, repetitions=256)
+                assert sample['scalar'] == initial[index][role], (
+                    'Role-specific public data/get preserves the original scalar value')
+                measurements.append({'row_id': initial[index]['id'], **sample})
+    (actor.folder / 'scalar-role-measurements.json').write_text(json.dumps(measurements, indent=2))
+    # No universal allocation/clock guarantee: structural absence and measured
+    # read times are separate facts, with no blanket machine-dependent threshold.
+    _rows_probe(actor, 'watch')
+    _rows_probe(actor, 'send', text='Read one further public reference.')
+    _rows_wait(actor, lambda value: value['count'] > count and value['state'] != 'idle')
+    insertion = _rows_probe(actor, 'events', clear=True)['events']
+    assert not any(event['kind'] in ('reset', 'move') for event in insertion), (
+        'Appending an actual activity retains original Qt row identities and order')
+    assert not any(event['kind'] == 'dataChanged' and event['first'] < count
+                   for event in insertion), 'An append does not invalidate unchanged original history rows'
+    pending_count = _rows_probe(actor)['count']
+    before = [_rows_probe(actor, 'roles', row=i)['roles'] for i in range(pending_count)]
+    release.touch()
+    _rows_wait(actor, lambda value: value['state'] == 'idle')
+    events = _rows_probe(actor, 'stop')['events']
+    after = [_rows_probe(actor, 'roles', row=i)['roles'] for i in range(pending_count)]
+    for event in events:
+        assert event['kind'] not in ('reset', 'move'), 'Completion preserves actual original model row identities'
+        if event['kind'] == 'dataChanged':
+            assert event['roles'], 'Actual changed-role notifications identify their changed public roles'
+            for index in range(event['first'], event['last'] + 1):
+                old = {role['name']: role['sha256'] for role in before[index]}
+                new = {role['name']: role['sha256'] for role in after[index]}
+                assert all(old.get(role) != new.get(role) for role in event['roles']), (
+                    'Unchanged scalar/technical presentation roles are not spuriously invalidated')
+    history = _rows_history_file(actor)
+    raw = history.read_bytes()
+    entries = list(objects(json.loads(raw)))
+    assert any(entry.get('literal') == opaque for entry in entries), (
+        'Original opaque research bytes remain in canonical durable backend despite compact presentation')
+    (actor.folder / 'canonical-history-before-detail.json').write_bytes(raw)
+    # Explicit public lazy lookup uses the exact original row identity tuple.
+    large = activities[1]
+    args = ','.join(json.dumps(large[key]) for key in ('id', 'kind', 'status'))
+    detail = qml(actor, '(function(){const s=Session.assistant.activityTechnicalDetails(' + args
+                 + ');return {literal:s.indexOf(' + json.dumps(marker) + ')>=0,bytes:s.length};})()')
+    assert detail['literal'] and detail['bytes'] >= len(opaque), (
+        'Explicit original-row technical lookup retains full backend evidence without presentation projection')
+    stale = qml(actor, 'Session.assistant.activityTechnicalDetails(' + json.dumps(large['id'])
+                + ',"user",' + json.dumps(large['status']) + ')')
+    assert stale == '', 'A mismatched original row kind cannot disclose technical evidence'
+    assert history.read_bytes() == raw, 'Lazy detail lookup does not rewrite canonical original history'
+
+
+@pytest.mark.parametrize('model,roles', [
+    ('selectedFiles', ['id', 'name', 'bytes', 'textReadable', 'format', 'pending']),
+    ('models', ['id', 'displayName', 'efforts', 'available']),
+    ('skills', ['id', 'version', 'title', 'summary', 'path', 'sha256', 'requires',
+                'capabilities', 'references', 'content', 'available', 'blocked_reason']),
+    ('skillSources', ['id', 'label', 'path', 'enabled', 'builtin', 'status']),
+])
+def test_nonmessage_rows_keep_their_original_public_roles_and_values(main_actor, tmp_path, model, roles):
+    actor = main_actor([[]])
+    actor.connect()
+    fixture = tmp_path / 'independent-file-label.cif'
+    # Real attachment bytes need no scientific parser: file admission is the
+    # ordinary signed-in selected-file owner, not a planted model result.
+    fixture.write_text('data_independent\n_audit_creation_method "ordinary attachment role witness"\n')
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(fixture)])['reply']['added'], (
+        'The independent attachment is admitted through its original current file-selection owner')
+    snapshot = _rows_probe(actor, model=model)
+    assert set(snapshot['role_names']) == set(roles), (
+        'Message-only lightweight projection does not change another original public Rows schema')
+    assert snapshot['count'] > 0, 'The actual nonmessage model has a reached positive row'
+    rows = [_rows_values(actor, model, index) for index in range(snapshot['count'])]
+    if model == 'selectedFiles':
+        row = next(row for row in rows if row['name'] == fixture.name)
+        assert row['bytes'] == fixture.stat().st_size and row['textReadable'] is True, (
+            'Attachment filename/raw byte count/readability retain actual admitted-file values')
+        assert row['id'] and row['format'] and row['pending'] is False, (
+            'The settled attachment keeps its own identity/format/current pending state')
+    elif model == 'models':
+        row = next(row for row in rows if row['id'] == 'gpt-6.1-sol')
+        assert row['displayName'] == 'Independent offline model' and row['available'] is True, (
+            'The pinned model/list fixture preserves its actual offered identity/name/availability')
+        assert 'medium' in json.dumps(row['efforts']), 'Original model effort values survive message projection changes'
+    elif model == 'skillSources':
+        row = next(row for row in rows if row['id'] == 'builtin')
+        assert row['label'] == 'EasyDiffraction' and row['enabled'] is True and row['builtin'] is True, (
+            'Original builtin source labels and typed booleans retain their distinct source roles')
+    else:
+        embedded = actor.command('embedded_skills')['reply']
+        indexed = {item['id']: item for item in embedded['index']['skills']}
+        for row in rows:
+            assert row['id'] in indexed and row['title'] and row['version'], (
+                'Actual skill rows retain catalog identity/title/version rather than message-shaped empty values')
+            source = ROOT / 'data/assistant/skills' / indexed[row['id']]['path']
+            content = source.read_bytes()
+            assert row['content'] == content.decode() and row['sha256'] == hashlib.sha256(content).hexdigest(), (
+                'Original skill content/hash matches independently committed resource bytes')
+
+
+def _rows_view_metrics(actor):
+    view = control_expression('assistant.messages')
+    return qml(actor, '(function(){const v=' + view + ';if(!v)return null;'
+        'const rows=Array.from(v.contentItem.children).filter(x=>typeof x.rowId==="string");'
+        'function details(x){if(typeof x.humanDetailsSnapshot!=="undefined")return '
+        '[{id:x.rowId,loaded:x.humanDetailsSnapshot!==null}];'
+        'return Array.from(x.children||[]).flatMap(details);}'
+        'return {count:v.count,height:v.height,cache:v.cacheBuffer,contentY:v.contentY,'
+        'rows:rows.map(x=>({id:x.rowId,index:x.index,height:x.height,visible:x.visible,'
+        'details:details(x)}))};})()')
+
+
+def test_actual_long_history_virtualizes_lazy_details_and_restores_exact_original_bytes(
+    main_actor, tmp_path, monkeypatch
+):
+    marker = 'independent-long-history-opaque-28bf:'
+    opaque = marker + 'q' * (1024 * 1024)
+    # Many independently framed actual items, one large backend result only.
+    actor = main_actor([[_rows_research('history-' + str(i), opaque=opaque if i == 47 else '')
+                         for i in range(96)]])
+    actor.connect()
+    actor.request('Read the finite public references and retain their actual outcomes.')
+    _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] >= 98)
+    original = _rows_history_file(actor).read_bytes()
+    history_copy = actor.folder / 'original-history-for-restore.json'
+    history_copy.write_bytes(original)
+    # No manufactured rows or alternate store: source is the first real run's
+    # original durable file, installed before the next ordinary Session ctor.
+    monkeypatch.setenv('EDI_TEST_ASSISTANT_RESTORE_HISTORY', str(history_copy))
+    restored = main_actor([[]])
+    witness = restored.last['history_restore']
+    assert witness['exact_copy'] and witness['sha256'] == hashlib.sha256(original).hexdigest(), (
+        'Restart uses byte-exact genuine original history before constructing its ordinary Session')
+    assert Path(witness['destination']).read_bytes() == original, (
+        'History restore does not synthesize rows or rewrite canonical backend bytes')
+    _rows_wait(restored, lambda value: value['count'] >= 98)
+    count = _rows_probe(restored)['count']
+    view = control_expression('assistant.messages')
+    observed = []
+    for position in (0, count // 2, count - 1):
+        started = time.monotonic()
+        restored.command('evaluate', expression='(function(){const v=' + view
+                         + ';v.positionViewAtIndex(' + str(position) + ',ListView.Center);})()')
+        metrics = _rows_view_metrics(restored)
+        assert metrics and metrics['rows'], 'Ordinary actual ListView realizes reached rows for its current viewport'
+        heights = [row['height'] for row in metrics['rows'] if row['height'] > 0]
+        assert heights, 'Virtualization witness has real nonempty row geometry'
+        # Conservative two boundary delegates plus normal cache on both sides;
+        # this is a fixture geometry bound, not a production history quota.
+        bound = int((metrics['height'] + 2 * metrics['cache']) / min(heights)) + 4
+        assert len(metrics['rows']) <= bound and len(metrics['rows']) < count // 2, (
+            'Actual rendered delegates remain viewport/cache bounded rather than proportional to history length')
+        assert all(not detail['loaded'] for row in metrics['rows'] for detail in row['details']), (
+            'Collapsed and reused actual delegates do not retain full human detail snapshots')
+        observed.append({'target': position, 'elapsed_seconds': time.monotonic() - started,
+                         'geometric_bound': bound, **metrics})
+    # One currently realized genuine activity control, never a virtual row
+    # fabricated solely to make input succeed.
+    restored.command('evaluate', expression='(function(){const v=' + view
+                     + ';v.positionViewAtIndex(48,ListView.Center);})()')
+    metrics = _rows_view_metrics(restored)
+    candidates = []
+    for row in metrics['rows']:
+        value = _rows_read(restored, row['index'], 'kind')['scalar']
+        if value == 'activity':
+            candidates.append(row)
+    assert candidates, 'The ordinary scroll genuinely realizes an activity before physical expansion'
+    chosen = next(row for row in candidates if row['index'] == 48)
+    click = restored.command('message_input', row_id=chosen['id'],
+                             name='assistant.activity.toggle', action='click')['reply']
+    assert click['reached'] and click['same_row_after'] and click['same_window_after'], (
+        'Expansion input is delivered to the exact original realized activity in the current Main window')
+    expanded = _rows_view_metrics(restored)
+    assert any(d['id'] == chosen['id'] and d['loaded'] for row in expanded['rows'] for d in row['details']), (
+        'Only explicit original-row expansion resolves its full human description')
+    restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='hover')
+    default_copy = restored.command('message_input', row_id=chosen['id'],
+                                    name='assistant.activity.copy', action='click')['reply']
+    assert qml(restored, 'Preferences.assistantCopyTechnicalDetails') is False, (
+        'Technical Copy remains opt-in with the original preference default false')
+    assert default_copy['reached'] and default_copy['clipboard'] and marker not in default_copy['clipboard'], (
+        'Default genuine Copy publishes human descriptions without opaque technical evidence')
+    restored.command('click', name='appBar.button.preferences')
+    restored.command('click', name='preferences.tab.aiAssistance')
+    restored.command('click', name='preferences.ai.copyTechnicalDetails')
+    assert qml(restored, 'Preferences.assistantCopyTechnicalDetails') is True, (
+        'Only the original explicit AI preference enables technical Copy')
+    restored.command('manual_key', key='escape')
+    restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='hover')
+    technical = restored.command('message_input', row_id=chosen['id'],
+                                 name='assistant.activity.copy', action='click')['reply']
+    assert technical['reached'] and technical['clipboard'].startswith(default_copy['clipboard'] + '\n\n') and opaque in technical['clipboard'], (
+        'Explicit opted-in original-row Copy includes unchanged full technical evidence and human descriptions')
+    restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='click')
+    collapsed = _rows_view_metrics(restored)
+    assert all(not d['loaded'] for row in collapsed['rows'] for d in row['details']), (
+        'Collapsing releases the original lazy detail snapshot before later reuse')
+    assert _rows_history_file(restored).read_bytes() == original, (
+        'Ordinary scrolling/expansion/default Copy leaves full canonical original history unchanged')
+    (restored.folder / 'restore-scroll-measurements.json').write_text(json.dumps({
+        'source_sha256': hashlib.sha256(original).hexdigest(), 'source_bytes': len(original),
+        'restored_count': count, 'positions': observed}, indent=2))
+
+
+def _attachment_rows(actor):
+    return [_rows_values(actor, 'selectedFiles', i)
+            for i in range(_rows_probe(actor, model='selectedFiles')['count'])]
+
+
+def _attachment_fixtures(tmp_path, count):
+    paths = []
+    for index in range(count):
+        path = tmp_path / ('admitted-' + str(index) + '.cif')
+        path.write_text('data_independent_' + str(index) + '\n_audit_creation_method "attachment-only literal input"\n')
+        paths.append(path)
+    return paths
+
+
+def _attachment_geometry(actor, prefix):
+    return qml(actor, '(function(){const out=[];function visit(x){'
+        'if(String(x.objectName).indexOf(' + json.dumps(prefix) + ')===0&&x.visible)'
+        '{const p=x.mapToItem(contentItem,0,0);let labels=[];function texts(y){'
+        'if(typeof y.text==="string"&&y.visible)labels.push(y.text);'
+        'Array.from(y.children||[]).forEach(texts);}texts(x);'
+        'out.push({id:x.objectName,x:p.x,y:p.y,width:x.width,height:x.height,labels:labels});}'
+        'Array.from(x.children||[]).forEach(visit);}visit(contentItem);return out;})()')
+
+
+def test_attachment_admission_is_six_per_pending_message_preserving_existing_draft(main_actor, tmp_path):
+    actor = main_actor([[]])
+    files = _attachment_fixtures(tmp_path, 7)
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=list(map(str, files[:4])))['reply']['added'], (
+        'Ordinary file admission accepts the first actual pending group')
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=list(map(str, files[4:6])))['reply']['added'], (
+        'Pending admissions accumulate to the owner-selected per-message maximum of six')
+    before = _attachment_rows(actor)
+    assert len([row for row in before if row['pending']]) == 6, (
+        'Six actual pending attachments are retained with their original IDs and exact byte counts')
+    actor.command('click', name='assistant.composer')
+    actor.command('manual_text', text='Preserve this exact unsent user draft.')
+    token = actor.begin_current_file_selection()
+    refused = actor.command('selected_add', token=token, paths=[str(files[6])])
+    assert refused['reply']['added'] is False, (
+        'A seventh pending file is refused rather than silently replacing/truncating the existing draft')
+    assert _attachment_rows(actor) == before, 'Excess admission preserves all previously admitted file identities/bytes/pending flags'
+    editor = qml(actor, control_expression('assistant.composer') + '.text')
+    assert editor == 'Preserve this exact unsent user draft.', 'Excess attachment admission preserves the original literal composer text'
+    assert actor.last['ui'].get('last_error') or qml(actor, 'Session.assistant.lastError'), (
+        'Excess attachment refusal is stated to the user instead of silently dropping input')
+    assert not any(row.get('method') == 'turn/start' for row in map(json.loads, actor.trace.read_text().splitlines())), (
+        'File-admission refusal never submits a provider turn or invents a scientific request')
+
+
+def test_file_only_send_retains_literal_empty_user_text_task_files_and_new_pending_draft(main_actor, tmp_path):
+    actor = main_actor([[], []])
+    files = _attachment_fixtures(tmp_path, 7)
+    actor.connect()
+    no_files = qml(actor, control_expression('assistant.send') + '.enabled')
+    assert no_files is False, 'Empty text without genuinely pending admitted files is not sendable'
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=list(map(str, files[:6])))['reply']['added'], (
+        'The first file-only draft contains six genuinely admitted files')
+    first = _attachment_rows(actor)
+    actor.command('accept_context')
+    actor.until(lambda value: value['ui']['connected'] and value['ui']['state'] == 'idle'
+                and any(c['name'] == 'assistant.send' and c['enabled'] and c['fully_exposed']
+                        for c in value['ui']['controls']))
+    assert qml(actor, control_expression('assistant.composer') + '.text') == '', (
+        'A file-only request does not fabricate a placeholder user prompt or scientific instruction')
+    actor.command('click', name='assistant.send')
+    actor.until(lambda value: value['ui']['state'] == 'idle' and not value['ui']['can_cancel'])
+    canonical = json.loads(_rows_history_file(actor).read_bytes())
+    users = [row for row in objects(canonical) if row.get('kind') == 'user'
+             and isinstance(row.get('payload'), dict) and row['payload'].get('type') == 'ediInput']
+    assert len(users) == 1 and users[0]['text'] == '', (
+        'Accepted file-only history retains the exact literal empty user text')
+    actual = users[0]['payload']['files']
+    assert {row['id'] for row in actual} == {row['id'] for row in first}, (
+        'The sent history owns all and only the actually admitted first-message files')
+    for entry, path in zip(first, files[:6]):
+        assert entry['name'] == path.name and entry['bytes'] == path.stat().st_size, (
+            'Sent-file labels preserve original names/raw bytes independently of their KB presentation')
+    assert not any(row['pending'] for row in _attachment_rows(actor)), (
+        'Accepted submission consumes only the original pending draft without losing task file authority')
+    assert not _attachment_geometry(actor, 'assistant.file.'), (
+        'Consumed attachments are hidden from the current composer after accepted submission')
+    sent = _attachment_geometry(actor, 'assistant.sentFile.')
+    assert len(sent) == 6, 'All six consumed attachments remain visibly attached to their sent user message'
+    assert len({row['y'] for row in sent}) == 6, 'Each sent attachment occupies its own original history line'
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(files[6])])['reply']['added'], (
+        'A later pending message has its own six-file allowance rather than a lifetime attachment cap')
+    later = _attachment_rows(actor)
+    assert {row['id'] for row in first} <= {row['id'] for row in later}, (
+        'Newly pending files do not erase consumed files still needed by the current task reader')
+    assert [row['name'] for row in later if row['pending']] == [files[6].name], (
+        'Only the newly admitted file belongs to the next pending composer draft')
+
+
+def test_pending_attachment_lines_follow_literal_text_with_separate_normal_line_gaps(main_actor, tmp_path):
+    actor = main_actor([[]])
+    files = _attachment_fixtures(tmp_path, 3)
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=list(map(str, files)))['reply']['added'], (
+        'The layout witness uses three genuinely admitted current files')
+    actor.command('click', name='assistant.composer')
+    actor.command('manual_text', text='A literal user draft above its files.')
+    rows = sorted(_attachment_geometry(actor, 'assistant.file.'), key=itemgetter('y'))
+    editor = qml(actor, '(function(){const e=' + control_expression('assistant.composer')
+                 + ',p=e.mapToItem(contentItem,0,0);return {y:p.y,height:e.height,text:e.text};})()')
+    assert len(rows) == 3 and all(row['height'] > 0 for row in rows), (
+        'The actual composer exposes all three original attachment rows')
+    assert rows[0]['y'] >= editor['y'] + editor['height'], (
+        'Files appear below the literal main text rather than above or inline with the editor')
+    assert all(a['y'] + a['height'] <= b['y'] for a, b in zip(rows, rows[1:])), (
+        'Every actual attachment has its own nonoverlapping line')
+    assert abs(rows[1]['x'] - rows[0]['x']) < 0.5 and abs(rows[2]['x'] - rows[0]['x']) < 0.5, (
+        'Attachment lines share the original normal text alignment')
+    labels = [text for row in rows for text in row['labels'] if any(p.name in text for p in files)]
+    assert len(labels) == 3 and all('undefined' not in label and 'KB' in label for label in labels), (
+        'Actual composer file labels preserve their names and consistently display KB instead of undefined raw roles')
+    gaps = [b['y'] - (a['y'] + a['height']) for a, b in zip(rows, rows[1:])]
+    assert rows[0]['y'] - (editor['y'] + editor['height']) > max(gaps), (
+        'The main-text-to-first-file gap is larger than ordinary inter-file line spacing')
