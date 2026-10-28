@@ -246,6 +246,7 @@ class Session : public QObject {
     // After a Save as: the project is no longer an example's, an archive's or a read-only tree's temporary copy.
     void leaveTemporaryOrigin();
     bool saveCopy(const QString& target, bool zip);
+    bool saveProjectAsFresh(const QUrl& target,bool zip,bool copy,bool notify = true);
 
     const AssistantWorkReportOptions work_report_options_;
     void initializeSession();
@@ -323,12 +324,12 @@ class Session : public QObject {
     struct Staged {
         QString root;
         QString folder;
-        std::shared_ptr<const edi::Project> project;  // the staged copy: what the open project takes once published
+        std::shared_ptr<edi::Project> project;  // the staged copy: what the open project takes once published
         ProjectViewModel::StagedScan scan;             // what a scan project reads there, read before publication
     };
     // What a Save writes (round, adopt, recalculate, write), done on a copy in `name` inside a new folder (the folder
     // itself for an empty name), once the project may be saved; the open project is left as it is.
-    bool stageCopy(const char* purpose, const QString& name, Staged& staged);
+    bool stageCopy(const char* purpose, const QString& name, Staged& staged, const QString& parent = {});
     // Writes the staged snapshot into the .zip `archive`, then the project takes it and works in its folder.
     bool publishArchive(const Staged& staged, const QString& archive);
     // The browser's place holds the staged snapshot: the project takes it and works in its folder, unless it was

@@ -580,6 +580,10 @@ QString Session::writeBackReports() {
 }
 
 bool Session::saveAs(const QUrl& directory) {
+    if(directory.isLocalFile()) {
+        const QFileInfo target(directory.toLocalFile());
+        if(!target.exists() && !target.isSymLink())return saveProjectAsFresh(directory,false,false);
+    }
     if (project_ == nullptr) {
         return false;
     }
@@ -622,7 +626,81 @@ void Session::leaveTemporaryOrigin() {
     }
 }
 
+// Same original staged native save/adopt owner; only fresh publication differs.
+bool Session::saveProjectAsFresh(const QUrl& destination,bool zip,bool copy,bool notify) {
+    const QPointer<Session> receiver(this);
+    const QPointer<ProjectViewModel> target(project_);
+    const auto replacement=replacement_generation_;
+    const auto current=[&]{return receiver && target && receiver->project_==target &&
+        receiver->replacement_generation_==replacement && !target->retired_;};
+    if(!current())return false;
+    if(!destination.isLocalFile() || destination.toLocalFile().isEmpty()) {
+        setLastError(tr("A fresh project destination must be a local file or folder."));return false;
+    }
+    const QFileInfo requested(QDir::cleanPath(destination.toLocalFile()));
+    if(requested.exists() || requested.isSymLink()) {
+        setLastError(tr("The fresh project destination already exists; nothing was replaced."));return false;
+    }
+    if(const auto refusal=target->criticalEditRefusal();!refusal.isEmpty()){setLastError(refusal);return false;}
+    bool editingSet=false;
+    const auto editing=qScopeGuard([target,&editingSet]{if(editingSet && target) {
+        target->editing_=false;
+        if(target->retired_ && !target->publication_depth_)target->deleteLater();
+    }});
+    if(!copy) {
+        const auto origin=std::exchange(target->assistant_save_origin_,0);
+        target->notifyProjectEdited(origin);if(!current())return false;
+        if(const auto refusal=target->saveRefusal();!refusal.isEmpty()){setLastError(refusal);return false;}
+        target->editing_=true;editingSet=true;
+        target->notifyProjectEdited(origin);
+    }
+    if(!current())return false;
+    const auto revision=target->revision();
+    Staged staged;
+    if(!stageCopy(copy?"copy":"saved",QStringLiteral("project"),staged,requested.absolutePath()))return false;
+    const auto release=qScopeGuard([receiver,root=staged.root]{if(receiver)receiver->releaseTemporaryRoots({root});});
+    if(!current() || target->revision()!=revision)return false;
+    const auto parent=QDir(requested.absolutePath()).canonicalPath();
+    if(parent.isEmpty() || requested.fileName().isEmpty()) {
+        if(current())setLastError(tr("The original fresh save parent is unavailable."));return false;
+    }
+    const auto where=parent+QLatin1Char('/')+requested.fileName();
+    const PendingOpenSource pendingOrigin(*this,where);
+    try {
+        if(zip)edi::detail::write_project_archive_fresh(staged.folder.toStdString(),where.toStdString());
+        else {
+            staged.project->path=where.toStdString();staged.project->metadata.path=staged.project->path;
+            if(staged.scan.listing)staged.scan.listing->relocate(staged.project,staged.folder,where);
+            if(!current() || target->revision()!=revision)return false;
+            edi::detail::publish_fresh_project_path(staged.folder.toStdString(),where.toStdString());
+        }
+    }catch(const std::exception& refusal) {if(current())setLastError(QString::fromUtf8(refusal.what()));return false;}
+    if(!current())return false; // The file commit is real; never decorate a successor.
+    if(copy){setLastError({});return current();}
+    target->takeStaged(zip?staged.folder:where,*staged.project,staged.scan);
+    if(!current())return false;
+    leaveTemporaryOrigin();if(!current())return false;
+    if(zip) {
+        releaseTemporaryFolder();if(!current())return false;
+        temporary_folder_=staged.root;archive_location_=where;
+    }else {
+        archive_location_.clear();releaseTemporaryFolder();if(!current())return false;
+    }
+    setLastError({});if(!current())return false;
+    if(notify) {
+        emit projectLocationChanged();if(!current())return false;
+        emit needsSaveAsChanged();if(!current())return false;
+        emit locationTextChanged();if(!current())return false;
+        emit projectDirectoryUsed(where);
+    }
+    return current();
+}
+
 bool Session::saveProjectAs(const QUrl& target, bool zip, bool copy) {
+    if(target.isLocalFile()) {
+        const QFileInfo destination(target.toLocalFile());
+        if(!destination.exists() && !destination.isSymLink())return saveProjectAsFresh(target,zip,copy);
+    }
     if (project_ == nullptr) {
         return false;
     }
@@ -688,7 +766,7 @@ bool Session::takeWebSave(const Staged& staged, quint64 revision) {
     return true;
 }
 
-bool Session::stageCopy(const char* purpose, const QString& name, Staged& staged) {
+bool Session::stageCopy(const char* purpose, const QString& name, Staged& staged,const QString& parent) {
     // What a Save writes (round, adopt, recalculate, write), done on a copy in a folder of its own, once the project
     // may be saved at all: the open project is left as it is.
     if (const QString refusal = project_->saveRefusal(); !refusal.isEmpty()) {
@@ -696,22 +774,35 @@ bool Session::stageCopy(const char* purpose, const QString& name, Staged& staged
         return false;
     }
     try {
-        staged.root = QString::fromStdString(edi::fresh_archive_directory(purpose));
+        staged.root = QString::fromStdString(parent.isEmpty()?edi::fresh_archive_directory(purpose):
+            edi::detail::fresh_archive_directory_at(purpose,parent.toStdString()));
         staged.folder = name.isEmpty() ? staged.root : staged.root + QLatin1Char('/') + name;
         auto copy = std::make_shared<edi::Project>(project_->savedModel());
+        QString copiedScratch;
+        if(!parent.isEmpty() && !copy->path.empty()) {
+            const auto source=QFileInfo(QString::fromStdString(copy->path)).canonicalFilePath();
+            if(!source.isEmpty()) {
+                copy->path=source.toStdString();copy->metadata.path=copy->path;
+                const auto relative=QDir(source).relativeFilePath(staged.root);
+                if(relative!=QStringLiteral("..") && !relative.startsWith(QStringLiteral("../")) && !QDir::isAbsolutePath(relative))
+                    copiedScratch=QDir(staged.folder).filePath(relative);
+            }
+        }
         edi::save_project_as(*copy, staged.folder.toStdString());
+        if(!copiedScratch.isEmpty() && QFileInfo::exists(copiedScratch) && !QDir().rmdir(copiedScratch))
+            throw edi::IoError("cannot remove the native save's copied empty staging directory");
         edi::adopt_saved_project(*copy, staged.folder.toStdString());
         staged.project = std::move(copy);
     } catch (const std::exception& refusal) {
         if (!staged.root.isEmpty()) {
-            QDir(staged.root).removeRecursively();
+            edi::remove_archive_directory(staged.root.toStdString());
         }
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
     }
     // Everything that can refuse happens before the save is published: a scan's results and its listing too.
     if (const QString refusal = project_->stageScan(staged.folder, *staged.project, staged.scan); !refusal.isEmpty()) {
-        QDir(staged.root).removeRecursively();
+        edi::remove_archive_directory(staged.root.toStdString());
         setLastError(refusal);
         return false;
     }
@@ -864,7 +955,8 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     if (location.isEmpty()) {
         return true;
     }
-    const QString error = originalCreated->saveTo(location);
+    const bool saved=saveProjectAsFresh(QUrl::fromLocalFile(location),false,false,false);
+    const QString error=current()?(saved?QString{}:last_error_):QStringLiteral("The original Create save owner changed");
     if (outcome) { outcome->error = error; outcome->saved = error.isEmpty(); outcome->path = originalCreated ? originalCreated->path() : QString{}; }
     if (!current()) return false;
     setLastError(error);

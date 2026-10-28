@@ -51,6 +51,10 @@ class ScanSession : public QObject {
     // What `listing` loaded of the same project in another place, taken whole: the datasets, the index and the run.
     // Nothing is read, so a save takes the listing it read of its staged folder before it was published.
     void take(ScanSession& listing);
+    /// Rebase an already loaded native staging snapshot before its tree moves.
+    /// Only a data-directory path under from follows to; external paths remain.
+    /// Retains snapshot as the immutable source. No read, calculation or row change.
+    void relocate(std::shared_ptr<const edi::Project> snapshot, const QString& from, const QString& to);
     // Indexes the results again (after a run or an undo); the refusal, if any.
     QString reindex(const edi::Project& project, bool writing = false);
     const edi::ScanDatasets& datasets() const { return datasets_; }

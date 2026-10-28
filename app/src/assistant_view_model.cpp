@@ -7867,7 +7867,7 @@ struct AssistantViewModel::State {
         task->submitting=true;task->visible_pending=false;task->call.may_have_written=true;native_call->may_have_written=true;
         session->assistant_save_origin_=own;task->project->assistant_save_origin_=own;
         const auto origin=qScopeGuard([session,target=task->project,own]{if(session && session->assistant_save_origin_==own)session->assistant_save_origin_=0;if(target && target->assistant_save_origin_==own)target->assistant_save_origin_=0;});
-        bool saved=false;try {saved=task->ordinary_current?session->save():session->saveProjectAs(destination,zip,copy);}catch(...) {}
+        bool saved=false;try {saved=task->ordinary_current?session->save():session->saveProjectAsFresh(destination,zip,copy);}catch(...) {}
         task->committed=saved;task->submitting=false;task->copy=copy;task->destination=task->ordinary_current?task->source_directory:destination.toLocalFile();
         task->active=saved && !copy && session && task->project && session->project()==task->project && session->replacement_generation_==replacement;
         task->presented=task->active && !task->project->calculating();

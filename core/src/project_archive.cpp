@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "edi/project_archive.hpp"
+#include "atomic_publish.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -10,6 +11,7 @@
 #include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <memory>
 #include <mutex>
 #include <random>
@@ -27,6 +29,7 @@
 #include <windows.h>
 #else
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <cerrno>
 #include <csignal>
@@ -265,9 +268,10 @@ std::string archive_bytes(const std::vector<std::pair<std::string, std::string>>
         [&](std::size_t) { return now; });
 }
 
-void write_project_archive(const std::string& directory, const std::string& archive) {
+static void write_project_archive_impl(const std::string& directory, const std::string& archive,bool replace) {
     const fs::path folder = fs::weakly_canonical(fs::path(directory));
-    const fs::path target = fs::weakly_canonical(fs::path(archive));
+    const fs::path requested=fs::path(archive);
+    const fs::path target=replace?fs::weakly_canonical(requested):fs::weakly_canonical(requested.parent_path())/requested.filename();
     const auto [inner, outer] =
         std::mismatch(folder.begin(), folder.end(), target.begin(), target.end());
     if (inner == folder.end()) {
@@ -275,7 +279,9 @@ void write_project_archive(const std::string& directory, const std::string& arch
                       " inside the project folder it archives");
     }
     const std::string bytes = project_archive_bytes(directory);
-    const fs::path staged = target.parent_path() / (target.filename().string() + ".edi-staged");
+    const std::string private_root=replace?std::string{}:detail::fresh_archive_directory_at("publish",target.parent_path().string());
+    struct Release {std::string root;~Release() noexcept {try{if(!root.empty())remove_archive_directory(root);}catch(...){}}} release{private_root};
+    const fs::path staged = replace?target.parent_path()/(target.filename().string()+".edi-staged"):fs::path(private_root)/"archive";
     {
         std::ofstream stream(staged, std::ios::binary | std::ios::trunc);
         if (!stream || !stream.write(bytes.data(), static_cast<std::streamsize>(bytes.size())) ||
@@ -285,12 +291,20 @@ void write_project_archive(const std::string& directory, const std::string& arch
             throw IoError("cannot write " + archive);
         }
     }
+    if(!replace){detail::publish_fresh_project_path(staged.string(),target.string());return;}
     std::error_code error;
     fs::rename(staged, target, error);
     if (error) {
         fs::remove(staged, error);
         throw IoError("cannot write " + archive);
     }
+}
+
+void write_project_archive(const std::string& directory,const std::string& archive) {
+    write_project_archive_impl(directory,archive,true);
+}
+void detail::write_project_archive_fresh(const std::string& directory,const std::string& archive) {
+    write_project_archive_impl(directory,archive,false);
 }
 
 std::string unpack_project_archive(std::string_view bytes, const std::string& target) {
@@ -420,10 +434,12 @@ struct Made {
 };
 
 auto recorded_root(std::vector<fs::path>& paths,const fs::path& given) {
-    return std::find_if(paths.begin(),paths.end(),[&](const auto& root) {
-        const auto [inner,outer]=std::mismatch(root.begin(),root.end(),given.begin(),given.end());
-        return inner==root.end();
-    });
+    auto found=paths.end();
+    for(auto at=paths.begin();at!=paths.end();++at) {
+        const auto [inner,outer]=std::mismatch(at->begin(),at->end(),given.begin(),given.end());
+        if(inner==at->end() && (found==paths.end() || std::distance(at->begin(),at->end())>std::distance(found->begin(),found->end())))found=at;
+    }
+    return found;
 }
 
 Made& made() {
@@ -434,9 +450,14 @@ Made& made() {
 }  // namespace
 
 std::string fresh_archive_directory(const std::string& kind) {
+    return detail::fresh_archive_directory_at(kind,archive_base().string());
+}
+std::string detail::fresh_archive_directory_at(const std::string& kind,const std::string& parent) {
     static std::atomic<unsigned> counter{0};
     std::error_code error;
-    const fs::path base = archive_base();
+    fs::create_directories(fs::path(parent),error);
+    if(error)throw IoError("cannot create the native save parent");
+    const fs::path base=fs::canonical(fs::path(parent));
     std::random_device seed;
     for (int attempt = 0; attempt < 100; ++attempt) {
         const fs::path path =
@@ -444,8 +465,12 @@ std::string fresh_archive_directory(const std::string& kind) {
                     "-" + std::to_string(counter.fetch_add(1)));
         fs::create_directories(base, error);
         if (fs::create_directory(path, error) && !error) {
-            const std::lock_guard lock(made().mutex);
-            made().paths.push_back(path);
+            fs::permissions(path,fs::perms::owner_all,fs::perm_options::replace,error);
+            if(error){std::error_code ignored;fs::remove(path,ignored);throw IoError("cannot protect the native staging directory");}
+            try {
+                const std::lock_guard lock(made().mutex);
+                made().paths.push_back(path);
+            }catch(...) {std::error_code ignored;fs::remove(path,ignored);throw;}
             return path.string();
         }
     }
@@ -453,6 +478,28 @@ std::string fresh_archive_directory(const std::string& kind) {
 }
 
 namespace detail {
+void publish_fresh_project_path(const std::string& staged,const std::string& destination) {
+    const fs::path from=fs::absolute(fs::path(staged)).lexically_normal();
+    const auto owner=archive_directory_root(from.string());
+    if(owner.empty() || from==fs::path(owner))throw IoError("fresh publication has no independent native staging owner");
+    fs::path target=fs::absolute(fs::path(destination)).lexically_normal();
+    while(target.filename().empty() && target.has_parent_path() && target.parent_path()!=target)target=target.parent_path();
+    if(target.filename().empty() || target.filename()=="." || target.filename()=="..")throw IoError("invalid fresh project destination");
+    const auto parent=fs::canonical(target.parent_path());
+    target=parent/target.filename();
+    std::error_code error;const auto status=fs::symlink_status(from,error);
+    if(error || (!fs::is_regular_file(status) && !fs::is_directory(status)))throw IoError("native fresh staging entry is unavailable");
+#if defined(_WIN32)
+    if(!::MoveFileW(from.c_str(),target.c_str()))throw IoError("cannot publish fresh project destination without replacing an existing entry");
+#elif !defined(__EMSCRIPTEN__)
+    struct Directory {int fd;explicit Directory(const fs::path& path):fd(::open(path.c_str(),O_RDONLY|O_DIRECTORY|O_CLOEXEC)){}
+        ~Directory(){if(fd>=0)::close(fd);}} source(from.parent_path()),output(parent);
+    if(source.fd<0 || output.fd<0 || atomic_publish(source.fd,from.filename().c_str(),output.fd,target.filename().c_str(),false))
+        throw IoError("cannot publish fresh project destination without replacing an existing entry");
+#else
+    throw IoError("atomic fresh project publication is unavailable on this platform");
+#endif
+}
 std::string archive_directory_root(const std::string& path) {
     const fs::path given=fs::path(path).lexically_normal();
     const std::lock_guard lock(made().mutex);
