@@ -1064,6 +1064,13 @@ Popup {
                     objectName: "assistant.sessions.list"
                     width: parent.width
                     maxRowCountShow: 8
+                    function prefetch() {
+                        if(sessionsDialog.opened && panel.assistant.sessionsHaveMore && !panel.assistant.sessionsLoading &&
+                            contentY+height>=contentHeight-height)panel.assistant.refreshSessions(true);
+                    }
+                    onContentYChanged: prefetch()
+                    onContentHeightChanged: prefetch()
+                    onHeightChanged: prefetch()
                     sourceModel: panel.assistant.sessions
                     defaultInfoText: panel.assistant.sessionsLoading ? qsTr("Loading sessions…") : qsTr("No app-created sessions")
                     columns: [numberColumnWidth, -1, AppSizes.unit*14, AppSizes.iconColumnWidth]
@@ -1088,8 +1095,17 @@ Popup {
                         }
                         EaComponents.ListViewLabel { text: sessionRow.modified; horizontalAlignment: Text.AlignLeft }
                         EaComponents.ListViewButton {
+                            id: archiveSessionButton
                             objectName: "assistant.session.archive."+sessionRow.index
                             fontIcon: "archive"
+                            horizontalAlignment: Text.AlignHCenter
+                            contentItem: EaElements.Label {
+                                text: archiveSessionButton.fontIcon
+                                font.family: EaStyle.Fonts.iconsFamily
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                color: archiveSessionButton.foregroundColor()
+                            }
                             enabled: sessionRow.canArchive && !panel.assistant.canCancel && !panel.assistant.sessionsLoading
                             ToolTip.text: qsTr("Archive session")
                             onClicked: panel.assistant.archiveSession(sessionRow.threadId)
@@ -1103,12 +1119,6 @@ Popup {
                     textFormat: Text.PlainText
                     wrapMode: Text.Wrap
                     color: EaStyle.Colors.red
-                }
-                EaElements.Button {
-                    text: qsTr("More sessions")
-                    visible: panel.assistant.sessionsHaveMore
-                    enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
-                    onClicked: panel.assistant.refreshSessions(true)
                 }
             }
             footer: EaElements.DialogButtonBox {
