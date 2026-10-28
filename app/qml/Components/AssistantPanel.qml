@@ -98,7 +98,7 @@ Popup {
         return false;
     }
     onAssistantChanged: { noticeState = null; captureNotice(); }
-    Component.onCompleted: captureNotice()
+    Component.onCompleted: { captureNotice(); Qt.callLater(function() {if(Qt.isQtObject(panel) && Qt.isQtObject(panel.assistant))panel.assistant.restoreLastSession();}); }
     component EdiNotice: Item {
         id: notice
         required property string noticeText
@@ -201,7 +201,6 @@ Popup {
         function onCountChanged() { panel.retireConsentSend(); }
         function onDataChanged() { panel.retireConsentSend(); }
     }
-    Component.onCompleted: Qt.callLater(function() {if(Qt.isQtObject(panel) && Qt.isQtObject(panel.assistant))panel.assistant.restoreLastSession();})
     Connections {
         target: panel.assistant
         function onSessionProjectRequested(threadId,location,intent) {
