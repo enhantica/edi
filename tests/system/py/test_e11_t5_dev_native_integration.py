@@ -8021,8 +8021,8 @@ def test_original_reset_preserves_only_genuine_pending_draft_inputs_and_rejects_
     assert qml(actor, 'Session.project.modified'), 'The ordinary Reset really has an unsaved current owner requiring its normal choice'
     start_count = len(_session_wire(actor, 'turn/start'))
     actor.command('click', name='appBar.button.reset')
-    actor.until(lambda value: any(row['name'] == 'unsavedChanges' and row['fully_exposed']
-        for row in value['ui']['controls']))
+    actor.until(lambda _value: qml(actor, 'typeof unsavedChanges!=="undefined"&&unsavedChanges.opened'
+        '&&unsavedChanges.visible&&!!unsavedChanges.contentItem&&unsavedChanges.contentItem.Window.window===window'))
     chosen = actor.command('dialog_ok', name='unsavedChanges', role=outcome)['reply']
     assert chosen['pressed_changes'] > 0 and chosen['role'] == outcome, (
         'The original standard Save/Discard/Cancel button receives genuine current-window input; no direct closeProject bypass qualifies')
@@ -8373,7 +8373,7 @@ def test_show_on_alias_search_physically_chooses_actual_offered_row_once(main_ac
     marker = 'e11.original-visible-offered-choice'
     _watch_original_offered_choices(actor, marker)
     call = {'tool': 'add_relations', 'call_id': 'original-visible-search-choice',
-        'arguments': {'purpose': 'Create one alias for the exact actually offered original cell parameter.',
+        'arguments': {'purpose': 'Create one alias for the exact actually offered original parameter.',
             'aliases': [{'id': 'visible_original_cell', 'path': parameter['path']}], 'constraints': []}}
     actor.configure_turns([[call]]);actor.connect();_session_request_with_original_disclosure(actor,
         'Use the exact ordinary original offered parameter for this one explicitly requested alias.')
@@ -8626,6 +8626,7 @@ def test_actual_auto_restart_first_send_keeps_original_thread_history_and_inputs
     try:
         # Observe the owner's actual startup path; manual Connect, Sessions,
         # selectSession and forced project Open would mask this regression.
+        _ordinary_expose_automatically_restored_composer(restored, original_task)
         restored.until(lambda value: original_task in json.dumps(value['ui']['messages'], ensure_ascii=False)
             and any(row['name'] == 'assistant.send' and row['enabled'] and row['fully_exposed']
                 for row in value['ui']['controls']))
@@ -8695,13 +8696,17 @@ def _ordinary_changed_alias_reference(actor, alias_id):
     assert qml(actor, '(function(){' + model + '.append();return ' + model + '.count;})()') == len(before['aliases']) + 1, (
         'The FIRST ordinary alias owner independently supports appending one alias without any constraint')
     appended = actor.command('inspect')['ui']['project']['aliases'][-1]
-    options = []
-    for row in before['parameters']:
-        if row['category'] != 'cell':
-            continue
-        names = [name for name in offered if name.endswith('.cell.' + row['field'])]
-        if len(names) == 1 and names[0] != appended['parameter']:
-            options.append((row, names[0]))
+    offered_mapping = qml(actor, '(function(){const project=Session.project,table=project.parameters;'
+        'return project.analysis.aliases.parameterNames.map(function(name){const number=project.parameterNumber(name);'
+        'return {unique_name:name,number:number,path:number>0&&number<=table.count?table.text(number-1,"path"):null};});})()')
+    canonical = {row['path']: row for row in before['parameters']}
+    options = [(canonical[item['path']], item['unique_name']) for item in offered_mapping
+        if item['unique_name'] in offered and item['unique_name'] != appended['parameter']
+        and item['path'] in canonical and item['number'] > 0]
+    # Prefer an independent cell input when actually offered; cubic fixtures
+    # can offer only their already-default cell input, so retain any other real
+    # offered independent parameter rather than inventing a cell spelling.
+    options.sort(key=lambda pair: pair[0]['category'] != 'cell')
     assert options, 'A genuinely different ordinary offered parameter exists; an already-selected no-op cannot qualify post-write settlement'
     parameter, unique_name = options[0]
     index = len(before['aliases'])
@@ -8807,7 +8812,7 @@ def test_actual_no_project_auto_restart_first_send_keeps_original_conversation_w
     first_rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
     assert {'user', 'assistant'} <= {row['kind'] for row in first_rows}, (
         'Expected history comes from a genuinely admitted first user message and actually emitted original assistant reply')
-    assert not actor.last['ui']['project'], 'The actual first conversation remains project-free through its normal completion'
+    assert not actor.command('inspect')['ui']['project'], 'The actual first conversation remains project-free through its normal completion'
     _capture_genuine_archive(actor, 'casual-no-project-original')
     manifest = _capture_exact_cache_manifest(actor, 'casual-no-project-full-current')
     sources = _finish_genuine_restart_sources(actor, manifest)
@@ -8815,6 +8820,7 @@ def test_actual_no_project_auto_restart_first_send_keeps_original_conversation_w
     try:
         # No manual Connect, Open, refreshSessions or selectSession is allowed
         # before the actual first ordinary Send on the restarted application.
+        _ordinary_expose_automatically_restored_composer(restored, first_text)
         restored.until(lambda value: first_text in json.dumps(value['ui']['messages'], ensure_ascii=False)
             and any(row['name'] == 'assistant.send' and row['enabled'] and row['fully_exposed']
                 for row in value['ui']['controls']))
@@ -8847,7 +8853,8 @@ def test_actual_no_project_auto_restart_first_send_keeps_original_conversation_w
         by_id = {row['id']: row for row in displayed}
         assert all(by_id.get(row['id']) == row for row in first_rows), (
             'The first Send preserves every actual original user and assistant history row with its original identity/status/text')
-        assert not restored.last['ui']['project'] and not restored.last['ui']['selected_files'], (
+        final_ui = restored.command('inspect')['ui']
+        assert not final_ui['project'] and not final_ui['selected_files'], (
             'A casual restored conversation cannot acquire scientific project or file authority as a side effect of its first question')
         (restored.folder / 'actual-casual-auto-startup-first-send.json').write_text(json.dumps({
             'original_sources': sources, 'original_thread': thread, 'original_rows': first_rows,
@@ -8881,3 +8888,192 @@ def _match_original_alias_undo_sequence(actor, before, ordinary_undo_states, sho
     (actor.folder / 'actual-alias-ordinary-undo-sequence.json').write_text(json.dumps({
         'show_actions': show_actions, 'independent_ordinary_states': ordinary_undo_states,
         'actual_native_undo_states': actual_states}, indent=2))
+
+
+def _ordinary_expose_automatically_restored_composer(actor, original_text):
+    actor.until(lambda value: original_text in json.dumps(value['ui']['messages'], ensure_ascii=False))
+    before = actor.command('inspect')['ui']
+    before_wire = _session_wire(actor)
+    before_draft = qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text')
+    delivery = None
+    if any(row['name'] == 'home.start' and row['enabled'] and row['fully_exposed'] for row in before['controls']):
+        delivery = actor.command('click', name='home.start')['reply']
+    after = actor.command('inspect')['ui']
+    assert (after['project'] or {}).get('path') == (before['project'] or {}).get('path') \
+        and after['selected_files'] == before['selected_files'], (
+            'Entering the actual ordinary Start page preserves the automatically restored current project and original input descriptors')
+    after_rows = {row['id']: row for row in after['messages']}
+    assert all(after_rows.get(row['id']) == row for row in before['messages']) \
+        and qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == before_draft, (
+            'The normal Start input does not substitute restored history rows or erase the original draft before the first Send')
+    assert not _session_wire(actor, 'thread/start') and not _session_wire(actor, 'turn/start'), (
+        'Normal UI exposure cannot silently bootstrap a fresh conversation or replay an old user input')
+    (actor.folder / 'ordinary-start-after-actual-auto-restore.json').write_text(json.dumps({
+        'actual_pre_start': before, 'actual_wire_before_start': before_wire,
+        'actual_pre_start_draft': before_draft, 'actual_start_input': delivery,
+        'actual_after_start': after, 'no_manual_connect_select_or_open': True}, indent=2))
+
+
+# PRIVATE / UNRUN. The existing one-Send/same-account positive is actual-red
+# in app21. These finite independent negatives do not replace that positive.
+@pytest.mark.parametrize('boundary', ['cancel', 'account', 'draft', 'files', 'model'])
+def test_original_share_wait_cannot_approve_changed_or_cancelled_input(main_actor, tmp_path, boundary):
+    actor = main_actor([[]], show_actions=True)
+    models = [{'id': name, 'model': name, 'displayName': name, 'description': 'Offline protocol fixture',
+        'hidden': False, 'isDefault': name == 'gpt-6.1-sol', 'defaultReasoningEffort': 'medium',
+        'supportedReasoningEfforts': [{'reasoningEffort': 'medium', 'description': 'Fixture'}]}
+        for name in ['gpt-6.1-sol', 'gpt-5.6-luna']]
+    _session_configure(actor, fixture_models=models, session_fixture={'threads': [], 'page_size': 12},
+        observe_context_continuity=True)
+    actor.connect();original_account = qml(actor, 'Session.assistant.account');files = _attachment_fixtures(tmp_path, 2)
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(files[0])])['reply']['added'], (
+        'The original Share wait owns a genuinely admitted pending file')
+    late = actor.begin_current_file_selection() if boundary == 'files' else None
+    text = 'Use this exact original pending input only after the original Share.'
+    actor.command('send_text', text=text)
+    actor.until(lambda value: any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
+        for row in value['ui']['controls']))
+    if boundary == 'account':
+        _session_configure(actor, fixture_account_read_reply={'account': {'type': 'chatgpt',
+            'email': 'different-fixture-account@example.invalid', 'planType': 'plus'}, 'requiresOpenaiAuth': False})
+    release = actor.folder / 'release-original-share-boundary-account'
+    try:
+        held = _review66_hold_original_identity(actor, release)
+        delivered = actor.command('dialog_ok', name='AssistantConnectionDialog',
+                                  role='cancel' if boundary == 'cancel' else 'ok')['reply']
+        assert delivered['pressed_changes'] > 0, 'The existing original Share/Cancel standard button receives actual current-window input'
+        if boundary == 'draft':
+            actor.until(lambda value: any(row['name'] == 'assistant.composer' and row['enabled'] and row['fully_exposed']
+                for row in value['ui']['controls']))
+            actor.command('click', name='assistant.composer');actor.command('manual_text', text=' Changed by the user before readiness.')
+            assert qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') != text, (
+                'The negative actually reaches changed draft text through the original physical editor')
+        elif boundary == 'files':
+            assert late and actor.command('selected_add', token=late, paths=[str(files[1])])['reply']['added'], (
+                'A genuine outstanding original picker changes the pending files rather than mutating a model property')
+        elif boundary == 'model':
+            actor.until(lambda value: any(row['name'] == 'assistant.modelEffort' and row['enabled'] and row['fully_exposed']
+                for row in value['ui']['controls']))
+            actor.command('click', name='assistant.modelEffort')
+            actor.until(lambda value: any(row['name'] == 'assistant.choice.model.gpt-5.6-luna' and row['enabled'] and row['fully_exposed']
+                for row in value['ui']['controls']))
+            actor.command('click', name='assistant.choice.model.gpt-5.6-luna')
+            assert qml(actor, 'Session.assistant.selectedModel') == 'gpt-5.6-luna', (
+                'The changed-model negative physically chooses an actually offered original model')
+        assert not _session_wire(actor, 'turn/start'), 'No original pending input may be sent while its correlated account proof is held'
+        release.touch();actor.command('refresh_usage')
+        actor.until(lambda _value: any(row.get('id') == held['id'] and 'result' in row
+            for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
+        if boundary == 'account':
+            actor.until(lambda value: not value['ui']['connected'] or qml(actor, 'Session.assistant.account') != original_account)
+        else:
+            actor.until(lambda value: value['ui']['connected'] and qml(actor, 'Session.assistant.draftAdmissionReady'))
+        actor.command('inspect') # A genuine subsequent Qt command turn after the actual readiness/retirement boundary.
+        assert not _session_wire(actor, 'turn/start') and not _session_state(actor)['inputs'], (
+            'Readiness cannot approve or resubmit an old cancelled/changed account, draft, file or model offer without a new explicit user action')
+        (actor.folder / 'original-share-invalidated-before-readiness.json').write_text(json.dumps({
+            'boundary': boundary, 'held_correlated_read': held, 'actual_original_button': delivered,
+            'send_count': 1, 'share_count': 0 if boundary == 'cancel' else 1,
+            'actual_requests': _session_wire(actor), 'actual_final': actor.command('inspect')['ui']}, indent=2))
+    finally:
+        release.touch()
+
+
+def _observe_original_toolbar_press(actor, marker, paths=()):
+    source = r'''(function(){const vm=Session.assistant,project=Session.project,toggle=assistantToggle;
+        if(!project||!toggle||toggle.Window.window!==window)return false;
+        const o=Qt.createQmlObject('import QtQuick; Item {property var presses:[];property var cues:[];}',window.contentItem);o.objectName=MARKER;
+        function values(){const table=project.parameters,out={};for(const path of PATHS){out[path]=null;for(let n=0;n<table.count;n++)if(table.text(n,'path')===path){out[path]=table.get(n,'value');break;}}return out;}
+        function state(){if(!Qt.isQtObject(project)||!Qt.isQtObject(vm)||!Qt.isQtObject(toggle)||Session.project!==project||Session.assistant!==vm)return {ownerCurrent:false,unavailable:true};return {ownerCurrent:true,project:String(project),
+            paneVisible:assistantPanel.visible,paneOpened:assistantPanel.opened,selected:toggle.assistantSelected,
+            icon:toggle.fontIcon,fitRunning:project.fit.running,fitOutcome:project.fit.outcome,
+            values:values(),showingActions:vm.showingActions,canCancel:vm.canCancel};}
+        toggle.pressedChanged.connect(function(){if(Qt.isQtObject(o)&&Qt.isQtObject(toggle)&&toggle.pressed)o.presses.push(state());});
+        vm.actionPointerMoved.connect(function(point){if(Qt.isQtObject(o)){const s=state();s.x=point.x;s.y=point.y;o.cues.push(s);}});
+        return true;})()'''.replace('MARKER', json.dumps(marker)).replace('PATHS', json.dumps(list(paths)))
+    assert qml(actor, source), 'The read-only witness binds the actual original toolbar, current project and window before genuine input'
+
+
+def _original_toolbar_pane_state(actor):
+    return qml(actor, '({visible:assistantPanel.visible,opened:assistantPanel.opened,selected:assistantToggle.assistantSelected,'
+        'icon:assistantToggle.fontIcon,project:String(Session.project),showingActions:Session.assistant.showingActions})')
+
+
+def test_manual_original_assistant_toolbar_keeps_exact_visible_prefix_then_new_reveal(main_actor, tmp_path):
+    actor = main_actor([[]], show_actions=True)
+    assert actor.command('open', path=str(copied_estimate_project(tmp_path)))['reply']['opened'], (
+        'The manual toolbar witness uses a genuine complete isolated ordinary project')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    before = json.loads(json.dumps(actor.command('inspect')['ui']['project']))
+    first = next(row for row in before['parameters'] if row['category'] == 'instrument' and row['field'] == 'calib_twotheta_offset')
+    second = next(row for row in before['parameters'] if row['category'] == 'instrument' and row['field'] == 'setup_wavelength')
+    wanted = {first['path']: first['value'] + 0.013, second['path']: second['value'] * 1.01}
+    call = tool_call('set_parameters', 'manual-toolbar-original-prefix', values=[{'path': row['path'], 'value': wanted[row['path']]} for row in [first, second]])
+    actor.configure_turns([[call]]);marker = 'e11.manual.toolbar.original-prefix'
+    _observe_original_toolbar_press(actor, marker, wanted)
+    actor.connect();_session_request_with_original_disclosure(actor, 'Apply these two explicit original scalar edits once through their ordinary visible owners.')
+    def prefix(value):
+        rows = {row['path']: row for row in value['ui']['project']['parameters']}
+        return value['ui']['can_cancel'] and rows[first['path']]['value'] == wanted[first['path']] \
+            and rows[second['path']]['value'] == second['value']
+    actor.until(prefix, visible_progress=True)
+    actor.command('click', name='assistant.toggle')
+    presses = qml(actor, '(' + _scene_control_expression(marker) + ').presses')
+    assert presses and presses[-1]['ownerCurrent'] and presses[-1]['showingActions'] \
+        and presses[-1]['values'][first['path']] == wanted[first['path']] \
+        and presses[-1]['values'][second['path']] == second['value'], (
+            'The actual physical toolbar press must reach the original partially applied visible operation before the second scientific edit; otherwise this channel is unreached')
+    actor.until(lambda _value: _original_toolbar_pane_state(actor)['visible'] and _original_toolbar_pane_state(actor)['opened'])
+    pane = _original_toolbar_pane_state(actor)
+    assert pane['selected'] and pane['icon'] == 'columns', 'After the actual manual Open Assistant action, pane and toolbar icon must agree on the visible Assistant'
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=True)
+    partial = json.loads(actor.responses()[0]['result']['contentItems'][0]['text'])
+    after = actor.command('inspect')['ui']['project'];rows = {row['path']: row for row in after['parameters']}
+    assert rows[first['path']]['value'] == wanted[first['path']] and rows[second['path']]['value'] == second['value'] \
+        and partial.get('complete') is False and partial.get('steps_completed') == 1, (
+            'Manual toolbar takeover retains the actual single applied prefix and truthfully retires its unperformed continuation without an extra edit')
+    before_cues = len(qml(actor, '(' + _scene_control_expression(marker) + ').cues'))
+    actor.append_turn([tool_call('inspect_project', 'inspect-actual-retained-manual-prefix'),
+        tool_call('set_parameters', 'later-new-original-reveal', values=[{'path': second['path'], 'value': wanted[second['path']]}])])
+    _session_request_with_original_disclosure(actor, 'Apply this separate new remaining original edit once after inspecting the retained prefix.')
+    actor.until(lambda value: len(actor.responses()) == 3 and value['ui']['state'] == 'idle', visible_progress=True)
+    native_result(actor.responses()[-1])
+    cues = qml(actor, '(' + _scene_control_expression(marker) + ').cues')[before_cues:]
+    assert cues and any(row['ownerCurrent'] and row['showingActions'] and not row['paneVisible'] for row in cues), (
+        'A later separately requested native operation can genuinely reveal its original control after the manual Assistant override')
+    current = {row['path']: row for row in actor.command('inspect')['ui']['project']['parameters']}
+    assert all(current[path]['value'] == value for path, value in wanted.items()) \
+        and all(current[row['path']] == row for row in before['parameters'] if row['path'] not in wanted) \
+        and all({key: value for key, value in current[row['path']].items() if key != 'value'}
+                == {key: value for key, value in row.items() if key != 'value'} for row in before['parameters'] if row['path'] in wanted), (
+            'The later newly owned action changes only its requested remaining value; manual sidebar switching preserves all unrelated values, flags and metadata')
+    (actor.folder / 'manual-toolbar-prefix-and-new-reveal.json').write_text(json.dumps({
+        'physical_press': presses, 'visible_pane': pane, 'actual_partial': partial,
+        'retained_prefix': after, 'later_cues': cues, 'actual_results': actor.responses()}, indent=2))
+
+
+def test_manual_original_assistant_toolbar_does_not_stop_active_background_fit(main_actor, tmp_path):
+    actor = main_actor([[tool_call('run_fit', 'toolbar-during-original-background-fit')]], show_actions=True)
+    project = tmp_path / 'ordinary-original-fit';shutil.copytree(ROOT / 'tests/fixtures/fit_quality/fullprof-model', project)
+    assert actor.command('open', path=str(project))['reply']['opened'], 'The background-Fit toolbar witness opens the unchanged existing native fit fixture'
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    wait_positive_tab(actor, 'appBar.tab.structure');actor.command('click', name='appBar.tab.structure')
+    assert qml(actor, 'Session.project.fit.available'), 'A real current native Fit is available before the toolbar action'
+    marker = 'e11.manual.toolbar.original-background-fit';_observe_original_toolbar_press(actor, marker)
+    actor.connect();_session_request_with_original_disclosure(actor, 'Fit this current original fixture while retaining its ordinary native result and Undo.')
+    actor.until(lambda _value: qml(actor, 'Session.project.fit.running'), visible_progress=True)
+    actor.command('click', name='assistant.toggle')
+    presses = qml(actor, '(' + _scene_control_expression(marker) + ').presses')
+    assert presses and presses[-1]['ownerCurrent'] and presses[-1]['fitRunning'], (
+        'Only a genuine original toolbar press during actual background Fit qualifies this channel; a naturally completed earlier fit does not')
+    actor.until(lambda _value: _original_toolbar_pane_state(actor)['visible'] and _original_toolbar_pane_state(actor)['opened'])
+    pane = _original_toolbar_pane_state(actor)
+    assert pane['selected'] and pane['icon'] == 'columns', 'Manual Assistant visibility and its real toolbar icon agree while a native Fit runs'
+    actor.until(lambda value: bool(actor.responses()) and not qml(actor, 'Session.project.fit.running'), visible_progress=True)
+    result = native_result(actor.responses()[0]);outcome = qml(actor, 'Session.project.fit.outcome')
+    assert outcome not in ['stopped', 'superseded'] and qml(actor, 'Session.project.fit.canUndo'), (
+        'Opening the Assistant is not Stop Fit or a project retirement; the same actual background result and ordinary Undo survive')
+    (actor.folder / 'manual-toolbar-preserves-original-background-fit.json').write_text(json.dumps({
+        'actual_running_press': presses, 'actual_pane': pane, 'actual_native_result': result,
+        'actual_fit_outcome': outcome, 'timing_qualification': 'No forced worker hold or elapsed-time performance claim; actual running press is mandatory.'}, indent=2))
