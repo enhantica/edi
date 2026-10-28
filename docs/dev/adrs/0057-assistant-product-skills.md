@@ -437,3 +437,23 @@ policy; existing chemical/symmetry/calibration authority remains intact.
 The same guidance preserves physical Biso/Uiso convention and units, distinguishes
 independent-site modelling constraints from native symmetry, and does not collapse
 an established anisotropic model automatically.
+
+
+### Default ordinary actions instead of duplicate compound setup
+
+The first ordinary current-session Create, native CIF/data imports, Estimate and
+current editors already express setup without a second recipe protocol. Default
+tool specs, names, nativeActions and their shared advertisement proof omit
+create_cwl_project together; tool/compiled/skill text no longer
+advertises its recipe or mandatory visible setup order. Its strict compatibility
+parser, dispatch, core API, once records, partial receipts and Undo remain.
+Ordinary manual/mapped structure actions and all native scientific actions remain
+offered. This changes discovery, not old requests' scientific validation.
+
+The optional dedicated runtime's independent static registry is already stale
+relative to current app actions and remains unqualified; changing default names
+is not proof of that package's tool ceiling. Stock official runtime remains the
+elected default. The compiled purpose instruction follows the existing optional
+metadata contract; actual objective, scientific operands and owner authority are
+unchanged. The default-advertisement change does not qualify runtime behavior or
+the separate dedicated package.
