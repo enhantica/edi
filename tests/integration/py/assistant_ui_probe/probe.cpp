@@ -403,6 +403,10 @@ int main(int argc,char** argv) {
                 {"available_efforts",QJsonArray::fromStringList(assistant->availableEfforts())},
                 {"selected_effort",assistant->selectedEffort()},
                 {"last_error",assistant->lastError()},{"messages",model_rows(assistant->messages())},
+                // Read the original current Session model without marking it viewed or dismissing history.
+                {"app_messages",Object{{"rows",model_rows(observed->loadWarnings())},
+                    {"count",observed->loadWarnings()->count()},
+                    {"unviewed_count",observed->loadWarnings()->unviewedCount()}}},
                 {"show_actions",assistant->showActions()},
                 {"action_transitions",action_transitions},{"ui_sequence",ui_sequence},
                 {"work_report",QJsonObject::fromVariantMap(assistant->workReportReceipt())},
