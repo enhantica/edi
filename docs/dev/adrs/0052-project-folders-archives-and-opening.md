@@ -131,3 +131,19 @@ not the project being read (measured with the app's software renderer, as on the
 | Archives with one top folder, as the web app wrote them                            | Rejected for writing: members relative to the folder are what Python's `zipfile` and other tools produce from it; both layouts are still read.               |
 | Separate *Open a project folder*, *Export project* buttons beside Open and Save as | Rejected by the owner (2026-10-25): six buttons whose differences are unclear; one Open and one Save as, with a format and a copy choice, do both jobs.      |
 | Save the open project's unsaved changes into an export                             | Rejected for the command line and Python: export writes the project as saved, as the folder does. In the app, *Save a copy* writes the project as it stands. |
+
+
+### 2026-10-28: Open publication belongs to its original replacement
+
+The assistant port made Session replacement return actual publication/currentness. Ordinary
+Open/Open-copy now propagate that result; a false result may follow a genuine partial adoption.
+Original receiver/target/replacement identity also fences archive/read-only/example/web location
+bookkeeping and failure notifications. A stale outer Open cannot decorate a successor with its
+origin, location or error, nor delete staging after another actual replacement. Unadopted local
+candidates can be retired, while actual adopted state is never rolled back to manufacture no effect.
+
+This does not change the original whole-project Open policy or introduce a loader/format. Save
+and readback continue to accept construction states; ordinary Open still requires structures,
+experiments and their measured-data/calculation-grid prerequisites. The retained app6 partial
+one-structure/zero-experiment reopen refusal was not writer corruption. Complete persistence
+verification uses a genuinely complete native project and retains incomplete refusal separately.

@@ -889,19 +889,36 @@ struct AssistantViewModel::State {
         return snapshot;
     }
 #endif
-    QByteArray work_report_cache; // One bounded current-or-last native diagnostic document.
-    void refresh_work_report_cache() noexcept {
+    QByteArray work_report_cache; // Last useful attempt; current diagnostics derive from canonical history.
+    bool work_has_diagnostic() const noexcept {
+        try {
+            for (const auto& value : history) {
+                const auto row=value.toObject();
+                if(work_eligible(row) && row.value("workDiagnostic").toBool() &&
+                    row.value("workEvidence").toObject().value("event_failure").isObject())return true;
+            }
+        }catch(...) {}
+        return false;
+    }
+    QByteArray current_work_report_document() noexcept {
 #ifndef __EMSCRIPTEN__
         const QPointer<AssistantViewModel> receiver(&owner);const auto binding=generation;const auto scope=work_reports.scope();
-        if(work_reports.attempt().isEmpty() && !work_report_cache.isEmpty())return;
         try {
             const auto snapshot=work_snapshot(Limits::record_bytes);
-            if(!receiver || receiver->state_.get()!=this || generation!=binding || work_reports.scope()!=scope || snapshot.document.isEmpty())return;
+            if(!receiver || receiver->state_.get()!=this || generation!=binding || work_reports.scope()!=scope || snapshot.document.isEmpty())return {};
             auto encoded=QJsonDocument(snapshot.document).toJson(QJsonDocument::Indented);
             if(static_cast<quint64>(encoded.size())>Limits::record_bytes)encoded=QJsonDocument(snapshot.document).toJson(QJsonDocument::Compact);
-            if(static_cast<quint64>(encoded.size())<=Limits::record_bytes)work_report_cache.swap(encoded);
-        }catch(...) {work_reports.missEvidence();} // Last useful document survives a current capture gap.
+            if(static_cast<quint64>(encoded.size())<=Limits::record_bytes)return encoded;
+        }catch(...){work_reports.missEvidence();}
 #endif
+        return {};
+    }
+    void refresh_work_report_cache() noexcept {
+        // A no-attempt diagnostic can be viewed as current without replacing the
+        // original useful last attempt or relabelling its scope/account/project.
+        if(work_reports.attempt().isEmpty() && !work_report_cache.isEmpty())return;
+        auto encoded=current_work_report_document();
+        if(!encoded.isEmpty())work_report_cache.swap(encoded);
     }
     QVariantMap work_capture(bool automatic=false) {
         const QPointer<AssistantViewModel> receiver(&owner);
@@ -939,7 +956,7 @@ struct AssistantViewModel::State {
 #endif
     }
     void work_settled_step() noexcept {
-        if(!work_reports.automatic() || !work_scope_bound || work_reports.attempt().isEmpty())return;
+        if(!work_reports.automatic() || !work_scope_bound || (work_reports.attempt().isEmpty() && !work_has_diagnostic()))return;
         try{(void)work_capture(true);}catch(...){work_reports.missEvidence();}
     }
     void work_end(const QString& terminal,const QString& cause={},const Object& terminalIdentity={}) noexcept {
@@ -2384,6 +2401,8 @@ struct AssistantViewModel::State {
         QMetaObject::Connection calculation_wait;
         qsizetype step = 0;
         bool manual_takeover = false;
+        bool dialog_opened=false, dialog_delivery=false;
+        bool confirmation_accepted=false, confirmation_consumed=false;
     };
     std::shared_ptr<NativeCreateWidget> native_create_widget;
     std::vector<std::weak_ptr<NativeCreateWidget>> creation_widget_frames;
@@ -5204,8 +5223,7 @@ struct AssistantViewModel::State {
                 const auto row = value.toObject();
                 for (auto field = row.constBegin(); field != row.constEnd(); ++field) if (field->isString()) {
                     const auto text = field->toString();
-                    const auto limit = field.key() == "expression" ? Limits::context_bytes : Limits::id_bytes;
-                    if (static_cast<quint64>(text.size()) > limit || std::any_of(text.cbegin(), text.cend(), [](QChar c) { return c.unicode() < 32 || c.unicode() == 127; }))
+                    if ((field.key() != "expression" && static_cast<quint64>(text.size()) > Limits::id_bytes) || std::any_of(text.cbegin(), text.cend(), [](QChar c) { return c.unicode() < 32 || c.unicode() == 127; }))
                         throw std::invalid_argument("The original single-line relation controls cannot type this spelling");
                 }
             }
@@ -7421,7 +7439,7 @@ struct AssistantViewModel::State {
             const auto error=creation->ordinary_facts.value("error").toString();
             if(!error.isEmpty())outcome["message"]=bounded_error(error);
             else if(!creation->ordinary_failure.isEmpty())outcome["message"]=bounded_error(creation->ordinary_failure);
-            if(!creation->ordinary_failure_target.isEmpty()){outcome["target"]=creation->ordinary_failure_target;outcome["stage"]="PROJECT_NAME_VALIDATION";}
+            if(!creation->ordinary_failure_target.isEmpty()){outcome["target"]=creation->ordinary_failure_target;outcome["stage"]=creation->ordinary_failure_target=="createProject.title"?"PROJECT_TITLE_VALIDATION":"PROJECT_NAME_VALIDATION";}
             native_finish(complete,outcome);
         }catch(...) {if(owned())native_finish(false,fallback);}
     }
@@ -9121,7 +9139,11 @@ struct AssistantViewModel::State {
             if(step.target.startsWith("experiments.row.") && target->property("experiment").value<QObject*>()!=run->operation_view)return false;
             if(step.target.startsWith("experimentType.") && run->project->currentExperiment()!=run->operation_view)return false;
         }
-        if (step.target == "createProject.accept") { run->creating_project = true; return true; }
+        if(step.target=="project.create" || step.target=="createProject.accept") {
+            if(!target->property("pressed").toBool())return false;
+            if(step.target=="createProject.accept")run->creating_project=true;
+            return true;
+        }
         if (!run->project) return true;
         auto* experiment = !run->individual_tool.isEmpty() ? run->operation_member : run->project->assistantProject()->experiments.empty() ? nullptr : run->project->assistantProject()->experiments[0].get();
         std::optional<ProjectEditor::CreationAction> action;
@@ -9213,6 +9235,12 @@ struct AssistantViewModel::State {
             if (!group || !QMetaObject::invokeMethod(group, "prepareAssistantCreate", Qt::DirectConnection,
                 Q_RETURN_ARG(QVariant, ok), Q_ARG(QVariant, QVariant(run->id))) || !ok.toBool()) { control_failure(run,ControlCause::Unavailable); throw std::runtime_error("The original Create dialog is unavailable"); }
             if (!run->receiver || run->receiver->state_.get()!=this || !create_widget_current(run)) return;
+            QVariant originalForm;
+            if(!QMetaObject::invokeMethod(group,"assistantCreateDialog",Qt::DirectConnection,Q_RETURN_ARG(QVariant,originalForm),Q_ARG(QVariant,QVariant(run->id))))
+                throw std::runtime_error("The original Create dialog owner is unavailable");
+            if(originalForm.metaType()==QMetaType::fromType<QJSValue>())originalForm=originalForm.value<QJSValue>().toVariant();
+            run->form=originalForm.value<QObject*>();
+            if(!run->form || run->form->objectName()!="createProject.dialog")throw std::runtime_error("The original Create dialog owner is unavailable");
         }
         if (!target) {
             if (create_widget_missing_target(run,step)) return;
@@ -9348,15 +9376,16 @@ struct AssistantViewModel::State {
                 branch="control.cleanup";
                 run->control_input.reset(); run->parameter_input.reset(); run->control_parameter.clear();
                 branch="control.create-dialog";
-                if (step.target == "project.create") {
-                    QObject* found = nullptr;
-                    for (auto* object : run->window->findChildren<QObject*>()) if (object->objectName() == "createProject.dialog" && object->property("visible").toBool() && object->property("assistantIntentId").toString() == run->id) {
-                        if (found) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original Create dialog is ambiguous"); }; found = object;
-                    }
-                    if (!found) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original Create dialog did not open"); }; run->form = found;
+                if(step.target=="project.create") {
+                    run->dialog_delivery=true;
+                    if(run->dialog_opened)create_widget_advance(run);
+                    return; // Original opened observation owns the deferred result.
                 }
                 branch="control.create-owner";
-                if (step.target == "createProject.accept" && (!run->project || !result_session() || result_session()->project() != run->project)) { control_failure(run,ControlCause::Commit); throw std::runtime_error("The original Create did not commit its owner"); };
+                if(step.target=="createProject.accept") {
+                    if(!run->confirmation_accepted) {control_failure(run,ControlCause::Commit);throw std::runtime_error("The original Create dialog did not accept this confirmation");}
+                    return; // Existing Session outcome settles this original call.
+                }
                 branch="control.advance";
                 create_widget_advance(run);
             } catch (...) { if (create_widget_owned(run)) create_widget_refuse(run, widget_outcome_error, false, branch, int(delivered), int(bool(target))); }
@@ -9403,7 +9432,7 @@ struct AssistantViewModel::State {
         const auto add=[&](Kind kind,const QString& target,const QString& text=QString{},int row=-1,
                            std::optional<Action::Kind> action=std::nullopt,const QString& field=QString{}) {
             if(run->inputs.size()>=std::numeric_limits<int>::max())throw std::length_error("Original setup has too many controls");
-            generic_size(target,Limits::context_bytes);generic_size(text,Limits::context_bytes);generic_size(field,Limits::context_bytes);
+            generic_measured_size(target);generic_measured_size(text);generic_measured_size(field);
             run->inputs.push_back({kind,target,text,kind==Kind::Choose && target!="peak.type"?0:-1,-1,row,action,field});
         };
         const auto value=[&](const edi::Parameter* member) {
@@ -9606,14 +9635,25 @@ struct AssistantViewModel::State {
         } catch (...) { if(publication.input_current())error = storage_error; return false; }
     }
     void work_failure_row(const QString& code,const QString& explanation,const Object& evidence={}) noexcept {
-        if(!work_reports.collecting() || work_reports.attempt().isEmpty())return;
+        if(!work_reports.collecting())return;
         const auto previousError=error;
         try {
+            if(work_reports.attempt().isEmpty()) {
+                work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();
+                if(!work_scope_bound){work_reports.missEvidence();return;}
+            }
             for(const auto& value:history){const auto row=value.toObject();
                 if(work_eligible(row) && row.value("kind")=="error" && row.value("payload").toObject().value("code")==code &&
                    row.value("workScope").toObject().value("attempt_id")==work_reports.attempt())return;}
             auto row=public_row("error",explanation,{{"code",code}},"failed");row["workDiagnostic"]=true;
             if(!evidence.isEmpty())row["workEvidence"]=evidence;
+            if(work_reports.attempt().isEmpty()) {
+                const auto m=work_report_missing();
+                Object diagnostic{{"attempt_id",work_report_missing("not_observed")},{"thread_id",m},{"turn_id",m},
+                    {"terminal",work_report_observed("failed")},{"native_settlement","unknown"},{"first_cause",work_report_observed(code)}};
+                if(!generic_thread.isEmpty())diagnostic["thread_id"]=work_report_observed(generic_thread);
+                row["workTurn"]=diagnostic;
+            }
             auto next=history;next.append(row);
             if(!publish(std::move(next), true))work_reports.missEvidence();
             error=previousError;
@@ -9626,8 +9666,12 @@ struct AssistantViewModel::State {
             const Object facts{{"method",work_report_observed(QLatin1StringView(diagnostic.method))},
                 {"first_stage",work_report_observed(QLatin1StringView(diagnostic.first_stage))},
                 {"first_class",work_report_observed(QLatin1StringView(diagnostic.first_class))}};
-            if(work_first_cause.isEmpty())work_first_cause=QStringLiteral("client.event_processing");
+            if(work_reports.attempt().isEmpty() && !work_has_diagnostic()) {
+                // Old account/project terminal metadata is not a new diagnostic's identity.
+                work_first_cause=QStringLiteral("client.event_processing");work_terminal=QStringLiteral("failed");
+            } else if(work_first_cause.isEmpty())work_first_cause=QStringLiteral("client.event_processing");
             work_failure_row(QStringLiteral("client.event_processing"),explanation,{{"event_failure",facts}});
+            work_settled_step();
             return explanation;
         }catch(...) {
             work_reports.missEvidence();
@@ -13179,6 +13223,42 @@ struct AssistantViewModel::State {
     }
 };
 
+bool AssistantViewModel::observeCreateDialog(QObject* form,const QString& intent,const QString& outcome) {
+#ifndef __EMSCRIPTEN__
+    const QPointer<AssistantViewModel> receiver(this);
+    auto* s=state_.get();const auto run=s->native_create_widget;
+    try {
+        if(!run || !run->ordinary || run->id!=intent || run->form!=form || !form || !s->create_widget_owned(run) ||
+            run->step<0 || run->step>=run->inputs.size())return false;
+        const auto step=run->inputs.at(run->step).target;
+        if(outcome=="opened") {
+            if(step!="project.create" || !form->property("visible").toBool() || form->property("assistantIntentId").toString()!=intent || !s->create_widget_current(run))return false;
+            run->dialog_opened=true;
+            if(run->dialog_delivery)s->create_widget_advance(run);
+            return true;
+        }
+        if(outcome=="accepted") {
+            // Qt6.11.2 QQuickDialog::StandardCode is Rejected=0, Accepted=1.
+            if(step!="createProject.accept" || !run->creating_project || run->confirmation_accepted || !s->widget_input || !s->widget_input->injecting() ||
+                form->property("result").toInt()!=1 || !s->create_widget_current(run))return false;
+            run->confirmation_accepted=true;
+            return true;
+        }
+        if(outcome=="rejected") {
+            if(form->property("result").toInt()!=0)return false;
+            s->create_widget_refuse(run,QStringLiteral("The original Create dialog was cancelled before this request committed"));
+            return true;
+        }
+    }catch(...) {
+        if(receiver && state_.get()==s && s->create_widget_owned(run))
+            s->create_widget_refuse(run,QStringLiteral("The original Create dialog outcome could not be retained; inspect the actual project before repeating"));
+    }
+#else
+    Q_UNUSED(form);Q_UNUSED(intent);Q_UNUSED(outcome);
+#endif
+    return false;
+}
+
 bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target, const QString& intent, const QString& location) {
 #ifndef __EMSCRIPTEN__
     const QPointer<AssistantViewModel> receiver(this);
@@ -13186,8 +13266,7 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
     const auto normal=s->native_creation;
     if(normal && normal->ordinary_project && normal->ordinary_intent==intent) {
         const auto visible=s->native_create_widget;
-        if(s->show_actions && (!visible || !visible->normal_project_only || visible->owner_handoff!=normal || !visible->creating_project ||
-            !s->widget_input || !s->widget_input->injecting())) {
+        if(s->show_actions && (!visible || !visible->normal_project_only || visible->owner_handoff!=normal || !visible->confirmation_accepted || visible->confirmation_consumed)) {
             normal->ordinary_failure=QStringLiteral("The original normal Create dialog confirmation no longer owns this request.");return false;
         }
         if(!s->normal_project_create_current(normal))return false;
@@ -13199,15 +13278,16 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
         if(!location.isEmpty() && QFileInfo::exists(location)) {
             normal->ordinary_failure=QStringLiteral("The normal Create destination already exists. Choose another project name; the existing destination was not replaced.");return false;
         }
+        if(s->show_actions)visible->confirmation_consumed=true;
         (void)s->prepare_creation_attachment(normal,target,normal->partial_outcomes[0]);
         return receiver && state_.get()==s && s->normal_project_create_current(normal);
     }
     const auto run = s->native_create_widget;
-    if (!location.isEmpty() || !run || !run->ordinary || run->id != intent || !run->creating_project || !s->create_widget_current(run) ||
-        !s->widget_input || !s->widget_input->injecting() || !target || s->project || !edi::empty_for_population(*target->assistantProject())) return false;
+    if (!location.isEmpty() || !run || !run->ordinary || run->id != intent || !run->confirmation_accepted || run->confirmation_consumed || !s->create_widget_current(run) || !target || s->project || !edi::empty_for_population(*target->assistantProject())) return false;
     const auto recipe = (run->complete_setup?run->call.record->original.value("arguments").toObject():run->arguments).value("recipe").toObject();
     if (!target->path().isEmpty() || target->name() != recipe.value("project_name").toString() ||
         target->description() != recipe.value("description").toString()) return false;
+    run->confirmation_consumed=true;
     auto creation = std::make_shared<State::NativeCreation>();
     creation->epoch = run->epoch; creation->receipt = run->call.receipt; creation->record = run->call.record;
     creation->selected = s->native_selected_bytes(*creation->receipt);
@@ -13247,7 +13327,17 @@ void AssistantViewModel::finishOrdinaryProjectCreationOutcome(const QString& int
         }catch(...) {} // Preserve retained inputs/history; no unrelated scope is granted.
         return;
     }
-    if(!creation || !creation->ordinary_project || creation->ordinary_intent!=intent)return;
+    if(!creation || !creation->ordinary_project || creation->ordinary_intent!=intent) {
+        const auto run=s->native_create_widget;
+        if(!run || !run->ordinary || run->normal_project_only || run->id!=intent || !run->confirmation_accepted || !s->create_widget_owned(run))return;
+        try {
+            auto* session=s->result_session();
+            if(facts.value("success").toBool() && session && session->creationOutcomeCurrent(facts) && run->project && s->project==run->project)
+                s->create_widget_advance(run);
+            else s->create_widget_refuse(run,facts.value("error").toString().isEmpty()?QStringLiteral("The original normal Create outcome did not complete"):facts.value("error").toString());
+        }catch(...) {if(s->create_widget_owned(run))s->create_widget_refuse(run,QStringLiteral("The original deferred Create result could not be retained"));}
+        return;
+    }
     const QPointer<AssistantViewModel> receiver(this);
     try {
         creation->ordinary_facts=facts;creation->ordinary_returned=true;
@@ -13257,6 +13347,7 @@ void AssistantViewModel::finishOrdinaryProjectCreationOutcome(const QString& int
     }catch(...) {
         if(receiver && state_.get()==s)try{creation->ordinary_failure=QStringLiteral("Create committed, but refreshing its original result did not complete. Inspect the current project before repeating.");}catch(...) {}
     }
+    if(receiver && state_.get()==s)s->native_finish_normal_project(creation);
 #else
     Q_UNUSED(intent);Q_UNUSED(facts);
 #endif
@@ -13310,7 +13401,7 @@ bool AssistantViewModel::commitNativeProject(ProjectViewModel* target) noexcept 
     s.selected_rows_dirty = true;
     *a->active = true; a->committed = true; a->creation->adopted = true;
     const auto run = s.native_create_widget;
-    if (run && run->ordinary && run->owner_handoff == a->creation && run->creating_project) {
+    if (run && run->ordinary && run->owner_handoff == a->creation && run->confirmation_accepted && run->confirmation_consumed) {
         run->project = target; run->epoch = session->assistantEpoch();
         ++run->completed_steps; run->step_counted = true; // Actual original Session/PVM pointer commit, no callback.
     }
@@ -13917,6 +14008,10 @@ QString AssistantViewModel::submitDraft(const QString& text) {
 QString AssistantViewModel::workReportDocument() {
 #ifndef __EMSCRIPTEN__
     if(QThread::currentThread()!=thread())return {};
+    if(state_->work_reports.attempt().isEmpty() && state_->work_has_diagnostic()) {
+        const auto current=state_->current_work_report_document();
+        if(!current.isEmpty())return QString::fromUtf8(current);
+    }
     state_->refresh_work_report_cache();
     return QString::fromUtf8(state_->work_report_cache);
 #else

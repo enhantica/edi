@@ -69,6 +69,9 @@ EaElements.GroupBox {
         assistantCreate = { id: id, cancelled: false };
         return assistantCreate !== null && assistantCreate.id === id && Session.project === null;
     }
+    function assistantCreateDialog(id) {
+        return assistantCreate !== null && assistantCreate.id === id ? createDialog : null;
+    }
     function retireAssistantCreate(id, manual) {
         const original = assistantCreate;
         if (original === null || original.id !== id) return;
@@ -86,9 +89,12 @@ EaElements.GroupBox {
         const actualName = name.length > 0 ? name : "project";
         if (!createDialog.acceptsProjectName(actualName))
             return ({error: qsTr("Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed."), target: "createProject.name"});
+        const actualTitle = title === undefined || title === null ? createDialog.projectTitle : title;
+        if (!createDialog.acceptsProjectTitle(actualTitle))
+            return ({error: qsTr("Project Title must fit the original single-line field (%1 UTF-16 units), without NUL, newline, carriage-return or tab. The supplied Title was not changed.").arg(createDialog.projectTitleMaximumLength), target: "createProject.title"});
         const parent = createDialog.projectParentDirectory
             ? EaLogic.Utils.urlToLocalFile(createDialog.projectParentDirectory) : createDialog.defaultProjectParentDirectory;
-        return ({name: actualName, description: description, title: title === undefined || title === null ? createDialog.projectTitle : title,
+        return ({name: actualName, description: description, title: actualTitle,
             authors: createDialog.projectAuthors, location: WebFiles.available ? "" : createDialog.joinedPath(parent, actualName),
             suRule: Preferences.newProjectSuRule, reportLibraries: Preferences.newReportLibraries === "embedded"});
     }
@@ -111,6 +117,16 @@ EaElements.GroupBox {
         x: Math.round((parent.width - width) / 2)
         y: Math.round((parent.height - height) / 2)
         visible: EaGlobals.Vars.showProjectDescriptionDialog
+        onOpened: {
+            const original = group.createIntent;
+            if (original !== null && original.assistant !== null)
+                Session.assistant.observeCreateDialog(createDialog, original.assistant.id, "opened");
+        }
+        onRejected: {
+            const original = group.createIntent;
+            if (original !== null && original.assistant !== null)
+                Session.assistant.observeCreateDialog(createDialog, original.assistant.id, "rejected");
+        }
         onClosed: {
             const life = group.createLife;
             const original = group.createIntent;
@@ -135,6 +151,7 @@ EaElements.GroupBox {
         onAccepted: {
             const life = group.createLife, original = group.createIntent;
             if (original === null || Session.project !== original.project || (original.assistant !== null && original.assistant.cancelled)) return;
+            if (original.assistant !== null && !Session.assistant.observeCreateDialog(createDialog, original.assistant.id, "accepted")) return;
             group.createIntent = null;
             if (!life.alive || group.createOperation !== original || Session.project !== original.project) return;
             if (original.assistant !== null && group.assistantCreate === original.assistant) group.assistantCreate = null;
