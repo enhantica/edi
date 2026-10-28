@@ -641,6 +641,64 @@ static std::shared_ptr<AssistantSkillInventory> capture_skill_sources(const QJso
 }
 #endif
 
+// The original human command formatter resolves closed instruction identities
+// and typed read/list/search metadata here; raw shell bytes never enter QML.
+QString command_human_description(const Object& source) {
+    const QString workflow="cat .agents/skills/project-assistance/SKILL.md";
+    const QString refinement="cat .agents/skills/refinement-strategy/SKILL.md";
+    const auto guidance=[](bool workflow,bool refinement) {
+        return workflow && refinement?QObject::tr("Read assistant workflow and refinement instructions"):
+            workflow?QObject::tr("Read assistant workflow instructions"):QObject::tr("Read assistant refinement instructions");
+    };
+    const auto command=source.value("command").toString();
+    if(command==workflow)return guidance(true,false);
+    if(command==refinement)return guidance(false,true);
+    if(command==workflow+" .agents/skills/refinement-strategy/SKILL.md" ||
+       command==refinement+" .agents/skills/project-assistance/SKILL.md")return guidance(true,true);
+    const auto actions=source.value("commandActions").toArray();
+    if(actions.isEmpty())return {};
+    for(const auto& value:actions) {
+        if(!value.isObject())return {};
+        const auto action=value.toObject();const auto type=action.value("type").toString();
+        if(!action.value("command").isString())return {};
+        if(type=="read") { if(!action.value("name").isString() || !action.value("path").isString())return {}; }
+        else if(type=="listFiles" || type=="search") {
+            for(const auto* key:{"path","query"})if(action.contains(key) && !action.value(key).isNull() && !action.value(key).isString())return {};
+        } else if(type!="unknown")return {};
+    }
+    if(actions.size()==1 && actions.first().toObject().value("type")=="unknown") {
+        const auto raw=actions.first().toObject().value("command").toString();
+        const QString marker="# Edi purpose: ";
+        if(raw.startsWith(marker)) {
+            const auto end=raw.indexOf('\n',0);
+            auto purpose=end<0?QString():raw.mid(marker.size(),end-marker.size());
+            if(purpose.endsWith('\r'))purpose.chop(1);
+            bool valid=!purpose.trimmed().isEmpty() && purpose.size()<=120 && !purpose.endsWith('\\') && purpose.toUtf8().size()<=480;
+            for(qsizetype i=0;valid && i<purpose.size();++i) {
+                const auto c=purpose.at(i).unicode();
+                if(c<0x20 || (c>=0x7f && c<=0x9f) || c==0x2028 || c==0x2029 || c==0xfeff || c==0x061c || c==0x200e || c==0x200f ||
+                   (c>=0x202a && c<=0x202e) || (c>=0x2066 && c<=0x2069))valid=false;
+                else if(QChar::isHighSurrogate(c)){if(++i>=purpose.size() || !purpose.at(i).isLowSurrogate())valid=false;}
+                else if(QChar::isLowSurrogate(c))valid=false;
+            }
+            if(valid)return purpose;
+        }
+    }
+    QStringList labels;
+    for(const auto& value:actions) {
+        const auto action=value.toObject();const auto type=action.value("type").toString();
+        const auto path=QString(action.value("path").toString()).replace('\\','/');
+        if(type=="read") {
+            if(path=="project-assistance/SKILL.md" || path.endsWith("/project-assistance/SKILL.md"))labels.append(guidance(true,false));
+            else if(path=="refinement-strategy/SKILL.md" || path.endsWith("/refinement-strategy/SKILL.md"))labels.append(guidance(false,true));
+            else if(action.value("name")=="SKILL.md")labels.append(QObject::tr("Read assistant instructions"));
+            else labels.append(QObject::tr("Read %1").arg(action.value("name").toString().isEmpty()?action.value("path").toString():action.value("name").toString()));
+        } else if(type=="listFiles")labels.append(path.isEmpty()?QObject::tr("List files"):QObject::tr("List %1").arg(action.value("path").toString()));
+        else if(type=="search")labels.append(action.value("query").toString().isEmpty()?QObject::tr("Search files"):QObject::tr("Search for %1").arg(action.value("query").toString()));
+        else labels.append(QObject::tr("Run shell command"));
+    }
+    return labels.join(" · ").simplified();
+}
 // Display projection only. Full canonical diagnostics stay in State::history.
 Object message_payload(const Object& source,bool full) {
     Object result;
@@ -671,6 +729,7 @@ Object message_payload(const Object& source,bool full) {
         result["commandCategory"]=category;
     }
     if(full) {
+        if(source.value("type")=="commandExecution")result["commandDescription"]=command_human_description(source);
         strings(source,result,{"purpose","description","message","code","title","actor","query"});
         if(!result.contains("purpose")) {
             const auto purpose=source.value("arguments").toObject().value("purpose");
@@ -722,18 +781,30 @@ class Rows : public RowTableModel {
             setTableRows(rows);
             if (!alive) return;
             if (pending_) continue;
-            int first=-1,last=-1;QList<int> roles;
+            struct Change { int first, last; QList<int> roles; };
+            QList<Change> changes;
             for(qsizetype i=0;i<visible_.size();++i) {
                 const auto before=i<announced_.size()?announced_.at(i).toObject():Object{};
                 const auto after=visible_.at(i).toObject();
-                for(int c=0;c<names_.size();++c)if(before.value(names_[c])!=after.value(names_[c])) {
-                    if(first<0)first=static_cast<int>(i);last=static_cast<int>(i);
-                    const auto role=Qt::UserRole+1+c;if(!roles.contains(role))roles.append(role);
-                }
+                QList<int> roles;
+                for(int c=0;c<names_.size();++c)if(before.value(names_[c])!=after.value(names_[c]))
+                    roles.append(Qt::UserRole+1+c);
+                if(roles.isEmpty())continue;
+                const auto row=static_cast<int>(i);
+                if(!changes.isEmpty() && changes.last().last+1==row && changes.last().roles==roles)
+                    changes.last().last=row;
+                else changes.append({row,row,std::move(roles)});
             }
-            announced_=visible_; // One complete notification; reentry schedules the newest projection.
-            if(first>=0)emit dataChanged(index(first),index(last),roles);
-            if (!alive) return;
+            // Advance only each announced span before its signal. Reentrant assign
+            // restarts against what was actually announced, not unsent old spans.
+            while(announced_.size()>visible_.size())announced_.removeLast();
+            while(announced_.size()<visible_.size())announced_.append(Object{});
+            for(const auto& change:changes) {
+                for(int i=change.first;i<=change.last;++i)announced_[i]=visible_.at(i);
+                emit dataChanged(index(change.first),index(change.last),change.roles);
+                if(!alive)return;
+                if(pending_)break;
+            }
         }
     }
    protected:
@@ -2989,16 +3060,19 @@ struct AssistantViewModel::State {
     }
     QList<QQuickItem*> widget_items() const {
         if (!action_window || !action_window->contentItem()) return {};
-        // DemoDriver::find owns the same distinction: view delegates may have
-        // visual parents without QObject ownership under the window content.
+        // Preserve QObject encounter order and visit visual-only descendants
+        // exactly once, even when their parent was already emitted as a QObject.
         auto items = action_window->findChildren<QQuickItem*>();
-        std::function<void(QQuickItem*)> walk = [&](QQuickItem* parent) {
-            for (auto* child : parent->childItems()) {
-                if (!items.contains(child)) items.append(child);
-                walk(child);
-            }
-        };
-        walk(action_window->contentItem());
+        QSet<QQuickItem*> emitted(items.cbegin(),items.cend()), visited;
+        QList<QQuickItem*> pending{action_window->contentItem()};
+        while(!pending.isEmpty()) {
+            auto* parent=pending.takeLast();
+            if(visited.contains(parent))continue;
+            visited.insert(parent);
+            if(parent!=action_window->contentItem() && !emitted.contains(parent)){emitted.insert(parent);items.append(parent);}
+            const auto children=parent->childItems();
+            for(auto it=children.crbegin();it!=children.crend();++it)pending.append(*it);
+        }
         return items;
     }
     QQuickItem* widget_named(const QString& name, bool visualOnlySave=false) const {
