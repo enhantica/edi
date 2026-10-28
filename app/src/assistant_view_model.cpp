@@ -7391,11 +7391,25 @@ struct AssistantViewModel::State {
             native_call && native_call->record==creation->record && native_call->receipt==creation->receipt &&
             native_current(creation->receipt) && !project && session && session->emptyAssistantOwner(creation->epoch);
     }
-    QVariant normal_project_defaults(const std::shared_ptr<NativeCreation>& creation) {
+    QPointer<QQuickItem> ordinary_create_group() {
         QPointer<QQuickItem> form;
         for(auto* item:widget_items())if(item->objectName()==QStringLiteral("group.getStarted")) {
             if(form)throw std::runtime_error("The ordinary Create form is ambiguous");form=item;
         }
+        if(!form)throw std::runtime_error("The current app Create form is unavailable");
+        return form;
+    }
+    QString ordinary_project_name_error(const QString& name) {
+        const auto publication=file_projection();const auto form=ordinary_create_group();QVariant result;
+        if(!QMetaObject::invokeMethod(form,"nativeProjectNameError",Qt::DirectConnection,Q_RETURN_ARG(QVariant,result),Q_ARG(QVariant,QVariant(name))))
+            throw std::runtime_error("The original Create Name validator is unavailable");
+        if(!publication.input_current())throw std::runtime_error("The original Create Name owner changed");
+        if(result.metaType()==QMetaType::fromType<QJSValue>())result=result.value<QJSValue>().toVariant();
+        if(result.metaType()!=QMetaType::fromType<QString>())throw std::runtime_error("The original Create Name validator is unavailable");
+        return result.toString();
+    }
+    QVariant normal_project_defaults(const std::shared_ptr<NativeCreation>& creation) {
+        const auto form=ordinary_create_group();
         QVariant defaults;
         if(!form || !QMetaObject::invokeMethod(form,"nativeCreateDefaults",Qt::DirectConnection,Q_RETURN_ARG(QVariant,defaults),
             Q_ARG(QVariant,QVariant(creation->ordinary_name)),Q_ARG(QVariant,QVariant(creation->ordinary_description)),Q_ARG(QVariant,creation->ordinary_title_supplied?QVariant(creation->ordinary_title):QVariant())))
@@ -7515,6 +7529,16 @@ struct AssistantViewModel::State {
         if (!args.value("recipe").isObject()) throw std::invalid_argument("Native creation requires an explicit recipe");
 
         auto recipe = parse_native_cwl_recipe(args.value("recipe").toObject());
+        if(!project) {
+            const auto nameError=ordinary_project_name_error(QString::fromStdString(recipe.project_name));
+            if(!nameError.isEmpty()) {
+                native_prepare(rpc,id,"create_cwl_project",purpose,original);
+                if(receiver && native_call && native_call->rpc==rpc && native_call->record->call==id)
+                    native_finish(false,{{"status","refused"},{"adopted",false},{"complete",false},{"steps_completed",0},
+                        {"target","createProject.name"},{"stage","PROJECT_NAME_VALIDATION"},{"message",nameError}});
+                return;
+            }
+        } // Existing owned partial projects keep their actual original name/metadata.
         if(visible) {
             if(recipe.type.sample_form!="powder" || recipe.type.beam_mode!="constant wavelength" ||
                 recipe.type.radiation_probe!="neutron" || recipe.type.scattering_type!="bragg" ||
@@ -13287,6 +13311,9 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
     const auto recipe = (run->complete_setup?run->call.record->original.value("arguments").toObject():run->arguments).value("recipe").toObject();
     if (!target->path().isEmpty() || target->name() != recipe.value("project_name").toString() ||
         target->description() != recipe.value("description").toString()) return false;
+    const auto nameError=s->ordinary_project_name_error(target->name());
+    if(!nameError.isEmpty())throw std::runtime_error(nameError.toStdString());
+    if(!receiver || state_.get()!=s || !s->create_widget_current(run))return false;
     run->confirmation_consumed=true;
     auto creation = std::make_shared<State::NativeCreation>();
     creation->epoch = run->epoch; creation->receipt = run->call.receipt; creation->record = run->call.record;

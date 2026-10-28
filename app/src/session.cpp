@@ -996,6 +996,7 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
         // test) must hold one project's pages, not every one opened so far.
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
+    if(!current() || project_!=target)return false;
     if (!previous_folder.isEmpty()) {
         edi::remove_archive_directory(previous_folder.toStdString());
     }
@@ -1046,47 +1047,55 @@ bool Session::openWebCopy(const QString& path, const WebPlace& place) {
 }
 
 void Session::openWebProject(const QString& kind) {
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> before(project_);
+    const auto binding=replacement_generation_;
+    const auto current=[&]{return receiver && project_==before && replacement_generation_==binding;};
     QString root;
     try {
         root = QString::fromStdString(edi::fresh_archive_directory("web"));
     } catch (const std::exception& refusal) {
+        if(!current())return;
         setLastError(QString::fromUtf8(refusal.what()));
-        emit loadFailed(last_error_);
+        if(current())emit loadFailed(last_error_);
         return;
     }
     WebStorage::instance()->pickOpen(kind, root, webOpenAnswer(root));
 }
 
 std::function<bool(const WebStorageAnswer&)> Session::openRequest(const QString& root) {
-    // Only the latest request opens: a project opened meanwhile, or a later Open, Recent or recovery, supersedes
-    // this one whichever finishes first. Edits made while it was read are not replaced without asking again.
-    const quint64 request = ++open_request_;
-    const QPointer<ProjectViewModel> before = project_;
-    const quint64 revision = project_ != nullptr ? project_->revision() : 0;
-    return [this, root, request, before, revision](const WebStorageAnswer& answer) {
-        if (request != open_request_ || before != project_ || !answer.ok) {
-            QDir(root).removeRecursively();
-            if (request == open_request_ && before == project_ && !answer.cancelled) {
+    // A stale/duplicate answer cannot clean up a root a replacement may now own.
+    const QPointer<Session> receiver(this);
+    const quint64 request=++open_request_;
+    const QPointer<ProjectViewModel> before=project_;
+    const quint64 revision=project_!=nullptr?project_->revision():0;
+    return [this,receiver,root,request,before,revision](const WebStorageAnswer& answer) {
+        const auto current=[&]{return receiver && request==open_request_ && before==project_;};
+        if(!current())return false;
+        if(!answer.ok) {
+            if(web_copy_!=root)QDir(root).removeRecursively();
+            if(!current())return false;
+            if(!answer.cancelled) {
                 setLastError(answer.message);
-                emit loadFailed(last_error_);
+                if(current())emit loadFailed(last_error_);
             }
             return false;
         }
-        if (project_ != nullptr && project_->modified() && project_->revision() != revision) {
-            QDir(root).removeRecursively();
-            setLastError(tr("%1 was not opened: the open project was changed while it was read. Open it again to "
-                            "replace the project.")
-                             .arg(answer.name));
-            emit loadFailed(last_error_);
+        if(project_ && project_->modified() && project_->revision()!=revision) {
+            if(web_copy_!=root)QDir(root).removeRecursively();
+            if(!current())return false;
+            const auto message=tr("%1 was not opened: the open project was changed while it was read. Open it again to replace the project.").arg(answer.name);
+            if(!current())return false;
+            setLastError(message);
+            if(current())emit loadFailed(last_error_);
             return false;
         }
         return true;
     };
 }
 
-WebStorage::Answer Session::webOpenAnswer(const QString& root) {
+WebStorage::Answer Session::webOpenAnswer(const QString& root, bool fromFile, bool recovery) {
     const QPointer<Session> receiver(this);
-    return [this,receiver,root,current=openRequest(root)](const WebStorageAnswer& answer) {
+    return [this,receiver,root,fromFile,recovery,current=openRequest(root)](const WebStorageAnswer& answer) {
         if(!receiver || !current(answer))return;
         const QPointer<ProjectViewModel> before(project_);const auto beforeBinding=replacement_generation_;
         const WebPlace place{answer.key,answer.kind,answer.name};
@@ -1094,13 +1103,20 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root) {
             if(!receiver || project_!=before || replacement_generation_!=beforeBinding)return;
             // A failed parse owns no replacement. A false publication after
             // adoption retains its original staging, never rolls back live data.
-            QDir(root).removeRecursively();
-            emit loadFailed(last_error_);
+            if(web_copy_!=root)QDir(root).removeRecursively();
+            if(!receiver || project_!=before || replacement_generation_!=beforeBinding)return;
+            const auto message=last_error_;
+            emit loadFailed(message);
             return;
         }
         const QPointer<ProjectViewModel> target(project_);const auto binding=replacement_generation_;
         const auto owned=[&]{return receiver && target && project_==target && replacement_generation_==binding;};
-        web_copy_=root;web_from_file_=true;
+        web_copy_=root;web_from_file_=fromFile;
+        if(recovery) {
+            target->markUnsaved();
+            if(!owned())return;
+        }
+        if(!fromFile)return; // Stored/recovery places already own their backing record.
         const bool persist=web_place_.kind==QStringLiteral("browser") && WebStorage::instance()->usable();
         if(!owned())return;
         if(persist)writeWebPlace(web_place_,target->path(),nullptr);
@@ -1108,33 +1124,19 @@ WebStorage::Answer Session::webOpenAnswer(const QString& root) {
 }
 
 void Session::openStoredProject(const QString& key, bool recovery) {
+    const QPointer<Session> receiver(this);const QPointer<ProjectViewModel> before(project_);
+    const auto binding=replacement_generation_;
+    const auto current=[&]{return receiver && project_==before && replacement_generation_==binding;};
     QString root;
     try {
-        root = QString::fromStdString(edi::fresh_archive_directory("web"));
-    } catch (const std::exception& refusal) {
+        root=QString::fromStdString(edi::fresh_archive_directory("web"));
+    }catch(const std::exception& refusal) {
+        if(!current())return;
         setLastError(QString::fromUtf8(refusal.what()));
-        emit loadFailed(last_error_);
+        if(current())emit loadFailed(last_error_);
         return;
     }
-    WebStorage::instance()->load(key, recovery, root, [this, root, recovery, current = openRequest(root)](
-                                                          const WebStorageAnswer& answer) {
-        if (!current(answer)) {
-            return;
-        }
-        const WebPlace place{answer.key,
-                             answer.kind,
-                             answer.name};
-        if (!openWebCopy(answer.path, place)) {
-            QDir(root).removeRecursively();
-            emit loadFailed(last_error_);
-            return;
-        }
-        web_copy_ = root;
-        // The kept state holds changes its place does not: the project opens with them, unsaved.
-        if (recovery) {
-            project_->markUnsaved();
-        }
-    });
+    WebStorage::instance()->load(key,recovery,root,webOpenAnswer(root,false,recovery));
 }
 
 bool Session::webPlaceInBrowser() const {

@@ -304,7 +304,7 @@ class Session : public QObject {
     // The open project's place is the browser's own storage until a Save as onto the disk.
     void setWebPlace(const WebPlace& place);
     // The answer to a browser chooser that copied a project into `root` in memory: opens it there.
-    WebStorage::Answer webOpenAnswer(const QString& root);
+    WebStorage::Answer webOpenAnswer(const QString& root, bool fromFile = true, bool recovery = false);
     // Opens the project folder or archive the browser copied into memory at `path`, from the place `place`.
     bool openWebCopy(const QString& path, const WebPlace& place);
     // Writes `folder` into `place`; `done` hears whether it was written.

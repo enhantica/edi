@@ -3127,3 +3127,10 @@ injecting() is not required after that original mouse stack has unwound. Existin
 settle the original Create or advance its compound continuation. No alternate Create button,
 generic click framework, guessed timer-success test, busy bypass or scientific replay is added.
 Stop/manual takeover and exact owner/currentness still retire only their original obligation.
+
+Fresh optional compound Create uses the same live original Name validation before OFF/ON split,
+with the same exact field/stage refusal and a second original-field check at visible confirmation
+preparation. Equal programmatically assigned text is not an acceptableInput receipt. Its schema
+describes the fresh-name rule; completing an existing owned partial project keeps that project's
+actual name/metadata and never applies a new-project validator to rename it. Global core/rename
+rules stay broader and unchanged.
