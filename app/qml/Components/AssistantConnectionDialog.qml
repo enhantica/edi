@@ -12,8 +12,10 @@ AppDialog {
     signal contextApproved(var offer)
     property bool connectionAttempt: false
     property var approvalOwner: ({})
+    property var acceptedOffer: null
     function beginOffer() {
         const offer = ({});
+        acceptedOffer = null;
         approvalOwner = offer;
         return offer;
     }
@@ -24,11 +26,32 @@ AppDialog {
             || token === null || component.approvalOwner !== token) return;
         component.open();
     }
-    onAssistantChanged: { approvalOwner = ({}); refreshDisclosedContext(); }
+    onAssistantChanged: { acceptedOffer = null; approvalOwner = ({}); refreshDisclosedContext(); }
     Connections {
         target: dialog
-        function onRejected() { dialog.approvalOwner = ({}); }
+        function onRejected() { dialog.acceptedOffer = null; dialog.approvalOwner = ({}); }
     }
+    function resumeAcceptedOffer() {
+        const component=dialog, accepted=component.acceptedOffer;
+        if(!accepted || accepted.submitting)return;
+        const original=accepted.owner;
+        if(!accepted.current() || !Qt.isQtObject(component) || !Qt.isQtObject(original)
+            || component.acceptedOffer!==accepted || !original.connected) {
+            if(Qt.isQtObject(component) && component.acceptedOffer===accepted)component.acceptedOffer=null;
+            return;
+        }
+        const ready=original.draftAdmissionReady;
+        if(!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.acceptedOffer!==accepted || !accepted.current())return;
+        if(!ready)return;
+        accepted.submitting=true;
+        const result=original.acceptConnectionOffer(accepted.context);
+        if(!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.acceptedOffer!==accepted)return;
+        accepted.submitting=false;
+        if(result==="waiting" && accepted.current())return;
+        component.acceptedOffer=null;
+        if(result==="approved" && accepted.current())component.contextApproved(accepted.approval);
+    }
+    function scheduleAcceptedOffer() { Qt.callLater(resumeAcceptedOffer); }
     function showConnectionFailureIfFinished() {
         if (!connectionAttempt || assistant.state === "connecting") return;
         connectionAttempt = false;
@@ -150,7 +173,8 @@ AppDialog {
             if (dialog.visible)
                 dialog.updateAcceptButton();
         }
-        function onStateChanged() { dialog.showConnectionFailureIfFinished(); }
+        function onStateChanged() { dialog.showConnectionFailureIfFinished(); dialog.scheduleAcceptedOffer(); }
+        function onDraftAdmissionReadyChanged() { dialog.scheduleAcceptedOffer(); }
         function onContextPreviewChanged() {
             const component = dialog, original = dialog.assistant;
             component.refreshDisclosedContext();
@@ -159,6 +183,7 @@ AppDialog {
         }
         function onLastErrorChanged() { dialog.showConnectionFailureIfFinished(); }
         function onConversationRetired() {
+            dialog.acceptedOffer = null;
             dialog.approvalOwner = ({});
             dialog.connectionAttempt = false;
             connectionFailure.close();
@@ -175,7 +200,8 @@ AppDialog {
             && dialog.assistant === original && dialog.approvalOwner === approval && Session.project === project
             && original.selectedModel === model && original.selectedEffort === effort
             && (!wasConnected || (original.account.email === email && original.account.planType === plan))
-            && !original.contextApprovalBlocked;
+            && !original.contextApprovalBlocked
+            && (typeof approval.currentDraft !== "function" || approval.currentDraft());
         if (!ownerCurrent()) return;
         const offered = dialog.disclosedContextIdentity;
         if (!ownerCurrent()) return;
@@ -190,12 +216,14 @@ AppDialog {
         connectionFailure.close();
         if (!current()) return;
         connectionAttempt = !wasConnected;
-        original.signIn();
+        const result=original.acceptConnectionOffer(offered);
         if (!current()) return;
+        if(result==="waiting") {
+            dialog.acceptedOffer={owner:original,approval:approval,context:offered,current:current,submitting:false};
+            dialog.scheduleAcceptedOffer();return;
+        }
         showConnectionFailureIfFinished();
-        if (!current() || !original.connected) return;
-        const required = original.contextConsentRequired;
-        if (current() && !required) contextApproved(approval);
+        if(result==="approved" && current())contextApproved(approval);
     }
     AppDialog {
         id: connectionFailure

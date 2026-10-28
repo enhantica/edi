@@ -801,6 +801,7 @@ Popup {
                             context: captured.context, model: captured.model,
                             effort: captured.effort, offer: offer, approved: false, submitting: false };
                         component.consentSend = intent;
+                        offer.currentDraft=() => Qt.isQtObject(component) && component.consentSend===intent && component.ownsConsentSend(intent);
                         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
                             || !Qt.isQtObject(dialog) || dialog.approvalOwner !== offer || component.consentSend !== intent) return;
                         const stillOwned = component.ownsConsentSend(intent);

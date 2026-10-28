@@ -104,6 +104,7 @@ class AssistantViewModel : public QObject {
     QString sessionDraft() const;
     void setSessionDraft(const QString&);
     Q_INVOKABLE void restoreLastSession();
+    Q_INVOKABLE bool requestAssistantPane(QObject* originalToggle);
     Q_INVOKABLE void continueSessionRestore(const QString& threadId);
     bool cachedHistoryClearing() const;
     QString cachedHistoryError() const;
@@ -168,6 +169,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void cancel();
     Q_INVOKABLE bool resumeConnection();
     Q_INVOKABLE void signIn();
+    Q_INVOKABLE QString acceptConnectionOffer(const QString& identity);
     Q_INVOKABLE void signOut();
     Q_INVOKABLE void clearHistory();
     Q_INVOKABLE QString beginFileSelection(bool requireSignedIn = false);
@@ -188,6 +190,7 @@ class AssistantViewModel : public QObject {
     void accountChanged();
     void showActionsChanged();
     void showingActionsChanged();
+    void actionControlsRequested(); // Original control reveal request, including repeated true requests.
     void actionWindowChanged();
     void actionPointerShown();
     void actionPointerMoved(const QPointF& position);
