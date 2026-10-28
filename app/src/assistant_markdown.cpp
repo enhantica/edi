@@ -86,8 +86,8 @@ void AssistantMarkdown::updatePolish() {
             int previousRow = -1;
             const auto appendRow = [&](int row, qreal top, qreal bottom) {
                 if (bottom <= top) return;
-                if (table_shade_color_.isValid() && (row < headerRows || (row-headerRows)%2 == 1))
-                    next.push_back({QRectF(rowLeft,top,frame.width(),bottom-top).intersected(boundingRect()),table_shade_color_});
+                const auto shade=(row < headerRows || (row-headerRows)%2 == 1)?table_shade_color_:table_base_color_;
+                if (shade.isValid())next.push_back({QRectF(rowLeft,top,frame.width(),bottom-top).intersected(boundingRect()),shade});
                 if (table_border_color_.isValid() && row+1 < table->rows())
                     next.push_back({QRectF(rowLeft,bottom-0.5,frame.width(),0.5).intersected(boundingRect()),table_border_color_});
             };
@@ -175,6 +175,7 @@ QFont AssistantMarkdown::bodyFont() const { return body_font_; }
 QString AssistantMarkdown::monoFontFamily() const { return mono_font_family_; }
 QColor AssistantMarkdown::tableBorderColor() const { return table_border_color_; }
 QColor AssistantMarkdown::tableShadeColor() const { return table_shade_color_; }
+QColor AssistantMarkdown::tableBaseColor() const { return table_base_color_; }
 void AssistantMarkdown::setBodyFont(const QFont& font) {
     if (body_font_set_ && body_font_ == font) return;
     body_font_ = font; body_font_set_ = true;
@@ -197,6 +198,12 @@ void AssistantMarkdown::setMonoFontFamily(const QString& family) {
 void AssistantMarkdown::setTableBorderColor(const QColor& color) {
     if (table_border_color_ == color) return;
     table_border_color_ = color;
+    ++presentation_revision_;
+    if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
+}
+void AssistantMarkdown::setTableBaseColor(const QColor& color) {
+    if (table_base_color_ == color) return;
+    table_base_color_ = color;
     ++presentation_revision_;
     if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
 }
@@ -289,6 +296,7 @@ void AssistantMarkdown::formatPresentation() {
             cell_format.setLeftPadding(line * 0.5); cell_format.setRightPadding(line * 0.5);
             if (table_shade_color_.isValid() && (r < format.headerRowCount() || (r - format.headerRowCount()) % 2 == 1))
                 cell_format.setBackground(table_shade_color_);
+            else if(table_base_color_.isValid())cell_format.setBackground(table_base_color_);
             else cell_format.clearBackground();
             cell.setFormat(cell_format);
         if (!current()) return;

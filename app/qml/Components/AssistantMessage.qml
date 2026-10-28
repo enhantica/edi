@@ -34,6 +34,10 @@ Rectangle {
     property int stepNumber: 0
     property AssistantViewModel assistant: null
     property color chatBackgroundColor: EaStyle.Colors.appBarBackground
+    function tableTone(lift) {
+        const base=chatBackgroundColor;
+        return Qt.rgba(Math.min(1,base.r+lift/255),Math.min(1,base.g+lift/255),Math.min(1,base.b+lift/255),base.a);
+    }
     property bool highlighted: false
     readonly property bool commandActivity: kind === "activity" && payload && payload.type === "commandExecution"
     readonly property bool decisionActivity: kind === "activity" && payload && typeof payload.decision === "string" && typeof payload.item_id === "string"
@@ -376,7 +380,8 @@ Rectangle {
                 bodyFont: body.font
                 monoFontFamily: EaStyle.Fonts.monoFontFamily
                 tableBorderColor: EaStyle.Colors.appBorder
-                tableShadeColor: Qt.tint(row.chatBackgroundColor, Qt.rgba(1, 1, 1, 0.04))
+                tableBaseColor: row.tableTone(5)
+                tableShadeColor: row.tableTone(13)
                 markdown: row.kind === "assistant"
             }
             readOnly: true

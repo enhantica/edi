@@ -25,6 +25,7 @@ class AssistantMarkdown : public QQuickItem {
     Q_PROPERTY(QString monoFontFamily READ monoFontFamily WRITE setMonoFontFamily)
     Q_PROPERTY(QColor tableBorderColor READ tableBorderColor WRITE setTableBorderColor)
     Q_PROPERTY(QColor tableShadeColor READ tableShadeColor WRITE setTableShadeColor)
+    Q_PROPERTY(QColor tableBaseColor READ tableBaseColor WRITE setTableBaseColor)
  public:
     explicit AssistantMarkdown(QQuickItem* parent = nullptr);
     QQuickTextDocument* document() const;
@@ -36,10 +37,12 @@ class AssistantMarkdown : public QQuickItem {
     QString monoFontFamily() const;
     QColor tableBorderColor() const;
     QColor tableShadeColor() const;
+    QColor tableBaseColor() const;
     void setBodyFont(const QFont& font);
     void setMonoFontFamily(const QString& family);
     void setTableBorderColor(const QColor& color);
     void setTableShadeColor(const QColor& color);
+    void setTableBaseColor(const QColor& color);
     void setDocument(QQuickTextDocument* document);
     void setSource(const QString& source);
     void setMarkdown(bool markdown);
@@ -58,7 +61,7 @@ class AssistantMarkdown : public QQuickItem {
     QPointer<QTextDocument> document_;
     QString source_;
     bool markdown_ = false;
-    QColor accent_color_, table_border_color_, table_shade_color_;
+    QColor accent_color_, table_border_color_, table_shade_color_, table_base_color_;
     QFont body_font_;
     QString mono_font_family_;
     bool body_font_set_ = false;
