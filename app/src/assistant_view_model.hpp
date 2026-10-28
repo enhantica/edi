@@ -32,6 +32,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(edi_app::RowTableModel* skillSources READ skillSources CONSTANT)
     Q_PROPERTY(QString skillSourceRevision READ skillSourceRevision NOTIFY skillSourcesChanged)
     Q_PROPERTY(QString skillSourceError READ skillSourceError NOTIFY skillSourcesChanged)
+    Q_PROPERTY(bool skillSourceImporting READ skillSourceImporting NOTIFY skillSourcesChanged)
     Q_PROPERTY(bool showActions READ showActions WRITE setShowActions NOTIFY showActionsChanged)
     Q_PROPERTY(bool showingActions READ showingActions NOTIFY showingActionsChanged)
     Q_PROPERTY(QQuickWindow* actionWindow READ actionWindow WRITE setActionWindow NOTIFY actionWindowChanged)
@@ -118,6 +119,9 @@ class AssistantViewModel : public QObject {
     RowTableModel* skillSources() const;
     QString skillSourceError() const;
     QString skillSourceRevision() const;
+    bool skillSourceImporting() const;
+    Q_INVOKABLE bool addWebSkillSource(const QString& token,const QUrl& url);
+    Q_INVOKABLE void cancelWebSkillSourceImport();
     Q_INVOKABLE QString beginSkillSourceSelection();
     Q_INVOKABLE bool addSkillSource(const QString& token, const QUrl& folder);
     Q_INVOKABLE void cancelSkillSourceSelection(const QString& token);
