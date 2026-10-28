@@ -65,6 +65,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QVariantMap account READ account NOTIFY accountChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextPreviewChanged)
+    Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
     Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
     Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextPreviewChanged)
 
@@ -132,6 +133,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void refreshUsage();
     QString contextPreview() const;
     QString contextConsentIdentity() const;
+    bool draftAdmissionReady() const;
     bool contextConsentRequired() const;
     bool contextApprovalBlocked() const;
     void setSelectedModel(const QString& model);
@@ -141,6 +143,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void send(const QString& text);
     /// Submit on the owner thread; return its admitted row ID, or empty on refusal. Durable completed status alone acknowledges it.
     Q_INVOKABLE QString submitDraft(const QString& text);
+    Q_INVOKABLE QVariantMap submitDraftAdmission(const QString& text);
     Q_INVOKABLE QString workReportDocument();
     /// Display-only intent label for a native action identifier; no action is executed.
     Q_INVOKABLE QString nativeActionLabel(const QString& action) const;
@@ -213,11 +216,13 @@ class AssistantViewModel : public QObject {
     void skillSourceSelectionRetired(const QString& token);
     void usageChanged();
     void contextPreviewChanged();
+    void draftAdmissionReadyChanged();
 
    protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
    private:
     friend class Session;
+    QString submitDraftImpl(const QString&,bool* accountWaiting);
     void finishHistoryInitialization() noexcept;
     bool ordinarySaveNotification(ProjectViewModel*) const noexcept;
     struct ProjectResetInputs;
