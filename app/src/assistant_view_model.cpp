@@ -4106,6 +4106,9 @@ struct AssistantViewModel::State {
             (!native_call || native_call->record == record);
     }
     void widget_showing(bool value) {
+        const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();const auto serial=native_serial;
+        if(value)emit owner.actionControlsRequested();
+        if(!receiver || receiver->state_.get()!=this || !proof.publication_current() || native_serial!=serial)return;
         if (showing_actions == value) return;
         showing_actions = value;
         emit owner.showingActionsChanged();
@@ -16408,6 +16411,13 @@ void AssistantViewModel::finishHistoryInitialization() noexcept {
         original->history_initialized=true;original->history_initial_snapshot={};
         if(original->history_unqueued)(void)original->queue_history(original->history);
         original->history_completed();
+#ifndef __EMSCRIPTEN__
+        if(receiver && receiver->state_.get()==original && original->generic_mode && original->history_session.isEmpty() &&
+            !original->restore_last_metadata_unavailable && !original->restore_last_target.isEmpty()) {
+            const auto target=original->restore_last_target;const auto record=original->saved_session(target);
+            if(!record.isEmpty() && !record.value("archived").toBool())original->history_for_session(target);
+        }
+#endif
     }catch(...) {if(receiver && receiver->state_.get()==original) {
         original->history_initialized=true;original->history_unqueued=true;original->history_error=original->storage_error;
     }}
@@ -16731,6 +16741,30 @@ void AssistantViewModel::continueSessionRestore(const QString& id) {
         original->fail_session_operation(operation,id,tr("The selected session could not reconnect. Original projects and attachments were preserved; no action was replayed."));}}
 #else
     Q_UNUSED(id);
+#endif
+}
+bool AssistantViewModel::requestAssistantPane(QObject* originalToggle) {
+#ifndef __EMSCRIPTEN__
+    const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();const auto proof=original->file_projection();
+    const auto serial=original->native_serial;const auto call=original->native_call;
+    const QPointer<AssistantWidgetInput> helper(original->widget_input.get());
+    const bool active=helper && helper->active();
+    const bool backgroundFit=!active && original->native_widget && original->native_widget->tool==QStringLiteral("run_fit") &&
+        original->native_fit && original->native_fit->nativeRunning();
+    const bool retireSequence=active || (!backgroundFit && (original->native_widget || original->native_create_widget));
+    const QPointer<QQuickItem> toggle(qobject_cast<QQuickItem*>(originalToggle));
+    if(!toggle || toggle->window()!=original->action_window || original->widget_named(QStringLiteral("assistant.toggle"))!=toggle)return false;
+    // Covering an owned visible sequence retires it even in an inter-control
+    // gap, retaining its actual prefix. An already-running background fit stays.
+    if(retireSequence)original->native_supersede_operation(tr("The visible action was interrupted by your sidebar choice; its actual partial result was retained."));
+    if(!receiver || receiver->state_.get()!=original || !proof.input_current() || original->native_serial!=serial || original->widget_input.get()!=helper)return false;
+    if(retireSequence && ((helper && helper->active()) || original->native_widget || original->native_create_widget))return false;
+    // A successor tool can share the same user-input serial. The old manual
+    // frame must not cover that new control request after reentrant settlement.
+    return !original->native_call || (call && original->native_call->record==call->record &&
+        original->native_call->receipt==call->receipt && original->native_call->rpc==call->rpc);
+#else
+    Q_UNUSED(originalToggle);return true;
 #endif
 }
 void AssistantViewModel::restoreLastSession() {
@@ -17757,6 +17791,30 @@ bool AssistantViewModel::resumeConnection() {
 #else
     return false;
 #endif
+}
+QString AssistantViewModel::acceptConnectionOffer(const QString& identity) {
+    const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();
+    const auto proof=original->file_projection();const auto model=original->model,effort=original->effort;
+    const auto current=[&]{return receiver && receiver->state_.get()==original && proof.input_current() && original->model==model && original->effort==effort;};
+    try {
+        if(identity.isEmpty())return QStringLiteral("stale");
+        const auto actual=contextConsentIdentity();
+        if(!current() || identity!=actual)return QStringLiteral("stale");
+#ifndef __EMSCRIPTEN__
+        // This result is definite non-admission: signIn and every wire/context
+        // transition have not been entered. Only the original accepted offer waits.
+        if(original->generic_mode && original->generic_authenticated && original->account_confirmation_pending &&
+            !original->session_preparation && !original->startup_restore_pending())return QStringLiteral("waiting");
+#endif
+        signIn();
+        if(!current())return QStringLiteral("submitted");
+        const bool isConnected=receiver->connected();
+        if(!current() || !isConnected)return QStringLiteral("submitted");
+        const bool required=receiver->contextConsentRequired();
+        if(!current() || required)return QStringLiteral("submitted");
+        const auto approved=receiver->contextConsentIdentity();
+        return current() && approved==identity?QStringLiteral("approved"):QStringLiteral("submitted");
+    }catch(...) {return QStringLiteral("unconfirmed");} // Never permission to replay a possibly entered operation.
 }
 void AssistantViewModel::signIn() {
     auto publication = state_->file_projection();

@@ -89,6 +89,7 @@ EaComponents.ApplicationWindow {
     property int assistantFocusEpoch: 0
     property var assistantManualTakeoverProject: null
     property bool assistantEmptyManualTakeover: false
+    property bool assistantManualPane: false
     readonly property bool assistantManualTakeover: assistantEmptyManualTakeover && Session.project === null
         || assistantManualTakeoverProject !== null && assistantManualTakeoverProject === Session.project
 
@@ -232,7 +233,7 @@ EaComponents.ApplicationWindow {
             id: assistantToggle
             KeyNavigation.tab: assistantPanel.visible && assistantPanel.shown ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
-            readonly property bool assistantSelected: assistantPanel.shown || (Session.assistant.showingActions && Preferences.assistantShown)
+            readonly property bool assistantSelected: assistantPanel.shown
             fontIcon: assistantSelected ? "columns" : "robot"
             contentItem: Item {
                 implicitWidth: Math.max(assistantRobot.implicitWidth, assistantColumns.implicitWidth)
@@ -267,20 +268,21 @@ EaComponents.ApplicationWindow {
             onClicked: {
                 if (!assistantToggle.enabled)
                     return;
-                if (window.assistantManualTakeover) {
+                const show = !assistantPanel.shown;
+                if (show && !Session.assistant.requestAssistantPane(assistantToggle))return;
+                if (show && window.assistantManualTakeover) {
                     window.assistantManualTakeoverProject = null;
                     window.assistantEmptyManualTakeover = false;
-                    Preferences.assistantShown = true;
-                    return;
                 }
-                if (!Preferences.assistantShown) {
+                if (show) {
                     ++window.assistantFocusEpoch;
                     window.assistantPreviousFocus = window.activeFocusItem;
                     window.assistantPreviousPage = window.assistantCurrentPage;
                     window.assistantPreviousHost = window.activeAssistantHost;
                     window.assistantPreviousProject = Session.project;
                 }
-                Preferences.assistantShown = !Preferences.assistantShown;
+                window.assistantManualPane = show && Session.assistant.showingActions;
+                Preferences.assistantShown = show;
             }
         },
         EaElements.ToolButton {
@@ -557,6 +559,8 @@ EaComponents.ApplicationWindow {
             if (Session.project === project && target === window.assistantWorkflowPage)
                 target.showSidebarTab(extra);
         }
+        function onActionControlsRequested() { window.assistantManualPane = false; }
+        function onShowingActionsChanged() { if(!Session.assistant.showingActions)window.assistantManualPane = false; }
         function onActionPointerShown() { assistantPointer.show(); }
         function onActionPointerMoved(position) { const local = assistantPointer.parent.mapFromItem(null, position.x, position.y); assistantPointer.move(local.x, local.y); }
         function onActionPointerPressed() { assistantPointer.click(); }
@@ -577,7 +581,7 @@ EaComponents.ApplicationWindow {
         id: assistantPanel
         parent: assistantFallbackHost
         assistant: Session.assistant
-        shown: Preferences.assistantShown && !Session.assistant.showingActions && !window.assistantManualTakeover && window.assistantWorkflowPage !== null
+        shown: Preferences.assistantShown && (!Session.assistant.showingActions || window.assistantManualPane) && !window.assistantManualTakeover && window.assistantWorkflowPage !== null
         toggleControl: assistantToggle
         onAboutToHide: window.retireAssistantFocus()
         onOpened: focusComposer()
