@@ -84,11 +84,15 @@ EaElements.GroupBox {
     }
     // Native Create reuses this actual form's remembered parent/defaults. It does
     // not accept a dialog or synthesize a chooser selection.
+    function nativeProjectNameError(name) {
+        return createDialog.acceptsProjectName(name) ? "" : qsTr("Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed.");
+    }
     function nativeCreateDefaults(name, description, title) {
         if (Session.project !== null || createIntent !== null || createDialog.visible) return ({});
         const actualName = name.length > 0 ? name : "project";
-        if (!createDialog.acceptsProjectName(actualName))
-            return ({error: qsTr("Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed."), target: "createProject.name"});
+        const nameError = nativeProjectNameError(actualName);
+        if (nameError.length > 0)
+            return ({error: nameError, target: "createProject.name"});
         const actualTitle = title === undefined || title === null ? createDialog.projectTitle : title;
         if (!createDialog.acceptsProjectTitle(actualTitle))
             return ({error: qsTr("Project Title must fit the original single-line field (%1 UTF-16 units), without NUL, newline, carriage-return or tab. The supplied Title was not changed.").arg(createDialog.projectTitleMaximumLength), target: "createProject.title"});

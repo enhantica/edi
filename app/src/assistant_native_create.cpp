@@ -65,7 +65,9 @@ QJsonObject native_cwl_recipe_schema(bool include_profiles) {
     auto background_point = background.value("items").toObject();
     background_point["description"] = "Exactly position and intensity numbers. No free, id, uncertainty or other keys; standalone edit_background has a separate explicit free field.";
     background["items"] = background_point;
-    return shape({{"project_name", shortText}, {"description", Object{{"type", "string"}}},
+    auto projectName=shortText;
+    projectName["description"]="Fresh creation uses the original normal Name validator: 2–31 ASCII characters, a letter first, then letters/digits/underscore/hyphen/period. Preserve supplied text; no automatic renaming. Completing an existing owned partial project preserves its actual current name/metadata instead.";
+    return shape({{"project_name", projectName}, {"description", Object{{"type", "string"}}},
         {"experiment_name", shortText}, {"sample_form", Object{{"type", "string"}, {"enum", Array{"powder"}}}},
         {"beam_mode", Object{{"type", "string"}, {"enum", Array{"constant wavelength"}}}},
         {"radiation_probe", Object{{"type", "string"}, {"enum", Array{"neutron"}}}},

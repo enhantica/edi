@@ -147,3 +147,9 @@ and readback continue to accept construction states; ordinary Open still require
 experiments and their measured-data/calculation-grid prerequisites. The retained app6 partial
 one-structure/zero-experiment reopen refusal was not writer corruption. Complete persistence
 verification uses a genuinely complete native project and retains incomplete refusal separately.
+
+Picked-file and stored/recovery Open answers share that same guarded webOpenAnswer continuation.
+Recovery marks only its actual successfully adopted current target unsaved. Shared openRequest
+checks receiver/project/request again after setLastError notifications, and a stale/duplicate
+answer never removes an accepted or successor's staging root. Only a still-current failed parse
+with genuinely unadopted local staging may clean it up; no false publication result is rollback.
