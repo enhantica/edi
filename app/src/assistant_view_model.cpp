@@ -1533,13 +1533,15 @@ struct AssistantViewModel::State {
     bool generic_durable=false,generic_resuming=false;
 
     struct SessionRequest {
-        QString kind,target,cursor,currentThread,email;
+        QString kind,target,cursor,currentThread,email,name;
         quint64 binding=0,account=0,transport=0,epoch=0;
         QPointer<ProjectViewModel> project;
     };
     QMap<QString,SessionRequest> session_requests;
     QMap<QString,Object> session_metadata;
     QString sessions_cursor;
+    QSet<QString> sessions_seen_cursors;
+    QMap<QString,QString> session_named;
     quint64 sessions_epoch=0;
     bool session_idle() const {
         return generic_authenticated && !generic_busy && !generic_connecting && !generic_retiring &&
@@ -1568,6 +1570,32 @@ struct AssistantViewModel::State {
             request.currentThread==generic_thread && agent && request.transport==agent->outputGeneration() &&
             request.email==generic_native.value("account").toObject().value("email").toString();
     }
+    static QString session_caption(QString text) {
+        // Presentation only; the runtime/canonical title and prompt stay intact.
+        for(const auto* marker:{"EDI_APPROVED_CONTEXT","EDI_CURRENT_CONTEXT","{\"schema\":","```","/home/","/Users/","file://"}) {
+            const auto at=text.indexOf(QLatin1StringView(marker));if(at>=0)text.truncate(at);
+        }
+        text=text.section(u'\n',0,0).simplified();
+        if(text.startsWith('{') || text.startsWith('[') || text.startsWith("file:") || text.startsWith('/') || text.contains("\\"))text.clear();
+        constexpr qsizetype captionCharacters=80; // Short UI caption, never a work/history admission limit.
+        if(text.size()>captionCharacters) {
+            text.truncate(captionCharacters);const auto boundary=text.lastIndexOf(' ');
+            if(boundary>0)text.truncate(boundary);
+            text+=QChar(0x2026);
+        }
+        return text;
+    }
+    void name_current_session() noexcept {
+        try {
+            if(!generic_authenticated || generic_retiring || generic_thread.isEmpty() || !agent)return;
+            const auto known=session_metadata.value(generic_thread);
+            if(!owned_session(known))return;
+            const auto name=session_caption(project?(project->title().trimmed().isEmpty()?project->name():project->title()):QObject::tr("Assistant conversation"));
+            if(name.isEmpty() || session_named.value(generic_thread)==name || known.value("name")==name)return;
+            session_named.insert(generic_thread,name); // One actual metadata request for this title.
+            (void)session_request("thread/name/set",{{"threadId",generic_thread},{"name",name}},"name",generic_thread);
+        }catch(...) {} // Optional naming cannot alter a scientific result or account state.
+    }
     void publish_sessions() {
         QList<Object> ordered=session_metadata.values();
         std::stable_sort(ordered.begin(),ordered.end(),[](const Object& a,const Object& b){
@@ -1576,8 +1604,8 @@ struct AssistantViewModel::State {
         });
         QJsonArray rows;
         for(const auto& thread:ordered) {
-            const auto id=thread.value("id").toString();QString name=thread.value("name").toString();
-            if(name.trimmed().isEmpty())name=thread.value("preview").toString().section(u'\n',0,0).trimmed();
+            const auto id=thread.value("id").toString();QString name=session_caption(thread.value("name").toString());
+            if(name.isEmpty())name=session_caption(thread.value("preview").toString());
             if(name.isEmpty())name=QObject::tr("Untitled session");
             QString modified=QObject::tr("Unavailable");const auto seconds=thread.value("updatedAt").toDouble(std::numeric_limits<double>::quiet_NaN());
             if(std::isfinite(seconds) && std::floor(seconds)==seconds && seconds>=-8640000000000.0 && seconds<=8640000000000.0) {
@@ -1592,7 +1620,7 @@ struct AssistantViewModel::State {
     }
     QString session_request(const QString& method,const Object& params,const QString& kind,const QString& target={}) {
         SessionRequest request{kind,target,params.value("cursor").toString(),generic_thread,
-            generic_native.value("account").toObject().value("email").toString(),generation,usage_epoch,
+            generic_native.value("account").toObject().value("email").toString(),params.value("name").toString(),generation,usage_epoch,
             agent?agent->outputGeneration():0,sessions_epoch,project};
         QString prepared;
         const auto rpc=agent->request(method,params,[this,request,&prepared](const QString& id) {
@@ -1619,13 +1647,27 @@ struct AssistantViewModel::State {
             if(request.kind=="list") {
                 if(!result.value("data").isArray() || (!result.value("nextCursor").isNull() && !result.value("nextCursor").isString()))
                     throw std::runtime_error("The session page was not valid metadata");
+                bool added=false;
                 for(const auto& value:result.value("data").toArray()) {
                     if(!value.isObject())throw std::runtime_error("The session page contained an invalid row");
-                    const auto thread=value.toObject();if(owned_session(thread))session_metadata[thread.value("id").toString()]=thread;
+                    const auto thread=value.toObject();if(owned_session(thread)) {
+                        const auto threadId=thread.value("id").toString();
+                        if(!session_metadata.contains(threadId))added=true;
+                        session_metadata[threadId]=thread;
+                    }
                 }
                 const auto next=result.value("nextCursor").toString();
-                if(!next.isEmpty() && next==request.cursor)throw std::runtime_error("The session page did not advance its cursor");
-                sessions_cursor=next;sessions_more=!next.isEmpty();sessions_loading=false;sessions_error.clear();publish_sessions();return;
+                if(!next.isEmpty() && (next==request.cursor || sessions_seen_cursors.contains(next)))throw std::runtime_error("The session page did not advance its cursor");
+                if(!next.isEmpty())sessions_seen_cursors.insert(next);
+                sessions_cursor=next;sessions_more=!next.isEmpty();sessions_error.clear();
+                if(!added && !next.isEmpty()){session_page(next);return;}
+                sessions_loading=false;publish_sessions();return;
+            }
+            if(request.kind=="name" && method=="thread/name/set") {
+                if(!result.isEmpty())throw std::runtime_error("The session name acknowledgment was unexpected");
+                auto thread=session_metadata.value(request.target);
+                if(!thread.isEmpty()){thread["name"]=request.name;session_metadata[request.target]=thread;publish_sessions();}
+                return;
             }
             if(request.kind=="archive-read") {
                 const auto thread=result.value("thread").toObject();
@@ -1659,8 +1701,12 @@ struct AssistantViewModel::State {
                 publish_sessions();return;
             }
         }catch(const std::exception& error) {
+            if(request.kind=="name"){session_named.remove(request.target);return;}
             sessions_loading=false;sessions_error=bounded_error(QString::fromUtf8(error.what()));emit owner.sessionsChanged();
-        }catch(...) {sessions_loading=false;sessions_error=QObject::tr("Session information is unavailable; no archive outcome was assumed.");emit owner.sessionsChanged();}
+        }catch(...) {
+            if(request.kind=="name"){session_named.remove(request.target);return;}
+            sessions_loading=false;sessions_error=QObject::tr("Session information is unavailable; no archive outcome was assumed.");emit owner.sessionsChanged();
+        }
     }
 
     bool resume_identity_current() {
@@ -7000,6 +7046,7 @@ struct AssistantViewModel::State {
                     generic_context_retention_pending=false;generic_context_retention_error.clear();
                 }
             }
+            if(success && project && (record->tool=="create_project" || record->tool=="edit_project"))name_current_session();
             const auto settled = native_settlement_scope(call);
             if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); }
             if (!receiver || !settled()) return;
@@ -11695,7 +11742,7 @@ struct AssistantViewModel::State {
     void generic_response(const QString& id, const QString& method, const Object& reply, const char*& reason_code, FileProjection& publication) {
         if (!publishing || !generic_mode || (generic_retiring && method != "account/logout")) return;
         if (method == "account/rateLimits/read") { usage_response(id, reply); return; }
-        if(method=="thread/list" || method=="thread/read" || method=="thread/archive") {session_response(id,method,reply);return;}
+        if(method=="thread/list" || method=="thread/read" || method=="thread/archive" || method=="thread/name/set") {session_response(id,method,reply);return;}
         if (reply.contains("error")) {
             reason_code = "RESULT_SHAPE";
             const auto failure = reply.value("error").toObject();
@@ -11997,6 +12044,7 @@ struct AssistantViewModel::State {
             const auto policy=verified_runtime_policy(result.value("ediPolicy"),actual_thread,QJsonValue(QJsonValue::Null));
             if(!publication.input_current())return;
             generic_thread = actual_thread;generic_thread_has_input=resumed && resume_checkpoint->had_input;
+            if(owned_session(thread))session_metadata[actual_thread]=thread;
             generic_durable=true;generic_resuming=false;
             generic_native["resume_status"]=resumed?QStringLiteral("resumed"):QStringLiteral("started");
             resume_checkpoint.reset();
@@ -12008,6 +12056,7 @@ struct AssistantViewModel::State {
             generic_policy_verified=true;
             generic_native["connection_id"] = generic_thread; generic_native["status"] = "ready";
             generic_connecting = false; generic_authenticated = true; generic_retiring = false; agent->settleOperation();
+            name_current_session();
             error.clear();
             // Required skills/thread bootstrap has finished. A same-callback
             // required write can no longer preempt this initial observation.
@@ -14897,7 +14946,7 @@ void AssistantViewModel::refreshSessions(bool nextPage) {
         if(nextPage && !state_->sessions_more)return;
         if(!nextPage) {
             if(state_->sessions_epoch==UINT64_MAX)throw std::runtime_error("The session browser identity is unavailable");
-            ++state_->sessions_epoch;state_->session_metadata.clear();state_->sessions_cursor.clear();state_->sessions_more=false;
+            ++state_->sessions_epoch;state_->session_metadata.clear();state_->sessions_cursor.clear();state_->sessions_seen_cursors.clear();state_->sessions_more=false;
             state_->sessions.assign({});
         }
         state_->sessions_loading=true;state_->sessions_error.clear();emit sessionsChanged();
