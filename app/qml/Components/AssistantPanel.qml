@@ -278,6 +278,7 @@ Popup {
             height: parent.height
             enabled: panel.shown
             Rectangle {
+                id: assistantChatBackground
                 anchors.fill: parent
                 color: EaStyle.Colors.appBarBackground
             }
@@ -571,6 +572,7 @@ Popup {
                         AssistantMessage {
                             id: messageItem
                             assistant: panel.assistant
+                            chatBackgroundColor: assistantChatBackground.color
                             width: parent.width
                             kind: messageDelegate.kind
                             text: messageDelegate.text
