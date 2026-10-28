@@ -581,62 +581,6 @@ Rectangle {
                 policy: ScrollBar.AsNeeded
                 interactive: false
             }
-            id: selectedFilesScroll
-            width: parent.width
-            height: visible ? Math.min(selectedChips.implicitHeight, AppSizes.unit * 5) : 0
-            visible: composer.pendingFileCount > 0
-            clip: true
-            Flow {
-                id: selectedChips
-                x: editor.leftPadding
-                width: Math.max(0, selectedFilesScroll.availableWidth - editor.leftPadding - editor.rightPadding)
-                spacing: AppSizes.unit * 0.75
-            Repeater {
-                model: composer.assistant.selectedFiles
-                delegate: RowLayout {
-                    required property var model
-                    objectName: "assistant.file." + model.id
-                    visible: model.pending !== false
-                    spacing: AppSizes.unit * 0.125
-                    EaElements.Label {
-                        Layout.maximumWidth: composerContent.width * 0.6
-                        text: qsTr("%1 (%2)%3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes))
-                            .arg(model.textReadable ? "" : qsTr(" · text export required"))
-                        textFormat: Text.PlainText
-                        elide: Text.ElideMiddle
-                        Accessible.name: qsTr("Selected file: %1, %2. %3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes))
-                            .arg(model.textReadable ? qsTr("Available for consented text reads") : qsTr("Unsupported binary; text export required"))
-                    }
-                    EaElements.ToolButton {
-                        id: removeFileButton
-                        fontIcon: "times"
-                        implicitWidth: composer.actionSize
-                        implicitHeight: composer.actionSize
-                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
-                        showBackground: false
-                        contentItem: EaElements.Label {
-                            text: removeFileButton.fontIcon
-                            font.family: EaStyle.Fonts.iconsFamily
-                            font.pixelSize: removeFileButton.font.pixelSize * 1.25
-                            color: removeFileButton.foregroundColor()
-                            horizontalAlignment: Text.AlignLeft
-                            verticalAlignment: Text.AlignVCenter
-                        }
-                        enabled: composer.assistant.connected && !composer.assistant.canCancel
-                        ToolTip.text: qsTr("Remove %1").arg(model.name)
-                        Accessible.name: ToolTip.text
-                        onClicked: composer.assistant.removeSelectedFile(model.id)
-                    }
-                }
-            }
-            }
-        }
-        ScrollView {
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-            ScrollBar.vertical: EaElements.ScrollBar {
-                policy: ScrollBar.AsNeeded
-                interactive: false
-            }
             width: parent.width
             height: Math.min(AppSizes.unit * 10, Math.max(editor.font.pixelSize * 2.5 + editor.topPadding + editor.bottomPadding, editor.implicitHeight))
             TextArea {
@@ -671,6 +615,66 @@ Rectangle {
                         event.accepted = true;
                     }
                 }
+            }
+        }
+        ScrollView {
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+            ScrollBar.vertical: EaElements.ScrollBar {
+                policy: ScrollBar.AsNeeded
+                interactive: false
+            }
+            id: selectedFilesScroll
+            width: parent.width
+            height: visible ? Math.min(selectedChips.implicitHeight, AppSizes.unit * 5) : 0
+            visible: composer.pendingFileCount > 0
+            clip: true
+            Column {
+                id: selectedChips
+                x: editor.leftPadding
+                width: Math.max(0, selectedFilesScroll.availableWidth - editor.leftPadding - editor.rightPadding)
+                spacing: 0
+                topPadding: AppSizes.unit * 0.5
+            Repeater {
+                model: composer.assistant.selectedFiles
+                delegate: RowLayout {
+                    required property var model
+                    objectName: "assistant.file." + model.id
+                    width: selectedChips.width
+                    visible: model.pending !== false
+                    spacing: AppSizes.unit * 0.125
+                    EaElements.Label {
+                        id: selectedFileLabel
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        text: qsTr("%1 (%2)%3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes))
+                            .arg(model.textReadable ? "" : qsTr(" · text export required"))
+                        textFormat: Text.PlainText
+                        elide: Text.ElideMiddle
+                        Accessible.name: qsTr("Selected file: %1, %2. %3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes))
+                            .arg(model.textReadable ? qsTr("Available for consented text reads") : qsTr("Unsupported binary; text export required"))
+                    }
+                    EaElements.ToolButton {
+                        id: removeFileButton
+                        fontIcon: "times"
+                        implicitWidth: composer.actionSize
+                        implicitHeight: selectedFileLabel.implicitHeight
+                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.6
+                        showBackground: false
+                        contentItem: EaElements.Label {
+                            text: removeFileButton.fontIcon
+                            font.family: EaStyle.Fonts.iconsFamily
+                            font.pixelSize: removeFileButton.font.pixelSize * 1.25
+                            color: removeFileButton.foregroundColor()
+                            horizontalAlignment: Text.AlignLeft
+                            verticalAlignment: Text.AlignVCenter
+                        }
+                        enabled: composer.assistant.connected && !composer.assistant.canCancel
+                        ToolTip.text: qsTr("Remove %1").arg(model.name)
+                        Accessible.name: ToolTip.text
+                        onClicked: composer.assistant.removeSelectedFile(model.id)
+                    }
+                }
+            }
             }
         }
         Item {

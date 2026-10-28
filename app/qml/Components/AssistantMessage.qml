@@ -441,7 +441,7 @@ Rectangle {
         TextEdit {
             id: body
             width: parent.width
-            visible: row.kind === "user" || row.kind === "assistant"
+            visible: (row.kind === "user" || row.kind === "assistant") && row.text.length > 0
             AssistantMarkdown {
                 anchors.fill: parent
                 document: body.textDocument
@@ -469,17 +469,18 @@ Rectangle {
             Accessible.ignored: !visible
             Accessible.name: visible ? (row.kind === "user" ? qsTr("You") : row.kind === "assistant" ? qsTr("Assistant") : qsTr("Activity")) + ": " + row.text : ""
         }
-        Flow {
+        Column {
             id: sentFiles
             width: parent.width
-            spacing: AppSizes.unit * 0.25
+            topPadding: row.text.length > 0 ? AppSizes.unit * 0.5 : 0
+            spacing: 0
             visible: row.kind === "user" && row.status === "completed" && row.inputFiles.length > 0
             Repeater {
                 model: row.inputFiles
                 delegate: RowLayout {
                     required property var modelData
                     objectName: "assistant.sentFile." + modelData.id
-                    width: Math.min(implicitWidth, sentFiles.width)
+                    width: sentFiles.width
                     spacing: AppSizes.unit * 0.125
                     EaElements.Label {
                         Layout.fillWidth: true
