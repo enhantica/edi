@@ -1133,6 +1133,12 @@ bool Session::replaceProject(ProjectViewModel* project, const QStringList& warni
     const QPointer<Session> receiver(this); const QPointer<ProjectViewModel> target(project);
     const bool hasTarget=project!=nullptr;
     const QPointer<ProjectViewModel> previous(project_);
+    const auto beforePreparation=replacement_generation_,beforePreparationPath=path_generation_;
+    // The original native Open has loaded its target, but has not retired or
+    // published the old project. A pending conversation stages ALL local target
+    // resources here; ordinary non-session replacements use the same no-op hook.
+    if(!nativePrepared && !assistant_->prepareSessionProjectRestore(target,openedFrom))return false;
+    if(!receiver || project_!=previous || replacement_generation_!=beforePreparation || path_generation_!=beforePreparationPath || (hasTarget && !target))return false;
     const QString previous_example=opened_example_;
     const bool previous_idle=!previous || (previous->publication_depth_==0 && !previous->editing_);
     const auto retire_previous=qScopeGuard([receiver,previous] {

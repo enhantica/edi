@@ -242,7 +242,7 @@ bool CodexAgent::beginNativeWork(const QJsonValue& originalRequestId, quint64 or
 bool CodexAgent::setNativeWorkWaiting(const QJsonValue& originalRequestId, quint64 originalGeneration, bool waiting) {
     if(generation_!=originalGeneration || failed_ || !process_ || operation_start_<0)return false;
     const auto found=server_requests_.constFind(native_work_id_);
-    if(native_work_id_.isEmpty() || found==server_requests_.cend() || found.value()!=originalRequestId)return false;
+    if(native_work_id_.isEmpty() || found==server_requests_.cend() || found->id!=originalRequestId)return false;
     if(native_work_waiting_==waiting)return true;
     const auto now=clock_.elapsed();
     if(!accountWaits(now))return false;
@@ -254,10 +254,10 @@ bool CodexAgent::endNativeWork(const QJsonValue& originalRequestId, quint64 orig
     if(generation_!=originalGeneration || failed_ || !process_)return false;
     if(native_work_id_.isEmpty()) {
         // Idempotent matching cleanup, without allocating a new encoded key.
-        return std::any_of(server_requests_.cbegin(),server_requests_.cend(),[&](const auto& id){return id==originalRequestId;});
+        return std::any_of(server_requests_.cbegin(),server_requests_.cend(),[&](const auto& request){return request.id==originalRequestId;});
     }
     const auto found=server_requests_.constFind(native_work_id_);
-    if(found==server_requests_.cend() || found.value()!=originalRequestId)return false;
+    if(found==server_requests_.cend() || found->id!=originalRequestId)return false;
     const auto now=clock_.elapsed();
     if(!accountWaits(now))return false;
     native_work_id_.clear();native_work_waiting_=false;
@@ -552,14 +552,14 @@ bool CodexAgent::answer(const QJsonValue& originalId, const QJsonObject& result,
     if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_))) return false;
     if(native_work_id_==key && !endNativeWork(originalId,generation_))return false;
     // Retire before delivery: an uncertain write never permits a repeated answer.
-    const auto id = server_requests_.take(key); pending_bytes_ -= server_sizes_.take(key);
+    const auto id = server_requests_.take(key).id; pending_bytes_ -= server_sizes_.take(key);
     return write({{QStringLiteral("id"), id}, {QStringLiteral("result"), result}}, {}, false, false, preparation, handoff);
 }
 bool CodexAgent::reject(const QJsonValue& originalId) {
     const auto key = idKey(originalId);
     if (key.isEmpty() || !server_requests_.contains(key) || (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_))) return false;
     if(native_work_id_==key && !endNativeWork(originalId,generation_))return false;
-    const auto id = server_requests_.take(key); pending_bytes_ -= server_sizes_.take(key);
+    const auto id = server_requests_.take(key).id; pending_bytes_ -= server_sizes_.take(key);
     return write({{"id", id}, {"error", QJsonObject{{"code", -32601}, {"message", "This client does not support this request."}}}});
 }
 void CodexAgent::resolved(const QJsonValue& originalId) {
@@ -567,6 +567,30 @@ void CodexAgent::resolved(const QJsonValue& originalId) {
     if (human_wait_start_ >= 0 && human_wait_id_ == key && !endHumanWait(originalId, generation_)) return;
     if(native_work_id_==key && !endNativeWork(originalId,generation_))return;
     server_requests_.remove(key); pending_bytes_ -= server_sizes_.take(key);
+}
+bool CodexAgent::deferServerRequest(const QJsonValue& originalId,quint64 originalGeneration) {
+    if(generation_!=originalGeneration || failed_ || !process_)return false;
+    const auto key=idKey(originalId);auto found=server_requests_.find(key);
+    if(key.isEmpty() || found==server_requests_.end() || found->id!=originalId)return false;
+    found->deferred=true;return true;
+}
+void CodexAgent::resumeDeferredRequests(quint64 originalGeneration) {
+    const QPointer<CodexAgent> receiver(this);const QPointer<QProcess> process(process_);
+    const auto current=[&]{return receiver && process && generation_==originalGeneration && process_==process && !failed_;};
+    if(!current())return;
+    QList<QPair<quint64,QString>> ordered;
+    for(auto it=server_requests_.cbegin();it!=server_requests_.cend();++it)if(it->deferred)ordered.append({it->order,it.key()});
+    std::sort(ordered.begin(),ordered.end());
+    for(const auto& entry:ordered) {
+        if(!current())return;
+        auto found=server_requests_.find(entry.second);
+        if(found==server_requests_.end() || found->order!=entry.first || !found->deferred)continue;
+        const auto request=*found;found->deferred=false; // Consume before the original callback can reenter.
+        emit serverRequest(request.id,request.method,request.params);
+        if(!current())return;
+        found=server_requests_.find(entry.second);
+        if(found!=server_requests_.end() && found->order==entry.first && found->deferred)return;
+    }
 }
 void CodexAgent::read(QProcess* process, quint64 scope, bool finished) {
     if (!process || process_ != process || generation_ != scope) return;
@@ -654,7 +678,8 @@ void CodexAgent::receive(const QByteArray& record) {
             if (!encodedSize(envelope, std::nullopt, bytes)) {
                 fail("The official agent request has invalid Unicode, number or nesting."); return;
             }
-            server_requests_.insert(key, id); server_sizes_.insert(key, bytes); pending_bytes_ += bytes;
+            if(server_sequence_==std::numeric_limits<quint64>::max())throw std::length_error("Server request identity is exhausted");
+            server_requests_.insert(key,ServerRequest{id,method,params,++server_sequence_,false});server_sizes_.insert(key,bytes);pending_bytes_+=bytes;
             emit serverRequest(id, method, params);
         } else emit event(method, params);
         return;

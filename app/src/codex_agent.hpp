@@ -39,6 +39,8 @@ public:
                 bool (*handoff)(void*) noexcept = nullptr);
     bool reject(const QJsonValue& originalId);
     void resolved(const QJsonValue& originalId);
+    bool deferServerRequest(const QJsonValue& originalId,quint64 originalGeneration);
+    void resumeDeferredRequests(quint64 originalGeneration);
     void activity();
     quint64 outputGeneration() const noexcept { return generation_; }
     void retire();
@@ -87,7 +89,9 @@ private:
     QSet<QString> optional_usage_ids_; // Outstanding or timed-out exact issued IDs, bounded by completed_calls.
     QHash<QString, qint64> pending_deadlines_;
     QHash<QString, quint64> pending_sizes_, server_sizes_;
-    QHash<QString, QJsonValue> server_requests_;
+    struct ServerRequest {QJsonValue id;QString method;QJsonObject params;quint64 order=0;bool deferred=false;};
+    QHash<QString, ServerRequest> server_requests_;
+    quint64 server_sequence_=0;
     quint64 next_id_ = 0, generation_ = 0;
     bool failed_ = false;
     FailureKind failure_kind_ = FailureKind::Other;
