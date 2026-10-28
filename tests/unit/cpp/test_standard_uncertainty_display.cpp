@@ -11,7 +11,7 @@
 
 TEST_CASE("Standard uncertainty display follows both IUCr decimal rules") {
 #ifdef HAS_SU_DISPLAY
-    const std::array<std::tuple<double, double, const char*, const char*>, 11> cases{{
+    const std::array<std::tuple<double, double, const char*, const char*>, 14> cases{{
         {1.54249, .01532, "iucr_19", "1.542(16)"},
         {2.16352, .00481, "iucr_19", "2.164(5)"},
         {2.16352, .00481, "iucr_99", "2.1635(49)"},
@@ -23,6 +23,11 @@ TEST_CASE("Standard uncertainty display follows both IUCr decimal rules") {
         {1.2345, .015, "iucr_19", "1.235(15)"},
         {-1.2345, .015, "iucr_19", "-1.235(15)"},
         {10.30925, .00157, "iucr_19", "10.3093(16)"},
+        // Independent IUCr decimal meaning: (41) at five places is .00041,
+        // not .00004. Mean/sign/scale prevent a unit-identity-only witness.
+        {3.8651226, .0004065, "iucr_99", "3.86512(41)"},
+        {-3.8651226, .0004065, "iucr_99", "-3.86512(41)"},
+        {386.51226, .04065, "iucr_99", "386.512(41)"},
     }};
     for (const auto& [value, su, rule, expected] : cases) {
         CAPTURE(value);
