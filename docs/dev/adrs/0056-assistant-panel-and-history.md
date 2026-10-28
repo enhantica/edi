@@ -3685,3 +3685,5 @@ Review84 establishes that Qt 6.11.2 keeps the FIRST popup visible throughout its
 ### Preferences sizing reads intrinsic scalar dimensions (2026-10-28)
 
 FIRST Preferences controlWidth measures original row ComboBoxes using implicitContentWidth/implicitIndicatorWidth and original padding/spacing, without accessing deferred contentItem/indicator objects while their own width is being computed. The web source dialog content follows its explicit contentWidth in one direction, rather than feeding its parent geometry back into the shared Dialog implicitWidth. Existing natural text measurement, translation, padding, control layout and shared styling remain authoritative; no fixed dialog width or warning suppression is introduced. This closes the reported source-level sizing cycles; actual macOS layout/warning qualification remains pending.
+
+The follow-up removes an invalid assignment to Column's read-only implicitWidth; its legitimate explicit width remains the one-way content-width source. qmlcachegen alone did not detect this construction-time property error, so its earlier successful source check was insufficient to qualify actual Main loading.
