@@ -24,7 +24,8 @@ Object object(Object properties, Array required) {
     return {{"type", "object"}, {"properties", properties}, {"required", required}, {"additionalProperties", false}};
 }
 void shape(const Object& value, const QSet<QString>& keys) {
-    if (value.size() != keys.size()) throw std::invalid_argument("Native action fields are missing or unsupported");
+    const auto expected=keys.size()-(keys.contains("purpose") && !value.contains("purpose")?1:0);
+    if (value.size() != expected) throw std::invalid_argument("Native action fields are missing or unsupported");
     for (auto i = value.constBegin(); i != value.constEnd(); ++i) if (!keys.contains(i.key()))
         throw std::invalid_argument("Unsupported native action field");
 }
@@ -35,7 +36,7 @@ QJsonArray native_tool_specs(bool include_profiles) {
     const Object text{{"type", "string"}, {"minLength", 1}, {"maxLength", 256}};
     Object parameterPath=text;parameterPath["description"]="Copy the exact current parameters[].path returned by inspect_project or list_parameters. Do not use parameters[].unique_name or substitute a dataset/structure ID. Single-owner paths use experiment. or structure.; multiple owners use the actual offered experiments[ID]. or structures[ID]. path. Copy the returned string rather than constructing it.";
     const Object purpose{{"type", "string"}, {"minLength", 1},
-        {"description", "A concise purpose for this action, not a claim that it succeeded"}};
+        {"description", "Optional concise action purpose, not success. If omitted, Edi labels the action itself and records native-fallback provenance"}};
     const auto add = [&](const char* name, const char* description, Object properties = {}, Array required = {}) {
         properties["purpose"] = purpose; required.append("purpose");
         tools.append(Object{{"type", "function"}, {"name", name}, {"description", description}, {"inputSchema", object(properties, required)}});
@@ -174,6 +175,25 @@ QJsonArray native_tool_specs(bool include_profiles) {
         branch(Array{"remove"},Array{"purpose","experiment","operation","id"}),
         branch(Array{"name_from_positions"},Array{"purpose","experiment","operation"})};
     tool["inputSchema"]=schema;tools[tools.size()-1]=tool;
+    // Common optional presentation metadata, for both original root schemas
+    // and their owned oneOf alternatives; scientific fields stay required.
+    const auto optionalPurpose=[](Object schema) {
+        if(schema.value("required").isArray()) {
+            Array fields;
+            for(const auto& field:schema.value("required").toArray())if(field!="purpose")fields.append(field);
+            schema["required"]=fields;
+        }
+        return schema;
+    };
+    for(qsizetype i=0;i<tools.size();++i) {
+        auto spec=tools[i].toObject();auto schema=optionalPurpose(spec.value("inputSchema").toObject());
+        if(schema.value("oneOf").isArray()) {
+            Array branches;
+            for(const auto& branch:schema.value("oneOf").toArray())branches.append(optionalPurpose(branch.toObject()));
+            schema["oneOf"]=branches;
+        }
+        spec["inputSchema"]=schema;tools[i]=spec;
+    }
     return tools;
 }
 } // namespace
@@ -237,7 +257,9 @@ bool assistant_native_tool(const QString& name) {
     return name=="show_report" || name=="create_project" || individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "undo_fit" || name == "create_cwl_project" || name == "add_relations" || name == "edit_relation" || name == "save_project" || name == "edit_background" || name == "estimate_background";
 }
-QString assistant_native_purpose(const Object& args) {
+QString assistant_native_purpose(const Object& args,const QString& action) {
+    if(!args.contains("purpose"))return action.isEmpty()?QStringLiteral("Edi native action"):
+        QStringLiteral("Edi native action: ")+action;
     const auto value = args.value("purpose");
     if (!value.isString()) throw std::invalid_argument("Native action requires its purpose");
     const auto text = value.toString();

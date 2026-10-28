@@ -37,6 +37,7 @@ const char* dependence(Dependence value) {
     return "unknown";
 }
 J parameters(Project& project) {
+    refresh_fittability(project);
     std::map<const Parameter*, std::string> names;
     for (const auto& slot : named_slots(project)) names[slot.parameter] = slot.unique_name;
     A rows;
@@ -48,6 +49,8 @@ J parameters(Project& project) {
         J row = O{{"path", entry.path}, {"unique_name", unique_name}, {"value", p.value.get()},
                             {"uncertainty", p.uncertainty.get() ? J(*p.uncertainty.get()) : J(nullptr)},
                             {"free", p.free.get()}, {"dependence", dependence(p.dependence)},
+                            {"refinable",entry.refinable},{"fittable",independently_fittable(entry)},
+                            {"fit_reason",p.fit_reason},
                             {"unit", p.spec ? p.spec->units : "dimensionless"}};
         const auto growth = payload_size(row) + (rows.empty() ? 0 : 1);
         bytes += growth; rows.push_back(std::move(row));

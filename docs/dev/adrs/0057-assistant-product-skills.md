@@ -321,3 +321,22 @@ remain unchanged. Project-assistance1.8.3 (SHA256 `28c94bb5340e9c8b714ec1322d275
 prefer ordinary current-project CIF/data import and native Estimate; the complete
 powder operation remains optional. No specimen, fixed refinement procedure, default
 parameter list or new input authority is introduced.
+
+
+## 2026-10-28: actual eligibility and optional action-purpose metadata
+
+Parameter context now exposes refinable, fittable and native fit_reason from the
+same original independently-fittable predicate used by parameter preparation:
+entry eligibility, independent dependence and no native blocker. The existing
+JSON row measurement and closed Parameter projection carry these actual facts.
+A refused free request names its exact offered path and actual native reason;
+no SC cell, descriptor, occupancy or dependent is made eligible to satisfy a call.
+
+Purpose is presentation/report metadata, not scientific or write authority. The
+original NativeReceipt objective, literal provider arguments, original-item match,
+call/once/current-project/disclosure checks and every physical operand remain
+independent. Purpose is optional in every root/oneOf native schema and exact-shape
+validator. An omitted purpose receives an explicitly native action label, with
+purpose_source=native_action_label in local work evidence; a supplied purpose stays
+literal and validated, with purpose_source=model_argument. No fallback is inserted
+into the original arguments or invented as the user's/model's scientific goal.

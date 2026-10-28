@@ -4066,7 +4066,10 @@ struct AssistantViewModel::State {
             // the detached row/JSON wrapper, reply and optional original item.
             generic_measured_size(call.record->response);
             generic_measured_size(call.record->original);
-            Object fields{{"workEvidence",work_call_evidence(call,disposition)}};
+            auto callEvidence=work_call_evidence(call,disposition);
+            callEvidence["purpose_source"]=call.record->original.value("arguments").toObject().contains("purpose")?
+                "model_argument":"native_action_label";
+            Object fields{{"workEvidence",callEvidence}};
             const auto& outcome=call.record->outcome;const auto m=work_report_missing();
             if(call.record->tool=="run_fit" || call.record->tool=="save_project") {
                 const auto actual=[&](const char* key){return outcome.contains(key)?work_report_observed(outcome.value(key)):m;};
@@ -5964,7 +5967,7 @@ struct AssistantViewModel::State {
                 if(!capture->latched) {
                     auto row=capture->primary;auto payload=row.value("payload").toObject();
                     payload["nativeOutcome"]=outcome;
-                    try {payload["purpose"]=assistant_native_purpose(payload.value("arguments").toObject());}catch(const std::invalid_argument&){}
+                    try {payload["purpose"]=assistant_native_purpose(payload.value("arguments").toObject(),payload.value("tool").toString());}catch(const std::invalid_argument&){}
                     row["payload"]=payload;
                     // Local native truth belongs to the primary archive even
                     // when optional report collection is unavailable.
@@ -5979,6 +5982,7 @@ struct AssistantViewModel::State {
                 const Object evidence{{"event_id",work_reports.newEvent()},{"thread_id",work_report_observed(capture->thread)},
                     {"turn_id",work_report_observed(capture->turn)},{"call_id",work_report_observed(callId)},
                     {"rpc_id",work_report_observed(id)},{"tool",payload.contains("tool")?work_report_observed(payload.value("tool")):m},
+                    {"purpose_source",payload.value("arguments").toObject().contains("purpose")?"model_argument":"native_action_label"},
                     {"arguments_relation","unknown"},{"original_item",m},{"projected_reply",work_report_observed(response)},
                     {"reply_disposition",QLatin1StringView(disposition)},{"completed",m},{"retired",m},{"elapsed_ms",m},
                     {"skill_capture_ids",QJsonArray{}},{"ui_event_ids",QJsonArray{}},{"science_event_ids",QJsonArray{}}};
@@ -6920,7 +6924,7 @@ struct AssistantViewModel::State {
         const auto args = params.value("arguments").toObject();
         save_stage = "ARGUMENTS";
         assistant_native_arguments(name, args);
-        const auto purpose = assistant_native_purpose(args);
+        const auto purpose = assistant_native_purpose(args,name);
         // One genuine owner-bound invocation before any busy/visible/preparation
         // refusal. Reuse this identity through native preflight and actual start.
         const auto fit_attempt = name == "run_fit" && project ? project->fit()->beginAttempt() : 0;
