@@ -8366,7 +8366,10 @@ def test_show_on_alias_search_physically_chooses_actual_offered_row_once(main_ac
     actor.until(lambda value: any(row['name'] == 'parameters.category' and row['visible']
         for row in value['ui']['controls']))
     original = json.loads(json.dumps(actor.last['ui']['project']))
-    parameter = next(row for row in original['parameters'] if row['category'] == 'cell' and row['field'] == 'length_a')
+    reference_before, expected_aliases, parameter, ordinary_unique_name, ordinary_default_alias, ordinary_undo_states = \
+        _ordinary_changed_alias_reference(actor, 'visible_original_cell')
+    assert reference_before['aliases'] == original['aliases'] and reference_before['parameters'] == original['parameters'], (
+        'The actual ordinary reference begins at the unchanged original science and chooses a genuinely different offered parameter')
     marker = 'e11.original-visible-offered-choice'
     _watch_original_offered_choices(actor, marker)
     call = {'tool': 'add_relations', 'call_id': 'original-visible-search-choice',
@@ -8392,14 +8395,14 @@ def test_show_on_alias_search_physically_chooses_actual_offered_row_once(main_ac
         assert point and b['x'] <= point['x'] <= b['x'] + b['width'] and b['y'] <= point['y'] <= b['y'] + b['height'], (
             'The existing assistant pointer actually reaches the visible original offered row before its physical selection')
     current = actor.last['ui']['project']
-    assert current['aliases'] == original['aliases'] + [{'id': 'visible_original_cell', 'parameter': parameter['path']}], (
-        'Visible choice creates exactly one original native alias with its requested canonical parameter')
+    assert current['aliases'] == expected_aliases, (
+        'Visible choice creates exactly one original native alias for its requested path, stored using the FIRST ordinary offered parameter unique name')
     assert len(actor.responses()) == 1, 'The visible chooser does not repeat the scientific operation through a second backend setter'
-    actor.command('undo');actor.until(lambda value: value['ui']['project']['aliases'] == original['aliases'])
-    assert actor.last['ui']['project']['parameters'] == original['parameters'], (
-        'One original Undo restores the actual alias operation without changing parameter values, free flags or uncertainties')
+    _match_original_alias_undo_sequence(actor, original, ordinary_undo_states, True)
     (actor.folder / 'actual-visible-offered-choice.json').write_text(json.dumps({
         'actual_call': call, 'actual_result': result, 'original_offered_parameter': parameter,
+        'original_ordinary_parameter_unique_name': ordinary_unique_name,
+        'ordinary_default_alias': ordinary_default_alias, 'ordinary_undo_states': ordinary_undo_states,
         'actual_original_control_events': facts}, indent=2))
 
 
@@ -8679,3 +8682,202 @@ def test_actual_main_engine_load_emits_owned_first_reply_without_component_error
         'host_pid': actor.process.pid, 'first_owned_reply': True,
         'owner_checks': {key: first['ui'][key] for key in ('singleton_identity', 'engine_parent', 'cpp_ownership')},
         'actual_stderr': str(actor.folder / 'host.stderr'), 'component_errors': bad}, indent=2))
+
+
+# PRIVATE / UNRUN. Review88 owner primitive/currentness contract, FIRST normal
+# AliasListModel operations as independent reference, not assistant receipt output.
+def _ordinary_changed_alias_reference(actor, alias_id):
+    before = json.loads(json.dumps(actor.command('inspect')['ui']['project']))
+    model = 'Session.project.analysis.aliases'
+    offered = qml(actor, model + '.parameterNames')
+    assert alias_id not in {row['id'] for row in before['aliases']}, (
+        'The isolated reference declares one genuinely new alias without reusing a live alias identity')
+    assert qml(actor, '(function(){' + model + '.append();return ' + model + '.count;})()') == len(before['aliases']) + 1, (
+        'The FIRST ordinary alias owner independently supports appending one alias without any constraint')
+    appended = actor.command('inspect')['ui']['project']['aliases'][-1]
+    options = []
+    for row in before['parameters']:
+        if row['category'] != 'cell':
+            continue
+        names = [name for name in offered if name.endswith('.cell.' + row['field'])]
+        if len(names) == 1 and names[0] != appended['parameter']:
+            options.append((row, names[0]))
+    assert options, 'A genuinely different ordinary offered parameter exists; an already-selected no-op cannot qualify post-write settlement'
+    parameter, unique_name = options[0]
+    index = len(before['aliases'])
+    assert qml(actor, model + '.setText(' + str(index) + ',"id",' + json.dumps(alias_id) + ')'), (
+        'The normal reference gives its new alias the requested explicit identity')
+    before_parameter_choice = json.loads(json.dumps(actor.command('inspect')['ui']['project']['aliases']))
+    assert qml(actor, model + '.setText(' + str(index) + ',"parameter",' + json.dumps(unique_name) + ')'), (
+        'The normal reference physically supported model setter changes the new alias to an actually offered canonical parameter name')
+    expected = json.loads(json.dumps(actor.command('inspect')['ui']['project']['aliases']))
+    assert expected[-1]['parameter'] != appended['parameter'], (
+        'The reference actually changes the selected parameter; a native no-op would not exercise an own-write stamp transition')
+    undo_states = []
+    # At most the three genuinely invoked ordinary setters can add Undo. Stop
+    # at the measured baseline; an ordinary no-op never invents an Undo step.
+    for _ in range(3):
+        if actor.last['ui']['project']['aliases'] == before['aliases']:
+            break
+        assert actor.last['ui']['project']['can_undo'], 'The FIRST ordinary reference retains its actual Undo before restoring the isolated baseline'
+        actor.command('undo');actor.until(lambda value: not value['ui']['project']['calculating'])
+        state = actor.command('inspect')['ui']['project']
+        undo_states.append({key: json.loads(json.dumps(state[key])) for key in ('aliases', 'constraints', 'parameters')})
+    assert undo_states and undo_states[0]['aliases'] == before_parameter_choice, (
+        'The first genuine ordinary Undo reverses only the last effectful parameter choice while retaining its appended alias and explicit ID')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    actual = actor.command('inspect')['ui']['project']
+    assert actual['aliases'] == before['aliases'] and actual['constraints'] == before['constraints'] \
+        and actual['parameters'] == before['parameters'], (
+            'Only ordinary Undo restores the genuine pre-reference science before the separately requested native action')
+    return before, expected, parameter, unique_name, appended, undo_states
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_alias_only_changed_parameter_matches_first_ordinary_owner_once_and_undo(main_actor, tmp_path, show_actions):
+    actor = main_actor([[]], show_actions=show_actions)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Standalone alias coverage uses a genuine complete ordinary project in an isolated copy')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    before, expected, parameter, unique_name, appended, reference_undo_states = _ordinary_changed_alias_reference(actor, 'standalone_original_cell')
+    if show_actions:
+        wait_positive_tab(actor, 'appBar.tab.analysis');actor.command('click', name='appBar.tab.analysis')
+        actor.until(lambda value: any(row['name'] == 'parameters.category' and row['visible'] for row in value['ui']['controls']))
+        _watch_original_offered_choices(actor, 'e11.standalone-alias-actual-choice')
+    call = {'tool': 'add_relations', 'call_id': 'standalone-original-alias-once',
+        'arguments': {'purpose': 'Add only this exact original offered alias without inventing a constraint.',
+            'aliases': [{'id': 'standalone_original_cell', 'path': parameter['path']}], 'constraints': []}}
+    actor.configure_turns([[call]]);actor.connect();_session_request_with_original_disclosure(actor,
+        'Add the one requested original alias and no constraint; retain its actual ordinary Undo.')
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=show_actions)
+    response = actor.responses()[0];result = native_result(response)
+    after = actor.command('inspect')['ui']['project']
+    assert after['aliases'] == expected and after['constraints'] == before['constraints'], (
+        'Alias-only native admission must match the FIRST independent ordinary alias owner and never fabricate a constraint')
+    assert after['parameters'] == before['parameters'] and len(actor.responses()) == 1, (
+        'One real changed alias choice does not replay science or change unrelated values, flags or uncertainties')
+    physical = []
+    if show_actions:
+        watcher = _scene_control_expression('e11.standalone-alias-actual-choice')
+        qml(actor, '(' + watcher + ').finished=true')
+        facts = qml(actor, '(' + watcher + ').facts')
+        physical = [row for row in facts if row['kind'] == 'real_delegate_pressed' and row['control'].startswith('alias.parameter.')]
+        assert physical and all(row['ownerCurrent'] and row['sameWindow'] and row['popupVisible'] and row['rowVisible'] for row in physical), (
+            'Show ON standalone alias reaches actual input on the original exposed offered row, not merely a setter or popup visibility')
+    _match_original_alias_undo_sequence(actor, before, reference_undo_states, show_actions)
+    (actor.folder / 'standalone-alias-original-owner.json').write_text(json.dumps({
+        'call': call, 'result': result, 'ordinary_reference_aliases': expected,
+        'normal_unique_name': unique_name, 'original_default_alias': appended,
+        'reference_undo_states': reference_undo_states, 'actual_physical_choices': physical}, indent=2))
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_empty_alias_and_constraint_request_refuses_without_creating_science(main_actor, tmp_path, show_actions):
+    call = {'tool': 'add_relations', 'call_id': 'genuinely-empty-relations',
+        'arguments': {'purpose': 'An empty declaration must refuse without inventing scientific work.', 'aliases': [], 'constraints': []}}
+    actor = main_actor([[call]], show_actions=show_actions)
+    assert actor.command('open', path=str(copied_estimate_project(tmp_path)))['reply']['opened'], (
+        'Empty relation refusal is exercised against an actual available ordinary project, not an unavailable-owner precondition')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    before = json.loads(json.dumps(actor.command('inspect')['ui']['project']))
+    actor.connect();_session_request_with_original_disclosure(actor, 'Do not create any alias or constraint for an empty declaration.')
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=show_actions)
+    response = actor.responses()[0]
+    assert not response['result']['success'], 'The actual native API must refuse a genuinely empty relation request instead of fabricating an action'
+    after = actor.command('inspect')['ui']['project']
+    assert after['aliases'] == before['aliases'] and after['constraints'] == before['constraints'] \
+        and after['parameters'] == before['parameters'] and after['can_undo'] == before['can_undo'], (
+            'The empty declaration refuses before any alias/constraint/parameter mutation or invented Undo')
+    (actor.folder / 'empty-original-relations-refusal.json').write_text(json.dumps({
+        'call': call, 'actual_reply': response, 'original_project': before, 'after_project': after}, indent=2))
+
+
+# PRIVATE / UNRUN. Owner's actual casual no-project startup continuation, distinct
+# from the retained saved-project plus attachment restart characterization.
+def test_actual_no_project_auto_restart_first_send_keeps_original_conversation_without_manual_connect(main_actor, tmp_path, monkeypatch):
+    actor = main_actor([[]])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect()
+    assert not actor.last['ui']['project'] and not actor.last['ui']['selected_files'], (
+        'The casual conversation starts in the actual original empty Main without a planted project or attachment')
+    first_text = 'Hello. Keep this actual ordinary conversation for my later question.'
+    _session_request_with_original_disclosure(actor, first_text);_session_completed(actor, 1)
+    first_input = _session_state(actor)['inputs'][0];thread = first_input['threadId']
+    first_rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
+    assert {'user', 'assistant'} <= {row['kind'] for row in first_rows}, (
+        'Expected history comes from a genuinely admitted first user message and actually emitted original assistant reply')
+    assert not actor.last['ui']['project'], 'The actual first conversation remains project-free through its normal completion'
+    _capture_genuine_archive(actor, 'casual-no-project-original')
+    manifest = _capture_exact_cache_manifest(actor, 'casual-no-project-full-current')
+    sources = _finish_genuine_restart_sources(actor, manifest)
+    restored = _start_exact_original_fixture_restart(tmp_path, monkeypatch, sources, [])
+    try:
+        # No manual Connect, Open, refreshSessions or selectSession is allowed
+        # before the actual first ordinary Send on the restarted application.
+        restored.until(lambda value: first_text in json.dumps(value['ui']['messages'], ensure_ascii=False)
+            and any(row['name'] == 'assistant.send' and row['enabled'] and row['fully_exposed']
+                for row in value['ui']['controls']))
+        startup = restored.command('inspect')['ui'];before_wire = _session_wire(restored)
+        assert not startup['project'] and not startup['selected_files'], (
+            'Automatic startup keeps the original no-project association instead of opening a substitute project')
+        followup_text = 'What was my earlier message in this same ordinary conversation?'
+        restored.command('click', name='assistant.composer');restored.command('manual_text', text=followup_text)
+        assert qml(restored, '(' + _scene_control_expression('assistant.composer') + ').text') == followup_text, (
+            'Actual physical typing reaches the original exposed composer, not a synthetic send or injected history row')
+        restored.command('click', name='assistant.send')
+        approval = None
+        if any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
+               for row in restored.last['ui']['controls']):
+            approval = restored.command('dialog_ok', name='AssistantConnectionDialog', role='ok')['reply']
+            assert approval['pressed_changes'] > 0, (
+                'Any genuinely required original sharing disclosure receives one actual approval and no second Send')
+        _session_completed(restored, 2)
+        wire = _session_wire(restored);actual = _session_state(restored)['inputs']
+        assert len(actual) == 2 and actual[-1]['threadId'] == thread \
+            and actual[-1]['actual_prior_input_count'] == 1, (
+                'The first actual post-startup question continues the exact original persisted runtime thread with its genuine prior input')
+        assert not any(row.get('method') == 'thread/start' for row in wire) \
+            and len(_session_wire(restored, 'turn/start')) == 1, (
+                'Automatic no-project continuation cold-resumes the original conversation without a new thread, replayed prompt or duplicate admission')
+        resumes = _session_wire(restored, 'thread/resume')
+        assert resumes and resumes[-1]['params']['threadId'] == thread, (
+            'Original history visibility is accompanied by an actual supported exact-ID runtime resume, not only cached user bubbles')
+        displayed = [_rows_values(restored, 'messages', index) for index in range(_rows_probe(restored)['count'])]
+        by_id = {row['id']: row for row in displayed}
+        assert all(by_id.get(row['id']) == row for row in first_rows), (
+            'The first Send preserves every actual original user and assistant history row with its original identity/status/text')
+        assert not restored.last['ui']['project'] and not restored.last['ui']['selected_files'], (
+            'A casual restored conversation cannot acquire scientific project or file authority as a side effect of its first question')
+        (restored.folder / 'actual-casual-auto-startup-first-send.json').write_text(json.dumps({
+            'original_sources': sources, 'original_thread': thread, 'original_rows': first_rows,
+            'actual_startup_before_send': startup, 'actual_wire_before_send': before_wire,
+            'manual_connect_or_session_selection': False, 'physical_send_count': 1,
+            'actual_sharing_approval': approval, 'actual_resumes': resumes,
+            'actual_inputs': actual, 'actual_after_rows': displayed}, indent=2))
+    finally:
+        _close_explicit_restart_actor(restored)
+
+
+
+def _match_original_alias_undo_sequence(actor, before, ordinary_undo_states, show_actions):
+    expected_states = ordinary_undo_states if show_actions else [
+        {key: before[key] for key in ('aliases', 'constraints', 'parameters')}]
+    assert expected_states, 'Undo qualification requires genuine original ordinary reference states, never a guessed fixed edit count'
+    actual_states = []
+    for expected in expected_states:
+        assert actor.last['ui']['project']['can_undo'], 'Each actual scientific Undo remains available on its original current project owner'
+        actor.command('undo');actor.until(lambda value: not value['ui']['project']['calculating'])
+        state = actor.command('inspect')['ui']['project']
+        actual = {key: state[key] for key in ('aliases', 'constraints', 'parameters')}
+        actual_states.append(actual)
+        assert actual == expected, (
+            'Show ON Undo follows each FIRST ordinary applied control prefix; Show OFF retains its one atomic relation Undo, with unrelated science unchanged')
+    assert actor.last['ui']['project']['aliases'] == before['aliases'] \
+        and actor.last['ui']['project']['constraints'] == before['constraints'] \
+        and actor.last['ui']['project']['parameters'] == before['parameters'] \
+        and actor.last['ui']['project']['can_undo'] == before['can_undo'], (
+            'The measured ordinary Undo sequence returns to the original declaration without an extra or duplicate scientific edit')
+    (actor.folder / 'actual-alias-ordinary-undo-sequence.json').write_text(json.dumps({
+        'show_actions': show_actions, 'independent_ordinary_states': ordinary_undo_states,
+        'actual_native_undo_states': actual_states}, indent=2))
