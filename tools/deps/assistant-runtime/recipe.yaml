@@ -1,0 +1,33 @@
+# Sole official standalone runtime version/archive owner; no CLI substitution.
+context:
+  version: "0.162.1"
+  target: ${{ "x86_64-unknown-linux-musl" if target_platform == "linux-64" else "aarch64-apple-darwin" }}
+  archive_sha256: ${{ "8748f9f8b708b3bc5a52b3f0a1ccddb22e6985f0efb4f45dafa1677e324abe0e" if target_platform == "linux-64" else "28c0e2fbfb39a422dcfdd5bb87027a12242da7fa2dc997811bc0a6d2316c4f93" }}
+package:
+  name: edi-assistant-runtime
+  version: ${{ version }}
+source:
+  - url: https://github.com/openai/codex/releases/download/rust-v${{ version }}/codex-app-server-package-${{ target }}.tar.gz
+    sha256: ${{ archive_sha256 }}
+    target_directory: upstream
+  - path: ../../../data/assistant/runtime
+    target_directory: edi-licenses
+build:
+  number: 0
+  skip: target_platform != "linux-64" and target_platform != "osx-arm64"
+  # Existing signed/self-contained upstream bytes must survive packaging unchanged.
+  prefix_detection:
+    ignore: true
+  dynamic_linking:
+    binary_relocation: false
+  script: python "$RECIPE_DIR/install.py" --source "$SRC_DIR/upstream" --licenses "$SRC_DIR/edi-licenses" --prefix "$PREFIX" --target "${{ target }}" --archive-sha256 "${{ archive_sha256 }}"
+requirements:
+  build:
+    - python >=3.12
+about:
+  homepage: https://github.com/openai/codex
+  summary: Exact qualified official native app-server/resource closure for Edi
+  license: LicenseRef-Edi-Assistant-Runtime-Notices
+  license_file:
+    - edi-licenses/LICENSE
+    - edi-licenses/NOTICE

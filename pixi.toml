@@ -4,6 +4,7 @@
 
 [workspace]
 name = "edi"
+preview = ["pixi-build"]
 channels = ["conda-forge"]
 platforms = [
     # osx-64 is not built (ADR-0017): crysta publishes no osx-64 SDK. One platform per subdir, with the floor
@@ -171,6 +172,8 @@ sysroot_linux-64 = "2.28.*"
 # for the structure view, and the distributed app is a GPLv3 work while edi's source stays BSD-3 (ADR-0015
 # §6, ADR-0008).
 [feature.app.dependencies]
+edi-assistant-runtime = { path = "tools/deps/assistant-runtime" }
+edi-assistant-math-source = { path = "tools/deps/assistant-math" }
 # The app environment imports the extension the default environment builds, so it keeps that Python's minor.
 python = "3.14.*"
 # The same Qt as the web build's kits (EDI_WASM_QT, tools/ci/wasm-env.sh), which wasm-toolchain.sh checks.
@@ -234,34 +237,19 @@ aqtinstall = "==3.3.0"
 CMAKE_CXX_COMPILER_LAUNCHER = "ccache"
 CMAKE_C_COMPILER_LAUNCHER = "ccache"
 
-[feature.app.tasks.assistant-runtime]
-# The sole developer pin/checksum owner. This task uses existing developer Python;
-# installed Edi carries only the provisioned native executables/resources.
-cmd = ["python", "tools/deps/provision-assistant-runtime.py"]
-inputs = ["pixi.toml", "tools/deps/provision-assistant-runtime.py", "tools/assistant-runtime/edi-app-server.patch"]
-outputs = ["build/deps/codex/provisioned/**", "build/deps/codex/**/input-*/**"]
-env = { EDI_CODEX_VERSION = "0.162.1", EDI_CODEX_LINUX_SHA256 = "8748f9f8b708b3bc5a52b3f0a1ccddb22e6985f0efb4f45dafa1677e324abe0e", EDI_CODEX_MACOS_SHA256 = "28c0e2fbfb39a422dcfdd5bb87027a12242da7fa2dc997811bc0a6d2316c4f93" }
-
-[feature.app.tasks.assistant-math]
-# Original native source/font closure only; no Python or TeX ships with the application.
-cmd = ["python", "tools/deps/provision-assistant-math.py"]
-inputs = ["pixi.toml", "tools/deps/provision-assistant-math.py"]
-outputs = ["build/deps/assistant-math.json", "build/deps/jkqtmathtext/*/source/**"]
-env = { EDI_MATH_COMMIT = "9e9f0af8b140192e3de7ff866a0013e7da5e1e93", EDI_MATH_ARCHIVE_SHA256 = "e70f491cee4203a74f76a86c197bd456c89371db35cf7b0068d4db1b21e44e00" }
-
 [feature.app.tasks]
 # Build the app host into build/app (crysta first, through the same build-crysta.sh the core uses). Each app
 # step below builds first when run on its own (an incremental build, every time); a full sequence builds once
 # and runs each step on that build: app-verify (and the verify chains that include it) through pixi's shared
 # dependency, each CI app job through `pixi run --skip-deps` (as the owner corrected it on 2026-09-29).
-app-build = { cmd = ["bash", "tools/ci/app-build.sh"] , depends-on = ["assistant-runtime", "assistant-math"] }
+app-build = { cmd = ["bash", "tools/ci/app-build.sh"]  }
 # Build, then start the app: `pixi run -e app app` (arguments pass through: `pixi run -e app app --demo out/`).
-app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh" , depends-on = ["assistant-runtime", "assistant-math"] }
+app = { cmd = "EDI_APP_TARGETS=edi_app bash tools/ci/app-build.sh && bash tools/ci/app-run.sh"  }
 # Start the already-built app with no build and no network check.
 app-run = { cmd = ["bash", "tools/ci/app-run.sh"] }
 # Development only: build crysta from a local checkout, link the app to it and start it
 # (`pixi run -e app app-with-crysta ../crysta`; docs/dev/local-crysta.md).
-app-with-crysta = { cmd = ["bash", "tools/dev/app-with-crysta.sh"] , depends-on = ["assistant-runtime", "assistant-math"] }
+app-with-crysta = { cmd = ["bash", "tools/dev/app-with-crysta.sh"]  }
 # Run the app's Qt Quick Test tier with the runner app-build built (refuses a vacuous run).
 app-test = { cmd = ["bash", "tools/ci/app-test.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
 # The drawn cases (tests/unit/app/tst_*_drawn.qml) on the capture platform, where Qt Quick 3D draws; by hand while
@@ -281,12 +269,12 @@ app-ui-test = { cmd = ["bash", "tools/ci/app-ui-test.sh"], depends-on = [{ task 
 app-ui-bless = { cmd = ["bash", "tools/ci/app-ui-bless.sh"] }
 # ADR-0017 §15: the measured-layer benchmark, by hand: Qt Graphs' own series against edi's scene-graph
 # item, on the stress dataset's measured series. Prints one table.
-app-chart-bench = { cmd = "EDI_APP_TARGETS=edi_app_chart_bench bash tools/ci/app-build.sh && build/app/app/edi_app_chart_bench" , depends-on = ["assistant-runtime", "assistant-math"] }
+app-chart-bench = { cmd = "EDI_APP_TARGETS=edi_app_chart_bench bash tools/ci/app-build.sh && build/app/app/edi_app_chart_bench"  }
 # ADR-0041: the scan views' renderer benchmark, by hand: the 324-file scan drawn by each candidate. Prints one table.
-app-scan-bench = { cmd = "EDI_APP_TARGETS=edi_app_scan_bench bash tools/ci/app-build.sh && build/app/app/edi_app_scan_bench" , depends-on = ["assistant-runtime", "assistant-math"] }
+app-scan-bench = { cmd = "EDI_APP_TARGETS=edi_app_scan_bench bash tools/ci/app-build.sh && build/app/app/edi_app_scan_bench"  }
 # ADR-0041: the plotting benchmark, by hand: every way of feeding Qt Graphs on the Stacked and Pattern workloads, its
 # table written to build/plot-bench/; plot-bench-compare prints two tables side by side.
-plot-bench = { cmd = "EDI_APP_TARGETS=edi_app_plot_bench bash tools/ci/app-build.sh && bash tools/ci/plot-bench.sh" , depends-on = ["assistant-runtime", "assistant-math"] }
+plot-bench = { cmd = "EDI_APP_TARGETS=edi_app_plot_bench bash tools/ci/app-build.sh && bash tools/ci/plot-bench.sh"  }
 plot-bench-compare = { cmd = ["python", "app/tools/plot_bench_compare.py"] }
 # app-build's recovery from a stale build/app (another environment's compilers): CI's last app step.
 app-build-recovery = { cmd = ["bash", "tools/ci/app-build-recovery.sh"], depends-on = [{ task = "app-build", environment = "app" }] }
