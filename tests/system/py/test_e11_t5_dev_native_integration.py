@@ -406,13 +406,20 @@ def qml(actor, expression):
     return json.loads(value) if isinstance(value, str) else None
 
 
+def _whole_window_objects_expression():
+    # FIRST actual-Main compact UI observer: Popup visual/data children may
+    # be outside ApplicationWindow.contentItem. Read only; never reveal/focus.
+    return ("(function(){const out=[],seen=new Set(),queue=[window];"
+            "while(queue.length){const x=queue.shift();if(!x||seen.has(x))continue;"
+            "seen.add(x);out.push(x);for(const key of ['children','data']){"
+            "let values=null;try{values=x[key];}catch(error){}"
+            "if(!values||typeof values.length!=='number')continue;"
+            "for(let i=0;i<values.length;i++)if(Qt.isQtObject(values[i]))queue.push(values[i]);}}"
+            "return out;})()")
+
+
 def control_expression(name):
-    return (
-        '(function seek(item) { if (item.objectName === '
-        + json.dumps(name)
-        + ') return item; for (const child of (item.children || [])) '
-        '{ const found=seek(child); if(found) return found; } return null; })(contentItem)'
-    )
+    return '(' + _whole_window_objects_expression() + '.find(x=>x.objectName===' + json.dumps(name) + ')||null)'
 
 
 def tool_call(tool, identity, **arguments):
@@ -4825,13 +4832,12 @@ def _attachment_fixtures(tmp_path, count):
 
 
 def _attachment_geometry(actor, prefix):
-    return qml(actor, '(function(){const out=[];function visit(x){'
-        'if(String(x.objectName).indexOf(' + json.dumps(prefix) + ')===0&&x.visible)'
-        '{const p=x.mapToItem(contentItem,0,0);let labels=[];function texts(y){'
-        'if(typeof y.text==="string"&&y.visible)labels.push(y.text);'
+    return qml(actor, '(function(){const all=' + _whole_window_objects_expression()
+        + ';return all.filter(x=>String(x.objectName).indexOf(' + json.dumps(prefix)
+        + ')===0&&x.visible).map(x=>{const p=x.mapToItem(contentItem,0,0);let labels=[];'
+        'function texts(y){if(typeof y.text==="string"&&y.visible)labels.push(y.text);'
         'Array.from(y.children||[]).forEach(texts);}texts(x);'
-        'out.push({id:x.objectName,x:p.x,y:p.y,width:x.width,height:x.height,labels:labels});}'
-        'Array.from(x.children||[]).forEach(visit);}visit(contentItem);return out;})()')
+        'return {id:x.objectName,x:p.x,y:p.y,width:x.width,height:x.height,labels:labels};});})()')
 
 
 def test_attachment_admission_is_six_per_pending_message_preserving_existing_draft(main_actor, tmp_path):
@@ -5403,12 +5409,23 @@ def test_native_estimate_then_ids_matches_separate_original_methods_and_undo_seq
         actor.command('click', name='appBar.tab.experiment')
         button = control_expression('background.namePoints')
         observer = '(function(){const b=' + button + ';if(!b)return false;'
-        observer += 'const o=Qt.createQmlObject(\'import QtQuick; Item {visible:false;objectName:"e11.test.namingPresses";property int presses:0;property bool exposed:false}\',contentItem);'
-        observer += 'b.pressedChanged.connect(function(){if(b.pressed){o.presses++;o.exposed=b.visible&&b.enabled;}});return true;})()'
+        observer += 'const t=' + control_expression('background.list') + ';if(!t||!t.sourceModel)return false;'
+        observer += 'const m=t.sourceModel,o=Qt.createQmlObject(\'import QtQuick; Item {visible:false;objectName:"e11.test.namingPresses";property int presses:0;property bool exposed:false;property int shapeEvents:0;property var events:[];property var atPress:null}\',contentItem);'
+        observer += 'function snap(kind){const p=b.mapToItem(contentItem,0,0),n=Math.min(t.count,t.maxRowCountShow),last=n>0?t.itemAtIndex(n-1):null,lp=last?last.mapToItem(t,0,0):null;return {kind:kind,nativeCount:m.count,viewCount:t.count,tableHeight:t.height,contentHeight:t.contentHeight,cap:t.maxRowCountShow,buttonY:p.y,lastShownRow:last?{y:lp.y,height:last.height}:null};}'
+        observer += 'function shape(kind){o.shapeEvents++;o.events=o.events.concat([snap(kind)]);}'
+        observer += 'm.modelReset.connect(function(){shape("modelReset");});m.rowsInserted.connect(function(){shape("rowsInserted");});m.rowsRemoved.connect(function(){shape("rowsRemoved");});'
+        observer += 'm.countChanged.connect(function(){o.events=o.events.concat([snap("sourceCountChanged")]);});'
+        observer += 't.countChanged.connect(function(){o.events=o.events.concat([snap("viewCountChanged")]);});'
+        observer += 't.heightChanged.connect(function(){o.events=o.events.concat([snap("tableHeightChanged")]);});'
+        observer += 'b.pressedChanged.connect(function(){if(b.pressed){o.presses++;o.exposed=b.visible&&b.enabled;o.atPress=snap("genuineNamePress");}});return true;})()'
         assert qml(actor, observer), 'The Show ON witness attaches only to the actual original Id-from-position button'
     actor.connect();actor.request('Estimate the background using the current native settings.')
     actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=show_actions)
     assert len(actor.responses()) == 1, 'Estimate and naming settle one original native call without replaying an uncertain Estimate'
+    if show_actions:
+        naming_geometry = qml(actor, '(function(){const o=' + control_expression('e11.test.namingPresses')
+                              + ';return {shapeEvents:o.shapeEvents,events:o.events,atPress:o.atPress,presses:o.presses,exposed:o.exposed};})()')
+        (actor.folder / 'actual-estimate-model-layout-and-name-input.json').write_text(json.dumps(naming_geometry, indent=2))
     result = native_result(actor.responses()[0])
     assert result['applied'] and result['complete'] and result['atomic'] is False, (
         'The combined native receipt truthfully reports its applied non-atomic ordinary prefix and naming completion')
@@ -5419,6 +5436,14 @@ def test_native_estimate_then_ids_matches_separate_original_methods_and_undo_seq
                     + ';return {presses:o.presses,exposed:o.exposed};})()')
         assert proof['presses'] == 1 and proof['exposed'], (
             'Show ON genuinely presses the exposed original naming button once, including an ordinary naming no-op')
+        assert naming_geometry['shapeEvents'] > 0 and naming_geometry['atPress'], (
+            'Actual background shape replacement is reached before naming input is judged; no modelReset-only assumption')
+        at_press = naming_geometry['atPress']
+        assert at_press['nativeCount'] == len(named) and at_press['viewCount'] == len(named), (
+            'The original point table adopts the actual model count before genuine Id-from-position input')
+        shown = at_press['lastShownRow']
+        assert at_press['tableHeight'] > 0 and shown and shown['y'] >= -1 and shown['y'] + shown['height'] <= at_press['tableHeight'] + 1, (
+            'The original capped point rows have coherent visible viewport height before the naming press')
     for expected in undo_states:
         actor.command('undo');actor.until(lambda value: not value['ui']['project']['calculating'])
         assert point_rows(actor) == expected, (
