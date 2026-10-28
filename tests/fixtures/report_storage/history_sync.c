@@ -23,6 +23,8 @@
 #include "../project_output/fault_interpose.h"
 struct control {char mode[16], target[PATH_MAX], release[PATH_MAX];unsigned epoch;};
 static _Thread_local int inside;
+static _Thread_local int checking_read_control;
+static _Atomic unsigned read_seen_epoch;
 static _Atomic unsigned serial;
 static int read_control(struct control *out) {
  const char *name=getenv("EDI_TEST_HISTORY_CONTROL");
@@ -34,7 +36,7 @@ static int read_control(struct control *out) {
  char *save=0,*mode=strtok_r(buffer,"\n",&save),*target=strtok_r(0,"\n",&save),*release=strtok_r(0,"\n",&save),*epoch=strtok_r(0,"\n",&save);
  if(!mode || !target || !release || !epoch || strlen(mode)>=sizeof(out->mode) || strlen(target)>=sizeof(out->target) || strlen(release)>=sizeof(out->release) || target[0]!='/' || release[0]!='/')return 0;
  strcpy(out->mode,mode);strcpy(out->target,target);strcpy(out->release,release);out->epoch=(unsigned)strtoul(epoch,0,10);
- return !strcmp(mode,"hold") || !strcmp(mode,"fail");
+ return !strcmp(mode,"hold") || !strcmp(mode,"fail") || !strcmp(mode,"hold_read");
 }
 static void receipt(const char *phase,const char *operation,const struct control *c,unsigned number) {
  const char *name=getenv("EDI_TEST_HISTORY_RECEIPT");if(!name)return;
@@ -62,6 +64,54 @@ static int selected_fd(int fd,const char *target) {
  const char *slash=strrchr(target,'/');if(!slash)return 0;size_t parent=(size_t)(slash-target);
  return !strncmp(actual,target,parent) && actual[parent]=='/' && !strchr(actual+parent+1,'/');
 }
+/* A read barrier is opt-in for one exact regular owned cache descriptor and
+ * one captured control epoch. Unrelated reads return directly without touching
+ * their bytes. The original read still owns all output and errno after release. */
+static int exact_read_descriptor(int fd,const char *target,struct stat *proof) {
+ if(fstat(fd,proof) || !S_ISREG(proof->st_mode) || proof->st_uid!=geteuid())return 0;
+ struct stat named;if(lstat(target,&named) || !S_ISREG(named.st_mode)
+     || named.st_uid!=geteuid() || named.st_dev!=proof->st_dev || named.st_ino!=proof->st_ino)return 0;
+ char actual[PATH_MAX];
+#ifdef __linux__
+ char link[64];snprintf(link,sizeof(link),"/proc/self/fd/%d",fd);ssize_t n=readlink(link,actual,sizeof(actual)-1);if(n<0)return 0;actual[n]=0;
+#elif defined(__APPLE__)
+ if(fcntl(fd,F_GETPATH,actual)<0)return 0;
+#else
+ return 0;
+#endif
+ return !strcmp(actual,target);
+}
+static void read_descriptor_receipt(const struct control *c,unsigned number,int fd,size_t requested,const struct stat *proof) {
+ const char *name=getenv("EDI_TEST_HISTORY_RECEIPT");if(!name)return;
+ int output=open(name,O_CREAT|O_WRONLY|O_APPEND|O_CLOEXEC|O_NOFOLLOW,0600);if(output<0)return;
+ char row[512];int n=snprintf(row,sizeof(row),"{\"phase\":\"read_descriptor\",\"operation\":\"read\",\"epoch\":%u,\"serial\":%u,\"pid\":%ld,\"fd\":%d,\"device\":%llu,\"inode\":%llu,\"requested\":%llu}\n",c->epoch,number,(long)getpid(),fd,(unsigned long long)proof->st_dev,(unsigned long long)proof->st_ino,(unsigned long long)requested);
+ if(n>0 && n<(int)sizeof(row))(void)write(output,row,(size_t)n);
+ close(output);
+}
+ssize_t FAULT(read)(int fd,void *buffer,size_t count) {
+ ssize_t (*original)(int,void*,size_t)=REAL(read);int entered_errno=errno;
+ if(inside || checking_read_control || !count)return original(fd,buffer,count);
+ checking_read_control=1;struct control c;struct stat proof;
+ int selected=read_control(&c) && !strcmp(c.mode,"hold_read") && c.epoch
+     && exact_read_descriptor(fd,c.target,&proof);
+ checking_read_control=0;
+ if(!selected){errno=entered_errno;return original(fd,buffer,count);}
+ unsigned previous=atomic_load(&read_seen_epoch);
+ if(previous==c.epoch || !atomic_compare_exchange_strong(&read_seen_epoch,&previous,c.epoch)){errno=entered_errno;return original(fd,buffer,count);}
+ inside=1;unsigned number=atomic_fetch_add(&serial,1)+1;
+ receipt("entered","read",&c,number);read_descriptor_receipt(&c,number,fd,count,&proof);
+ struct timespec begin,now,pause={0,1000000};clock_gettime(CLOCK_MONOTONIC,&begin);int automatic=0;
+ while(access(c.release,F_OK)) {
+  clock_gettime(CLOCK_MONOTONIC,&now);
+  if(now.tv_sec-begin.tv_sec>=15){automatic=1;break;}
+  nanosleep(&pause,0);
+ }
+ receipt(automatic?"auto_release":"released","read",&c,number);
+ inside=0;errno=entered_errno;ssize_t result=original(fd,buffer,count);int error=errno;
+ inside=1;receipt(result<0?"read_failed":"read_returned","read",&c,number);inside=0;
+ errno=error;return result;
+}
+INTERPOSE(read)
 static unsigned hold_sync(int fd,const char *operation,struct control *captured) {
  struct control c;if(!read_control(&c) || strcmp(c.mode,"hold") || !selected_fd(fd,c.target))return 0;
  *captured=c;inside=1;unsigned number=atomic_fetch_add(&serial,1)+1;receipt("entered",operation,&c,number);
