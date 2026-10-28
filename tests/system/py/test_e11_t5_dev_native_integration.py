@@ -4397,3 +4397,145 @@ def test_unsaved_native_setup_autonomous_save_uses_original_suggested_folder(mai
     for key in ('type','mode','points','input_count','input_intensity_count','input_sigma_count','input_first'):
         assert after['backgrounds'][0][key]==before['backgrounds'][0][key],(
             'Ordinary autonomous Save/Open preserves actual inputs and decoded background identity/values without a fabricated filename or measurement')
+
+
+def test_original_reveal_accepts_same_exposed_target_after_real_window_resize_without_scroll(
+    main_actor, tmp_path
+):
+    """A reached zero-delta reveal needs current geometry, not a scroll-delta proxy.
+
+    NOT_REACHED is an explicit skip/artifact, never an expected red or pass.
+    No forced contentY, group/popup/selection property or scientific seed.
+    """
+    actor = main_actor([[]], show_actions=True)
+    project = tmp_path / 'ordinary-reveal-project'
+    shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    original = actor.last['ui']['project']
+    paths = {
+        row['field']: row['path'] for row in original['parameters']
+        if row['category'] == 'cell'
+    }
+    call = tool_call(
+        'add_relations', 'original-target-height-resize-once',
+        aliases=[{'id': 'e11_reveal_a', 'path': paths['length_a']},
+                 {'id': 'e11_reveal_b', 'path': paths['length_b']}],
+        constraints=[{'id': 'e11_reveal_pair',
+                      'expression': 'e11_reveal_b = e11_reveal_a', 'enabled': True}],
+    )
+    actor.configure_turns([[call]])
+    actor.connect()
+    wait_positive_tab(actor, 'appBar.tab.analysis')
+    actor.command('click', name='appBar.tab.analysis')
+    initial = qml(actor, '(function(){const before=window.height;window.height=window.minimumHeight;'
+                  'return {before:before,requested:window.minimumHeight,actual:window.height};})()')
+    marker = 'e11.reveal.resizeWitness'
+    setup = r'''(function(){
+        const group=GROUP,field=FIELD;
+        if(!group||!field)return {installed:false,reason:'original_controls_absent'};
+        const o=Qt.createQmlObject('import QtQuick; Item {objectName:"e11.reveal.resizeWitness"; visible:false; width:0;height:0; property bool fired:false; property var originalProject:null; property var originalAssistant:null; property var target:null; property var viewport:null; property var callback:null; property var before:null; property var resized:null; property var samples:[]; property real requestedHeight:0; property string reason:"no_pending_original_scroll_cue"}',contentItem);
+        o.originalProject=Session.project;o.originalAssistant=Session.assistant;
+        function rect(x,base){const points=[[0,0],[x.width,0],[0,x.height],[x.width,x.height]].map(p=>x.mapToItem(base,p[0],p[1]));return {left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),top:Math.min(...points.map(p=>p.y)),bottom:Math.max(...points.map(p=>p.y))};}
+        function owner(){const page=window.assistantWorkflowPage;return Session.project===o.originalProject&&Session.assistant===o.originalAssistant&&page&&page.current&&page.enabled&&page.pageName==='analysis'&&!page.assistantCovered&&!assistantPanel.visible;}
+        function fullyExposed(x){
+            if(!x||x.Window.window!==contentItem.Window.window||!owner())return false;
+            const b=rect(x,contentItem);if(!Object.values(b).every(Number.isFinite)||b.right<=b.left||b.bottom<=b.top)return false;
+            let clip={left:0,top:0,right:contentItem.width,bottom:contentItem.height};
+            for(let a=x;a;a=a.parent){if(!a.visible||!a.enabled||a.opacity===0)return false;if(a.clip){const r=rect(a,contentItem);clip={left:Math.max(clip.left,r.left),top:Math.max(clip.top,r.top),right:Math.min(clip.right,r.right),bottom:Math.min(clip.bottom,r.bottom)};}if(a===contentItem)break;}
+            return b.left>=clip.left&&b.right<=clip.right&&b.top>=clip.top&&b.bottom<=clip.bottom;
+        }
+        function snapshot(label){const v=o.viewport,t=o.target;return {label:label,ownerCurrent:owner(),project:String(Session.project),assistant:String(Session.assistant),target:String(t),viewport:String(v),window:String(contentItem.Window.window),height:window.height,requestedHeight:o.requestedHeight,targetEnabled:t?t.enabled:null,targetBounds:t?rect(t,contentItem):null,targetFullyExposed:t?fullyExposed(t):false,contentY:v?v.contentY:null,originY:v?v.originY:null,contentHeight:v?v.contentHeight:null,viewportHeight:v?v.height:null,interactive:v?v.interactive:null,atYEnd:v?v.atYEnd:null,atYBeginning:v?v.atYBeginning:null};}
+        o.callback=function(position){
+            if(o.fired||!owner())return;
+            const wanted=group.collapsed?group.titleArea:field;
+            if(!wanted||!wanted.visible||!wanted.enabled||wanted.Window.window!==contentItem.Window.window)return;
+            let viewport=null,bounds=null;
+            // The nearest actual clipping scroll ancestor is the original
+            // layout owner, not the first arbitrary hover/list object.
+            for(let a=wanted.parent;a;a=a.parent){
+                if(Number.isFinite(a.contentY)&&Number.isFinite(a.contentHeight)&&a.height>0){const b=rect(wanted,a);if(b.top<0||b.bottom>a.height){viewport=a;bounds=b;break;}}
+                if(String(a.objectName).endsWith('.manualSidebar'))break;
+            }
+            if(!viewport||bounds.top<0||bounds.bottom<=viewport.height||bounds.bottom-bounds.top>viewport.height)return;
+            const vr=rect(viewport,contentItem);
+            if(vr.left<0||vr.top<0||vr.right>contentItem.width||vr.bottom>contentItem.height)return;
+            const center=viewport.mapToItem(contentItem,viewport.width/2,viewport.height/2);
+            if(Math.abs(position.x-center.x)>1||Math.abs(position.y-center.y)>1)return;
+            let available=0;try{available=Number(Screen.desktopAvailableHeight);}catch(error){o.reason='screen_height_unavailable';return;}
+            const requested=Math.min(available,Math.ceil(window.height+bounds.bottom-viewport.height+wanted.height*2));
+            if(!Number.isFinite(requested)||requested<=window.height){o.reason='no_safe_ordinary_resize_space';return;}
+            o.target=wanted;o.viewport=viewport;o.requestedHeight=requested;o.before=snapshot('pending_original_scroll_cue');o.fired=true;o.reason='ordinary_resize_requested';
+            // Ordinary QWindow geometry only: no target/group/scroll assignment.
+            window.height=requested;
+            o.samples=o.samples.concat([snapshot('height_setter_returned')]);
+            Qt.callLater(function(){o.resized=snapshot('next_layout');o.samples=o.samples.concat([o.resized]);});
+        };
+        Session.assistant.actionPointerMoved.connect(o.callback);
+        return {installed:true,height:window.height,minimumHeight:window.minimumHeight};
+    })()'''.replace('GROUP', control_expression('group.constraint')).replace(
+        'FIELD', control_expression('constraints.append'))
+    installed = qml(actor, setup)
+    receipt = {'scope': 'Single original-target reveal property; not a live-matrix or scientific gate',
+               'initial_resize': initial, 'installed': installed}
+    (actor.folder / 'stale-reveal-property.json').write_text(json.dumps(receipt, indent=2)+'\n')
+    try:
+        if not installed['installed']:
+            receipt['classification'] = 'NOT_REACHED: original controls unavailable'
+            (actor.folder / 'stale-reveal-property.json').write_text(json.dumps(receipt, indent=2)+'\n')
+            pytest.skip(receipt['classification'])
+        actor.request('Apply the original affine relation once and retain its actual native outcome.')
+        actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle',
+                    visible_progress=True)
+        witness = qml(actor, '(function(){const o='+control_expression(marker)+';return '
+                      '{fired:o.fired,reason:o.reason,before:o.before,resized:o.resized,samples:o.samples};})()')
+        response = actor.responses()[0]
+        receipt.update({'witness': witness, 'response': response,
+                        'project_after': actor.last['ui']['project']})
+        before, resized = witness.get('before'), witness.get('resized')
+        reached = (witness['fired'] and before and resized
+                   and before['ownerCurrent'] and resized['ownerCurrent']
+                   and before['target'] == resized['target']
+                   and before['viewport'] == resized['viewport']
+                   and not before['targetFullyExposed'] and resized['targetFullyExposed']
+                   and resized['height'] > before['height']
+                   and resized['contentY'] == before['contentY'])
+        receipt['reached'] = bool(reached)
+        wire = json.loads(response['result']['contentItems'][0]['text'])
+        receipt['expected_original_zero_delta_refusal'] = bool(
+            reached and not response['result']['success']
+            and wire.get('message') == 'The genuine wheel did not move the current viewport'
+        )
+        receipt['classification'] = ('REACHED: actual zero-delta/current-original geometry boundary'
+                                     if reached else 'NOT_REACHED: cue/resize/exposure/zero-delta not proved')
+        (actor.folder / 'stale-reveal-property.json').write_text(json.dumps(receipt, indent=2)+'\n')
+        if not reached:
+            pytest.skip(receipt['classification'])
+        result = native_result(response)
+        assert result.get('complete') and result.get('steps_completed') == 7, (
+            'A fully exposed SAME original target must complete its ordinary seven relation edits once; '
+            'unchanged scroll position alone cannot refuse it. Complete receipt: '
+            + str(actor.folder / 'stale-reveal-property.json')
+        )
+        after = actor.last['ui']['project']
+        assert after['aliases'] == original['aliases'] + [
+            {'id': 'e11_reveal_a', 'parameter': 'phase.cell.length_a'},
+            {'id': 'e11_reveal_b', 'parameter': 'phase.cell.length_b'},
+        ], 'Actual alias row readback retains all original declarations and exactly two requested additions'
+        assert after['constraints'] == original['constraints'] + [
+            {'id': 'e11_reveal_pair', 'expression': 'e11_reveal_b = e11_reveal_a', 'enabled': True}
+        ], 'Actual enabled constraint and original declarations survive; no duplicate or retargeted effect'
+        for _ in range(7):
+            actor.command('undo')
+            actor.until(lambda row: not row['ui']['project']['calculating'])
+        restored = actor.last['ui']['project']
+        assert restored['aliases'] == original['aliases']
+        assert restored['constraints'] == original['constraints']
+        assert restored['parameters'] == original['parameters'], (
+            'The original ordinary Undo history exactly restores the scientific and relation preimage'
+        )
+    finally:
+        if not getattr(actor, '_stream_unusable', None):
+            qml(actor, '(function(){const o='+control_expression(marker)+';if(o){'
+                'Session.assistant.actionPointerMoved.disconnect(o.callback);o.destroy();}'
+                'window.height='+json.dumps(initial['before'])+';return true;})()')
