@@ -205,6 +205,10 @@ Popup {
     // A user navigation link always refers to the current project's normal
     // Report page. Other links retain their completed-row/file ownership checks.
     function openReportLink(sourceRowId, link) {
+        // Explicit clicked web links use the normal system browser. The fixed
+        // scheme/authority check never turns file or application schemes into web.
+        if (typeof link === "string" && /^https?:\/\/[^\s/?#\\]+(?:[/?#][^\s\\]*)?$/i.test(link)
+            && !/[\u0000-\u001f\u007f]/.test(link)) return Qt.openUrlExternally(link);
         if (link === "edi:report") {
             if (Session.project !== null && AppState.reportPageEnabled) {
                 AppState.open(AppState.Page.Report);
