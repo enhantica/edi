@@ -374,9 +374,11 @@ Rectangle {
             width: parent.width
             visible: (row.kind === "user" || row.kind === "assistant") && row.text.length > 0
             AssistantMarkdown {
+                id: markdownPresentation
                 anchors.fill: parent
                 document: body.textDocument
                 source: row.summarizedActivity ? "" : row.text
+                textColor: body.color
                 accentColor: EaStyle.Colors.link
                 bodyFont: body.font
                 monoFontFamily: EaStyle.Fonts.monoFontFamily
@@ -391,6 +393,11 @@ Rectangle {
             selectionColor: EaStyle.Colors.themeAccent
             selectedTextColor: EaStyle.Colors.themeBackground
             textFormat: TextEdit.PlainText
+            Keys.onPressed: event => {
+                if(event.matches(StandardKey.Copy) && body.selectionStart!==body.selectionEnd) {
+                    ApplicationInfo.copyText(markdownPresentation.selectedSource(body.selectionStart,body.selectionEnd));event.accepted=true;
+                }
+            }
             onLinkActivated: link => row.reportRequested(row.rowId, link)
             HoverHandler { cursorShape: body.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.IBeamCursor }
             wrapMode: TextEdit.Wrap
