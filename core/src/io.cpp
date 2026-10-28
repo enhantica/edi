@@ -3319,12 +3319,15 @@ std::vector<std::string> registered_peak_types() {
     return tokens;
 }
 
-// `whole` holds the loader's rules for a project as a whole: one structure or more, one experiment or more, each
-// declaring what it computes over and linking structures the project holds. A save's readback lifts them, since a save
-// writes a project still being built too, and its values must still be adopted (edi ADR-0052).
+// Completeness and reference integrity are separate FIRST loader obligations.
+// Only save value-readback retains its prior relaxed reference role; ordinary
+// construction-state GUI restoration always validates links to held structures.
+enum class ProjectLoadPolicy { Complete, Construction, SavedValues };
 std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
 
-static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true, bool assistant_result = false) {
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning,
+                                   ProjectLoadPolicy policy=ProjectLoadPolicy::Complete, bool assistant_result=false) {
+    const bool whole=policy==ProjectLoadPolicy::Complete;
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -3419,8 +3422,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
                           "project must say what it computes over");
         }
-        // A save's readback lifts this rule with the others (edi ADR-0052).
-        if (whole) {
+        // Ordinary incomplete GUI projects keep reference integrity. Only the
+        // prior save-value adoption role omits this separate check (ADR-0052).
+        if (policy!=ProjectLoadPolicy::SavedValues) {
             require_held_links(project, experiment, "project " + directory + ": ", file.string());
         }
         project.experiments.push_back(std::move(experiment));
@@ -4268,16 +4272,21 @@ std::string text_field_paragraphs(const std::vector<std::string>& lines) {
 }
 
 Project load_project(const std::string& path, const WarningSink& on_warning) {
+    return load_project(path,ProjectLoadMode::Complete,on_warning);
+}
+Project load_project(const std::string& path, ProjectLoadMode mode, const WarningSink& on_warning) {
+    if(mode!=ProjectLoadMode::Complete && mode!=ProjectLoadMode::Construction)throw IoError("unknown project load role");
+    const auto policy=mode==ProjectLoadMode::Complete?ProjectLoadPolicy::Complete:ProjectLoadPolicy::Construction;
     // edi ADR-0052: a project opens from its folder, its project.edi or a .zip of the folder.
     std::error_code error;
     const fs::path given(path);
     if (given.filename() == "project.edi" && fs::is_regular_file(given, error)) {
         const fs::path folder = given.has_parent_path() ? given.parent_path() : fs::path(".");
-        return load_project_folder(folder.string(), on_warning);
+        return load_project_folder(folder.string(), on_warning,policy);
     }
     if (is_project_archive(path)) {
         const std::string folder = unpack_project_archive(read_file(path), fresh_archive_directory("open"));
-        Project project = load_project_folder(folder, on_warning);
+        Project project = load_project_folder(folder, on_warning,policy);
         // The unpacked folder is temporary: the project has no directory of its own until it is saved somewhere, and
         // reads its scan data from the unpacked folder meanwhile.
         project.scan_data_root = folder;
@@ -4285,13 +4294,13 @@ Project load_project(const std::string& path, const WarningSink& on_warning) {
         project.metadata.path.clear();
         return project;
     }
-    return load_project_folder(path, on_warning);
+    return load_project_folder(path, on_warning,policy);
 }
 
 namespace detail {
 Project load_assistant_project(const std::string& directory) {
     if(!fs::is_directory(directory))throw IoError("assistant result must be a captured project directory");
-    return load_project_folder(directory,{},true,true);
+    return load_project_folder(directory,{},ProjectLoadPolicy::Complete,true);
 }
 } // namespace detail
 
@@ -4644,7 +4653,7 @@ namespace {
 // What a save wrote to `directory`, read as a reopen reads it, a project still being built included. The reopen's
 // warnings were the save's own concern.
 Project read_saved_project(const std::string& directory) {
-    return load_project_folder(directory, [](const std::string&) {}, false);
+    return load_project_folder(directory, [](const std::string&) {}, ProjectLoadPolicy::SavedValues);
 }
 
 }  // namespace
@@ -4946,7 +4955,7 @@ class ScratchSave {
             return message;
         };
         try {
-            return load_project((root_ / "project").string(), [&on_warning, &local](const std::string& warning) {
+            return load_project((root_ / "project").string(), ProjectLoadMode::Construction, [&on_warning, &local](const std::string& warning) {
                 if (on_warning) {
                     on_warning(local(warning));
                 }

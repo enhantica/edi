@@ -51,6 +51,12 @@ using WarningSink = std::function<void(const std::string&)>;
 // new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
 // and it reads its scan data from the unpacked folder.
 Project load_project(const std::string& path, const WarningSink& on_warning = {});
+// Ordinary GUI Open/Text restoration also accepts saved construction states with absent
+// structures, experiments or data. Present content and all held-structure references still
+// pass the same parser/integrity checks; no placeholder members are manufactured.
+// The original overload above remains the strict complete-model contract for non-GUI users.
+enum class ProjectLoadMode : std::uint8_t { Complete, Construction };
+Project load_project(const std::string& path, ProjectLoadMode mode, const WarningSink& on_warning = {});
 
 // Structures and experiments enter an open project from files. Every structure and experiment
 // text these loads and the project loader read goes through one check first: crysta decides once,
