@@ -2463,9 +2463,30 @@ struct AssistantViewModel::State {
         if(!input || widget_input.get()!=input || !native_call || native_call->record!=original.record ||
             native_call->receipt!=original.receipt || native_call->rpc!=original.rpc)
             throw ControlInputRefusal(ControlCause::Superseded,"The original visible input owner retired");
+        const QPointer<QQuickItem> target(request.target);
+        const auto kind=request.kind;
+        const bool visualOnlyDisabled=request.visualOnlyDisabledTarget;
+        work_latch_control(original,target,"control_attempt","not_yet_delivered",{}, {},kind,visualOnlyDisabled);
+        if(!receiver || receiver->state_.get()!=this)return 0;
+        if(!input || widget_input.get()!=input || !native_call || native_call->record!=original.record ||
+            native_call->receipt!=original.receipt || native_call->rpc!=original.rpc)
+            throw ControlInputRefusal(ControlCause::Superseded,"The original visible input owner retired");
+        // Optional observation cannot replace or make the original completion
+        // inadmissible if copying/allocating its observer fails.
+        if(request.completed)try {
+            auto completed=request.completed;
+            request.completed=[this,receiver,original,target,kind,visualOnlyDisabled,completed=std::move(completed)](bool delivered,const QString& message,ControlCause cause) {
+                if(!receiver || receiver->state_.get()!=this)return;
+                work_latch_control(original,target,"control_completion",delivered?"helper_delivered":control_error(cause),delivered,{},kind,visualOnlyDisabled);
+                if(receiver && receiver->state_.get()==this)completed(delivered,message,cause);
+            };
+        }catch(...){work_reports.missEvidence();}
         try {return input->start(std::move(request));}
         catch(const ControlInputRefusal& refusal) {
-            if(receiver && receiver->state_.get()==this)control_latch(original,refusal.cause,field);
+            if(receiver && receiver->state_.get()==this) {
+                work_latch_control(original,target,"control_refusal",control_error(refusal.cause),false,{},kind,visualOnlyDisabled);
+                control_latch(original,refusal.cause,field);
+            }
             throw;
         }
     }
@@ -4097,6 +4118,108 @@ struct AssistantViewModel::State {
             events.append(event);work_merge(run->call.record->row,{{"workUI",events}});
         }catch(...){work_reports.missEvidence();}
     }
+    // Original call/row facts only: these optional observations share workUI's
+    // writer/export owner and cannot grant input, call a getter for science, or
+    // make report storage a precondition of an ordinary control action.
+    void work_latch_control(const NativeCall& call,const QPointer<QQuickItem>& target,
+                            const char* phase,const char* cause,std::optional<bool> delivered={},
+                            const QString& wanted={},std::optional<AssistantWidgetInput::Kind> kind={},
+                            std::optional<bool> visualOnlyDisabled={}) noexcept {
+        QPointer<AssistantViewModel> receiver;
+        try {
+            receiver=&owner;
+            if(!work_reports.collecting() || !call.record || !call.receipt)return;
+            const QPointer<QQuickWindow> window(action_window);
+            const auto scope=work_reports.scope();
+            const auto current=[&] {
+                return receiver && receiver->state_.get()==this && window && action_window==window &&
+                    native_call && native_call->record==call.record && native_call->receipt==call.receipt &&
+                    native_call->rpc==call.rpc && !call.receipt->retired && work_reports.scope()==scope;
+            };
+            if(!current())return;
+            bool eligible=false;for(const auto& value:history) {const auto row=value.toObject();
+                if(row.value("id")==call.record->row && work_eligible(row)){eligible=true;break;}}
+            if(!eligible)return;
+            const auto missing=work_report_missing();
+            const auto identifier=[&](const QString& text) {
+                return !text.isEmpty() && text.isValidUtf16() && text.toUtf8().size()<=static_cast<qsizetype>(Limits::id_bytes)
+                    ?work_report_observed(text):work_report_missing("not_observed");
+            };
+            Object control{{"exists",bool(target)},{"name",target?identifier(target->objectName()):missing},
+                {"same_window",target?work_report_observed(target->window()==window):missing},
+                {"visible",target?work_report_observed(target->isVisible()):missing},
+                {"enabled",target?work_report_observed(target->isEnabled()):missing},
+                {"scene_bounds",target?work_rect(target->mapRectToScene(QRectF(0,0,target->width(),target->height())),"scene"):missing},
+                {"checked",missing},{"usable",missing}};
+            if(target && target->metaObject()->indexOfProperty("checked")>=0) {
+                const auto checked=target->property("checked");if(!current())return;
+                if(target && checked.metaType().id()==QMetaType::Bool)control["checked"]=work_report_observed(checked.toBool());
+            }
+            if(target && widget_input)control["usable"]=work_report_observed(widget_input->usableTarget(*target));
+            if(!current())return;
+            Object page{{"name",missing},{"checked",missing},{"current",missing},{"same_project",missing}};
+            for(const char* name:{"project","structure","experiment","analysis","report"}) {
+                const QPointer<QQuickItem> tab(widget_workflow_tab(QStringLiteral("appBar.tab.")+QLatin1StringView(name)));
+                if(!tab || !tab->property("checked").toBool()){if(!current())return;continue;}
+                if(!current() || !tab)return;
+                page["name"]=work_report_observed(QLatin1StringView(name));page["checked"]=work_report_observed(true);
+                const QPointer<QObject> loader(tab->property("page").value<QObject*>());if(!current())return;
+                const QPointer<QQuickItem> item(loader?qobject_cast<QQuickItem*>(loader->property("item").value<QObject*>()):nullptr);
+                if(!current())return;
+                if(item) {const auto active=item->property("current");if(!current() || !item)return;
+                    page["current"]=work_report_observed(active.toBool());
+                    const auto owner=item->property("project").value<ProjectViewModel*>();if(!current())return;
+                    page["same_project"]=work_report_observed(owner==project);}
+                break;
+            }
+            const QPointer<QQuickItem> focus(window->activeFocusItem());
+            Object focusFacts{{"exists",bool(focus)},{"kind",focus?identifier(QString::fromLatin1(focus->metaObject()->className())):missing},
+                {"within_target",target && focus?work_report_observed(target==focus || target->isAncestorOf(focus)):missing},
+                {"known_popup_owner",missing}};
+            QJsonArray popups;
+            for(const char* id:{"fit.results","statusBar.fitResults"}) {
+                Object fact{{"name",QLatin1StringView(id)},{"exists",false},{"visible",missing},{"opened",missing},
+                    {"modal",missing},{"content_scene_bounds",missing},{"contains_focus",missing}};
+                const auto objects=window->findChildren<QObject*>(QString::fromLatin1(id));
+                QPointer<QObject> popup;
+                bool ambiguous=false;
+                for(auto* object:objects)if(object->inherits("QQuickPopup")) {if(popup){ambiguous=true;popup.clear();break;}popup=object;}
+                if(ambiguous)fact["exists"]=work_report_missing("ambiguous");
+                if(popup) {
+                    fact["exists"]=true;
+                    for(const char* key:{"visible","opened","modal"}) {
+                        const auto value=popup->property(key);if(!current() || !popup)return;
+                        if(value.metaType().id()==QMetaType::Bool)fact[QLatin1StringView(key)]=work_report_observed(value.toBool());
+                    }
+                    const QPointer<QQuickItem> content(popup->property("contentItem").value<QQuickItem*>());
+                    if(!current())return;
+                    if(content && content->window()==window) {
+                        fact["content_scene_bounds"]=work_rect(content->mapRectToScene(QRectF(0,0,content->width(),content->height())),"scene");
+                        const bool contains=focus && (content==focus || content->isAncestorOf(focus));
+                        fact["contains_focus"]=work_report_observed(contains);
+                        if(contains)focusFacts["known_popup_owner"]=work_report_observed(QLatin1StringView(id));
+                    }
+                }
+                popups.append(fact);
+            }
+            if(!current())return;
+            Object event{{"event_id",work_reports.newEvent()},{"row_id",work_report_observed(call.record->row)},
+                {"phase",QLatin1StringView(phase)},{"cause",cause?work_report_observed(QLatin1StringView(cause)):missing},
+                {"elapsed_ms",work_clock.isValid()?work_report_observed(QString::number(work_clock.elapsed())):missing},
+                {"wanted",identifier(wanted)},{"helper_delivered",delivered?work_report_observed(*delivered):missing},
+                {"input_kind",kind?work_report_observed(static_cast<int>(*kind)):missing},
+                {"visual_only_cue",kind?work_report_observed(*kind==AssistantWidgetInput::Kind::FileLoadCue):missing},
+                {"visual_only_disabled_target",visualOnlyDisabled?work_report_observed(*visualOnlyDisabled):missing},
+                {"control",control},{"page",page},{"focus",focusFacts},{"known_popups",popups}};
+            QJsonArray events;
+            for(const auto& value:history){const auto row=value.toObject();if(row.value("id")==call.record->row){events=row.value("workUI").toArray();break;}}
+            events.append(event);
+            if(!current())return;
+            if(work_first_cause.isEmpty() && std::string_view(phase)=="sidebar_postcheck" && cause && std::string_view(cause)!="extra_selected")
+                work_first_cause=QString::fromLatin1(cause);
+            work_merge(call.record->row,{{"workUI",events}});
+        }catch(...){if(receiver && receiver->state_.get()==this)work_reports.missEvidence();}
+    }
     QQuickItem* widget_sidebar_tab(const std::shared_ptr<NativeWidget>& run,const QString& suffix,
                                    const char** cause=nullptr,QPointer<QQuickItem>* named=nullptr) const {
         if(cause)*cause="main_named_absent";
@@ -5253,6 +5376,11 @@ struct AssistantViewModel::State {
                 if (!delivered) { widget_refuse(run, message); return; }
                 QTimer::singleShot(500, &owner, [this, run, target] {
                     try {
+                        if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
+                        const char* observed=!widget_page_selected(run)?"extra_page_not_current":!target?"extra_target_retired":
+                            widget_sidebar_tab(run,"extras")!=target?"extra_target_changed":!target->property("checked").toBool()?"extra_unchecked":"extra_selected";
+                        work_latch_control(run->call,target,"sidebar_postcheck",observed,{},QStringLiteral("sideBar.tab.extras"));
+                        if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
                         if (!widget_page_selected(run) || !target || widget_sidebar_tab(run, "extras") != target || !target->property("checked").toBool()) {
                             control_failure(run,ControlCause::ExtraSidebar); widget_refuse(run, QObject::tr("The genuine Extra click did not select its original sidebar")); return;
                         }
@@ -8883,6 +9011,9 @@ struct AssistantViewModel::State {
                               const char* branch = "refuse", int delivered = -1, int target_survived = -1) noexcept {
         if (!create_widget_owned(run)) return;
         const auto receiver = run->receiver;
+        const auto wanted=run->step>=0 && run->step<run->inputs.size()?run->inputs.at(run->step).target:QString{};
+        work_latch_control(run->call,{},"control_refusal",branch,{},wanted);
+        if(!receiver || receiver->state_.get()!=this || !create_widget_owned(run))return;
         if(run->normal_project_only && run->owner_handoff) {
             try {if(run->owner_handoff->ordinary_failure.isEmpty())run->owner_handoff->ordinary_failure=message;}catch(...) {}
             native_finish_normal_project(run->owner_handoff,false);return;
@@ -11655,6 +11786,20 @@ struct AssistantViewModel::State {
                         outcome["action_error"]=action->error;outcome["action_field"]=action->field;
                     }
                     const auto tool=params.value("tool").toString();
+                    // The common required-field validator is pure and runs
+                    // before native admission. Reuse its exact rules instead
+                    // of flattening a missing purpose into scope/capacity or
+                    // exposing arbitrary exception text from other stages.
+                    if(!typed_refusal && assistant_native_tool(tool) && std::string_view(dispatch_stage)=="ARGUMENTS" &&
+                        dynamic_cast<const std::invalid_argument*>(&failure)) {
+                        try {(void)assistant_native_purpose(params.value("arguments").toObject());}
+                        catch(const std::invalid_argument&) {
+                            typed_refusal=true;outcome["code"]="invalid_arguments";
+                            outcome["action_error"]="unsupported_input";outcome["action_field"]="purpose";
+                            outcome["target"]="purpose";outcome["stage"]="ARGUMENT_VALIDATION";
+                            outcome["message"]="Required field purpose must be a nonempty string without control characters. No native action was admitted.";
+                        }
+                    }
                     const auto* core_refusal=dynamic_cast<const edi::assistant::detail::Refusal*>(&failure);
                     const bool parameter_preparation=tool=="set_parameters" || tool=="set_free";
                     if(!typed_refusal && core_refusal && (parameter_preparation || tool=="add_relations") &&
@@ -13486,8 +13631,13 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
             normal->ordinary_failure=QStringLiteral("The original normal Create dialog confirmation no longer owns this request.");return false;
         }
         if(!s->normal_project_create_current(normal))return false;
+        // FIRST Session::createProjectImpl retains native metadata defaults
+        // for an empty Title, whether omitted or explicitly left empty in its
+        // original form. Input spelling and actual created value differ here.
+        const QString expectedTitle=normal->ordinary_title.isEmpty()
+            ?QString::fromStdString(edi::ProjectMetadata{}.title):normal->ordinary_title;
         if(!target || !edi::empty_for_population(*target->assistantProject()) ||
-            !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->title()!=normal->ordinary_title || target->description()!=normal->ordinary_description ||
+            !target->path().isEmpty() || target->name()!=normal->ordinary_name || target->title()!=expectedTitle || target->description()!=normal->ordinary_description ||
             location!=normal->ordinary_location) {
             normal->ordinary_failure=QStringLiteral("The original normal Create target or form defaults changed before adoption.");return false;
         }

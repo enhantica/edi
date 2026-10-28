@@ -3257,3 +3257,59 @@ Recognized unsupported-model preparation uses status=unavailable alongside the
 existing unavailable category, so the sole closed outgoing code owner preserves
 that category. Invalid arguments, scope refusal and resource exhaustion retain
 their existing category paths; exact core diagnostics remain separate facts.
+
+
+## 2026-10-28: native fit origin and attempted control evidence
+
+The FIRST fit owner is `FitViewModel::ended`/`scanEnded`, its native completion and
+`automaticResultsRequested`; the normal results window and explicit status-bar results action
+remain original controls. `finished` and `scanFinished` announce a result regardless of origin.
+Main therefore consumes the existing origin-specific automatic-presentation request, with the
+existing `showFitResults` preference, instead of opening a popup on the universal completion
+signals. Native assistant fits retain their actual result without unsolicited results presentation;
+manual fits/scans and explicit status-results opening retain their ordinary behavior. The results
+window is a popup; its actual modal property is observed rather than assumed.
+
+The FIRST local diagnostic owners are `workUI`, `work_latch_ui`, `work_merge`,
+`work_call_evidence` and the automatic snapshot exporter. Previously only Main-sidebar and
+relation target-reveal paths latched UI events; Extra navigation and individual native Load
+attempts could settle without attempted-control evidence. The existing shared `control_start`
+now adds call-scoped attempt and helper-completion facts to that same row, while the deferred
+Extra post-check is distinct from pointer delivery. Individual refusal records the original
+declared target even when no live target was retained. Helper delivery means actual input
+submission, not a claim that the requested control fired or a scientific edit committed.
+
+Fixed local facts include the actual control identifier, checked state, scene bounds, current
+page and owner match, original helper usability, focus type/known popup owner, and actual
+visibility/modal/content bounds of the known results popups. They contain no editor text,
+scientific input dump, credential, arbitrary QObject traversal dump or inferred hit-test result.
+Missing, ambiguous or deleted targets remain explicitly unknown. Current call/receipt/RPC,
+original row and report scope must still match; no successor row acquires an old event.
+
+This remains optional observation in the existing report owner. Capture/callback-copy/storage
+failures mark an evidence gap and preserve the original completion/action path, with no new
+work quota, logger, input permission, retry, timer or scientific admission condition. Existing
+exporter logic derives UI event IDs and `observations.ui` from the same retained row events.
+
+
+## 2026-10-28: common required purpose and native optional Title
+
+The FIRST required-purpose owner remains `assistant_native_purpose`, before native admission.
+Its strict nonempty string/control-character rules remain identical for all registered actions.
+The argument-stage refusal channel reuses that pure validator to identify this common missing
+or malformed field, returning closed `invalid_arguments`/`unsupported_input`/`purpose` facts
+and fixed actionable text. It does not dump arbitrary exception messages, infer successful
+admission, relax a schema, add aliases or reinterpret the failure as capacity/scientific invalidity.
+
+The FIRST ordinary Create owner is `Session::createProjectImpl`: an empty Title retains the
+actual native `ProjectMetadata` default. Both the original empty form and native omission may
+therefore produce a different stored Title from the empty input spelling. The adapter's
+pre-adoption metadata identity check compares against that same native default while retaining
+the exact original form/input text, owner/name/description/location checks and actual created
+receipt. Explicit nonempty Titles still match exactly; no default string is hardcoded, no user
+value is silently renamed and no global model/Session/manual behavior changes.
+
+An unsaved existing project continues through the original Session Save As intent, original
+format choice and native destination chooser. A waiting format/destination is pending, not a
+project save, a GUI stall or a missing tool response. No automatic Folder selection, chooser
+acceptance, saved=true fabrication or alternate writer is introduced by these corrections.
