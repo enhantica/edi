@@ -110,7 +110,7 @@ Rectangle {
     function activityLabel(running) {
         if (!commandActivity) {
             const names = {fileChange: qsTr("File changes"), webSearch: qsTr("Web search"),
-                mcpToolCall: qsTr("Tool activity"), dynamicToolCall: qsTr("Tool activity"),
+                mcpToolCall: qsTr("Tool activity"), dynamicToolCall: qsTr("Project action"),
                 collabAgentToolCall: qsTr("Agent activity"), plan: qsTr("Plan update")};
             return names[payload && payload.type] || qsTr("Activity");
         }
@@ -212,11 +212,17 @@ Rectangle {
         }
         return "";
     }
+    function nativeActionCaption() {
+        const action = payload && typeof payload.tool === "string" ? payload.tool : "";
+        return assistant ? assistant.nativeActionLabel(action) : qsTr("Work on the current project");
+    }
     function activityDescription() {
         if (!payload || typeof payload !== "object") return "";
         const supplied = typeof payload.purpose === "string" ? payload.purpose
                        : typeof payload.description === "string" ? payload.description
                        : payload.arguments && typeof payload.arguments.purpose === "string" ? payload.arguments.purpose : "";
+        if (payload.type === "dynamicToolCall" && (supplied === "Edi native action"
+                || supplied === "Edi native action: " + payload.tool)) return nativeActionCaption();
         if (supplied.trim().length) return shortActionObject(supplied, false);
         if (payload.type === "webSearch") return webSearchCaption();
         if (!commandActivity) return "";
@@ -251,15 +257,7 @@ Rectangle {
         if (description.length) return description;
         if (decisionActivity) return qsTr("Review requested action");
         if (commandActivity) return qsTr("Run shell command");
-        if (payload && payload.type === "dynamicToolCall") {
-            const tools = {inspect_project: qsTr("Inspect project"), list_parameters: qsTr("Inspect parameters"),
-                diagnostics: qsTr("Check refinement diagnostics"), set_parameters: qsTr("Update parameter values"),
-                set_free: qsTr("Select refinement parameters"), run_fit: qsTr("Refine project"),
-                create_cwl_project: qsTr("Create diffraction project"), acquire_inputs: qsTr("Inspect input files"),
-                save_project: qsTr("Save project"), add_relations: qsTr("Edit parameter relationships"),
-                edit_background: qsTr("Edit experiment background")};
-            return Object.prototype.hasOwnProperty.call(tools, payload.tool) ? tools[payload.tool] : qsTr("Use project tool");
-        }
+        if (payload && payload.type === "dynamicToolCall") return nativeActionCaption();
         const names = {fileChange: qsTr("Update files"), webSearch: qsTr("Search the web"),
             mcpToolCall: qsTr("Use external tool"), collabAgentToolCall: qsTr("Coordinate assistant task"),
             plan: qsTr("Update work plan"), ediOutcome: qsTr("Report project action")};

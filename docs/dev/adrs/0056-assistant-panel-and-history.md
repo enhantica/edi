@@ -3499,3 +3499,20 @@ The existing Create/setup instruction also requires awaiting an actual prerequis
 outcome before dependent calls and reconciling refusal/adoption. Literal names
 and existing-destination no-clobber remain unchanged; a lawful subsequent request
 is distinct from silently renaming or overwriting the original request.
+
+
+### User-oriented activity labels without changing the original record
+
+The FIRST optional-purpose helper owns translatable intent labels for every
+advertised native action and the retained legacy operation, with a generic
+nontechnical fallback. Genuine supplied purpose text stays literal and optional;
+original arguments/tool IDs, outcome classification and purpose-source provenance
+remain in the payload/report. A thin read-only QML presentation bridge reuses
+that helper instead of maintaining a second partial tool-label dictionary.
+
+Fresh official item updates retain the admitted description rather than replacing
+it with the protocol type. Existing historical rows display friendly captions for
+absent purposes and exact old technical fallback spellings without rewriting
+stored history. Actual assistant-authored prose, pending/partial/errors/red rows
+and technical detail disclosure remain unchanged. Concise user-facing progress
+guidance is descriptive, not a new execution or reporting prerequisite.
