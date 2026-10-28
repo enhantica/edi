@@ -360,14 +360,14 @@ Popup {
                         id: clearButton
                         visible: panel.assistant.connected
                         objectName: "assistant.clear"
-                        text: qsTr("Clear")
+                        text: qsTr("New session")
                         leftPadding: AppSizes.unit * 0.75
                         rightPadding: leftPadding
                         implicitHeight: usageButton.implicitHeight
                         contentItem: RowLayout {
                             spacing: AppSizes.unit * 0.4
                             EaElements.Label {
-                                text: "eraser"
+                                text: "plus"
                                 font.family: EaStyle.Fonts.iconsFamily
                                 font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75 * 1.25
                                 color: clearButton.foregroundColor()
@@ -381,8 +381,8 @@ Popup {
                             radius: height * 0.5
                             color: clearButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
                         }
-                        ToolTip.text: qsTr("Start a new conversation for this project. Your ChatGPT account stays connected.")
-                        Accessible.name: qsTr("Clear conversation")
+                        ToolTip.text: qsTr("Start a new session. Keep the previous session, project and sign-in.")
+                        Accessible.name: clearButton.text
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: panel.toggleControl
                         KeyNavigation.tab: usageButton
