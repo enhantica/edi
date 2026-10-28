@@ -1649,6 +1649,28 @@ Reply Controller::update_selected_files(std::string collection_id, std::uint64_t
     catch (...) { return failure("interrupted", "Selected-file admission was interrupted"); }
 }
 
+Reply Controller::consume_selected_files(const std::string& collection_id, std::uint64_t expected_generation,
+                                          const std::vector<std::string>& file_ids) {
+    try {
+        if(collection_id!=state_->selected.collection_id || expected_generation!=state_->selected.generation)
+            refuse("stale_revision", "The acknowledged selected-file collection changed");
+        if(file_ids.size()>SelectedFileLimits::message_files)
+            refuse("invalid_argument", "A message can include at most six pending attachments");
+        auto next=state_->consumed_selected;
+        std::set<std::string> unique;
+        for(const auto& id:file_ids) {
+            if(!unique.insert(id).second || std::none_of(state_->selected.files.begin(),state_->selected.files.end(),
+                [&](const auto& file){return file.id==id;}))
+                refuse("invalid_argument", "The acknowledged attachment is not an original admitted handle");
+            next.insert(id);
+        }
+        auto result=success(); // Complete all fallible preparation before consumption.
+        state_->consumed_selected.swap(next);
+        return result;
+    } catch(const Refusal& error) {return failure(error.code,error.what());}
+    catch(...) {return failure("resource_exhausted", "Attachment acknowledgment could not be retained; selected bytes are preserved");}
+}
+
 Revision Controller::revision() const { return state_->version; }
 void Controller::notify_changed() { ++state_->version.revision; state_->stop(); }
 Reply Controller::user_command(const JsonText& command) {

@@ -64,6 +64,9 @@ class Controller {
     /// Owner-thread selected bytes, committed atomically only when no assistant work is active.
     Reply update_selected_files(std::string collection_id, std::uint64_t expected_generation,
                                 std::vector<SelectedFile> added, std::vector<std::string> removed);
+    /// Trusted host ACK of this exact admitted message's handles; bytes remain task context.
+    Reply consume_selected_files(const std::string& collection_id, std::uint64_t expected_generation,
+                                 const std::vector<std::string>& file_ids);
     /// Notify a manual edit, undo, save/readback or publication outside this controller.
     void notify_changed();
     /// Admit a trusted UI action. Provider traffic must use provider_event, never this entry.

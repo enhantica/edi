@@ -12001,6 +12001,14 @@ struct AssistantViewModel::State {
             if(genuine) {
                 // No callback lies between the actual ACK proof and these
                 // markers. Provider userMessage items never create this row.
+                const auto files=row.value("payload").toObject().value("files").toArray();
+                if(!files.isEmpty() && controller) {
+                    std::vector<std::string> ids;ids.reserve(files.size());
+                    for(const auto& file:files)ids.push_back(file.toObject().value("id").toString().toStdString());
+                    const auto consumed=controller->consume_selected_files(
+                        input->selected_context.value("collection_id").toString().toStdString(),file_generation(input->selected_context),ids);
+                    if(!consumed.ok)error=QObject::tr("The message was accepted, but its attachment draft acknowledgment could not be retained. Its admitted files are preserved.");
+                }
                 generic_thread_has_input=true;
                 if(!input->objective.trimmed().isEmpty() && (genuine_objective_row.isEmpty() || genuine_objective_generation!=generation ||
                     genuine_objective_account!=usage_epoch || genuine_objective_project!=project)) {
