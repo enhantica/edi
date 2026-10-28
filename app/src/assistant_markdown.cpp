@@ -61,6 +61,18 @@ MathSource captureMath(QStringView source) {
                 result.markdown+=source.mid(i,lineEnd-i);i=lineEnd;continue;
             }
         }
+        // Reference identities must reach Qt unchanged at EVERY occurrence:
+        // full/collapsed/shortcut references and image labels use the same rule.
+        // Leave bracket labels literal rather than inventing per-occurrence IDs.
+        if(source[i]==u'[' && !escapedAt(source,i)) {
+            qsizetype end=i+1;int depth=1;
+            for(;end<source.size();++end) {
+                if(escapedAt(source,end))continue;
+                if(source[end]==u'[')++depth;
+                else if(source[end]==u']' && --depth==0)break;
+            }
+            if(end<source.size()) {result.markdown+=source.mid(i,end-i);i=end;continue;}
+        }
         // Keep actual inline link/image destinations untouched. Qt still parses
         // their escapes, nesting and optional titles from the original bytes.
         if(source[i]==u']' && !escapedAt(source,i) && i+1<source.size() && source[i+1]==u'(') {
@@ -108,7 +120,12 @@ MathSource captureMath(QStringView source) {
         qsizetype end=source.indexOf(closing,i+opening);
         while(end>=0 && (escapedAt(source,end) || (opening==1 && (source[end-1].isSpace() || (end+1<source.size() && source[end+1].isDigit())))))end=source.indexOf(closing,end+closing.size());
         if(end<0 && opening==1){result.markdown+=source[i++];continue;}
-        const auto consumed=end<0?opening:end+closing.size()-i;
+        qsizetype unfinishedEnd=source.size();
+        if(end<0)for(auto newline=source.indexOf(u'\n',i);newline>=0;newline=source.indexOf(u'\n',newline+1)) {
+            auto next=newline+1;while(next<source.size() && (source[next]==u' ' || source[next]==u'\t'))++next;
+            if(next==source.size() || source[next]==u'\n'){unfinishedEnd=newline;break;}
+        }
+        const auto consumed=end<0?unfinishedEnd-i:end+closing.size()-i;
         const auto formula=end<0?QString():source.mid(i+opening,end-i-opening).toString();
         const auto token=QStringLiteral("EdiMath")+nonce+QString::number(result.spans.size());
         result.spans.push_back({token,source.mid(i,consumed).toString(),formula,display});
@@ -354,7 +371,7 @@ QString AssistantMarkdown::selectedSource(int start,int end) const {
         QTextCursor cursor(document);cursor.setPosition(i);cursor.setPosition(i+1,QTextCursor::KeepAnchor);
         const auto format=cursor.charFormat();
         if(format.hasProperty(mathSourceProperty))result+=format.stringProperty(mathSourceProperty);
-        else result+=cursor.selectedText().replace(QChar::ParagraphSeparator,u'\n');
+        else result+=cursor.selectedText().replace(QChar::ParagraphSeparator,u'\n').replace(QChar::LineSeparator,u'\n');
     }
     return result;
 }
@@ -676,7 +693,13 @@ void AssistantMarkdown::render() noexcept {
             if(!current())return;
             if(picture.image.isNull())slot.insertText(span.literal,originalFormat);
             else {
-                const auto logical=picture.image.deviceIndependentSize();const auto available=std::max(qreal(1),document->textWidth());
+                const auto logical=picture.image.deviceIndependentSize();auto available=std::max(qreal(1),document->textWidth());
+                // The original Qt line owns list indentation and table/quote width.
+                (void)document->documentLayout()->blockBoundingRect(slot.block());if(!current())return;
+                if(const auto* layout=slot.block().layout()) {
+                    const auto line=layout->lineForTextPosition(slot.selectionStart()-slot.block().position());
+                    if(line.isValid() && line.width()>0)available=std::min(available,line.width());
+                }
                 const auto scale=logical.width()>available?available/logical.width():qreal(1);
                 const auto descent=picture.descent*scale;
                 auto placementFont=document->defaultFont();const auto base=QFontMetricsF(placementFont);
@@ -690,7 +713,7 @@ void AssistantMarkdown::render() noexcept {
                 // Qt Quick ImageObject uses imageHeight - FORMAT font descent.
                 // Pad/paint the image so that this supported baseline is the actual
                 // measured formula baseline, including width scaling and DPR rounding.
-                const auto width=std::ceil(logical.width()*scale*dpr),height=std::ceil((logical.height()*scale+fontDescent-descent)*dpr);
+                const auto width=std::ceil((span.display?available:logical.width()*scale)*dpr),height=std::ceil((logical.height()*scale+fontDescent-descent)*dpr);
                 if(!std::isfinite(width) || !std::isfinite(height) || width<=0 || height<=0 ||
                     width>std::numeric_limits<int>::max() || height>std::numeric_limits<int>::max() || width*height*4>edi::assistant::Limits::ui_history_bytes) {
                     slot.insertText(span.literal,originalFormat);continue;
@@ -700,7 +723,7 @@ void AssistantMarkdown::render() noexcept {
                 aligned.setDevicePixelRatio(dpr);aligned.fill(Qt::transparent);
                 const auto size=aligned.deviceIndependentSize();const auto top=size.height()-fontDescent-(logical.height()-picture.descent)*scale;
                 QPainter painter(&aligned);painter.setRenderHint(QPainter::SmoothPixmapTransform);
-                painter.drawImage(QRectF(0,top,logical.width()*scale,logical.height()*scale),picture.image);painter.end();
+                painter.drawImage(QRectF(span.display?(size.width()-logical.width()*scale)/2:0,top,logical.width()*scale,logical.height()*scale),picture.image);painter.end();
                 QTextImageFormat image;image.merge(originalFormat);image.setFont(placementFont);image.setName(passive->install(aligned).toString());
                 image.setWidth(size.width());image.setHeight(size.height());
                 image.setProperty(mathSourceProperty,span.literal);image.setProperty(QTextFormat::ImageAltText,span.literal);
@@ -708,11 +731,17 @@ void AssistantMarkdown::render() noexcept {
                 const auto imagePosition=slot.selectionStart();slot.insertImage(image);
                 if(!current())return;
                 if(span.display) {
+                    // Soft line boundaries preserve ONE original paragraph/list
+                    // item/heading/cell/quote. Centering is inside the image's
+                    // original line-width canvas, not cloned semantic blocks.
                     QTextCursor display(document);display.setPosition(imagePosition);
-                    if(display.position()>display.block().position()){display.insertBlock();if(!current())return;}
-                    const auto position=display.position();display.setPosition(position+1);
-                    if(display.position()<display.block().position()+display.block().length()-1){display.insertBlock();if(!current())return;}
-                    display.setPosition(position);auto format=display.blockFormat();format.setAlignment(Qt::AlignHCenter);display.setBlockFormat(format);
+                    if(display.position()>display.block().position()) {
+                        display.insertText(QString(QChar::LineSeparator),originalFormat);if(!current())return;
+                    }
+                    display.setPosition(display.position()+1);
+                    if(display.position()<display.block().position()+display.block().length()-1) {
+                        display.insertText(QString(QChar::LineSeparator),originalFormat);if(!current())return;
+                    }
                 }
             }
             if(!current())return;
