@@ -1417,7 +1417,9 @@ struct Controller::State : std::enable_shared_from_this<Controller::State> {
         if (!supported) refuse("invalid_argument", "Model or effort is not available");
         if (has(command, "attachments") && !command.at("attachments").array("attachments").empty())
             refuse("out_of_scope", "Attachment transfer requires the pending selected-handle unit");
-        auto next_text = string(command, "text");
+        // Selected handles are already admitted context, not a new attachments wire.
+        // Literal empty text carries no scientific instruction of its own.
+        auto next_text = string(command, "text", !this->selected.files.empty());
         auto next_turn = id("turn"), next_request = id("request");
         auto next_conversation = conversation.empty() ? id("conversation") : conversation;
         const J user_row = O{{"type", "message"}, {"role", "user"}, {"text", next_text}, {"turn_id", next_turn}, {"request_id", ""}};
