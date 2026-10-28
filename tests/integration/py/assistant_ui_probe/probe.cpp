@@ -29,6 +29,8 @@
 #include <QDirIterator>
 #include <QGuiApplication>
 #include <QSettings>
+#include <QJSValue>
+#include <QWheelEvent>
 #include <QClipboard>
 #include <QCryptographicHash>
 #include <QElapsedTimer>
@@ -182,7 +184,9 @@ int main(int argc,char** argv) {
     QGuiApplication app(argc,argv);
     app.setQuitOnLastWindowClosed(false); // The owned stdin protocol, including EOF, owns this test host lifetime.
     QGuiApplication::setOrganizationName("EdiIndependentAcceptance");
-    QGuiApplication::setApplicationName("assistant-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
+    const auto test_application_name=qEnvironmentVariable("EDI_TEST_ASSISTANT_APPLICATION_NAME");
+    if(!test_application_name.isEmpty() && qEnvironmentVariable("EDI_TEST_ASSISTANT_RESTORE_SETTINGS").isEmpty())return 78;
+    QGuiApplication::setApplicationName(test_application_name.isEmpty()?"assistant-"+QUuid::createUuid().toString(QUuid::WithoutBraces):test_application_name);
     edi_app::use_design_font();
     edi_app::use_fresh_settings();
     Object settings_restore_info;
@@ -721,7 +725,32 @@ int main(int argc,char** argv) {
                 const auto value=expression.evaluate();
                 if(expression.hasError())throw std::runtime_error(expression.error().toString().toStdString());
                 result={{"value",QJsonValue::fromVariant(value)}};
-            } else if(op=="manual_key") {
+            } else if(op=="session_wheel") {
+                QPointer<QQuickItem> target=qobject_cast<QQuickItem*>(find("assistant.sessions.list"));
+                const int delta=input["angle_y"].toInt(-120);
+                if(!target || target->window()!=window || !target->isVisible() || !target->isEnabled()
+                    || target->width()<=0 || target->height()<=0 || (delta!=-120 && delta!=120))
+                    throw std::runtime_error("original current sessions viewport is not exposed for one real wheel step");
+                const auto scene=target->mapToScene(QPointF(target->width()/2,target->height()/2));
+                bool clipped=!QRectF(0,0,window->width(),window->height()).contains(scene);
+                for(auto* parent=target->parentItem();parent;parent=parent->parentItem())
+                    if(!parent->isVisible() || !parent->isEnabled() || (parent->clip()
+                        && !QRectF(0,0,parent->width(),parent->height()).contains(parent->mapFromScene(scene))))clipped=true;
+                if(clipped)throw std::runtime_error("original sessions wheel center is clipped");
+                const auto before=target->property("contentY").toDouble();
+                auto current_source=[&]() -> QObject* {if(!target)return nullptr;const auto value=target->property("sourceModel");return value.metaType()==QMetaType::fromType<QJSValue>()?value.value<QJSValue>().toQObject():value.value<QObject*>();};
+                QPointer<QObject> source=current_source();
+                const auto count=target->property("count").toInt();
+                QWheelEvent wheel(scene,window->mapToGlobal(scene.toPoint()),QPoint{},QPoint(0,delta),
+                    Qt::NoButton,Qt::NoModifier,Qt::NoScrollPhase,false);
+                wheel.setAccepted(false);QCoreApplication::sendEvent(window,&wheel);drain();
+                result={{"name","assistant.sessions.list"},{"accepted",wheel.isAccepted()},
+                    {"content_y_before",before},{"content_y_after",target?target->property("contentY").toDouble():before},
+                    {"count_before",count},{"count_after",target?target->property("count").toInt():0},
+                    {"same_window",bool(target)&&target->window()==window},
+                    {"same_source_model",bool(target)&&source&&current_source()==source.data()}};
+            }
+            else if(op=="manual_key") {
                 const auto key=input["key"].toString();
                 if(key=="select_all")QTest::keyClick(window,Qt::Key_A,Qt::ControlModifier);
                 else if(key=="return")QTest::keyClick(window,Qt::Key_Return);
@@ -1049,7 +1078,7 @@ int main(int argc,char** argv) {
             drain();
             auto output=fixture.snapshot();output["reply"]=result;
             output["ui"]=(op=="messages_probe" || op=="message_input") ? Object{{"alive",bool(observed)&&bool(window)},{"state",observed?observed->assistant()->state():QString()},{"connected",observed&&observed->assistant()->connected()},{"can_cancel",observed&&observed->assistant()->canCancel()}} : ui_snapshot();
-            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["test_settings"]=Object{{"path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()}};
+            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["test_settings"]=Object{{"path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()},{"application_name_override",test_application_name}};
             output["state"]=observed ? Object{{"last_error",observed->assistant()->lastError()}} : QJsonValue();
             output["image_requests"]=urls.image_requests;output["activated_urls"]=urls.activated;
             output["image_url"]=QString("http://127.0.0.1:%1/untrusted.png").arg(urls.images.serverPort());
