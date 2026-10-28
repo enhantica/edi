@@ -6678,7 +6678,7 @@ struct AssistantViewModel::State {
                 if(row.value("severity")=="error" && row.value("path").isString() && !row.value("path").toString().isEmpty())
                     paths.insert(row.value("path").toString());
             }
-            Array parameters;
+            QJsonArray parameters;
             for(const auto& value:context.value("parameters").toArray())
                 if(paths.contains(value.toObject().value("path").toString()))parameters.append(value);
             auto enriched=result;
