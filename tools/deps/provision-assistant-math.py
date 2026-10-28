@@ -55,6 +55,23 @@ def main() -> None:
         raise RuntimeError('The native math source pin is invalid')
     base = ROOT / 'build' / 'deps' / 'jkqtmathtext' / commit
     base.mkdir(parents=True, exist_ok=True)
+    source = base / 'source'
+    destination = ROOT / 'build' / 'deps' / 'assistant-math.json'
+    identity = {'schema': 'edi.assistant.math-source/1', 'commit': commit,
+                'archive_sha256': expected, 'provisioner_sha256': digest(Path(__file__)), 'source': str(source)}
+    if destination.is_file() and not destination.is_symlink():
+        previous = json.loads(destination.read_text())
+        if all(previous.get(key) == value for key, value in identity.items()):
+            if source.is_symlink() or not source.is_dir() or not previous.get('files') or members(source) != previous['files']:
+                raise RuntimeError('Retained native math source changed; it was not overwritten')
+            # Other app task edits can change pixi.toml without changing this pin.
+            current = dict(previous, manifest_sha256=digest(manifest))
+            if current != previous:
+                candidate = destination.with_suffix('.json.new')
+                candidate.write_text(json.dumps(current, indent=2)+'\n')
+                candidate.replace(destination)
+            print(f'Native math source already verified: {commit}')
+            return
     archive = base / 'package.tar.gz'
     if not archive.exists():
         candidate = base / 'package.tar.gz.download'
@@ -76,7 +93,6 @@ def main() -> None:
             candidate.unlink(missing_ok=True)
     if digest(archive) != expected:
         raise RuntimeError('The retained native math archive failed its canonical SHA256')
-    source = base / 'source'
     expected_files = {}
     with tempfile.TemporaryDirectory(prefix='source-', dir=base) as temporary:
         staged = Path(temporary)
@@ -108,10 +124,7 @@ def main() -> None:
         else:
             # Publish only this fully checked source closure; never execute upstream setup.
             staged.rename(source)
-    result = {'schema': 'edi.assistant.math-source/1', 'commit': commit,
-              'archive_sha256': expected, 'manifest_sha256': digest(manifest),
-              'source': str(source), 'files': expected_files}
-    destination = ROOT / 'build' / 'deps' / 'assistant-math.json'
+    result = dict(identity, manifest_sha256=digest(manifest), files=expected_files)
     candidate = destination.with_suffix('.json.new')
     candidate.write_text(json.dumps(result, indent=2)+'\n')
     candidate.replace(destination)

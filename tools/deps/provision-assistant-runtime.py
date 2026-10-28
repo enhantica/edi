@@ -59,6 +59,25 @@ def main() -> None:
     cache.mkdir(parents=True, exist_ok=True)
     with (cache / 'acquire.lock').open('a+b') as lock:
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        published = cache / ('input-' + expected)
+        destination = ROOT / 'build/deps/codex/provisioned' / target
+        receipt = destination / 'input.json'
+        required = ['bin/codex-app-server', 'bin/codex-code-mode-host', 'codex-path/rg', 'codex-resources/zsh/bin/zsh']
+        if system == 'Linux':
+            required.append('codex-resources/bwrap')
+        identity = dict(schema='edi.assistant.provisioned/1', root=str(published), version=version,
+            target=target, archive_sha256=expected, dedicated=dedicated, provisioner_sha256=digest(Path(__file__)))
+        # Pixi normally skips this task. Direct/offline invocations still verify
+        # the accepted closure without extracting the original package again.
+        if receipt.is_file() and not receipt.is_symlink():
+            previous = json.loads(receipt.read_text())
+            if all(previous.get(key) == value for key, value in identity.items()):
+                if published.is_symlink() or not published.is_dir() or not previous.get('files') or files(published) != previous['files']:
+                    raise RuntimeError('The immutable provisioned helper changed; it was not overwritten')
+                if any(not (published / item).is_file() or not os.access(published / item, os.X_OK) for item in required):
+                    raise RuntimeError('The provisioned helper lost an executable resource')
+                print(f'Native helper already verified: {version} {target}', flush=True)
+                return
         archive = cache / 'package.tar.gz'
         if not archive.exists():
             staged_archive = cache / 'package.tar.gz.download'
@@ -94,21 +113,15 @@ def main() -> None:
                 entrypoint='bin/codex-app-server', resourcesDir='codex-resources', pathDir='codex-path')
             if any(metadata.get(key) != value for key, value in required_metadata.items()):
                 raise RuntimeError('The official helper package has an incompatible native layout')
-            required = ['bin/codex-app-server', 'bin/codex-code-mode-host', 'codex-path/rg', 'codex-resources/zsh/bin/zsh']
-            if system == 'Linux':
-                required.append('codex-resources/bwrap')
             if any(not (stage / item).is_file() or not os.access(stage / item, os.X_OK) for item in required):
                 raise RuntimeError('The official helper package is missing an executable resource')
             expected_files = files(stage)
-            published = cache / ('input-' + expected)
             if published.exists() or published.is_symlink():
                 if published.is_symlink() or not published.is_dir() or files(published) != expected_files:
                     raise RuntimeError('The immutable provisioned helper was modified; it was not overwritten')
             else:
                 stage.rename(published)
-            manifest = dict(schema='edi.assistant.provisioned/1', root=str(published), version=version,
-                target=target, archive_sha256=expected, dedicated=dedicated, files=expected_files)
-            destination = ROOT / 'build/deps/codex/provisioned' / target
+            manifest = dict(identity, files=expected_files)
             destination.mkdir(parents=True, exist_ok=True)
             candidate = destination / 'input.json.stage'
             candidate.write_text(json.dumps(manifest, indent=2, sort_keys=True) + '\n')
