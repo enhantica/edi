@@ -3480,3 +3480,22 @@ model-readiness retry is introduced.
 Local workUI events are retained without the old stream-event count drop; actual
 allocation/encoding failures still report missed evidence and never veto science.
 Provider protocol/currentness/identity guards are separate and unchanged.
+
+
+### Reveal completion follows the original target, not a mandatory scroll delta
+
+A normal group/table layout change can expose the original control while an
+already-admitted genuine wheel action leaves contentY unchanged. Its existing
+completion now rechecks the surviving original wanted/control/row scope, full
+viewport/window/clipping bounds and ordinary usability; if reachable it resumes
+the same original route, which rechecks the exact current member before writing.
+Unchanged scrolling with an unreachable target still refuses and retains the
+original full target-reveal/viewport facts. No scroll/group/index assignment,
+extra input, timing/budget increase or scientific fallback is introduced. The
+old live refusal's exclusive cause remains unproved; this closes the identified
+postcondition class rather than changing the original manual UI.
+
+The existing Create/setup instruction also requires awaiting an actual prerequisite
+outcome before dependent calls and reconciling refusal/adoption. Literal names
+and existing-destination no-clobber remain unchanged; a lawful subsequent request
+is distinct from silently renaming or overwriting the original request.
