@@ -88,6 +88,7 @@ class AssistantViewModel : public QObject {
     QString sessionsError() const;
     Q_INVOKABLE void refreshSessions(bool nextPage = false);
     Q_INVOKABLE void archiveSession(const QString& threadId);
+    Q_INVOKABLE void selectSession(const QString& threadId);
     RowTableModel* selectedFiles() const;
     RowTableModel* skills() const;
     QString selectedSkill() const;
@@ -147,6 +148,7 @@ class AssistantViewModel : public QObject {
 
    signals:
     void sessionsChanged();
+    void sessionSelected(const QString& threadId);
     void workReportFinished(QVariantMap receipt);
     void workReportReceiptChanged();
     void accountChanged();

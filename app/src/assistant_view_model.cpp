@@ -26,6 +26,8 @@
 #include <QPointingDevice>
 #include <QVariant>
 #include <QScopeGuard>
+#include <QTextBoundaryFinder>
+#include <QCryptographicHash>
 #include <QSignalBlocker>
 #include <array>
 #include <initializer_list>
@@ -111,7 +113,6 @@
 #include "background_input.hpp"
 #include "assistant_native_create.hpp"
 #include "category_list_model.hpp"
-#include <QCryptographicHash>
 #include "connection_services.hpp"
 #endif
 
@@ -699,6 +700,17 @@ QString command_human_description(const Object& source) {
     }
     return labels.join(" · ").simplified();
 }
+QString history_thread(const Object& row) {
+    const auto explicitThread=row.value("sessionThread").toString();
+    if(!explicitThread.isEmpty())return explicitThread;
+    for(const auto* field:{"workEvidence","workTurn"}) {
+        const auto value=row.value(QLatin1StringView(field)).toObject().value("thread_id");
+        if(value.isString())return value.toString();
+        const auto observed=value.toObject();
+        if(observed.value("state")=="observed" && observed.value("value").isString())return observed.value("value").toString();
+    }
+    return {};
+}
 // Display projection only. Full canonical diagnostics stay in State::history.
 Object message_payload(const Object& source,bool full) {
     Object result;
@@ -757,8 +769,8 @@ Object message_display_row(const Object& original) {
 }
 class Rows : public RowTableModel {
    public:
-    Rows(const QStringList& names, QObject* parent, const QJsonArray* canonical = nullptr, bool messageProjection = false)
-        : RowTableModel(names, parent), names_(names), canonical_(canonical), message_projection_(messageProjection) {}
+    Rows(const QStringList& names, QObject* parent, const QJsonArray* canonical = nullptr, bool messageProjection = false, const QString* session = nullptr)
+        : RowTableModel(names, parent), names_(names), canonical_(canonical), message_projection_(messageProjection), session_(session) {}
     void assign(const QJsonArray& data) {
         if (!canonical_) own_ = data;
         pending_ = true;
@@ -771,7 +783,11 @@ class Rows : public RowTableModel {
             const auto& source = canonical_ ? *canonical_ : own_;
             QJsonArray projected;
             for(const auto& value:source) {
-                if(message_projection_)projected.append(message_display_row(value.toObject()));
+                if(message_projection_) {
+                    const auto original=value.toObject();
+                    if(session_ && history_thread(original)!=*session_)continue;
+                    projected.append(message_display_row(original));
+                }
                 else projected.append(value);
             }
             visible_=std::move(projected); // Only lightweight display values reach the model.
@@ -816,6 +832,7 @@ class Rows : public RowTableModel {
     QStringList names_;
     const QJsonArray* canonical_;
     const bool message_projection_;
+    const QString* session_;
     QJsonArray own_,visible_,announced_; // Canonical message payloads are never copied into these display snapshots.
     bool assigning_ = false, pending_ = false;
 };}
@@ -1119,7 +1136,8 @@ struct AssistantViewModel::State {
     std::unique_ptr<edi::assistant::native::ChatGptConnection> connection;
 #endif
     QJsonArray history;
-    Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history, true};
+    QString history_session;
+    Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history, true, &history_session};
     Rows sessions{{"id","name","modified","current","canArchive"},&owner};
     bool sessions_loading=false,sessions_more=false;
     QString sessions_error;
@@ -1304,7 +1322,7 @@ struct AssistantViewModel::State {
     QString observed_native_error;
     std::uint64_t generation = 0;
     QTimer timer{&owner};
-    QString history_path;
+    QString history_path, history_archive_thread;
     std::unique_ptr<AssistantHistoryArchive> history_archive;
     bool history_base_included=false, history_unqueued=false, history_initialized=false;
     QJsonArray history_initial_snapshot;
@@ -1350,13 +1368,16 @@ struct AssistantViewModel::State {
     void history_completed() noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);
         try {
-            if(!publishing || !history_archive)return;
+            if(!publishing || !history_archive || history_archive_thread!=history_session)return;
             // Read the current cell, not an older queued notification. This
             // updates metadata/presentation only, never persists another ack.
             const auto view=history_archive->view();
             if(view.loaded && !history_base_included) {
-                auto merged=view.initial_rows;
-                for(const auto& row:history)merged.append(row);
+                auto merged=view.initial_rows;QSet<QString> ids;
+                for(const auto& row:merged)ids.insert(row.toObject().value("id").toString());
+                for(const auto& row:history)if(!ids.contains(row.toObject().value("id").toString())) {
+                    merged.append(row);ids.insert(row.toObject().value("id").toString());
+                }
                 history.swap(merged);history_base_included=true;
                 (void)queue_render();
                 if(!receiver || receiver->state_.get()!=this)return;
@@ -1380,27 +1401,61 @@ struct AssistantViewModel::State {
     }
     void initialize_history(bool adoptInitial=true) {
         const QPointer<AssistantViewModel> receiver(&owner);
-        history_archive=std::make_unique<AssistantHistoryArchive>(&owner,history_path,[this,receiver](const AssistantHistoryArchive::View&) {
+        auto path=history_path;
+        if(!history_session.isEmpty()) {
+            const auto digest=QCryptographicHash::hash(history_session.toUtf8(),QCryptographicHash::Sha256).toHex();
+            path=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/history/"+QString::fromLatin1(digest)+".json";
+        }
+        const auto original=history_session;
+        auto prepared=std::make_unique<AssistantHistoryArchive>(&owner,path,[this,receiver](const AssistantHistoryArchive::View&) {
             if(receiver && receiver->state_.get()==this && publishing)history_completed();
         },!history_initialized);
-        const auto view=history_archive->view();
-        // A replacement VM takes the already accepted immutable memory, not a
-        // stale disk file while the previous receiver's final write drains.
-        if(adoptInitial) {history=view.latest_rows;history_base_included=view.includes_initial;}
+        const auto view=prepared->view();
+        if(!receiver || receiver->state_.get()!=this || history_session!=original)return;
+        history_archive=std::move(prepared);history_path=path;history_archive_thread=original;
+        if(adoptInitial) {
+            if(original.isEmpty())history=view.latest_rows;
+            else {
+                QSet<QString> ids;for(const auto& value:history)ids.insert(value.toObject().value("id").toString());
+                for(const auto& value:view.latest_rows)if(!ids.contains(value.toObject().value("id").toString()))history.append(value);
+            }
+            history_base_included=view.includes_initial;
+        }
         if(!history_initialized)history_initial_snapshot=history;
     }
     bool queue_history(const QJsonArray& rows,bool logicalClear=false) noexcept {
         if(logicalClear)history_base_included=true; // Never restore an old async initial prefix after Clear.
         try {
-            if(!history_archive)initialize_history(false);
+            if(!history_archive || history_archive_thread!=history_session)initialize_history(false);
             if(history_initialized && history_archive)history_archive->activate();
-            if(!history_archive || !history_archive->retain(rows,history_base_included,logicalClear)) {
+            QJsonArray captured;
+            for(const auto& value:rows)if(history_session.isEmpty() || history_thread(value.toObject())==history_session)captured.append(value);
+            if(!history_archive || history_archive_thread!=history_session || !history_archive->retain(captured,history_base_included,logicalClear)) {
                 history_unqueued=true;history_retry_revision=0;history_error=storage_error;return false;
             }
             if(history_unqueued && !history_retry_revision)history_retry_revision=history_archive->view().accepted;
             return true; // Accepted full snapshot, NOT a durable commit.
         }catch(...) {history_unqueued=true;history_retry_revision=0;history_error=storage_error;return false;}
     }
+#ifndef __EMSCRIPTEN__
+    void history_for_session(const QString& thread) noexcept {
+        if(thread==history_session)return;
+        const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
+        try {
+            (void)queue_history(history); // Preserve the previous cache under its actual owner.
+            if(!proof.input_current())return;
+            history_session=thread;history_base_included=false;
+            initialize_history(); // The existing worker creates/reads/writes the local target.
+            if(!proof.input_current() || history_session!=thread)return;
+            reconcile_history();
+            if(proof.input_current() && history_session==thread)(void)queue_history(history);
+        }catch(...) {if(receiver && receiver->state_.get()==this && proof.input_current()) {
+            history_session=thread;history_unqueued=true;
+            history_error=QObject::tr("The conversation resumed, but its local app activity cache is unavailable. No old transcript was sent as a new prompt.");
+            reconcile_history();
+        }}
+    }
+#endif
     QByteArray consented_context;
     bool archive_refused = false;
     using Limits = edi::assistant::Limits;
@@ -1531,17 +1586,19 @@ struct AssistantViewModel::State {
     };
     std::optional<ResumeCheckpoint> resume_checkpoint;
     bool generic_durable=false,generic_resuming=false;
+    QString session_selection_target;
 
     struct SessionRequest {
         QString kind,target,cursor,currentThread,email,name;
         quint64 binding=0,account=0,transport=0,epoch=0;
         QPointer<ProjectViewModel> project;
+        bool operator==(const SessionRequest&) const = default;
     };
     QMap<QString,SessionRequest> session_requests;
     QMap<QString,Object> session_metadata;
     QString sessions_cursor;
     QSet<QString> sessions_seen_cursors;
-    QMap<QString,QString> session_named;
+    QMap<QString,QPair<QString,QString>> session_named; // Intended name + actual admitted RPC, not a guessed success.
     quint64 sessions_epoch=0;
     bool session_idle() const {
         return generic_authenticated && !generic_busy && !generic_connecting && !generic_retiring &&
@@ -1571,32 +1628,50 @@ struct AssistantViewModel::State {
             request.email==generic_native.value("account").toObject().value("email").toString();
     }
     static QString session_caption(QString text) {
-        // Presentation only; the runtime/canonical title and prompt stay intact.
-        for(const auto* marker:{"EDI_APPROVED_CONTEXT","EDI_CURRENT_CONTEXT","{\"schema\":","```","/home/","/Users/","file://"}) {
+        // A real context suffix can follow human text. Other technical/ambiguous
+        // candidates are not made semantic by deleting one familiar path prefix.
+        for(const auto* marker:{"EDI_APPROVED_CONTEXT","EDI_CURRENT_CONTEXT"}) {
             const auto at=text.indexOf(QLatin1StringView(marker));if(at>=0)text.truncate(at);
         }
         text=text.section(u'\n',0,0).simplified();
-        if(text.startsWith('{') || text.startsWith('[') || text.startsWith("file:") || text.startsWith('/') || text.contains("\\"))text.clear();
-        constexpr qsizetype captionCharacters=80; // Short UI caption, never a work/history admission limit.
+        if(!text.isValidUtf16() || text.contains('/') || text.contains('\\') || text.contains('{') || text.contains('}') ||
+            text.contains('[') || text.contains(']') || text.contains("```") || text.contains("://"))return {};
+        for(const auto ch:text)if(ch.category()==QChar::Other_Control || ch.category()==QChar::Other_Format)return {};
+        constexpr qsizetype captionCharacters=80; // Presentation only, not work/history admission.
         if(text.size()>captionCharacters) {
-            text.truncate(captionCharacters);const auto boundary=text.lastIndexOf(' ');
-            if(boundary>0)text.truncate(boundary);
+            QTextBoundaryFinder boundary(QTextBoundaryFinder::Grapheme,text);
+            boundary.setPosition(captionCharacters);
+            const auto end=boundary.isAtBoundary()?captionCharacters:boundary.toPreviousBoundary();
+            if(end<=0)return {};
+            text.truncate(end);const auto word=text.lastIndexOf(' ');
+            if(word>0)text.truncate(word);
             text+=QChar(0x2026);
         }
         return text;
     }
-    void name_current_session() noexcept {
+    void name_current_session(const QString& semanticTitle={}) noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const QPointer<CodexAgent> transport(agent.get());
+        const auto proof=file_projection();
         try {
-            if(!generic_authenticated || generic_retiring || generic_thread.isEmpty() || !agent)return;
-            const auto known=session_metadata.value(generic_thread);
+            if(!generic_authenticated || generic_retiring || generic_thread.isEmpty() || !transport)return;
+            const auto id=generic_thread;const auto known=session_metadata.value(id);
             if(!owned_session(known))return;
-            const auto name=session_caption(project?(project->title().trimmed().isEmpty()?project->name():project->title()):QObject::tr("Assistant conversation"));
-            if(name.isEmpty() || session_named.value(generic_thread)==name || known.value("name")==name)return;
-            session_named.insert(generic_thread,name); // One actual metadata request for this title.
-            (void)session_request("thread/name/set",{{"threadId",generic_thread},{"name",name}},"name",generic_thread);
-        }catch(...) {} // Optional naming cannot alter a scientific result or account state.
+            const auto existing=session_caption(known.value("name").toString());
+            const auto semantic=session_caption(semanticTitle);
+            // Reconnection/setup cannot downgrade a meaningful original name.
+            if(semantic.isEmpty() && !existing.isEmpty())return;
+            const auto name=!semantic.isEmpty()?semantic:QObject::tr("Assistant conversation");
+            if(known.value("name")==name)return;
+            const auto pending=session_named.value(id);
+            if(pending.first==name && session_requests.contains(pending.second))return;
+            (void)session_request("thread/name/set",{{"threadId",id},{"name",name}},"name",id);
+            if(!receiver || receiver->state_.get()!=this || !proof.input_current() || !transport || agent.get()!=transport)return;
+        }catch(...) {} // The original transport/error owner remains authoritative.
     }
     void publish_sessions() {
+        const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
+        const auto epoch=sessions_epoch;
         QList<Object> ordered=session_metadata.values();
         std::stable_sort(ordered.begin(),ordered.end(),[](const Object& a,const Object& b){
             const auto at=a.value("updatedAt").toDouble(),bt=b.value("updatedAt").toDouble();
@@ -1616,18 +1691,34 @@ struct AssistantViewModel::State {
             rows.append(Object{{"id",id},{"name",name},{"modified",modified},{"current",id==generic_thread},
                 {"canArchive",status=="idle" || status=="notLoaded"}});
         }
-        sessions.assign(rows);emit owner.sessionsChanged();
+        sessions.assign(rows);
+        if(receiver && receiver->state_.get()==this && proof.input_current() && sessions_epoch==epoch)emit owner.sessionsChanged();
     }
     QString session_request(const QString& method,const Object& params,const QString& kind,const QString& target={}) {
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const QPointer<CodexAgent> transport(agent.get());
         SessionRequest request{kind,target,params.value("cursor").toString(),generic_thread,
             generic_native.value("account").toObject().value("email").toString(),params.value("name").toString(),generation,usage_epoch,
-            agent?agent->outputGeneration():0,sessions_epoch,project};
+            transport?transport->outputGeneration():0,sessions_epoch,project};
+        const auto current=[&] {return receiver && receiver->state_.get()==this && transport && agent.get()==transport && session_request_current(request);};
+        if(!current())return {};
         QString prepared;
-        const auto rpc=agent->request(method,params,[this,request,&prepared](const QString& id) {
-            if(!session_request_current(request))return false;
-            session_requests.insert(id,request);prepared=id;return true;
-        });
-        if(rpc.isEmpty()) {session_requests.remove(prepared);throw std::runtime_error("The session request could not be delivered; its outcome is unconfirmed");}
+        const auto cleanup=[&] {
+            if(!receiver || receiver->state_.get()!=this || prepared.isEmpty())return;
+            const auto found=session_requests.find(prepared);
+            if(found==session_requests.end() || found.value()!=request)return;
+            session_requests.erase(found);
+            if(request.kind=="name" && session_named.value(request.target)==qMakePair(request.name,prepared))session_named.remove(request.target);
+        };
+        QString rpc;
+        try {rpc=transport->request(method,params,[&](const QString& id) {
+            if(!current())return false;
+            session_requests.insert(id,request);prepared=id;
+            if(request.kind=="name")session_named.insert(request.target,qMakePair(request.name,id));
+            return true;
+        });}catch(...) {cleanup();if(current())throw;return {};}
+        if(!current()){cleanup();return {};}
+        if(rpc.isEmpty()){cleanup();throw std::runtime_error("The session request could not be delivered; its outcome is unconfirmed");}
         return rpc;
     }
     void session_page(const QString& cursor={}) {
@@ -1639,7 +1730,12 @@ struct AssistantViewModel::State {
     void session_response(const QString& rpc,const QString& method,const Object& reply) noexcept {
         const auto it=session_requests.find(rpc);if(it==session_requests.end())return;
         const auto request=it.value();session_requests.erase(it);
-        if(!session_request_current(request))return;
+        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<CodexAgent> transport(agent.get());
+        const auto current=[&] {return receiver && receiver->state_.get()==this && transport && agent.get()==transport && session_request_current(request);};
+        if(!current())return;
+        const auto retireName=[&] {
+            if(receiver && receiver->state_.get()==this && session_named.value(request.target)==qMakePair(request.name,rpc))session_named.remove(request.target);
+        };
         try {
             if(reply.contains("error"))throw std::runtime_error("The runtime could not confirm the requested session operation");
             if(!reply.value("result").isObject())throw std::runtime_error("The session response was not valid metadata");
@@ -1665,9 +1761,20 @@ struct AssistantViewModel::State {
             }
             if(request.kind=="name" && method=="thread/name/set") {
                 if(!result.isEmpty())throw std::runtime_error("The session name acknowledgment was unexpected");
+                if(session_named.value(request.target)!=qMakePair(request.name,rpc))return;
+                retireName();
                 auto thread=session_metadata.value(request.target);
                 if(!thread.isEmpty()){thread["name"]=request.name;session_metadata[request.target]=thread;publish_sessions();}
                 return;
+            }
+            if(request.kind=="select-read" && method=="thread/read") {
+                const auto thread=result.value("thread").toObject();
+                if(thread.value("id")!=request.target || !owned_session(thread) || !session_idle())
+                    throw std::runtime_error("The original session or current operation changed before selection");
+                const auto status=thread.value("status").toObject().value("type").toString();
+                if(status!="idle" && status!="notLoaded")throw std::runtime_error("Finish that session's active operation before selecting it");
+                session_metadata[request.target]=thread;
+                resume_selected_session(request.target);return;
             }
             if(request.kind=="archive-read") {
                 const auto thread=result.value("thread").toObject();
@@ -1701,14 +1808,42 @@ struct AssistantViewModel::State {
                 publish_sessions();return;
             }
         }catch(const std::exception& error) {
-            if(request.kind=="name"){session_named.remove(request.target);return;}
+            if(!current())return;
+            if(request.kind=="name"){retireName();return;}
             sessions_loading=false;sessions_error=bounded_error(QString::fromUtf8(error.what()));emit owner.sessionsChanged();
         }catch(...) {
-            if(request.kind=="name"){session_named.remove(request.target);return;}
+            if(!current())return;
+            if(request.kind=="name"){retireName();return;}
             sessions_loading=false;sessions_error=QObject::tr("Session information is unavailable; no archive outcome was assumed.");emit owner.sessionsChanged();
         }
     }
 
+    void resume_selected_session(const QString& id) {
+        if(!session_idle())throw std::runtime_error("Finish the current operation before selecting a session");
+        if(id==generic_thread) {
+            const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
+            history_for_session(id);
+            if(receiver && receiver->state_.get()==this && proof.input_current() && generic_thread==id)emit owner.sessionSelected(id);
+            return;
+        }
+        const auto email=generic_native.value("account").toObject().value("email").toString();
+        auto proof=file_projection();
+        if(!generic_revoke_workspace(&proof,true) || !proof.retirement_current())return;
+        auto approval=prepare_disclosure_scope(project,outgoing_context(),generic_input_hashes);
+        if(!proof.input_current())return;
+        // A new managed instruction stage is legitimate for this same ID. Old
+        // staged skill files/fingerprints are not a blanket conversation veto.
+        approved_scope=approval;backend_scope=approval;
+        generic_prepare_workspace();
+        if(!proof.input_current())return;
+        resume_checkpoint=ResumeCheckpoint{id,generic_workspace,email,project,approval,generation,bool(project),true,false};
+        session_selection_target=id;sessions_loading=true;sessions_error.clear();
+        schedule_resume_connection(); // Original output-owner release also invokes this once.
+        if(proof.input_current()){
+            notify();
+            if(proof.input_current())emit owner.sessionsChanged();
+        }
+    }
     bool resume_identity_current() {
         if(!resume_checkpoint)return false;
         const auto& saved=*resume_checkpoint;
@@ -7046,8 +7181,14 @@ struct AssistantViewModel::State {
                     generic_context_retention_pending=false;generic_context_retention_error.clear();
                 }
             }
-            if(success && project && (record->tool=="create_project" || record->tool=="edit_project"))name_current_session();
             const auto settled = native_settlement_scope(call);
+            if(success && project && (record->tool=="create_project" || record->tool=="edit_project")) {
+                const auto args=record->original.value("arguments").toObject();
+                const auto title=record->tool=="create_project"?args.value("title").toString():
+                    args.value("operation")=="title"?args.value("value").toString():QString();
+                if(!title.isEmpty() && project->title()==title)name_current_session(title);
+            }
+            if(!receiver || !settled())return;
             if (native_create_widget && native_create_widget->call.record == record) { const auto run = native_create_widget; create_widget_end(run); }
             if (!receiver || !settled()) return;
             if (native_widget && native_widget->call.record == record) { const auto run = native_widget; widget_end(run); }
@@ -11342,6 +11483,12 @@ struct AssistantViewModel::State {
         if(!publication.input_current())return;
         const bool was_refused = archive_refused;
         archive_refused = false;
+        if(!history_session.isEmpty()) {
+            (void)queue_history(history);
+            if(!publication.input_current())return;
+            history_session.clear();
+            history_path=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/history/draft-"+QUuid::createUuid().toString(QUuid::WithoutBraces)+".json";
+        }
         if (!publish({},false,nullptr,true)) { archive_refused = was_refused; error = storage_error; notify(); return; }
         if (discarded) *discarded = true; // Logical discard; archive revision/commit is tracked independently.
         if (removed) *removed = true;
@@ -12056,7 +12203,17 @@ struct AssistantViewModel::State {
             generic_policy_verified=true;
             generic_native["connection_id"] = generic_thread; generic_native["status"] = "ready";
             generic_connecting = false; generic_authenticated = true; generic_retiring = false; agent->settleOperation();
-            name_current_session();
+            history_for_session(actual_thread);
+            if(!publication.input_current() || generic_thread!=actual_thread)return;
+            if(!resumed)name_current_session(project && project->title()!=project->name()?project->title():QString());
+            if(!publication.input_current() || !generic_authenticated || generic_retiring || generic_thread!=actual_thread)return;
+            if(session_selection_target==actual_thread) {
+                session_selection_target.clear();sessions_loading=false;sessions_error.clear();
+                emit owner.sessionsChanged();
+                if(!publication.input_current() || generic_thread!=actual_thread)return;
+                emit owner.sessionSelected(actual_thread);
+            }
+            if(!publication.input_current())return;
             error.clear();
             // Required skills/thread bootstrap has finished. A same-callback
             // required write can no longer preempt this initial observation.
@@ -13870,10 +14027,11 @@ struct AssistantViewModel::State {
                 for(const auto& oldValue:history) {
                     const auto old=oldValue.toObject();if(old.value("id")!=row.value("id"))continue;
                     existing=true;
-                    for(const char* field:{"workScope","workEvidence","workUI","workScience","workSkills","workSkillRefs","workSchema","workInputs","workRuntime","workTurn","workDiagnostic"})
+                    for(const char* field:{"sessionThread","workScope","workEvidence","workUI","workScience","workSkills","workSkillRefs","workSchema","workInputs","workRuntime","workTurn","workDiagnostic"})
                         if(old.contains(field) && !row.contains(field)){row[field]=old.value(field);changed=true;}
                     break;
                 }
+                if(!existing && !generic_thread.isEmpty()){row["sessionThread"]=generic_thread;changed=true;}
                 if(!existing && work_scope_bound){row["workScope"]=work_reports.stamp();changed=true;}
                 if(changed)next[i]=row;
             }
@@ -14941,29 +15099,57 @@ bool AssistantViewModel::sessionsHaveMore() const { return state_->sessions_more
 QString AssistantViewModel::sessionsError() const { return state_->sessions_error; }
 void AssistantViewModel::refreshSessions(bool nextPage) {
 #ifndef __EMSCRIPTEN__
+    const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();
+    const auto proof=original->file_projection();
+    const auto current=[&]{return receiver && receiver->state_.get()==original && proof.input_current();};
     try {
-        if(QThread::currentThread()!=thread() || !state_->session_idle() || state_->sessions_loading)return;
-        if(nextPage && !state_->sessions_more)return;
+        if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
+        if(nextPage && !original->sessions_more)return;
+        original->sessions_loading=true;original->sessions_error.clear();
         if(!nextPage) {
-            if(state_->sessions_epoch==UINT64_MAX)throw std::runtime_error("The session browser identity is unavailable");
-            ++state_->sessions_epoch;state_->session_metadata.clear();state_->sessions_cursor.clear();state_->sessions_seen_cursors.clear();state_->sessions_more=false;
-            state_->sessions.assign({});
+            if(original->sessions_epoch==UINT64_MAX)throw std::runtime_error("The session browser identity is unavailable");
+            ++original->sessions_epoch;original->session_metadata.clear();original->sessions_cursor.clear();original->sessions_seen_cursors.clear();original->sessions_more=false;
+            original->sessions.assign({});
+            if(!current())return;
         }
-        state_->sessions_loading=true;state_->sessions_error.clear();emit sessionsChanged();
-        state_->session_page(nextPage?state_->sessions_cursor:QString());
-    }catch(...) {state_->sessions_loading=false;state_->sessions_error=tr("Session information could not be requested. Your conversation is unchanged.");emit sessionsChanged();}
+        const auto epoch=original->sessions_epoch;
+        emit sessionsChanged();
+        if(!current() || original->sessions_epoch!=epoch || !original->session_idle())return;
+        original->session_page(nextPage?original->sessions_cursor:QString());
+    }catch(...) {if(current() && original->generic_authenticated && !original->generic_retiring) {
+        original->sessions_loading=false;original->sessions_error=tr("Session information could not be requested. Your conversation is unchanged.");emit sessionsChanged();}}
 #else
     Q_UNUSED(nextPage);
 #endif
 }
+void AssistantViewModel::selectSession(const QString& threadId) {
+#ifndef __EMSCRIPTEN__
+    const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();const auto proof=original->file_projection();
+    const auto current=[&]{return receiver && receiver->state_.get()==original && proof.input_current();};
+    try {
+        if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
+        if(!original->owned_session(original->session_metadata.value(threadId)))return;
+        original->sessions_loading=true;original->sessions_error.clear();const auto epoch=original->sessions_epoch;emit sessionsChanged();
+        if(!current() || original->sessions_epoch!=epoch || !original->session_idle())return;
+        (void)original->session_request("thread/read",{{"threadId",threadId},{"includeTurns",false}},"select-read",threadId);
+    }catch(...) {if(current() && original->generic_authenticated && !original->generic_retiring) {
+        original->sessions_loading=false;original->sessions_error=tr("The selected session could not be resumed. No earlier action was replayed.");emit sessionsChanged();}}
+#else
+    Q_UNUSED(threadId);
+#endif
+}
 void AssistantViewModel::archiveSession(const QString& threadId) {
 #ifndef __EMSCRIPTEN__
+    const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();const auto proof=original->file_projection();
+    const auto current=[&]{return receiver && receiver->state_.get()==original && proof.input_current();};
     try {
-        if(QThread::currentThread()!=thread() || !state_->session_idle() || state_->sessions_loading)return;
-        if(!state_->owned_session(state_->session_metadata.value(threadId)))return;
-        state_->sessions_loading=true;state_->sessions_error.clear();emit sessionsChanged();
-        (void)state_->session_request("thread/read",{{"threadId",threadId},{"includeTurns",false}},"archive-read",threadId);
-    }catch(...) {state_->sessions_loading=false;state_->sessions_error=tr("The archive request could not be confirmed. Refresh the original session before trying again.");emit sessionsChanged();}
+        if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
+        if(!original->owned_session(original->session_metadata.value(threadId)))return;
+        original->sessions_loading=true;original->sessions_error.clear();const auto epoch=original->sessions_epoch;emit sessionsChanged();
+        if(!current() || original->sessions_epoch!=epoch || !original->session_idle())return;
+        (void)original->session_request("thread/read",{{"threadId",threadId},{"includeTurns",false}},"archive-read",threadId);
+    }catch(...) {if(current() && original->generic_authenticated && !original->generic_retiring) {
+        original->sessions_loading=false;original->sessions_error=tr("The archive request could not be confirmed. Refresh the original session before trying again.");emit sessionsChanged();}}
 #else
     Q_UNUSED(threadId);
 #endif
