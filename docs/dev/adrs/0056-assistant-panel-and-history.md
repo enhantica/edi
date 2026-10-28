@@ -3232,3 +3232,28 @@ existing closed native result code maps its broad category, while existing
 diagnostics retain the exact core code/message and target identifies parameter
 or relation. Other exception types keep their existing safe generic handling; no
 arbitrary exception payload is published or new error mechanism introduced.
+
+### 2026-10-28: original workflow readiness precedes visible navigation
+
+The first WorkflowTabButton owns its real asynchronous Loader/preparing state;
+WorkflowPage owns current/enabled and its actual Session project. A preparing
+workflow tab is discovered before final input usability. The same native frame
+waits only for its original Loader status/enabled notifications, coalesced on the
+GUI event loop, then resumes its ordinary tab click. It adds no clock deadline,
+polling, tool replay, forced enablement or programmatic tab selection. Loader
+error or a genuinely disabled project capability refuses with a factual bounded
+message. Stop, owner loss and frame cleanup retire the original notification wait.
+
+Checked alone is not page ownership. Shared parameter/background/relation and
+compound/individual routes confirm the original tab's real loaded item is current,
+enabled and bound to the same project before named-control discovery or visible
+effects. File cues retain that proof through completion. Ordinary OFF native model
+effects and the page-independent status-bar Fit retain their existing contracts.
+Individual progress keeps its already bounded refusal message rather than dropping
+it when selecting the typed individual result. No input parser, scientific rule,
+appearance or pinned dependency changes.
+
+Recognized unsupported-model preparation uses status=unavailable alongside the
+existing unavailable category, so the sole closed outgoing code owner preserves
+that category. Invalid arguments, scope refusal and resource exhaustion retain
+their existing category paths; exact core diagnostics remain separate facts.
