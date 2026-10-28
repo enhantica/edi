@@ -134,15 +134,40 @@ class MainActor:
             return value
         raise AssertionError(f'No actual observation returned for {op}')
 
-    def until(self, predicate, *, seconds=10):
-        deadline = time.monotonic() + seconds
-        while time.monotonic() < deadline:
+    def until(self, predicate, *, seconds=10, visible_progress=False):
+        started = time.monotonic()
+        deadline = started + seconds
+        outer = started + (120 if visible_progress else seconds)
+        last_progress = None
+        advances = 0
+        while time.monotonic() < deadline and time.monotonic() < outer:
             value = self.command('inspect')
             if predicate(value):
                 return value
-        raise AssertionError(
-            'The actual native lifecycle did not settle: ' + json.dumps(self.last)
-        )
+            if visible_progress:
+                ui = value['ui']
+                controls = sorted((c['name'],c['visible'],c['enabled'],c['exposed'])
+                    for c in ui['controls'] if c['visible'] and not c['name'].startswith(('assistant.','statusBar.assistant')))
+                texts = sorted((t['name'],t['display']) for t in ui['texts']
+                    if t['visible'] and 'Agent working' not in t['display'] and not t['name'].startswith(('assistant.','statusBar.assistant')))
+                activities = [(m.get('id'),m.get('status')) for m in ui['messages'] if m.get('kind')=='activity']
+                progress = json.dumps([ui.get('project'),controls,texts,activities],sort_keys=True)
+                if last_progress is None:
+                    last_progress = progress
+                elif progress != last_progress:
+                    advances += 1
+                    last_progress = progress
+                    deadline = time.monotonic() + seconds
+        if visible_progress:
+            elapsed = time.monotonic()-started
+            sequence = self.last['ui'].get('ui_sequence',[])
+            receipt = {'elapsed_seconds':elapsed,'semantic_advances':advances,
+                'cue_moves':sum(x['kind']=='pointer_moved' for x in sequence),
+                'presses':sum(x['kind']=='pointer_pressed' for x in sequence),
+                'reason':'finite outer observation bound' if time.monotonic()>=outer else 'no semantic progress',
+                'stall_seconds':seconds,'outer_seconds':120}
+            (self.folder/'visible-observation-boundary.json').write_text(json.dumps(receipt,indent=2)+'\n')
+        raise AssertionError('The actual native lifecycle did not settle: ' + json.dumps(self.last))
 
     def connect(self):
         if not self.last['ui']['connected']:
@@ -388,7 +413,7 @@ def test_native_estimate_uses_saved_nondefault_options_once_and_ordinary_undo(
     prior_undo = actor.last['ui']['project']['can_undo']
     actor.connect()
     actor.request()
-    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     assert len(actor.responses()) == 1, 'Exactly one actual native tool response must settle'
     native_result(actor.responses()[0])
     expected = REFERENCE['cases']['hrpt']['methods']['arpls']['override']['anchors']
@@ -445,7 +470,7 @@ def test_refused_estimate_cannot_mutate_and_does_not_block_next_native_operation
     original = point_rows(actor)
     actor.connect()
     actor.request()
-    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     first, second = actor.responses()
     assert first['result']['success'] is False, 'The invalid exact target must really refuse'
     model_visible = json.loads(first['result']['contentItems'][0]['text'])
@@ -582,7 +607,7 @@ def test_selected_published_cif_reaches_native_load_without_recreating_structure
     ])
     actor.connect()
     actor.request('Use the attached CIF through native Load structure.')
-    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[0])
     after = actor.last['ui']['project']['structure_rows']
     assert len(after) == len(before) + 1 and after[:-1] == before
@@ -629,7 +654,7 @@ def test_explicit_manual_native_setup_does_not_import_the_attached_cif(
     assert actor.command('selected_add', token=token, paths=[str(path)])['reply']['added']
     actor.connect()
     actor.request('Add the structure manually without loading the attached CIF. Use a=6.173.')
-    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     for response in actor.responses():
         native_result(response)
     rows = actor.last['ui']['project']['structure_rows']
@@ -676,7 +701,7 @@ def test_current_disabled_relation_preserves_ordinary_rows_and_duplicate_call_is
     actor.request()
     actor.until(
         lambda row: bool(actor.responses()) and row['ui']['state'] in {'idle', 'interrupted'}
-    )
+    , visible_progress=show_actions)
     sent = [
         json.loads(line)
         for line in actor.trace.with_suffix('.sent.jsonl').read_text(encoding='utf-8').splitlines()
@@ -744,7 +769,7 @@ def test_native_free_eligibility_follows_current_dev_marks_without_old_boolean_f
     ])
     actor.connect()
     actor.request()
-    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     assert actor.responses()[0]['result']['success'] is False
     native_result(actor.responses()[1])
     after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
@@ -823,7 +848,7 @@ def test_manual_mapped_wyckoff_omission_and_explicit_value_survive_save_reload(
     ])
     actor.connect()
     actor.request('Construct this explicit manual setup and preserve supplied values.')
-    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[0])
     actor.until(lambda row: not row['ui']['project']['calculating'])
     rows = actor.last['ui']['project']['structure_rows']
@@ -1027,7 +1052,7 @@ def test_actual_native_mixed_batch_cannot_bypass_automatic_background_owner(
     ])
     actor.connect()
     actor.request()
-    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     assert actor.responses()[0]['result']['success'] is False
     assert actor.last['ui']['project']['parameters'] == parameters, (
         'Automatic point/poly/Chebyshev ownership must refuse the whole native batch before writes'
@@ -1173,7 +1198,7 @@ def test_native_point_operations_respect_automatic_owner_and_keep_free_flag_cont
             and row['ui']['state'] == 'idle'
             and not row['ui']['project']['calculating']
         )
-    )
+    , visible_progress=show_actions)
     responses = actor.responses()
     for response in responses[1:]:
         native_result(response)
@@ -1269,7 +1294,7 @@ def test_registered_estimate_partial_effects_are_not_relabelled_as_zero_steps(
     actor.command('arm_estimate_publication', mode='throw')
     actor.connect()
     actor.request()
-    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 2 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     payload = json.loads(actor.responses()[0]['result']['contentItems'][0]['text'])
     receipts = [row for row in objects(payload) if 'applied' in row and 'steps_completed' in row]
     assert receipts and any(
@@ -1357,7 +1382,7 @@ def test_compound_default_estimate_refusal_preserves_and_discloses_actual_setup_
         if route == 'mapped'
         else 'Import the selected CIF and measurement and use native Estimate.'
     )
-    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     payload = json.loads(actor.responses()[0]['result']['contentItems'][0]['text'])
     current = actor.last['ui']['project']
     assert current['structures'] == 1 and len(current['backgrounds']) == 1, (
@@ -1416,7 +1441,7 @@ def test_relation_receipts_cover_all_existing_alias_and_constraint_operations(
     actor.configure_turns([calls])
     actor.connect()
     actor.request()
-    actor.until(lambda row: len(actor.responses()) == len(calls) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == len(calls) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     for response in actor.responses():
         native_result(response)
     current = actor.last['ui']['project']
@@ -1494,7 +1519,7 @@ def test_grouped_fixed_and_free_use_exact_full_membership_with_mixed_and_subset_
             lambda row, turn=turn: (
                 len(actor.responses()) == turn + 1 and row['ui']['state'] == 'idle'
             )
-        )
+        , visible_progress=show_actions)
         native_result(actor.responses()[-1])
         by_path = {row['path']: row for row in actor.last['ui']['project']['parameters']}
         wanted = (
@@ -1560,7 +1585,7 @@ def test_native_clear_keeps_the_current_blocked_but_free_parameter_policy(
     ])
     actor.connect()
     actor.request()
-    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[0])
     after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
     assert not after[blocked['path']]['free'], (
@@ -1585,7 +1610,7 @@ def test_unmodified_current_save_uses_the_same_ordinary_owner_once(
     before = actor.last['ui']['project']
     actor.connect()
     actor.request()
-    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: bool(actor.responses()) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[0])
     assert len(actor.responses()) == 1, (
         'E11 F11 unchanged current Save uses the ordinary owned project in both modes'
@@ -2098,7 +2123,7 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
     actor.connect()
     actor.command('clear_ui_sequence')
     actor.request('Create a new project, import the attached CIF and save it.')
-    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     outcomes = [native_result(response) for response in actor.responses()]
     created = outcomes[0]
     assert (created['status'] == 'created' and created['adopted'] and created['complete']
@@ -2189,7 +2214,7 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
     # measurements are invented to make an isolated structure reopenable.
     actor.append_turn([tool_call('create_experiment', 'explicit-structure-persistence-simulation')])
     actor.request('For this separate persistence check add one ordinary calculation-only experiment; add no measured data.')
-    actor.until(lambda row: len(actor.responses()) == 4 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 4 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[-1])
     actor.until(lambda row: not row['ui']['project']['calculating'])
     simulation = json.loads(actor.last['ui']['context'])['datasets'][0]
@@ -2281,7 +2306,7 @@ def test_ordinary_empty_to_created_transition_retains_original_task_and_approved
     )
     actor.command('click', name='assistant.toggle')
     actor.request('Continue the original request.')
-    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     readback = native_result(actor.responses()[0])
     assert any(value == expected_text for row in objects(readback) for value in row.values()
                if isinstance(value, str)), (
@@ -2328,7 +2353,7 @@ def test_native_fit_uses_current_statusbar_owner_from_structure_page(main_actor,
     actor.connect()
     actor.command('clear_ui_sequence')
     actor.request('Fit the current independent polynomial background using its existing free parameters.')
-    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[0])
     assert qml(actor, 'Session.project.fit.canUndo'), (
         'The current native Fit owner actually adopts one result and owns its ordinary Undo'
@@ -2415,7 +2440,7 @@ def test_native_single_crystal_extinction_matches_current_selectors_and_direct_m
     actor.connect()
     for index, token in enumerate(choices):
         actor.request('Select the requested supported extinction family through its ordinary app owner.')
-        actor.until(lambda row: len(actor.responses()) == index + 1 and row['ui']['state'] == 'idle')
+        actor.until(lambda row: len(actor.responses()) == index + 1 and row['ui']['state'] == 'idle', visible_progress=show_actions)
         native_result(actor.responses()[-1])
         assert qml(actor, 'Session.project.currentExperiment.extinctionType') == token, (
             'The registered SC family action changes the actual ordinary current experiment'
@@ -2455,7 +2480,7 @@ def test_native_single_crystal_extinction_matches_current_selectors_and_direct_m
     ]])
     scalar.connect()
     scalar.request('Set the crystal size field directly to 3 mm and keep it fixed.')
-    scalar.until(lambda row: len(scalar.responses()) == 2 and row['ui']['state'] == 'idle')
+    scalar.until(lambda row: len(scalar.responses()) == 2 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     for response in scalar.responses():
         native_result(response)
     assert qml(scalar, 'Session.project.currentExperiment.mosaicDistribution') == changed_distribution, (
@@ -2647,7 +2672,7 @@ def test_refused_empty_create_prefix_settles_load_and_save_without_account_loss(
         tool_call('save_project', 'save-after-refused-create', destination='current'),
     ], [tool_call('inspect_project', 'still-current-no-project')]])
     actor.request('Try the requested new-project name, then report the actual current Save outcome.')
-    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     responses = actor.responses()
     assert all(not row['result']['success'] for row in responses), (
         'Refused Create and subsequent no-project Save each settle their original actual provider call'
@@ -2669,7 +2694,7 @@ def test_refused_empty_create_prefix_settles_load_and_save_without_account_loss(
         'Native refusal encoding cannot retire the account or strand a pending provider reply'
     )
     actor.request('Inspect the actual current state without clearing the conversation.')
-    actor.until(lambda row: len(actor.responses()) == 4 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 4 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     final = actor.responses()[-1]['result']
     assert not final['success'] and json.loads(final['contentItems'][0]['text'])['code'] == 'project_required', (
         'A later actual request remains usable after the refusal prefix without stale reply replay'
@@ -2825,7 +2850,7 @@ def test_fresh_native_experiment_selects_real_sample_form_before_reflection_impo
         tool_call('create_experiment', 'fresh-sc-normal-experiment'),
     ]])
     actor.request('Create a new project from the selected structure and prepare a normal experiment.')
-    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 3 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     result = [native_result(row) for row in actor.responses()]
     assert actor.last['ui']['project']['structures'] == 1, (
         'Fresh SC routing uses one actual native CIF import rather than a prepared SC project'
@@ -2838,7 +2863,7 @@ def test_fresh_native_experiment_selects_real_sample_form_before_reflection_impo
     actor.append_turn([tool_call('set_experiment_type', 'fresh-native-sample-form',
                                 experiment=created_id, axis='sampleForm', token='single crystal')])
     actor.request('Use the original sample form selector to select single-crystal neutron diffraction.')
-    actor.until(lambda row: len(actor.responses()) == 4 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 4 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     selected = native_result(actor.responses()[-1])
     actual_id = selected['datasets'][0]['id']
     context = json.loads(actor.last['ui']['context'])['datasets'][0]
@@ -2857,12 +2882,12 @@ def test_fresh_native_experiment_selects_real_sample_form_before_reflection_impo
     actor.append_turn([tool_call('set_experiment_type', 'fresh-native-sample-form-again',
                                 experiment=created_id, axis='sampleForm', token='single crystal')])
     actor.request('Select the requested single-crystal sample form again after the explicit Undo.')
-    actor.until(lambda row: len(actor.responses()) == 5 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 5 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     actual_id = native_result(actor.responses()[-1])['datasets'][0]['id']
     actor.append_turn([tool_call('load_data', 'fresh-sc-native-reflections',
                                 experiment=actual_id, file_id=ids[measured.name])])
     actor.request('Load the genuine selected measured reflections into that current experiment.')
-    actor.until(lambda row: len(actor.responses()) == 6 and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == 6 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[-1])
     actor.until(lambda row: not row['ui']['project']['calculating'])
     actual = actor.command('sc_input')['reply']
@@ -2903,7 +2928,7 @@ def test_native_create_explicit_names_follow_original_dialog_without_silent_rena
                             for i, name in enumerate(invalid)]])
     actor.command('clear_ui_sequence')
     actor.request('Try each exact requested name and explain any ordinary form validation refusal.')
-    actor.until(lambda row: len(actor.responses()) == len(invalid) and row['ui']['state'] == 'idle')
+    actor.until(lambda row: len(actor.responses()) == len(invalid) and row['ui']['state'] == 'idle', visible_progress=show_actions)
     for response in actor.responses():
         assert not response['result']['success'], (
             'Both native modes refuse exact names the original normal Create form cannot represent'
@@ -3584,3 +3609,102 @@ def test_pending_archive_source_survives_real_same_owner_save_as_publication(mai
     assert (destination/'project.edi').is_file() and actor.last['ui']['project']['structure_rows']==before['structure_rows'], (
         'Actual adopted scientific files and structure values survive the superseding native write without fabricated rollback'
     )
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off','on'])
+def test_original_estimate_member_survives_ordinary_selection_callback_before_effect(main_actor,tmp_path,show_actions):
+    actor=main_actor([[]],show_actions=show_actions);project=copied_estimate_project(tmp_path)
+    source=project/'experiments/bank.edi';other=project/'experiments/bank_second.edi'
+    other.write_text(source.read_text().replace('data_bank\n','data_bank_second\n',1).replace('old_a 10 0','other_a 10 7').replace('old_b 164.84999999999999 0','other_b 164.84999999999999 11'))
+    assert actor.command('open',path=str(project))['reply']['opened'], 'The selection race uses two genuine independently identified native measured datasets'
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    qml(actor,'Session.project.currentExperimentIndex=0')
+    before=actor.last['ui']['project'];requested=before['backgrounds'][0]['id']
+    assert len(before['backgrounds'])==2 and before['backgrounds'][0]!=before['backgrounds'][1], (
+        'The original and successor datasets have distinguishable native state before their ordinary selection callback'
+    )
+    actor.configure_turns([[tool_call('estimate_background','original-member-before-selection',experiment=requested),tool_call('inspect_project','continue-after-selected-member-refusal')]])
+    actor.connect()
+    marker='e11.estimate.selection'
+    signal='pointer.visibleChanged' if show_actions else 'Session.assistant.actionPageRequested'
+    callback=('function(){if(!o.fired && pointer.visible){o.fired=true;o.before=Session.project.currentExperimentIndex;Session.project.currentExperimentIndex=1;o.after=Session.project.currentExperimentIndex;}}' if show_actions else
+              'function(page,extra){if(!o.fired && page==="experiment"){o.fired=true;o.before=Session.project.currentExperimentIndex;Session.project.currentExperimentIndex=1;o.after=Session.project.currentExperimentIndex;}}')
+    setup='(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"'+marker+'";property bool fired:false;property int before:-1;property int after:-1;property var callback:null}\',contentItem);const pointer='+control_expression('assistant.actionPointer')+';o.callback='+callback+';'+signal+'.connect(o.callback);return true;})()'
+    assert qml(actor,setup), 'The actual ordinary selection callback is attached to the current visible cue or OFF follow-page boundary'
+    try:
+        actor.request('Estimate the originally requested current measured dataset and inspect the resulting state.')
+        actor.until(lambda row:len(actor.responses())==2 and row['ui']['state']=='idle', visible_progress=show_actions)
+        changed=qml(actor,'(function(){const o='+control_expression(marker)+';return {fired:o.fired,before:o.before,after:o.after};})()')
+        assert changed=={'fired':True,'before':0,'after':1}, 'A genuine same-owner ordinary selection setter actually executes during the admitted action boundary'
+        assert not actor.responses()[0]['result']['success'], 'A changed requested member cannot be silently replaced by the newly selected dataset'
+        native_result(actor.responses()[1])
+        after=actor.last['ui']['project']
+        assert after['backgrounds']==before['backgrounds'] and after['parameters']==before['parameters'], (
+            'Both original and successor native datasets retain exact prewrite scientific values and flags after selection supersedes the request'
+        )
+        assert after['can_undo']==before['can_undo'], 'A prewrite selected-member refusal cannot add an Undo or hide a partial effect'
+    finally:
+        qml(actor,'(function(){const o='+control_expression(marker)+';const pointer='+control_expression('assistant.actionPointer')+';'+signal+'.disconnect(o.callback);o.destroy();})()')
+
+
+@pytest.mark.parametrize('boundary',['padding','header_width'])
+def test_datatable_internal_ordinary_setter_retirement_preserves_live_width_contract(main_actor,tmp_path,boundary):
+    actor=main_actor([[]]);source=copied_estimate_project(tmp_path);successor=tmp_path/'independent-successor'
+    shutil.copytree(source,successor)
+    assert actor.command('open',path=str(source))['reply']['opened'], 'Internal column lifetime uses the genuine ordinary project/page owner'
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    wait_positive_tab(actor,'appBar.tab.structure');actor.command('click',name='appBar.tab.structure')
+    witness='e11.table.internal.witness'
+    qml(actor,'(function(){Qt.createQmlObject(\'import QtQuick; import edi.app; Item {objectName:"'+witness+'";property bool armed:false;property string boundary:"'+boundary+'";property int hits:0;property bool opened:false;property var held:null;function padding(cell,table){if(armed && boundary==="padding" && table.basePaddings.has(cell)){armed=false;hits++;opened=Session.openProject('+json.dumps(successor.as_uri())+');}}function header(cell,table){if(armed && boundary==="header_width" && table.basePaddings.has(cell)){armed=false;hits++;opened=Session.openProject('+json.dumps(successor.as_uri())+');}}}\',contentItem);return true;})()')
+    component=r'''import QtQuick
+import QtQuick.Controls
+import EasyApplication.Gui.Elements as E
+import EasyApplication.Gui.Components as C
+import edi.app
+DataTable {
+ id: t
+ objectName: "e11.actual.column.fixture"
+ width: parent.width-40
+ height: 180
+ columns: [numberColumnWidth,-1,-1]
+ function findWitness(){const w=Window.window;if(!w)return null;const todo=[w.contentItem];while(todo.length){const v=todo.pop();if(v.objectName==="e11.table.internal.witness")return v;for(const c of v.children??[])todo.push(c);}return null;}
+ readonly property var witness: findWitness()
+ sourceModel: ListModel {ListElement {word:"Independent native column";amount:3.71} ListElement {word:"Second row";amount:14.6}}
+ header: C.ListViewHeader {
+  C.ListViewLabel {text:"#"}
+  C.ListViewLabel {text:"Name"}
+  C.ListViewLabel {id: headerValue;text:"Value";onWidthChanged:if(t.witness)t.witness.header(headerValue,t)}
+ }
+ delegate: C.ListViewRow {
+  id: r
+  required property int index
+  required property string word
+  required property real amount
+  C.ListViewLabel {text:String(r.index+1)}
+  E.Label {id: labelCell;text:r.word;onLeftPaddingChanged:if(t.witness)t.witness.padding(labelCell,t)}
+  E.Label {property real number:r.amount;text:String(number)}
+ }
+}'''
+    def create_table():
+        return qml(actor,'(function(){const w='+control_expression(witness)+';w.held=Qt.createQmlObject('+json.dumps(component)+',assistantWorkflowPage);return Qt.isQtObject(w.held);})()')
+    assert create_table(), 'The fixture instantiates the actual existing DataTable and FIRST row/header components rather than replacing their width logic'
+    actor.until(lambda row:qml(actor,'(function(){const w='+control_expression(witness)+';return Qt.isQtObject(w.held)&&w.held.fittedWidths.length===3&&w.held.fittedWidths.every(x=>Number.isFinite(x)&&x>0);})()'))
+    normal=qml(actor,'(function(){const w='+control_expression(witness)+';return {width:w.held.width,columns:w.held.columnWidths,rows:w.held.count};})()')
+    assert normal['rows']==2 and all(value>0 for value in normal['columns']), 'Ordinary live column measurements and header widths are valid before the retirement escape'
+    if boundary=='padding':
+        qml(actor,'(function(){const w='+control_expression(witness)+';w.held.destroy();w.armed=true;})()')
+        assert create_table(), 'A fresh ordinary row reaches its first genuine padding setter after the lifetime witness is armed'
+    else:
+        qml(actor,'(function(){const w='+control_expression(witness)+';w.armed=true;width=width+103;})()')
+    actor.until(lambda row:qml(actor,'('+control_expression(witness)+').hits')==1)
+    observed=qml(actor,'(function(){const w='+control_expression(witness)+';return {hits:w.hits,opened:w.opened,retired:!Qt.isQtObject(w.held)};})()')
+    assert observed=={'hits':1,'opened':True,'retired':True}, (
+        'An actual inner padding/header-width setter invokes ordinary replacement and destroys the original table before its helper tail resumes'
+    )
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    assert actor.last['ui']['project']['path']==str(successor), 'Ordinary replacement retains its real scientific successor through column-helper retirement'
+    wait_positive_tab(actor,'appBar.tab.structure');actor.command('click',name='appBar.tab.structure')
+    qml(actor,'('+control_expression(witness)+').armed=false')
+    assert create_table(), 'A new current ordinary table still owns valid layout after the retired helper has settled'
+    actor.until(lambda row:qml(actor,'(function(){const w='+control_expression(witness)+';return w.held.fittedWidths.length===3&&w.held.fittedWidths.every(x=>Number.isFinite(x)&&x>0);})()'))
+    assert qml(actor,'('+control_expression(witness)+').held.count')==2, 'Normal current native row/column layout remains available after retiring the original callback owner'
