@@ -1,24 +1,25 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# ADR-0056: the canonical Pixi task provisions original source; this adapter builds only its native math subtargets.
+# ADR-0056: Pixi installs the original source dependency; this adapter builds only its native math subtargets.
 if(EMSCRIPTEN)
     return()
 endif()
-set(_edi_math_manifest "${PROJECT_SOURCE_DIR}/build/deps/assistant-math.json")
-if(NOT EXISTS "${_edi_math_manifest}")
-    message(FATAL_ERROR "Native math source is absent. Run pixi run -e app assistant-math first.")
-endif()
-file(READ "${_edi_math_manifest}" _edi_math)
+find_file(EDI_ASSISTANT_MATH_MANIFEST NAMES input.json
+    HINTS "$ENV{PIXI_ENVIRONMENT_PREFIX}" "$ENV{CONDA_PREFIX}"
+    PATH_SUFFIXES share/edi/assistant/mathtext/9e9f0af8b140192e3de7ff866a0013e7da5e1e93
+    NO_DEFAULT_PATH NO_CACHE REQUIRED)
+file(READ "${EDI_ASSISTANT_MATH_MANIFEST}" _edi_math)
 string(JSON _edi_math_schema GET "${_edi_math}" schema)
 string(JSON _edi_math_commit GET "${_edi_math}" commit)
-string(JSON _edi_math_manifest_hash GET "${_edi_math}" manifest_sha256)
-file(SHA256 "${PROJECT_SOURCE_DIR}/pixi.toml" _edi_math_current_manifest_hash)
-if(NOT _edi_math_schema STREQUAL "edi.assistant.math-source/1" OR NOT _edi_math_manifest_hash STREQUAL _edi_math_current_manifest_hash)
-    message(FATAL_ERROR "Native math provisioning is stale. Run the canonical Pixi assistant-math task.")
+string(JSON _edi_math_relative_source GET "${_edi_math}" source)
+if(NOT _edi_math_schema STREQUAL "edi.assistant.math-package/1" OR
+   NOT _edi_math_commit STREQUAL "9e9f0af8b140192e3de7ff866a0013e7da5e1e93" OR
+   NOT _edi_math_relative_source STREQUAL "source")
+    message(FATAL_ERROR "Installed native math package is incompatible; install the locked app environment.")
 endif()
-string(JSON EDI_ASSISTANT_MATH_SOURCE GET "${_edi_math}" source)
-file(REAL_PATH "${PROJECT_SOURCE_DIR}/build/deps/jkqtmathtext/${_edi_math_commit}/source" _edi_math_expected_source)
-if(NOT EDI_ASSISTANT_MATH_SOURCE STREQUAL _edi_math_expected_source OR IS_SYMLINK "${EDI_ASSISTANT_MATH_SOURCE}")
-    message(FATAL_ERROR "Native math source identity changed.")
+get_filename_component(_edi_math_package "${EDI_ASSISTANT_MATH_MANIFEST}" DIRECTORY)
+set(EDI_ASSISTANT_MATH_SOURCE "${_edi_math_package}/source")
+if(NOT IS_DIRECTORY "${EDI_ASSISTANT_MATH_SOURCE}" OR IS_SYMLINK "${EDI_ASSISTANT_MATH_SOURCE}")
+    message(FATAL_ERROR "Native math package source identity changed.")
 endif()
 string(JSON _edi_math_count LENGTH "${_edi_math}" files)
 file(GLOB_RECURSE _edi_math_files LIST_DIRECTORIES false RELATIVE "${EDI_ASSISTANT_MATH_SOURCE}" "${EDI_ASSISTANT_MATH_SOURCE}/*")

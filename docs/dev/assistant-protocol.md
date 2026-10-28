@@ -11,11 +11,15 @@ Independent probes include the real public header and link `edi::core`. The test
 Current slice: parameter inspection, diagnostics, explicit plan approval, typed parameter/free edits, isolated single/joint real FitJob trials and checked result adoption. Scan artifact transactions, complete baseline-objective establishment, product skill resources, attachment transfer, native Claude, browser companion/hosted delivery and native project conversion remain owed. A missing recorded comparable baseline prevents automatic adoption rather than inventing an improvement.
 
 
-Developer native helper input is provisioned with `pixi run -e app assistant-runtime` before a
-native CMake configure. `python tools/deps/provision-assistant-runtime.py --offline` uses the same
-canonical Pixi pin and retained verified archive when developing offline. CMake consumes the
-published `build/deps/codex/provisioned/<target>/input.json`; missing or changed input fails closed.
-The installed app does not depend on this developer Python/Pixi provisioning path.
+The app environment declares two genuine local Pixi source dependencies. The runtime recipe
+wraps the exact official 0.162.1 standalone app-server archive, its executable/resource closure and
+original notices. The math source recipe installs only the pinned Common/MathText/XITS closure;
+the original app compiler and Qt kit still compile those subtargets. Pixi installs/reuses packages
+before tasks execute. No assistant provision task or task dependency hook remains. Recipe SHA256
+pins, the compatible backend pin and the generated per-platform `pixi.lock` own acquisition.
+CMake reads installed namespaced receipts and stages immutable application runtime copies only
+inside its own build tree. It never writes into the Pixi dependency prefix. The installed Edi/QtIFW
+bundle carries native bytes/fonts/notices, with no Python/Pixi build runtime.
 
 Official assistant task threads are durable and reconnect by their original opaque thread ID only
 under the same actual project/account/disclosure. `thread/resume` requests `excludeTurns=true`:

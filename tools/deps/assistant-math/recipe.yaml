@@ -1,0 +1,28 @@
+# Source/font package only: Edi's original compiler/Qt kit builds upstream subtargets.
+context:
+  version: "5.0.0"
+  commit: "9e9f0af8b140192e3de7ff866a0013e7da5e1e93"
+  archive_sha256: "e70f491cee4203a74f76a86c197bd456c89371db35cf7b0068d4db1b21e44e00"
+package:
+  name: edi-assistant-math-source
+  version: ${{ version }}
+source:
+  url: https://codeload.github.com/jkriege2/JKQtPlotter/tar.gz/${{ commit }}
+  sha256: ${{ archive_sha256 }}
+  target_directory: upstream
+build:
+  number: 0
+  noarch: generic
+  prefix_detection:
+    ignore: true
+  script: python "$RECIPE_DIR/install.py" --source "$SRC_DIR/upstream" --prefix "$PREFIX"
+requirements:
+  build:
+    - python >=3.12
+about:
+  homepage: https://github.com/jkriege2/JKQtPlotter
+  summary: Original minimal JKQT Common/MathText source and XITS fonts for Edi
+  license: LGPL-2.1-or-later AND OFL-1.1
+  license_file:
+    - upstream/LICENSE
+    - upstream/lib/jkqtmathtext/resources/xits/OFL.txt
