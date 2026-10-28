@@ -201,6 +201,21 @@ Popup {
         function onCountChanged() { panel.retireConsentSend(); }
         function onDataChanged() { panel.retireConsentSend(); }
     }
+    Component.onCompleted: Qt.callLater(function() {if(Qt.isQtObject(panel) && Qt.isQtObject(panel.assistant))panel.assistant.restoreLastSession();})
+    Connections {
+        target: panel.assistant
+        function onSessionProjectRequested(threadId,location) {
+            const original=panel.assistant;
+            AppState.afterChanges(function() {
+                if(!Qt.isQtObject(panel) || !Qt.isQtObject(original) || panel.assistant!==original)return;
+                if(Session.openProject(location) && Qt.isQtObject(original) && panel.assistant===original)original.continueSessionRestore(threadId);
+            });
+        }
+        function onSessionConsentRequested(threadId) {
+            if(!Qt.isQtObject(panel) || !Qt.isQtObject(connectionDialog))return;
+            connectionDialog.beginOffer();connectionDialog.open();
+        }
+    }
     Component.onDestruction: retireConsentSend()
     // A user navigation link always refers to the current project's normal
     // Report page. Other links retain their completed-row/file ownership checks.
