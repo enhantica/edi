@@ -47,6 +47,8 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool sessionsLoading READ sessionsLoading NOTIFY sessionsChanged)
     Q_PROPERTY(bool sessionsHaveMore READ sessionsHaveMore NOTIFY sessionsChanged)
     Q_PROPERTY(QString sessionsError READ sessionsError NOTIFY sessionsChanged)
+    Q_PROPERTY(bool cachedHistoryClearing READ cachedHistoryClearing NOTIFY cachedHistoryChanged)
+    Q_PROPERTY(QString cachedHistoryError READ cachedHistoryError NOTIFY cachedHistoryChanged)
     Q_PROPERTY(edi_app::RowTableModel* selectedFiles READ selectedFiles CONSTANT)
     Q_PROPERTY(edi_app::RowTableModel* skills READ skills CONSTANT)
     Q_PROPERTY(QString selectedSkill READ selectedSkill NOTIFY selectedSkillChanged)
@@ -89,6 +91,9 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void refreshSessions(bool nextPage = false);
     Q_INVOKABLE void archiveSession(const QString& threadId);
     Q_INVOKABLE void selectSession(const QString& threadId);
+    bool cachedHistoryClearing() const;
+    QString cachedHistoryError() const;
+    Q_INVOKABLE void clearCachedHistory();
     RowTableModel* selectedFiles() const;
     RowTableModel* skills() const;
     QString selectedSkill() const;
@@ -149,6 +154,7 @@ class AssistantViewModel : public QObject {
    signals:
     void sessionsChanged();
     void sessionSelected(const QString& threadId);
+    void cachedHistoryChanged();
     void workReportFinished(QVariantMap receipt);
     void workReportReceiptChanged();
     void accountChanged();
