@@ -17,6 +17,7 @@ import subprocess
 import sys
 import time
 from operator import itemgetter
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 import pytest
@@ -96,13 +97,19 @@ class MainActor:
         reads = []
         def unsettled(reason, pending):
             self._stream_unusable = {'sequence': sequence, 'op': op, 'reason': reason}
-            (self.folder / 'unsettled-command-bytes.bin').write_bytes(pending)
-            (self.folder / 'unsettled-command.json').write_text(json.dumps({
+            self._unsettled_bytes = pending
+            self._unsettled_command = {
                 **self._stream_unusable, 'started_monotonic': started,
                 'failed_monotonic': time.monotonic(), 'read_chunks': reads,
                 'pending_bytes': len(pending), 'pid': self.process.pid,
                 'process_exit': self.process.poll(),
-            }, indent=2) + '\n')
+            }
+            try:
+                (self.folder / 'unsettled-command-bytes.bin').write_bytes(pending)
+                (self.folder / 'unsettled-command.json').write_text(
+                    json.dumps(self._unsettled_command, indent=2) + '\n')
+            except OSError as failure:
+                self._unsettled_command['evidence_persistence_error'] = type(failure).__name__
         (self.folder / 'command-boundary.json').write_text(json.dumps({
             'op': op, 'pid': self.process.pid, 'started_monotonic': time.monotonic(),
             'reply_observed': False, 'process_exit_before_command': self.process.poll(),
@@ -146,8 +153,12 @@ class MainActor:
                 unsettled('invalid UTF-8 reply framing', raw + b'\n' + buffered)
                 raise
             if not line.startswith('{'):
-                with (self.folder / 'host.stdout-diagnostics').open('a') as output:
-                    output.write(line + '\n')
+                try:
+                    with (self.folder / 'host.stdout-diagnostics').open('a') as output:
+                        output.write(line + '\n')
+                except OSError:
+                    unsettled('stdout notice persistence failed before original reply', raw + b'\n' + buffered)
+                    raise
                 continue
             try:
                 value = json.loads(line)
@@ -480,15 +491,35 @@ def test_native_estimate_uses_saved_nondefault_options_once_and_ordinary_undo(
         assert True in actor.last['ui']['action_transitions'], (
             'Show actions must actually enter its native visible flow'
         )
+    # Immutable reference: Crysta058166 su_format.cpp round_plain is SIX
+    # significant figures, HALF-AWAY; save_project.cpp keeps positions exact.
+    # This is an independent decoded-codec expectation, never writer output.
+    def ordinary_no_su(value):
+        number=Decimal(str(value))
+        if number.is_zero():return float(number)
+        return float(number.quantize(Decimal(1).scaleb(number.adjusted()-5),rounding=ROUND_HALF_UP))
+    decoded=[{**point,'intensity':ordinary_no_su(point['intensity'])} for point in points]
+    before_background=json.loads(actor.last['ui']['context'])['datasets'][0]['background']
+    assert all(point.get('uncertainty') in (None,0) for point in before_background['anchors']), (
+        'The independently specified six-figure rule is exercised only by this genuine no-SU background fixture'
+    )
+    settings={key:before_background[key] for key in ('type','estimate')}
     assert actor.command('save')['reply']['saved']
+    assert point_rows(actor)==decoded, (
+        'Ordinary Save adopts precisely the independently specified no-SU six-figure tokens while IDs, order, positions and flags stay exact'
+    )
     actor.command('undo')
     actor.until(lambda row: not row['ui']['project']['calculating'])
     assert point_rows(actor) == original, 'One ordinary Undo restores the whole prior background'
     assert actor.last['ui']['project']['can_undo'] == prior_undo
     assert actor.command('open', path=str(project))['reply']['opened']
     actor.until(lambda row: not row['ui']['project']['calculating'])
-    assert point_rows(actor) == points, (
-        'Save/reload preserves exact native estimated IDs and values'
+    assert point_rows(actor) == decoded, (
+        'Genuine Open preserves exact IDs, order, positions and flags plus the independent decoded ordinary intensity codec'
+    )
+    reopened_background=json.loads(actor.last['ui']['context'])['datasets'][0]['background']
+    assert {key:reopened_background[key] for key in ('type','estimate')}==settings, (
+        'Background family and every independently retained native Estimate setting remain exact through Save and genuine Open'
     )
 
 
@@ -2203,10 +2234,8 @@ def test_empty_current_session_uses_normal_create_load_and_current_save(main_act
         # FIRST77 Main.qml175 defines assistantSelected as the return/preference
         # icon state. It may stay true while native presentation hides Assistant.
         # Preserve that observation and check its documented formula separately.
-        assert qml(actor, '(function(){const toggle=' + control_expression('assistant.toggle')
-            + ';const panel=' + control_expression('assistant.popup')
-            + ';return toggle.assistantSelected === (panel.shown || '
-            + '(Session.assistant.showingActions && Preferences.assistantShown));})()'), (
+        assert qml(actor, 'assistantToggle.assistantSelected === (assistantPanel.shown || '
+            '(Session.assistant.showingActions && Preferences.assistantShown))'), (
             'The original selected-bit observation retains its documented return/preference icon semantics'
         )
         assert any(row['kind'] == 'mouse_press' and row.get('create_contains_press')
@@ -2405,6 +2434,10 @@ def test_native_fit_uses_current_statusbar_owner_from_structure_page(main_actor,
     before = actor.last['ui']['project']['parameters']
     actor.connect()
     actor.command('clear_ui_sequence')
+    if show_actions:
+        assert qml(actor,r'''(function(){const o=Qt.createQmlObject('import QtQuick; Item {objectName:"e11.fit.physical.sidebar";property var rows:[];property var cue:null;}',contentItem);o.cue=function(position){const page=window.assistantWorkflowPage;const seek=function(item){if(!item)return null;if(item.objectName==="sideBar.tab.basic")return item;for(const child of item.children||[]){const found=seek(child);if(found)return found;}return null;};const tab=seek(page);const point=tab?tab.mapToItem(contentItem,0,0):null;o.rows=o.rows.concat([{assistant_visible:assistantPanel.visible,logical_selected:assistantToggle.assistantSelected,formula_correct:assistantToggle.assistantSelected===(assistantPanel.shown||(Session.assistant.showingActions&&Preferences.assistantShown)),normal_exposed:!!page&&page.current&&page.enabled&&!!tab&&tab.visible&&tab.enabled&&point.x>=0&&point.y>=0&&point.x+tab.width<=contentItem.width&&point.y+tab.height<=contentItem.height}]);};Session.assistant.actionPointerMoved.connect(o.cue);return true;})()'''), (
+            'The same Main observer reads physical normal controls and the original logical preference formula at the real Fit cue'
+        )
     actor.request('Fit the current independent polynomial background using its existing free parameters.')
     actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle', visible_progress=show_actions)
     native_result(actor.responses()[0])
@@ -2417,9 +2450,14 @@ def test_native_fit_uses_current_statusbar_owner_from_structure_page(main_actor,
     )
     if show_actions:
         pointers = [row for row in actor.last['ui']['ui_sequence'] if row['kind'].startswith('pointer_')]
-        assert pointers and all(not row['assistant_visible'] and not row['assistant_selected'] for row in pointers), (
-            'The Show ON Fit operation exposes the real normal sidebar before current-control presentation'
+        assert pointers and all(not row['assistant_visible'] for row in pointers), (
+            'The Show ON Fit operation physically hides Assistant before current-control presentation'
         )
+        physical=qml(actor,'('+control_expression('e11.fit.physical.sidebar')+').rows')
+        assert physical and all(row['normal_exposed'] and not row['assistant_visible'] and row['formula_correct'] for row in physical), (
+            'Real current normal controls are exposed at every Fit cue while the retained selected-bit observation follows its original return/preference formula'
+        )
+        qml(actor,'(function(){const o='+control_expression('e11.fit.physical.sidebar')+';Session.assistant.actionPointerMoved.disconnect(o.cue);o.destroy();})()')
     assert not any('Local work report saved' in row['display'] for row in actor.last['ui']['texts'] if row['visible']), (
         'Automatic diagnostics remain written without unsolicited visible chat or footer status chatter'
     )
@@ -3948,3 +3986,104 @@ def test_main_reader_complete_fifo_and_predicate_timeout_keep_usable_ownership(t
             actor.process.wait(timeout=2)
         if not actor.process.stdout.closed:actor.process.stdout.close()
         if not actor.stderr.closed:actor.stderr.close()
+
+
+@pytest.mark.parametrize('evidence_fault',[False,True],ids=['notice_only','notice_and_failure_artifact'])
+def test_main_reader_notice_io_failure_keeps_original_owner_through_cleanup(tmp_path,monkeypatch,evidence_fault):
+    evidence=tmp_path/'server-evidence.json'
+    packet=b'library notice\n{"ui":{"alive":true},"reply":{"value":"original"}}\n'
+    program="import sys,json,os;first=json.loads(sys.stdin.readline());os.write(1,bytes.fromhex(sys.argv[2]));rest=sys.stdin.read();open(sys.argv[1],'w').write(json.dumps({'first':first,'later_input':rest}))"
+    actor=MainActor.__new__(MainActor);actor.folder=tmp_path
+    actor.process=subprocess.Popen([sys.executable,'-c',program,str(evidence),packet.hex()],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1);actor.stderr=actor.process.stderr
+    original_open=Path.open
+    def local_fault(path,*args,**kwargs):
+        if path.name=='host.stdout-diagnostics' or (evidence_fault and path.name.startswith('unsettled-command')):
+            raise PermissionError('deliberate local notice evidence failure')
+        return original_open(path,*args,**kwargs)
+    monkeypatch.setattr(Path,'open',local_fault)
+    try:
+        with pytest.raises(PermissionError,match='local notice evidence failure'):
+            actor.command('original')
+        boundary=json.loads((tmp_path/'command-boundary.json').read_text())
+        assert actor._unsettled_bytes==packet and actor._unsettled_command['op']=='original', (
+            'Actual coalesced notice and unread reply bytes remain original-owned even when both diagnostic persistence paths fail'
+        )
+        with pytest.raises(RuntimeError,match='no successor command was sent'):
+            actor.command('successor')
+        actor.close()
+        observed=json.loads(evidence.read_text())
+        assert observed['first']['op']=='original' and observed['later_input']=='', (
+            'Independent actual pipe stdin proves notice-I/O failure cannot send successor or automatic cleanup queries'
+        )
+        assert json.loads((tmp_path/'command-boundary.json').read_text())==boundary, (
+            'Local diagnostic I/O cannot overwrite the incomplete original command boundary with a fabricated cleanup result'
+        )
+    finally:
+        if actor.process.poll() is None:
+            if not actor.process.stdin.closed:actor.process.stdin.close()
+            actor.process.wait(timeout=2)
+        if not actor.process.stdout.closed:actor.process.stdout.close()
+        if not actor.stderr.closed:actor.stderr.close()
+
+
+@pytest.mark.parametrize('show_actions',[False,True],ids=['off','on'])
+@pytest.mark.parametrize('category',['invalid_argument','out_of_scope','unsupported_model'])
+def test_actual_native_preparation_refusals_keep_specific_projected_feedback_without_writes(main_actor,tmp_path,show_actions,category):
+    actor=main_actor([[]],show_actions=show_actions)
+    if category=='unsupported_model':
+        assert actor.command('create',name='diagnostic_owner')['reply']['created'], (
+            'Unsupported relation diagnostics retain a genuine ordinary current project with an empty scientific graph'
+        )
+        call=tool_call('add_relations','specific-preparation-refusal',aliases=[{'id':'native_alias','path':'structure.cell.length_a'}],
+            constraints=[{'id':'native_constraint','expression':'native_alias = native_alias','enabled':True}])
+    else:
+        project=copied_estimate_project(tmp_path)
+        assert actor.command('open',path=str(project))['reply']['opened'], (
+            'Native parameter diagnostic controls use the unchanged independent measured fixture and current owner'
+        )
+        actor.until(lambda row:not row['ui']['project']['calculating'])
+        if category=='invalid_argument':
+            call=tool_call('set_parameters','specific-preparation-refusal',values=[{'path':'unknown.owner.field','value':1.237}])
+        else:
+            dependent=next(p for p in actor.last['ui']['project']['parameters'] if p['dependence']!=0)
+            call=tool_call('set_free','specific-preparation-refusal',flags=[{'path':dependent['path'],'free':True}])
+    before=actor.last['ui']['project']
+    actor.configure_turns([[call,tool_call('inspect_project','continue-after-specific-refusal')]])
+    actor.connect();actor.request('Validate this explicit rejected request and inspect the unchanged current project.')
+    actor.until(lambda row:len(actor.responses())==2 and row['ui']['state']=='idle')
+    first=actor.responses()[0]['result'];body=json.loads(first['contentItems'][0]['text'])
+    expected={'invalid_argument':'invalid_arguments','out_of_scope':'refused','unsupported_model':'unavailable'}[category]
+    assert first['success'] is False and body['code']==expected, (
+        'Actual model-visible native bytes retain each original preparation refusal category after the production projector'
+    )
+    assert any(d['code']==category and d['message'] and d['severity']=='error' for d in body['diagnostics']) and body['message'], (
+        'Specific sanitized native diagnostics and their useful app message survive instead of the generic scope/capacity text'
+    )
+    native_result(actor.responses()[1]);after=actor.last['ui']['project']
+    def science(project):
+        return {'name':project['name'],'path':project['path'],'structure_rows':project['structure_rows'],
+            'backgrounds':project['backgrounds'],'aliases':project['aliases'],'constraints':project['constraints'],'can_undo':project['can_undo'],
+            'parameters':[{k:p[k] for k in ('path','value','free','dependence')} for p in project['parameters']]}
+    assert science(after)==science(before) and actor.last['ui']['connected'], (
+        'Preparation refusals cannot write science, replace its owner, add Undo or retire the account before a valid read continuation'
+    )
+
+
+def test_recognized_preparation_categories_survive_actual_wire_and_byte_projection(main_actor):
+    actor=main_actor([[]])
+    # Resource allocation failure is a projection-only control: no forced OOM,
+    # synthetic work quota or claim of end-to-end VM allocation-path execution.
+    categories=[('invalid_argument','refused','invalid_arguments'),('out_of_scope','refused','refused'),
+        ('unsupported_model','unavailable','unavailable'),('resource_exhausted','refused','resource_exhausted')]
+    cases=[{'source':{'status':status,'code':code,'message':'Scoped native validation Ω',
+        'diagnostics':[{'code':diagnostic,'message':'Scoped native validation Ω','severity':'error','actionable':True}]}}
+        for diagnostic,status,code in categories]
+    actual=actor.command('outgoing_projection_cases',cases=cases)['reply']['cases']
+    for (diagnostic,status,code),row in zip(categories,actual,strict=True):
+        wire=json.loads(row['wire'])
+        assert not row['rejected'] and row['size']==row['wire_bytes']==len(row['wire'].encode()), (
+            'Every recognized native refusal reaches the actual compact wire with one accurate byte-count owner'
+        )
+        assert wire['code']==code and wire['diagnostics'][0]['code']==diagnostic and wire['message']=='Scoped native validation Ω', (
+            'Literal original category meanings survive real materialization rather than only a constructed catch object'
+        )
