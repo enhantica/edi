@@ -274,3 +274,18 @@ Unavailable values or operations remain explicit limits. After Undo or repair,
 current fit/report availability is inspected and a justified fit re-establishes
 current results before reporting a completed refinement. Existing refinement
 scope, wavelength/chemistry constraints and finite exploration budget remain.
+
+
+### 2026-10-28: physical trial assessment and adaptive reassessment
+
+Refinement strategy 1.4.1 restores useful guidance from the original strategy:
+use actual alignment and residual shape, assess the physical profile immediately
+after a trial, and spend the original current fit Undo before another fit replaces
+it. Following structural/displacement changes, an earlier unstable identifiable
+group can be reconsidered when current evidence warrants it. McCusker et al.'s
+profile/structural guidance (sections 4, 5 and 7) supports these decision criteria.
+The existing accepted-state, calibration, composition and native-operation owners
+remain authoritative. The agent chooses useful work and its endpoint; this adds
+no fixed stage order, exploration count, reference objective, solver bound or
+specimen-specific values. The original catalogue version and content hash advance
+together, and this guidance change alone establishes no scientific or runtime pass.
