@@ -41,6 +41,8 @@
 #include <QFileInfo>
 #include <QJSValue>
 #include <QJsonArray>
+#include <QDateTime>
+#include <QLocale>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QCborValue>
@@ -1047,6 +1049,9 @@ struct AssistantViewModel::State {
 #endif
     QJsonArray history;
     Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history, true};
+    Rows sessions{{"id","name","modified","current","canArchive"},&owner};
+    bool sessions_loading=false,sessions_more=false;
+    QString sessions_error;
     Rows models{{"id", "displayName", "efforts", "available"}, &owner};
     QJsonArray skill_catalog_rows;
     Rows skills{{"id", "version", "title", "summary", "path", "sha256", "requires", "capabilities", "references", "content", "available", "blocked_reason"}, &owner,&skill_catalog_rows};
@@ -1454,6 +1459,148 @@ struct AssistantViewModel::State {
     };
     std::optional<ResumeCheckpoint> resume_checkpoint;
     bool generic_durable=false,generic_resuming=false;
+
+    struct SessionRequest {
+        QString kind,target,cursor,currentThread,email;
+        quint64 binding=0,account=0,transport=0,epoch=0;
+        QPointer<ProjectViewModel> project;
+    };
+    QMap<QString,SessionRequest> session_requests;
+    QMap<QString,Object> session_metadata;
+    QString sessions_cursor;
+    quint64 sessions_epoch=0;
+    bool session_idle() const {
+        return generic_authenticated && !generic_busy && !generic_connecting && !generic_retiring &&
+            !generic_revoke_pending && !generic_clear_pending && !generic_context_pending &&
+            !generic_held_row && generic_rpc_rows.isEmpty() && generic_rpc_turns.isEmpty() &&
+            generic_question_id.isEmpty() && !file_selection && !file_staging && !native_worker_admitted() &&
+            (!native_fit || !native_fit->nativeRunning()) &&
+            (!native_call || (native_call->resolved && native_call->record->answered)) && agent &&
+            agent->outputOwnerState()==CodexAgent::OutputOwnerState::Released;
+    }
+    static QJsonArray session_source_kinds() {
+        return {"cli","vscode","exec","appServer","subAgent","subAgentReview","subAgentCompact","subAgentThreadSpawn","subAgentOther","unknown"};
+    }
+    bool owned_session(const Object& thread) const {
+        if(thread.value("originator")!="edi" || thread.value("ephemeral")!=false ||
+            !thread.value("id").isString() || thread.value("id").toString().isEmpty())return false;
+        const auto modified=thread.value("updatedAt").toDouble(std::numeric_limits<double>::quiet_NaN());
+        if(!std::isfinite(modified) || std::floor(modified)!=modified || modified < -8640000000000.0 || modified > 8640000000000.0)return false;
+        const auto cwd=thread.value("cwd").toString();
+        const auto root=QFileInfo(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/agent").canonicalFilePath();
+        const QFileInfo workspace(cwd);const auto canonical=workspace.canonicalFilePath();
+        if(root.isEmpty() || canonical!=cwd || !workspace.isDir() || workspace.fileName()!="workspace")return false;
+        const auto issued=workspace.dir();const auto token=issued.dirName();const QUuid uuid(token);
+        if(uuid.isNull() || uuid.toString(QUuid::WithoutBraces)!=token || issued.absolutePath()!=root+u'/'+token)return false;
+        const QFileInfo instruction(cwd+"/.agents/skills/project-assistance/SKILL.md");
+        if(!instruction.isFile() || instruction.isSymLink() || instruction.canonicalFilePath()!=instruction.absoluteFilePath())return false;
+#if defined(Q_OS_UNIX)
+        struct stat identity{};const auto bytes=QFile::encodeName(issued.absolutePath());
+        if(::lstat(bytes.constData(),&identity) || !S_ISDIR(identity.st_mode) || identity.st_uid!=::getuid() || (identity.st_mode&0077))return false;
+#endif
+        return true;
+    }
+    bool session_request_current(const SessionRequest& request) const {
+        return publishing && generic_authenticated && !generic_retiring && request.epoch==sessions_epoch &&
+            request.binding==generation && request.account==usage_epoch && request.project==project &&
+            request.currentThread==generic_thread && agent && request.transport==agent->outputGeneration() &&
+            request.email==generic_native.value("account").toObject().value("email").toString();
+    }
+    void publish_sessions() {
+        QList<Object> ordered=session_metadata.values();
+        std::stable_sort(ordered.begin(),ordered.end(),[](const Object& a,const Object& b){
+            const auto at=a.value("updatedAt").toDouble(),bt=b.value("updatedAt").toDouble();
+            return at==bt?a.value("id").toString()<b.value("id").toString():at>bt;
+        });
+        QJsonArray rows;
+        for(const auto& thread:ordered) {
+            const auto id=thread.value("id").toString();QString name=thread.value("name").toString();
+            if(name.trimmed().isEmpty())name=thread.value("preview").toString().section(u'\n',0,0).trimmed();
+            if(name.isEmpty())name=QObject::tr("Untitled session");
+            QString modified=QObject::tr("Unavailable");const auto seconds=thread.value("updatedAt").toDouble(std::numeric_limits<double>::quiet_NaN());
+            if(std::isfinite(seconds) && std::floor(seconds)==seconds && seconds>=-8640000000000.0 && seconds<=8640000000000.0) {
+                const auto date=QDateTime::fromSecsSinceEpoch(static_cast<qint64>(seconds)).toLocalTime();
+                if(date.isValid())modified=QLocale(QLocale::English).toString(date,"dd MMM yyyy 'at' HH:mm");
+            }
+            const auto status=thread.value("status").toObject().value("type").toString();
+            rows.append(Object{{"id",id},{"name",name},{"modified",modified},{"current",id==generic_thread},
+                {"canArchive",status=="idle" || status=="notLoaded"}});
+        }
+        sessions.assign(rows);emit owner.sessionsChanged();
+    }
+    QString session_request(const QString& method,const Object& params,const QString& kind,const QString& target={}) {
+        SessionRequest request{kind,target,params.value("cursor").toString(),generic_thread,
+            generic_native.value("account").toObject().value("email").toString(),generation,usage_epoch,
+            agent?agent->outputGeneration():0,sessions_epoch,project};
+        QString prepared;
+        const auto rpc=agent->request(method,params,[this,request,&prepared](const QString& id) {
+            if(!session_request_current(request))return false;
+            session_requests.insert(id,request);prepared=id;return true;
+        });
+        if(rpc.isEmpty()) {session_requests.remove(prepared);throw std::runtime_error("The session request could not be delivered; its outcome is unconfirmed");}
+        return rpc;
+    }
+    void session_page(const QString& cursor={}) {
+        Object params{{"sortKey","updated_at"},{"sortDirection","desc"},{"sourceKinds",session_source_kinds()},
+            {"modelProviders",QJsonArray{"openai"}},{"archived",false}};
+        if(!cursor.isEmpty())params["cursor"]=cursor;
+        (void)session_request("thread/list",params,"list");
+    }
+    void session_response(const QString& rpc,const QString& method,const Object& reply) noexcept {
+        const auto it=session_requests.find(rpc);if(it==session_requests.end())return;
+        const auto request=it.value();session_requests.erase(it);
+        if(!session_request_current(request))return;
+        try {
+            if(reply.contains("error"))throw std::runtime_error("The runtime could not confirm the requested session operation");
+            if(!reply.value("result").isObject())throw std::runtime_error("The session response was not valid metadata");
+            const auto result=reply.value("result").toObject();
+            if(request.kind=="list") {
+                if(!result.value("data").isArray() || (!result.value("nextCursor").isNull() && !result.value("nextCursor").isString()))
+                    throw std::runtime_error("The session page was not valid metadata");
+                for(const auto& value:result.value("data").toArray()) {
+                    if(!value.isObject())throw std::runtime_error("The session page contained an invalid row");
+                    const auto thread=value.toObject();if(owned_session(thread))session_metadata[thread.value("id").toString()]=thread;
+                }
+                const auto next=result.value("nextCursor").toString();
+                if(!next.isEmpty() && next==request.cursor)throw std::runtime_error("The session page did not advance its cursor");
+                sessions_cursor=next;sessions_more=!next.isEmpty();sessions_loading=false;sessions_error.clear();publish_sessions();return;
+            }
+            if(request.kind=="archive-read") {
+                const auto thread=result.value("thread").toObject();
+                if(thread.value("id")!=request.target || !owned_session(thread) ||
+                    thread.value("cwd")!=session_metadata.value(request.target).value("cwd") || !session_idle())
+                    throw std::runtime_error("The original session or current operation changed before archiving");
+                const auto status=thread.value("status").toObject().value("type").toString();
+                if(status!="idle" && status!="notLoaded")throw std::runtime_error("Finish the session's active operation before archiving it");
+                (void)session_request("thread/list",{{"ancestorThreadId",request.target},{"sourceKinds",session_source_kinds()},{"archived",false}},"archive-children",request.target);return;
+            }
+            if(request.kind=="archive-children") {
+                if(!result.value("data").isArray())throw std::runtime_error("Linked session state could not be checked");
+                if(!result.value("data").toArray().isEmpty())throw std::runtime_error("This session has linked sessions; their archive state must be resolved first");
+                const auto next=result.value("nextCursor").toString();
+                if(!next.isEmpty()) {
+                    if(next==request.cursor)throw std::runtime_error("The linked-session cursor did not advance");
+                    (void)session_request("thread/list",{{"ancestorThreadId",request.target},{"sourceKinds",session_source_kinds()},{"archived",false},{"cursor",next}},"archive-children",request.target);return;
+                }
+                if(!session_idle())throw std::runtime_error("Finish the current operation before archiving");
+                (void)session_request("thread/archive",{{"threadId",request.target}},"archive",request.target);return;
+            }
+            if(request.kind=="archive" && method=="thread/archive") {
+                if(!result.isEmpty())throw std::runtime_error("The runtime archive acknowledgment was unexpected");
+                // This is the correlated acknowledgment for the exact original ID,
+                // never disappearance from a page or another thread's notification.
+                session_metadata.remove(request.target);sessions_loading=false;sessions_error.clear();
+                if(request.target==generic_thread) {
+                    retire_result();resume_checkpoint.reset();generic_thread.clear();generic_thread_has_input=false;
+                    generic_durable=false;invalidate_policy();generic_native["connection_id"]=QString();
+                }
+                publish_sessions();return;
+            }
+        }catch(const std::exception& error) {
+            sessions_loading=false;sessions_error=bounded_error(QString::fromUtf8(error.what()));emit owner.sessionsChanged();
+        }catch(...) {sessions_loading=false;sessions_error=QObject::tr("Session information is unavailable; no archive outcome was assumed.");emit owner.sessionsChanged();}
+    }
+
     bool resume_identity_current() {
         if(!resume_checkpoint)return false;
         const auto& saved=*resume_checkpoint;
@@ -11360,6 +11507,7 @@ struct AssistantViewModel::State {
     void generic_response(const QString& id, const QString& method, const Object& reply, const char*& reason_code, FileProjection& publication) {
         if (!publishing || !generic_mode || (generic_retiring && method != "account/logout")) return;
         if (method == "account/rateLimits/read") { usage_response(id, reply); return; }
+        if(method=="thread/list" || method=="thread/read" || method=="thread/archive") {session_response(id,method,reply);return;}
         if (reply.contains("error")) {
             reason_code = "RESULT_SHAPE";
             const auto failure = reply.value("error").toObject();
@@ -14541,6 +14689,41 @@ QStringList AssistantViewModel::availableEfforts() const {
     return {};
 }
 RowTableModel* AssistantViewModel::messages() const { return &state_->messages; }
+
+RowTableModel* AssistantViewModel::sessions() const { return &state_->sessions; }
+bool AssistantViewModel::sessionsLoading() const { return state_->sessions_loading; }
+bool AssistantViewModel::sessionsHaveMore() const { return state_->sessions_more; }
+QString AssistantViewModel::sessionsError() const { return state_->sessions_error; }
+void AssistantViewModel::refreshSessions(bool nextPage) {
+#ifndef __EMSCRIPTEN__
+    try {
+        if(QThread::currentThread()!=thread() || !state_->session_idle() || state_->sessions_loading)return;
+        if(nextPage && !state_->sessions_more)return;
+        if(!nextPage) {
+            if(state_->sessions_epoch==UINT64_MAX)throw std::runtime_error("The session browser identity is unavailable");
+            ++state_->sessions_epoch;state_->session_metadata.clear();state_->sessions_cursor.clear();state_->sessions_more=false;
+            state_->sessions.assign({});
+        }
+        state_->sessions_loading=true;state_->sessions_error.clear();emit sessionsChanged();
+        state_->session_page(nextPage?state_->sessions_cursor:QString());
+    }catch(...) {state_->sessions_loading=false;state_->sessions_error=tr("Session information could not be requested. Your conversation is unchanged.");emit sessionsChanged();}
+#else
+    Q_UNUSED(nextPage);
+#endif
+}
+void AssistantViewModel::archiveSession(const QString& threadId) {
+#ifndef __EMSCRIPTEN__
+    try {
+        if(QThread::currentThread()!=thread() || !state_->session_idle() || state_->sessions_loading)return;
+        if(!state_->owned_session(state_->session_metadata.value(threadId)))return;
+        state_->sessions_loading=true;state_->sessions_error.clear();emit sessionsChanged();
+        (void)state_->session_request("thread/read",{{"threadId",threadId},{"includeTurns",false}},"archive-read",threadId);
+    }catch(...) {state_->sessions_loading=false;state_->sessions_error=tr("The archive request could not be confirmed. Refresh the original session before trying again.");emit sessionsChanged();}
+#else
+    Q_UNUSED(threadId);
+#endif
+}
+
 RowTableModel* AssistantViewModel::selectedFiles() const { return &state_->selected_files; }
 RowTableModel* AssistantViewModel::skills() const { return &state_->skills; }
 QString AssistantViewModel::selectedSkill() const { return state_->selected_skill; }
@@ -14950,6 +15133,11 @@ QString AssistantViewModel::submitDraft(const QString& text) {
         projection = state_->file_projection();
         if (!state_->claim_file_projection(projection)) return {};
         if (!state_->message_input_ready(text,projection)) return {};
+#ifndef __EMSCRIPTEN__
+        for(const auto& request:state_->session_requests)if(request.kind.startsWith("archive") && state_->session_request_current(request)) {
+            state_->error=tr("Wait for the session archive operation to finish before sending another message.");state_->notify();return {};
+        }
+#endif
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode) {
             state_->generic_writing_input = false;
