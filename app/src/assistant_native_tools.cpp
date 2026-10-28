@@ -15,6 +15,7 @@
 #include <QSet>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <stdexcept>
 namespace edi_app {
 namespace {
@@ -46,6 +47,9 @@ QJsonArray native_tool_specs(bool include_profiles) {
             {"description","Original normal Name identifier: 2–31 ASCII characters, letter first, then letters/digits/underscore/hyphen/period; human-readable wording belongs in title. Preserve an explicit user Name without silent renaming."}}},{"title",Object{{"type","string"},{"maxLength",32767},{"pattern","^[^\\u0000\\r\\n\\t]*$"},{"description","Original single-line Title field: at most 32767 UTF-16 units, with no NUL, newline, carriage-return or tab. The live original field validates before either action mode; supplied text is never truncated."}}},{"description",Object{{"type","string"}}}});
     add("show_report", "Open the CURRENT project's ordinary enabled Report preview through the same current-window tab navigation as the app. Both modes use the same owner; Show actions adds the existing tab cue. This navigates only; it does not generate/export/save a report or discover another application.");
     add("inspect_project", "Inspect Edi's actual currently displayed project/context, including native_state.interface_groups in actual current category-model/tier order (category groups only; admitted is compatibility, not enabled-control authority), and native_state.calculations: exact dataset published error/stale and calculated-column count/availability. Idle or available stale points do not prove success or viewport visibility. No mutation.");
+    add("inspect_data", "Read an explicit slice of one exact current datasets[].id without changing the project, selection, calculation, fit, free flags or Undo. Native powder x/measured/sigma/calculated/background/residual columns are not display-decimated or transformed; single-crystal rows use original reflection order and F-squared values with actual native fit-use flags. Missing or nonfinite cells are null, distinct from zero. Read each column's independent availability, length and unit; a live fit_frame is not an adopted current result. source=bragg returns separate phase reflection slices with their own extents and source-row mapping, never rows zipped to measurement points. Copy the exact dataset_id from inspect_project, and supply start/count explicitly. Default project context intentionally contains no curve arrays.",
+        {{"dataset_id",text},{"start",Object{{"type","integer"},{"minimum",0}}},{"count",Object{{"type","integer"},{"minimum",0}}},
+         {"source",Object{{"enum",Array{"data","bragg"}}}}},{"dataset_id","start","count"});
     add("list_parameters", "Read actual native parameter paths/values/free flags and dependence. No mutation.");
     add("diagnostics", "Read actual available native physical diagnostics plus original app native_state.calculations for each exact dataset: published error/stale and calculated-column count/availability. Published old errors and idle are not current success; calculated availability is not legend/series visibility. No mutation.");
     add("set_parameters", "Set independent parameter values after complete native validation. Numeric cell/site/occupancy/ADP setup uses original current Structure controls; instrument/profile/background/linked-scale setup uses original current Experiment controls where exposed. Choose setup operations from actual native dependencies, admitted scientific evidence and explicit user scope. Map FullProf occupancy before writes: qraw=OccFP*M/m and, only for established common phase c, chemical occupancy=qraw/c with already-mapped scale times c*c once; preserve partial/shared fractions. Use fresh native_state.interface_groups to locate current controls, without imposing a universal scientific sequence. Preserve explicit values-array order. Normal mode follows the last changed requested member page and is one atomic edit/Undo; Show actions navigates/cues original exposed controls in order then calls their ordinary app parameter setters, with no scientific key/click input; separate Undo per change and actual applied/published receipts determine honest complete/partial/uncertain outcomes." EDI_ASSISTANT_CONTROL_GUIDANCE,
@@ -198,7 +202,7 @@ QJsonArray native_tool_specs(bool include_profiles) {
 }
 } // namespace
 QJsonArray assistant_native_tool_names() {
-    return {"create_project","show_report","inspect_project","list_parameters","diagnostics","set_parameters","set_free","run_fit","undo_fit",
+    return {"create_project","show_report","inspect_project","inspect_data","list_parameters","diagnostics","set_parameters","set_free","run_fit","undo_fit",
         "create_cwl_project","load_structure","create_experiment","set_experiment_type","load_data",
         "read_selected_file","create_structure","edit_structure","edit_atom","edit_experiment",
         "acquire_inputs","save_project","add_relations","edit_relation","edit_background","estimate_background"};
@@ -254,7 +258,7 @@ QJsonArray assistant_native_tool_specs() {
     return native_tool_specs(true);
 }
 bool assistant_native_tool(const QString& name) {
-    return name=="show_report" || name=="create_project" || individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "list_parameters" || name == "diagnostics" ||
+    return name=="show_report" || name=="create_project" || individual_app_action(name) || name == "read_selected_file" || name == "acquire_inputs" || name == "inspect_project" || name == "inspect_data" || name == "list_parameters" || name == "diagnostics" ||
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "undo_fit" || name == "create_cwl_project" || name == "add_relations" || name == "edit_relation" || name == "save_project" || name == "edit_background" || name == "estimate_background";
 }
 QString assistant_native_purpose(const Object& args,const QString& action) {
@@ -272,6 +276,21 @@ QString assistant_native_purpose(const Object& args,const QString& action) {
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
     if(name=="show_report"){shape(args,{"purpose"});return;}
+    if(name=="inspect_data") {
+        QSet<QString> keys{"purpose","dataset_id","start","count"};if(args.contains("source"))keys.insert("source");shape(args,keys);
+        if(!args.value("dataset_id").isString() || args.value("dataset_id").toString().isEmpty())
+            edi::assistant::detail::refuse("invalid_argument","Numerical inspection requires an exact current dataset_id");
+        for(const char* field:{"start","count"}) {
+            const auto value=args.value(field);const auto n=value.toDouble(-1);
+            const auto exact=std::ldexp(1.0,std::numeric_limits<double>::digits)-1;
+            if(!value.isDouble() || !std::isfinite(n) || n<0 || n!=std::floor(n) || n>exact ||
+               static_cast<long double>(n)>static_cast<long double>(std::numeric_limits<std::size_t>::max()))
+                edi::assistant::detail::refuse("invalid_argument","Numerical inspection start and count must be exactly representable nonnegative native indices");
+        }
+        if(args.contains("source") && args.value("source")!="data" && args.value("source")!="bragg")
+            edi::assistant::detail::refuse("invalid_argument","Numerical inspection source must be data or bragg");
+        return;
+    }
     if(name=="create_project") {
         QSet<QString> fields{"purpose"};if(args.contains("name"))fields.insert("name");if(args.contains("description"))fields.insert("description");if(args.contains("title"))fields.insert("title");shape(args,fields);
         if((args.contains("name") && (!args.value("name").isString() || args.value("name").toString().isEmpty())) ||

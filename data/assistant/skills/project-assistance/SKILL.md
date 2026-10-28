@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.8.3. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
+Version: 1.9.0. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
 
 ## Inputs and setup
 
@@ -33,7 +33,7 @@ If a native operation refuses, inspect its factual cause, current state and comp
 
 Use the exact current parameters[].path for parameter value/free requests and native alias targets. unique_name is the separate native relation identity, not an interchangeable tool address; do not prepend a dataset ID or translate between them. Single-owner addresses use experiment. or structure.; multiple owners use their offered experiments[ID]. or structures[ID]. spelling. Copy returned paths after selections, renames, imports or type changes rather than constructing them. A proved prewrite unknown/duplicate/dependent-path refusal is guidance to inspect and correct the request, not permission to loosen validation or repeat an uncertain write.
 
-Use inspect_project, list_parameters and diagnostics for current native facts. set_parameters, set_free, run_fit and undo_fit operate on the displayed project through its ordinary editor, worker and Undo. Wait for actual asynchronous calculation completion before fitting. Interpret done, max_iterations, no_step, cancelled and error as their actual outcomes; none alone establishes scientific adequacy or a global optimum.
+Use inspect_project, list_parameters and diagnostics for compact current native facts. Use inspect_data with an exact datasets[].id and explicit start/count for actual native powder curves or single-crystal F-squared reflection rows when numerical residual/alignment evidence is needed. Read column availability, units, row mapping and publication/current status; missing values are not zero, and phase Bragg rows are separate from measurement rows. A running fit frame is not an adopted current result. set_parameters, set_free, run_fit and undo_fit operate on the displayed project through its ordinary editor, worker and Undo. Wait for actual asynchronous calculation completion before fitting. Interpret done, max_iterations, no_step, cancelled and error as their actual outcomes; none alone establishes scientific adequacy or a global optimum.
 
 Keep supplied calibration anchors and chemical constraints. Choose identifiable variable groups from evidence; preserve explicit immediate call scope and flags. Cumulative refinement, temporary block isolation, alternative starts and simpler models are options to evaluate, not fixed steps. Use only supported affine relations for native aliases/constraints; they are not general geometric restraints or rigid-body models. add_relations validates explicit declarations, while ordinary existing rows retain their current direct editor. No manual Draft/Confirm workflow is required.
 

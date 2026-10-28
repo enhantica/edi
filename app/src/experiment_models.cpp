@@ -273,6 +273,12 @@ void SingleCrystalReflectionModel::showFrame(std::shared_ptr<const std::vector<d
     refresh();
 }
 
+QVariant SingleCrystalReflectionModel::fileValue(qsizetype row, const QString& role) const {
+    const auto column=kSingleCrystalReflectionRoles.indexOf(role);
+    if(row<0 || row>=file_rows_.size() || column<0 || column>=file_rows_.at(row).values.size())return {};
+    return file_rows_.at(row).values.at(column);
+}
+
 void SingleCrystalReflectionModel::refresh() {
     QList<Row> rows;
     QList<double> calculated;

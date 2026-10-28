@@ -340,3 +340,30 @@ validator. An omitted purpose receives an explicitly native action label, with
 purpose_source=native_action_label in local work evidence; a supplied purpose stays
 literal and validated, with purpose_source=model_argument. No fallback is inserted
 into the original arguments or invented as the user's/model's scientific goal.
+
+
+## 2026-10-28: optional current numerical inspection
+
+The first curve owner is edi::capture_pattern on PatternAxis::Native, before
+renderer transformation/decimation. The first single-crystal row owner is
+SingleCrystalReflectionModel's file-order rows, before optional display sorting;
+its C++-only accessors expose original F-squared/sigma/residual/fitUse cells and
+actual fit-frame status without syncing, sorting or recomputing scientific values.
+
+inspect_data requires the exact dataset_id and explicit start/count; source=data
+is the native curve/reflection slice, while source=bragg keeps each phase's own
+row space, extent and original reflection mapping. Column lengths, units, current
+publication and null/zero distinctions stay explicit. No bulk curves enter the
+default project context. The existing scalar/object-array closed outgoing walk
+projects and measures the result; no recursive arbitrary serializer or work quota
+is added. Original Session/project/member/revision/view-generation/disclosure and
+work-stamp checks bracket capture and settlement. The read creates no Edit, Undo,
+calculation, selection, dirty state or Save. Calculated availability in the compact
+SC summary follows native current reflection columns, not powder chart storage.
+
+The canonical native registry drives dedicated-route name proof as well as the
+actual schemas and readonly admission. Project-assistance1.9.0 makes the optional
+reader discoverable; refinement-strategy1.4.2 keeps one concise scientific owner for
+position/profile/background/intensity evidence, defaults-versus-known-calibration
+and physical trial/Undo/reassessment. No fixed stage order, parameter list, metric
+threshold, specimen value, reference result or mandatory extra trial is introduced.

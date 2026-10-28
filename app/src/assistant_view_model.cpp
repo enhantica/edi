@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
 #include "assistant_history.hpp"
+#include "assistant_data.hpp"
 #include "assistant_recipe_refusal.hpp"
 #include "assistant_action_refusal.hpp"
 #include "assistant_selected_text.hpp"
@@ -1532,14 +1533,15 @@ struct AssistantViewModel::State {
         // The dedicated host proves full parsed-schema equality with these
         // exact requested schemas. Independently reject extra/shadow namespaces
         // and missing/duplicate/nonfunction/deferred callable advertisements.
-        static constexpr std::array<QStringView,22> expectedNames{u"inspect_project",u"list_parameters",u"diagnostics",u"set_parameters",u"set_free",u"run_fit",u"undo_fit",u"create_cwl_project",u"acquire_inputs",u"save_project",u"add_relations",u"edit_relation",u"edit_background",u"load_structure",u"create_experiment",u"set_experiment_type",u"load_data",u"read_selected_file",u"create_structure",u"edit_structure",u"edit_atom",u"edit_experiment"};
-        std::array<bool,expectedNames.size()> names{};
+        QStringList expectedNames;
+        for(const auto& name:assistant_native_tool_names())expectedNames.append(name.toString());
+        QList<bool> names(expectedNames.size(),false);
         const auto accept=[&](const Object& function) {
             if(function.value("type")!="function" || !function.value("name").isString() ||
                 function.value("defer_loading").toBool() || !function.value("parameters").isObject())
                 throw std::runtime_error("Dedicated Edi advertisement is invalid");
             const auto name=function.value("name").toString();
-            const auto at=std::find(expectedNames.begin(),expectedNames.end(),QStringView(name));
+            const auto at=std::find(expectedNames.begin(),expectedNames.end(),name);
             if(at==expectedNames.end() || names[at-expectedNames.begin()])throw std::runtime_error("Dedicated Edi advertisement is invalid");
             names[at-expectedNames.begin()]=true;
         };
@@ -1856,10 +1858,12 @@ struct AssistantViewModel::State {
                 {"pattern_available",bool(pattern)}};
             if(pattern) {
                 const auto text=bounded_error(error);
-                const auto points=pattern->calculatedPointCount();
+                const bool sc=held->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL;
+                const bool nativeCurrent=held->computed_current();
+                const auto points=sc?(nativeCurrent && held->reflections?held->reflections->intensity_calc.size():0):pattern->calculatedPointCount();
                 if(points>(quint64(1)<<std::numeric_limits<double>::digits))
                     throw std::length_error("Calculation point count is not exactly representable");
-                row["stale"]=pattern->stale();row["calculated_points"]=static_cast<double>(points);
+                row["stale"]=sc?!nativeCurrent:pattern->stale();row["calculated_points"]=static_cast<double>(points);
                 row["calculated_available"]=points>0;row["calculation_error_present"]=!error.isEmpty();
                 row["calculation_error"]=text;row["calculation_error_complete"]=text==error;
             }
@@ -2321,6 +2325,9 @@ struct AssistantViewModel::State {
         QPointer<ProjectViewModel> project;
         std::optional<edi::WorkStamps> stamps;
         quint64 generation = 0, serial = 0;
+        QPointer<ExperimentViewModel> data_view;
+        const edi::ExperimentBase* data_member=nullptr;
+        quint64 data_generation=0;
         bool retired = false, stale = false;
     };
     // Fixed fit-only settlement payload belongs to the original record, not
@@ -6388,7 +6395,7 @@ struct AssistantViewModel::State {
                 if (!original_call()) return;
                 advance = approved && native_receipt == call.receipt && native_owner(call.receipt) && policy_current() &&
                     !generic_connecting && !generic_context_pending && !generic_clear_pending &&
-                    (!project || (inspection->stamps && edi::unchanged_since(*project->assistantProject(), *inspection->stamps)));
+                    native_data_current(inspection) && (!project || (inspection->stamps && edi::unchanged_since(*project->assistantProject(), *inspection->stamps)));
             }
             if (native_call && native_call->record == record) native_call.reset();
             if (advance) {
@@ -6886,11 +6893,77 @@ struct AssistantViewModel::State {
             if (receiver && receiver->state_.get() == this) --generic_item_depth;
         });
     }
+    Object native_data_slice(const Object& args,const std::shared_ptr<NativeReceipt>& inspection) {
+        const auto publication=file_projection();
+        const auto receipt=native_receipt;
+        const QPointer<ProjectViewModel> target(project);
+        if(!target || target->publication_depth_ || target->editing_)
+            edi::assistant::detail::refuse("invalid_argument","The original project publication is not settled for numerical inspection");
+        auto* model=target->assistantProject();
+        const auto id=args.value("dataset_id").toString();
+        std::size_t index=model->experiments.size();
+        for(std::size_t i=0;i<model->experiments.size();++i)
+            if(QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(model->experiments[i]->name.value()))==id) {
+                if(index!=model->experiments.size())edi::assistant::detail::refuse("invalid_argument","The current dataset ID is ambiguous");
+                index=i;
+            }
+        if(index==model->experiments.size())edi::assistant::detail::refuse("invalid_argument","The dataset_id is not an exact currently offered dataset ID");
+        const auto member=model->experiments[index];
+        QPointer<ExperimentViewModel> view;
+        for(auto* candidate:target->experimentModels())if(candidate && candidate->experiment()==member.get()) {
+            if(view)edi::assistant::detail::refuse("invalid_argument","The original dataset view is ambiguous");
+            view=candidate;
+        }
+        if(!view)edi::assistant::detail::refuse("invalid_argument","The original native dataset publication is unavailable");
+        const auto generation=view->patternGeneration();
+        const auto revision=target->revision();
+        const auto current=[&] {
+            return publication.input_current() && project==target && target && !target->publication_depth_ && !target->editing_ &&
+                native_receipt==receipt && native_owner(receipt) && target->assistantProject()==model &&
+                target->revision()==revision && index<model->experiments.size() && model->experiments[index]==member &&
+                view && target->experimentModels().contains(view) && view->experiment()==member.get() &&
+                view->patternGeneration()==generation && inspection && inspection->stamps &&
+                edi::unchanged_since(*model,*inspection->stamps);
+        };
+        if(!current())edi::assistant::detail::refuse("invalid_argument","The original dataset changed before its numerical capture");
+        const auto start=assistant_data::index(args.value("start")),count=assistant_data::index(args.value("count"));
+        const auto source=args.value("source").toString(QStringLiteral("data"));
+        const bool sc=member->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL;
+        Object data;
+        if(source=="bragg")data=assistant_data::bragg(edi::capture_pattern(*model,index),start,count);
+        else if(sc) {
+            const QPointer<SingleCrystalReflectionModel> reflections(view->singleCrystalReflections());
+            if(!reflections)edi::assistant::detail::refuse("invalid_argument","The original single-crystal reflection publication is unavailable");
+            data=assistant_data::reflections(*member,*reflections,start,count);
+            if(!reflections || view->singleCrystalReflections()!=reflections)
+                edi::assistant::detail::refuse("invalid_argument","The original single-crystal reflection publication changed during capture");
+        } else data=assistant_data::powder(edi::capture_pattern(*model,index),start,count);
+        data["dataset_id"]=id;data["sample_form"]=QString::fromLatin1(edi::token(member->experiment_type.effective_sample_form()));
+        data["source"]=source;data["captured_revision"]=QString::number(revision);
+        data["publication_generation"]=QString::number(generation);
+        data["calculating"]=target->calculating();data["fitting"]=target->fit()->nativeRunning();
+        const auto error=view->pattern()?view->pattern()->calculationError():QString{};
+        const auto errorText=bounded_error(error);
+        data["calculation_error"]=errorText;data["calculation_error_present"]=!error.isEmpty();
+        data["calculation_error_complete"]=errorText==error;
+        if(!current())edi::assistant::detail::refuse("invalid_argument","The original dataset changed during its numerical capture");
+        inspection->data_view=view;inspection->data_member=member.get();inspection->data_generation=generation;
+        return {{"data",data}};
+    }
+    bool native_data_current(const std::shared_ptr<NativeReceipt>& inspection) const {
+        if(!inspection || !inspection->data_member)return true;
+        const auto view=inspection->data_view;
+        const auto target=inspection->project;
+        if(!target || project!=target || !view || !target->experimentModels().contains(view) ||
+            view->experiment()!=inspection->data_member || view->patternGeneration()!=inspection->data_generation)return false;
+        for(const auto& member:target->assistantProject()->experiments)if(member.get()==inspection->data_member)return true;
+        return false;
+    }
     void native_dispatch(const QJsonValue& rpc, const Object& params, const char*& save_stage, const QString& expectedThread, const QString& expectedTurn) {
         const auto publication=file_projection();
         const auto reply=[&](bool success,const Object& outcome){native_reply(rpc,success,outcome,params.value("callId").toString(),params,expectedThread,expectedTurn);};
         const bool inspecting = params.value("tool") == "inspect_project" ||
-            params.value("tool") == "list_parameters" || params.value("tool") == "diagnostics";
+            params.value("tool") == "list_parameters" || params.value("tool") == "diagnostics" || params.value("tool")=="inspect_data";
         if (inspecting && (!policy_current() || generic_connecting)) {
             reply(false, {{"status", "refused"}, {"code", "policy_mismatch"}, {"message", "The original thread settings are not current."}}); return;
         }
@@ -6928,7 +7001,7 @@ struct AssistantViewModel::State {
         // One genuine owner-bound invocation before any busy/visible/preparation
         // refusal. Reuse this identity through native preflight and actual start.
         const auto fit_attempt = name == "run_fit" && project ? project->fit()->beginAttempt() : 0;
-        const bool readonly = name == "inspect_project" || name == "list_parameters" || name == "diagnostics" || name=="acquire_inputs" || name=="read_selected_file";
+        const bool readonly = name == "inspect_project" || name == "list_parameters" || name == "diagnostics" || name=="inspect_data" || name=="acquire_inputs" || name=="read_selected_file";
         if (!readonly && project && (project->fit()->nativeRunning() || project->calculating())) {
             reply(false, {{"status", "busy"}, {"code", "calculation_busy"}, {"message", "The current native calculation or fit has not settled."}}); return;
         }
@@ -7016,7 +7089,8 @@ struct AssistantViewModel::State {
 
                 inspection->approved_context = QJsonDocument(context).toJson(QJsonDocument::Compact);
             }
-            read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
+            if(name=="inspect_data")read_result=native_data_slice(args,inspection);
+            else read_result = name == "inspect_project" ? context : Object{{name == "list_parameters" ? "parameters" : "diagnostics", context.value(name == "list_parameters" ? "parameters" : "diagnostics")}};
             if(name=="diagnostics")read_result["native_state"]=context.value("native_state");
         }
         native_prepare(rpc, id, name, purpose, original);
@@ -7027,7 +7101,12 @@ struct AssistantViewModel::State {
 
             if (!publication.input_current() || !native_call || native_call->receipt != original_receipt || native_call->record->call != id) return;
         }
-        if (readonly) { native_finish(true, read_result); return; }
+        if (readonly) {
+            if(name=="inspect_data" && !native_data_current(native_call->inspection)) {
+                native_finish(false,{{"status","refused"},{"code","request_stale"},{"message","The original dataset publication changed before its numerical response; inspect current state."}});return;
+            }
+            native_finish(true, read_result); return;
+        }
         if (name == "edit_background") {
             const auto background = assistant_native_background(*project->assistantProject(), args);
             if (!project->currentExperiment() || project->currentExperiment()->experiment() != background.experiment)
@@ -11982,12 +12061,12 @@ struct AssistantViewModel::State {
                             typed_refusal=true;outcome["code"]="invalid_arguments";
                             outcome["action_error"]="unsupported_input";outcome["action_field"]="purpose";
                             outcome["target"]="purpose";outcome["stage"]="ARGUMENT_VALIDATION";
-                            outcome["message"]="Required field purpose must be a nonempty string without control characters. No native action was admitted.";
+                            outcome["message"]="When supplied, purpose must be a nonempty string without control characters. No native action was admitted.";
                         }
                     }
                     const auto* core_refusal=dynamic_cast<const edi::assistant::detail::Refusal*>(&failure);
                     const bool parameter_preparation=tool=="set_parameters" || tool=="set_free";
-                    if(!typed_refusal && core_refusal && (parameter_preparation || tool=="add_relations") &&
+                    if(!typed_refusal && core_refusal && (parameter_preparation || tool=="add_relations" || tool=="inspect_data") &&
                         (core_refusal->code=="invalid_argument" || core_refusal->code=="out_of_scope" ||
                          core_refusal->code=="unsupported_model" || core_refusal->code=="resource_exhausted")) {
                         const auto refusal=edi::assistant::detail::failure(core_refusal->code,core_refusal->what());
@@ -11995,7 +12074,7 @@ struct AssistantViewModel::State {
                         outcome["code"]=core_refusal->code=="invalid_argument"?"invalid_arguments":
                             core_refusal->code=="unsupported_model"?"unavailable":core_refusal->code=="resource_exhausted"?"resource_exhausted":"refused";
                         if(core_refusal->code=="unsupported_model")outcome["status"]="unavailable";
-                        outcome["message"]=message;outcome["target"]=parameter_preparation?"parameter":"relation";
+                        outcome["message"]=message;outcome["target"]=parameter_preparation?"parameter":tool=="inspect_data"?"dataset":"relation";
                         outcome["diagnostics"]=QJsonArray{Object{{"code",QString::fromStdString(core_refusal->code)},
                             {"message",message},{"severity","error"},{"actionable",true}}};
                         typed_refusal=true;
