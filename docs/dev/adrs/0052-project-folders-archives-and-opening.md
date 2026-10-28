@@ -187,3 +187,19 @@ its own workIn notification, but an additional genuine path write retires the ol
 even if the project pointer is unchanged. It cannot reinstall an old archive origin over a
 completed SaveAs. Replacement/project identity, explicit SaveAs effects, loader completeness,
 filesystem permissions and displayed origin policy remain unchanged.
+
+
+### 2026-10-28: independent ordinary preparation copies
+
+Read-only folder and bundled-example Open each prepare a fresh root through the
+existing archive temporary owner. The Session remembers that root before copying,
+and scope exit invokes its normal closure/lifetime cleanup. Repeated IDs or source
+basenames never reuse/delete an old destination. Open-copy refuses an existing
+target or a target physically beneath its source rather than removing that tree.
+A failed preparation leaves the original current backing and worker untouched; an
+adopted or still-live model retains its actual new root until ordinary release.
+
+Example identity, read-only source, demo path masking and SaveAs behavior keep
+their original presentation and normal adoption owners. The old shared fixed-name
+QTemporaryDir destination is replaced by the same registered temporary owner used
+elsewhere in Session, with no second directory registry, loader or science rule.

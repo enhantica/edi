@@ -214,7 +214,7 @@ void Session::initializeSession() {
 Session::~Session() {
     delete assistant_;assistant_=nullptr;
     // QObject normally deletes children after members. The workers/models must
-    // stop before owned QTemporaryDir members or archive roots remove their files.
+    // stop before archive roots remove their files.
     project_=nullptr;
     while(auto* model=findChild<ProjectViewModel*>(QString{},Qt::FindDirectChildrenOnly)) {
         disconnect(model,nullptr,this,nullptr);model->blockSignals(true);delete model;
@@ -224,6 +224,13 @@ Session::~Session() {
 
 void Session::releaseTemporaryFolder() {
     releaseTemporaryRoots({std::exchange(temporary_folder_,QString{})});
+}
+
+QString Session::prepareCopyRoot(const char* kind) {
+    const auto root=QString::fromStdString(edi::fresh_archive_directory(kind));
+    try { retainTemporaryRoots({root}); }
+    catch(...) { edi::remove_archive_directory(root.toStdString());throw; }
+    return root;
 }
 
 void Session::retainTemporaryRoots(const QStringList& candidates) {
@@ -382,14 +389,12 @@ bool Session::openProjectAt(const QUrl& location) {
     // so a fit never writes into it; Save As writes the project where the user chooses.
     const QFileInfo folder(source), analysis(source + QStringLiteral("/analysis"));
     if (folder.isDir() && (!folder.isWritable() || (analysis.exists() && !analysis.isWritable()))) {
-        if (extracted_ == nullptr || !extracted_->isValid()) {
-            extracted_ = std::make_unique<QTemporaryDir>();
-        }
-        if (!extracted_->isValid()) {
-            setLastError(QStringLiteral("cannot create a temporary copy of %1: %2").arg(source, extracted_->errorString()));
-            return false;
-        }
-        const QString target = extracted_->filePath(QStringLiteral("read-only/") + folder.fileName());
+        QString copyRoot;
+        try { copyRoot=prepareCopyRoot("read-only"); }
+        catch(const std::exception& error) { setLastError(QString::fromUtf8(error.what()));return false; }
+        const QPointer<Session> copyOwner(this);
+        const auto cleanup=qScopeGuard([copyOwner,copyRoot]{if(copyOwner)copyOwner->releaseTemporaryRoots({copyRoot});});
+        const QString target=QDir(copyRoot).filePath(folder.fileName());
         if (!openCopy(source, target, {})) {
             return false;
         }
@@ -446,9 +451,9 @@ QString Session::projectLocation() const {
         return archive_location_;
     }
     QString location = project_->path();
-    if (ApplicationInfo::demoIdentity() && !opened_example_.isEmpty() && extracted_ != nullptr && extracted_->isValid()
-        && location.startsWith(extracted_->path())) {
-        location.replace(0, extracted_->path().size(), QStringLiteral("<temporary>"));
+    if (ApplicationInfo::demoIdentity() && !opened_example_.isEmpty()) {
+        const auto root=QString::fromStdString(edi::detail::archive_directory_root(location.toStdString()));
+        if(!root.isEmpty())location.replace(0,root.size(),QStringLiteral("<temporary>"));
     }
     return location;
 }
@@ -750,20 +755,13 @@ bool Session::openExampleNamed(const QString& exampleId) {
         setLastError(QStringLiteral("no bundled example named '%1'").arg(exampleId));
         return false;
     }
-    if (extracted_ == nullptr || !extracted_->isValid()) {
-        extracted_ = std::make_unique<QTemporaryDir>();
-    }
-    // An invalid directory's filePath() is empty, and removing the empty path below would remove the
-    // working directory with everything in it: refuse first.
-    if (!extracted_->isValid()) {
-        setLastError(QStringLiteral("cannot create a directory for the example '%1': %2")
-                         .arg(exampleId, extracted_->errorString()));
-        return false;
-    }
-    // A fresh copy per open, so edits to an opened example never leak into the next open of it. A bundled example
-    // lives in the application's resources, which crysta cannot read: its scan data are copied with it.
-    const QString target = extracted_->filePath(exampleId + QStringLiteral("/project"));
-    QDir(target).removeRecursively();
+    QString copyRoot;
+    try { copyRoot=prepareCopyRoot("example"); }
+    catch(const std::exception& error) { setLastError(QString::fromUtf8(error.what()));return false; }
+    const QPointer<Session> copyOwner(this);
+    const auto cleanup=qScopeGuard([copyOwner,copyRoot]{if(copyOwner)copyOwner->releaseTemporaryRoots({copyRoot});});
+    // Resource files are copied into an independent native folder for each Open.
+    const QString target=QDir(copyRoot).filePath(exampleId+QStringLiteral("/project"));
     QDirIterator files(source, QDir::Files, QDirIterator::Subdirectories);
     while (files.hasNext()) {
         const QString file = files.next();
@@ -987,7 +985,17 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
                 data.clear();  // no scan directory resolves: everything is copied
             }
         }
-        QDir(target).removeRecursively();
+        if(QFileInfo::exists(target))throw std::runtime_error("The independent temporary copy target already exists");
+        std::error_code pathError;
+        auto cursor=std::filesystem::weakly_canonical(std::filesystem::u8path(target.toUtf8().constData()),pathError);
+        if(pathError)throw std::runtime_error("The temporary copy target cannot be resolved independently");
+        const auto original=std::filesystem::u8path(source.toUtf8().constData());
+        for(;;) {
+            if(std::filesystem::exists(cursor,pathError) && std::filesystem::equivalent(cursor,original,pathError))
+                throw std::runtime_error("The temporary copy target must be outside its source folder");
+            if(pathError)throw std::runtime_error("The temporary copy target independence cannot be proved");
+            const auto parent=cursor.parent_path();if(parent.empty() || parent==cursor)break;cursor=parent;
+        }
         if (!copyTree(source, target, data)) {
             throw std::runtime_error("cannot make a temporary copy of " + source.toStdString());
         }

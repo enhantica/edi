@@ -151,7 +151,22 @@ EaComponents.ListView {
         else if ("horizontalAlignment" in cell)
             cell.horizontalAlignment = alignment;
     }
+    property var columnFitLife: ({alive: true, queued: false})
+    function scheduleFitColumns() {
+        const life = columnFitLife;
+        if (!life || !life.alive || life.queued) return;
+        life.queued = true;
+        Qt.callLater(() => {
+            if (!life.alive) return;
+            life.queued = false;
+            table.fitColumns();
+        });
+    }
+    Component.onDestruction: columnFitLife.alive = false
+
     function fitColumns() {
+        const life = columnFitLife;
+        if (!life || !life.alive) return;
         const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths.filter((w, i) => true) : [];
         // A cell is measured by its whole text: a number cell by the number it would show if it fitted (it shortens
         // itself to the width it is given), a label by its natural width, an editor by its text (its implicit width
@@ -172,60 +187,79 @@ EaComponents.ListView {
         const widths = columns.map((w, i) => Math.max(headerWidths[i] ?? 0, refitting ? 0 : (fittedWidths[i] ?? 0)));
         let kinds = null;
         for (const item of contentItem.children) {
+            if (!life.alive) return;
             const cells = cellsOf(item);
             if (!cells || item === headerItem)
                 continue;
+            if (!life.alive) return;
             kinds = kinds ?? cells.map(cell => kindOf(cell));
             for (let i = 0; i < cells.length && i < widths.length; ++i) {
                 if (i > 0 && kinds[i])
                     alignCell(cells[i], kinds[i]);
+                if (!life.alive) return;
                 padForFiller(cells[i], i);
+                if (!life.alive) return;
                 widths[i] = Math.max(widths[i], Math.ceil(measure(cells[i]) - (i === fillerIndex ? fillerWidth : 0)));
             }
         }
         if (kinds && headerCells) {
             for (let i = 1; i < headerCells.length && i < kinds.length; ++i) {
+                if (!life.alive) return;
                 alignCell(headerCells[i], kinds[i]);
+                if (!life.alive) return;
                 padForFiller(headerCells[i], i);
             }
         }
+        if (!life.alive) return;
         refitting = false;
+        if (!life.alive) return;
         if (JSON.stringify(widths) !== JSON.stringify(fittedWidths))
             fittedWidths = widths;
     }
     // A change of the content fits the columns afresh; scrolling only adds rows to what was measured.
     function refit() {
+        const life = columnFitLife;
+        if (!life || !life.alive) return;
         refitting = true;
-        Qt.callLater(fitColumns);
+        if (life.alive) scheduleFitColumns();
     }
-    onColumnsChanged: refit()
+    onColumnsChanged: if (table.columnFitLife && table.columnFitLife.alive) table.refit()
     // The spare width follows the columns: the last data column's cells take it as padding after their content.
     onColumnWidthsChanged: {
+        const life = table.columnFitLife;
+        if (!life || !life.alive) return;
         const spare = fillerIndex >= 0 && fittedWidths.length === columns.length ? Math.max(0, columnWidths[fillerIndex] - (fittedWidths[fillerIndex] ?? 0) - autoColumnPadding) : 0;
         if (spare !== fillerWidth) {
             fillerWidth = spare;
-            Qt.callLater(fitColumns);
+            if (life.alive) scheduleFitColumns();
         }
     }
-    onModelRevisionChanged: refit()
-    onCountChanged: refit()
+    onModelRevisionChanged: if (table.columnFitLife && table.columnFitLife.alive) table.refit()
+    onCountChanged: if (table.columnFitLife && table.columnFitLife.alive) table.refit()
     Component.onCompleted: refit()
     Connections {
+        property var ownerLife: null
+        Component.onCompleted: ownerLife = table.columnFitLife
         target: table.contentItem
         function onChildrenChanged() {
-            Qt.callLater(table.fitColumns);
+            if (!ownerLife || !ownerLife.alive) return;
+            table.scheduleFitColumns();
         }
     }
     // A header whose cells change after it was made (a column per structure arriving with the calculation) has
     // them sized and the columns fitted again.
     Connections {
+        property var ownerLife: null
+        Component.onCompleted: ownerLife = table.columnFitLife
         target: table.headerItem
         ignoreUnknownSignals: true
         function onImplicitColumnWidthsChanged() {
+            if (!ownerLife || !ownerLife.alive) return;
             const first = table.headerItem && table.headerItem.contentRowData ? Array.from(table.headerItem.contentRowData).find(cell => cell instanceof Item) : null;
+            if (!ownerLife.alive) return;
             if (first && first.parent)
                 table.applyWidths(first.parent);
-            Qt.callLater(table.fitColumns);
+            if (ownerLife.alive) table.scheduleFitColumns();
         }
     }
     // Long IDs and paths must leave room for the numeric cells and row controls.

@@ -148,3 +148,21 @@ per structure is an empty cell on a row without a curve), and a row or header wh
 since the base centres each row. Atom sites, atomic displacements and the Analysis parameters keep layouts of their
 own: equal columns for the first two; for the parameters the name in full, then value and s.u. at three tenths of
 the rest each and min and max at two tenths, with free at the right.
+
+
+### 2026-10-28: deferred fitting belongs to the actual table
+
+All four deferred fitColumns requests share one Qt.callLater scheduling door. A
+plain lifetime token coalesces pending requests and is retired by the original
+DataTable destruction handler before a queued callback can resolve its QML
+methods. The live callback clears its pending bit before fitting, so padding or
+new-row changes during fitting can request the ordinary next pass. Column kinds,
+measurements, widths, filler padding and virtualized-row layout are unchanged.
+This uses the same original-QML lifetime pattern as the project page's deferred
+Create callbacks; it adds no timer, ignored warning or appearance rule.
+
+Signal entry paths retain that same plain lifetime token before dispatching table
+methods. Header width application and the fitting pass recheck it after mutating
+cells, so a destruction callback cannot turn their next lookup into a call on a
+retired QML table. The token belongs to the original table, never a model or its
+replacement.
