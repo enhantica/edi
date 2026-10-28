@@ -14,10 +14,10 @@
 
 include(FetchContent)
 
-set(EDI_GUI_COMPONENTS_SHA bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1)  # head of the edi branch, ADR-0015
-set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 4a91484651c78fcc639007b0144c349f8c5c87a9d5a98a85dfb8088947204f35)
+set(EDI_GUI_COMPONENTS_SHA 10dc5828020c90666a1ef015835475936d56e819)  # original shared pointer, ai-assistant-pointer; ADR-0015
+set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 89cfb0443e84a9d4a0cf0a07994f8ac7aa5b0bc296c7f23c3ce1e6f1eff9c93b)
 # Every file under src/ at the pinned commit, as edi_gui_tree_sha256 below sums them.
-set(EDI_GUI_COMPONENTS_SRC_SHA256 c61364b60961098a49cad8b1c1e0c8681ab2e510611f900fa7339c9b3c8984f2)
+set(EDI_GUI_COMPONENTS_SRC_SHA256 65b857b24fdd782e7068d422fc11667e6aca84377d88f757efeed082be16d030)
 
 if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
     message(STATUS "gui-components: fetching the pinned archive ${EDI_GUI_COMPONENTS_SHA} (8 MB, once per build tree)")
