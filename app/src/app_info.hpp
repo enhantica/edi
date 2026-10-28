@@ -96,6 +96,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QString diagnostics() const;
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
+    Q_INVOKABLE QString fileSizeKilobytes(qint64 bytes) const;
     /// Device eligibility captured before QML observation; not provider connection or permission.
     /// Read on the owning QObject thread. Native desktop remains eligible.
     bool assistantAvailable() const;

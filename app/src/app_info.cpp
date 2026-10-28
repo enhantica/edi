@@ -13,6 +13,7 @@
 #include <QGuiApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLocale>
 #include <QQuickWindow>
 #include <QRegularExpression>
 #include <QScreen>
@@ -485,6 +486,10 @@ QString ApplicationInfo::diagnostics() const {
 }
 
 void ApplicationInfo::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }
+QString ApplicationInfo::fileSizeKilobytes(qint64 bytes) const {
+    if(bytes<0)return tr("Size unavailable");
+    return tr("%1 KB").arg(QLocale().toString(static_cast<double>(bytes)/1000.0,'f',1));
+}
 
 bool ApplicationInfo::engineThreadsSelectable() const {
     return std::string_view(edi::engine_threading().backend) != "serial";
