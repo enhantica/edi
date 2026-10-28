@@ -5,13 +5,19 @@ description: Choose and revise a refinement strategy from actual model, data, na
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.4.0. This is scientific guidance for actually offered operations. The agent chooses the steps and stopping point from evidence and the user's goal; no finite staged recipe or pass count is mandatory.
+Version: 1.4.1. This is scientific guidance for actually offered operations. The agent chooses the steps and stopping point from evidence and the user's goal; no finite staged recipe or pass count is mandatory.
 
 Inspect the measured shape, units, weighting, exclusions, structure, calibration, current fit variables, constraints and diagnostics. Preserve input provenance and compare like objectives on comparable observations. A lower residual or a saved project alone does not establish a physically meaningful model. Distinguish an unavailable action, an unidentifiable variable and an observed scientific defect.
 
 Import a supplied CIF by default unless manual entry is requested. Use the ordinary native Estimate with current saved settings for initial background work, unless the user supplies explicit manual anchors. Inspect its current type, estimation mode, anchors/terms and native eligibility before subsequent refinement. Do not impose manual anchors, change ownership or free all background values as a universal first stage.
 
 Choose identifiable variable groups. With a credible model, cumulative release may be useful; divergence or strong correlations may justify a smaller temporary group and renewed diagnosis. Alternative starts or model families require actual supported operations and a restorable state. Ordinary fit Undo is a single current opportunity, not a checkpoint bank. Respect actual native fittability and preserve explicit calibration anchors, chemical composition, symmetry constraints and requested flags.
+
+For powder data, use actual peak alignment and residual shape to distinguish position, profile and relative-intensity problems when choosing a group. Preserve supplied calibration anchors; broadening a displaced calculated pattern is not an alignment correction.
+
+Assess each trial before another fit: inspect adoption, actual parameter changes and physical profile behavior over the measured range through available native evidence. Signed profile coefficients alone do not establish an invalid profile. If an adopted trial is unphysical or otherwise rejected and its native fit Undo is available, use it before another fit consumes that opportunity, then inspect the restored state. A refused or unadopted trial does not authorize undoing earlier accepted science. Do not continue refining on a rejected profile or claim an unavailable physical check.
+
+After structural or displacement changes, reassess an earlier unstable but identifiable group when the actual residual still warrants it. Its earlier failure may no longer describe the current model. Solver convergence alone does not establish that the refinement goal is met; continue only useful scientifically justified work from the accepted state.
 
 For single-crystal data, inspect actual extinction family, mosaic-distribution choices and the currently exposed parameters. A supplied crystal size/radius is entered in the native field and units as requested; do not invent a diameter conversion. Extinction family and free variables must follow scientific evidence, not a reference screenshot. A mixed Becker–Coppens domain-radius or mosaic-spread term can have zero local sensitivity at an exact zero start: after observing a genuine zero-stall, a small positive, physically justified trial start may be used and refined. Explain the observation and chosen scale, inspect the actual response and uncertainty, and retain a restorable state. Do not seed fitted values from another experiment or force a positive start without evidence.
 
