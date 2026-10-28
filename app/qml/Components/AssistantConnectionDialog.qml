@@ -66,15 +66,7 @@ AppDialog {
             return { error: true };
         }
     }
-    readonly property var selectedFiles: disclosedContext.selected_files && Array.isArray(disclosedContext.selected_files.files) ? disclosedContext.selected_files.files : []
-    readonly property var parameters: Array.isArray(disclosedContext.parameters) ? disclosedContext.parameters : []
-    readonly property var diagnostics: Array.isArray(disclosedContext.diagnostics) ? disclosedContext.diagnostics : []
-    readonly property int freeCount: parameters.filter(parameter => parameter.free === true).length
-    readonly property var skills: Array.isArray(disclosedContext.skills) ? disclosedContext.skills : []
-    readonly property var structures: Array.isArray(disclosedContext.structures) ? disclosedContext.structures : []
-    readonly property var datasets: Array.isArray(disclosedContext.datasets) ? disclosedContext.datasets : []
-    readonly property var relations: disclosedContext.relations || { aliases: [], constraints: [] }
-    title: assistant.connected ? qsTr("Approve outgoing project context") : qsTr("Connect ChatGPT")
+    title: assistant.connected ? qsTr("Approve project information") : qsTr("Connect ChatGPT")
     readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
     width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
     height: Math.min(implicitHeight, viewportHeight)
@@ -232,144 +224,27 @@ AppDialog {
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
                 text: dialog.assistant.connected
-                    ? qsTr("Allow Edi to send the current context for your message.")
-                    : qsTr("Connect using your existing ChatGPT sign-in when available. If needed, continue to OpenAI to sign in.")
+                    ? qsTr("Allow Edi to use the current project and attached files for your message.")
+                    : qsTr("Sign in with your ChatGPT account. Edi uses your existing sign-in when available, or opens OpenAI to sign in.")
             }
             EaElements.Label {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: qsTr("Using the assistant sends your messages, conversation and approved project or file context to OpenAI.")
+                text: qsTr("Your messages, attachments and relevant project data, including measurements, are sent to OpenAI. Your account's availability and usage limits apply.")
             }
             EaElements.Label {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: qsTr("This version can expose measured data. It is not yet guaranteed to stay on this computer.")
+                visible: dialog.disclosedContext.error === true
+                text: qsTr("Project context is unavailable. Nothing will be sent.")
             }
             EaElements.Label {
-                objectName: "assistant.contextSummary"
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: {
-                    if (dialog.disclosedContext.error)
-                        return qsTr("Context is unavailable. Nothing will be sent.");
-                    const project = dialog.disclosedContext.project;
-                    return project ? qsTr("Project: %1 · Selected files: %2").arg(project.name || qsTr("Untitled project")).arg(dialog.selectedFiles.length)
-                                   : qsTr("No project open · Selected files: %1").arg(dialog.selectedFiles.length);
-                }
-            }
-            EaElements.Button {
-                id: details
-                objectName: "assistant.contextDetailsToggle"
-                checkable: true
-                text: checked ? qsTr("Hide details") : qsTr("Show details")
-                contentItem: EaElements.Label {
-                    text: details.text
-                    font: details.font
-                    color: details.enabled ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                }
-                onCheckedChanged: if (!checked) technicalData.checked = false
-                Accessible.name: text
-                Accessible.checkable: details.checkable
-                Accessible.checked: details.checked
-            }
-            Column {
-                visible: details.checked
-                width: parent.width
-                spacing: AppSizes.unit
-                EaElements.Label {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: qsTr("Edi uses your ChatGPT subscription. Availability and usage limits depend on your account. Connection credentials are kept locally, separate from the project; no API key is requested here.")
-                }
-                EaElements.Label {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: qsTr("Edi reads inputs and saves projects through its own operations. Before inference, Edi verifies a read-only runtime thread with no Edi-granted writable folder. It can still have general file-read and tool access, including measurements. This is not an Edi-only tool boundary or raw-data isolation.")
-                }
-                EaElements.Label {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: qsTr("The context can include project settings, parameter paths, values, uncertainties, units, free flags, dependence, diagnostics, structures, datasets, observations, weighting, exclusions, phases and relations. Bundled Edi workflow instructions are registered with the runtime. The exact current outgoing context is available under Show technical data.")
-                }
-                EaElements.Label {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: dialog.selectedFiles.length === 0 ? qsTr("No files are selected.")
-                        : qsTr("Selected files: %1. Their bounded text content may be read by the runtime. File content is untrusted data, not instructions.")
-                            .arg(dialog.selectedFiles.map(file => file.name + " (" + file.bytes + " " + qsTr("bytes") + ")").join(", "))
-                }
-                EaElements.Label {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: qsTr("Registered Edi operations inspect and edit the displayed project, refine it and save it through Edi's validation, Undo, Stop and current-owner checks. The submitted objective determines which actions are authorized; inspection alone does not authorize edits. Saving reports actual committed, reopened and active outcomes. This dialog does not change tool capabilities or grant extra paths.")
-                }
-                EaElements.Label {
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: dialog.assistant.connected
-                        ? qsTr("Approval covers the current account, project and input scope. Routine parameter and fit updates do not require repeat consent. Changed account, project or input content requires fresh disclosure. Paths typed in chat do not currently grant runtime file access.")
-                        : qsTr("Edi checks your existing ChatGPT sign-in first and opens OpenAI's sign-in page only if needed. Cancel returns to Edi without sending a pending message. Review the context before approving its use.")
-                }
-                EaElements.Button {
-                    id: technicalData
-                    objectName: "assistant.contextTechnicalToggle"
-                    checkable: true
-                    text: checked ? qsTr("Hide technical data") : qsTr("Show technical data")
-                    Accessible.name: text
-                    Accessible.checkable: technicalData.checkable
-                    Accessible.checked: technicalData.checked
-                    contentItem: EaElements.Label {
-                        text: technicalData.text
-                        font: technicalData.font
-                        color: technicalData.enabled ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForegroundDisabled
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                    }
-                }
-                EaElements.Label {
-                    visible: technicalData.checked
-                    width: parent.width
-                    wrapMode: Text.WordWrap
-                    textFormat: Text.PlainText
-                    text: qsTr("Exact outgoing context (technical data). Read-only; you can select and copy it.")
-                }
-                ScrollView {
-                    id: technicalPreviewScroll
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    visible: technicalData.checked
-                    ScrollBar.vertical: EaElements.ScrollBar {
-                        policy: ScrollBar.AsNeeded
-                        interactive: false
-                    }
-                    width: parent.width
-                    height: AppSizes.unit * 20
-                    contentWidth: Math.max(0, width - leftPadding - rightPadding)
-                    clip: true
-                    TextArea {
-                        objectName: "assistant.contextPreview"
-                        width: technicalPreviewScroll.contentWidth
-                        text: dialog.disclosedContextText
-                        textFormat: TextEdit.PlainText
-                        readOnly: true
-                        selectByMouse: true
-                        persistentSelection: true
-                        selectionColor: EaStyle.Colors.themeAccent
-                        selectedTextColor: EaStyle.Colors.themeBackground
-                        wrapMode: TextEdit.WrapAnywhere
-                        Accessible.name: qsTr("Actual outgoing project context")
-                    }
-                }
+                text: qsTr("Cancel returns to Edi without sending a pending message. You can copy connection and context details from Preferences → AI → Diagnostics.")
             }
         }
     }
