@@ -3733,13 +3733,73 @@ struct AssistantViewModel::State {
         // No target is used after a logging callback. Even if it died, the original owned refusal settles once.
         widget_refuse(run,message,caller);
     }
+    bool widget_settle_control_layout(const std::shared_ptr<NativeWidget>& run,QQuickItem* field) {
+        const auto* entry=widget_parameter_entry(run);
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const QPointer<QQuickItem> target(field);
+        QList<QPointer<QQuickItem>> ancestors;
+        QPointer<QQuickItem> group;
+        for(auto* item=field?field->parentItem():nullptr;item;item=item->parentItem()) {
+            ancestors.append(item);
+            if(!group && ((item->property("collapsed").isValid() && item->objectName().startsWith("group.")) ||
+                item->objectName()=="background.rows"))group=item;
+            if(item->objectName().endsWith(".manualSidebar"))break;
+        }
+        if(!group)return true; // No owning table group: keep the existing reveal path.
+        struct TableLayout {QPointer<QQuickItem> item;QPointer<QObject> model;};
+        QList<TableLayout> tables;
+        const auto current=[&] {
+            if(!receiver || receiver->state_.get()!=this || !target || !group)return false;
+            const bool valid=widget_entry_current(run,entry);
+            if(!receiver || receiver->state_.get()!=this || !valid || !target || !group ||
+                target->window()!=run->window || !group->isAncestorOf(target))return false;
+            auto* parent=target->parentItem();
+            for(const auto& original:ancestors) {
+                if(!original || parent!=original)return false;
+                parent=parent->parentItem();
+            }
+            for(const auto& table:tables)
+                if(!table.item || !table.model || !group->isAncestorOf(table.item) || table.item->window()!=run->window ||
+                    table.item->property("sourceModel").value<QObject*>()!=table.model)return false;
+            return true;
+        };
+        if(!current())return false;
+        for(auto* item:widget_items())if(group->isAncestorOf(item) && item->inherits("QQuickListView") &&
+            item->property("sourceModel").value<QObject*>())
+            tables.append({item,item->property("sourceModel").value<QObject*>()});
+        // ListView batches model changes until polish. Settle the actual sibling
+        // table first; polishing just the button cannot update the height above it.
+        for(const auto& table:tables) {
+            if(!current() || !table.item || !table.model || !group->isAncestorOf(table.item) ||
+                table.item->property("sourceModel").value<QObject*>()!=table.model)return false;
+            if(!QMetaObject::invokeMethod(table.item,"forceLayout",Qt::DirectConnection))return false;
+            if(!current() || !table.item || table.item->property("sourceModel").value<QObject*>()!=table.model)return false;
+            table.item->ensurePolished();
+            if(!current())return false;
+        }
+        // Inner-to-outer ordinary positioners now consume those real heights.
+        // Every polish can emit QML callbacks; reprove the same chain afterward.
+        for(const auto& parent:ancestors) {
+            if(!current() || !parent)return false;
+            parent->ensurePolished();
+            if(!current())return false;
+        }
+        return current();
+    }
     bool widget_reveal_parameter(const std::shared_ptr<NativeWidget>& run, QQuickItem* field) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input || !field || field->window() != run->window ||
             !widget_page_selected(run) || widget_input->manualDraftPresent()) {
             widget_refuse(run, QObject::tr("Finish the current manual input before revealing its parameter")); return false;
         }
-        QPointer<QQuickItem> wanted(field), group, viewport, wholeRow;
+        const QPointer<QQuickItem> originalField(field);
+        if(!widget_settle_control_layout(run,field)) {
+            if(run->receiver && run->receiver->state_.get()==this && widget_entry_owned(run,entry))
+                widget_refuse(run,QObject::tr("The original control group changed while its pending layout was settled"));
+            return false;
+        }
+        if(!originalField || !widget_entry_current(run,entry))return false;
+        QPointer<QQuickItem> wanted(originalField), group, viewport, wholeRow;
         const bool boundedControl=!field->property("tableRowHeight").isValid() && !field->inherits("QQuickTextEdit");
         for (auto* a = field->parentItem(); a; a = a->parentItem()) {
             if (!group && a->property("collapsed").isValid() && a->objectName().startsWith("group.")) group = a;
