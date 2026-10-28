@@ -3808,7 +3808,7 @@ struct AssistantViewModel::State {
     bool widget_current(const std::shared_ptr<NativeWidget>& run) const {
         return widget_owned(run) && !native_call->resolved && !native_call->retiring &&
             !run->call.record->answered && !run->call.record->retired && !run->call.record->completed &&
-            native_current(run->call.receipt);
+            (native_current(run->call.receipt) || native_post_edit_current(run->call.receipt,run->relation_input));
     }
     bool native_estimate_selection_current(const NativeCall& call, ProjectViewModel* target) const {
         const auto record=call.record;
@@ -6640,6 +6640,9 @@ struct AssistantViewModel::State {
             run->relation_constraint = true; run->relation_row = 0; run->relation_field = 0;
             run->relation_base = static_cast<qsizetype>(run->project->assistantProject()->constraints.size());
             rows = run->relation_args.value("constraints").toArray();
+            if(rows.isEmpty()) {
+                native_finish(true,widget_sequence_progress(run,QObject::tr("Aliases edited through their original controls and Undo"),true));return;
+            }
         }
         if (run->relation_constraint) { widget_constraint_step(run); return; }
         const auto row = rows[run->relation_row].toObject();
@@ -7179,8 +7182,8 @@ struct AssistantViewModel::State {
             const auto aliases = args.value("aliases").toArray(), constraints = args.value("constraints").toArray();
             // Same admitted batch shape as the native tool. No extra
             // singleton/fixture restriction is imposed by the ordinary form.
-            if (constraints.isEmpty())
-                throw std::runtime_error("The relation declaration exceeds the native row limits");
+            if (aliases.isEmpty() && constraints.isEmpty())
+                throw std::invalid_argument("Supply at least one alias or constraint");
             run->relation_args = args;
             auto actualAliases = aliases;
             const auto paths = edi::parameter_entries(*project->assistantProject());
@@ -7552,6 +7555,15 @@ struct AssistantViewModel::State {
         return false;
     }
 
+    template<class Input>
+    bool native_post_edit_current(const std::shared_ptr<NativeReceipt>& receipt,const std::shared_ptr<Input>& input) const {
+        if(!input || !input->consumed || !input->outcome.applied || !input->outcome.published || !input->proof.after ||
+            !receipt || receipt->stale || !receipt->stamps || !native_owner(receipt) ||
+            native_blocked || generic_context_retention_pending || generic_blocked || !project)return false;
+        const auto& before=input->proof.before;
+        if(before.edits!=receipt->stamps->edits || before.edits_at!=receipt->stamps->edits_at)return false;
+        return edi::unchanged_since(*project->assistantProject(),*input->proof.after);
+    }
     void native_complete_discard() noexcept {
         if (!native_discard_pending || native_worker_admitted() || (native_fit && native_fit->nativeRunning())) return;
         if (native_call && !native_call->resolved && !native_call->record->answered) return; // A live original response is still owed.
@@ -10909,7 +10921,8 @@ struct AssistantViewModel::State {
     }
     bool create_widget_current(const std::shared_ptr<NativeCreateWidget>& run) const {
         if (!create_widget_owned(run) || native_call->resolved || native_call->retiring || run->call.record->answered ||
-            run->call.record->retired || run->call.record->completed || !native_current(run->call.receipt)) return false;
+            run->call.record->retired || run->call.record->completed ||
+            !(native_current(run->call.receipt) || native_post_edit_current(run->call.receipt,run->control_input))) return false;
         const auto* session = result_session();
         // Selection has no own scientific notification: any genuine epoch
         // advance remains a conflict, unlike an ordinary applied editor below.

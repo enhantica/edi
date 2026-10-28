@@ -17,8 +17,8 @@ struct NativeConstraintInput { std::string id, expression; bool enabled = false;
 // parse its affine expression in the app. Actual crysta completion owns semantics.
 inline Edit prepare_relation_append(Project& project, const std::vector<NativeAliasInput>& aliases,
                                      const std::vector<NativeConstraintInput>& constraints) {
-    if (constraints.empty())
-        refuse("invalid_argument", "The native constraint declaration must be nonempty");
+    if (aliases.empty() && constraints.empty())
+        refuse("invalid_argument", "Supply at least one alias or constraint");
     std::uint64_t bytes = sizeof("{\"aliases\":[],\"constraints\":[]}") - 1;
     const auto charge = [&](std::uint64_t n) {
         if (n > std::numeric_limits<std::uint64_t>::max() - bytes) throw std::overflow_error("Native relation byte count overflow");

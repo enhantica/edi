@@ -733,6 +733,7 @@ std::shared_ptr<ProjectViewModel::WidgetCreationInput> ProjectViewModel::prepare
     if (widget_creation_input_ || widget_file_input_) throw std::runtime_error("An original input is already prearmed");
     if (const auto refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
     auto input = std::make_shared<WidgetCreationInput>(); input->expected = action;
+    input->proof.before=edi::work_stamps(*project_);
     input->outcome.message = tr("The original creation control did not commit");
     widget_creation_input_ = input; return input;
 }
@@ -761,6 +762,11 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
     const bool previous=widget_input_executing_;
     const auto release=qScopeGuard([self,previous]{if(self)self->widget_input_executing_=previous;});
     if(input){input->consumed=true;widget_input_executing_=true;}
+    const auto capture=qScopeGuard([self,input] {
+        if(self && !self->retired_ && input && self->widget_creation_input_==input &&
+            input->consumed && input->outcome.applied && input->outcome.published)
+            self->captureWidgetEditProof(input->proof);
+    });
     using Kind=CreationAction::Kind;
     const bool scalar_control=actual.kind==Kind::AbsorptionType || actual.kind==Kind::ExtinctionType || actual.kind==Kind::MosaicDistribution || actual.kind==Kind::CutoffFwhm || actual.kind==Kind::DatasetWeight;
     const bool phase_control=actual.kind==Kind::PhaseAppend || actual.kind==Kind::PhaseRetarget ||
@@ -2896,10 +2902,21 @@ void ProjectViewModel::pinTimestamps(const QString& timestamp) {
     setModified(modified);
 }
 
+void ProjectViewModel::captureWidgetEditProof(WidgetEditProof& proof) noexcept {
+    try {
+        auto after=edi::work_stamps(*project_);
+        // One exact closed Edit advanced the original record. A nested external
+        // edit during publication cannot become the input's completion proof.
+        if(proof.before.edits && after.edits==proof.before.edits &&
+            proof.before.edits_at!=std::numeric_limits<std::uint64_t>::max() &&
+            after.edits_at==proof.before.edits_at+1)proof.after=std::move(after);
+    }catch(...) {} // Actual applied/published outcome remains factual if capture fails.
+}
 std::shared_ptr<ProjectViewModel::WidgetRelationInput> ProjectViewModel::prepareWidgetRelations(const ProjectEditor::RelationAction& action) {
     if (const QString refusal = editReadinessRefusal(false); !refusal.isEmpty()) throw std::runtime_error(refusal.toStdString());
     auto input = std::make_shared<WidgetRelationInput>();
     input->expected = action;
+    input->proof.before=edi::work_stamps(*project_);
     input->outcome.message = tr("The original relation control did not commit");
     widget_relation_input_ = input;
     return input;
@@ -2920,6 +2937,8 @@ QString ProjectViewModel::apply_relation_control(const edi::Edit& change, const 
     widget_input_executing_ = true;
     const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
     input->outcome = applyRecordedEdit(change, true);
+    if(self && !retired_ && widget_relation_input_==input && input->outcome.applied && input->outcome.published)
+        captureWidgetEditProof(input->proof);
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
