@@ -3536,3 +3536,5 @@ The FIRST Rows/RowTableModel projection now reads only the requested role and an
 Show actions uses the same inner padding as Clear, Clear's icon matches the eye's size, and only the chat scroll indicator moves to the sidebar edge; message/composer geometry is retained.
 
 Message projection is an explicit messages-only constructor policy, not inferred from canonical backing: selected-file, skill and source rows retain their own original roles. Both pending and sent attachment labels use the same ApplicationInfo decimal-KB formatter (1000 bytes per KB), while actual retained byte counts/admission remain unchanged.
+
+Attachment lists use one full-width line per file below the actual message text in both pending composer and sent history, with a larger first-file separation and ordinary label line height thereafter. The existing chooser/drop/removal, admitted identities, shared KB formatter and pending-versus-consumed behavior remain; moving their presentation does not remove task admissions or sent snapshots. An empty literal user text has no fabricated visible placeholder.
