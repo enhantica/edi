@@ -39,3 +39,11 @@ must also include the matching vendored bubblewrap source, the selected zsh sour
 patch/build script, and the corresponding Codex source/build inputs identified above, or a verified applicable
 source-download arrangement alongside that release. URLs in this development provenance are not evidence
 that the final release delivered corresponding source. No release/installer clearance is claimed.
+
+Windows dependency packaging additionally pins the official x86_64-pc-windows-msvc standalone
+app-server tarball from the same 0.162.1 release (SHA256 e67c01033b79e7ee3ec763b85cf5c7b774ba4846d46c0b0920193bd19f835728).
+The upstream Codex092 scripts/codex_package/layout.py and targets.py define the .exe entrypoint,
+code-mode host, rg and command-runner/sandbox-setup resource closure. Their Windows rule does not
+require POSIX executable bits. The separate tools/deps/assistant-packages workspace locks these
+same recipes for Windows without enabling the Edi Windows app, bash tasks or installer. Metadata
+coverage is distinct from native Windows package execution and distribution qualification.

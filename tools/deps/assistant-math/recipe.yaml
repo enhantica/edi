@@ -15,7 +15,10 @@ build:
   noarch: generic
   prefix_detection:
     ignore: true
-  script: python "$RECIPE_DIR/install.py" --source "$SRC_DIR/upstream" --prefix "$PREFIX"
+  script:
+    - if: win
+      then: 'python "%RECIPE_DIR%/install.py" --source "%SRC_DIR%/upstream" --prefix "%PREFIX%"'
+      else: 'python "$RECIPE_DIR/install.py" --source "$SRC_DIR/upstream" --prefix "$PREFIX"'
 requirements:
   build:
     - python >=3.12
