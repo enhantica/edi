@@ -133,6 +133,11 @@ struct AssistantSkillWebImport::State {
             }
         }
         if(roots.isEmpty())throw std::runtime_error("The public repository selection contains no SKILL.md packages.");
+        // A parent package owns its complete original companion tree. Do not
+        // assign nested bytes to whichever unordered root happens to win.
+        for(const auto& parent:roots)for(const auto& child:roots)if(parent!=child &&
+            (parent.isEmpty() || child.startsWith(parent+'/')))
+            throw std::runtime_error("This selection contains nested skill packages. Choose a nonoverlapping skill folder (for example its nested child) or a collection without nested SKILL.md roots; no companion files were rearranged.");
         for(const auto& value:entries) {
             const auto row=value.toObject();const auto path=row.value("path").toString();
             if(row.value("type")=="tree")continue;
