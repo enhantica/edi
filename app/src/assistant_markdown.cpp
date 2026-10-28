@@ -16,6 +16,8 @@
 #include <memory>
 #ifdef EDI_HAS_NATIVE_MATH
 #include <jkqtmathtext/jkqtmathtext.h>
+#include <jkqtmathtext/jkqtmathtexttools.h>
+#include <mutex>
 #endif
 #include <QAbstractTextDocumentLayout>
 #include <QSGSimpleRectNode>
@@ -151,6 +153,20 @@ QString restoreMathTokens(QString value,const MathSource& captured) {
     for(const auto& span:captured.spans)value.replace(span.token,span.literal);
     return value;
 }
+#ifdef EDI_HAS_NATIVE_MATH
+class NativeMathText final : public JKQTMathText {
+    static QObject* initializeBundledFallback() {
+        // The upstream constructor estimates every font, including Fraktur,
+        // before useXITS(). Avoid an unavailable generic-family lookup there.
+        const auto family=getXITSFamilies().mathFontName();
+        const std::lock_guard<std::mutex> lock(s_mutex);
+        if(!family.isEmpty() && init_fracturFont==QStringLiteral("fraktur"))init_fracturFont=family;
+        return nullptr;
+    }
+ public:
+    NativeMathText():JKQTMathText(initializeBundledFallback()){}
+};
+#endif
 class PassiveDocument final : public QTextDocument {
  public:
     struct Picture {QImage image;qreal descent=0;};
@@ -175,7 +191,7 @@ class PassiveDocument final : public QTextDocument {
         if(pictures_.contains(key)) {const auto result=pictures_.value(key);nextPictures_.insert(key,result);return result;}
         quint64 retained=newBytes_;for(auto it=pictures_.cbegin();it!=pictures_.cend();++it)retained+=static_cast<quint64>(it.value().image.sizeInBytes());
         constexpr auto capacity=edi::assistant::Limits::ui_history_bytes;
-        JKQTMathText math;math.useXITS(); // Genuine mathematical-symbol fallback.
+        NativeMathText math;math.useXITS(); // Genuine mathematical-symbol fallback.
         math.useAnyUnicode(font.family(),font.family());
         math.setFontOption(JKQTMathText::BaseFontBold,font.bold());
         math.setFontOption(JKQTMathText::BaseFontItalic,font.italic());
