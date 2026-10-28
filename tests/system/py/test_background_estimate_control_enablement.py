@@ -37,7 +37,9 @@ def test_model_policy_selector_saves_and_reloads_tokens_and_migrates_booleans(
             '-o',
             '-,txt',
         ],
-        env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
+        env={**os.environ,
+             'QT_QPA_PLATFORM': os.environ.get('QT_QPA_PLATFORM', 'offscreen'),
+             'QT_QUICK_BACKEND': os.environ.get('QT_QUICK_BACKEND', 'software')},
         capture_output=True,
         text=True,
         # Process scheduling headroom; the measured system tier stays five seconds.
@@ -75,7 +77,9 @@ def test_each_auto_estimate_reports_information_in_messages_instead_of_backgroun
             '-o',
             '-,txt',
         ],
-        env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
+        env={**os.environ,
+             'QT_QPA_PLATFORM': os.environ.get('QT_QPA_PLATFORM', 'offscreen'),
+             'QT_QUICK_BACKEND': os.environ.get('QT_QUICK_BACKEND', 'software')},
         capture_output=True,
         text=True,
         # Process scheduling headroom; the measured system tier stays five seconds.
