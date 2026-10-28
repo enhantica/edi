@@ -1182,9 +1182,8 @@ Popup {
         }
         AssistantConnectionDialog {
             id: connectionDialog
-            onRejected: if(Qt.isQtObject(panel.assistant))panel.assistant.cancelSessionSelection()
             assistant: panel.assistant
-            onRejected: panel.retireConsentSend()
+            onRejected: { panel.retireConsentSend(); if(Qt.isQtObject(panel.assistant))panel.assistant.cancelSessionSelection(); }
             onContextApproved: offer => {
                 const component = panel, original = panel.assistant, dialog = connectionDialog;
                 const intent = component.consentSend;
