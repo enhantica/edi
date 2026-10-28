@@ -4,6 +4,7 @@
 #include "assistant_view_model.hpp"
 #include "assistant_native_tools.hpp"
 #include "assistant_outgoing.hpp"
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include "codex_agent.hpp"
@@ -22,6 +23,12 @@
 #include <QMouseEvent>
 #include <QDirIterator>
 #include <QGuiApplication>
+#include <QSocketNotifier>
+#include <cerrno>
+#if defined(Q_OS_UNIX)
+#include <fcntl.h>
+#include <unistd.h>
+#endif
 #include <QFile>
 #include <QDir>
 #include <QJsonValue>
@@ -164,6 +171,7 @@ int main(int argc,char** argv) {
     user_dirs.close();
 #endif
     QGuiApplication app(argc,argv);
+    app.setQuitOnLastWindowClosed(false); // The owned stdin protocol, including EOF, owns this test host lifetime.
     QGuiApplication::setOrganizationName("EdiIndependentAcceptance");
     QGuiApplication::setApplicationName("assistant-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
     edi_app::use_design_font();
@@ -275,7 +283,7 @@ int main(int argc,char** argv) {
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerHidden,&ui_inputs,[&]{ui_record("pointer_hidden");});
     QObject::connect(observed,&edi_app::Session::projectChanged,&ui_inputs,[&]{ui_record("project_changed");});
     auto ui_snapshot=[&]()->Object {
-        if(!observed) return {{"alive",false}};
+        if(!observed || !window) return {{"alive",false}};
         QQmlExpression expression(qmlContext(window),window,"Session.assistant");
         auto qml_assistant=expression.evaluate().value<QObject*>();
         Array texts,controls;
@@ -331,8 +339,11 @@ int main(int argc,char** argv) {
                     {"enabled",constraint->enabled.get()}});
             for(const auto& bank:model.experiments) {
                 Array points,input_rows;
-                if(bank->data)for(std::size_t i=0;i<std::min<std::size_t>(bank->data->axis().size(),4);++i)
-                    input_rows.push_back(Array{bank->data->axis()[i],bank->data->intensity_meas[i],bank->data->intensity_meas_su[i]});
+                if(bank->data) {
+                    const auto available=std::min({bank->data->axis().size(),bank->data->intensity_meas.size(),bank->data->intensity_meas_su.size(),std::size_t{4}});
+                    for(std::size_t i=0;i<available;++i)
+                        input_rows.push_back(Array{bank->data->axis()[i],bank->data->intensity_meas[i],bank->data->intensity_meas_su[i]});
+                }
                 for(const auto& point:bank->background)
                     points.push_back(Object{{"id",QString::fromStdString(point->id.value())},
                         {"position",point->position.get()},{"intensity",point->intensity.value.get()},
@@ -345,6 +356,16 @@ int main(int argc,char** argv) {
                     {"has_data",bank->data.has_value()},{"points",points}});
                 auto row=backgrounds.last().toObject();
                 row["input_count"]=bank->data?static_cast<double>(bank->data->axis().size()):0.0;
+                row["calculation_only"]=bank->calculation_only;
+                row["input_intensity_count"]=bank->data?static_cast<double>(bank->data->intensity_meas.size()):0.0;
+                row["input_sigma_count"]=bank->data?static_cast<double>(bank->data->intensity_meas_su.size()):0.0;
+                row["measured_columns_equal_length"]=bank->data?QJsonValue(bank->data->axis().size()==bank->data->intensity_meas.size() && bank->data->axis().size()==bank->data->intensity_meas_su.size()):QJsonValue();
+                if(bank->reflections) {
+                    const auto& data=*bank->reflections;
+                    row["reflection_columns"]=Object{{"h",static_cast<double>(data.index_h.get().size())},{"k",static_cast<double>(data.index_k.get().size())},{"l",static_cast<double>(data.index_l.get().size())},
+                        {"intensity",static_cast<double>(data.intensity_meas.get().size())},{"sigma",static_cast<double>(data.intensity_meas_su.get().size())},{"wavelength",static_cast<double>(data.wavelength.get().size())}};
+                    row["reflection_columns_rectangular"]=data.rectangular();
+                }
                 row["input_first"]=input_rows;backgrounds[backgrounds.size()-1]=row;
             }
             project={{"name",QString::fromStdString(model.metadata.name)},
@@ -382,11 +403,11 @@ int main(int argc,char** argv) {
                 {"project",project},{"texts",texts},{"controls",controls},
                 {"disclosures",disclosures},{"width",window->width()},{"height",window->height()}};
     };
-    std::string line;
-    while(std::getline(std::cin,line)) {
+    const auto execute_command=[&](const QByteArray& line) {
         try {
-            auto input=decode(QByteArray::fromStdString(line)).toObject();
+            auto input=decode(line).toObject();
             auto op=input["op"].toString();Object result;
+            if((!observed || !window) && op!="inspect" && op!="destroy")throw std::runtime_error("the original Main owner has retired");
             if(op=="missing_constructor") {
                 auto incomplete=fixture.dependencies;
                 switch(input["index"].toInt()) {
@@ -527,7 +548,7 @@ int main(int argc,char** argv) {
                 if(model.experiments.empty()||!model.experiments.front()->reflections)throw std::runtime_error("published SC reflections unavailable");
                 auto& bank=*model.experiments.front();auto& data=*bank.reflections;
                 const auto mode=input["mode"].toString("snapshot"),field=input["field"].toString();
-                if(mode!="snapshot"&&mode!="column"&&mode!="equal"&&mode!="replace")throw std::invalid_argument("finite SC witness mode required");
+                if(mode!="snapshot"&&mode!="column"&&mode!="equal"&&mode!="replace"&&mode!="truncate")throw std::invalid_argument("finite SC witness mode required");
                 if(mode!="snapshot") {
                     if(field=="sample_form") {
                         if(input["value"]!="powder"&&input["value"]!="single crystal")throw std::invalid_argument("finite declared sample form required");
@@ -538,8 +559,12 @@ int main(int argc,char** argv) {
                     } else {
                         const auto change=[&](auto& column) {
                             auto values=column.get();using Value=typename std::remove_cvref_t<decltype(values)>::value_type;
-                            if(values.empty())throw std::runtime_error("genuine measured column required");
-                            if(mode!="equal") {
+                            if(mode=="truncate") {
+                                const auto count=input["count"].toInt(-1);
+                                if(count<0 || static_cast<std::size_t>(count)>values.size())throw std::invalid_argument("an existing measured-column prefix is required");
+                                values.resize(static_cast<std::size_t>(count));
+                            } else if(values.empty())throw std::runtime_error("genuine measured column required");
+                            else if(mode!="equal") {
                                 const auto value=input["value"].toDouble(std::numeric_limits<double>::quiet_NaN());
                                 if(!std::isfinite(value))throw std::invalid_argument("finite measured replacement required");
                                 if constexpr(std::is_integral_v<Value>)if(value!=std::trunc(value)||value<std::numeric_limits<Value>::min()||value>std::numeric_limits<Value>::max())throw std::invalid_argument("int32 measured index required");
@@ -595,6 +620,8 @@ int main(int argc,char** argv) {
                 require(agent.start(executable,workspace),"clock_peer_started");
                 QElapsedTimer wait;wait.start();while(!started&&wait.elapsed()<1000)drain(1);
                 require(started&&failures==0,"clock_transport_ready");
+                // start() owns a bounded bootstrap operation; end that role before the inactive control.
+                agent.settleOperation();
                 const auto generation=agent.outputGeneration();
                 const QJsonValue native("clock-native"),human("clock-human"),foreign("clock-foreign");
                 edi_app::CodexAgentTestAccess::receive(agent,{{"id",native},{"method","item/tool/call"},{"params",Object{{"tool","inspect_project"},{"arguments",Object{{"purpose","finite clock role"}}}}}});
@@ -761,7 +788,49 @@ int main(int argc,char** argv) {
         } catch(const std::exception& error) {
             std::cout<<encode(Object{{"host_error",QString::fromUtf8(error.what())}}).toStdString()<<'\n'<<std::flush;
         }
-    }
+    };
+#if defined(Q_OS_UNIX)
+    // stdin is this existing line protocol, not a second IPC server. Readiness
+    // runs on the actual GUI owner event loop; a quiet driver cannot starve Qt.
+    const int original_flags=::fcntl(STDIN_FILENO,F_GETFL);
+    if(original_flags<0 || ::fcntl(STDIN_FILENO,F_SETFL,original_flags|O_NONBLOCK)<0)return 89;
+    QByteArray input_buffer;
+    QSocketNotifier input_ready(STDIN_FILENO,QSocketNotifier::Read,&app);
+    QObject::connect(&input_ready,&QSocketNotifier::activated,&app,[&] {
+        // Commands may drain events to settle real controls. Keep stdin delivery
+        // nonreentrant so current receivers and FIFO command/reply remain exact.
+        input_ready.setEnabled(false);
+        bool eof=false,failed=false;
+        char bytes[65536];
+        for(;;) {
+            const auto count=::read(STDIN_FILENO,bytes,sizeof(bytes));
+            if(count>0) {input_buffer.append(bytes,count);continue;}
+            if(count==0) {eof=true;break;}
+            if(errno==EINTR)continue;
+            if(errno==EAGAIN || errno==EWOULDBLOCK)break;
+            failed=true;break;
+        }
+        for(;;) {
+            const auto end=input_buffer.indexOf('\n');
+            if(end<0)break;
+            const auto command=input_buffer.first(end);input_buffer.remove(0,end+1);
+            execute_command(command);
+        }
+        // Match the original getline behavior for a final line without LF.
+        if(eof && !input_buffer.isEmpty()) {execute_command(input_buffer);input_buffer.clear();}
+        if(failed) {std::fputs("Main test stdin readiness failed\n",stderr);app.exit(88);}
+        else if(eof)app.quit();
+        else input_ready.setEnabled(true);
+    });
+    const int result=app.exec();
+    input_ready.setEnabled(false);
+    (void)::fcntl(STDIN_FILENO,F_SETFL,original_flags);
     engine.reset();
+    return result;
+#else
+    std::fputs("Main test host requires POSIX stdin readiness; this platform is not qualified by this carrier\n",stderr);
+    engine.reset();
+    return 87;
+#endif
 }
 #include "probe.moc"
