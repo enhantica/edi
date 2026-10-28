@@ -88,21 +88,47 @@ class MainActor:
                    for row in self.last['ui'].get('controls', [])):
                 self.command('click', name='home.start')
         assert self.process.poll() is None, 'The real Main host must remain alive'
+        (self.folder / 'command-boundary.json').write_text(json.dumps({
+            'op': op, 'pid': self.process.pid, 'started_monotonic': time.monotonic(),
+            'reply_observed': False, 'process_exit_before_command': self.process.poll(),
+        }, indent=2))
         self.process.stdin.write(json.dumps({'op': op, **arguments}) + '\n')
         self.process.stdin.flush()
         deadline = time.monotonic() + 10
+        buffered = getattr(self, '_stdout_bytes', b'')
         while time.monotonic() < deadline:
-            ready, _, _ = select.select(
-                [self.process.stdout], [], [], max(0, deadline - time.monotonic())
-            )
-            assert ready, f'The finite Main command {op} must return a complete observation'
-            line = self.process.stdout.readline()
-            assert line, f'The actual Main host closed during {op}'
+            if b'\n' not in buffered:
+                ready, _, _ = select.select([self.process.stdout], [], [], max(0, deadline - time.monotonic()))
+                assert ready, f'The finite Main command {op} must return a complete observation'
+                chunk = os.read(self.process.stdout.fileno(), 65536)
+                assert chunk, f'The actual Main host closed during {op}'
+                buffered += chunk
+                self._stdout_bytes = buffered
+                continue
+            raw, buffered = buffered.split(b'\n', 1)
+            self._stdout_bytes = buffered
+            line = raw.decode('utf-8')
             if not line.startswith('{'):
+                with (self.folder / 'host.stdout-diagnostics').open('a') as output:
+                    output.write(line + '\n')
                 continue
             value = json.loads(line)
             assert 'host_error' not in value, value
             self.last = value
+            ui = value.get('ui', {})
+            (self.folder / 'last-observation.json').write_text(json.dumps({
+                'op': op, 'pid': self.process.pid, 'observed_monotonic': time.monotonic(),
+                'process_exit': self.process.poll(),
+                'ui': {key: ui[key] for key in (
+                    'alive', 'project', 'controls', 'texts', 'state', 'connected',
+                    'last_error', 'can_cancel', 'pending_question', 'pending_plan',
+                    'singleton_identity', 'engine_parent', 'cpp_ownership',
+                ) if key in ui},
+            }, indent=2))
+            (self.folder / 'command-boundary.json').write_text(json.dumps({
+                'op': op, 'pid': self.process.pid, 'completed_monotonic': time.monotonic(),
+                'reply_observed': True, 'process_exit': self.process.poll(),
+            }, indent=2))
             if 'ui_sequence' in value.get('ui', {}):
                 (self.folder / 'ui-sequence.json').write_text(json.dumps(value['ui']['ui_sequence'], indent=2))
             return value
@@ -242,6 +268,14 @@ def main_actor(tmp_path):
         + '\n'.join(coding_errors)
     )
 
+
+
+def wait_positive_tab(actor, name):
+    """Normal setup only: wait for the actual loader-backed enabled tab, without revealing controls."""
+    if any(c['name'] == 'home.start' and c['visible'] and c['enabled'] for c in actor.last['ui']['controls']):
+        actor.command('click', name='home.start')
+    actor.until(lambda row: any(c['name'] == name and c['visible'] and c['enabled'] and c['exposed']
+                              for c in row['ui']['controls']))
 
 def copied_estimate_project(tmp_path, *, overrides=True):
     destination = tmp_path / 'native-project'
@@ -636,7 +670,8 @@ def test_current_disabled_relation_preserves_ordinary_rows_and_duplicate_call_is
         for row in original['parameters']
         if row['category'] == 'cell' and row['field'] == 'length_a'
     )
-    actor.configure_turns([[call, call]])
+    call['replay_request_once'] = True
+    actor.configure_turns([[call]])
     actor.connect()
     actor.request()
     actor.until(
@@ -1836,6 +1871,7 @@ def test_actual_manual_text_editor_preserves_composition_escape_and_real_commit(
     ]['opened'], 'E11 F4 actual manual composition, publication and member lifetime remain safe'
     actor.until(lambda row: not row['ui']['project']['calculating'])
     original = actor.last['ui']['project']['structure_rows'][0]['id']
+    wait_positive_tab(actor, 'appBar.tab.structure')
     actor.command('click', name='appBar.tab.structure')
     actor.command('click', name='structures.name.0')
     actor.command('manual_key', key='select_all')
@@ -1868,6 +1904,7 @@ def test_actual_parameter_cell_clean_publication_and_recycling_keep_original_mem
         'reply'
     ]['opened'], 'E11 F4 actual manual composition, publication and member lifetime remain safe'
     actor.until(lambda row: not row['ui']['project']['calculating'])
+    wait_positive_tab(actor, 'appBar.tab.analysis')
     actor.command('click', name='appBar.tab.analysis')
     table = control_expression('parameters.list')
     qml(actor, f'{table}.sourceModel.nameFilter = "length_a"')
@@ -1921,6 +1958,7 @@ def test_ordinary_measurement_picker_keeps_its_original_experiment_intent(
     original = actor.last['ui']['project']['backgrounds']
     data = tmp_path / 'ordinary-picker.xye'
     data.write_text('21.5 17.25 .75\n22.75 31.75 1.25\n25.125 23.5 1.5\n')
+    wait_positive_tab(actor, 'appBar.tab.experiment')
     actor.command('click', name='appBar.tab.experiment')
     actor.command('click', name='experiments.loadData.0')
     if boundary == 'removed':
@@ -1964,6 +2002,7 @@ def test_on_native_parameter_target_is_revealed_from_real_virtualized_or_clipped
         'E11 F7 actual clipped or virtualized member is revealed without broadening mutation'
     )
     actor.until(lambda row: not row['ui']['project']['calculating'])
+    wait_positive_tab(actor, 'appBar.tab.analysis')
     actor.command('click', name='appBar.tab.analysis')
     eligible = {
         row['path']: row
@@ -2271,7 +2310,9 @@ def test_native_fit_uses_current_statusbar_owner_from_structure_page(main_actor,
         'The independent finite polynomial fixture opens through the actual current app owner'
     )
     actor.until(lambda row: not row['ui']['project']['calculating'])
+    wait_positive_tab(actor, 'appBar.tab.structure')
     actor.command('click', name='appBar.tab.structure')
+    actor.until(lambda row: any(c['name'] == 'statusBar.fit.button' and c['visible'] and c['enabled'] and c['exposed'] for c in row['ui']['controls']))
     controls = actor.last['ui']['controls']
     current = [row for row in controls if row['name'] == 'statusBar.fit.button']
     assert len(current) == 1 and current[0]['visible'] and current[0]['enabled'] and current[0]['exposed'], (
@@ -2364,8 +2405,8 @@ def test_native_single_crystal_extinction_matches_current_selectors_and_direct_m
     )
     distributions = qml(actor, '(function(){const m=Session.project.currentExperiment.mosaicDistributionOptions;'
                         'return Array.from({length:m.count},(_,i)=>m.tokenAt(i));})()')
-    assert context['mosaic_distribution_options'] == distributions == ['gaussian', 'lorentzian'], (
-        'Native mosaic choices preserve the original ordinary SC distribution tokens'
+    assert context['extinction_type'] == 'none' and context['mosaic_distribution_options'] == distributions == [], (
+        'The ordinary none family has no applicable mosaic choices before a supported family is selected'
     )
     experiment = context['id']
     choices = [token for token in expected if token != context['extinction_type']]
@@ -2399,6 +2440,11 @@ def test_native_single_crystal_extinction_matches_current_selectors_and_direct_m
                   if row['category'] == 'extinction' and row['field'] == 'crystal_radius')
     assert not radius['refinable'] and not radius['free'], (
         'The original current-dev crystal-radius descriptor remains never fitted'
+    )
+    distributions = qml(scalar, '(function(){const m=Session.project.currentExperiment.mosaicDistributionOptions;'
+                        'return Array.from({length:m.count},(_,i)=>m.tokenAt(i));})()')
+    assert distributions == ['gaussian', 'lorentzian'], (
+        'The applicable mixed family preserves the two original ordinary mosaic distribution tokens'
     )
     original_distribution = qml(scalar, 'Session.project.currentExperiment.mosaicDistribution')
     changed_distribution = next(token for token in distributions if token != original_distribution)
@@ -3019,9 +3065,18 @@ def test_large_original_multiline_description_is_not_a_work_or_form_context_quot
         'Original title control semantics and complete multiline Description survive actual native Create'
     )
     actual = Path(result['path']) / 'project.edi'
-    assert actual.is_file() and description in actual.read_text(encoding='utf-8'), (
-        'The ordinary scientific project writer retains the actual complete multiline metadata bytes'
+    assert actual.is_file(), 'The ordinary writer produces its real metadata file before decoded readback'
+    metadata_bytes = actual.read_bytes()
+    complete = copied_estimate_project(tmp_path)
+    (complete / 'project.edi').write_bytes(metadata_bytes)
+    assert actor.command('open', path=str(complete))['reply']['opened'], (
+        'An explicitly complete independent fixture permits ordinary parsing of the actual saved CIF metadata'
     )
+    assert qml(actor, 'Session.project.description') == description and qml(actor, 'Session.project.title') == title, (
+        'Decoded native CIF metadata preserves the complete original multiline Description and Title'
+    )
+    assert actual.read_bytes() == metadata_bytes, 'Decoded metadata observation never rewrites the original saved project'
+
     assert actor.last['ui']['connected'] and not actor.last['ui']['can_cancel'], (
         'A valid large form cannot retire the account or leave a retention/Clear fence'
     )
@@ -3339,7 +3394,7 @@ def test_open_current_archive_backing_root_preserves_real_files_and_current_data
         'A subsequent ordinary Save still has its real current files and source data after same-backing adoption'
     )
     if target_kind == 'archive_inside':
-        assert target.is_file() and working.is_dir() and actual.is_dir(), (
+        assert target.is_file() and working.is_dir() and Path(actor.last['ui']['project']['path']).is_dir(), (
             'Ordinary subsequent Save preserves both the retained archive origin ancestor and the current working closure'
         )
         with zipfile.ZipFile(target) as saved_archive:
@@ -3347,3 +3402,185 @@ def test_open_current_archive_backing_root_preserves_real_files_and_current_data
                 assert saved_archive.read(relative) == content, (
                     'The original future archive target actually receives the unchanged scientific files on ordinary Save'
                 )
+
+
+def test_main_reader_keeps_json_after_a_coalesced_native_diagnostic(tmp_path):
+    program = "import sys,os;sys.stdin.readline();os.write(1,b'library notice\\n{\"ui\":{\"alive\":true},\"reply\":{\"value\":73}}\\n');sys.stdin.readline()"
+    actor = MainActor.__new__(MainActor)
+    actor.folder = tmp_path
+    actor.process = subprocess.Popen([sys.executable, '-c', program], stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+    try:
+        response = actor.command('inspect')
+        assert response['ui']['alive'] and response['reply']['value'] == 73, (
+            'A complete JSON response already read beside a library diagnostic cannot be stranded behind OS select readiness'
+        )
+        assert actor.process.poll() is None, 'The framing witness keeps its server alive awaiting the next real command'
+    finally:
+        actor.process.stdin.close()
+        actor.process.wait(timeout=2)
+        actor.process.stdout.close()
+        actor.process.stderr.close()
+
+
+def model_wire_contexts(actor, response):
+    contexts = []
+    for line in actor.trace.read_text().splitlines():
+        request = json.loads(line)
+        if request.get('method') != 'turn/start':
+            continue
+        for item in request['params']['input']:
+            text = item.get('text', '')
+            if text.startswith('EDI_APPROVED_CONTEXT_DATA_V1'):
+                contexts.append(json.loads(text[text.index('{'):]))
+    reply = native_result(response)
+    contexts.extend(row for row in objects(reply) if row.get('schema') == 'edi.assistant.context/1')
+    assert len(contexts) >= 2, 'Both the actual approved provider context and native inspect reply expose their real typed context'
+    return contexts
+
+
+@pytest.mark.parametrize('kind', ['line-segment', 'polynomial', 'chebyshev'])
+@pytest.mark.parametrize('mode', ['manual', 'auto'])
+def test_model_visible_background_ownership_settings_and_terms_match_real_native_values(main_actor, tmp_path, kind, mode):
+    actor = main_actor([[]])
+    project = tmp_path / 'native-wire-background'
+    shutil.copytree(ROOT / ('tests/fixtures/background_estimate/projects/fitted-auto-' + kind), project)
+    path = project / 'experiments/d20.edi'
+    text = path.read_text()
+    assert text.count('_background_estimate.mode auto') == 1, 'The independent source fixture explicitly declares its original automatic owner'
+    if mode == 'manual':
+        path.write_text(text.replace('_background_estimate.mode auto', '_background_estimate.mode manual'))
+    assert actor.command('open', path=str(project))['reply']['opened'], 'Model-visible ownership starts from the genuine native saved background fixture'
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    native = actor.last['ui']['project']['backgrounds'][0]
+    assert native['mode'] == mode and native['type'] == kind, 'The ordinary native owner actually adopts the independently declared background type and mode'
+    actor.configure_turns([[tool_call('inspect_project', 'actual-visible-background')]])
+    actor.connect()
+    actor.request('Inspect the actual current native background and saved settings.')
+    actor.until(lambda row: len(actor.responses()) == 1 and row['ui']['state'] == 'idle')
+    for context in model_wire_contexts(actor, actor.responses()[0]):
+        background = next(row for row in context['datasets'] if row['id'] == native['id'])['background']
+        assert background['type'] == kind, 'Actual approved/inspect wire preserves the real native background family'
+        assert background['estimate'] == {'mode': mode, 'method': 'arpls', 'width': 6,
+            'smoothness': 1000, 'n_points': 9, 'tolerance': 2, 'in_peaks': 'move',
+            'use_model': 'auto', 'max_terms': 3}, (
+            'Actual wire retains every independently stored native Estimate setting instead of silently dropping its typed object'
+        )
+        assert [{k:point[k] for k in ('id','position','intensity','free')} for point in background['anchors']] == native['points'], (
+            'Approved context and inspect preserve actual native point identity, coordinates, intensities and free flags'
+        )
+        assert [{k:term[k] for k in ('id','order','coefficient','uncertainty','free')} for term in background['terms']] == native['term_rows'], (
+            'Approved context and inspect preserve every current polynomial/Chebyshev term through the actual outgoing projection'
+        )
+        assert all(term['dependence'] == 'independent' for term in background['terms']), (
+            'The independent unconstrained series fixture remains independent in model-visible native metadata'
+        )
+
+
+def test_model_visible_sc_choices_follow_actual_applicable_native_family(main_actor, tmp_path):
+    actor = main_actor([[]])
+    project = tmp_path / 'sc-visible-options'
+    shutil.copytree(ROOT / 'docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project', project)
+    assert actor.command('open', path=str(project))['reply']['opened'], 'Model-visible SC metadata uses the independently published measured single-crystal fixture'
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    original=actor.last['ui']['project']
+    initial=json.loads(actor.last['ui']['context'])['datasets'][0]
+    assert initial['extinction_type']=='none', 'The published fixture initially has no applicable mosaic family'
+    actor.configure_turns([[tool_call('edit_experiment','inapplicable-mosaic',experiment=initial['id'],operation='mosaic_distribution',value='gaussian')]])
+    actor.connect();actor.request('Report whether the current none family has an applicable mosaic selector.')
+    actor.until(lambda row:len(actor.responses())==1 and row['ui']['state']=='idle')
+    assert not actor.responses()[0]['result']['success'] and actor.last['ui']['project']==original, (
+        'An inapplicable ordinary mosaic choice refuses without changing native science or creating a new field family'
+    )
+    qml(actor, 'Session.project.currentExperiment.extinctionType="becker-coppens-mixed"')
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    def options(name):
+        return qml(actor, '(function(){const m=Session.project.currentExperiment.'+name+';return Array.from({length:m.count},(_,i)=>m.tokenAt(i));})()')
+    ordinary_types, ordinary_distributions = options('extinctionTypeOptions'), options('mosaicDistributionOptions')
+    assert ordinary_distributions == ['gaussian','lorentzian'], 'The genuinely selected mixed family has the original applicable two-token mosaic selector'
+    actor.append_turn([tool_call('inspect_project','actual-visible-sc-options')])
+    actor.connect();actor.request('Inspect the current actual single-crystal family and its available ordinary options.')
+    actor.until(lambda row:len(actor.responses())==2 and row['ui']['state']=='idle')
+    contexts=model_wire_contexts(actor,actor.responses()[-1])
+    assert len(contexts)==3 and contexts[0]['datasets'][0]['mosaic_distribution_options']==[], 'Actual initial none context and both later applicable contexts retain their distinct native option scopes'
+    for context in contexts[1:]:
+        row=context['datasets'][0]
+        assert row['sample_form']=='single crystal' and row['extinction_type']=='becker-coppens-mixed', (
+            'Actual model-visible SC type/family agrees with the ordinary selected native owner'
+        )
+        assert row['extinction_type_options']==ordinary_types and row['mosaic_distribution_options']==ordinary_distributions, (
+            'Actual approved/inspect context cannot erase currently applicable SC native selector choices'
+        )
+
+
+@pytest.mark.parametrize('kind', ['nested','readonly','example'])
+def test_actual_retired_worker_and_repeat_copy_keep_live_native_file_identity(main_actor,tmp_path,kind):
+    actor=main_actor([[]])
+    readonly=None
+    try:
+        if kind=='example':
+            initial=actor.command('open_first_example')['reply']
+            assert initial['opened'], 'A real bundled example supplies its actual ordinary backing root before repeated Open'
+            target=initial['id'];successor=''
+        else:
+            source=copied_estimate_project(tmp_path)
+            if kind=='readonly':
+                readonly=source
+                for p in source.rglob('*'):p.chmod(0o555 if p.is_dir() else 0o444)
+                source.chmod(0o555)
+            assert actor.command('open',path=str(source))['reply']['opened'], 'The real native owner adopts the independent measured source before its worker lifetime witness'
+            target=str(source);successor=''
+            if kind=='nested':
+                archive=tmp_path/'worker-original.zip'
+                assert actor.command('save_project_as',path=str(archive),zip=True,copy=True)['reply']['saved'], 'The ordinary archive writer creates the actual worker-backed temporary root'
+                assert actor.command('open',path=str(archive))['reply']['opened'], 'Ordinary archive Open supplies the actual removable backing root'
+                outer=tmp_path/'outer';winner=tmp_path/'winner'
+                shutil.copytree(source,outer);shutil.copytree(source,winner)
+                target,successor=str(outer),str(winner)
+        actor.until(lambda row:not row['ui']['project']['calculating'])
+        result=actor.command('live_worker_root_boundary',kind=kind,target=target,successor=successor)['reply']
+        assert result['actual_worker_entered'] and result['native_file_read_before'], (
+            'The genuine original ProjectViewModel Worker reaches a real native experiment-file read before replacement'
+        )
+        assert result['file_identity_at_about'] and result['file_preserved_while_worker_live'], (
+            'Neither fixed-copy staging nor reentrant cleanup may unlink or replace the live original native file before its owner releases it'
+        )
+        if kind=='nested':
+            assert result['nested_reached'] and result['nested_opened'] and result['file_preserved_after_nested'], (
+                'A genuine nested ordinary Open exercises the early-return branch while the retired original Worker owns its files'
+            )
+            assert actor.last['ui']['project']['path']==successor, 'Reentrant native replacement retains the actual independent successor rather than inventing rollback'
+        else:
+            assert result['opened'], 'A valid repeated read-only/example Open still adopts its real complete project'
+        assert result['original_destroyed'] and result['actual_worker_finished'] and result['native_file_read_after'], (
+            'The original QObject/Worker retirement completes its actual data read before reclaiming its backing root'
+        )
+    finally:
+        if readonly is not None:
+            readonly.chmod(0o755)
+            for p in readonly.rglob('*'):p.chmod(0o755 if p.is_dir() else 0o644)
+
+
+def test_pending_archive_source_survives_real_same_owner_save_as_publication(main_actor,tmp_path):
+    actor=main_actor([[]]);source=copied_estimate_project(tmp_path)
+    assert actor.command('open',path=str(source))['reply']['opened'], 'Pending source lifetime starts from an independently complete ordinary project'
+    archive=tmp_path/'outer-current.zip'
+    assert actor.command('save_project_as',path=str(archive),zip=True,copy=True)['reply']['saved'], 'Ordinary archive Save establishes the original owned temporary-root lifetime'
+    assert actor.command('open',path=str(archive))['reply']['opened'], 'Ordinary archive Open adopts its actual current working root'
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    before=actor.last['ui']['project'];inside=Path(before['path'])/'pending-input.zip'
+    assert actor.command('save_project_as',path=str(inside),zip=True,copy=True)['reply']['saved'], 'A real archive Save copy places its exact future Open source inside the existing owned root'
+    destination=tmp_path/'actual-intervening-save'
+    result=actor.command('pending_open_save_as',source=str(inside),destination=str(destination))['reply']
+    assert result['hooked'] and result['saved'] and not result['hook_error'], (
+        'A real pathChanged publication invokes the ordinary same-owner SaveAs before outer archive-origin installation'
+    )
+    assert result['source_preserved_during_pending_save'], (
+        'The genuine archive input remains byte-identical through nested cleanup while its actual Open is still pending'
+    )
+    assert result['current_path']==str(destination) and result['location']==str(destination), (
+        'The outer Open cannot reinstall stale archive origin over the actual intervening same-owner SaveAs location'
+    )
+    assert (destination/'project.edi').is_file() and actor.last['ui']['project']['structure_rows']==before['structure_rows'], (
+        'Actual adopted scientific files and structure values survive the superseding native write without fabricated rollback'
+    )

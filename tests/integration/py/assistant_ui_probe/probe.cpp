@@ -13,6 +13,11 @@
 #include <type_traits>
 #include "engine_setup.hpp"
 #include "edi/io.hpp"
+#include "edi/worker.hpp"
+#include "example_list_model.hpp"
+#include <condition_variable>
+#include <mutex>
+#include <filesystem>
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "../../../../core/src/assistant_skills.hpp"
@@ -367,6 +372,12 @@ int main(int argc,char** argv) {
                         {"intensity",static_cast<double>(data.intensity_meas.get().size())},{"sigma",static_cast<double>(data.intensity_meas_su.get().size())},{"wavelength",static_cast<double>(data.wavelength.get().size())}};
                     row["reflection_columns_rectangular"]=data.rectangular();
                 }
+                Array terms;
+                for(const auto& term:bank->background_terms) terms.push_back(Object{
+                    {"id",QString::fromStdString(term->id.value())},{"order",term->order.get()},
+                    {"coefficient",term->coef.value.get()},{"free",term->coef.free.get()},
+                    {"uncertainty",term->coef.uncertainty.get()?QJsonValue(*term->coef.uncertainty.get()):QJsonValue()}});
+                row["term_rows"]=terms;
                 row["input_first"]=input_rows;backgrounds[backgrounds.size()-1]=row;
             }
             project={{"name",QString::fromStdString(model.metadata.name)},
@@ -376,8 +387,8 @@ int main(int argc,char** argv) {
                      {"aliases",aliases},{"constraints",constraints},
                      {"backgrounds",backgrounds},
                      {"calculating",observed->project()->calculating()},
-                     {"cell_a",model.structures.empty()?QJsonValue():QJsonValue(model.structure().cell.length_a.value.get())},
-                     {"cell_a_free",model.structures.empty()?QJsonValue():QJsonValue(model.structure().cell.length_a.free.get())},
+                     {"cell_a",model.structures.size()!=1?QJsonValue():QJsonValue(model.structures.front()->cell.length_a.value.get())},
+                     {"cell_a_free",model.structures.size()!=1?QJsonValue():QJsonValue(model.structures.front()->cell.length_a.free.get())},
                      {"report_embedded",observed->project()->report()->embedLibraries()},
                      {"can_undo",observed->project()->canUndo()}};
         }
@@ -448,6 +459,97 @@ int main(int argc,char** argv) {
                 const auto index=edi::assistant::detail::skill_index_data();
                 result={{"index",QJsonDocument::fromJson(QByteArray(index.data(),index.size())).object()},
                     {"resources",resources}};
+            }
+            else if(op=="capture_frame") {
+                const auto path=input["path"].toString();
+                if(path.isEmpty()||!window->isExposed())throw std::runtime_error("current Main frame is not exposed");
+                const auto image=window->grabWindow();
+                result={{"saved",!image.isNull()&&image.save(path)},{"width",image.width()},{"height",image.height()}};
+            }
+            else if(op=="scientific_receipt") {
+                if(!observed->project())throw std::runtime_error("scientific receipt requires current project");
+                Array files;
+                for(const auto& [path,text]:observed->project()->savedFiles())
+                    files.append(Object{{"relative",QString::fromStdString(path)},{"text",QString::fromStdString(text)}});
+                result={{"files",files}};
+            }
+            else if(op=="open_first_example") {
+                const auto ids=edi_app::ExampleListModel::bundledIds();
+                if(ids.empty())throw std::runtime_error("no actual bundled example available");
+                result={{"id",ids.front()},{"opened",observed->openExample(ids.front())}};
+            }
+            else if(op=="pending_open_save_as") {
+                const auto source=input["source"].toString(),destination=input["destination"].toString();
+                auto read=[&]{QFile f(source);return f.open(QIODevice::ReadOnly)?f.readAll():QByteArray();};
+                const auto original=read();
+                if(original.isEmpty())throw std::runtime_error("pending Open source is absent before its native action");
+                bool armed=true,hooked=false,saved=false,source_during=false;QString hook_error;
+                QMetaObject::Connection path_connection;
+                const auto changed=QObject::connect(observed,&edi_app::Session::projectChanged,observed,[&]{
+                    if(!armed||!observed->project())return;
+                    auto* owner=observed->project();
+                    path_connection=QObject::connect(owner,&edi_app::ProjectViewModel::pathChanged,observed,[&,owner]{
+                        if(!armed||observed->project()!=owner)return;
+                        armed=false;hooked=true;
+                        try {saved=observed->saveAs(QUrl::fromLocalFile(destination));source_during=read()==original;}
+                        catch(const std::exception& e){hook_error=QString::fromUtf8(e.what());}
+                    });
+                });
+                bool opened=false;
+                try{opened=observed->openProject(QUrl::fromLocalFile(source));}
+                catch(...){QObject::disconnect(changed);QObject::disconnect(path_connection);throw;}
+                QObject::disconnect(changed);QObject::disconnect(path_connection);
+                result={{"opened",opened},{"hooked",hooked},{"saved",saved},{"source_preserved_during_pending_save",source_during},
+                    {"hook_error",hook_error},{"location",observed->locationText()},
+                    {"current_path",observed->project()?observed->project()->path():QString()}};
+            }
+            else if(op=="live_worker_root_boundary") {
+                const QPointer<edi_app::ProjectViewModel> original=observed->project();
+                if(!original)throw std::runtime_error("live root witness requires original native owner");
+                const auto root=original->project().scan_data_root.empty()?original->path():QString::fromStdString(original->project().scan_data_root);
+                const auto files=QDir(root+"/experiments").entryList({"*.edi"},QDir::Files,QDir::Name);
+                if(files.empty())throw std::runtime_error("live root witness requires real native experiment file");
+                const auto file=root+"/experiments/"+files.front();
+                QTemporaryDir links(QDir::tempPath()+"/edi-root-identity-XXXXXX");
+                if(!links.isValid())throw std::runtime_error("root identity link directory unavailable");
+                const auto link=links.filePath("original-native-inode");
+                std::filesystem::create_hard_link(file.toStdString(),link.toStdString());
+                struct Reader {std::mutex mutex;std::condition_variable cv;std::atomic<bool> entered{false},done{false},release{false};bool before=false,after=false;};
+                const auto reader=std::make_shared<Reader>();
+                original->assistantWorker().submit("tests.actual-root-reader",[reader,file,link](const edi::work::CancelToken& cancel,const edi::work::Emit&)->edi::work::Delivery{
+                    auto read=[&]{QFile f(file);return f.open(QIODevice::ReadOnly)?f.readAll():QByteArray();};
+                    const auto bytes=read();reader->before=!bytes.isEmpty();reader->entered=true;reader->cv.notify_all();
+                    {std::unique_lock lock(reader->mutex);while(!cancel.cancelled()&&!reader->release)reader->cv.wait_for(lock,std::chrono::milliseconds(1));}
+                    std::error_code error;
+                    reader->after=read()==bytes&&std::filesystem::equivalent(file.toStdString(),link.toStdString(),error)&&!error;
+                    reader->done=true;reader->cv.notify_all();return {};
+                });
+                {std::unique_lock lock(reader->mutex);if(!reader->cv.wait_for(lock,std::chrono::seconds(2),[&]{return reader->entered.load();})){reader->release=true;reader->cv.notify_all();throw std::runtime_error("actual model Worker did not enter native file read");}}
+                auto preserved=[&]{std::error_code error;return std::filesystem::equivalent(file.toStdString(),link.toStdString(),error)&&!error;};
+                const auto kind=input["kind"].toString();bool nested=false,nested_opened=false,about=false,protected_about=false,protected_nested=false;
+                const auto about_connection=QObject::connect(observed,&edi_app::Session::projectAboutToChange,observed,[&]{
+                    if(observed->project()==original){about=true;protected_about=preserved();}
+                });
+                QMetaObject::Connection changed;
+                if(kind=="nested")changed=QObject::connect(observed,&edi_app::Session::projectChanged,observed,[&]{
+                    if(nested)return;nested=true;
+                    nested_opened=observed->openProject(QUrl::fromLocalFile(input["successor"].toString()));
+                    protected_nested=reader->done.load()?reader->after:preserved();
+                });
+                bool opened=false;QString operation_error;
+                try {
+                    opened=kind=="example"?observed->openExample(input["target"].toString()):observed->openProject(QUrl::fromLocalFile(input["target"].toString()));
+                }catch(const std::exception& e){operation_error=QString::fromUtf8(e.what());}
+                QObject::disconnect(changed);QObject::disconnect(about_connection);drain(40);
+                const bool retired_destroyed=original.isNull();
+                const bool protected_while_live=reader->done.load()?reader->after:preserved();
+                reader->release=true;reader->cv.notify_all();
+                bool done=false;{std::unique_lock lock(reader->mutex);done=reader->cv.wait_for(lock,std::chrono::seconds(2),[&]{return reader->done.load();});}
+                result={{"opened",opened},{"operation_error",operation_error},{"about_reached",about},{"file_identity_at_about",protected_about},
+                    {"nested_reached",nested},{"nested_opened",nested_opened},{"file_preserved_after_nested",protected_nested},
+                    {"original_destroyed",retired_destroyed},{"file_preserved_while_worker_live",protected_while_live},
+                    {"actual_worker_entered",reader->entered.load()},{"actual_worker_finished",done},{"native_file_read_before",reader->before},{"native_file_read_after",reader->after},
+                    {"native_fit_exercised",false},{"original_root",root}};
             }
             else if(op=="evaluate") {
                 QQmlExpression expression(qmlContext(window),window,input["expression"].toString());
