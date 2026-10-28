@@ -600,11 +600,11 @@ Rectangle {
                     spacing: AppSizes.unit * 0.125
                     EaElements.Label {
                         Layout.maximumWidth: composerContent.width * 0.6
-                        text: qsTr("%1 (%2 bytes)%3").arg(model.name).arg(model.bytes)
+                        text: qsTr("%1 (%2)%3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes))
                             .arg(model.textReadable ? "" : qsTr(" · text export required"))
                         textFormat: Text.PlainText
                         elide: Text.ElideMiddle
-                        Accessible.name: qsTr("Selected file: %1, %2 bytes. %3").arg(model.name).arg(model.bytes)
+                        Accessible.name: qsTr("Selected file: %1, %2. %3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes))
                             .arg(model.textReadable ? qsTr("Available for consented text reads") : qsTr("Unsupported binary; text export required"))
                     }
                     EaElements.ToolButton {

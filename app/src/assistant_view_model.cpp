@@ -696,8 +696,8 @@ Object message_display_row(const Object& original) {
 }
 class Rows : public RowTableModel {
    public:
-    Rows(const QStringList& names, QObject* parent, const QJsonArray* canonical = nullptr)
-        : RowTableModel(names, parent), names_(names), canonical_(canonical) {}
+    Rows(const QStringList& names, QObject* parent, const QJsonArray* canonical = nullptr, bool messageProjection = false)
+        : RowTableModel(names, parent), names_(names), canonical_(canonical), message_projection_(messageProjection) {}
     void assign(const QJsonArray& data) {
         if (!canonical_) own_ = data;
         pending_ = true;
@@ -710,7 +710,7 @@ class Rows : public RowTableModel {
             const auto& source = canonical_ ? *canonical_ : own_;
             QJsonArray projected;
             for(const auto& value:source) {
-                if(canonical_)projected.append(message_display_row(value.toObject()));
+                if(message_projection_)projected.append(message_display_row(value.toObject()));
                 else projected.append(value);
             }
             visible_=std::move(projected); // Only lightweight display values reach the model.
@@ -742,6 +742,7 @@ class Rows : public RowTableModel {
    private:
     QStringList names_;
     const QJsonArray* canonical_;
+    const bool message_projection_;
     QJsonArray own_,visible_,announced_; // Canonical message payloads are never copied into these display snapshots.
     bool assigning_ = false, pending_ = false;
 };}
@@ -1045,7 +1046,7 @@ struct AssistantViewModel::State {
     std::unique_ptr<edi::assistant::native::ChatGptConnection> connection;
 #endif
     QJsonArray history;
-    Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history};
+    Rows messages{{"id", "kind", "text", "status", "payload"}, &owner, &history, true};
     Rows models{{"id", "displayName", "efforts", "available"}, &owner};
     QJsonArray skill_catalog_rows;
     Rows skills{{"id", "version", "title", "summary", "path", "sha256", "requires", "capabilities", "references", "content", "available", "blocked_reason"}, &owner,&skill_catalog_rows};

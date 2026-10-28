@@ -343,7 +343,7 @@ Rectangle {
     }
     color: "transparent"
     function sentFileLabel(file) {
-        return qsTr("%1 (%2 bytes)%3").arg(file.name).arg(file.bytes)
+        return qsTr("%1 (%2)%3").arg(file.name).arg(ApplicationInfo.fileSizeKilobytes(file.bytes))
             .arg(file.textReadable ? "" : qsTr(" · text export required"));
     }
     readonly property real widestSentFile: {
@@ -489,7 +489,7 @@ Rectangle {
                         textFormat: Text.PlainText
                         elide: Text.ElideMiddle
                         color: EaStyle.Colors.themeForegroundMinor
-                        Accessible.name: qsTr("Sent file snapshot: %1, %2 bytes").arg(modelData.name).arg(modelData.bytes)
+                        Accessible.name: qsTr("Sent file snapshot: %1, %2").arg(modelData.name).arg(ApplicationInfo.fileSizeKilobytes(modelData.bytes))
                     }
                 }
             }
