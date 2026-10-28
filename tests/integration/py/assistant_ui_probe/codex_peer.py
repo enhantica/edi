@@ -361,6 +361,22 @@ for line in sys.stdin:
         if fixture.get('list_only_fixture_threads'):
             known = {row['id'] for row in fixture.get('threads', [])}
             rows = [row for row in rows if row['id'] in known]
+        if params.get('parentThreadId'):
+            rows = [row for row in rows if row.get('parentThreadId') == params['parentThreadId']]
+        if params.get('ancestorThreadId'):
+            ancestor = params['ancestorThreadId']
+            def descendant(row):
+                seen = {row['id']}
+                parent = row.get('parentThreadId')
+                while parent is not None:
+                    if parent == ancestor:
+                        return True
+                    if parent in seen:
+                        return False
+                    seen.add(parent)
+                    parent = state['threads'].get(parent, {}).get('parentThreadId')
+                return False
+            rows = [row for row in rows if row['id'] != ancestor and descendant(row)]
         if params.get('sourceKinds'):
             rows = [row for row in rows if row['source'] in params['sourceKinds']]
         if params.get('modelProviders'):
