@@ -922,6 +922,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     };
     RecordedEdit* recording_ = nullptr; // stack owner, detached before any UI observer
     void finishRecordedEdit() noexcept;
+    EditOutcome estimateBackgroundFor(const edi::ExperimentBase* expected,EditOutcome* receipt);
     EditOutcome* estimate_receipt_ = nullptr;
     EditOutcome applyEdit(const edi::Edit& change, bool structural, bool restoring = false);
     QString editReadinessRefusal(bool restoring) const;

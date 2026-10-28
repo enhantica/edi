@@ -166,3 +166,19 @@ methods. Header width application and the fitting pass recheck it after mutating
 cells, so a destruction callback cannot turn their next lookup into a call on a
 retired QML table. The token belongs to the original table, never a model or its
 replacement.
+
+### 2026-10-28: retain the original row inside mutating width helpers
+
+The first ListView width distributor is the pinned GUI component's applyWidths.
+DataTable keeps its exact sequential resolved-width assignment locally so each
+observable cell write can be followed by a check of the original table lifetime,
+model/revision and row/cell identities before another lookup or write. Filler
+padding computes both values before its first write and checks the same owner
+between left and right padding. Alignment callers retain that obligation too.
+The normal width distribution, measurement and coalesced fit rules do not change.
+
+At original table destruction, its pinned header/delegate Connections are disabled
+before their listView references are released, preventing late inherited callbacks
+from resolving removed derived methods. Other fit signal entries retain the plain
+lifetime token before dispatch. This changes neither the pinned dependency nor live
+layout, and adds no timer or ignored-warning path.

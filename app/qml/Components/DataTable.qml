@@ -117,9 +117,38 @@ EaComponents.ListView {
     property var cellKinds: new Map()
     // A cell's padding: its own, a spacing more on the side it aligns to, so a right-aligned number and a
     // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it.
+    function columnRowOwner(row) {
+        const life = columnFitLife;
+        if (!life || !life.alive || !Qt.isQtObject(row)) return () => false;
+        const parent = row.parent, source = sourceModel, revision = modelRevision;
+        const cells = Array.from(row.children);
+        return () => {
+            if (!life.alive || !Qt.isQtObject(row) || row.parent !== parent || table.sourceModel !== source || table.modelRevision !== revision) return false;
+            const current = Array.from(row.children);
+            return current.length === cells.length && cells.every((cell, index) => Qt.isQtObject(cell) && current[index] === cell && cell.parent === row);
+        };
+    }
+    // Same width distribution as the pinned base ListView, with the original
+    // row/cell lifetime retained across each observable width assignment.
+    function applyWidths(row) {
+        const life = columnFitLife;
+        if (!life || !life.alive || !Qt.isQtObject(row)) return;
+        const ownsRow = columnRowOwner(row), cells = Array.from(row.children);
+        for (let i = 0; i < cells.length; ++i) {
+            if (!ownsRow()) return;
+            const widths = resolvedColumnWidths;
+            if (i >= widths.length) return;
+            const cell = cells[i], width = widths[i];
+            if (!ownsRow()) return;
+            cell.width = width;
+        }
+    }
     function padForFiller(cell, column) {
-        if (!("rightPadding" in cell) || "keepsAlignment" in cell)
+        const life = columnFitLife;
+        if (!life || !life.alive || !Qt.isQtObject(cell) || !("rightPadding" in cell) || "keepsAlignment" in cell)
             return;
+        const ownsRow = columnRowOwner(cell.parent);
+        if (!ownsRow()) return;
         if (!basePaddings.has(cell))
             basePaddings.set(cell, {
                 "left": cell.leftPadding,
@@ -128,8 +157,12 @@ EaComponents.ListView {
         const base = basePaddings.get(cell);
         const kind = cellKinds.get(cell) ?? "";
         const gap = EaStyle.Sizes.tableColumnSpacing;
-        cell.leftPadding = base.left + (kind === "text" ? gap : 0);
-        cell.rightPadding = base.right + (kind === "number" || kind === "check" ? gap : 0) + (column === fillerIndex ? fillerWidth : 0);
+        const left = base.left + (kind === "text" ? gap : 0);
+        const right = base.right + (kind === "number" || kind === "check" ? gap : 0) + (column === fillerIndex ? fillerWidth : 0);
+        if (!ownsRow()) return;
+        cell.leftPadding = left;
+        if (!ownsRow()) return;
+        cell.rightPadding = right;
     }
     // A cell's kind, which sets how it aligns: a number, an icon or button, or text.
     function kindOf(cell) {
@@ -162,7 +195,20 @@ EaComponents.ListView {
             table.fitColumns();
         });
     }
-    Component.onDestruction: columnFitLife.alive = false
+    Component.onDestruction: {
+        columnFitLife.alive = false;
+        const owner = table;
+        const rows = [headerItem, ...Array.from(contentItem ? contentItem.children : [])];
+        // Retire the pinned header/delegate Connections before derived QML
+        // methods disappear; no live layout or dependency source is changed.
+        for (const row of rows) {
+            if (!Qt.isQtObject(row) || row.listView !== owner) continue;
+            for (const child of Array.from(row.data ?? []))
+                if (Qt.isQtObject(child) && "ignoreUnknownSignals" in child && "target" in child && child.target === owner) child.enabled = false;
+        }
+        for (const row of rows)
+            if (Qt.isQtObject(row) && row.listView === owner) row.listView = null;
+    }
 
     function fitColumns() {
         const life = columnFitLife;
@@ -189,24 +235,28 @@ EaComponents.ListView {
         for (const item of contentItem.children) {
             if (!life.alive) return;
             const cells = cellsOf(item);
-            if (!cells || item === headerItem)
+            if (!cells || cells.length === 0 || item === headerItem)
                 continue;
             if (!life.alive) return;
+            const ownsRow = columnRowOwner(cells[0].parent);
+            if (!ownsRow()) return;
             kinds = kinds ?? cells.map(cell => kindOf(cell));
             for (let i = 0; i < cells.length && i < widths.length; ++i) {
+                if (!ownsRow()) return;
                 if (i > 0 && kinds[i])
                     alignCell(cells[i], kinds[i]);
-                if (!life.alive) return;
+                if (!ownsRow()) return;
                 padForFiller(cells[i], i);
-                if (!life.alive) return;
+                if (!ownsRow()) return;
                 widths[i] = Math.max(widths[i], Math.ceil(measure(cells[i]) - (i === fillerIndex ? fillerWidth : 0)));
             }
         }
-        if (kinds && headerCells) {
+        if (kinds && headerCells && headerCells.length) {
+            const ownsHeader = columnRowOwner(headerCells[0].parent);
             for (let i = 1; i < headerCells.length && i < kinds.length; ++i) {
-                if (!life.alive) return;
+                if (!ownsHeader()) return;
                 alignCell(headerCells[i], kinds[i]);
-                if (!life.alive) return;
+                if (!ownsHeader()) return;
                 padForFiller(headerCells[i], i);
             }
         }
@@ -312,16 +362,22 @@ EaComponents.ListView {
 
     FontMetrics {
         id: metrics
+        property var ownerLife: null
+        Component.onCompleted: ownerLife = table.columnFitLife
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
-        onFontChanged: table.remeasure()
+        onFontChanged: if (ownerLife && ownerLife.alive) table.remeasure()
     }
     Connections {
+        property var ownerLife: null
+        Component.onCompleted: ownerLife = table.columnFitLife
         target: table.model
         ignoreUnknownSignals: true
         function onDataChanged(topLeft, bottomRight) {
+            if (!ownerLife || !ownerLife.alive) return;
             // A value arriving later (a calculated curve) can widen its column.
             table.refit();
+            if (!ownerLife.alive) return;
             let changed = false;
             for (const role in table.rowWidths) {
                 const widths = table.rowWidths[role];
@@ -337,16 +393,16 @@ EaComponents.ListView {
                 table.modelRevision++;
         }
         function onCountChanged() {
-            table.remeasure();
+            if (ownerLife && ownerLife.alive) table.remeasure();
         }
         function onModelReset() {
-            table.remeasure();
+            if (ownerLife && ownerLife.alive) table.remeasure();
         }
         function onRowsMoved() {
-            table.remeasure();
+            if (ownerLife && ownerLife.alive) table.remeasure();
         }
         function onLayoutChanged() {
-            table.remeasure();
+            if (ownerLife && ownerLife.alive) table.remeasure();
         }
     }
 }

@@ -3182,3 +3182,21 @@ refuses without a mode/algorithm change. Both modes retain the same native
 Estimate operation/settings, recorded outcome and Undo; only visible presentation
 requires this existing reveal path. No unchecked click, forced scroll/focus,
 extra delay, parser, new scientific policy or substituted control is added.
+
+### 2026-10-28: Estimate retains its originally requested experiment
+
+The first ordinary Estimate owner remains ProjectViewModel::estimateBackgroundOutcome.
+Its public signature and manual UI behavior stay intact; the private shared effect
+accepts an optional original member and refuses a different selected member before
+estimation or Undo allocation. The assistant records the admitted canonical ID,
+ExperimentViewModel and native member before following a page, in both presentation
+modes. Discovery, reveal, cue preparation/completion and the effect recheck that
+original selected owner, including a reused Background control. Existing background
+naming/edit paths retain their pinned member and ordinary consumed-input receipts.
+
+A selection change before the write is a no-effect refusal. A change during effect
+publication or context refresh preserves actual applied/Undo facts and reports
+incomplete presentation. The same private effect is used for the optional compound
+setup's captured native member. Model WorkStamps are still required but do not stand
+in for UI selection; no forced selection, AUTO enablement or scientific algorithm
+change is introduced.
