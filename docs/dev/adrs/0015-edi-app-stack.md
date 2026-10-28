@@ -43,7 +43,7 @@ original could. Three facts shape the decision:
    own design values sit in `app/qml/Style/AppSizes.qml`, each a multiple of the base's font size; colours
    and fonts come only from the base's `EaStyle` tokens.
 2. **The base at a verified pin.** `cmake/EdiGuiBase.cmake` fetches gui-components at the full sha
-   `bfe8a386e7e979fbe69506ac0ca3095e62b1ecc1` and declares its own QML modules under the upstream URIs
+   `10dc5828020c90666a1ef015835475936d56e819` and declares its own QML modules under the upstream URIs
    (`EasyApplication.Gui.{Style,Globals,Logic,Animations,Elements,Components}`,
    `EasyApplication.Logic.Maintenance`) over an explicit file list. Upstream files are built byte-identical except the
    declared replacement seams: ParamTextField for parameter menu terminology and units (ADR-0029), TextInput for its
@@ -53,7 +53,7 @@ original could. Three facts shape the decision:
    git clone inside CMake could hang without a word). An offline copy (`EDI_GUI_COMPONENTS_SRC`) is a git clone at the
    pin with an unmodified `src/`, or any other copy whose `src/` files match a committed SHA-256 of the pinned tree.
    `tools/ci/app-build.sh` keeps the build identity of a configure that did not finish, so a rerun of the same identity
-   continues in `build/app` instead of starting from nothing. The pinned commit is the head of gui-components' `edi`
+   continues in `build/app` instead of starting from nothing. The pinned commit is retained on gui-components' `ai-assistant-pointer`
    branch, which has no release tag yet; it stays fetchable as long as that branch keeps it in its history, and the
    archive and source-tree digests refuse any other content. Left out: the Plotly/WebEngine and
    QtCharts charts, `BasicReport` (WebEngine), `GuideWindow`/`GuideWindowContainer`, `JsonListModel`,
@@ -502,3 +502,17 @@ The core, its wheels and the CLI keep the 13.4 deployment target their own sourc
 - **A web view for the report** — needs QtWebEngine, which the web build cannot have; rejected for §8.
 
 The source-tree pin uses `edi_gui_tree_sha256`'s ordering of complete relative path strings. Sorting `pathlib.Path` objects instead orders directory components differently from CMake when a file and directory share a prefix (for example `Maintenance.py` and `Maintenance/Updater.qml`). The archive route is validated separately from the git-checkout route, so the pinned downloaded archive must pass the same CMake digest check.
+
+## Original shared pointer pulse (2026-10-28)
+
+The base pin advances from bfe8a386 to 10dc5828, the original shared
+RemotePointer and its upstream ADR0003. Its minimum rectangle/center placement
+remain fixed while Scale/Opacity Animators perform growth during the existing
+pressDuration and relaxation during clickRelaxation; movement uses the original
+position inputs with X/Y Animators. Color, opacity ranges, public calls and
+original duration settings remain shared. Edi consumes those exact source bytes,
+not an assistant-local copy or an edited fetched archive. The source/archive
+digests were derived from the published immutable archive and compared with every
+tracked src file. Render-thread benefit depends on the actual render loop and
+does not establish that GUI blocking or all pointer hitching is fixed; native
+consuming qualification follows the grouped build.
