@@ -3316,11 +3316,13 @@ struct AssistantViewModel::State {
             widget_refuse(run, QObject::tr("Finish the current manual input before revealing its parameter")); return false;
         }
         QPointer<QQuickItem> wanted(field), group, viewport, wholeRow;
+        const bool boundedControl=!field->property("tableRowHeight").isValid() && !field->inherits("QQuickTextEdit");
         for (auto* a = field->parentItem(); a; a = a->parentItem()) {
             if (!group && a->property("collapsed").isValid() && a->objectName().startsWith("group.")) group = a;
             if (a->property("contentY").isValid() && a->property("contentHeight").isValid()) {
-                const auto center = field->mapToItem(a, QPointF(field->width()/2, field->height()/2));
-                if (!viewport && (center.y() < 0 || center.y() > a->height())) viewport = a;
+                const auto bounds=field->mapRectToItem(a,QRectF(0,0,field->width(),field->height()));
+                const auto center=bounds.center();
+                if(!viewport && (boundedControl?(bounds.top()<0 || bounds.bottom()>a->height()):(center.y()<0 || center.y()>a->height())))viewport=a;
             }
             if (a->objectName().endsWith(".manualSidebar")) break;
         }
@@ -3331,8 +3333,8 @@ struct AssistantViewModel::State {
             viewport.clear();
             for (auto* a = title->parentItem(); a; a = a->parentItem()) {
                 if (a->property("contentY").isValid() && a->property("contentHeight").isValid()) {
-                    const auto center = title->mapToItem(a, QPointF(title->width()/2, title->height()/2));
-                    if (!viewport && (center.y() < 0 || center.y() > a->height())) viewport = a;
+                    const auto bounds=title->mapRectToItem(a,QRectF(0,0,title->width(),title->height()));
+                    if(!viewport && (bounds.top()<0 || bounds.bottom()>a->height()))viewport=a;
                 }
                 if (a->objectName().endsWith(".manualSidebar")) break;
             }
@@ -3362,7 +3364,7 @@ struct AssistantViewModel::State {
                 }
             }
         }
-        if (widget_input->usableTarget(*wanted) && (!wholeRow || widget_full_row_visible(wanted))) {
+        if (!viewport && widget_input->usableTarget(*wanted) && (!wholeRow || widget_full_row_visible(wanted))) {
             if (wanted == field) return true;
             AssistantWidgetInput::Request request;
             request.kind = AssistantWidgetInput::Kind::Navigate; request.target = wanted;
@@ -4117,10 +4119,40 @@ struct AssistantViewModel::State {
             {"applied",result.applied},{"published",result.published},{"complete",result.applied && result.published},{"atomic",true},
             {"steps_completed",result.applied?1:0},{"message",bounded_error(result.message)}});
     }
+    QQuickItem* widget_background_group(const std::shared_ptr<NativeWidget>& run) const {
+        if(!widget_current(run) || !widget_page_selected(run) || !run->project->currentExperiment())return nullptr;
+        QQuickItem* found=nullptr;
+        for(auto* item:widget_items()) {
+            if(item->objectName()!="background.rows" || item->window()!=run->window ||
+                item->property("experiment").value<QObject*>()!=run->project->currentExperiment())continue;
+            bool scoped=false,otherTier=false;
+            for(auto* ancestor=item->parentItem();ancestor;ancestor=ancestor->parentItem()) {
+                if(ancestor->objectName()=="workflow.experiment.manualSidebar")scoped=true;
+                const auto tier=ancestor->property("shownTier");
+                if(tier.isValid() && tier.toString()!="Basic")otherTier=true;
+            }
+            if(!scoped || otherTier)continue;
+            if(found)return nullptr;
+            found=item;
+        }
+        return found;
+    }
+    QQuickItem* widget_background_named(const std::shared_ptr<NativeWidget>& run,const QString& name) const {
+        auto* group=widget_background_group(run);
+        if(!group)return nullptr;
+        QQuickItem* found=nullptr;
+        for(auto* item:widget_items()) {
+            if(item->objectName()!=name || item->window()!=run->window || !group->isAncestorOf(item))continue;
+            if(found)return nullptr;
+            found=item;
+        }
+        return found;
+    }
     void widget_estimate_background(const std::shared_ptr<NativeWidget>& run) {
         if(!widget_current(run) || !widget_input){widget_refuse(run,widget_outcome_error);return;}
-        const QPointer<QQuickItem> target(widget_named("background.estimate"));
-        if(!target){widget_refuse(run,widget_outcome_error);return;}
+        const QPointer<QQuickItem> target(widget_background_named(run,"background.estimate"));
+        if(!target){control_failure(run,ControlCause::Unavailable);widget_refuse(run,QObject::tr("The current experiment's original Estimate control is unavailable"));return;}
+        if(!target->isEnabled()){control_failure(run,ControlCause::Unavailable);widget_refuse(run,QObject::tr("The original Estimate control is disabled; inspect measured data and the current estimation mode"));return;}
         if(!widget_reveal_parameter(run,target))return;
         AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
         auto current=[this,run,target]{return target && widget_current(run);};
@@ -4195,7 +4227,7 @@ struct AssistantViewModel::State {
             else native_finish(true,{{"status","unchanged"},{"complete",true},{"atomic",false},{"steps_completed",0},{"message","Background IDs already match their positions; no input or Undo was needed"}});
             return;
         }
-        const QPointer<QQuickItem> target(widget_named("background.namePoints"));
+        const QPointer<QQuickItem> target(widget_background_named(run,"background.namePoints"));
         if(!target){widget_refuse(run,widget_outcome_error);return;}
         bool owned=false;
         for(auto* a=target->parentItem();a;a=a->parentItem())
@@ -4485,21 +4517,7 @@ struct AssistantViewModel::State {
     }
     void widget_background_begin(const std::shared_ptr<NativeWidget>& run) {
         if (!widget_current(run) || !widget_page_selected(run)) { widget_refuse(run, widget_outcome_error); return; }
-        for (auto* item : widget_items()) {
-            if (item->objectName() != "background.rows" || item->window() != run->window ||
-                item->property("experiment").value<QObject*>() != run->project->currentExperiment()) continue;
-            bool current = false, other_tier = false;
-            for (auto* parent = item->parentItem(); parent; parent = parent->parentItem()) {
-                if (parent->objectName() == "workflow.experiment.manualSidebar") current = true;
-                // Basic and Extras retain the same category content, including hidden groups.
-                // As in the original parameter/creation selectors, only Main owns this input.
-                const auto tier = parent->property("shownTier");
-                if (tier.isValid() && tier.toString() != "Basic") other_tier = true;
-            }
-            if (!current || other_tier) continue;
-            if (run->background_group) { widget_refuse(run, widget_outcome_error); return; }
-            run->background_group = item;
-        }
+        run->background_group=widget_background_group(run);
         if (!run->background_group) { control_failure(run,ControlCause::Unavailable); widget_refuse(run, QObject::tr("The original Background group is unavailable")); return; }
         run->background_id = run->background_request.action == edi::BackgroundPointInput::Action::Add
             ? background_append_input(*run->background_experiment).id : run->background_request.id;

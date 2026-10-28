@@ -6,7 +6,6 @@
 #include <QPointer>
 #include <QString>
 #include <QStringList>
-#include <QTemporaryDir>
 #include <QTimer>
 #include <QUrl>
 #include <QtQml/qqmlregistration.h>
@@ -280,7 +279,6 @@ class Session : public QObject {
     ExampleListModel* examples_;
     WarningListModel* warnings_;
     int project_messages_ = 0;  // the keys of the project's messages
-    std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
     QString opened_archive_;
     // The .zip the project was saved as: its location, rewritten by every Save from the working folder.
@@ -292,6 +290,7 @@ class Session : public QObject {
     void releaseTemporaryFolder();
     // Cleanup authority only: never an inherited origin/Save destination.
     QStringList retained_temporary_roots_;
+    QString prepareCopyRoot(const char* kind);
     void retainTemporaryRoots(const QStringList& candidates);
     struct PendingOpenSource;
     QStringList pending_open_sources_;

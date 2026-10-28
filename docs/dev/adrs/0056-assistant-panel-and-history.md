@@ -3164,3 +3164,21 @@ and mapped exact-coordinate/occupancy/ADP checks still reject a requested litera
 constraints would change. Show actions applies the resolved declaration through the original
 atom-row method, with no mandatory manual Wyckoff entry, extra parser or independent matcher.
 The ordinary native first-atom factory and CIF importer retain their original behavior.
+
+
+### 2026-10-28: reveal a current control before requiring its clipped point
+
+Estimate and background naming first discover the unique original Background
+control under the current experiment's Main group. This shares the existing
+background-row owner lookup, independently of whether a viewport currently clips
+the control. The normal reveal helper opens its original group and scrolls its
+original ScrollView through genuine input before the final target checks/cue.
+Bounded controls and group headers use their full vertical bounds to discover
+clipping; virtualized tables and multiline editors retain their row/clip owners.
+
+The actual manual Estimate failure was an enabled current button below the
+viewport. Automatic mode's disabled manual Estimate control stays disabled and
+refuses without a mode/algorithm change. Both modes retain the same native
+Estimate operation/settings, recorded outcome and Undo; only visible presentation
+requires this existing reveal path. No unchecked click, forced scroll/focus,
+extra delay, parser, new scientific policy or substituted control is added.
