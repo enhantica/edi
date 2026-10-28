@@ -82,6 +82,7 @@ Rectangle {
             else if (commandActivity) add(qsTr("Use the reported operation to support the current task."));
             else add(qsTr("Carry out the requested assistant action for the current task."));
         }
+        add(detail.provenance);
         const outcome = payload && payload.nativeOutcome;
         const message = outcome && typeof outcome.message === "string" ? outcome.message
                       : payload && payload.error && typeof payload.error.message === "string" ? payload.error.message : "";

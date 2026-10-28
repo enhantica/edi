@@ -711,6 +711,28 @@ QString history_thread(const Object& row) {
     }
     return {};
 }
+QString history_turn(const Object& row) {
+    const auto explicitTurn=row.value("sessionTurn").toString();if(!explicitTurn.isEmpty())return explicitTurn;
+    for(const auto* key:{"workTurn","workEvidence"}) {
+        const auto field=row.value(QLatin1StringView(key)).toObject().value("turn_id");
+        if(field.isString())return field.toString();
+        const auto observed=field.toObject();if(observed.value("state")=="observed")return observed.value("value").toString();
+    }
+    return {};
+}
+bool associate_history_threads(QJsonArray& rows) {
+    QMap<QPair<QString,QString>,QSet<QString>> anchors;
+    const auto key=[](const Object& row) {const auto scope=row.value("workScope").toObject();return qMakePair(scope.value("scope_id").toString(),scope.value("attempt_id").toString());};
+    for(const auto& value:rows) {const auto row=value.toObject();const auto identity=key(row);const auto thread=history_thread(row);
+        if(!identity.first.isEmpty() && !identity.second.isEmpty() && !thread.isEmpty())anchors[identity].insert(thread);
+    }
+    bool changed=false;
+    for(qsizetype i=0;i<rows.size();++i) {auto row=rows.at(i).toObject();if(!history_thread(row).isEmpty())continue;
+        const auto known=anchors.value(key(row));
+        if(known.size()==1){row["sessionThread"]=*known.cbegin();rows[i]=row;changed=true;}
+    }
+    return changed;
+}
 // Display projection only. Full canonical diagnostics stay in State::history.
 Object message_payload(const Object& source,bool full) {
     Object result;
@@ -1325,7 +1347,8 @@ struct AssistantViewModel::State {
     std::uint64_t generation = 0;
     QTimer timer{&owner};
     QString history_path, history_archive_thread;
-    std::unique_ptr<AssistantHistoryArchive> history_archive;
+    std::unique_ptr<AssistantHistoryArchive> history_archive,history_legacy_archive;
+    bool history_cache_was_cleared=false;
     bool history_base_included=false, history_unqueued=false, history_initialized=false;
     QJsonArray history_initial_snapshot;
     std::uint64_t history_retry_revision=0;
@@ -1371,6 +1394,23 @@ struct AssistantViewModel::State {
         const QPointer<AssistantViewModel> receiver(&owner);
         try {
             if(!publishing || !history_archive || history_archive_thread!=history_session)return;
+            bool mergedLegacy=false;
+            if(history_legacy_archive) {
+                const auto legacy=history_legacy_archive->view();
+                if(legacy.loaded) {
+                    if(!history_cache_was_cleared) {
+                        QSet<QString> ids;for(const auto& value:history)ids.insert(value.toObject().value("id").toString());
+                        auto merged=legacy.initial_rows;
+                        for(const auto& value:history) {
+                            const auto id=value.toObject().value("id").toString();
+                            for(qsizetype i=merged.size();i-->0;)if(merged.at(i).toObject().value("id")==id)merged.removeAt(i);
+                            merged.append(value);
+                        }
+                        history=std::move(merged);associate_history_threads(history);mergedLegacy=true;
+                    }
+                    history_legacy_archive.reset();
+                }
+            }
             // Read the current cell, not an older queued notification. This
             // updates metadata/presentation only, never persists another ack.
             const auto view=history_archive->view();
@@ -1382,8 +1422,14 @@ struct AssistantViewModel::State {
                 for(const auto& row:history)if(!ids.contains(row.toObject().value("id").toString())) {
                     merged.append(row);ids.insert(row.toObject().value("id").toString());
                 }
-                history.swap(merged);history_base_included=true;
+                history.swap(merged);associate_history_threads(history);history_base_included=true;
                 (void)queue_render();
+                if(!receiver || receiver->state_.get()!=this)return;
+            }
+            if(mergedLegacy) {
+                (void)queue_render();
+                if(!receiver || receiver->state_.get()!=this)return;
+                (void)queue_history(history);
                 if(!receiver || receiver->state_.get()!=this)return;
             }
             history_path=view.path;
@@ -1416,6 +1462,9 @@ struct AssistantViewModel::State {
         },!history_initialized);
         const auto view=prepared->view();
         if(!receiver || receiver->state_.get()!=this || history_session!=original)return;
+        if(history_archive && history_archive_thread.isEmpty() && !history_base_included &&
+            history_archive->view().path.endsWith("/assistant/history.json") && !history_legacy_archive)
+            history_legacy_archive=std::move(history_archive);
         history_archive=std::move(prepared);history_path=path;history_archive_thread=original;
         if(adoptInitial) {
             if(original.isEmpty())history=view.latest_rows;
@@ -1425,6 +1474,7 @@ struct AssistantViewModel::State {
             }
             history_base_included=view.includes_initial;
         }
+        associate_history_threads(history);
         if(!history_initialized)history_initial_snapshot=history;
     }
     bool queue_history(const QJsonArray& rows,bool logicalClear=false) noexcept {
@@ -1528,7 +1578,10 @@ struct AssistantViewModel::State {
         for(const auto& value:history)hidden_cached_rows.insert(value.toObject().value("id").toString());
         cache_clear_targets=std::move(prepared);cache_clear_pending=true;cache_clear_error.clear();
         cache_clear_current_revision=0;cache_clear_current_path.clear();
-        history_base_included=true;
+        history_base_included=true;history_cache_was_cleared=true;history_legacy_archive.reset();
+#ifndef __EMSCRIPTEN__
+        session_history_loading=false;session_history_explicit_target.clear();++sessions_epoch;mark_session_caches_cleared();
+#endif
         if(history_archive) {
             if(!history_archive->retain({},true,true))cache_clear_error=QObject::tr("The current local cache clear could not be retained.");
             else {const auto view=history_archive->view();cache_clear_current_path=view.path;cache_clear_current_revision=view.accepted;}
@@ -1675,6 +1728,12 @@ struct AssistantViewModel::State {
     bool generic_durable=false,generic_resuming=false;
     QString session_selection_target;
 
+    void mark_session_caches_cleared() noexcept {
+        try {auto index=session_associations();if(index.isEmpty())return;auto rows=index.value("threads").toObject();
+            for(auto it=rows.begin();it!=rows.end();++it) {auto row=it.value().toObject();row["cacheCleared"]=true;it.value()=row;}
+            index["threads"]=rows;store_session_associations(index);
+        }catch(...) {cache_clear_error=QObject::tr("The cache clear was retained, but its restart preference could not be saved.");}
+    }
     QString session_draft,session_restore_target,resume_metadata_thread;
     bool restore_last_attempted=false;
     static QString session_object_identity(const QString& path) {
@@ -1742,7 +1801,7 @@ struct AssistantViewModel::State {
             if(!generic_authenticated || generic_retiring || !generic_durable || generic_thread.isEmpty() || !owned_session(session_metadata.value(generic_thread)))return;
             const auto id=generic_thread;const auto account=generic_native.value("account").toObject();
             auto index=session_associations();auto records=index.value("threads").toObject();
-            Object record{{"thread",id},{"originator","edi"},{"email",account.value("email")},
+            Object record{{"cacheCleared",session_history_explicit_target==id?false:records.value(id).toObject().value("cacheCleared").toBool()},{"thread",id},{"originator","edi"},{"email",account.value("email")},
                 {"model",model},{"effort",effort},{"draft",session_draft}};
             const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
             if(session && session->assistant()==&owner && session->project()==project && project && !session->needsSaveAs()) {
@@ -1982,6 +2041,79 @@ struct AssistantViewModel::State {
             if(!receiver || receiver->state_.get()!=this || !proof.input_current() || !transport || agent.get()!=transport)return;
         }catch(...) {} // The original transport/error owner remains authoritative.
     }
+    QSet<QString> session_history_cursors;
+    QString session_history_explicit_target;
+    QString session_history_thread;
+    bool session_history_loading=false;
+    bool has_rich_session_history(const QString& thread) const {
+        for(const auto& value:history) {const auto row=value.toObject();
+            if(history_thread(row)==thread && (row.value("kind")=="assistant" || row.value("kind")=="activity"))return true;
+        }
+        return false;
+    }
+    void restore_runtime_history(const QString& thread) noexcept {
+        const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
+        try {
+            associate_history_threads(history);
+            if(!generic_authenticated || generic_retiring || generic_thread!=thread || session_history_loading || has_rich_session_history(thread))return;
+            if(saved_session(thread).value("cacheCleared").toBool() && session_history_explicit_target!=thread)return;
+            session_history_thread=thread;session_history_cursors.clear();session_history_loading=true;
+            (void)session_request("thread/items/list",{{"threadId",thread},{"sortDirection","asc"}},"history",thread);
+        }catch(...) {if(receiver && receiver->state_.get()==this && proof.input_current()) {
+            session_history_loading=false;sessions_error=QObject::tr("The conversation resumed, but its older app activity could not be restored from runtime history.");
+        }}
+    }
+    void restore_history_page(const SessionRequest& request,const Object& result) {
+        if(request.target!=generic_thread || session_history_thread!=request.target || !session_history_loading)return;
+        if(!result.value("data").isArray() || (!result.value("nextCursor").isNull() && !result.value("nextCursor").isString()))
+            throw std::runtime_error("The original conversation history page was not valid");
+        auto next=history;QSet<QString> knownItems,userTurns;bool unknownUserTurn=false;
+        for(const auto& value:history) {const auto row=value.toObject();if(history_thread(row)!=request.target)continue;
+            const auto item=row.value("sessionItem").toString().isEmpty()?row.value("payload").toObject().value("id").toString():row.value("sessionItem").toString();
+            if(!item.isEmpty())knownItems.insert(item);
+            if(row.value("kind")=="user" && row.value("historyOrigin")!="runtime") {
+                const auto turn=history_turn(row);if(turn.isEmpty())unknownUserTurn=true;else userTurns.insert(turn);
+            }
+        }
+        for(const auto& value:result.value("data").toArray()) {
+            if(!value.isObject())throw std::runtime_error("The runtime history contained an invalid item entry");
+            const auto entry=value.toObject();const auto item=entry.value("item").toObject();const auto id=generic_id(item.value("id"));
+            const auto turn=generic_id(entry.value("turnId"));const auto type=item.value("type").toString();
+            if(knownItems.contains(id) || type=="reasoning")continue;
+            QString kind,text;Object payload;
+            if(type=="agentMessage") {if(!item.value("text").isString())throw std::runtime_error("The runtime assistant message was invalid");kind="assistant";text=item.value("text").toString();}
+            else if(type=="userMessage") {
+                if(unknownUserTurn || userTurns.contains(turn))continue; // Preserve original app text/attachment receipts for that actual turn.
+                if(!item.value("content").isArray())throw std::runtime_error("The runtime user message was invalid");
+                for(const auto& fragment:item.value("content").toArray()) {const auto part=fragment.toObject();
+                    if(part.value("type")!="text" || !part.value("text").isString())continue;
+                    const auto literal=part.value("text").toString();
+                    if(literal.startsWith("EDI_APPROVED_CONTEXT_DATA_V1\n") || literal.startsWith("Earlier genuine user message for this same project/account; context only, no file permission is replayed:\n"))continue;
+                    if(!text.isEmpty())text+='\n';text+=literal;
+                }
+                if(text.isEmpty())continue;kind="user";payload={{"type","ediInput"}};
+            } else if(type=="dynamicToolCall" || type=="commandExecution" || type=="webSearch" || type=="mcpToolCall" || type=="fileChange" || type=="collabAgentToolCall" || type=="plan") {
+                kind="activity";payload=item;text=type=="dynamicToolCall"?assistant_native_purpose({},item.value("tool").toString()):QObject::tr("Earlier assistant activity");
+            } else continue;
+            auto status=item.value("status").toString();
+            if(type=="agentMessage" || type=="userMessage")status="completed";
+            else if(status.isEmpty())status="unknown";
+            const auto identity=QCryptographicHash::hash(request.target.toUtf8()+'\0'+id.toUtf8(),QCryptographicHash::Sha256).toHex();
+            Object restored{{"id","runtime-"+QString::fromLatin1(identity)},{"kind",kind},{"text",text},{"status",status},{"payload",payload},
+                {"sessionThread",request.target},{"sessionItem",id},{"sessionTurn",turn},{"historyOrigin","runtime"}};
+            qsizetype insertAt=next.size();
+            for(qsizetype i=next.size();i-->0;)if(history_thread(next.at(i).toObject())==request.target && history_turn(next.at(i).toObject())==turn){insertAt=i+1;break;}
+            next.insert(insertAt,restored);
+            knownItems.insert(id);
+        }
+        const auto cursor=result.value("nextCursor").toString();
+        if(!cursor.isEmpty() && (cursor==request.cursor || session_history_cursors.contains(cursor)))throw std::runtime_error("The original history cursor did not advance");
+        if(!cursor.isEmpty())session_history_cursors.insert(cursor);
+        const auto proof=file_projection();
+        if(!publish(std::move(next),true) || !proof.input_current())return;
+        if(cursor.isEmpty()) {session_history_loading=false;return;}
+        (void)session_request("thread/items/list",{{"threadId",request.target},{"sortDirection","asc"},{"cursor",cursor}},"history",request.target);
+    }
     void publish_sessions() {
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
         const auto epoch=sessions_epoch;
@@ -2053,6 +2185,7 @@ struct AssistantViewModel::State {
             if(reply.contains("error"))throw std::runtime_error("The runtime could not confirm the requested session operation");
             if(!reply.value("result").isObject())throw std::runtime_error("The session response was not valid metadata");
             const auto result=reply.value("result").toObject();
+            if(request.kind=="history" && method=="thread/items/list") {restore_history_page(request,result);return;}
             if(request.kind=="list") {
                 if(!result.value("data").isArray() || (!result.value("nextCursor").isNull() && !result.value("nextCursor").isString()))
                     throw std::runtime_error("The session page was not valid metadata");
@@ -2123,10 +2256,12 @@ struct AssistantViewModel::State {
         }catch(const std::exception& error) {
             if(!current())return;
             if(request.kind=="name"){retireName();return;}
+            if(request.kind=="history")session_history_loading=false;
             sessions_loading=false;sessions_error=bounded_error(QString::fromUtf8(error.what()));emit owner.sessionsChanged();
         }catch(...) {
             if(!current())return;
             if(request.kind=="name"){retireName();return;}
+            if(request.kind=="history")session_history_loading=false;
             sessions_loading=false;sessions_error=QObject::tr("Session information is unavailable; no archive outcome was assumed.");emit owner.sessionsChanged();
         }
     }
@@ -12202,7 +12337,7 @@ struct AssistantViewModel::State {
             resume_metadata_thread=resume_checkpoint->thread;session_metadata[resume_metadata_thread]=thread;
             generic_start_thread();return;
         }
-        if(method=="thread/list" || method=="thread/read" || method=="thread/archive" || method=="thread/name/set") {session_response(id,method,reply);return;}
+        if(method=="thread/list" || method=="thread/read" || method=="thread/items/list" || method=="thread/archive" || method=="thread/name/set") {session_response(id,method,reply);return;}
         if (reply.contains("error")) {
             reason_code = "RESULT_SHAPE";
             const auto failure = reply.value("error").toObject();
@@ -12534,6 +12669,8 @@ struct AssistantViewModel::State {
             if(!publication.input_current())return;
             remember_current_session();
             if(!publication.input_current())return;
+            if(resumed)restore_runtime_history(actual_thread);
+            if(!publication.input_current() || !generic_authenticated || generic_retiring || generic_thread!=actual_thread)return;
             error.clear();
             // Required skills/thread bootstrap has finished. A same-callback
             // required write can no longer preempt this initial observation.
@@ -12585,6 +12722,7 @@ struct AssistantViewModel::State {
                 row.value("kind")=="user" && row.value("status")=="pending" && row.value("text")==input->objective;
             row["status"] = "completed";
             if(genuine) {
+                row["sessionTurn"]=turn;
                 // No callback lies between the actual ACK proof and these
                 // markers. Provider userMessage items never create this row.
                 const auto files=row.value("payload").toObject().value("files").toArray();
@@ -12723,7 +12861,7 @@ struct AssistantViewModel::State {
             stage = "ITEM_ROW_PREPARE";
             if (!generic_item_rows.contains(id)) generic_item_rows[id] = QUuid::createUuid().toString(QUuid::WithoutBraces);
             const auto text = type == "agentMessage" ? item.value("text").toString() : type == "commandExecution" ? item.value("command").toString() : type == "fileChange" ? QObject::tr("Working-copy file changes") : type == "webSearch" ? QObject::tr("Search public sources") : type == "dynamicToolCall" ? assistant_native_purpose({},item.value("tool").toString()) : type == "mcpToolCall" ? QObject::tr("Use an external tool") : type == "collabAgentToolCall" ? QObject::tr("Coordinate assistant work") : QObject::tr("Update assistant activity");
-            Object row{{"id", generic_item_rows.value(id)}, {"kind", type == "agentMessage" ? "assistant" : "activity"}, {"text", text},
+            Object row{{"id", generic_item_rows.value(id)}, {"sessionItem",id},{"sessionTurn",generic_turn}, {"kind", type == "agentMessage" ? "assistant" : "activity"}, {"text", text},
                 {"status", completed ? (type == "agentMessage" ? "in_progress" : item.value("status").toString("completed")) : "in_progress"}, {"payload", type == "agentMessage" ? Object{} : item}};
             if (type == "dynamicToolCall") {
                 // These public fields are owned by Edi, never provider input.
@@ -14357,12 +14495,12 @@ struct AssistantViewModel::State {
                 for(const auto& oldValue:history) {
                     const auto old=oldValue.toObject();if(old.value("id")!=row.value("id"))continue;
                     existing=true;
-                    for(const char* field:{"sessionThread","workScope","workEvidence","workUI","workScience","workSkills","workSkillRefs","workSchema","workInputs","workRuntime","workTurn","workDiagnostic"})
+                    for(const char* field:{"sessionThread","sessionItem","sessionTurn","historyOrigin","workScope","workEvidence","workUI","workScience","workSkills","workSkillRefs","workSchema","workInputs","workRuntime","workTurn","workDiagnostic"})
                         if(old.contains(field) && !row.contains(field)){row[field]=old.value(field);changed=true;}
                     break;
                 }
                 if(!existing && !generic_thread.isEmpty()){row["sessionThread"]=generic_thread;changed=true;}
-                if(!existing && work_scope_bound){row["workScope"]=work_reports.stamp();changed=true;}
+                if(!existing && work_scope_bound && row.value("historyOrigin")!="runtime"){row["workScope"]=work_reports.stamp();changed=true;}
                 if(changed)next[i]=row;
             }
         }catch(...) {
@@ -15251,7 +15389,7 @@ void AssistantViewModel::finishHistoryInitialization() noexcept {
             if((!id.isEmpty() && !previousIds.contains(id) && !latestIds.contains(id)) ||
                (id.isEmpty() && i>=original->history_initial_snapshot.size()))merged.append(row);
         }
-        original->history=std::move(merged);original->history_base_included=view.includes_initial;
+        original->history=std::move(merged);associate_history_threads(original->history);original->history_base_included=view.includes_initial;
         original->messages.assign(original->history);
         if(!receiver || receiver->state_.get()!=original)return;
         original->history_archive->activate();
@@ -15473,6 +15611,7 @@ void AssistantViewModel::selectSession(const QString& threadId) {
     try {
         if(QThread::currentThread()!=thread() || !original->session_idle() || original->sessions_loading)return;
         if(!original->owned_session(original->session_metadata.value(threadId)))return;
+        original->session_history_explicit_target=threadId;
         emit sessionSelectionStarted(threadId);
         if(!current())return;
         original->remember_current_session();
@@ -15760,6 +15899,7 @@ QVariantMap AssistantViewModel::activityHumanDetails(const QString& rowId,const 
                 (kind=="activity" && !payload.contains("type") && payload.value("decision").isString() && payload.value("item_id").isString());
             Object detail{{"row_id",rowId},{"kind",kind},{"status",status},{"text",human?row.value("text"):QJsonValue(QString())},
                 {"payload",message_payload(payload,true)}};
+            if(row.value("historyOrigin")=="runtime")detail["provenance"]=tr("Restored from runtime history. Detailed app delivery and scientific-result receipts are unavailable for this earlier step.");
             const auto result=detail.toVariantMap();
             if(!receiver || receiver->state_.get()!=original || original->generation!=binding || original->usage_epoch!=account || original->project!=project)return {};
             for(const auto& current:original->history)if(current.toObject().value("id")==rowId)return current==value?result:QVariantMap{};
