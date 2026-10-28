@@ -44,7 +44,11 @@ Rectangle {
     onTextChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
     Timer { id: copyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: row.technicalCopied = false }
     function humanActivityText() {
-        const lines = [activityCaption(), activityExplanation()];
+        const lines = [activityCaption()];
+        const description = activityDescription(true);
+        if (description.trim().length && lines.indexOf(description) < 0) lines.push(description);
+        const outcomeText = activityExplanation();
+        if (lines.indexOf(outcomeText) < 0) lines.push(outcomeText);
         const outcome = payload && payload.nativeOutcome;
         const message = outcome && typeof outcome.message === "string" ? outcome.message
                       : payload && payload.error && typeof payload.error.message === "string" ? payload.error.message : "";
@@ -225,14 +229,14 @@ Rectangle {
         const action = payload && typeof payload.tool === "string" ? payload.tool : "";
         return assistant ? assistant.nativeActionLabel(action) : qsTr("Work on the current project");
     }
-    function activityDescription() {
+    function activityDescription(full) {
         if (!payload || typeof payload !== "object") return "";
         const supplied = typeof payload.purpose === "string" ? payload.purpose
                        : typeof payload.description === "string" ? payload.description
                        : payload.arguments && typeof payload.arguments.purpose === "string" ? payload.arguments.purpose : "";
         if (payload.type === "dynamicToolCall" && (supplied === "Edi native action"
                 || supplied === "Edi native action: " + payload.tool)) return nativeActionCaption();
-        if (supplied.trim().length) return shortActionObject(supplied, false);
+        if (supplied.trim().length) return full ? supplied : shortActionObject(supplied, false);
         if (payload.type === "webSearch") return webSearchCaption();
         if (!commandActivity) return "";
         const guidance = knownGuidanceCommandCaption(payload.command);
@@ -261,11 +265,8 @@ Rectangle {
         return shortActionObject(labels.join(" · "), false);
     }
     function activityCaption() {
-        if (payload && payload.type === "ediOutcome" && payload.actor === "Edi" && typeof payload.title === "string" && payload.title.trim().length) return shortActionObject(payload.title, false);
-        const description = activityDescription();
-        if (description.length) return description;
         if (decisionActivity) return qsTr("Review requested action");
-        if (commandActivity) return qsTr("Run shell command");
+        if (commandActivity) return activityLabel(false);
         if (payload && payload.type === "dynamicToolCall") return nativeActionCaption();
         const names = {fileChange: qsTr("Update files"), webSearch: qsTr("Search the web"),
             mcpToolCall: qsTr("Use external tool"), collabAgentToolCall: qsTr("Coordinate assistant task"),
