@@ -20,6 +20,7 @@ class AssistantMarkdown : public QQuickItem {
     Q_PROPERTY(QQuickTextDocument* document READ document WRITE setDocument)
     Q_PROPERTY(QString source READ source WRITE setSource)
     Q_PROPERTY(bool markdown READ markdown WRITE setMarkdown)
+    Q_PROPERTY(QColor textColor READ textColor WRITE setTextColor)
     Q_PROPERTY(QColor accentColor READ accentColor WRITE setAccentColor)
     Q_PROPERTY(QFont bodyFont READ bodyFont WRITE setBodyFont)
     Q_PROPERTY(QString monoFontFamily READ monoFontFamily WRITE setMonoFontFamily)
@@ -31,6 +32,10 @@ class AssistantMarkdown : public QQuickItem {
     QQuickTextDocument* document() const;
     QString source() const;
     bool markdown() const;
+    QColor textColor() const;
+    void setTextColor(const QColor&);
+    /// Copy retained TeX for a selected generated formula; whole selection preserves the original message.
+    Q_INVOKABLE QString selectedSource(int start,int end) const;
     QColor accentColor() const;
     void setAccentColor(const QColor& color);
     QFont bodyFont() const;
@@ -47,6 +52,7 @@ class AssistantMarkdown : public QQuickItem {
     void setSource(const QString& source);
     void setMarkdown(bool markdown);
  protected:
+    bool eventFilter(QObject*,QEvent*) override;
     void updatePolish() override;
     QSGNode* updatePaintNode(QSGNode*, UpdatePaintNodeData*) override;
     void geometryChange(const QRectF&, const QRectF&) override;
@@ -61,9 +67,12 @@ class AssistantMarkdown : public QQuickItem {
     QPointer<QTextDocument> document_;
     QString source_;
     bool markdown_ = false;
+    QPointer<QQuickWindow> observed_window_;
+    QColor text_color_;
     QColor accent_color_, table_border_color_, table_shade_color_, table_base_color_;
     QFont body_font_;
     QString mono_font_family_;
     bool body_font_set_ = false;
+    qreal math_text_width_ = -1;
 };
 } // namespace edi_app
