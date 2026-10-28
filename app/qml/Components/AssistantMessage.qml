@@ -33,6 +33,7 @@ Rectangle {
     property string rowId: ""
     property int stepNumber: 0
     property AssistantViewModel assistant: null
+    property color chatBackgroundColor: EaStyle.Colors.appBarBackground
     property bool highlighted: false
     readonly property bool commandActivity: kind === "activity" && payload && payload.type === "commandExecution"
     readonly property bool decisionActivity: kind === "activity" && payload && typeof payload.decision === "string" && typeof payload.item_id === "string"
@@ -302,8 +303,8 @@ Rectangle {
         height: row.implicitHeight
         color: row.kind === "user" ? EaStyle.Colors.contentBackground : "transparent"
         radius: row.kind === "user" ? AppSizes.unit * 0.75 : 0
-        border.width: row.highlighted ? EaStyle.Sizes.borderThickness : 0
-        border.color: EaStyle.Colors.themeAccent
+        border.width: row.kind === "user" || row.highlighted ? EaStyle.Sizes.borderThickness : 0
+        border.color: row.highlighted ? EaStyle.Colors.themeAccent : EaStyle.Colors.appBorder
     }
     HoverHandler {
         id: userHistoryHover
@@ -375,7 +376,7 @@ Rectangle {
                 bodyFont: body.font
                 monoFontFamily: EaStyle.Fonts.monoFontFamily
                 tableBorderColor: EaStyle.Colors.appBorder
-                tableShadeColor: EaStyle.Colors.contentBackground
+                tableShadeColor: Qt.tint(row.chatBackgroundColor, Qt.rgba(1, 1, 1, 0.04))
                 markdown: row.kind === "assistant"
             }
             readOnly: true

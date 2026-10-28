@@ -58,9 +58,9 @@ void AssistantMarkdown::updatePolish() {
             if (!table || table == previous) continue;
             previous = table;
             const auto rows = static_cast<std::size_t>(table->rows());
-            if (rows >= limit/sizeof(Decoration) || count > limit/sizeof(Decoration)-rows-1)
+            if (rows > (limit/sizeof(Decoration)-4)/2 || count > limit/sizeof(Decoration)-(rows*2+4))
                 throw std::length_error("Table presentation exceeds its existing UI capacity");
-            count += rows+1;
+            count += rows*2+4;
         }
         const auto maximum = std::max(decoration_high_water_,count);
         if (maximum > limit/nodeBytes || count > (limit-maximum*nodeBytes)/sizeof(Decoration) ||
@@ -82,13 +82,13 @@ void AssistantMarkdown::updatePolish() {
             const auto inset = table->cellAt(0,0).format().toTableCellFormat().leftPadding();
             const auto rowLeft = frame.left() - inset;
             const auto headerRows = table->format().headerRowCount();
-            qreal previousTop = 0, previousBottom = 0;
+            qreal previousTop = 0, previousBottom = 0, tableTop = 0;
             int previousRow = -1;
             const auto appendRow = [&](int row, qreal top, qreal bottom) {
                 if (bottom <= top) return;
                 if (table_shade_color_.isValid() && (row < headerRows || (row-headerRows)%2 == 1))
                     next.push_back({QRectF(rowLeft,top,frame.width(),bottom-top).intersected(boundingRect()),table_shade_color_});
-                if (table_border_color_.isValid() && row+1 == headerRows)
+                if (table_border_color_.isValid() && row+1 < table->rows())
                     next.push_back({QRectF(rowLeft,bottom-0.5,frame.width(),0.5).intersected(boundingRect()),table_border_color_});
             };
             for (int row = 0; row < table->rows(); ++row) {
@@ -111,9 +111,20 @@ void AssistantMarkdown::updatePolish() {
                 // row origins are the shared boundaries, including Qt's border
                 // rounding; block margins must not be charged a second time.
                 if (previousRow >= 0) appendRow(previousRow,previousTop,top);
+                else tableTop=top;
                 previousRow = row; previousTop = top; previousBottom = bottom;
             }
-            if (previousRow >= 0) appendRow(previousRow,previousTop,previousBottom);
+            if (previousRow >= 0) {
+                appendRow(previousRow,previousTop,previousBottom);
+                if(table_border_color_.isValid()) {
+                    constexpr qreal rule=0.5; // Retain the original chat table rule thickness.
+                    const auto height=previousBottom-tableTop;
+                    for(const auto& edge:{QRectF(rowLeft,tableTop,frame.width(),rule),
+                        QRectF(rowLeft,previousBottom-rule,frame.width(),rule),
+                        QRectF(rowLeft,tableTop,rule,height),QRectF(rowLeft+frame.width()-rule,tableTop,rule,height)})
+                        next.push_back({edge.intersected(boundingRect()),table_border_color_});
+                }
+            }
         }
         if (!current() || !layout) return;
         decorations_.swap(next);
@@ -276,10 +287,6 @@ void AssistantMarkdown::formatPresentation() {
             auto cell_format = cell.format().toTableCellFormat();
             cell_format.setBorder(0); cell_format.setTopPadding(line * 0.3); cell_format.setBottomPadding(line * 0.3);
             cell_format.setLeftPadding(line * 0.5); cell_format.setRightPadding(line * 0.5);
-            if (r + cell.rowSpan() == format.headerRowCount()) {
-                cell_format.setBottomBorder(0.5); cell_format.setBottomBorderStyle(QTextFrameFormat::BorderStyle_Solid);
-                if (table_border_color_.isValid()) cell_format.setBottomBorderBrush(table_border_color_);
-            }
             if (table_shade_color_.isValid() && (r < format.headerRowCount() || (r - format.headerRowCount()) % 2 == 1))
                 cell_format.setBackground(table_shade_color_);
             else cell_format.clearBackground();
