@@ -147,6 +147,8 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void selectSkill(const QString& id);
     Q_INVOKABLE void approvePlan(const QString& id);
     Q_INVOKABLE void answerQuestion(const QString& id, const QString& answer);
+    Q_INVOKABLE bool nativeProjectCreateCurrent(const QString& intent) const;
+    Q_INVOKABLE void nativeProjectCreateReady(const QString& intent,bool ready);
     // Actual grab owns this opaque proof until its sole tap, cancel or ungrab.
     // Final delivery only validates the original owner; it never cancels anew.
     Q_INVOKABLE QVariant beginManualControlInput(QQuickItem* control, const QEventPoint& point, QObject* actionOwner);

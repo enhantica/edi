@@ -1666,8 +1666,11 @@ void edi_app::Session::retireAssistantIntent() noexcept {
     if(assistant_epoch_==UINT64_MAX)assistant_epoch_exhausted_=true;else ++assistant_epoch_;
     if(assistant_save_choice_){const auto token=assistant_save_choice_->token;try{cancelAssistantSaveAs(token);}catch(...) {}}
 }
+bool edi_app::Session::assistantOwner(quint64 epoch,ProjectViewModel* expected) const noexcept {
+    return !assistant_epoch_exhausted_ && assistant_epoch_==epoch && project_==expected;
+}
 bool edi_app::Session::emptyAssistantOwner(quint64 epoch) const noexcept {
-    return !assistant_epoch_exhausted_ && assistant_epoch_==epoch && !project_;
+    return assistantOwner(epoch,nullptr);
 }
 namespace edi_app {
 std::unique_ptr<ProjectViewModel> Session::prepareAssistantNativeModel(edi::Project project, quint64 epoch,

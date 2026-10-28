@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.9.3. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
+Version: 1.9.4. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
 
 ## Inputs and setup
 
@@ -13,9 +13,9 @@ Use genuine user-selected inputs. If the needed files are already listed in curr
 
 Import an attached CIF by default. Use manual structure entry when the user requests it, or when a real import limit requires a different supported route. Do not replace a supplied CIF with guessed coordinates, a generated CIF, a sample structure or an unnecessary manual reconstruction. Current native symmetry/Wyckoff ownership applies: an omitted optional Wyckoff letter is not missing scientific input.
 
-From an empty current Edi window use normal create_project, choosing a lawful name (2–31 ASCII characters: letter first, then letters, digits, underscore, dash or dot) and meaningful human-readable title and description from the genuine task, preserving supplied metadata and actual app preferences/destination; invent no authors. On desktop normal Create saves immediately. Show ON opens the original normal dialog, enters name, title and description and confirms its existing normal OK button; OFF calls the same ordinary Session owner. Then import the admitted CIF and measurement through load_structure/create_experiment/load_data and current native editors. Keep the same task and supplied calibration through creation; do not ask the user to create the project or repeat already admitted files/instructions.
+For an explicit request for a NEW project, use normal create_project in the current Edi window even if an existing project matches the data. Choose a lawful name (2–31 ASCII characters: letter first, then letters, digits, underscore, dash or dot) and a meaningful human-readable title and description from the genuine task, preserving supplied metadata and actual app preferences/destination; invent no authors. On desktop normal Create saves immediately. Show ON opens the original normal dialog, enters name, title and description and confirms its existing normal OK button; OFF calls the same ordinary Session owner. Then import the admitted CIF and measurement through load_structure/create_experiment/load_data and current native editors. Keep the same task and supplied calibration through creation; do not ask the user to create the project or repeat already admitted files/instructions.
 
-When a project is already open, including a scientifically empty project, inspect and populate that SAME project through the ordinary import/create/type/load controls. Do not replace it or call new-project Create merely to fill it. For single-crystal input use the original set_experiment_type sampleForm choice before loading reflections; beam/probe choices and resets follow actual native options.
+When the task is to fill, continue or refine the current project, inspect and populate that SAME project through the ordinary import/create/type/load controls, including a scientifically empty project. An explicit NEW-project objective instead uses create_project and its actual returned new identity; a matching existing project is not a substitute. The original unsaved-work flow preserves prior work; a cancelled or refused Create is not a new project. For single-crystal input use the original set_experiment_type sampleForm choice before loading reflections; beam/probe choices and resets follow actual native options.
 
 Use returned identities after loads, selections, renames or Undo; never infer them from table indices or assume placeholder rows represent the supplied structure.
 

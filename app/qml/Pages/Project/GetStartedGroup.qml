@@ -30,7 +30,13 @@ EaElements.GroupBox {
             objectName: "project.create"
             fontIcon: "plus-circle"
             text: qsTr("Create a new project")
-            onClicked: AppState.afterChanges(() => group.chooseCreate())
+            onClicked: {
+                const original=group.assistantCreate;
+                AppState.afterChanges(() => {
+                    if(original!==null && (group.assistantCreate!==original || Session.project!==original.project))return;
+                    group.chooseCreate();
+                },() => {if(original!==null)Session.assistant.nativeProjectCreateReady(original.id,false);});
+            }
         }
 
         EaElements.SideBarButton {
@@ -65,9 +71,10 @@ EaElements.GroupBox {
     property var assistantCreate: null
     Component.onDestruction: createLife.alive = false
     function prepareAssistantCreate(id) {
-        if (id.length === 0 || Session.project !== null || createIntent !== null || assistantCreate !== null || createDialog.visible) return false;
-        assistantCreate = { id: id, cancelled: false };
-        return assistantCreate !== null && assistantCreate.id === id && Session.project === null;
+        if(id.length===0 || createIntent!==null || assistantCreate!==null || createDialog.visible || !Session.assistant.nativeProjectCreateCurrent(id))return false;
+        const before=Session.project;
+        assistantCreate={id:id,project:before,cancelled:false};
+        return assistantCreate!==null && assistantCreate.id===id && Session.project===before;
     }
     function assistantCreateDialog(id) {
         return assistantCreate !== null && assistantCreate.id === id ? createDialog : null;
@@ -88,7 +95,7 @@ EaElements.GroupBox {
         return createDialog.acceptsProjectName(name) ? "" : qsTr("Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed.");
     }
     function nativeCreateDefaults(name, description, title) {
-        if (Session.project !== null || createIntent !== null || createDialog.visible) return ({});
+        if(createIntent!==null || createDialog.visible)return ({});
         const actualName = name.length > 0 ? name : "project";
         const nameError = nativeProjectNameError(actualName);
         if (nameError.length > 0)
