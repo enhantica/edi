@@ -1102,14 +1102,11 @@ EaComponents.ApplicationWindow {
             refusal.open();
         }
     }
-    // A finished fit opens its results unless the preferences say not to; the status bar's fit status opens them then.
+    // The fit owner requests automatic presentation only for ordinary manual fits/scans.
+    // Native assistant fits retain their result; the status bar can still open it explicitly.
     Connections {
         target: Session.project ? Session.project.fit : null
-        function onFinished() {
-            if (Preferences.showFitResults)
-                fitResults.open();
-        }
-        function onScanFinished() {
+        function onAutomaticResultsRequested() {
             if (Preferences.showFitResults)
                 fitResults.open();
         }
