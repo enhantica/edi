@@ -5,6 +5,7 @@
 #include "codex_agent.hpp"
 #include "../../core/src/assistant_json.hpp"
 #include <QJsonDocument>
+#include <QCoreApplication>
 #include "assistant_native_create.hpp"
 #include "background_input.hpp"
 #include "edi/selectors.hpp"
@@ -250,8 +251,35 @@ bool assistant_native_tool(const QString& name) {
         name == "set_parameters" || name == "set_free" || name == "run_fit" || name == "undo_fit" || name == "create_cwl_project" || name == "add_relations" || name == "edit_relation" || name == "save_project" || name == "edit_background" || name == "estimate_background";
 }
 QString assistant_native_purpose(const Object& args,const QString& action) {
-    if(!args.contains("purpose"))return action.isEmpty()?QStringLiteral("Edi native action"):
-        QStringLiteral("Edi native action: ")+action;
+    if(!args.contains("purpose")) {
+        if(action=="create_project")return QCoreApplication::translate("AssistantActions","Create a project");
+        if(action=="show_report")return QCoreApplication::translate("AssistantActions","Show the project report");
+        if(action=="inspect_project")return QCoreApplication::translate("AssistantActions","Inspect the current project");
+        if(action=="inspect_data")return QCoreApplication::translate("AssistantActions","Inspect diffraction data");
+        if(action=="list_parameters")return QCoreApplication::translate("AssistantActions","Inspect model parameters");
+        if(action=="diagnostics")return QCoreApplication::translate("AssistantActions","Check the current model");
+        if(action=="set_parameters")return QCoreApplication::translate("AssistantActions","Update parameter values");
+        if(action=="set_free")return QCoreApplication::translate("AssistantActions","Choose parameters to refine");
+        if(action=="run_fit")return QCoreApplication::translate("AssistantActions","Refine the current model");
+        if(action=="undo_fit")return QCoreApplication::translate("AssistantActions","Undo the latest refinement");
+        if(action=="load_structure")return QCoreApplication::translate("AssistantActions","Load a structure");
+        if(action=="create_experiment")return QCoreApplication::translate("AssistantActions","Add an experiment");
+        if(action=="set_experiment_type")return QCoreApplication::translate("AssistantActions","Choose the experiment type");
+        if(action=="load_data")return QCoreApplication::translate("AssistantActions","Load diffraction data");
+        if(action=="read_selected_file")return QCoreApplication::translate("AssistantActions","Read an attached file");
+        if(action=="create_structure")return QCoreApplication::translate("AssistantActions","Create a structure");
+        if(action=="edit_structure")return QCoreApplication::translate("AssistantActions","Edit the structure");
+        if(action=="edit_atom")return QCoreApplication::translate("AssistantActions","Edit an atomic site");
+        if(action=="edit_experiment")return QCoreApplication::translate("AssistantActions","Edit the experiment");
+        if(action=="acquire_inputs")return QCoreApplication::translate("AssistantActions","Inspect input files");
+        if(action=="save_project")return QCoreApplication::translate("AssistantActions","Save the project");
+        if(action=="add_relations")return QCoreApplication::translate("AssistantActions","Add parameter relationships");
+        if(action=="edit_relation")return QCoreApplication::translate("AssistantActions","Edit a parameter relationship");
+        if(action=="edit_background")return QCoreApplication::translate("AssistantActions","Edit the background");
+        if(action=="estimate_background")return QCoreApplication::translate("AssistantActions","Estimate the background");
+        if(action=="create_cwl_project")return QCoreApplication::translate("AssistantActions","Prepare a diffraction project");
+        return QCoreApplication::translate("AssistantActions","Work on the current project");
+    }
     const auto value = args.value("purpose");
     if (!value.isString()) throw std::invalid_argument("Native action requires its purpose");
     const auto text = value.toString();
