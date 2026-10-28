@@ -1050,6 +1050,7 @@ Popup {
             title: qsTr("Assistant sessions")
             width: Math.min(AppSizes.unit * 64, Math.max(0, parent.width-AppSizes.unit*2))
             readonly property real viewportHeight: Math.max(0, parent.height-AppSizes.unit*2)
+            contentWidth: Math.max(0, width-leftPadding-rightPadding)
             contentHeight: Math.min(sessionsContent.implicitHeight, Math.max(0, viewportHeight-topPadding-bottomPadding
                 - (implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)
                 - (implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
@@ -1103,10 +1104,23 @@ Popup {
                     wrapMode: Text.Wrap
                     color: EaStyle.Colors.red
                 }
-                RowLayout {
-                    EaElements.Button { text: qsTr("Refresh"); enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel; onClicked: panel.assistant.refreshSessions() }
-                    EaElements.Button { text: qsTr("More sessions"); visible: panel.assistant.sessionsHaveMore; enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel; onClicked: panel.assistant.refreshSessions(true) }
+            }
+            footer: DialogButtonBox {
+                EaElements.Button {
+                    text: qsTr("Refresh")
+                    DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                    enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
+                    onClicked: panel.assistant.refreshSessions()
                 }
+                EaElements.Button {
+                    text: qsTr("More sessions")
+                    DialogButtonBox.buttonRole: DialogButtonBox.ActionRole
+                    visible: panel.assistant.sessionsHaveMore
+                    enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
+                    onClicked: panel.assistant.refreshSessions(true)
+                }
+                standardButtons: Dialog.Close
+                onRejected: sessionsDialog.reject()
             }
         }
         AssistantConnectionDialog {
