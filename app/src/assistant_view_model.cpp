@@ -1053,7 +1053,7 @@ struct AssistantViewModel::State {
         scope["current_session_browser"]=Object{{"operation",QString::number(session_operation)},
             {"target",session_selection_target},{"loading",sessions_loading},{"error",session_browser_error()},
             {"startup_target",restore_last_target},{"startup_requested",restore_last_requested},{"startup_attempted",restore_last_attempted},
-            {"startup_metadata_unavailable",restore_last_metadata_unavailable},
+            {"startup_metadata_unavailable",restore_last_metadata_unavailable},{"startup_transition",startup_restore_observation},
             {"history_session",history_session},{"runtime_thread",generic_thread},
             {"archive_persistence_failures",session_archive_persistence_errors},
             {"account_check",session_account_observation},{"preparation",session_preparation_observation},{"history_target",session_history_thread},{"history_loading",session_history_loading},{"history_error",session_history_error}};
@@ -1759,6 +1759,7 @@ struct AssistantViewModel::State {
     QString session_draft,session_restore_target,resume_metadata_thread;
     bool restore_last_attempted=false,restore_last_requested=false,restore_last_metadata_unavailable=false;
     QString restore_last_target;
+    Object startup_restore_observation;
     bool startup_restore_pending() const {return restore_last_metadata_unavailable || !restore_last_target.isEmpty();}
     void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
 
@@ -12930,6 +12931,11 @@ struct AssistantViewModel::State {
             Object resumed{{"threadId",resume_checkpoint->thread},{"excludeTurns",true}};
             for(const auto* field:{"cwd","sandbox","approvalPolicy","approvalsReviewer","modelProvider","model","config","developerInstructions"})
                 if(params.contains(field))resumed[field]=params.value(field);
+            if(startup_restore_pending()) {
+                startup_restore_observation["prepared_method"]="thread/resume";
+                startup_restore_observation["prepared_target"]=resume_checkpoint->thread;
+                startup_restore_observation["operation"]=QString::number(session_operation);
+            }
             generic_request("thread/resume",resumed);
         } else generic_request("thread/start",params);
     }
@@ -13345,8 +13351,20 @@ struct AssistantViewModel::State {
             generic_policy_verified=true;
             generic_native["connection_id"] = generic_thread; generic_native["status"] = "ready";
             generic_connecting = false; generic_authenticated = true; generic_retiring = false; agent->settleOperation();
+            const bool startupAccepted=resumed && restore_last_target==actual_thread;
+            if(startupAccepted) {
+                startup_restore_observation["accepted_method"]=method;
+                startup_restore_observation["accepted_target"]=actual_thread;
+                startup_restore_observation["history_owner_before"]=history_session;
+                startup_restore_observation["displayed_rows_before"]=messages.count();
+            }
             history_for_session(actual_thread);
             if(!publication.input_current() || generic_thread!=actual_thread)return;
+            if(startupAccepted) {
+                startup_restore_observation["history_owner_after"]=history_session;
+                startup_restore_observation["displayed_rows_after"]=messages.count();
+                session_preparation_observation["stage"]="original_runtime_resumed";
+            }
             if(!resumed)name_current_session(project && project->title()!=project->name()?project->title():QString());
             if(!publication.input_current() || !generic_authenticated || generic_retiring || generic_thread!=actual_thread)return;
             if(resumed && restore_last_target==actual_thread)retire_startup_restore();
@@ -15260,8 +15278,14 @@ struct AssistantViewModel::State {
         });
 #ifndef __EMSCRIPTEN__
         if(generic_mode) {
-            try {restore_last_target=session_associations().value("last").toString();restore_last_metadata_unavailable=false;}
-            catch(const std::exception& failure){restore_last_metadata_unavailable=true;sessions_error=bounded_error(QString::fromUtf8(failure.what()));}
+            try {
+                restore_last_target=session_associations().value("last").toString();restore_last_metadata_unavailable=false;
+                startup_restore_observation={{"settings_read","available"},{"settings_target",restore_last_target},
+                    {"history_owner_at_read",history_session},{"displayed_rows_at_read",messages.count()}};
+            }catch(const std::exception& failure){
+                restore_last_metadata_unavailable=true;sessions_error=bounded_error(QString::fromUtf8(failure.what()));
+                startup_restore_observation={{"settings_read","unavailable"}};
+            }
             const auto whenReady=[this,receiver] {
                 if(receiver && receiver->state_.get()==this && restore_last_requested && !restore_last_attempted)
                     receiver->restoreLastSession();
@@ -16712,6 +16736,8 @@ void AssistantViewModel::restoreLastSession() {
                 original->restore_last_metadata_unavailable=true;
                 original->restore_last_target=original->session_associations().value("last").toString();
                 original->restore_last_metadata_unavailable=false; // Successful absence is distinct from read failure.
+                original->startup_restore_observation["settings_reread"]="available";
+                original->startup_restore_observation["settings_target"]=original->restore_last_target;
             }
             original->restore_last_requested=true;
             const auto id=original->restore_last_target;
