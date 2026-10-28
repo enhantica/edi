@@ -3459,7 +3459,10 @@ def model_wire_contexts(actor, response):
             if text.startswith('EDI_APPROVED_CONTEXT_DATA_V1'):
                 contexts.append(json.loads(text[text.index('{'):]))
     reply = native_result(response)
-    contexts.extend(row for row in objects(reply) if row.get('schema') == 'edi.assistant.context/1')
+    assert reply.get('schema') == 'edi.assistant.outgoing/1' and isinstance(reply.get('datasets'),list), (
+        'The successful native inspect endpoint must expose its actual typed outgoing context rather than an invented nested context envelope'
+    )
+    contexts.append(reply)
     assert len(contexts) >= 2, 'Both the actual approved provider context and native inspect reply expose their real typed context'
     return contexts
 
@@ -3629,7 +3632,7 @@ def test_original_estimate_member_survives_ordinary_selection_callback_before_ef
     signal='pointer.visibleChanged' if show_actions else 'Session.assistant.actionPageRequested'
     callback=('function(){if(!o.fired && pointer.visible){o.fired=true;o.before=Session.project.currentExperimentIndex;Session.project.currentExperimentIndex=1;o.after=Session.project.currentExperimentIndex;}}' if show_actions else
               'function(page,extra){if(!o.fired && page==="experiment"){o.fired=true;o.before=Session.project.currentExperimentIndex;Session.project.currentExperimentIndex=1;o.after=Session.project.currentExperimentIndex;}}')
-    setup='(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"'+marker+'";property bool fired:false;property int before:-1;property int after:-1;property var callback:null}\',contentItem);const pointer='+control_expression('assistant.actionPointer')+';o.callback='+callback+';'+signal+'.connect(o.callback);return true;})()'
+    setup='(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"'+marker+'";property bool fired:false;property int before:-1;property int after:-1;property var callback:null}\',contentItem);const pointer=assistantPointer;o.callback='+callback+';'+signal+'.connect(o.callback);return true;})()'
     assert qml(actor,setup), 'The actual ordinary selection callback is attached to the current visible cue or OFF follow-page boundary'
     try:
         actor.request('Estimate the originally requested current measured dataset and inspect the resulting state.')
@@ -3644,7 +3647,7 @@ def test_original_estimate_member_survives_ordinary_selection_callback_before_ef
         )
         assert after['can_undo']==before['can_undo'], 'A prewrite selected-member refusal cannot add an Undo or hide a partial effect'
     finally:
-        qml(actor,'(function(){const o='+control_expression(marker)+';const pointer='+control_expression('assistant.actionPointer')+';'+signal+'.disconnect(o.callback);o.destroy();})()')
+        qml(actor,'(function(){const o='+control_expression(marker)+';const pointer=assistantPointer;'+signal+'.disconnect(o.callback);o.destroy();})()')
 
 
 @pytest.mark.parametrize('boundary',['padding','header_width'])
@@ -3675,7 +3678,7 @@ DataTable {
   C.ListViewLabel {text:"Name"}
   C.ListViewLabel {id: headerValue;text:"Value";onWidthChanged:if(t.witness)t.witness.header(headerValue,t)}
  }
- delegate: C.ListViewRow {
+ delegate: C.ListViewDelegate {
   id: r
   required property int index
   required property string word
@@ -3757,7 +3760,7 @@ def test_direct_compound_population_stop_retains_prefix_without_default_estimate
             'The canceled retained prefix contains the actual independently supplied measurements, not merely a populated filename or placeholder grid'
         )
         original_rows=[r for r in actor.last['ui']['messages'] if (r.get('payload') or {}).get('tool')=='create_cwl_project']
-        assert len(original_rows)==1 and any(not v['complete'] and v.get('steps_completed',0)>0 for v in objects(original_rows[0]) if isinstance(v,dict) and 'complete' in v), (
+        assert len(original_rows)==1 and any(not v['complete'] and v.get('adopted') is True and v.get('request_retired') is True and v.get('status')=='partial' and v.get('points')==len(measured) for v in objects(original_rows[0]) if isinstance(v,dict) and 'complete' in v), (
             'The original once row retains incomplete applied-prefix facts after its genuine Stop boundary'
         )
         settled_original=json.loads(json.dumps(original_rows[0].get('payload',{}).get('nativeOutcome')))
