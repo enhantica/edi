@@ -2300,7 +2300,8 @@ struct AssistantViewModel::State {
     static Object input_scope_catalog(const std::vector<std::shared_ptr<LocalInputSource>>& sources) {
         QJsonArray rows;
         for(const auto& source:sources)rows.append(Object{{"scope_id",source->id},{"ordinal",static_cast<double>(source->ordinal)},
-            {"source_kind",!source->attachment.isEmpty()?"attachment":source->directory?"directory":"file"}});
+            {"source_kind",!source->attachment.isEmpty()?"attachment":source->directory?"directory":"file"},
+            {"already_admitted",!source->attachment.isEmpty() || source->acquired}});
         return {{"sources",rows}};
     }
     static QString input_reader_hint(const QString& name) {
@@ -6687,7 +6688,10 @@ struct AssistantViewModel::State {
         for(const auto& candidate:callReceipt->sources)if(candidate->id==scopeId){source=candidate;break;}
         Object outcome{{"status","refused"},{"scope_id",scopeId},{"files",QJsonArray{}},
             {"discovered",0},{"admitted",0},{"ignored",0},{"code","scope_retired"}};
-        if(!source){native_prepare(rpc, id, "acquire_inputs", purpose, original);
+        if(!source){
+            outcome["code"]="invalid_arguments";
+            outcome["message"]="The supplied scope_id does not match an input scope offered to this current call. Copy an exact input_scopes.sources.scope_id; if needed files are already in selected_files.files, use those admitted file IDs directly.";
+            native_prepare(rpc, id, "acquire_inputs", purpose, original);
             if(receiver && publication.input_current() && native_call && native_call->receipt==callReceipt && native_call->rpc==rpc)
                 native_finish(false,outcome);return;}
         if(source->acquired){
@@ -9410,9 +9414,12 @@ struct AssistantViewModel::State {
     QQuickItem* create_widget_named(const std::shared_ptr<NativeCreateWidget>& run, const QString& name) const {
         QQuickItem* found = nullptr;
         const bool scalar=run->individual_tool=="edit_experiment" && experiment_scalar(run->arguments);
-        const bool extra=scalar && (run->arguments.value("operation")=="dataset_weight" ||
+        const auto operation=run->arguments.value("operation");
+        const bool extrasOperation=operation=="dataset_weight" || operation=="absorption_type" || operation=="cutoff_fwhm";
+        const bool extra=scalar && (operation=="dataset_weight" ||
             (run->step>=0 && run->step<run->inputs.size() &&
-             (run->inputs.at(run->step).target=="sideBar.tab.extras" || run->inputs.at(run->step).kind==AssistantWidgetInput::Kind::FileLoadCue)));
+             (run->inputs.at(run->step).target=="sideBar.tab.extras" ||
+              (extrasOperation && run->inputs.at(run->step).kind==AssistantWidgetInput::Kind::FileLoadCue))));
         const QString sidebar = QStringLiteral("workflow.") + run->page + ".manualSidebar";
         for (auto* item : widget_items()) {
             if (item->objectName() != name || item->window() != run->window) continue;
@@ -9562,7 +9569,8 @@ struct AssistantViewModel::State {
         } else if(step.target.startsWith("jointFit.weight.")) {
             groupName="group.joint_fit";tableName="jointFit.list";index=indexed?requested:-1;
             if(index!=individual_member_index(run))return false;
-        } else if(step.target.startsWith("absorption."))groupName="group.absorption";
+        } else if(step.target.startsWith("extinction."))groupName="group.extinction";
+        else if(step.target.startsWith("absorption."))groupName="group.absorption";
         else if (step.target.startsWith("peak.")) groupName="group.peak";
         else if (step.target.startsWith("instrument.")) groupName="group.instrument";
         else return false;
