@@ -281,7 +281,7 @@ void Session::releaseTemporaryRoots(const QStringList& candidates,const QString&
             if(held!=target)addModel(held);
         const auto physical=[](const QString& path) {
             std::error_code error;
-            auto result=std::filesystem::weakly_canonical(std::filesystem::u8path(path.toUtf8().constData()),error);
+            auto result=std::filesystem::weakly_canonical(QFileInfo(path).filesystemFilePath(),error);
             if(error)throw std::runtime_error("Temporary backing-root independence is unavailable");
             return result;
         };
@@ -1082,9 +1082,9 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         }
         if(QFileInfo::exists(target))throw std::runtime_error("The independent temporary copy target already exists");
         std::error_code pathError;
-        auto cursor=std::filesystem::weakly_canonical(std::filesystem::u8path(target.toUtf8().constData()),pathError);
+        auto cursor=std::filesystem::weakly_canonical(QFileInfo(target).filesystemFilePath(),pathError);
         if(pathError)throw std::runtime_error("The temporary copy target cannot be resolved independently");
-        const auto original=std::filesystem::u8path(source.toUtf8().constData());
+        const auto original=QFileInfo(source).filesystemFilePath();
         for(;;) {
             if(std::filesystem::exists(cursor,pathError) && std::filesystem::equivalent(cursor,original,pathError))
                 throw std::runtime_error("The temporary copy target must be outside its source folder");
