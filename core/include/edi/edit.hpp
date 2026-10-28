@@ -500,6 +500,10 @@ class Edit {
         const ExcludedRegion* exclusion = nullptr;
         const LinkedStructure* linked_structure = nullptr;
         const ParameterConstraint* constraint = nullptr;
+        // Filled only by the original LivePreview editor door around its closed
+        // application/note_edit, before trace/hooks. Epochs are identities, not counts.
+        std::shared_ptr<const detail::EditRecord> editor_before, editor_after;
+        std::uint64_t editor_before_epoch=0, editor_after_epoch=0;
     };
     // Executes this same closed operation once. The result is an identity fact,
     // not a getter or a grant to use a row after its owner has retired.

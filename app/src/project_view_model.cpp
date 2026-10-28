@@ -765,7 +765,7 @@ QString ProjectViewModel::apply_creation_control(const edi::Edit& change, bool s
     const auto capture=qScopeGuard([self,input] {
         if(self && !self->retired_ && input && self->widget_creation_input_==input &&
             input->consumed && input->outcome.applied && input->outcome.published)
-            self->captureWidgetEditProof(input->proof);
+            self->captureWidgetEditProof(input->proof,input->applied_result);
     });
     using Kind=CreationAction::Kind;
     const bool scalar_control=actual.kind==Kind::AbsorptionType || actual.kind==Kind::ExtinctionType || actual.kind==Kind::MosaicDistribution || actual.kind==Kind::CutoffFwhm || actual.kind==Kind::DatasetWeight;
@@ -2902,14 +2902,16 @@ void ProjectViewModel::pinTimestamps(const QString& timestamp) {
     setModified(modified);
 }
 
-void ProjectViewModel::captureWidgetEditProof(WidgetEditProof& proof) noexcept {
+void ProjectViewModel::captureWidgetEditProof(WidgetEditProof& proof,const edi::Edit::AppliedResult& applied) noexcept {
     try {
+        proof.after.reset();
+        if(!applied.editor_before || !applied.editor_after || proof.before.edits!=applied.editor_before ||
+            proof.before.edits_at!=applied.editor_before_epoch)return;
         auto after=edi::work_stamps(*project_);
-        // One exact closed Edit advanced the original record. A nested external
-        // edit during publication cannot become the input's completion proof.
-        if(proof.before.edits && after.edits==proof.before.edits &&
-            proof.before.edits_at!=std::numeric_limits<std::uint64_t>::max() &&
-            after.edits_at==proof.before.edits_at+1)proof.after=std::move(after);
+        // Match the exact identity recorded by this editor application before
+        // trace/publication. Global Epoch allocation has no dense +1 meaning.
+        if(after.edits==applied.editor_after && after.edits_at==applied.editor_after_epoch)
+            proof.after=std::move(after);
     }catch(...) {} // Actual applied/published outcome remains factual if capture fails.
 }
 std::shared_ptr<ProjectViewModel::WidgetRelationInput> ProjectViewModel::prepareWidgetRelations(const ProjectEditor::RelationAction& action) {
@@ -2938,7 +2940,7 @@ QString ProjectViewModel::apply_relation_control(const edi::Edit& change, const 
     const auto release = qScopeGuard([self, previous] { if (self) self->widget_input_executing_ = previous; });
     input->outcome = applyRecordedEdit(change, true);
     if(self && !retired_ && widget_relation_input_==input && input->outcome.applied && input->outcome.published)
-        captureWidgetEditProof(input->proof);
+        captureWidgetEditProof(input->proof,input->applied_result);
     return input->outcome.applied ? QString{} : input->outcome.message;
 }
 
