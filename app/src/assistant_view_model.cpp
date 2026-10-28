@@ -5226,32 +5226,37 @@ struct AssistantViewModel::State {
             }
         }else if(!widget_reveal_parameter(run,target))return;
         AssistantWidgetInput::Request request;
-        request.kind=opened?AssistantWidgetInput::Kind::FileLoadCue:AssistantWidgetInput::Kind::Navigate;request.target=target;
+        request.kind=opened?AssistantWidgetInput::Kind::Free:AssistantWidgetInput::Kind::Navigate;request.target=target;
         auto captured_current=[this,run,entry,header,target,content,menu,filter,opened] {
             if(!header || !target || !menu || !filter || !widget_entry_current(run,entry) || !widget_page_selected(run) ||
                 header->window()!=run->window || header->findChild<QObject*>(QStringLiteral("parameters.freeHeader.menu"))!=menu ||
-                menu->property("project").value<QObject*>()!=run->project || menu->property("filter").value<QObject*>()!=filter ||
-                !widget_free_group_matches(run,filter))return false;
+                menu->property("project").value<QObject*>()!=run->project || menu->property("filter").value<QObject*>()!=filter)return false;
+            // The same original receipt may close its popup during the actual
+            // release. Settlement still checks every prepared member/value.
+            if(opened && run->input && run->input->consumed)return true;
+            if(!widget_free_group_matches(run,filter))return false;
             if(!opened)return true;
             if(!content || !menu->property("visible").toBool() || menu->property("contentItem").value<QObject*>()!=content)return false;
             for(auto* parent=target.data();parent;parent=parent->parentItem())if(parent==content)return true;
             return false;
         };
-        auto captured_prepareCommit=[] {return true;};auto captured_finishCommit=[] {};
-        auto captured_completed=[this,run,entry,header,menu,filter,opened,captured_current](bool delivered,const QString& message, ControlCause cause) {
+        auto captured_prepareCommit=[this,run,opened,filter,captured_current] {
+            return !opened || widget_prepare_free_group(run,filter,captured_current);
+        };
+        auto captured_finishCommit=[this,run,opened] {
+            if(!opened)return;
+            const auto receiver=run->receiver;const auto input=run->input;const auto scope=run->edit_scope;
+            const QPointer<ProjectViewModel> target(run->project);
+            if(target)target->finishWidgetInput(input);
+            if(receiver && receiver->state_.get()==this && run->edit_scope==scope){run->edit_scope=0;end_own_edit(scope);}
+        };
+        auto captured_completed=[this,run,entry,header,menu,filter,opened](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_entry_owned(run,entry))return;
             if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 if(opened) {
-                    {
-                        const auto close=qScopeGuard([this,run,entry,menu]() noexcept {
-                            try {
-                                if(menu && widget_entry_current(run,entry))QMetaObject::invokeMethod(menu,"close",Qt::DirectConnection);
-                            } catch (...) {} // Cleanup must preserve the original failure/outcome.
-                        });
-                        if(delivered)widget_apply_parameter(run,true,menu,filter,captured_current);
-                    }
-                    if(!run->receiver || run->receiver->state_.get()!=this || !widget_entry_owned(run,entry))return;
+                    // Original StateRow.onChosen already entered menu.apply once.
+                    // Read its exact prepared group outcome; never call it again.
                     widget_input_finished(run,delivered,message);return;
                 }
                 if(!delivered || !widget_entry_current(run,entry)){widget_refuse(run,message.isEmpty()?widget_outcome_error:message);return;}
@@ -5269,6 +5274,24 @@ struct AssistantViewModel::State {
 
         if(!run->receiver || run->receiver->state_.get()!=this || !widget_owned(run))return;
         control_start(run->call,control_target(run),std::move(request));
+    }
+    bool widget_prepare_free_group(const std::shared_ptr<NativeWidget>& run,const QPointer<ParameterFilterModel>& filter,
+            const std::function<bool()>& popupCurrent) {
+        const auto* entry=widget_parameter_entry(run);
+        if(!popupCurrent || !popupCurrent() || !widget_entry_current(run,entry) || !widget_free_group_matches(run,filter))return false;
+        const auto receiver=run->receiver;const QPointer<ProjectViewModel> target(run->project);
+        const auto range=widget_free_group_range(run,filter);
+        std::vector<const edi::Parameter*> members;members.reserve(range.second-range.first);
+        for(std::size_t at=range.first;at<range.second;++at) {
+            const auto& expected=run->parameter_entries[at];
+            if(!widget_parameter_binding_current(expected))return false;
+            members.push_back(expected.member);
+        }
+        const auto input=target->prepareWidgetFreeGroup(std::move(members),entry->free);run->input=input;
+        run->parameter_group=true;run->parameter_uncertain=true;
+        if(!receiver || receiver->state_.get()!=this || !target || !popupCurrent() || !widget_entry_current(run,entry))return false;
+        run->edit_scope=begin_own_edit();native_call->may_have_written=true;
+        return popupCurrent();
     }
     void widget_apply_parameter(const std::shared_ptr<NativeWidget>& run,bool group,const QPointer<QObject>& menu={},
             const QPointer<ParameterFilterModel>& originalFilter={},const std::function<bool()>& originalPopupCurrent={}) {
@@ -5304,26 +5327,8 @@ struct AssistantViewModel::State {
                 }
                 return;
             }
-            const auto range=widget_free_group_range(run,originalFilter);const auto count=range.second-range.first;
-            std::vector<const edi::Parameter*> members;members.reserve(count);
-            for(std::size_t at=range.first;at<range.second;++at) {
-                const auto& original=run->parameter_entries[at];
-                if(!widget_parameter_binding_current(original))throw std::runtime_error("The original free-header member changed");
-                members.push_back(original.member);
-            }
-            input=target->prepareWidgetFreeGroup(std::move(members),entry->free);run->input=input;
-            run->parameter_group=true;run->parameter_uncertain=true;
-
-            if(!receiver || receiver->state_.get()!=this)return;
-            if(!menu_current()) {
-                if(receiver && receiver->state_.get()==this && widget_entry_owned(run,entry)) {
-                    run->parameter_uncertain=input && input->outcome.applied;
-                    control_failure(run,ControlCause::Superseded);
-                    widget_refuse(run,QStringLiteral("The original visible Free-column menu, choice or eligible members changed before the group action"));
-                }
-                return;
-            }
-            scope=begin_own_edit();run->edit_scope=scope;native_call->may_have_written=true;
+            if(!widget_prepare_free_group(run,originalFilter,originalPopupCurrent))return;
+            input=run->input;scope=run->edit_scope;
             // The same original menu action used by a manual choice supplies
             // its shown members to setParametersFree and closes its own menu.
             // The prepared receipt refuses any different set before mutation.
