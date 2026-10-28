@@ -408,3 +408,98 @@ TEST_CASE("E11 dev FIRST Responses stream accepts valid cumulative work and reta
     CHECK_MESSAGE(!malformed.feed("data: {not-json}\n\n").ok,
         "E11 owner856 removing arbitrary work quotas preserves actual malformed-protocol refusal");
 }
+
+// Owner pending-message semantics, independently of Qt VM draft guards. These
+// exercise the original public Controller update/admit/terminal owners directly.
+namespace {
+void pending_connection(ControllerHost& host) {
+    const auto ready=host.controller.provider_event(edi::json::write(O{{"schema","edi.assistant/1"},{"type","connection"},
+        {"connection_id","independent-connection"},{"status","ready"},
+        {"capabilities",A{O{{"id","gpt-6.1-sol"},{"display_name","Independent fixture"},{"efforts",A{"high"}},{"attachment_types",A{}}}}}}));
+    REQUIRE_MESSAGE(ready.ok,"Pending file-only inputs retain the original supported connection admission");
+}
+std::vector<edi::assistant::SelectedFile> pending_files(unsigned first,unsigned count) {
+    std::vector<edi::assistant::SelectedFile> values;
+    for(unsigned i=first;i<first+count;++i) {
+        const auto text="data_independent_"+std::to_string(i)+"\n";
+        values.push_back({"independent-file-"+std::to_string(i),"input-"+std::to_string(i)+".cif",
+            std::vector<std::uint8_t>(text.begin(),text.end())});
+    }
+    return values;
+}
+edi::assistant::Reply pending_message(ControllerHost& host,const std::string& text={},const std::string& model="gpt-6.1-sol") {
+    return host.controller.user_command(edi::json::write(O{{"schema","edi.assistant/1"},{"type","message"},
+        {"text",text},{"connection_id","independent-connection"},{"model",model},{"effort","high"}}));
+}
+void finish_pending_turn(ControllerHost& host) {
+    REQUIRE_MESSAGE(!host.requests.empty(),"A genuinely admitted original message has an actual provider request");
+    const auto request=host.requests.back();
+    const auto done=host.controller.provider_event(edi::json::write(O{{"schema","edi.assistant/1"},{"type","turn_finished"},
+        {"connection_id","independent-connection"},{"turn_id",request.at("turn_id")},
+        {"request_id",request.at("request_id")},{"status","completed"}}));
+    REQUIRE_MESSAGE(done.ok,"Pending-message consumption is observed after the actual original turn terminal");
+}
+}
+
+TEST_CASE("E11 pending Controller rejects consumed handles as another file-only draft") {
+    auto project=background_project("line-segment","manual");ControllerHost host(project);pending_connection(host);
+    REQUIRE_MESSAGE(host.controller.update_selected_files("independent-selected",0,pending_files(0,2),{}).ok,
+        "Original public Controller admits genuinely new file handles");
+    const auto selected=edi::json::parse(host.controller.context()).at("selected_files");
+    REQUIRE_MESSAGE(pending_message(host).ok,"Literal empty user text is admitted with genuinely pending new handles");
+    const auto& sent=host.requests.back().at("history").array("history").back();
+    CHECK_MESSAGE(sent.at("text").string("text").empty(),"File-only submission preserves exact empty text without a fabricated objective");
+    finish_pending_turn(host);
+    const auto requests=host.requests.size();
+    const auto repeated=pending_message(host);
+    CHECK_FALSE_MESSAGE(repeated.ok,"Consumed retained task handles alone cannot admit another empty user message");
+    CHECK_MESSAGE(host.requests.size()==requests,"Refused repeated empty input sends no second provider request");
+    CHECK_MESSAGE(edi::json::write(edi::json::parse(host.controller.context()).at("selected_files"))==edi::json::write(selected),
+        "Refused repeated file-only input preserves all retained task file descriptors/bytes authority");
+    if(repeated.ok)finish_pending_turn(host); // Preserve the reached red and still exercise the independent retained-input positive.
+    REQUIRE_MESSAGE(pending_message(host,"Read the already attached inputs without changing the scientific model.").ok,
+        "A genuine later nonempty user message may still use retained task attachments");
+}
+
+TEST_CASE("E11 pending Controller separates six per message from retained task capacity") {
+    auto project=background_project("line-segment","manual");ControllerHost host(project);pending_connection(host);
+    SUBCASE("fresh seven refuses before any collection or provider side effect") {
+        const auto original=host.controller.context();const auto update=host.controller.update_selected_files("independent-selected",0,pending_files(0,7),{});
+        CHECK_FALSE_MESSAGE(update.ok,"The direct Controller also enforces the owner-selected six fresh attachments per pending message");
+        CHECK_MESSAGE(host.controller.context()==original,"Excess fresh admission preserves the original selected-input context");
+        CHECK_FALSE_MESSAGE(pending_message(host).ok,"Refused excess input cannot make an empty no-file message sendable");
+        CHECK_MESSAGE(host.requests.empty(),"Excess direct admission does not fabricate a provider turn");
+    }
+    SUBCASE("six consumed plus six fresh remain valid retained task inputs") {
+        REQUIRE_MESSAGE(host.controller.update_selected_files("independent-selected",0,pending_files(0,6),{}).ok,
+            "The first six pending handles are a supported per-message batch");
+        REQUIRE_MESSAGE(pending_message(host).ok,"The first actual six-file draft is admitted once");finish_pending_turn(host);
+        REQUIRE_MESSAGE(host.controller.update_selected_files("independent-selected",1,pending_files(6,6),{}).ok,
+            "Six previously consumed handles do not become a lifetime six-file collection limit");
+        CHECK_MESSAGE(edi::json::parse(host.controller.context()).at("selected_files").at("files").array("files").size()==12,
+            "All twelve independently admitted task handles remain available across two messages");
+        REQUIRE_MESSAGE(pending_message(host).ok,"Only the six fresh handles make the second literal-empty draft eligible");finish_pending_turn(host);
+        CHECK_FALSE_MESSAGE(pending_message(host).ok,"A second completed batch cannot make a third empty draft eligible without new files");
+    }
+    SUBCASE("cumulative four then two then one preserves original pending six") {
+        REQUIRE_MESSAGE(host.controller.update_selected_files("independent-selected",0,pending_files(0,4),{}).ok,"First pending picker/drop batch enters its original collection");
+        REQUIRE_MESSAGE(host.controller.update_selected_files("independent-selected",1,pending_files(4,2),{}).ok,"Cumulative pending batches can reach six");
+        const auto original=host.controller.context();
+        CHECK_FALSE_MESSAGE(host.controller.update_selected_files("independent-selected",2,pending_files(6,1),{}).ok,
+            "A seventh cumulative pending handle is refused at the shared admission owner");
+        CHECK_MESSAGE(host.controller.context()==original,"Cumulative excess refusal preserves original pending IDs/generation/descriptors");
+    }
+}
+
+TEST_CASE("E11 pending Controller failed preadmission does not consume genuine attachments") {
+    auto project=background_project("line-segment","manual");ControllerHost host(project);pending_connection(host);
+    REQUIRE_MESSAGE(host.controller.update_selected_files("independent-selected",0,pending_files(0,1),{}).ok,"Original input is genuinely pending before admission refusal");
+    const auto original=host.controller.context();
+    CHECK_FALSE_MESSAGE(pending_message(host,{},"unoffered-independent-model").ok,
+        "Unrecognized model refusal occurs before successful message admission");
+    CHECK_MESSAGE(host.requests.empty(),"A preadmission refusal cannot dispatch an unrelated provider request");
+    CHECK_MESSAGE(host.controller.context()==original,"Failed preadmission preserves the exact selected input context");
+    REQUIRE_MESSAGE(pending_message(host).ok,"The same pending input remains sendable after a corrected actual admission");
+    finish_pending_turn(host);
+    CHECK_FALSE_MESSAGE(pending_message(host).ok,"Only successful admission/settlement consumes the original pending eligibility");
+}

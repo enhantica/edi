@@ -4932,3 +4932,499 @@ def test_pending_attachment_lines_follow_literal_text_with_separate_normal_line_
     gaps = [b['y'] - (a['y'] + a['height']) for a, b in zip(rows, rows[1:])]
     assert rows[0]['y'] - (editor['y'] + editor['height']) > max(gaps), (
         'The main-text-to-first-file gap is larger than ordinary inter-file line spacing')
+
+
+def _session_fixture(actor, **archive):
+    # These fixed provider rows come from independently pinned schema fixtures,
+    # never a materialized application model or fabricated local chat history.
+    source = json.loads('{"thread_list": {"threads": [{"id": "019a0290-0000-7000-9000-000000000001", "cliVersion": "0.162.1", "createdAt": 1, "updatedAt": 1792751460, "cwd": "{CURRENT_WORKSPACE}", "ephemeral": false, "modelProvider": "openai", "preview": "", "projectId": null, "sessionId": "independent-provider-session", "source": "vscode", "forkedFromId": null, "parentThreadId": null, "section": null, "sectionEnteredAt": null, "historyMode": "legacy", "recencyAt": null, "model": "gpt-6.1-sol", "reasoningEffort": "medium", "path": null, "originator": "edi", "threadSource": null, "agentNickname": null, "agentRole": null, "gitInfo": null, "name": "Historical Edi VSCode source", "status": {"type": "idle"}, "turns": []}, {"id": "019a0290-0000-7000-9000-000000000002", "cliVersion": "0.162.1", "createdAt": 1, "updatedAt": 1792837860, "cwd": "/independent/other-app-workspace", "ephemeral": false, "modelProvider": "openai", "preview": "", "projectId": null, "sessionId": "independent-provider-session", "source": "vscode", "forkedFromId": null, "parentThreadId": null, "section": null, "sectionEnteredAt": null, "historyMode": "legacy", "recencyAt": null, "model": "gpt-6.1-sol", "reasoningEffort": "medium", "path": null, "originator": "edi", "threadSource": null, "agentNickname": null, "agentRole": null, "gitInfo": null, "name": "Another app workspace", "status": {"type": "idle"}, "turns": []}, {"id": "019a0290-0000-7000-9000-000000000003", "cliVersion": "0.162.1", "createdAt": 1, "updatedAt": 1792924260, "cwd": "{CURRENT_WORKSPACE}", "ephemeral": false, "modelProvider": "openai", "preview": "", "projectId": null, "sessionId": "independent-provider-session", "source": "appServer", "forkedFromId": null, "parentThreadId": null, "section": null, "sectionEnteredAt": null, "historyMode": "legacy", "recencyAt": null, "model": "gpt-6.1-sol", "reasoningEffort": "medium", "path": null, "originator": "edi", "threadSource": null, "agentNickname": null, "agentRole": null, "gitInfo": null, "name": "Explicit app-server Edi source", "status": {"type": "idle"}, "turns": []}, {"id": "019a0290-0000-7000-9000-000000000004", "cliVersion": "0.162.1", "createdAt": 1, "updatedAt": 1793097060, "cwd": "{CURRENT_WORKSPACE}", "ephemeral": false, "modelProvider": "openai", "preview": "", "projectId": null, "sessionId": "independent-provider-session", "source": "vscode", "forkedFromId": null, "parentThreadId": null, "section": null, "sectionEnteredAt": null, "historyMode": "legacy", "recencyAt": null, "model": "gpt-6.1-sol", "reasoningEffort": "medium", "path": null, "originator": "vscode", "threadSource": null, "agentNickname": null, "agentRole": null, "gitInfo": null, "name": "Foreign at identical cwd/source", "status": {"type": "idle"}, "turns": []}, {"id": "019a0290-0000-7000-9000-000000000005", "cliVersion": "0.162.1", "createdAt": 1, "updatedAt": 1793183460, "cwd": "{CURRENT_WORKSPACE}", "ephemeral": false, "modelProvider": "openai", "preview": "", "projectId": null, "sessionId": "independent-provider-session", "source": "vscode", "forkedFromId": null, "parentThreadId": null, "section": null, "sectionEnteredAt": null, "historyMode": "legacy", "recencyAt": null, "model": "gpt-6.1-sol", "reasoningEffort": "medium", "path": null, "originator": null, "threadSource": null, "agentNickname": null, "agentRole": null, "gitInfo": null, "name": "Unknown originator at identical cwd/source", "status": {"type": "idle"}, "turns": []}, {"id": "019a0290-0000-7000-9000-000000000006", "cliVersion": "0.162.1", "createdAt": 1, "updatedAt": 1793010660, "cwd": "{CURRENT_WORKSPACE}", "ephemeral": false, "modelProvider": "openai", "preview": "", "projectId": null, "sessionId": "independent-provider-session", "source": "appServer", "forkedFromId": null, "parentThreadId": null, "section": null, "sectionEnteredAt": null, "historyMode": "legacy", "recencyAt": null, "model": "gpt-6.1-sol", "reasoningEffort": "medium", "path": null, "originator": "other-application", "threadSource": null, "agentNickname": null, "agentRole": null, "gitInfo": null, "name": "Foreign app-server client", "status": {"type": "idle"}, "turns": []}], "page_size": 2, "expected_owned_ids": ["019a0290-0000-7000-9000-000000000003", "019a0290-0000-7000-9000-000000000002", "019a0290-0000-7000-9000-000000000001"], "expected_request_sort": {"sortKey": "updated_at", "sortDirection": "desc"}, "nonempty_originators_error": "Local pinned app-server rejects a nonempty originator filter", "cwd_filter_must_not_hide_other_owned_workspace": true}}')
+    path = actor.folder / 'peer.json'
+    config = json.loads(path.read_bytes())
+    config['session_fixture'] = {**source['thread_list'], **archive}
+    path.write_text(json.dumps(config))
+    return source
+
+
+def _session_wait(actor):
+    actor.until(lambda _value: not qml(actor, 'Session.assistant.sessionsLoading'))
+    return [_rows_values(actor, 'sessions', i)
+            for i in range(_rows_probe(actor, model='sessions')['count'])]
+
+
+def test_app_session_browser_pages_updated_sessions_without_foreign_cwd_or_source_ownership(main_actor):
+    actor = main_actor([[]])
+    fixture = _session_fixture(actor)
+    actor.connect()
+    actor.command('click', name='assistant.sessions')
+    rows = _session_wait(actor)
+    pages = 1
+    while qml(actor, 'Session.assistant.sessionsHaveMore'):
+        assert pages < 10, 'The finite seven-row provider fixture completes without a cursor cycle'
+        qml(actor, 'Session.assistant.refreshSessions(true)')
+        rows = _session_wait(actor)
+        pages += 1
+    expected = fixture['thread_list']['expected_owned_ids']
+    known = {row['id'] for row in fixture['thread_list']['threads']}
+    found = [row['id'] for row in rows if row['id'] in known]
+    assert found == expected, (
+        'All app-created workspaces, including historical vscode and appServer sessions, are listed newest-modified first')
+    assert len({row['id'] for row in rows}) == len(rows), (
+        'Opaque pagination preserves unique original session identities without duplicated rows')
+    assert all(row['name'] and re.fullmatch(r'\d{1,2} [A-Za-z]{3} \d{4} at \d{2}:\d{2}', row['modified'])
+               for row in rows if row['id'] in known), (
+        'App-owned metadata retains the actual session title and owner-requested human timestamp form')
+    wire = list(map(json.loads, actor.trace.read_text().splitlines()))
+    requests = [row['params'] for row in wire if row.get('method') == 'thread/list']
+    assert len(requests) >= 2 and any(row.get('cursor') for row in requests), (
+        'Actual supported thread/list follows opaque continuation rather than treating a page as total history')
+    assert all(not row.get('originators') for row in requests), (
+        'Local pinned runtime never receives its unsupported nonempty hosted-only originator filter')
+    assert all(row.get('sortKey') == 'updated_at' and row.get('sortDirection', 'desc') == 'desc'
+               and not row.get('cwd') for row in requests), (
+        'Original supported list request sorts modified time and does not hide other app-owned workspaces')
+    # No account field exists in the pinned returned Thread. Account association
+    # belongs to the actual current authenticated owner, never invented metadata.
+    assert all('account' not in row for row in fixture['thread_list']['threads']), (
+        'Session ownership fixture preserves the pinned absence of a returned account field')
+
+
+@pytest.mark.parametrize('outcome', ['held_ack', 'error'])
+def test_archive_preserves_original_row_until_actual_ack_without_science_or_account_change(main_actor, outcome):
+    actor = main_actor([[]])
+    release = actor.folder / 'release-original-archive'
+    fixture = _session_fixture(actor, **({'archive_hold': str(release)} if outcome == 'held_ack'
+                                         else {'archive_error': True}))
+    actor.connect()
+    account = qml(actor, 'Session.assistant.account')
+    project = qml(actor, 'Session.project===null ? null : String(Session.project)')
+    qml(actor, 'Session.assistant.refreshSessions()')
+    _session_wait(actor)
+    while qml(actor, 'Session.assistant.sessionsHaveMore'):
+        qml(actor, 'Session.assistant.refreshSessions(true)')
+        _session_wait(actor)
+    victim = fixture['thread_list']['expected_owned_ids'][0]
+    before = [_rows_values(actor, 'sessions', i)
+              for i in range(_rows_probe(actor, model='sessions')['count'])]
+    original = next(row for row in before if row['id'] == victim)
+    assert original['canArchive'], 'The finite archive fixture reaches a genuine idle noncurrent app-owned session'
+    qml(actor, 'Session.assistant.archiveSession(' + json.dumps(victim) + ')')
+    pending = [_rows_values(actor, 'sessions', i)
+               for i in range(_rows_probe(actor, model='sessions')['count'])]
+    assert victim in {row['id'] for row in pending}, (
+        'An unacknowledged or failed archive cannot optimistically erase the original active-list row')
+    if outcome == 'held_ack':
+        release.touch()
+        actor.command('refresh_usage')
+        settled = _session_wait(actor)
+        assert victim not in {row['id'] for row in settled}, (
+            'Only actual acknowledged runtime archive removes its original active-list row')
+        state = json.loads(actor.trace.with_suffix('.provider-state.json').read_bytes())
+        assert victim in state['archived_threads'] and victim in state['threads'], (
+            'Archive organizes the actual runtime session while retaining its persisted log identity')
+    else:
+        actor.until(lambda _row: bool(qml(actor, 'Session.assistant.sessionsError')))
+        assert victim in {row['id'] for row in _session_wait(actor)}, (
+            'Explicit archive failure retains the original row and exposes its actual diagnostic')
+    assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
+        'Session organization preserves the current authenticated account')
+    assert qml(actor, 'Session.project===null ? null : String(Session.project)') == project, (
+        'Browsing or archiving another workspace never implicitly adopts or modifies a scientific project')
+    requests = [row for row in map(json.loads, actor.trace.read_text().splitlines()) if row.get('method')]
+    assert len([row for row in requests if row['method'] == 'thread/archive']) == 1, (
+        'The original archive operation is sent once without hidden replay')
+    assert not any(row['method'] == 'turn/start' for row in requests), (
+        'Metadata browsing and archive do not invent provider work or scientific actions')
+
+
+def test_healthy_live_session_transport_lists_but_active_and_unsettled_input_stay_guarded(main_actor):
+    actor = main_actor([[_rows_research('live-session-metadata-reference')]], hold_final=True)
+    _session_fixture(actor)
+    actor.connect()
+    requests = lambda: [row for row in map(json.loads, actor.trace.read_text().splitlines()) if row.get('method')]
+    records = list(map(json.loads, actor.trace.read_text().splitlines()))
+    runtimes = [row['fixture_runtime_started'] for row in records if 'fixture_runtime_started' in row]
+    assert len(runtimes) == 1, 'The metadata fixture has one genuine original stdio runtime process'
+    runtime_pid = runtimes[0]['pid']
+    os.kill(runtime_pid, 0)
+    assert actor.last['ui']['connected'] and actor.last['ui']['state'] == 'idle', (
+        'Session metadata admission begins with an actual healthy connected settled transport')
+    before = len([row for row in requests() if row['method'] == 'thread/list'])
+    actor.command('click', name='assistant.sessions')
+    _session_wait(actor)
+    assert len([row for row in requests() if row['method'] == 'thread/list']) > before, (
+        'Healthy Live transport reaches the actual supported thread/list RPC without being retired to Released')
+    actor.command('manual_key', key='escape')
+    token = actor.begin_current_file_selection()
+    assert token, 'The unresolved-input guard is an actual original selection intent, not a forced private flag'
+    before = len([row for row in requests() if row['method'] == 'thread/list'])
+    qml(actor, 'Session.assistant.refreshSessions()')
+    assert len([row for row in requests() if row['method'] == 'thread/list']) == before, (
+        'A captured unsettled input authority still refuses session work on the otherwise healthy live transport')
+    qml(actor, 'Session.assistant.cancelFileSelection(' + json.dumps(token) + ')')
+    actor.request('Read the public reference without scientific edits.')
+    actor.until(lambda value: value['ui']['can_cancel'])
+    before = len([row for row in requests() if row['method'] in ('thread/list', 'thread/read', 'thread/archive')])
+    qml(actor, 'Session.assistant.refreshSessions()')
+    qml(actor, 'Session.assistant.archiveSession("019a0290-0000-7000-9000-000000000003")')
+    assert len([row for row in requests() if row['method'] in ('thread/list', 'thread/read', 'thread/archive')]) == before, (
+        'Active original work cannot be bypassed by either metadata refresh or direct Archive invocation')
+    actor.command('cancel');actor.until(lambda value: not value['ui']['can_cancel'] and value['ui']['state'] == 'idle')
+    before = len([row for row in requests() if row['method'] == 'thread/list'])
+    qml(actor, 'Session.assistant.refreshSessions()');_session_wait(actor)
+    assert len([row for row in requests() if row['method'] == 'thread/list']) > before, (
+        'After genuine Stop settles, the same retained healthy transport can list sessions again')
+    os.kill(runtime_pid, 0)
+    assert len([row for row in requests() if row['method'] == 'initialize']) == 1, (
+        'Listing is not made possible by killing/restarting or replacing the original connected runtime')
+    (actor.folder / 'live-session-admission-boundaries.json').write_text(json.dumps({
+        'runtime_pid': runtime_pid, 'requests': [row['method'] for row in requests()],
+        'healthy_list_reached': True, 'active_guard_reached': True, 'unsettled_input_guard_reached': True,
+        'uncertain_mutation_guard': 'not independently fabricated or claimed; original guard remains'}, indent=2))
+
+
+def _protocol_item(method, item):
+    clock = {'startedAtMs': 1} if method == 'item/started' else {'completedAtMs': 2}
+    return {'notification': {'method': method, 'params': {'item': item, **clock}}}
+
+
+def test_lazy_command_human_details_preserve_first_supported_meanings_without_technical_copy(main_actor):
+    # Labels are the immutable FIRST formatter's human compatibility contract
+    # (Edi9d06 AssistantMessage.qml), not current projection output as oracle.
+    hidden = 'independent-raw-command-output-NEVER-DISPLAY-69bb'
+    cases = [
+        ('workflow', 'cat .agents/skills/project-assistance/SKILL.md', [],
+         'Read assistant workflow instructions'),
+        ('strategy', 'cat .agents/skills/refinement-strategy/SKILL.md', [],
+         'Read assistant refinement instructions'),
+        ('read', 'cat /approved/counts.xye', [{'type': 'read', 'command': 'cat /approved/counts.xye',
+           'name': 'counts.xye', 'path': '/approved/counts.xye'}], 'Read counts.xye'),
+        ('list', 'ls /approved/references', [{'type': 'listFiles', 'command': 'ls /approved/references',
+           'path': 'reference-directory'}], 'List reference-directory'),
+        ('search', 'rg atomic /approved/input.cif', [{'type': 'search', 'command': 'rg atomic /approved/input.cif',
+           'query': 'atomic coordinates', 'path': '/approved/input.cif'}], 'Search for atomic coordinates'),
+        ('declared', '# Edi purpose: Inspect selected input headings\nopaque unread technical script',
+         [{'type': 'unknown', 'command': '# Edi purpose: Inspect selected input headings\nopaque unread technical script'}],
+         'Inspect selected input headings'),
+    ]
+    steps = []
+    for identity, command, actions, _ in cases:
+        item = {'type': 'commandExecution', 'id': 'human-' + identity,
+                'pluginId': None, 'scriptPath': None, 'command': command,
+                'cwd': '/independent/approved-workspace', 'processId': None, 'source': 'agent',
+                'status': 'inProgress', 'commandActions': actions,
+                'aggregatedOutput': None, 'exitCode': None, 'durationMs': None}
+        steps.extend([_protocol_item('item/started', item),
+                      _protocol_item('item/completed', {**item, 'status': 'completed',
+                                      'aggregatedOutput': hidden, 'exitCode': 0, 'durationMs': 1})])
+    actor = main_actor([steps])
+    actor.connect()
+    starts = [row for row in map(json.loads, actor.trace.read_text().splitlines())
+              if row.get('method') == 'thread/start']
+    assert starts, 'The command fixture belongs to an actual original bootstrapped runtime workspace'
+    for step in steps:
+        step['notification']['params']['item']['cwd'] = starts[-1]['params']['cwd']
+    actor.configure_turns([steps])
+    actor.request('Read the already selected public information; do not change the scientific model.')
+    _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] >= len(cases) + 2)
+    assert qml(actor, 'Preferences.assistantCopyTechnicalDetails') is False, (
+        'Original human command meanings remain available without technical opt-in')
+    rows = [_rows_values(actor, 'messages', i) for i in range(_rows_probe(actor)['count'])]
+    activities = [row for row in rows if row['kind'] == 'activity']
+    assert len(activities) == len(cases), 'All independently pinned command item pairs reach actual retained activity rows'
+    view = control_expression('assistant.messages')
+    observed = []
+    for current, (identity, command, actions, expected) in zip(activities, cases):
+        index = next(i for i, row in enumerate(rows) if row['id'] == current['id'])
+        actor.command('evaluate', expression='(function(){const v=' + view
+                      + ';v.positionViewAtIndex(' + str(index) + ',ListView.Center);})()')
+        response = actor.command('message_input', row_id=current['id'],
+                                  name='assistant.activity.toggle', action='click')['reply']
+        assert response['reached'] and response['same_row_after'], (
+            'Known command description is expanded through its exact original realized Qt activity control')
+        expression = '(function seek(x){if(x.rowId===' + json.dumps(current['id']) + '\
+&&typeof x.humanDetailsSnapshot!=="undefined"){const out=[];function visit(y){\
+if(y.objectName==="assistant.activity.details")out.push(y.text);\
+Array.from(y.children||[]).forEach(visit);}visit(x);return out;}\
+for(const c of (x.children||[])){const r=seek(c);if(r)return r;}return null;})(contentItem)'
+        displayed = qml(actor, expression)
+        assert displayed and expected in '\n'.join(displayed), (
+            'Lazy full-human expansion preserves the FIRST known skill/read/list/search/declared-purpose meaning')
+        assert hidden not in '\n'.join(displayed) and 'opaque unread technical script' not in '\n'.join(displayed), (
+            'Human expansion never displays raw command/output trees as a substitute for the missing description')
+        actor.command('message_input', row_id=current['id'], name='assistant.activity.toggle', action='hover')
+        copied = actor.command('message_input', row_id=current['id'], name='assistant.activity.copy', action='click')['reply']
+        assert copied['reached'] and expected in copied['clipboard'] and hidden not in copied['clipboard'], (
+            'Default original-row Copy retains the useful human command meaning without technical output')
+        args = ','.join(json.dumps(current[key]) for key in ('id', 'kind', 'status'))
+        technical = qml(actor, 'Session.assistant.activityTechnicalDetails(' + args + ')')
+        original = json.loads(technical)
+        assert original['payload']['command'] == command and original['payload']['aggregatedOutput'] == hidden, (
+            'Explicit exact-row technical lookup still retains immutable original command/output evidence')
+        actor.command('message_input', row_id=current['id'], name='assistant.activity.toggle', action='click')
+        observed.append({'fixture': identity, 'row_id': current['id'], 'human': displayed,
+                         'default_copy': copied['clipboard']})
+    (actor.folder / 'command-human-compatibility.json').write_text(json.dumps(observed, indent=2))
+
+
+def test_sparse_interruption_notifies_only_original_changed_status_cells(main_actor):
+    # Legal overlapping public research items; a deliberate real peer EOF then
+    # invokes the FIRST interrupt-pending-rows publication in one native owner.
+    # Completed middle B is the independent unchanged-cell control.
+    def item(identity):
+        return {'type': 'webSearch', 'id': identity, 'query': '', 'action': None, 'results': None}
+    a, b, c = (item('sparse-' + identity) for identity in ('A', 'B', 'C'))
+    steps = [_protocol_item('item/started', a), _protocol_item('item/started', b),
+             _protocol_item('item/completed', {**b, 'query': 'Independent completed reference',
+                 'action': {'type': 'search', 'query': 'reference', 'queries': None}, 'results': []}),
+             _protocol_item('item/started', c)]
+    actor = main_actor([steps], hold_final=True)
+    config_path = actor.folder / 'peer.json'
+    config = json.loads(config_path.read_bytes());config['terminal_status'] = 'process_exit'
+    config_path.write_text(json.dumps(config))
+    actor.connect();actor.request('Read these public sources without changing the scientific model.')
+    _rows_wait(actor, lambda value: value['count'] >= 4 and value['state'] != 'idle')
+    before = [_rows_values(actor, 'messages', i) for i in range(_rows_probe(actor)['count'])]
+    activities = [(i, row) for i, row in enumerate(before) if row['kind'] == 'activity']
+    assert len(activities) == 3, 'The sparse fixture reaches all three original distinct activity rows before EOF'
+    assert activities[0][1]['status'] in ('pending', 'in_progress') and activities[1][1]['status'] == 'completed' \
+        and activities[2][1]['status'] in ('pending', 'in_progress'), (
+        'The reached original rows contain pending A, unchanged completed B, and pending C')
+    _rows_probe(actor, 'watch', capture_cells=True)
+    actor.gate.touch()
+    actor.command('refresh_usage')
+    actor.until(lambda value: bool(value['ui']['last_error']))
+    events = _rows_probe(actor, 'stop')['events']
+    after = [_rows_values(actor, 'messages', i) for i in range(len(before))]
+    assert after[activities[1][0]] == before[activities[1][0]], (
+        'The completed middle activity remains byte/value-identical across real transport interruption')
+    assert all(after[activities[i][0]]['status'] == 'interrupted' for i in (0, 2)), (
+        'Both genuine pending endpoints reach the original single-publication interruption owner')
+    signals = [event for event in events if event['kind'] == 'dataChanged']
+    assert signals and all('changed_cells' in event for event in signals), (
+        'Sparse witness retains actual signal-time independent before/after public cell hashes')
+    for event in signals:
+        actual = {(cell['row'], cell['role']) for cell in event['changed_cells']}
+        roles = event['roles'] or event['all_role_names']
+        announced = {(row, role) for row in range(event['first'], event['last'] + 1) for role in roles}
+        assert announced <= actual, (
+            'Original Rows never announces an unchanged intermediate row or an unchanged endpoint role')
+    (actor.folder / 'sparse-interruption-signals.json').write_text(json.dumps({
+        'before': before, 'after': after, 'signals': events,
+        'intentional_peer_eof': True, 'mixed_status_text_publication': 'not claimed'}, indent=2))
+
+
+def _draft_text(actor):
+    return qml(actor, control_expression('assistant.composer') + '.text')
+
+
+def _type_original_draft(actor, text):
+    actor.command('click', name='assistant.composer')
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text=text)
+    assert _draft_text(actor) == text, 'The Clear witness starts from literal actual original TextArea input'
+
+
+def test_explicit_clear_clears_only_captured_draft_and_preserves_account_and_project(main_actor, tmp_path):
+    actor = main_actor([[]])
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Clear changes conversation/draft ownership, not the current ordinary scientific project')
+    actor.connect();actor.request('Retain this completed conversation as the original Clear positive.')
+    actor.until(lambda value: value['ui']['state'] == 'idle' and bool(value['ui']['messages']))
+    account = qml(actor, 'Session.assistant.account')
+    science = actor.last['ui']['project']
+    _type_original_draft(actor, 'This captured unsent draft should clear.')
+    files = _attachment_fixtures(tmp_path, 1)
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(files[0])])['reply']['added'], (
+        'The captured unsent draft owns a genuinely pending attachment')
+    actor.command('click', name='assistant.clear')
+    actor.until(lambda value: not value['ui']['messages'])
+    assert _draft_text(actor) == '', 'Only successful explicit Clear removes its captured literal unsent text'
+    assert not any(row['pending'] for row in _attachment_rows(actor)), (
+        'Successful explicit Clear also retires its captured pending files')
+    assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
+        'Explicit conversation/draft Clear does not sign out the actual account')
+    assert actor.command('inspect')['ui']['project'] == science, (
+        'Conversation Clear preserves the original current scientific project and parameter state')
+    _type_original_draft(actor, 'Fresh text typed after successful Clear remains.')
+    actor.command('refresh_usage')
+    assert _draft_text(actor) == 'Fresh text typed after successful Clear remains.', (
+        'Later notifications cannot erase a fresh draft after the captured Clear has committed')
+
+
+def test_clear_requested_callback_newer_original_editor_input_is_not_erased(main_actor):
+    actor = main_actor([[]]);actor.connect()
+    actor.request('An original completed message before explicit Clear.')
+    actor.until(lambda value: value['ui']['state'] == 'idle' and bool(value['ui']['messages']))
+    old = 'Captured before Clear.'
+    suffix = ' Newer text during the original requested signal.'
+    _type_original_draft(actor, old)
+    # Ordinary editor method in a public synchronous UI callback; no backend
+    # history setter, property force, fabricated consent or altered owner.
+    expression = '(function(){const a=Session.assistant,e=' + control_expression('assistant.composer') + ';'
+    expression += 'const once=function(intent){a.conversationClearRequested.disconnect(once);e.insert(e.length,' + json.dumps(suffix) + ');};'
+    expression += 'a.conversationClearRequested.connect(once);return true;})()'
+    assert qml(actor, expression), 'The genuine original Clear requested signal has one test-owned ordinary editing observer'
+    actor.command('click', name='assistant.clear')
+    actor.until(lambda value: not value['ui']['messages'])
+    assert _draft_text(actor) == old + suffix, (
+        'A newer editor revision arriving after Clear capture survives the old intent commit')
+
+
+def test_unrelated_ordinary_project_context_change_preserves_unsent_draft(main_actor, tmp_path):
+    actor = main_actor([[]]);actor.connect()
+    text = 'Unsent user text belongs to this composer, not a context retirement.'
+    _type_original_draft(actor, text)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'An ordinary native project Open reaches a real context/owner transition')
+    assert _draft_text(actor) == text, (
+        'Project/context retirement does not impersonate explicit conversation Clear or erase unsent text')
+
+
+def test_short_attachment_remove_cross_follows_rendered_label_by_normal_space_width(main_actor, tmp_path):
+    actor = main_actor([[]]);file = _attachment_fixtures(tmp_path, 1)[0]
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(file)])['reply']['added'], (
+        'Remove-cross geometry uses an original genuinely admitted current attachment')
+    identity = next(row['id'] for row in _attachment_rows(actor) if row['pending'])
+    info = qml(actor, '(function(){const row=' + control_expression('assistant.file.' + identity)
+        + ';if(!row)return null;const label=Array.from(row.children).find(x=>typeof x.text==="string"&&x.text.indexOf('
+        + json.dumps(file.name) + ')>=0);const button=Array.from(row.children).find(x=>x.fontIcon==="times");'
+        'if(!label||!button||!button.contentItem)return null;const icon=button.contentItem;'
+        'const fm=Qt.createQmlObject("import QtQuick; FontMetrics {}",contentItem);fm.font=label.font;'
+        'const space=fm.advanceWidth(" ");fm.destroy();'
+        'return {gap:icon.mapToItem(contentItem,0,0).x-(label.mapToItem(contentItem,0,0).x+label.contentWidth),'
+        'space:space,labelText:label.text,buttonVisible:button.visible,buttonEnabled:button.enabled};})()')
+    assert info and info['buttonVisible'] and info['buttonEnabled'] and info['space'] > 0, (
+        'Actual original label/font/remove control geometry is reached before spacing is judged')
+    assert info['space'] - 1 <= info['gap'] <= 2 * info['space'] + 1, (
+        'The actual remove glyph follows its short painted label by one to two normal font spaces, not the far line edge')
+
+
+def test_hidden_chat_working_stop_group_is_immediately_left_of_original_fit_group(main_actor, tmp_path):
+    actor = main_actor([[{'research': {'query': 'Public reference', 'action': None, 'results': None},
+                          'call_id': 'working-layout-reference'}]], hold_final=True)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Status layout reaches the real ordinary project and existing Fit controls')
+    actor.connect();actor.request('Read the public reference without changing science.')
+    actor.until(lambda value: value['ui']['can_cancel'])
+    actor.command('click', name='assistant.toggle')
+    working = control_expression('statusBar.assistant.working')
+    fit = control_expression('statusBar.fit')
+    info = qml(actor, '(function(){const w=' + working + ',f=' + fit
+        + ';if(!w||!f)return null;const a=w.parent,ap=a.mapToItem(contentItem,0,0),fp=f.mapToItem(contentItem,0,0);'
+        'return {assistant:{x:ap.x,y:ap.y,width:a.width,height:a.height,visible:a.visible},'
+        'fit:{x:fp.x,y:fp.y,width:f.width,height:f.height,visible:f.visible},sameParent:a.parent===f.parent};})()')
+    assert info and info['sameParent'] and info['assistant']['visible'] and info['fit']['visible'], (
+        'Working and original Fit groups are both actually visible in the same real status bar')
+    assert info['assistant']['x'] + info['assistant']['width'] <= info['fit']['x'], (
+        'AI working/Stop group precedes the original Fit group without overlap')
+    actor.command('click', name='assistant.stopVisibleAction')
+    actor.until(lambda value: not value['ui']['can_cancel'])
+    (actor.folder / 'statusbar-working-fit-geometry.json').write_text(json.dumps({
+        'actual_geometry': info, 'latency_qualification': 'No pointer hitch/frame-cost measurement is inferred'}, indent=2))
+
+
+def test_empty_session_table_keeps_dialog_width_and_refresh_next_to_original_close(main_actor):
+    actor = main_actor([[]])
+    _session_fixture(actor)
+    path = actor.folder / 'peer.json'
+    config = json.loads(path.read_bytes())
+    # An authenticated runtime may have no materialized saved logs before the
+    # first user turn. This is a valid empty provider list, not injected UI rows.
+    config['session_fixture'].update(threads=[], list_only_fixture_threads=True)
+    path.write_text(json.dumps(config))
+    actor.connect();actor.command('click', name='assistant.sessions')
+    assert not _session_wait(actor), 'A genuine empty runtime list reaches the original empty sessions owner'
+    dialog = control_expression('assistant.sessionsDialog')
+    table = control_expression('assistant.sessions.list')
+    info = qml(actor, '(function(){const d=' + dialog + ',t=' + table + ';if(!d||!t)return null;'
+        'const f=d.footer,c=f.standardButton(Dialog.Close);let refresh=null;'
+        'function scan(x){if(x.text==="Refresh"&&x.visible)refresh=x;Array.from(x.children||[]).forEach(scan);}scan(f);'
+        'if(!c||!refresh)return null;const r=refresh.mapToItem(contentItem,0,0),p=c.mapToItem(contentItem,0,0);'
+        'return {dialogWidth:d.contentWidth,tableWidth:t.width,tableHeight:t.height,info:t.defaultInfoText,'
+        'footerHeight:f.height,refresh:{x:r.x,y:r.y,width:refresh.width,height:refresh.height,enabled:refresh.enabled},'
+        'close:{x:p.x,y:p.y,width:c.width,height:c.height,enabled:c.enabled}};})()')
+    assert info and info['tableHeight'] > 0 and abs(info['tableWidth'] - info['dialogWidth']) <= 1, (
+        'The genuine empty sessions table retains stable full dialog content width instead of collapsing to its label')
+    assert info['info'] and 'No app-created sessions' in info['info'], (
+        'An empty runtime list remains an explicit useful state rather than blank content')
+    assert info['refresh']['enabled'] and info['close']['enabled'] \
+        and abs(info['refresh']['y'] - info['close']['y']) <= 1, (
+        'Original Refresh and Close controls are adjacent in the same real dialog footer')
+
+
+@pytest.mark.parametrize('show_actions', [False, True])
+def test_native_estimate_then_ids_matches_separate_original_methods_and_undo_sequence(
+    main_actor, tmp_path, show_actions
+):
+    # Independent reference is the two original ordinary Qt owners, not an
+    # assistant-generated expected ID or a claimed atomic combined operation.
+    reference = main_actor([[]])
+    original_path = copied_estimate_project(tmp_path / 'ordinary-reference')
+    assert reference.command('open', path=str(original_path))['reply']['opened'], (
+        'The naming reference uses a genuine ordinary complete project')
+    reference.until(lambda value: not value['ui']['project']['calculating'])
+    original = point_rows(reference)
+    original_can_undo = reference.last['ui']['project']['can_undo']
+    assert qml(reference, 'Session.project.estimateBackground()'), (
+        'The original ordinary native Estimate produces the independently exercised reference prefix')
+    reference.until(lambda value: not value['ui']['project']['calculating'])
+    raw = point_rows(reference)
+    qml(reference, 'Session.project.namePointsByPosition()')
+    reference.until(lambda value: not value['ui']['project']['calculating'])
+    named = point_rows(reference)
+    assert [{k: v for k, v in row.items() if k != 'id'} for row in named] == [
+        {k: v for k, v in row.items() if k != 'id'} for row in raw], (
+        'The original Id-from-position operation changes only IDs, preserving raw estimator science and flags')
+    undo_states = []
+    reference.command('undo');reference.until(lambda value: not value['ui']['project']['calculating'])
+    undo_states.append(point_rows(reference))
+    if undo_states[-1] != original:
+        reference.command('undo');reference.until(lambda value: not value['ui']['project']['calculating'])
+        undo_states.append(point_rows(reference))
+    assert undo_states[-1] == original and reference.last['ui']['project']['can_undo'] == original_can_undo, (
+        'The two original ordinary operations retain their actual separate Undo behavior, including naming no-op')
+    reference.close()
+    call = tool_call('estimate_background', 'estimate-then-original-ids', experiment='bank')
+    actor = main_actor([[call]], show_actions=show_actions)
+    current = copied_estimate_project(tmp_path / 'native-subject')
+    assert actor.command('open', path=str(current))['reply']['opened'], (
+        'The native subject uses the same independent initial project through ordinary Open')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    assert point_rows(actor) == original, 'The two ordinary/native subjects begin with identical native point identity/value state'
+    if show_actions:
+        # Positive setup only, to realize the real original control before its
+        # read-only public pressed-signal observation. No fabricated click/slot.
+        wait_positive_tab(actor, 'appBar.tab.experiment')
+        actor.command('click', name='appBar.tab.experiment')
+        button = control_expression('background.namePoints')
+        observer = '(function(){const b=' + button + ';if(!b)return false;'
+        observer += 'const o=Qt.createQmlObject(\'import QtQuick; Item {visible:false;objectName:"e11.test.namingPresses";property int presses:0;property bool exposed:false}\',contentItem);'
+        observer += 'b.pressedChanged.connect(function(){if(b.pressed){o.presses++;o.exposed=b.visible&&b.enabled;}});return true;})()'
+        assert qml(actor, observer), 'The Show ON witness attaches only to the actual original Id-from-position button'
+    actor.connect();actor.request('Estimate the background using the current native settings.')
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=show_actions)
+    assert len(actor.responses()) == 1, 'Estimate and naming settle one original native call without replaying an uncertain Estimate'
+    result = native_result(actor.responses()[0])
+    assert result['applied'] and result['complete'] and result['atomic'] is False, (
+        'The combined native receipt truthfully reports its applied non-atomic ordinary prefix and naming completion')
+    assert point_rows(actor) == named, (
+        'Both modes match the two independent original native Estimate/Id-from-position owners exactly')
+    if show_actions:
+        proof = qml(actor, '(function(){const o=' + control_expression('e11.test.namingPresses')
+                    + ';return {presses:o.presses,exposed:o.exposed};})()')
+        assert proof['presses'] == 1 and proof['exposed'], (
+            'Show ON genuinely presses the exposed original naming button once, including an ordinary naming no-op')
+    for expected in undo_states:
+        actor.command('undo');actor.until(lambda value: not value['ui']['project']['calculating'])
+        assert point_rows(actor) == expected, (
+            'Each native workflow Undo matches its separate ordinary-owner reference step without invented extra Undo')
+    assert actor.last['ui']['project']['can_undo'] == original_can_undo, (
+        'Native Estimate/naming ends at the exact original Undo boundary')
+    (actor.folder / 'ordinary-estimate-name-reference.json').write_text(json.dumps({
+        'original': original, 'raw_estimate': raw, 'named': named, 'undo_states': undo_states,
+        'mode': show_actions, 'native_receipt': result}, indent=2))
