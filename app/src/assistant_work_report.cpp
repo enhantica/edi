@@ -11,6 +11,7 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFileInfo>
+#include <QFile>
 #include <QJsonDocument>
 #include <QPointer>
 #include <QThread>
@@ -49,8 +50,13 @@ Object receiptBase(const QString& id,const QString& scope,quint64 revision,const
         {"scope_id",scope.isEmpty()?missing("not_present"):observed(scope)},
         {"snapshot_revision",observed(decimal(revision))},{"scope_retired",false},
         {"complete_evidence",false},{"coverage",work_report_receipt_coverage()},
-        {"artifact",missing("not_present")},{"error_code",missing("not_present")},{"recovery_required",false}};
+        {"artifact",missing("not_present")},{"project_mirror",missing("not_observed")},{"error_code",missing("not_present")},{"recovery_required",false}};
 }
+struct ReportMirror {
+    QString root,identity;
+    std::shared_ptr<const void> lease;
+    std::shared_ptr<std::atomic<bool>> current;
+};
 struct FileResult { Object artifact; const char* disposition="failed_precommit"; bool recovery=false; };
 // One existing writer's completion metadata, not another request or task queue.
 struct WriterCompletion {
@@ -141,19 +147,32 @@ QByteArray fileHash(int fd,quint64 expected) {
 QString identityToken(const Identity& id) {
     return QString::number(static_cast<qulonglong>(id.value.st_dev))+u':'+QString::number(static_cast<qulonglong>(id.value.st_ino));
 }
-FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const QByteArray& digest) {
+FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const QByteArray& digest,const QString& serializationRoot={},const ReportMirror* expected=nullptr) {
     FileResult result;
     bool locked=false,created=false,changed=false,indeterminate=false,verified=false,oldPresent=false;
-    Fd root,folder,lock,candidate,oldFile;
+    Fd root,folder,serialization,lockFolder,lock,candidate,oldFile;
+    QByteArray lockName=".writer",candidateName="candidate.json";int stageParent=-1;
+    std::optional<Identity> serializationId,lockFolderId;
     std::optional<Identity> rootId,folderId,lockId,candidateId,oldId;
     try {
         root=directory(projectRoot);checkDirectory(root.n,0);rootId.emplace(root.n);
+        if(expected && (!expected->current || !expected->current->load(std::memory_order_acquire) || identityToken(*rootId)!=expected->identity))
+            throw std::runtime_error("The original project report destination changed");
         folder=childDirectory(root.n,"reports",0);folderId.emplace(folder.n);
-        if(::mkdirat(folder.n,".writer",0700)) {
+        if(serializationRoot.isEmpty())lockFolder=Fd(::dup(folder.n));
+        else {
+            serialization=directory(serializationRoot);checkDirectory(serialization.n,0);serializationId.emplace(serialization.n);
+            lockFolder=childDirectory(serialization.n,"reports");
+            lockName=".mirror-"+QCryptographicHash::hash(identityToken(*rootId).toUtf8(),QCryptographicHash::Sha256).toHex();
+            candidateName=".candidate-"+QUuid::createUuid().toString(QUuid::WithoutBraces).toUtf8()+".json";
+        }
+        lockFolderId.emplace(lockFolder.n);
+        if(::mkdirat(lockFolder.n,lockName.constData(),0700)) {
             result.disposition="writer_busy_or_recovery_required";result.recovery=true;return result;
         }
-        locked=true;lock=Fd(::openat(folder.n,".writer",O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));checkDirectory(lock.n);lockId.emplace(lock.n);
-        candidate=Fd(::openat(lock.n,"candidate.json",O_RDWR|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC,0600));created=true;candidateId.emplace(candidate.n);
+        locked=true;lock=Fd(::openat(lockFolder.n,lockName.constData(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC));checkDirectory(lock.n);lockId.emplace(lock.n);
+        stageParent=serializationRoot.isEmpty()?lock.n:folder.n;
+        candidate=Fd(::openat(stageParent,candidateName.constData(),O_RDWR|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC,0600));created=true;candidateId.emplace(candidate.n);
         struct stat existing{};
         if(!::fstatat(folder.n,"work-report.json",&existing,AT_SYMLINK_NOFOLLOW)) {
             oldFile=Fd(::openat(folder.n,"work-report.json",O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC));privateFile(oldFile.n);oldId.emplace(oldFile.n);oldPresent=true;
@@ -166,23 +185,28 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
             if(!n)throw std::runtime_error("Work report short write");off+=static_cast<std::size_t>(n);
         }
         if(::fsync(candidate.n) || fileHash(candidate.n,bytes.size())!=digest)throw std::runtime_error("Work report candidate verification");
-        auto current=below(folder.n,".writer",true);
-        if(!folderId->object(folder.n) || !lockId->object(current.n))throw std::runtime_error("Work report lock changed");
-        auto named=below(lock.n,"candidate.json");
+        auto current=below(lockFolder.n,QString::fromLatin1(lockName),true);
+        if(!folderId->object(folder.n) || !lockFolderId->object(lockFolder.n) || !lockId->object(current.n))throw std::runtime_error("Work report lock changed");
+        auto named=below(stageParent,QString::fromLatin1(candidateName));
         if(!candidateId->object(named.n))throw std::runtime_error("Work report candidate changed");
         if(oldPresent){auto prior=below(folder.n,"work-report.json");if(!oldId->unchanged(prior.n))throw std::runtime_error("Work report prior changed");}
         const auto currentNamespace=[&] {
+            if(expected && (!expected->current || !expected->current->load(std::memory_order_acquire)))throw std::runtime_error("The original report mirror binding retired");
             auto currentRoot=directory(projectRoot);auto currentFolder=below(currentRoot.n,"reports",true);
+            if(!serializationRoot.isEmpty()) {
+                auto writer=directory(serializationRoot);auto writerFolder=below(writer.n,"reports",true);
+                if(!serializationId->object(writer.n) || !lockFolderId->object(writerFolder.n))throw std::runtime_error("The original serialization owner changed");
+            }
             if(!rootId->object(currentRoot.n) || !folderId->object(currentFolder.n))
                 throw std::runtime_error("Work report namespace changed");
         };
         currentNamespace();
         if(work_report_test_fault(WorkReportFaultPoint::BeforeAtomicPublish))throw std::runtime_error("Work report test publish fault");
-        if(atomic_publish(lock.n,"candidate.json",folder.n,"work-report.json",oldPresent)) {
+        if(atomic_publish(stageParent,candidateName.constData(),folder.n,"work-report.json",oldPresent)) {
             // Preserve uncertainty if the platform cannot prove the namespace
             // is still exactly the precommit state after a failed syscall.
             bool original=false;
-            try {auto staged=below(lock.n,"candidate.json");original=candidateId->object(staged.n);
+            try {auto staged=below(stageParent,QString::fromLatin1(candidateName));original=candidateId->object(staged.n);
                 if(oldPresent){auto previous=below(folder.n,"work-report.json");original=original && oldId->unchanged(previous.n);}
                 else {struct stat absent{};original=original && ::fstatat(folder.n,"work-report.json",&absent,AT_SYMLINK_NOFOLLOW)<0 && errno==ENOENT;}
             }catch(...){original=false;}
@@ -192,11 +216,11 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
         if(work_report_test_fault(WorkReportFaultPoint::AfterAtomicPublishReadback))throw std::runtime_error("Work report test readback fault");
         auto installed=below(folder.n,"work-report.json");
         if(!candidateId->object(installed.n) || fileHash(installed.n,bytes.size())!=digest)throw std::runtime_error("Work report installed changed");
-        if(oldPresent){auto prior=below(lock.n,"candidate.json");if(!oldId->object(prior.n))throw std::runtime_error("Work report old exchange unverified");}
+        if(oldPresent){auto prior=below(stageParent,QString::fromLatin1(candidateName));if(!oldId->object(prior.n))throw std::runtime_error("Work report old exchange unverified");}
         if(work_report_test_fault(WorkReportFaultPoint::OldCandidateCleanup))throw std::runtime_error("Work report test cleanup fault");
-        if(oldPresent && ::unlinkat(lock.n,"candidate.json",0))throw std::runtime_error("Work report old cleanup refused");
-        auto sameLock=below(folder.n,".writer",true);
-        if(!lockId->object(sameLock.n) || ::unlinkat(folder.n,".writer",AT_REMOVEDIR))throw std::runtime_error("Work report lock cleanup refused");
+        if(oldPresent && ::unlinkat(stageParent,candidateName.constData(),0))throw std::runtime_error("Work report old cleanup refused");
+        auto sameLock=below(lockFolder.n,QString::fromLatin1(lockName),true);
+        if(!lockId->object(sameLock.n) || ::unlinkat(lockFolder.n,lockName.constData(),AT_REMOVEDIR))throw std::runtime_error("Work report lock cleanup refused");
         currentNamespace();
         verified=true;result.disposition="saved";
         result.artifact={{"path",projectRoot+QStringLiteral("/reports/work-report.json")},
@@ -206,9 +230,9 @@ FileResult publishFile(const QString& projectRoot,const QByteArray& bytes,const 
         else if(changed){result.disposition="committed_unverified";result.recovery=true;}
         else if(locked) {
             try {
-                if(created){auto named=below(lock.n,"candidate.json");if(!candidateId || !candidateId->object(named.n) || ::unlinkat(lock.n,"candidate.json",0))throw std::runtime_error("Unverified candidate");}
-                auto same=below(folder.n,".writer",true);
-                if(!lockId || !lockId->object(same.n) || ::unlinkat(folder.n,".writer",AT_REMOVEDIR))throw std::runtime_error("Unverified lock");
+                if(created){auto named=below(stageParent,QString::fromLatin1(candidateName));if(!candidateId || !candidateId->object(named.n) || ::unlinkat(stageParent,candidateName.constData(),0))throw std::runtime_error("Unverified candidate");}
+                auto same=below(lockFolder.n,QString::fromLatin1(lockName),true);
+                if(!lockId || !lockId->object(same.n) || ::unlinkat(lockFolder.n,lockName.constData(),AT_REMOVEDIR))throw std::runtime_error("Unverified lock");
             }catch(...){result.recovery=true;}
         }
     }
@@ -275,6 +299,8 @@ struct AssistantWorkReports::Control {
     std::uint64_t serial=0,revision=0,missed=0,missing=0;
     bool enabled=false,exhausted=false,serialExhausted=false,unknown=false,busy=false,closing=false;
     Object last,activeReceipt;
+    QByteArray lastDocument;
+    std::shared_ptr<std::atomic<bool>> mirrorCurrent=std::make_shared<std::atomic<bool>>(true);
     QVariantMap lastVariant;
     bool capturing=false;
     QString activeScope,activeRoot,storageRoot,rootIdentity;quint64 activeRevision=0;
@@ -282,7 +308,7 @@ struct AssistantWorkReports::Control {
 AssistantWorkReports::AssistantWorkReports(AssistantWorkReportOptions options,AssistantViewModel* owner) noexcept
     :options_(options),owner_(owner),collection_requested_(options.automatic) {}
 AssistantWorkReports::~AssistantWorkReports(){closeOwner();}
-void AssistantWorkReports::closeOwner() noexcept {if(control_)control_->closing=true;}
+void AssistantWorkReports::closeOwner() noexcept {if(control_){control_->closing=true;control_->mirrorCurrent->store(false,std::memory_order_release);}}
 bool AssistantWorkReports::tryInitialize() noexcept {
     if(control_)return true;
     try {
@@ -311,9 +337,10 @@ QString AssistantWorkReports::newEvent() {
 }
 void AssistantWorkReports::retireScope() noexcept {
     if(!control_){unavailable_evidence_=true;return;}
-    control_->scope.clear();control_->last={};control_->lastVariant={};
+    control_->scope.clear();control_->mirrorCurrent->store(false,std::memory_order_release);
     try {const auto event=newEvent();if(event.isEmpty())return;control_->exhausted=false;control_->scope="wc/"+control_->instance+u'/'+decimal(control_->serial);
-        control_->last={};
+        control_->mirrorCurrent=std::make_shared<std::atomic<bool>>(true);
+        if(!control_->last.isEmpty()){control_->last["scope_retired"]=true;control_->lastVariant=control_->last.toVariantMap();}
         control_->attempt.clear();control_->revision=0;control_->missed=0;control_->missing=0;control_->unknown=false;changed();}catch(...){control_->exhausted=true;control_->unknown=true;}
 }
 bool AssistantWorkReports::bindStorageRoot(QStringView root) noexcept {
@@ -324,10 +351,12 @@ bool AssistantWorkReports::bindStorageRoot(QStringView root) noexcept {
     try {
         auto nextRoot=root.toString();auto identity=newEvent();
         if(identity.isEmpty())throw std::length_error("Report root identity exhausted");
+        auto current=std::make_shared<std::atomic<bool>>(true);
+        state->mirrorCurrent->store(false,std::memory_order_release);state->mirrorCurrent=std::move(current);
         state->storageRoot.swap(nextRoot);state->rootIdentity.swap(identity);
-        state->last={};state->lastVariant={};changed();return true;
+        changed();return true;
     }catch(...) {
-        state->rootIdentity.clear();state->last={};state->lastVariant={};state->exhausted=true;state->unknown=true;
+        state->mirrorCurrent->store(false,std::memory_order_release);state->rootIdentity.clear();state->exhausted=true;state->unknown=true;
         return true;
     }
 }
@@ -354,13 +383,14 @@ void AssistantWorkReports::settleCompletion(const std::shared_ptr<Control>& stat
     // Owner-thread checkpoint; clearing the cell cannot replay an accepted writer.
     if(state->completion!=cell)return;
     state->busy=false;state->activeReceipt={};state->activeRoot.clear();state->completion.reset();
-    if(state->scope==cell->scope && state->rootIdentity==cell->rootIdentity && !state->closing) {
+    if(state->scope==cell->scope && !state->closing) {
 
         const auto& fallback=cell->fallback[cell->outcome.load(std::memory_order_acquire)];
         state->last=fallback.first;state->lastVariant=fallback.second;
         // No fabricated finished signal or worker retry on this unavailable path.
     }
 }
+QByteArray AssistantWorkReports::lastDocument() const {return control_?control_->lastDocument:QByteArray{};}
 QVariantMap AssistantWorkReports::receipt() const {
     const auto state=control_;
     if(QThread::currentThread()==owner_->thread())settleCompletion(state);
@@ -402,14 +432,16 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         std::shared_ptr<WriterWorkerLease> lease;
         std::shared_ptr<Control> state;
         std::shared_ptr<WriterCompletion> completion;
-        Object document,receipt,reuseArtifact;
-        QString projectRoot,scope;
+        Object document,receipt;
+        QString primaryRoot,serializationRoot,scope;
+        ReportMirror mirror;
         QPointer<AssistantViewModel> receiver;
     };
     struct FinishCapture {
         std::shared_ptr<Control> state;
         std::shared_ptr<WriterCompletion> completion;
         Object terminal;
+        QByteArray encoded;
         QString scope;
         QPointer<AssistantViewModel> receiver;
         bool fallbackOnly;
@@ -466,11 +498,6 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
     if(state->busy && state->activeScope==state->scope && state->activeRevision==state->revision && QStringView(state->activeRoot)==storageRoot) {
         auto r=state->activeReceipt;r["disposition"]="coalesced";return immediate(r);
     }
-    Object reuseArtifact;
-    if(!state->busy && state->last.value("scope_id").toObject().value("value")==state->scope &&
-       state->last.value("snapshot_revision").toObject().value("value")==decimal(state->revision) &&
-       (state->last.value("disposition")=="saved" || state->last.value("disposition")=="saved_incomplete"))
-        reuseArtifact=state->last.value("artifact").toObject().value("value").toObject();
     // Verification/readback belongs to the same original background writer,
     // never a synchronous GUI prerequisite for reusing a prior receipt.
     if(automaticTrigger && state->busy)missedAutomaticCapture();
@@ -495,10 +522,18 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
     const char* preparationCode="snapshot_unavailable";
     try {
         const auto scope=state->scope;const auto revision=state->revision;
-        if(storageRoot.isEmpty() || storageRoot.contains(QChar(0)) || storageRoot.size()>static_cast<qsizetype>(L::message_bytes)) {
+        if(storageRoot.contains(QChar(0))) {
             preparationCode="storage_root_unavailable";throw std::runtime_error("Report storage unavailable");
         }
         const auto projectRoot=storageRoot.toString();
+        const auto serializationRoot=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/work-reports";
+        const auto primaryRoot=serializationRoot+"/"+state->instance;
+        ReportMirror mirror;mirror.root=projectRoot;mirror.current=state->mirrorCurrent;
+        if(!projectRoot.isEmpty())try {
+            auto fd=std::make_shared<assistant_files::Fd>(assistant_files::directory(projectRoot));checkDirectory(fd->n,0);
+            mirror.identity=identityToken(assistant_files::Identity(fd->n));mirror.lease=std::move(fd);
+        }catch(...) {} // An unavailable mirror cannot veto the stable primary.
+
         const auto snapshot=build(static_cast<quint64>(QByteArray::maxSize()));
         if(snapshot.scope!=scope || snapshot.revision!=revision || state->scope!=scope || state->revision!=revision) {
             receipt["disposition"]="superseded";receipt["coverage"]=work_report_receipt_coverage("superseded");
@@ -534,27 +569,23 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
         state->busy=true;state->activeScope=scope;state->activeRoot=projectRoot;state->activeRevision=revision;state->activeReceipt=receipt;state->completion=completion;
         const auto acceptedVariant=receipt.toVariantMap();acceptedReply=acceptedVariant;accepted=true;
         present(receipt,acceptedVariant);
-        const auto input=std::make_shared<WorkCapture>(WorkCapture{workerLease,state,completion,std::move(document),receipt,reuseArtifact,projectRoot,scope,receiver});
+        const auto input=std::make_shared<WorkCapture>(WorkCapture{workerLease,state,completion,std::move(document),receipt,primaryRoot,serializationRoot,scope,std::move(mirror),receiver});
         auto work=[input]() mutable {
             const auto& state=input->state;const auto& completion=input->completion;
-            auto& document=input->document;const auto& receipt=input->receipt;const auto& projectRoot=input->projectRoot;
+            auto& document=input->document;const auto& receipt=input->receipt;const auto& primaryRoot=input->primaryRoot;
             const auto& scope=input->scope;const auto& receiver=input->receiver;
             // Worker mutates only its local Qt owners and this original cell's
             // fixed atomics. Never State/Project/QObject/owner-thread Qt data.
             try {
-                auto terminal=receipt;bool fallbackOnly=false;
+                auto terminal=receipt;QByteArray encoded;bool fallbackOnly=false;
                 try {
                     terminal["phase"]="terminal";
-                    FileResult result;
-                    if(!input->reuseArtifact.isEmpty() && artifactCurrent(input->reuseArtifact,projectRoot))
-                        result={input->reuseArtifact,"saved",false};
-                    else {
-                        const auto bytes=QJsonDocument(document).toJson(QJsonDocument::Compact);
-                        if(bytes.isEmpty())throw std::runtime_error("Report encoding failed");
-                        const auto hash=QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex();
-                        result=publishFile(projectRoot,bytes,hash);
-                    }
-                    completion->publication(result); // POD latch BEFORE fallible receipt assembly.
+                    encoded=QJsonDocument(document).toJson(QJsonDocument::Compact);
+                    if(encoded.isEmpty())throw std::runtime_error("Report encoding failed");
+                    const auto hash=QCryptographicHash::hash(encoded,QCryptographicHash::Sha256).toHex();
+                    if(!QDir().mkpath(primaryRoot))throw std::runtime_error("The app-local report destination is unavailable");
+                    const auto result=publishFile(primaryRoot,encoded,hash);
+                    completion->publication(result); // Primary outcome is latched before optional mirror work.
                     terminal["disposition"]=QLatin1StringView(result.disposition);terminal["recovery_required"]=result.recovery;
                     if(!result.artifact.isEmpty()) {
                         terminal["artifact"]=observed(result.artifact);
@@ -564,9 +595,22 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
                         terminal["error_code"]=observed(QLatin1StringView(result.disposition));
                         auto covered=terminal.value("coverage").toObject();covered["reason"]="storage";terminal["coverage"]=covered;
                     }
+                    try {
+                    Object mirror{{"binding",observed(completion->rootIdentity)},{"disposition","not_present"},{"artifact",missing("not_present")}};
+                    if(!input->mirror.root.isEmpty()) {
+                        if(result.artifact.isEmpty())mirror["disposition"]="primary_unverified";
+                        else if(!input->mirror.lease)mirror["disposition"]="destination_unavailable";
+                        else {
+                            const auto copied=publishFile(input->mirror.root,encoded,hash,input->serializationRoot,&input->mirror);
+                            mirror["disposition"]=QLatin1StringView(copied.disposition);mirror["recovery_required"]=copied.recovery;
+                            if(!copied.artifact.isEmpty())mirror["artifact"]=observed(copied.artifact);
+                        }
+                    }
+                    terminal["project_mirror"]=mirror;
+                    }catch(...) {} // Optional mirror observation cannot discard the already assembled primary receipt.
                 }catch(...) {fallbackOnly=true;terminal={};} // Immutable fallback already owns every field/Variant.
                 document={};
-                const auto output=std::make_shared<FinishCapture>(FinishCapture{state,completion,std::move(terminal),scope,receiver,fallbackOnly});
+                const auto output=std::make_shared<FinishCapture>(FinishCapture{state,completion,std::move(terminal),std::move(encoded),scope,receiver,fallbackOnly});
                 auto deliver=[output]() mutable {
                     const auto& state=output->state;const auto& completion=output->completion;
                     auto& terminal=output->terminal;const auto& scope=output->scope;const auto& receiver=output->receiver;
@@ -577,19 +621,21 @@ QVariantMap AssistantWorkReports::capture(bool automaticTrigger,AssistantWorkRep
                     // Settled means original callback execution, never receiver
                     // delivery/consumption acknowledgement after death/throw.
                     const auto fallbackIndex=completion->outcome.load(std::memory_order_acquire)+
-                        (state->scope!=scope || state->rootIdentity!=completion->rootIdentity || state->closing?WriterCompletion::publicationCases:0);
+                        (state->scope!=scope || state->closing?WriterCompletion::publicationCases:0);
                     const auto& fallback=completion->fallback[fallbackIndex];
                     QVariantMap terminalVariant;
-                    if(!fallbackOnly)try {terminal["scope_retired"]=state->scope!=scope || state->rootIdentity!=completion->rootIdentity || state->closing;terminalVariant=terminal.toVariantMap();}
+                    if(!fallbackOnly)try {terminal["scope_retired"]=state->scope!=scope || state->closing;
+                            if(state->rootIdentity!=completion->rootIdentity) {auto mirror=terminal.value("project_mirror").toObject();mirror["binding_retired"]=true;terminal["project_mirror"]=mirror;}terminalVariant=terminal.toVariantMap();}
                         catch(...) {fallbackOnly=true;}
                     if(fallbackOnly){terminal=fallback.first;terminalVariant=fallback.second;}
                     // An unavailable old scope is never presented on a successor.
                     // A normal original delivery still settles its actual waiter.
                     if(state->completion==completion) {
+                        if(!output->encoded.isEmpty())state->lastDocument=std::move(output->encoded);
                         state->busy=false;state->activeRoot.clear();state->activeReceipt={};state->completion.reset();
                     }
                     if(receiver) {
-                        if(state->scope==scope && state->rootIdentity==completion->rootIdentity && !state->closing) {
+                        if(state->scope==scope && !state->closing) {
 
                             state->last=terminal;state->lastVariant=terminalVariant;
                             try {emit receiver->workReportReceiptChanged();}catch(...){}
