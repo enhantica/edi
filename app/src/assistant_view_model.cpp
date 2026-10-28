@@ -1151,6 +1151,7 @@ struct AssistantViewModel::State {
 
     QJsonArray selected_rows;
     Rows selected_files{{"id", "name", "bytes", "textReadable", "format", "pending"}, &owner, &selected_rows};
+    QString explicit_clear_intent;
     std::string selected_reply; // bounded descriptors only; canonical bytes belong solely to Controller
     bool selected_rows_dirty = false, file_staging = false, file_authority_exhausted = false;
     std::uint64_t file_epoch = 0, file_connection_epoch = 0;
@@ -2708,7 +2709,7 @@ struct AssistantViewModel::State {
         qsizetype relation_base = 0, completed_steps = 0;
         const void* relation_key = nullptr;
         ProjectEditor::RelationAction relation_action;
-        bool step_counted = false;
+        bool step_counted = false, estimate_then_names = false;
         std::shared_ptr<ProjectViewModel::WidgetRelationInput> relation_input;
         QPointer<ConstraintListModel> constraint_model;
 
@@ -4901,6 +4902,64 @@ struct AssistantViewModel::State {
             result.message=QObject::tr("The requested background was estimated and Undo retained; its selected presentation changed");
             *receipt=result;
         }
+        if(result.applied && result.published && native_estimate_target_current(original) && owns() &&
+            !native_call->retiring && !native_call->resolved && !original.record->retired &&
+            original.record->estimate_member->background_type=="line-segment" &&
+            target->currentExperiment()->backgroundEstimateMode()!=QStringLiteral("auto")) {
+            // Separate ordinary operations: retain the real Estimate before any
+            // next cue/write; cancellation never replays or rolls it back.
+            if(show_actions) {
+                const auto run=native_widget;
+                if(!run || !widget_owned(run))return;
+                run->tool="background_names";run->estimate_then_names=true;
+                run->completed_steps=1;run->step_counted=false;run->reveal_steps=0;
+                widget_sequence_retain(run);
+                if(widget_entry_current(run,nullptr))widget_background_names(run);
+                else if(widget_owned(run))widget_refuse(run,QObject::tr("Estimate completed; Id from position could not continue under its original owner"));
+                return;
+            }
+            bool names_complete=false;bool names_applied=false;
+            QString naming_message=QObject::tr("Estimate completed; Id from position was not confirmed");
+            try {
+                const auto names=edi::position_point_ids(*original.record->estimate_member);
+                const auto& points=original.record->estimate_member->background;
+                bool equal=names.size()==points.size();
+                for(std::size_t i=0;equal && i<points.size();++i)equal=names[i]==points[i]->id.value();
+                {
+                    const auto input=target->prepareWidgetBackgroundNames(*original.record->estimate_member);
+                    const auto finish=qScopeGuard([target,input]{if(target)target->finishWidgetBackground(input);});
+                    if(!owns())return;
+                    if(native_call->retiring || !native_estimate_target_current(original)) {
+                        naming_message=QObject::tr("Estimate completed; the original Id from position owner changed before its edit");
+                    } else {
+                        const auto edit_scope=begin_own_edit();
+                        const auto close=qScopeGuard([receiver,this,edit_scope]{if(receiver && receiver->state_.get()==this)end_own_edit(edit_scope);});
+                        if(owns() && !native_call->retiring && native_estimate_target_current(original)) {
+                            const bool accepted=target->namePointsByPosition();
+                            names_applied=input->outcome.applied;
+                            names_complete=accepted && input->consumed && (equal || (names_applied && input->outcome.published));
+                            if(!input->outcome.message.isEmpty())naming_message=input->outcome.message;
+                        }
+                    }
+                }
+                if(!owns())return;
+                if(names_applied && target && project==target)native_refresh(*native_call);
+                if(!owns())return;
+                names_complete=names_complete && native_estimate_target_current(original) && !native_call->retiring;
+                if(names_complete) {
+                    const auto names=edi::position_point_ids(*original.record->estimate_member);
+                    const auto& points=original.record->estimate_member->background;
+                    names_complete=names.size()==points.size();
+                    for(std::size_t i=0;names_complete && i<points.size();++i)names_complete=names[i]==points[i]->id.value();
+                }
+            } catch(...) {} // The real estimated prefix and any naming receipt remain factual.
+            if(!owns())return;
+            native_finish(names_complete,{{"status",names_complete?"completed":"partial"},{"applied",true},
+                {"published",result.published},{"complete",names_complete},{"atomic",false},
+                {"steps_completed",1+(names_applied?1:0)},
+                {"message",names_complete?QObject::tr("Background estimated and IDs assigned from positions with separate ordinary Undo steps"):bounded_error(naming_message)}});
+            return;
+        }
         native_finish(result.applied && result.published,{{"status",result.applied?(result.published?"completed":"applied_unconfirmed"):"refused"},
             {"applied",result.applied},{"published",result.published},{"complete",result.applied && result.published},{"atomic",true},
             {"steps_completed",result.applied?1:0},{"message",bounded_error(result.message)}});
@@ -5009,7 +5068,7 @@ struct AssistantViewModel::State {
         for(const auto& id:names)if(id.size()>Limits::id_bytes){widget_refuse(run,widget_outcome_error);return;}
         bool equal=names.size()==points.size();
         for(std::size_t i=0;equal && i<points.size();++i)equal=names[i]==points[i]->id.value();
-        if(equal){
+        if(equal && !run->estimate_then_names){
             if(parent){create_widget_take_child(parent,run);widget_end(run);if(create_widget_owned(parent))create_widget_advance(parent);}
             else native_finish(true,{{"status","unchanged"},{"complete",true},{"atomic",false},{"steps_completed",0},{"message","Background IDs already match their positions; no input or Undo was needed"}});
             return;
@@ -5037,12 +5096,12 @@ struct AssistantViewModel::State {
             if(run->project)run->project->finishWidgetBackground(run->background_input);
             if(run->receiver && run->receiver->state_.get()==this && run->edit_scope){end_own_edit(run->edit_scope);run->edit_scope=0;}
         };
-        auto captured_completed=[this,run](bool delivered,const QString& message, ControlCause cause) {
+        auto captured_completed=[this,run,equal](bool delivered,const QString& message, ControlCause cause) {
             if(!widget_owned(run))return;
             if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
             try {
                 const auto parent=run->create_parent.lock();const auto input=run->background_input;
-                const bool settled=delivered && input && input->consumed && input->outcome.applied && input->outcome.published;
+                const bool settled=delivered && input && input->consumed && ((run->estimate_then_names && equal) || (input->outcome.applied && input->outcome.published));
                 if(input && input->outcome.applied){++run->completed_steps;run->step_counted=true;native_call->may_have_written=true;}
                 if(parent)create_widget_take_child(parent,run);
                 else widget_sequence_retain(run); // Factual applied state precedes refresh/readback.
@@ -5365,6 +5424,10 @@ struct AssistantViewModel::State {
         Object result{{"status", complete ? "edited" : count ? "partial" : "refused"}, {"steps_completed", static_cast<qint64>(count)},
             {"complete", complete}, {"atomic", false}, {"calculation_pending", run->project && run->project->calculating()},
             {"message", bounded_error(message)}};
+        if(run->estimate_then_names) {
+            result["applied"]=true;
+            result["published"]=run->call.record->estimate_receipt && run->call.record->estimate_receipt->published;
+        }
         if(complete && run->tool=="edit_background" && run->background_request.action!=edi::BackgroundPointInput::Action::Remove)
             result["background_id"]=QString::fromStdString(run->background_id);
         return result;
@@ -11156,7 +11219,7 @@ struct AssistantViewModel::State {
         generic_report_views.clear();
         generic_report_bytes = 0;
     }
-    void generic_clear(bool* discarded = nullptr) {
+    void generic_clear(bool* discarded = nullptr, bool* removed = nullptr) {
         resume_checkpoint.reset();generic_resuming=false;
         auto publication = file_projection();
         if (discarded) *discarded = generic_clear_pending;
@@ -11184,6 +11247,7 @@ struct AssistantViewModel::State {
         archive_refused = false;
         if (!publish({},false,nullptr,true)) { archive_refused = was_refused; error = storage_error; notify(); return; }
         if (discarded) *discarded = true; // Logical discard; archive revision/commit is tracked independently.
+        if (removed) *removed = true;
         work_cancel_failure();work_reports.retireScope();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();work_registration={};
         work_terminal.clear();work_first_cause.clear();work_automatic_terminal=false;
         genuine_objective_row.clear();genuine_objective_project.clear();generic_thread_has_input=false;
@@ -15654,6 +15718,11 @@ void AssistantViewModel::clearHistory() {
     if (!publication.input_current()) return;
 #endif
     if (!publication.input_current()) return;
+    const QPointer<AssistantViewModel> receiver(this);
+    const auto intent=QUuid::createUuid().toString(QUuid::WithoutBraces);
+    state_->explicit_clear_intent=intent;
+    emit conversationClearRequested(intent);
+    if(!receiver || !publication.input_current() || state_->explicit_clear_intent!=intent)return;
     if (state_->session_attachment_depth || state_->attachment_clear_draining) {
         state_->attachment_clear_requested = true;
         return; // The actual request is drained at the existing attachment boundary.
@@ -15667,17 +15736,24 @@ bool AssistantViewModel::clearHistoryNow(bool* logicalDiscarded) {
     discarded = false; // The caller owns this actual latch even if later diagnostics throw.
     if (!publication.input_current()) return discarded;
     const QPointer<AssistantViewModel> alive(this);
-    const auto present_discard = qScopeGuard([this, alive, &discarded] {
+    auto* const original=state_.get();
+    const auto intent=state_->explicit_clear_intent;
+    bool removed=false;
+    const auto present_discard = qScopeGuard([this, alive, original, intent, &discarded, &removed] {
         // All successful explicit Clear paths share this boundary, including a
         // managed attachment drain, disconnected Clear, and early owner change.
         // Reconcile the CURRENT canonical history; never force-empty a newer
         // owner's messages and never announce an unperformed logical discard; archive durability is separate.
         if (alive && discarded) state_->reconcile_history();
+        if(alive && state_.get()==original && removed && !intent.isEmpty() && state_->explicit_clear_intent==intent) {
+            state_->explicit_clear_intent.clear();
+            emit conversationClearCommitted(intent);
+        }
     });
     try {
 #ifndef __EMSCRIPTEN__
         if (state_->generic_mode && state_->generic_authenticated && !state_->generic_retiring) {
-            state_->generic_clear(&discarded); return discarded;
+            state_->generic_clear(&discarded,&removed); return discarded;
         }
 #endif
 #ifndef __EMSCRIPTEN__
@@ -15695,6 +15771,7 @@ bool AssistantViewModel::clearHistoryNow(bool* logicalDiscarded) {
             state_->sync(); return false;
         } else {
             discarded = true; // Logical discard survives a later observer; never a queued=disk claim.
+            removed = true;
             // Explicit Clear retires immediately after its logical removal,
             // before any later cancellation/presentation can reenter.
             state_->work_cancel_failure();state_->work_reports.retireScope();

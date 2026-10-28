@@ -327,6 +327,7 @@ Rectangle {
     signal contextApprovalRequested(string draft)
     signal submissionRequested(var draft)
     signal submissionBlocked()
+    property var clearDraft: null
     property int textRevision: 0
     property int selectionRevision: -1
     property int savedSelectionStart: 0
@@ -449,6 +450,15 @@ Rectangle {
     }
     Connections {
         target: composer.assistant
+        function onConversationClearRequested(intent) {
+            composer.clearDraft={intent: intent, text: editor.text, revision: composer.textRevision};
+        }
+        function onConversationClearCommitted(intent) {
+            const draft=composer.clearDraft;
+            if(!draft || draft.intent!==intent)return;
+            composer.clearDraft=null;
+            if(draft.revision===composer.textRevision && draft.text===editor.text && !editor.inputMethodComposing && !editor.preeditText.length)editor.clear();
+        }
         function onConversationRetired() { ++composer.draftOwnerRevision; composer.submittedDrafts = []; composer.workReportDraft = null; }
         function onWorkReportFinished(receipt) { composer.finishWorkReport(receipt); }
     }
