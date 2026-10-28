@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
 from pathlib import Path
 
 config = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
@@ -21,6 +22,8 @@ turn_number = 0
 thread_number = 0
 cursor = {'position': 0, 'sequence': 0, 'pending_final': False, 'research': None}
 native_ids = {}
+emit_lock = threading.RLock()
+usage_notifications_delivered = False
 # Provider-owned offline persistence, using pinned092d Thread/Resume/Read shapes.
 # This never fabricates application state or scientific results. A killed helper
 # must resume the original stored ID, rather than silently starting another one.
@@ -57,9 +60,10 @@ def thread_response(exclude_turns=False):
 
 
 def emit(value):
-    with trace.with_suffix('.sent.jsonl').open('a', encoding='utf-8') as output:
-        output.write(json.dumps(value) + '\n')
-    print(json.dumps(value, ensure_ascii=False), flush=True)
+    with emit_lock:
+        with trace.with_suffix('.sent.jsonl').open('a', encoding='utf-8') as output:
+            output.write(json.dumps(value) + '\n')
+        print(json.dumps(value, ensure_ascii=False), flush=True)
 
 
 def reply(request, value):
@@ -110,6 +114,12 @@ def advance():
             sys.exit(23)
         return
     spec = calls[cursor['position']]
+    if 'idle_delay_ms' in spec:
+        calls[cursor['position']] = {key: value for key, value in spec.items() if key != 'idle_delay_ms'}
+        timer = threading.Timer(spec['idle_delay_ms'] / 1000, advance)
+        timer.daemon = True
+        timer.start()
+        return
     cursor['position'] += 1
     cursor['sequence'] += 1
     call_id = spec.get('call_id', 'integration-call-' + str(cursor['sequence']))
@@ -224,6 +234,11 @@ for line in sys.stdin:
         )
     elif method == 'account/rateLimits/read':
         reply(request, {'rateLimits': None, 'rateLimitsByLimitId': {}})
+        current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
+        if current.get('usage_notifications') and not usage_notifications_delivered:
+            usage_notifications_delivered = True
+            for event in current['usage_notifications']:
+                notify(event['method'], {**event['params'], 'threadId': thread_id})
         if cursor['research'] and Path(cursor['research'][0]).exists():
             notify('item/completed', cursor['research'][1])
             cursor['research'] = None
