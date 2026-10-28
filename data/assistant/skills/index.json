@@ -71,11 +71,11 @@
     },
     {
       "id": "refinement-strategy",
-      "version": "1.4.5",
+      "version": "1.4.6",
       "title": "Plan adaptive Rietveld refinement",
       "summary": "Choose evidence-based stages, checkpoints, ADPs and mixed-site relationships.",
       "path": "refinement-strategy/SKILL.md",
-      "sha256": "193c90d32b8b82f8d04b9a331791cf16734c14ec38306bd7c27f79eb57cd7517",
+      "sha256": "16d1fc9d667fa8da5107c97e7bc9509c41ecf7a413f06731361c3aeac601397a",
       "requires": [],
       "capabilities": [
         "inspect_project",
