@@ -3463,3 +3463,20 @@ is exposed. This repairs a source owner mismatch; the retained live failure did
 not capture enough popup state to assign an exclusive cause. The later isolated
 native discriminator stopped at an earlier sidebar prerequisite and did not reach
 the popup boundary. Neither run justifies changing the manual header itself.
+
+
+### Analysis filter admission and diagnostic retention
+
+The original Analysis table/filter belongs to its current project's ParametersGroup.
+Reading that model does not require an already exposed table hit point. Discover
+the exact original Basic sidebar controls first, retain their actual model owner,
+then use original group/scroll reveal before a needed reset or category choice.
+A reveal resumes the same pending filter stage rather than skipping to a row
+under stale filters. Equal category needs no selector input. Actual row, model,
+missing/ambiguous control and category predicates report fixed factual phases
+through the existing call-scoped workUI/result owners. No speculative timeout or
+model-readiness retry is introduced.
+
+Local workUI events are retained without the old stream-event count drop; actual
+allocation/encoding failures still report missed evidence and never veto science.
+Provider protocol/currentness/identity guards are separate and unchanged.
