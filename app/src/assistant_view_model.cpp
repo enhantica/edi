@@ -12458,6 +12458,8 @@ struct AssistantViewModel::State {
     void resume_account_admissions() {
         const auto proof=file_projection();const QPointer<AssistantViewModel> receiver(&owner);
         if(account_confirmation_pending || !generic_authenticated || generic_retiring)return;
+        emit owner.draftAdmissionReadyChanged();
+        if(!proof.input_current() || !receiver || receiver->state_.get()!=this || account_confirmation_pending)return;
         const QPointer<CodexAgent> transport(agent.get());const auto output=transport?transport->outputGeneration():0;
         if(transport)transport->resumeDeferredRequests(output);
         if(!receiver || receiver->state_.get()!=this || !proof.input_current() || account_confirmation_pending)return;
@@ -14132,12 +14134,13 @@ struct AssistantViewModel::State {
             notify();
         } else { diagnostic.stage = "UNSUPPORTED_REJECT"; agent->reject(id); } // No fabricated result for unsupported callbacks.
     }
-    QString generic_send(const QString& text, FileProjection& projection) {
+    QString generic_send(const QString& text, FileProjection& projection, bool* accountWaiting=nullptr) {
         if(!message_input_ready(text,projection))return {};
         if(!session_selection_target.isEmpty()) {
             error=input_refusal(QObject::tr("Finish or cancel the conversation selection before sending. Your draft and attachments are retained."));notify();return {};
         }
         if(account_confirmation_pending) {
+            if(accountWaiting){*accountWaiting=true;return {};}
             error=input_refusal(QObject::tr("The current account is being verified. Your draft and attachments are retained; send when ready."));notify();return {};
         }
         if (generic_revoke_pending || generic_context_pending || generic_clear_pending || !generic_interrupt_rpc.isEmpty()) {
@@ -14266,8 +14269,9 @@ struct AssistantViewModel::State {
         const auto originalApproval = approved_scope, originalBackend = backend_scope;
 
         if(!settings_current())return {};
+        bool prewriteAccountWait=false;QString attemptedRpc;
         const auto rpc = agent->request(steering ? "turn/steer" : "turn/start", params,
-            [this, row, publicId, steering, native, projection,
+            [this, row, publicId, steering, native, projection,&prewriteAccountWait,&attemptedRpc,
              originalThread,originalTurn,originalApproval,originalBackend,originalModel,originalEffort,
              originalEffectiveModel,originalEffectiveEffort,originalPolicy](const QString& id) {
             // This is the actual before-write boundary, after optional usage may have notified observers.
@@ -14282,9 +14286,12 @@ struct AssistantViewModel::State {
                     model==originalModel && effort==originalEffort && generic_policy_model==originalEffectiveModel &&
                     generic_policy_effort==originalEffectiveEffort && policy_current();
             };
+            attemptedRpc=id; // CodexAgent::request invokes this before-write owner synchronously.
             const auto admissible = [&] {
-                return settings_current() && !account_confirmation_pending && generic_authenticated && !generic_retiring && !generic_revoke_pending &&
+                const bool owned=settings_current() && generic_authenticated && !generic_retiring && !generic_revoke_pending &&
                     !generic_context_pending && !generic_clear_pending && generic_busy == steering;
+                if(owned && account_confirmation_pending)prewriteAccountWait=true;
+                return owned && !account_confirmation_pending;
             };
             bool turn_owned=false,row_owned=false,native_owned=false,presented=false;
             const auto entries_current = [&] {
@@ -14348,6 +14355,14 @@ struct AssistantViewModel::State {
         if(!settings_current())return rpc.isEmpty()?QString{}:publicId; // Never settle a newer settings operation or overwrite its selection.
         if (rpc.isEmpty()) {
             if(!steering && !generic_writing_input)agent->settleOperation();
+            if(!projection.current())return {};
+            // Wait only for a proven veto BEFORE write and complete cleanup of
+            // this original unwritten receipt. Empty/failed writes are uncertain.
+            if(accountWaiting && prewriteAccountWait && !generic_writing_input && !attemptedRpc.isEmpty() &&
+                !generic_rpc_rows.contains(attemptedRpc) && !generic_rpc_turns.contains(attemptedRpc) && !native_pending.contains(attemptedRpc) &&
+                std::none_of(history.begin(),history.end(),[&](const auto& value){return value.toObject().value("id")==publicId;})) {
+                *accountWaiting=true;return {};
+            }
             if(account_confirmation_pending){error=input_refusal(QObject::tr("The account check is pending. Your draft was not sent and remains available."));notify();return {};}
             throw std::runtime_error("Agent input could not be admitted");
         }
@@ -14973,6 +14988,7 @@ struct AssistantViewModel::State {
             if (!property("canCancel", &AssistantViewModel::canCancel, &AssistantViewModel::canCancelChanged)) return;
             if (!property("lastError", &AssistantViewModel::lastError, &AssistantViewModel::lastErrorChanged)) return;
             if (!property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
+            if (!property("draftAdmissionReady", &AssistantViewModel::draftAdmissionReady, &AssistantViewModel::draftAdmissionReadyChanged)) return;
             if (!property("contextConsentIdentity", &AssistantViewModel::contextConsentIdentity, &AssistantViewModel::contextPreviewChanged)) return;
             if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextPreviewChanged)) return;
             if (!property("contextApprovalBlocked", &AssistantViewModel::contextApprovalBlocked, &AssistantViewModel::contextPreviewChanged)) return;
@@ -16918,6 +16934,13 @@ QString AssistantViewModel::contextConsentIdentity() const {
 #endif
     return contextPreview(); // The portable original context has no volatile native presentation.
 }
+bool AssistantViewModel::draftAdmissionReady() const {
+#ifndef __EMSCRIPTEN__
+    return !state_->generic_mode || !state_->account_confirmation_pending;
+#else
+    return true;
+#endif
+}
 bool AssistantViewModel::contextApprovalBlocked() const {
 #ifndef __EMSCRIPTEN__
     return false; // Local history/science fences never disable authentication/approval.
@@ -17076,7 +17099,14 @@ bool AssistantViewModel::resultSettledReady() const {
 void AssistantViewModel::send(const QString& text) {
     (void)submitDraft(text);
 }
-QString AssistantViewModel::submitDraft(const QString& text) {
+QString AssistantViewModel::submitDraft(const QString& text) {return submitDraftImpl(text,nullptr);}
+QVariantMap AssistantViewModel::submitDraftAdmission(const QString& text) {
+    bool waiting=false;
+    const auto row=submitDraftImpl(text,&waiting);
+    return {{"status",!row.isEmpty()?QStringLiteral("admitted"):waiting?QStringLiteral("waiting"):QStringLiteral("unconfirmed")},{"row_id",row}};
+}
+QString AssistantViewModel::submitDraftImpl(const QString& text,bool* accountWaiting) {
+    if(accountWaiting)*accountWaiting=false;
     // Local native command precedes every provider/consent/attachment door.
     if(QStringView(text).trimmed()==u"/work-report") { (void)captureWorkReport(); return {}; }
 #ifndef __EMSCRIPTEN__
@@ -17104,7 +17134,7 @@ QString AssistantViewModel::submitDraft(const QString& text) {
             if (state_->file_selection || state_->file_staging) { state_->error = state_->input_refusal(tr("Finish file selection first.")); state_->notify(); return {}; }
             if (state_->selected_rows_dirty && !state_->flush_selected_rows(projection)) { if (projection.current()) state_->notify(); return {}; }
             if (!projection.current()) return {};
-            const auto rowId = state_->generic_send(text, projection);
+            const auto rowId = state_->generic_send(text, projection, accountWaiting);
             if (projection.current()) state_->generic_writing_input = false;
             return rowId;
         }

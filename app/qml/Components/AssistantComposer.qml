@@ -524,14 +524,15 @@ Rectangle {
     function submitApprovedDraft(draft) {
         const component = composer, original = assistant;
         const owned = component.ownsConsentDraft(draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !owned) return;
-        if (!original.connected) return;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !owned) return "retired";
+        if (!original.connected) return "waiting";
         const required = original.contextConsentRequired;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return "retired";
         const stillOwned = component.ownsConsentDraft(draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
-        if (required || original.state !== "idle" || original.canCancel) return;
-        component.submit(draft);
+        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return "retired";
+        if (required || original.state !== "idle" || original.canCancel) return "waiting";
+        const result=component.submit(draft);
+        return result ? result.status : "retired";
     }
     function explainBlockedSubmission() {
         const component = composer, original = assistant;
@@ -566,7 +567,8 @@ Rectangle {
         }
         const owned = component.ownsConsentDraft(requested);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !owned) return;
-        if (!original.connected || (original.canCancel && !canSteer) || !hasDraft) return;
+        if (!hasDraft) return;
+        if (!original.connected || (original.canCancel && !canSteer)) return approvedDraft ? {status:"waiting"} : null;
         const required = original.contextConsentRequired;
         if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
         const stillOwned = component.ownsConsentDraft(requested);
@@ -574,14 +576,15 @@ Rectangle {
         if (required) {
             // Approval cannot resolve a retained native/history outcome. Keep
             // the original draft and existing Clear/inspection diagnostic.
-            if (approvedDraft) return;
+            if (approvedDraft) return {status:"waiting"};
             if (original.contextApprovalBlocked) { component.explainBlockedSubmission(); return; }
             component.contextApprovalRequested(requested.text);
             return;
         }
         const text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision;
-        if (approvedDraft && (original.state !== "idle" || original.canCancel)) return;
-        const rowId = original.submitDraft(text);
+        if (approvedDraft && (original.state !== "idle" || original.canCancel)) return {status:"waiting"};
+        const admission = approvedDraft ? original.submitDraftAdmission(text) : null;
+        const rowId = approvedDraft ? (admission ? admission.row_id : "") : original.submitDraft(text);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
         if (rowId.length && draftOwnerRevision === ownerRevision) {
             const pending = submittedDrafts.slice();
@@ -589,6 +592,7 @@ Rectangle {
             submittedDrafts = pending;
             acknowledgeVisiblePrompt();
         }
+        return admission;
     }
     Column {
         id: composerContent

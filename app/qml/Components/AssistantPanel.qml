@@ -151,7 +151,7 @@ Popup {
     function resumeConsentSend() {
         const component = panel, original = panel.assistant, draftComponent = composer;
         const intent = component.consentSend;
-        if (!intent) return;
+        if (!intent || intent.submitting) return;
         const owned = component.ownsConsentSend(intent);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
         if (!owned) { if (component.consentSend === intent) component.retireConsentSend(); return; }
@@ -160,12 +160,15 @@ Popup {
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
         const stillOwned = component.ownsConsentSend(intent);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
-        if (!original.connected || required || original.state !== "idle" || original.canCancel) return;
-        // Consume before submission: queued readiness notifications cannot send twice.
-        component.consentSend = null;
+        if (!original.connected || required || !original.draftAdmissionReady || original.state !== "idle" || original.canCancel) return;
+        // Guard reentrant readiness, but retain A until the actual admission
+        // result. Only a proven prewrite account wait may continue automatically.
+        intent.submitting = true;
+        const result = draftComponent.submitApprovedDraft(intent.draft);
         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-            || component.consentSend !== null) return;
-        draftComponent.submitApprovedDraft(intent.draft);
+            || component.consentSend !== intent) return;
+        intent.submitting = false;
+        if (result !== "waiting") component.retireConsentSend();
     }
     function scheduleConsentSend() { Qt.callLater(resumeConsentSend); }
     Connections {
@@ -177,6 +180,7 @@ Popup {
         function onSelectedEffortChanged() { panel.retireConsentSend(); }
         function onStateChanged() { panel.scheduleConsentSend(); }
         function onCanCancelChanged() { panel.scheduleConsentSend(); }
+        function onDraftAdmissionReadyChanged() { panel.scheduleConsentSend(); }
         function onLastErrorChanged() { panel.captureNotice(); }
         function onContextPreviewChanged() {
             const component = panel, original = panel.assistant;
@@ -794,7 +798,7 @@ Popup {
                             || !owned || component.consentSend !== previous) return;
                         const intent = { owner: original, project: captured.project, draft: captured,
                             context: captured.context, model: captured.model,
-                            effort: captured.effort, offer: offer, approved: false };
+                            effort: captured.effort, offer: offer, approved: false, submitting: false };
                         component.consentSend = intent;
                         if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
                             || !Qt.isQtObject(dialog) || dialog.approvalOwner !== offer || component.consentSend !== intent) return;
