@@ -3526,7 +3526,7 @@ struct AssistantViewModel::State {
         QPointer<ExperimentViewModel> data_view;
         const edi::ExperimentBase* data_member=nullptr;
         quint64 data_generation=0;
-        bool retired = false, stale = false, archived = false;
+        bool retired = false, stale = false, archived = false, input_issued = false;
     };
     // Fixed fit-only settlement payload belongs to the original record, not
     // the disposable widget. The ordinary input may outlive synchronous cleanup.
@@ -14375,6 +14375,7 @@ struct AssistantViewModel::State {
                 if (!generic_present(row)) { release(); return false; }
                 presented=true;
                 if (!entries_current() || !admissible()) { release(); return false; }
+                native->input_issued=true; // This original input's write permission is spent, including uncertainty.
                 generic_writing_input = true; generic_busy = true;
                 return true;
             } catch (...) {
@@ -14483,6 +14484,34 @@ struct AssistantViewModel::State {
             for (const auto& file : files)
                 if (file.toObject().value("id") == id) return true;
         }
+        return false;
+    }
+    bool file_owned_by_issued_input(const QString& id) const {
+        if(file_was_sent(id))return true;
+#ifndef __EMSCRIPTEN__
+        const auto owns=[&](const std::shared_ptr<NativeReceipt>& input) {
+            return input && input->input_issued && input->selected_hashes.contains(id) &&
+                input->selected_hashes.value(id)==generic_input_hashes.value(id);
+        };
+        if(owns(native_receipt))return true;
+        for(const auto& input:native_pending)if(owns(input))return true;
+        for(const auto& value:history) {
+            const auto row=value.toObject();const auto payload=row.value("payload").toObject();
+            if(row.value("kind")!="user" || payload.value("type")!="ediInput")continue;
+            bool includes=false;for(const auto& file:payload.value("files").toArray())if(file.toObject().value("id")==id){includes=true;break;}
+            if(!includes)continue;
+            // A retained pending/error row is not proof of non-admission. Only
+            // its exact still-unwritten original before-write owner can be so.
+            bool unwritten=false;
+            for(auto it=generic_rpc_rows.cbegin();it!=generic_rpc_rows.cend();++it)if(it.value()==row.value("id").toString()) {
+                const auto input=native_pending.value(it.key());
+                unwritten=input && !input->input_issued && !input->retired && input->generation==generation && input->project==project &&
+                    input->disclosure && input->disclosure->account==usage_epoch;
+                break;
+            }
+            if(!unwritten)return true;
+        }
+#endif
         return false;
     }
     Object input_file_payload() const {
@@ -15810,7 +15839,7 @@ struct AssistantViewModel::State {
         work_cancel_failure();work_reports.retireScope();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();work_registration={};
         const auto binding = ++generation;
 #ifndef __EMSCRIPTEN__
-        const auto resetAccount=usage_epoch;const auto resetWindow=action_window;auto resetFiles=file_epoch;
+        auto resetAccount=usage_epoch;const auto resetWindow=action_window;auto resetFiles=file_epoch;
         if(!preserveSetup){approved_scope.reset();backend_scope.reset();bootstrap_scope.reset();}
         disclosure_cache.reset();generic_context_reuse=false;
 #endif
@@ -15853,7 +15882,16 @@ struct AssistantViewModel::State {
                 generic_workspace.clear(); generic_skill_paths.clear(); staged_skill_inventory.reset(); generic_skill_declarations={};
                 generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear();
                 // Keep only the actual managed process/account/catalog. No old thread/call/context authority survives.
-            } else if(!preserveSetup)(void)generic_context_changed();
+            } else if(!preserveSetup) {
+                if(resetInputs) {
+                    auto originalRetirement=file_projection();
+                    (void)generic_context_changed(false,&originalRetirement);
+                    // usage_retire writes its exact own epoch to this original
+                    // proof before observers. Never adopt a newly read account.
+                    if(!originalRetirement.input_current() || action_window!=resetWindow || file_epoch!=resetFiles)return false;
+                    resetAccount=originalRetirement.account;
+                } else (void)generic_context_changed();
+            }
             if (!current()) return false;
             if(!preserveSetup){generic_input_paths.clear();generic_input_hashes.clear();generic_input_physical.clear();generic_input_origins.clear();generic_input_cache.reset();}
             if (!generic_context_retention_pending) { generic_held_row.reset(); generic_blocked = false; }
@@ -15977,7 +16015,7 @@ std::shared_ptr<AssistantViewModel::ProjectResetInputs> AssistantViewModel::prep
         if(original->generic_mode && original->controller) {
             if(original->generation==UINT64_MAX || original->file_epoch==UINT64_MAX)throw std::runtime_error("The original draft attachment identity is exhausted");
             auto files=original->selected_snapshot(original->file_context(),original->generic_input_hashes);
-            std::erase_if(files,[&](const auto& file){return original->file_was_sent(QString::fromStdString(file.id));});
+            std::erase_if(files,[&](const auto& file){return original->file_owned_by_issued_input(QString::fromStdString(file.id));});
             if(files.empty())return result->proof.input_current() && result->window==original->action_window?result:nullptr;
             auto input=std::make_unique<State::SessionInputs>();input->generation=original->generation+1;input->active=std::make_shared<bool>(false);
             input->controller=original->make_controller(nullptr,input->generation,input->active);
@@ -17052,6 +17090,11 @@ bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedRe
     const auto receiver_current = [&] { return receiver && receiver->state_.get() == original; };
     const QPointer<ProjectViewModel> target(project);
     const bool has_target = project != nullptr;
+#ifndef __EMSCRIPTEN__
+    const QPointer<ProjectViewModel> resetPrevious(original->project);
+    auto* const resetPreviousController=original->controller.get();
+    const auto resetBinding=resetInputs && resetInputs->inputs?resetInputs->inputs->generation:quint64(0);
+#endif
     if(resetInputs) {
         if(resetInputs->consumed || project || managedResult || ordinaryEmptyCreate)return false;
 #ifndef __EMSCRIPTEN__
@@ -17074,6 +17117,14 @@ bool AssistantViewModel::attachProject(ProjectViewModel* project, bool managedRe
 #endif
     } catch (...) { failure = std::current_exception(); }
     if (!receiver_current()) return false;
+#ifndef __EMSCRIPTEN__
+    if(resetInputs && resetBinding && !target && state_->generation==resetBinding && !state_->attached_to(target) &&
+        state_->project==resetPrevious && state_->controller.get()==resetPreviousController && !state_->rebind_project()) {
+        // Session already accepted its null target. Detach ONLY this original
+        // stale borrow on failed retirement, not a newer controller/account.
+        state_->controller_attached=false;state_->controller_project.clear();state_->controller.reset();state_->project=nullptr;
+    }
+#endif
     const bool clear_requested = state_->attachment_clear_requested;
     const bool cancelled_candidate = managedResult && clear_requested;
     if (cancelled_candidate) {
