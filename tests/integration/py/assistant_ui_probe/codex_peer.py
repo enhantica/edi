@@ -7,6 +7,7 @@ Wire shapes are independently retained in the earlier assistant stdio fixture at
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import sys
 import threading
@@ -26,6 +27,11 @@ cursor = {'position': 0, 'sequence': 0, 'pending_final': False, 'research': None
 native_ids = {}
 emit_lock = threading.RLock()
 usage_notifications_delivered = False
+account_mode_delivered = False
+effective_configs = {}
+subscribed_threads = set()
+held_usage = []
+pending_metadata = []
 pending_archive = None
 client_originator = None
 if config.get("session_fixture"):
@@ -35,6 +41,20 @@ if config.get("session_fixture"):
 # This never fabricates application state or scientific results. A killed helper
 # must resume the original stored ID, rather than silently starting another one.
 state_path = trace.with_suffix('.provider-state.json')
+source_state = os.environ.get('EDI_TEST_CODEX_PROVIDER_STATE_SOURCE')
+if source_state and not state_path.exists():
+    source = Path(source_state).resolve(strict=True)
+    fixture_root = Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).resolve().parent.parent
+    assert source.is_relative_to(fixture_root) and source.is_file() and source.stat().st_uid == os.geteuid()
+    assert not state_path.exists() and config.get('session_fixture')
+    original_state_bytes = source.read_bytes()
+    original_state = json.loads(original_state_bytes)
+    assert isinstance(original_state.get('threads'), dict) and isinstance(original_state.get('inputs'), list)
+    state_path.write_bytes(original_state_bytes)
+    with trace.open('a', encoding='utf-8') as output:
+        output.write(json.dumps({'fixture_provider_restore': {'source': str(source),
+            'destination': str(state_path), 'bytes': len(original_state_bytes),
+            'sha256': hashlib.sha256(original_state_bytes).hexdigest(), 'exact_copy': True}}) + '\n')
 state = json.loads(state_path.read_text()) if state_path.exists() else {
     'thread_number': 0, 'turn_number': 0, 'threads': {}, 'inputs': []}
 thread_number = state['thread_number']
@@ -55,13 +75,14 @@ def saved_thread(exclude_turns=False):
 
 
 def thread_response(exclude_turns=False):
+    effective = effective_configs.get(thread_id, {})
     return {
-        'thread': saved_thread(exclude_turns), 'model': 'gpt-6.1-sol',
+        'thread': saved_thread(exclude_turns), 'model': effective.get('model', 'gpt-6.1-sol'),
         'modelProvider': 'openai', 'serviceTier': None, 'disabledPluginIds': [],
-        'cwd': cwd, 'instructionSources': [], 'approvalPolicy': 'never',
+        'cwd': effective.get('cwd', cwd), 'instructionSources': [], 'approvalPolicy': 'never',
         'approvalsReviewer': 'user',
         'sandbox': {'type': 'readOnly', 'networkAccess': False},
-        'reasoningEffort': 'medium', 'collaborationMode': None,
+        'reasoningEffort': effective.get('effort', 'medium'), 'collaborationMode': None,
         'turnsBackwardsCursor': None, 'itemsBackwardsCursor': None,
     }
 
@@ -77,8 +98,39 @@ def reply(request, value):
     emit({'id': request['id'], 'result': value})
 
 
+def metadata_reply(request, value, family):
+    gate = config.get('session_fixture', {}).get(family + '_hold')
+    if gate and not Path(gate).exists():
+        pending_metadata.append((request, json.loads(json.dumps(value)), family))
+    else:
+        reply(request, value)
+
+
+def remember_actual_item(method, params):
+    if not config.get('observe_context_continuity') or method not in ('item/started', 'item/completed'):
+        return
+    identity = params.get('threadId')
+    assert identity in state['threads'] and params.get('turnId') and isinstance(params.get('item'), dict)
+    item = json.loads(json.dumps(params['item']))
+    if item.get('type') == 'agentMessage':
+        for optional in ('phase', 'memoryCitation', 'delivery', 'questions'):
+            item.setdefault(optional, None)
+    entries = state.setdefault('item_history', {}).setdefault(identity, [])
+    key = (params['turnId'], item['id'])
+    old = next((entry for entry in entries if (entry['turnId'], entry['item']['id']) == key), None)
+    entry = {'turnId': params['turnId'], 'item': item,
+             'startedAtMs': params.get('startedAtMs', old.get('startedAtMs') if old else None),
+             'completedAtMs': params.get('completedAtMs') if method == 'item/completed' else None}
+    if old is None:
+        entries.append(entry)
+    else:
+        entries[entries.index(old)] = entry
+    persist()
+
+
 def notify(method, params):
     emit({'method': method, 'params': params})
+    remember_actual_item(method, params)
 
 
 def turn(status):
@@ -114,9 +166,16 @@ def advance():
         notify('item/started', binding)
         notify('item/completed', {**binding, 'completedAtMs': 1})
         completed = turn('completed')
+        if config.get('observe_context_continuity'):
+            completed['items'] = [entry['item'] for entry in state.get('item_history', {}).get(thread_id, []) if entry['turnId'] == turn_id]
         state['threads'][thread_id]['turns'].append(completed)
         persist()
         notify('turn/completed', {'threadId': thread_id, 'turn': completed})
+        title = config.get('automatic_thread_name_after_first_turn')
+        if title and len(state['threads'][thread_id]['turns']) == 1:
+            state['threads'][thread_id]['name'] = title
+            persist()
+            notify('thread/name/updated', {'threadId': thread_id, 'threadName': title})
         if config.get('disconnect_after_turn'):
             sys.exit(23)
         return
@@ -243,21 +302,44 @@ for line in sys.stdin:
         )
     elif method == 'initialized':
         pass
+    elif method == 'account/logout':
+        reply(request, {})
     elif method == 'account/read':
+        mode = config.get('account_notification_before_read')
+        if mode is not None and not account_mode_delivered:
+            account_mode_delivered = True
+            with trace.open('a', encoding='utf-8') as output:
+                output.write(json.dumps({'fixture_mode_before_account_read': {'request_id': request['id'], 'pid': os.getpid(), 'metadata': mode}}) + '\n')
+            notify('account/updated', mode)
         reply(
             request,
             {
                 'account': {
                     'type': 'chatgpt',
-                    'email': 'integration@example.invalid',
+                    'email': config.get('account_email', 'integration@example.invalid'),
                     'planType': 'plus',
                 },
                 'requiresOpenaiAuth': False,
             },
         )
     elif method == 'account/rateLimits/read':
-        reply(request, {'rateLimits': None, 'rateLimitsByLimitId': {}})
         current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
+        barrier = current.get('hold_usage_until')
+        if barrier and not Path(barrier).exists():
+            held_usage.append(request)
+        else:
+            for old in held_usage:
+                reply(old, {'rateLimits': None, 'rateLimitsByLimitId': {}})
+            held_usage.clear()
+            reply(request, {'rateLimits': None, 'rateLimitsByLimitId': {}})
+        for old, value, family in list(pending_metadata):
+            gate = current.get('session_fixture', {}).get(family + '_hold')
+            if not gate or Path(gate).exists():
+                if current.get('session_fixture', {}).get(family + '_error_on_release'):
+                    emit({'id': old['id'], 'error': {'code': -32000, 'message': 'Independent original ' + family + ' operation failure'}})
+                else:
+                    reply(old, value)
+                pending_metadata.remove((old, value, family))
         if current.get('usage_notifications') and not usage_notifications_delivered:
             usage_notifications_delivered = True
             for event in current['usage_notifications']:
@@ -342,6 +424,9 @@ for line in sys.stdin:
             state['threads'][thread_id]['source'] = source
             state['threads'][thread_id]['originator'] = client_originator
         persist()
+        effective_configs[thread_id] = {'cwd': cwd, 'model': params.get('model', 'gpt-6.1-sol'),
+                                        'effort': params.get('config', {}).get('model_reasoning_effort', 'medium')}
+        subscribed_threads.add(thread_id)
         reply(request, thread_response())
     elif method == 'thread/list':
         fixture = config.get('session_fixture', {})
@@ -390,8 +475,8 @@ for line in sys.stdin:
         offset = 0 if cursor_value is None else int(cursor_value.removeprefix('independent-page:'))
         count = min(fixture.get('page_size', 2), params.get('limit', 100))
         page = rows[offset:offset + count]
-        reply(request, {'data': [{**row, 'turns': []} for row in page],
-                        'nextCursor': 'independent-page:' + str(offset + count) if offset + count < len(rows) else None})
+        metadata_reply(request, {'data': [{**row, 'turns': []} for row in page],
+                        'nextCursor': 'independent-page:' + str(offset + count) if offset + count < len(rows) else None}, 'list')
     elif method == 'thread/archive':
         fixture = config.get('session_fixture', {})
         if params['threadId'] not in state['threads']:
@@ -405,19 +490,63 @@ for line in sys.stdin:
             persist()
             reply(request, {})
     elif method == 'thread/resume':
-        # Actual pinned selector and metadata, not history-based reconstruction.
+        if config.get('session_fixture', {}).get('resume_error'):
+            emit({'id': request['id'], 'error': {'code': -32000,
+                  'message': 'Independent exact-session bootstrap refusal'}})
+            continue
         assert params['threadId'] in state['threads']
         assert not params.get('history') and not params.get('path')
         thread_id = params['threadId']
         assert not state['threads'][thread_id]['ephemeral']
-        cwd = state['threads'][thread_id]['cwd']
-        assert params.get('cwd', cwd) == cwd
+        stored_cwd = state['threads'][thread_id]['cwd']
+        was_loaded = thread_id in effective_configs
+        subscribed = thread_id in subscribed_threads
+        # Pinned092 processor4348+: subscribed loaded threads retain effective
+        # config. A fresh helper/cold thread may apply supported current overrides.
+        if not was_loaded or not subscribed:
+            effective_configs[thread_id] = {
+                'cwd': params.get('cwd', stored_cwd),
+                'model': params.get('model') or state['threads'][thread_id].get('model') or 'gpt-6.1-sol',
+                'effort': params.get('config', {}).get('model_reasoning_effort', state['threads'][thread_id].get('reasoningEffort')),
+            }
+        cwd = effective_configs[thread_id]['cwd']
+        subscribed_threads.add(thread_id)
+        state.setdefault('resume_observations', []).append({'threadId': thread_id,
+            'was_loaded': was_loaded, 'had_subscribers': subscribed,
+            'historical_cwd': stored_cwd, 'effective_cwd': cwd,
+            'overrides_applied': not was_loaded or not subscribed})
+        persist()
         reply(request, thread_response(params.get('excludeTurns') is True))
+    elif method == 'thread/unsubscribe':
+        target = params['threadId']
+        status = 'notLoaded' if target not in effective_configs else 'unsubscribed' if target in subscribed_threads else 'notSubscribed'
+        subscribed_threads.discard(target)
+        reply(request, {'status': status})
+    elif method == 'thread/items/list':
+        identity = params['threadId']
+        assert identity in state['threads'] and config.get('observe_context_continuity')
+        assert not params.get('history') and not params.get('path')
+        entries = list(state.get('item_history', {}).get(identity, []))
+        if params.get('turnId'):
+            entries = [entry for entry in entries if entry['turnId'] == params['turnId']]
+        direction = params.get('sortDirection') or 'asc'
+        assert direction in ('asc', 'desc')
+        if direction == 'desc':
+            entries.reverse()
+        cursor_value = params.get('cursor')
+        assert cursor_value is None or isinstance(cursor_value, str)
+        offset = 0 if cursor_value is None else int(cursor_value.removeprefix('genuine-items-page:'))
+        count = min(config.get('session_fixture', {}).get('items_page_size', 2), (params.get('limit') or 100))
+        assert count > 0
+        page = entries[offset:offset + count]
+        metadata_reply(request, {'data': page,
+            'nextCursor': 'genuine-items-page:' + str(offset + count) if offset + count < len(entries) else None,
+            'backwardsCursor': None}, 'items')
     elif method == 'thread/read':
         assert params['threadId'] in state['threads']
         original_id = thread_id
         thread_id = params['threadId']
-        reply(request, {'thread': saved_thread(not params.get('includeTurns', False))})
+        metadata_reply(request, {'thread': saved_thread(not params.get('includeTurns', False))}, 'read')
         thread_id = original_id
     elif method == 'thread/name/set':
         assert set(params) == {'threadId', 'name'} and isinstance(params['name'], str)
@@ -472,11 +601,28 @@ for line in sys.stdin:
         current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
         config.update(current)
         state['turn_number'] = turn_number
-        state['inputs'].append({'threadId': thread_id, 'turnId': turn_id, 'input': params.get('input')})
+        record = {'threadId': thread_id, 'turnId': turn_id, 'input': params.get('input')}
+        if config.get('observe_context_continuity'):
+            prior = [row for row in state['inputs'] if row['threadId'] == thread_id]
+            record['actual_prior_input_count'] = len(prior)
+            record['first_actual_input_sha256'] = hashlib.sha256(json.dumps(prior[0]['input'], sort_keys=True, ensure_ascii=False).encode()).hexdigest() if prior else None
+            record['actual_request_model'] = params.get('model')
+            record['effective_model'] = effective_configs.get(thread_id, {}).get('model')
+        if config.get('observe_context_continuity'):
+            # Pinned ThreadItem.userMessage retains the actual acknowledged
+            # turn/start UserInput array. This is not app history injection.
+            actual_user_entry = {
+                'turnId': turn_id, 'item': {'type': 'userMessage', 'id': turn_id + '-actual-user',
+                    'clientId': params.get('clientId'), 'content': json.loads(json.dumps(params.get('input', [])))},
+                'startedAtMs': None, 'completedAtMs': None}
+        state['inputs'].append(record)
         persist()
         calls = current['turns'][turn_number - 1]
         cursor['position'] = 0
         reply(request, {'turn': turn('inProgress')})
+        if config.get('observe_context_continuity'):
+            state.setdefault('item_history', {}).setdefault(thread_id, []).append(actual_user_entry)
+            persist()
         notify('turn/started', {'threadId': thread_id, 'turn': turn('inProgress')})
         advance()
     elif method == 'turn/interrupt':

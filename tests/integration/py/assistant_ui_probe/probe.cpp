@@ -2,6 +2,19 @@
 #include "fixture_services.hpp"
 #include "session.hpp"
 #include "assistant_view_model.hpp"
+#include "assistant_history.hpp"
+#include <map>
+#include <QSet>
+#include <QMap>
+#include "assistant_markdown.hpp"
+#include <QAbstractTextDocumentLayout>
+#include <QTextTable>
+#include <QTextBlock>
+#include <QTextFragment>
+#include <QTextImageFormat>
+#include <QImage>
+#include <QFontMetricsF>
+#include <QTextLayout>
 #include "assistant_native_tools.hpp"
 #include "assistant_outgoing.hpp"
 #include <algorithm>
@@ -59,6 +72,7 @@
 #include <QUuid>
 #include <QtQml/qqmlextensionplugin.h>
 #include <QtTest/QTest>
+#include <QtTest/QSignalSpy>
 
 namespace edi_app {
 // One explicitly authorized friend, defined only in this tests-owned carrier.
@@ -219,6 +233,56 @@ int main(int argc,char** argv) {
         QFile verify(destination);if(!verify.open(QIODevice::ReadOnly)||verify.readAll()!=bytes)return 84;
         history_restore_info={{"source",history_restore_source},{"destination",destination},{"bytes",static_cast<double>(bytes.size())},{"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())},{"exact_copy",true}};
     }
+    Object cache_restore_info;
+    const auto cache_manifest_source=qEnvironmentVariable("EDI_TEST_ASSISTANT_RESTORE_CACHE_MANIFEST");
+    if(!cache_manifest_source.isEmpty()) {
+        if(!codex_mode || qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT").isEmpty())return 77;
+        QFile manifest(cache_manifest_source);if(!QFileInfo(cache_manifest_source).isAbsolute() || !manifest.open(QIODevice::ReadOnly))return 76;
+        const auto manifest_bytes=manifest.readAll();QJsonParseError parse_error;
+        const auto document=QJsonDocument::fromJson(manifest_bytes,&parse_error);
+        if(parse_error.error!=QJsonParseError::NoError || !document.isObject() || !document.object()["files"].isArray())return 75;
+        const auto capture_root=QFileInfo(cache_manifest_source).canonicalPath()+"/cache-files/";
+        const auto app_root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        Array copied;QSet<QString> seen;
+        for(const auto& row:document.object()["files"].toArray()) {
+            if(!row.isObject())return 74;const auto entry=row.toObject();
+            const auto relative=entry["relative"].toString();
+            const auto source=QFileInfo(entry["source"].toString()).canonicalFilePath();
+            const auto destination=QDir::cleanPath(app_root+"/"+relative);
+            if(relative.isEmpty() || QDir::isAbsolutePath(relative) || relative.contains("..") || seen.contains(relative)
+                || !(relative=="assistant/history.json" || relative.startsWith("assistant/history/") || (relative.startsWith("assistant/history-recovered-")&&relative.endsWith(".json")))
+                || !source.startsWith(capture_root) || !destination.startsWith(app_root+"/assistant/") || QFileInfo::exists(destination))return 73;
+            seen.insert(relative);QFile input(source);if(!input.open(QIODevice::ReadOnly))return 72;
+            const auto bytes=input.readAll();const auto hash=QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
+            if(hash!=entry["sha256"].toString() || bytes.size()!=entry["bytes"].toInteger(-1))return 71;
+            if(!QDir().mkpath(QFileInfo(destination).absolutePath()))return 70;
+            QFile output(destination);if(!output.open(QIODevice::WriteOnly)||!output.setPermissions(QFileDevice::ReadOwner|QFileDevice::WriteOwner)||output.write(bytes)!=bytes.size())return 69;output.close();
+            QFile verify(destination);if(!verify.open(QIODevice::ReadOnly)||verify.readAll()!=bytes)return 68;
+            copied.append(Object{{"relative",relative},{"source",source},{"original_source",entry["original_source"]},{"destination",destination},{"sha256",hash},{"bytes",static_cast<double>(bytes.size())},{"exact_copy",true}});
+        }
+        cache_restore_info={{"manifest",cache_manifest_source},{"manifest_sha256",QString::fromLatin1(QCryptographicHash::hash(manifest_bytes,QCryptographicHash::Sha256).toHex())},{"files",copied},{"keys_or_rows_rewritten",false}};
+    }
+    Object initial_cache_read_binding;
+    const auto initial_read_relative=qEnvironmentVariable("EDI_TEST_ASSISTANT_INITIAL_CACHE_READ");
+    if(!initial_read_relative.isEmpty()) {
+        if(!codex_mode || cache_manifest_source.isEmpty() || qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT").isEmpty())return 67;
+        const auto app_root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        const auto target=QDir::cleanPath(app_root+"/"+initial_read_relative);
+        const auto control=qEnvironmentVariable("EDI_TEST_HISTORY_CONTROL"),release=qEnvironmentVariable("EDI_TEST_HISTORY_RELEASE");
+        const auto fixture_root=QFileInfo(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT")).dir().absolutePath();
+        const auto fixture_parent=QFileInfo(fixture_root).dir().canonicalPath();
+        const auto owned_parent=[&](const QString& file) {const auto parent=QFileInfo(file).dir().canonicalPath();return !fixture_parent.isEmpty() && (parent==fixture_parent || parent.startsWith(fixture_parent+"/"));};
+        bool valid=false;const auto epoch=qEnvironmentVariable("EDI_TEST_HISTORY_EPOCH").toUInt(&valid);
+        if(!valid || !epoch || !(initial_read_relative=="assistant/history.json" || initial_read_relative.startsWith("assistant/history/"))
+            || initial_read_relative.contains("..") || !QFileInfo(target).isFile() || QFileInfo(target).isSymLink()
+            || !target.startsWith(app_root+"/assistant/") || !QDir::isAbsolutePath(control) || !QDir::isAbsolutePath(release)
+            || !owned_parent(control) || !owned_parent(release) || QFileInfo(control).isSymLink() || QFileInfo(release).isSymLink()
+            || target.contains('\n') || release.contains('\n') || QFileInfo::exists(control) || QFileInfo::exists(release))return 66;
+        QFile output(control);if(!output.open(QIODevice::WriteOnly|QIODevice::NewOnly))return 65;
+        const auto bytes=("hold_read\n"+target+"\n"+release+"\n"+QString::number(epoch)+"\n").toUtf8();
+        if(output.write(bytes)!=bytes.size())return 64;output.close();
+        initial_cache_read_binding={{"target",target},{"control",control},{"release",release},{"epoch",static_cast<int>(epoch)},{"bytes_changed",false}};
+    }
     FixtureServices fixture; // Outlives all engines, QML, Session, VM and operation teardown.
     UrlObserver urls;
     auto engine=std::make_unique<QQmlApplicationEngine>();
@@ -268,6 +332,23 @@ int main(int argc,char** argv) {
         for(const auto& connection:message_model_connections)QObject::disconnect(connection);
         message_model_connections.clear();message_model_watched.clear();
     };
+    QMetaObject::Connection session_notification_fault;
+    QMetaObject::Connection session_transport_failure_watch;
+    Object session_fault_facts;
+    unsigned session_notification_hits=0;
+    QObject session_fault_observer;
+    // Test-owned handles of the original public archive owner; no application
+    // rows, receipts, permissions or provider data are manufactured here.
+    struct PublicArchiveProbe {
+        QObject receiver;
+        edi_app::AssistantHistoryArchive::View latest;
+        unsigned notices=0;
+        std::unique_ptr<edi_app::AssistantHistoryArchive> archive;
+    };
+    std::map<QString,std::unique_ptr<PublicArchiveProbe>> public_archives;
+    QObject public_archive_clear_receiver;
+    std::vector<edi_app::AssistantHistoryArchive::ClearBarrier> public_archive_barriers;
+ // Disconnect before the retained facts leave scope.
     QMetaObject::Connection publication_fault;
     int publication_fault_hits=0;
     bool publication_undo_seen=false;
@@ -482,11 +563,48 @@ int main(int argc,char** argv) {
                 {"project",project},{"texts",texts},{"controls",controls},
                 {"disclosures",disclosures},{"width",window->width()},{"height",window->height()}};
     };
+    auto close_owned_session_write=[&]() {
+        if(!observed || !window || qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT").isEmpty())
+            throw std::runtime_error("controlled write fault requires the original scripted-fixture Main owner");
+        QPointer<edi_app::AssistantViewModel> vm=observed->assistant();
+        QPointer<edi_app::CodexAgent> agent;QPointer<QProcess> child;
+        const auto expected=QFileInfo(qEnvironmentVariable("EDI_CODEX_DEVELOPMENT_EXECUTABLE")).canonicalFilePath();
+        const auto fixture=QFileInfo(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT")).canonicalPath();
+        if(expected.isEmpty() || fixture.isEmpty() || QFileInfo(expected).canonicalPath()!=fixture)
+            throw std::runtime_error("write fault refuses any process outside the exact owned fixture directory");
+        for(auto* candidate:vm->findChildren<edi_app::CodexAgent*>()) {
+            if(candidate->parent()!=vm || candidate->outputOwnerState()!=edi_app::CodexAgent::OutputOwnerState::Live)continue;
+            for(auto* process:candidate->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly)) {
+                if(process->state()!=QProcess::Running || QFileInfo(process->program()).canonicalFilePath()!=expected)continue;
+                if(child)throw std::runtime_error("ambiguous owned scripted runtime child");
+                child=process;agent=candidate;
+            }
+        }
+        if(!child || !agent || child->parent()!=agent || !vm || observed->assistant()!=vm)
+            throw std::runtime_error("the original current scripted runtime child was not proved");
+        const auto pid=child->processId();qlonglong parent=-1;
+#if defined(Q_OS_LINUX)
+        QFile status(QStringLiteral("/proc/")+QString::number(pid)+"/status");
+        if(status.open(QIODevice::ReadOnly))for(const auto& line:status.readAll().split('\n'))
+            if(line.startsWith("PPid:"))parent=line.mid(5).trimmed().toLongLong();
+#endif
+        if(parent!=QCoreApplication::applicationPid())throw std::runtime_error("actual owned child OS parent was not proved on this platform");
+        session_fault_facts["write_child_pid"]=QString::number(pid);
+        session_fault_facts["write_child_parent"]=QString::number(parent);
+        session_fault_facts["script_path"]=expected;
+        session_fault_facts["original_vm_child"]=true;
+        QObject::disconnect(session_transport_failure_watch);
+        session_transport_failure_watch=QObject::connect(agent.data(),&edi_app::CodexAgent::failed,&session_fault_observer,[&](const QString& error){
+            session_fault_facts["actual_transport_error"]=error;
+            session_fault_facts["actual_transport_failed_signal"]=true;
+        },Qt::DirectConnection);
+        child->closeWriteChannel();session_fault_facts["public_close_write_channel_invoked"]=true;
+    };
     const auto execute_command=[&](const QByteArray& line) {
         try {
             auto input=decode(line).toObject();
             auto op=input["op"].toString();Object result;
-            if((!observed || !window) && op!="inspect" && op!="destroy")throw std::runtime_error("the original Main owner has retired");
+            if((!observed || !window) && op!="inspect" && op!="destroy" && op!="session_fault_facts")throw std::runtime_error("the original Main owner has retired");
             if(op=="message_input") {
                 const auto identity=input["row_id"].toString(),name=input["name"].toString();
                 const auto action=input["action"].toString("click");
@@ -957,10 +1075,21 @@ int main(int argc,char** argv) {
             else if(op=="dialog_ok") {
                 auto* dialog=find(input["name"].toString());
                 if(!dialog)throw std::runtime_error("actual original dialog is absent");
-                QQmlExpression expression(qmlContext(dialog),dialog,"standardButton(Dialog.Ok)");
+                const auto role=input["role"].toString("ok");
+                const QMap<QString,QString> expressions{{"ok","standardButton(Dialog.Ok)"},{"save","standardButton(Dialog.Save)"},
+                    {"discard","standardButton(Dialog.Discard)"},{"cancel","standardButton(Dialog.Cancel)"}};
+                if(!expressions.contains(role))throw std::invalid_argument("closed original standard dialog role required");
+                QQmlExpression expression(qmlContext(dialog),dialog,expressions.value(role));
                 const auto button=expression.evaluate().value<QObject*>();
                 if(expression.hasError())throw std::runtime_error(expression.error().toString().toStdString());
+                if(!button)throw std::runtime_error("actual original standard dialog button is absent");
+                QPointer<QObject> original_dialog=dialog,original_button=button;
+                std::unique_ptr<QSignalSpy> pressed;
+                if(input.contains("role"))pressed=std::make_unique<QSignalSpy>(button,SIGNAL(pressedChanged()));
                 click(button);
+                if(input.contains("role"))result={{"role",role},{"actual_dialog_name",input["name"]},
+                    {"pressed_changes",pressed?pressed->count():0},{"original_dialog_after",bool(original_dialog)},
+                    {"original_button_after",bool(original_button)}};
             }
             else if(op=="click") click(find(input["name"].toString()));
             else if(op=="open") result={{"opened",observed->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
@@ -972,6 +1101,305 @@ int main(int argc,char** argv) {
             else if(op=="save") result={{"saved",observed->save()}};
             else if(op=="report_toggle") observed->project()->report()->setEmbedLibraries(!observed->project()->report()->embedLibraries());
             else if(op=="undo") observed->project()->undo();
+            else if(op=="session_row_click") {
+                const auto id=input["thread_id"].toString();QPointer<QQuickItem> row,area;
+                if(id.isEmpty())throw std::invalid_argument("exact original public session row ID required");
+                for(auto* object:objects(window)) {
+                    auto* item=qobject_cast<QQuickItem*>(object);
+                    if(!item || item->property("threadId").toString()!=id || !item->isVisible())continue;
+                    if(row && row!=item)throw std::runtime_error("ambiguous original realized session row");row=item;
+                }
+                if(row)for(auto* item:row->childItems()) {
+                    if(!item->property("acceptedButtons").isValid() || !(item->property("acceptedButtons").toInt()&Qt::LeftButton)
+                        || item->parentItem()!=row || item->width()<=0 || item->width()>=row->width()-1 || std::abs(item->height()-row->height())>1)continue;
+                    if(area)throw std::runtime_error("ambiguous original row-owned session input area");area=item;
+                }
+                if(!row || !area)result={{"reached",false},{"reason","original session row/declared input area is not realized"},{"thread_id",id}};
+                else {
+                    const auto scene=area->mapToScene(QPointF(area->width()/2,area->height()/2));
+                    bool exposed=area->window()==window && area->isVisible() && area->isEnabled()
+                        && QRectF(0,0,window->width(),window->height()).contains(scene);
+                    for(auto* parent=area->parentItem();parent;parent=parent->parentItem())
+                        if(!parent->isVisible() || !parent->isEnabled() || (parent->clip()
+                            && !QRectF(0,0,parent->width(),parent->height()).contains(parent->mapFromScene(scene))))exposed=false;
+                    if(!exposed)result={{"reached",false},{"reason","original session row input center is clipped/inactive"},{"thread_id",id}};
+                    else {
+                        QSignalSpy pressed(area.data(),SIGNAL(pressedChanged()));
+                        QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,scene.toPoint());drain();
+                        result={{"reached",true},{"thread_id",id},{"actual_pressed_changes",pressed.count()},
+                            {"same_row_after",bool(row)&&row->property("threadId").toString()==id},
+                            {"same_window_after",bool(area)&&area->window()==window}};
+                    }
+                }
+            }
+            else if(op=="archive_probe_open") {
+                const auto key=input["key"].toString(),relative=input["relative"].toString();
+                const auto root=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+                const auto path=QDir::cleanPath(root+"/"+relative);
+                if(key.isEmpty() || public_archives.count(key) || relative.isEmpty() || QDir::isAbsolutePath(relative)
+                    || !(relative=="assistant/history.json" || relative.startsWith("assistant/history/"))
+                    || !path.startsWith(root+"/assistant/") || relative.contains(".."))
+                    throw std::invalid_argument("unique test archive and original run-owned history namespace required");
+                Object copied;
+                const auto source=input["source"].toString();
+                if(!source.isEmpty()) {
+                    const auto owned=QFileInfo(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT")).canonicalPath();
+                    const auto actual=QFileInfo(source).canonicalFilePath();
+                    if(actual.isEmpty() || owned.isEmpty() || !actual.startsWith(owned+"/") || QFileInfo::exists(path))
+                        throw std::runtime_error("archive preload requires an unchanged captured snapshot inside this exact fixture and an absent target");
+                    QFile original(actual);if(!original.open(QIODevice::ReadOnly))throw std::runtime_error("captured archive snapshot unavailable");
+                    const auto bytes=original.readAll();original.close();
+                    if(!QDir().mkpath(QFileInfo(path).absolutePath()))throw std::runtime_error("run-owned archive parent unavailable");
+                    QFile output(path);if(!output.open(QIODevice::WriteOnly)||!output.setPermissions(QFileDevice::ReadOwner|QFileDevice::WriteOwner)||output.write(bytes)!=bytes.size())throw std::runtime_error("exact archive snapshot copy failed");output.close();
+                    copied={{"source",actual},{"bytes",static_cast<double>(bytes.size())},{"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())},{"exact_copy",true}};
+                }
+                auto handle=std::make_unique<PublicArchiveProbe>();auto* captured=handle.get();
+                handle->archive=std::make_unique<edi_app::AssistantHistoryArchive>(&handle->receiver,path,
+                    [captured](const edi_app::AssistantHistoryArchive::View& view){captured->latest=view;++captured->notices;},true);
+                if(input["activate"].toBool(true))handle->archive->activate();
+                public_archives.emplace(key,std::move(handle));
+                result={{"opened",true},{"key",key},{"requested_path",path},{"copied",copied}};
+            }
+            else if(op=="archive_probe_retain") {
+                const auto key=input["key"].toString();auto found=public_archives.find(key);
+                if(found==public_archives.end())throw std::invalid_argument("original test archive handle required");
+                const bool clear=input["logical_clear"].toBool();Array rows;Object captured;
+                if(!clear) {
+                    const auto source=input["source"].toString();const auto actual=QFileInfo(source).canonicalFilePath();
+                    const auto owned=QFileInfo(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT")).canonicalPath();
+                    if(actual.isEmpty() || owned.isEmpty() || !actual.startsWith(owned+"/"))throw std::runtime_error("retain requires a genuine byte-captured snapshot in this exact fixture");
+                    QFile original(actual);if(!original.open(QIODevice::ReadOnly))throw std::runtime_error("genuine retained snapshot unavailable");
+                    const auto bytes=original.readAll();QJsonParseError error;const auto parsed=QJsonDocument::fromJson(bytes,&error);
+                    if(error.error!=QJsonParseError::NoError || !parsed.isArray())throw std::runtime_error("genuine archive source is not its original JSON array");
+                    rows=parsed.array();captured={{"source",actual},{"bytes",static_cast<double>(bytes.size())},{"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())}};
+                }
+                const bool accepted=found->second->archive->retain(rows,input["includes_initial"].toBool(),clear);
+                result={{"accepted",accepted},{"logical_clear",clear},{"captured",captured}};
+            }
+            else if(op=="archive_probe_view") {
+                const auto key=input["key"].toString();auto found=public_archives.find(key);
+                if(found==public_archives.end())throw std::invalid_argument("original test archive handle required");
+                const auto view=found->second->archive->view();
+                result={{"path",view.path},{"initial_rows",view.initial_rows},{"latest_rows",view.latest_rows},
+                    {"accepted",static_cast<double>(view.accepted)},{"durable",static_cast<double>(view.durable)},
+                    {"clear",static_cast<double>(view.clear)},{"failure_revision",static_cast<double>(view.failure_revision)},
+                    {"failure_stage",view.failure_stage?QString::fromUtf8(view.failure_stage):QString()},
+                    {"loaded",view.loaded},{"includes_initial",view.includes_initial},{"pending",view.pending},
+                    {"recovered",view.recovered},{"working",view.working},{"notices",static_cast<int>(found->second->notices)}};
+            }
+            else if(op=="archive_probe_close") {
+                const auto key=input["key"].toString();auto found=public_archives.find(key);
+                if(found==public_archives.end())throw std::invalid_argument("original test archive handle required");
+                found->second->archive->closeOwner();result={{"closed",true}};
+            }
+            else if(op=="archive_probe_clear") {
+                public_archive_barriers=edi_app::AssistantHistoryArchive::clearCaches(&public_archive_clear_receiver,[](const edi_app::AssistantHistoryArchive::View&) {});
+                result={{"barriers",static_cast<int>(public_archive_barriers.size())}};
+            }
+            else if(op=="archive_probe_clear_view") {
+                Array barriers;for(const auto& barrier:public_archive_barriers) {
+                    const auto view=barrier.view();
+                    barriers.append(Object{{"path",view.path},{"revision",static_cast<double>(barrier.revision())},
+                        {"accepted",static_cast<double>(view.accepted)},{"durable",static_cast<double>(view.durable)},
+                        {"failure_revision",static_cast<double>(view.failure_revision)},
+                        {"failure_stage",view.failure_stage?QString::fromUtf8(view.failure_stage):QString()},
+                        {"pending",view.pending},{"working",view.working},{"recovered",view.recovered}});
+                }
+                result={{"barriers",barriers}};
+            }
+            else if(op=="archive_probe_clear_retry") {
+                const auto index=input["index"].toInt(-1);
+                if(index<0 || static_cast<std::size_t>(index)>=public_archive_barriers.size())throw std::invalid_argument("original clear-barrier receipt required");
+                const auto revision=public_archive_barriers[index].revision();
+                result={{"accepted",public_archive_barriers[index].retry()},{"original_revision",static_cast<double>(revision)}};
+            }
+            else if(op=="archive_probe_merge") {
+                auto read=[&](const char* field) {
+                    const auto actual=QFileInfo(input[field].toString()).canonicalFilePath();
+                    const auto owned=QFileInfo(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT")).canonicalPath();
+                    if(actual.isEmpty() || owned.isEmpty() || !actual.startsWith(owned+"/"))throw std::runtime_error("merge requires actual byte-captured snapshots in this fixture");
+                    QFile file(actual);if(!file.open(QIODevice::ReadOnly))throw std::runtime_error("captured merge source unavailable");
+                    QJsonParseError error;const auto value=QJsonDocument::fromJson(file.readAll(),&error);
+                    if(error.error!=QJsonParseError::NoError || !value.isArray())throw std::runtime_error("original captured history array required");return value.array();
+                };
+                const auto initial=read("initial_source"),current=read("current_source");
+                result={{"rows",edi_app::merge_assistant_history(initial,current)}};
+            }
+            else if(op=="archive_probe_drop") {
+                const auto key=input["key"].toString();auto found=public_archives.find(key);
+                if(found==public_archives.end())throw std::invalid_argument("original test archive handle required");
+                public_archives.erase(found);result={{"dropped",true}};
+            }
+            else if(op=="markdown_probe") {
+                const auto identity=input["row_id"].toString();
+                QPointer<edi_app::AssistantMarkdown> presentation;QPointer<QQuickItem> original_row;
+                if(identity.isEmpty())throw std::invalid_argument("original realized message row ID required");
+                for(auto* object:objects(window)) {
+                    auto* candidate=qobject_cast<edi_app::AssistantMarkdown*>(object);if(!candidate)continue;
+                    for(auto* parent=candidate->parentItem();parent;parent=parent->parentItem())
+                        if(parent->property("rowId").toString()==identity) {
+                            if(presentation && presentation!=candidate)throw std::runtime_error("ambiguous original message document");
+                            presentation=candidate;original_row=parent;break;
+                        }
+                }
+                if(!presentation || !original_row || !presentation->document() || !presentation->document()->textDocument())
+                    result={{"reached",false},{"reason","original message/document is not realized"},{"row_id",identity}};
+                else {
+                    auto* document=presentation->document()->textDocument();const auto center=presentation->mapToScene(QPointF(presentation->width()/2,presentation->height()/2));
+                    bool exposed=presentation->window()==window && presentation->isVisible() && presentation->width()>0 && presentation->height()>0
+                        && QRectF(0,0,window->width(),window->height()).contains(center);
+                    for(auto* parent=presentation->parentItem();parent;parent=parent->parentItem())
+                        if(!parent->isVisible() || (parent->clip() && !QRectF(0,0,parent->width(),parent->height()).contains(parent->mapFromScene(center))))exposed=false;
+                    Array images,tables,anchors,blocks;
+                    for(auto block=document->begin();block.isValid();block=block.next())blocks.append(Object{{"position",block.position()},{"text",block.text()},
+                        {"heading",block.blockFormat().headingLevel()},{"list_item",block.textList()!=nullptr},{"list_object",block.blockFormat().objectIndex()}});
+                    for(auto block=document->begin();block.isValid();block=block.next())for(auto it=block.begin();!it.atEnd();++it) {
+                        const auto fragment=it.fragment();if(!fragment.isValid())continue;
+                        if(fragment.charFormat().isAnchor())anchors.append(Object{{"href",fragment.charFormat().anchorHref()},{"text",fragment.text()},{"tooltip",fragment.charFormat().toolTip()}});
+                        if(!fragment.charFormat().isImageFormat())continue;
+                        const auto format=fragment.charFormat().toImageFormat();const auto resource=document->resource(QTextDocument::ImageResource,QUrl(format.name()));
+                        const auto image=qvariant_cast<QImage>(resource);bool nontransparent=false;QRect ink;
+                        const auto area=static_cast<quint64>(image.width())*static_cast<quint64>(image.height());
+                        const auto frame_area=static_cast<quint64>(window->width())*static_cast<quint64>(window->height());
+                        // Only a diagnostic scan bound for these tiny formula fixtures;
+                        // no product input/render/resource is refused or truncated here.
+                        const bool fixture_sized=area<=frame_area*16;
+                        if(fixture_sized)for(int y=0;y<image.height();++y)for(int x=0;x<image.width();++x)
+                            if(image.pixelColor(x,y).alpha()){nontransparent=true;ink=ink.united(QRect(x,y,1,1));}
+                        const auto font=format.font().resolve(document->defaultFont());const auto font_descent=QFontMetricsF(font).descent();
+                        const auto line=block.layout()?block.layout()->lineForTextPosition(fragment.position()-block.position()):QTextLine();
+                        const auto baseline=line.isValid()?block.layout()->position().y()+line.y()+line.ascent():0;
+                        const auto logical_height=format.height()>0?format.height():(image.devicePixelRatio()>0?image.height()/image.devicePixelRatio():0);
+                        images.append(Object{{"position",fragment.position()},{"length",fragment.length()},{"name",format.name()},
+                            {"width",format.width()},{"height",format.height()},{"resource_width",image.width()},{"resource_height",image.height()},
+                            {"resource_dpr",image.devicePixelRatio()},{"resource_null",image.isNull()},{"nontransparent",nontransparent},
+                            {"fixture_sized",fixture_sized},{"format_font_descent",font_descent},{"format_baseline_offset",format.baselineOffset()},
+                            {"line_baseline",baseline},{"quick_baseline_top_from_consumer",baseline-(logical_height-font_descent)},
+                            {"ink_x",ink.x()},{"ink_y",ink.y()},{"ink_width",ink.width()},{"ink_height",ink.height()},
+                            {"selected_source",presentation->selectedSource(fragment.position(),fragment.position()+fragment.length())}});
+                    }
+                    std::function<void(QTextFrame*)> visit=[&](QTextFrame* frame) {
+                        if(auto* table=qobject_cast<QTextTable*>(frame)) {
+                            const auto rect=document->documentLayout()->frameBoundingRect(table);Array rows;
+                            for(int r=0;r<table->rows();++r) {
+                                QRectF bounds;for(int c=0;c<table->columns();++c) {
+                                    const auto cell=table->cellAt(r,c);const auto first=cell.firstCursorPosition().block(),last=cell.lastCursorPosition().block();
+                                    bounds=bounds.united(document->documentLayout()->blockBoundingRect(first)).united(document->documentLayout()->blockBoundingRect(last));
+                                }
+                                rows.append(Object{{"row",r},{"x",bounds.x()},{"y",bounds.y()},{"width",bounds.width()},{"height",bounds.height()}});
+                            }
+                            tables.append(Object{{"rows",table->rows()},{"columns",table->columns()},{"x",rect.x()},{"y",rect.y()},
+                                {"width",rect.width()},{"height",rect.height()},{"row_geometry",rows}});
+                        }
+                        for(auto* child:frame->childFrames())visit(child);
+                    };visit(document->rootFrame());
+                    Object literal_copy;
+                    if(input["literal"].isString()) {
+                        const auto literal=input["literal"].toString();const auto found=document->find(literal);
+                        literal_copy={{"found",!found.isNull()},{"literal",literal}};
+                        if(!found.isNull())literal_copy["selected_source"]=presentation->selectedSource(found.selectionStart(),found.selectionEnd());
+                    }
+                    auto color=[](const QColor& value){return Array{value.red(),value.green(),value.blue(),value.alpha()};};
+                    result={{"reached",true},{"row_id",identity},{"same_window",presentation->window()==window},{"center_exposed",exposed},
+                        {"source",presentation->source()},{"literal_copy",literal_copy},{"plain_text",document->toPlainText()},{"whole_source_copy",presentation->selectedSource(0,std::max(0,document->characterCount()-1))},
+                        {"markdown",presentation->markdown()},{"images",images},{"tables",tables},{"anchors",anchors},{"blocks",blocks},
+                        {"chat_color",color(original_row->property("chatBackgroundColor").value<QColor>())},
+                        {"base_color",color(presentation->tableBaseColor())},{"alternate_color",color(presentation->tableShadeColor())},
+                        {"border_color",color(presentation->tableBorderColor())},{"document_scene_x",presentation->mapToScene(QPointF()).x()},{"document_scene_y",presentation->mapToScene(QPointF()).y()},{"body_font_family",presentation->bodyFont().family()},
+                        {"mono_font_family",presentation->monoFontFamily()}};
+                }
+            }
+            else if(op=="markdown_copy") {
+                const auto identity=input["row_id"].toString(),mode=input["mode"].toString("public");
+                if(mode!="public" && mode!="keyboard" && mode!="selection")throw std::invalid_argument("closed original TextEdit copy entrance required");
+                QPointer<edi_app::AssistantMarkdown> presentation;QPointer<QQuickItem> body,original_row;
+                for(auto* object:objects(window)) {
+                    auto* candidate=qobject_cast<edi_app::AssistantMarkdown*>(object);if(!candidate)continue;
+                    for(auto* parent=candidate->parentItem();parent;parent=parent->parentItem())
+                        if(parent->property("rowId").toString()==identity) {
+                            if(presentation && presentation!=candidate)throw std::runtime_error("ambiguous original math message");
+                            presentation=candidate;body=candidate->parentItem();original_row=parent;break;
+                        }
+                }
+                if(!presentation || !body || !presentation->document() || !presentation->document()->textDocument())throw std::runtime_error("original realized math TextEdit is unavailable");
+                auto* document=presentation->document()->textDocument();int index=input["image_index"].toInt(),start=-1,end=-1;
+                for(auto block=document->begin();block.isValid()&&start<0;block=block.next())for(auto it=block.begin();!it.atEnd();++it) {
+                    const auto fragment=it.fragment();if(!fragment.isValid() || !fragment.charFormat().isImageFormat())continue;
+                    if(index--==0){start=fragment.position();end=start+fragment.length();break;}
+                }
+                if(start<0)throw std::runtime_error("the requested original generated formula is not present");
+                QRectF first,last;
+                if(!QMetaObject::invokeMethod(body,"positionToRectangle",Qt::DirectConnection,Q_RETURN_ARG(QRectF,first),Q_ARG(int,start))
+                    || !QMetaObject::invokeMethod(body,"positionToRectangle",Qt::DirectConnection,Q_RETURN_ARG(QRectF,last),Q_ARG(int,end)))
+                    throw std::runtime_error("original TextEdit public position geometry is unavailable");
+                const auto a=body->mapToScene(QPointF(first.left()+.25,first.center().y()));
+                const auto b=body->mapToScene(QPointF(last.left()+.25,last.center().y()));
+                auto exposed=[&](const QPointF& point) {
+                    if(!body || body->window()!=window || !body->isVisible() || !body->isEnabled()
+                        || !QRectF(0,0,window->width(),window->height()).contains(point))return false;
+                    for(auto* parent=body->parentItem();parent;parent=parent->parentItem())
+                        if(!parent->isVisible() || !parent->isEnabled() || (parent->clip() && !QRectF(0,0,parent->width(),parent->height()).contains(parent->mapFromScene(point))))return false;
+                    return true;
+                };
+                if(!exposed(a)||!exposed(b))throw std::runtime_error("original formula selection endpoints are clipped in their current window");
+                const auto source=presentation->source();QPointer<QQuickTextDocument> original_document=presentation->document();
+                QTest::mouseMove(window,a.toPoint());QTest::mousePress(window,Qt::LeftButton,Qt::NoModifier,a.toPoint());
+                QTest::mouseMove(window,b.toPoint());QTest::mouseRelease(window,Qt::LeftButton,Qt::NoModifier,b.toPoint());drain();
+                if(!body || !presentation || !original_row || original_row->property("rowId").toString()!=identity
+                    || presentation->document()!=original_document || presentation->source()!=source || body->window()!=window)
+                    throw std::runtime_error("original formula copy receiver changed during real selection input");
+                const auto selected_start=body->property("selectionStart").toInt(),selected_end=body->property("selectionEnd").toInt();
+                if(std::min(selected_start,selected_end)>start || std::max(selected_start,selected_end)<end || selected_start==selected_end)
+                    throw std::runtime_error("the actual original mouse drag did not select the requested formula");
+                auto* clipboard=QGuiApplication::clipboard();QString copied;
+                if(mode=="selection") {
+                    if(!clipboard->supportsSelection() || !clipboard->ownsSelection())
+                        throw std::runtime_error("this actual platform/gesture does not own its primary selection clipboard");
+                    copied=clipboard->text(QClipboard::Selection);
+                } else {
+                    if(mode=="public") {
+                        if(!QMetaObject::invokeMethod(body,"copy",Qt::DirectConnection))throw std::runtime_error("original TextEdit.copy entrance unavailable");
+                    } else {
+                        if(!body->hasActiveFocus())throw std::runtime_error("real formula selection did not give the original TextEdit keyboard focus");
+                        QTest::keyClick(window,Qt::Key_C,Qt::ControlModifier);drain();
+                    }
+                    if(!clipboard->ownsClipboard())throw std::runtime_error("original copy did not own the current clipboard");
+                    copied=clipboard->text();
+                }
+                result={{"reached",true},{"row_id",identity},{"mode",mode},{"clipboard",copied},
+                    {"selected_start",selected_start},{"selected_end",selected_end},{"formula_start",start},{"formula_end",end},
+                    {"same_row",original_row->property("rowId").toString()==identity},{"same_window",body->window()==window}};
+            }
+            else if(op=="arm_session_notification") {
+                if(!observed || !window)throw std::runtime_error("actual original session notification owner required");
+                QObject::disconnect(session_notification_fault);session_notification_hits=0;session_fault_facts=Object{};
+                const auto signal=input["signal"].toString(),action=input["action"].toString();
+                if((signal!="usage" && signal!="sessions") || (action!="close_project" && action!="destroy_engine"))
+                    throw std::invalid_argument("declared public session notification/action required");
+                QPointer<edi_app::AssistantViewModel> original=observed->assistant();
+                const auto callback=[&,original,action,signal] {
+                    if(session_notification_hits++)return;
+                    session_fault_facts["notification"]=signal;session_fault_facts["action"]=action;
+                    session_fault_facts["original_vm_before"]=bool(original)&&observed&&observed->assistant()==original;
+                    if(action=="close_project")observed->closeProject();
+                    else {engine.reset();singleton=nullptr;}
+                    session_fault_facts["original_vm_after"]=bool(original)&&observed&&observed->assistant()==original;
+                    session_fault_facts["project_present_after"]=bool(observed)&&bool(observed->project());
+                };
+                if(signal=="usage")session_notification_fault=QObject::connect(original.data(),&edi_app::AssistantViewModel::usageChanged,&session_fault_observer,callback,Qt::DirectConnection);
+                else session_notification_fault=QObject::connect(original.data(),&edi_app::AssistantViewModel::sessionsChanged,&session_fault_observer,callback,Qt::DirectConnection);
+                result={{"armed",true}};
+            }
+            else if(op=="session_operation") {
+                if(!observed || !window)throw std::runtime_error("actual original session operation owner required");
+                const auto operation=input["operation"].toString();QPointer<edi_app::AssistantViewModel> original=observed->assistant();
+                if(operation=="refresh")original->refreshSessions(input["next_page"].toBool());
+                else if(operation=="archive")original->archiveSession(input["thread_id"].toString());
+                else throw std::invalid_argument("original public Refresh/Archive operation required");
+                result={{"called",true},{"original_vm_after",bool(original)&&observed&&observed->assistant()==original}};
+            }
+            else if(op=="close_owned_transport_write") {close_owned_session_write();result=session_fault_facts;}
+            else if(op=="session_fault_facts") {result=session_fault_facts;result["notification_hits"]=static_cast<int>(session_notification_hits);}
             else if(op=="clear_history") observed->assistant()->clearHistory();
             else if(op=="cancel") observed->assistant()->cancel();
             else if(op=="sign_out") observed->assistant()->signOut();
@@ -1078,7 +1506,7 @@ int main(int argc,char** argv) {
             drain();
             auto output=fixture.snapshot();output["reply"]=result;
             output["ui"]=(op=="messages_probe" || op=="message_input") ? Object{{"alive",bool(observed)&&bool(window)},{"state",observed?observed->assistant()->state():QString()},{"connected",observed&&observed->assistant()->connected()},{"can_cancel",observed&&observed->assistant()->canCancel()}} : ui_snapshot();
-            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["test_settings"]=Object{{"path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()},{"application_name_override",test_application_name}};
+            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["cache_restore"]=cache_restore_info;output["initial_cache_read_binding"]=initial_cache_read_binding;output["test_settings"]=Object{{"path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()},{"application_name_override",test_application_name},{"app_local_data",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)}};
             output["state"]=observed ? Object{{"last_error",observed->assistant()->lastError()}} : QJsonValue();
             output["image_requests"]=urls.image_requests;output["activated_urls"]=urls.activated;
             output["image_url"]=QString("http://127.0.0.1:%1/untrusted.png").arg(urls.images.serverPort());
