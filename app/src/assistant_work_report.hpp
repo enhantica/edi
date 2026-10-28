@@ -67,7 +67,7 @@ public:
     // or artifact can originate from that immediate refusal.
     QVariantMap capture(bool automaticTrigger, AssistantWorkReportCoverage counts,QStringView storageRoot,
         const std::function<AssistantWorkReportSnapshot(quint64)>& build,const QString& expectedScope,quint64 expectedRevision,bool projectionBlocked);
-    bool artifactCurrent(const QJsonObject&,QStringView storageRoot) const noexcept;
+    static bool artifactCurrent(const QJsonObject&,QStringView storageRoot) noexcept;
 private:
     struct Control;
     const AssistantWorkReportOptions options_;

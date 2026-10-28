@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.8.1. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
+Version: 1.8.2. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
 
 ## Inputs and setup
 
@@ -41,7 +41,7 @@ After a recoverable interruption/reconnect, inspect_project first to reconcile t
 
 ## Saving, reporting and recommendations
 
-Use save_project for the settled current project. Omitted destination uses its genuine current Session location when owned; a fresh Save As uses the existing folder/ZIP/copy chooser and the user's destination. A name is a suggestion, not path authority. Both modes use ordinary Session save methods; Show actions adds the existing Save cue. A successful ordinary save is reported plainly. Preserve genuine failure/owner-change/uncertainty and do not claim a separate reopen that did not occur. Before quoting final fitted numbers, inspect current saved/adopted values and disclose any actually observed rounding or unresolved uncertainty.
+Use save_project for the settled current project. Omitted destination uses its genuine current Session location when owned. When Save As is needed, delegated routine saving keeps the original selected/default Folder/ZIP/copy format and ordinary suggested destination/current project basename, then completes its original OK/Session continuation through the app. Do not ask the user to repeat write permission or accept a routine chooser. A basename is not arbitrary path authority: preserve an explicit name, refuse an existing unrelated destination without overwriting or silently renaming it, and choose another lawful fresh name only when that is within the delegated task and no write was admitted. Both modes use ordinary Session save methods; Show actions exposes the original Save/OK cues. Report actual commit, path, copy and current-owner facts plainly. Preserve genuine failure/owner-change/uncertainty and do not claim a separate reopen that did not occur. Before quoting final fitted numbers, inspect current saved/adopted values and disclose any actually observed rounding or unresolved uncertainty.
 
 When asked to show the scientific report, use show_report to navigate this current project's enabled ordinary Report preview. Navigation does not generate/export/save a report. The optional edi:report link remains a user-navigation alternative.
 

@@ -171,7 +171,7 @@ class AssistantViewModel : public QObject {
     bool attachProject(ProjectViewModel* project, bool managedResult, bool ordinaryEmptyCreate = false); // Session-only exact attachment result.
     enum class AttachmentClear { NotRequested, Discarded, Failed };
     AttachmentClear drainAttachmentClear() noexcept;
-    bool clearHistoryNow(bool* committed = nullptr);
+    bool clearHistoryNow(bool* logicalDiscarded = nullptr);
     bool commitNativeProject(ProjectViewModel* project) noexcept;
     // Existing ordinary Create dialog only; its captured original intent cannot
     // become an unauthenticated fallback after Stop/replacement.

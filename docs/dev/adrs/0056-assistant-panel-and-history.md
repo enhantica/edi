@@ -3313,3 +3313,68 @@ An unsaved existing project continues through the original Session Save As inten
 format choice and native destination chooser. A waiting format/destination is pending, not a
 project save, a GUI stall or a missing tool response. No automatic Folder selection, chooser
 acceptance, saved=true fabrication or alternate writer is introduced by these corrections.
+
+
+## 2026-10-28: canonical history durability off the GUI and delegated Save As
+
+The FIRST canonical owner is State::publish/work_merge, its app-local JSON array,
+initial read/recovery, legacy controller send and both explicit Clear entrances. The
+FIRST background owner is background.hpp/run_in_background and the immutable report
+writer/completion lifetime. AssistantHistoryArchive is a small app-only file owner
+using that same background mechanism, not another provider, logger or work policy.
+It retains the existing array format, atomic QSaveFile replacement and private owner
+permissions. Read/parse, row encoding, directory creation, writes and commit happen
+in the background; the GUI retains canonical rows and native receipts immediately.
+
+One archive target has one ordered active commit and the newest complete pending
+snapshot. Intermediate versions may coalesce only because the later full canonical
+array retains their rows, actual native effects and supplements, except an explicit
+logical Clear's authorized removal. The shared file owner/revisions survive receiver
+replacement/destruction and drain accepted latest work without accessing State, a
+ProjectVM or transport. A replacement VM starts with accepted immutable memory rather
+than a stale on-disk file. Failures retain the canonical memory/latest snapshot and
+fixed stage/revision; they never expire sign-in, replay native work or veto science.
+No GUI join, polling loop, new task quota or deadline is introduced. Threaded desktop
+builds use the existing QtConcurrent path; the existing single-owner WebAssembly
+mode is not claimed as proof of off-GUI filesystem execution.
+
+Initial read/parse is asynchronous. Before it completes, current rows form a retained
+provisional tail; the loaded historical prefix is prepended without rewriting row
+identities/scopes or replacing newer rows. An intervening logical Clear suppresses
+that prefix. Unreadable originals remain untouched and the worker freezes its actual
+new recovered pathname before later snapshots write. Project/account/reconnect scope
+changes do not rebind archive jobs or turn history durability into resume authority.
+
+Clear's existing immediate memory/consent/once retirement is a logical discard, not
+a disk acknowledgment. Both doors mark its archive revision. Only an actual committed
+revision at or beyond that barrier can make it durable; a later full post-Clear
+snapshot can satisfy it while preserving new rows. Older snapshots cannot become
+the final file afterward. Pending/failed/durable revisions and fixed failure stage
+are separate from primary interaction error, so ordinary error.clear cannot hide a
+storage failure. Metadata callbacks never republish canonical history acknowledgments
+into another write. Explicit current/last diagnostics include this local persistence
+state without relabeling old native/project rows.
+
+The related report-artifact cache no longer hashes files synchronously during GUI
+capture. Its original frozen background writer verifies a same-scope/revision/root
+artifact before reuse, or performs the original verified atomic publication. Existing
+file identity/hash and retired/current receipt guards remain authoritative.
+
+The FIRST fresh Save owner is NativeSave, Session's exact AssistantSaveChoice intent,
+the original Main saveAs.choice format/OK and Session::suggestedSaveTarget/
+assistantSaveAsTarget/saveProjectAs. The task already delegates routine creation and
+saving: a native intent now completes this ordinary selected/default Folder/ZIP/copy
+choice and suggested destination instead of waiting for repeated human acceptance.
+It does not set Folder irrespective of the original form, infer a different basename,
+create a custom picker or grant arbitrary helper filesystem access. OFF invokes the
+same ordinary acceptance owner; ON operates its genuine original OK after its actual
+opened notification. Manual Save As still follows the original destination picker.
+
+Current Session/project/epoch/receipt/token, the actual original form/control and once
+consumption remain checked through readiness and acceptance. A known existing file,
+folder or symlink is refused before write rather than silently overwritten; an explicit
+basename stays literal. Cancellation/owner loss cleans only the original intent/dialog.
+Actual ordinary commit controls saved, the actual destination is returned as path, and
+a copy does not claim the current project moved. No queued/suggested path is a save,
+no helper reply substitutes for commit, and no new provider resume/chooser API exists.
+Native schemas, compiled instructions and the bundled skill describe the same route.
