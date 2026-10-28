@@ -1053,6 +1053,7 @@ struct AssistantViewModel::State {
         scope["current_session_browser"]=Object{{"operation",QString::number(session_operation)},
             {"target",session_selection_target},{"loading",sessions_loading},{"error",session_browser_error()},
             {"startup_target",restore_last_target},{"startup_requested",restore_last_requested},{"startup_attempted",restore_last_attempted},
+            {"startup_metadata_unavailable",restore_last_metadata_unavailable},
             {"history_session",history_session},{"runtime_thread",generic_thread},
             {"archive_persistence_failures",session_archive_persistence_errors},
             {"account_check",session_account_observation},{"preparation",session_preparation_observation},{"history_target",session_history_thread},{"history_loading",session_history_loading},{"history_error",session_history_error}};
@@ -1756,10 +1757,10 @@ struct AssistantViewModel::State {
         }catch(...) {cache_clear_error=QObject::tr("The cache clear was retained, but its restart preference could not be saved.");}
     }
     QString session_draft,session_restore_target,resume_metadata_thread;
-    bool restore_last_attempted=false,restore_last_requested=false;
+    bool restore_last_attempted=false,restore_last_requested=false,restore_last_metadata_unavailable=false;
     QString restore_last_target;
-    bool startup_restore_pending() const {return !restore_last_target.isEmpty();}
-    void retire_startup_restore() {restore_last_target.clear();restore_last_attempted=true;}
+    bool startup_restore_pending() const {return restore_last_metadata_unavailable || !restore_last_target.isEmpty();}
+    void retire_startup_restore() {restore_last_target.clear();restore_last_metadata_unavailable=false;restore_last_attempted=true;}
 
     bool session_account_preflight=false;
     QString account_read_rpc;
@@ -15246,8 +15247,8 @@ struct AssistantViewModel::State {
         });
 #ifndef __EMSCRIPTEN__
         if(generic_mode) {
-            try {restore_last_target=session_associations().value("last").toString();}
-            catch(const std::exception& failure){sessions_error=bounded_error(QString::fromUtf8(failure.what()));}
+            try {restore_last_target=session_associations().value("last").toString();restore_last_metadata_unavailable=false;}
+            catch(const std::exception& failure){restore_last_metadata_unavailable=true;sessions_error=bounded_error(QString::fromUtf8(failure.what()));}
             const auto whenReady=[this,receiver] {
                 if(receiver && receiver->state_.get()==this && restore_last_requested && !restore_last_attempted)
                     receiver->restoreLastSession();
@@ -15871,6 +15872,7 @@ struct AssistantViewModel::State {
                 (!session_opening_bound || session_opened_project==target);
             if(opening){session_opened_project=target;session_opening_bound=true;}
             else {const auto operation=session_operation;const auto id=session_restore_target;
+                if(restore_last_target==id)retire_startup_restore();
                 fail_session_operation(operation,id,QObject::tr("Conversation selection ended because the current project changed."));
                 if(!receiver || receiver->state_.get()!=this)return false;
             }
@@ -15878,7 +15880,11 @@ struct AssistantViewModel::State {
         retire_session_history();
 
         if(!preserveSetup && target!=project && session_restore_target.isEmpty()) {
-            remember_session_draft();if(!startup_restore_pending())forget_last_session();
+            remember_session_draft();
+            // Only the constructor's initial binding may precede startup selection.
+            // A later unrelated ordinary Open/Create/Reset is a new user context.
+            if(oldBinding!=0 && startup_restore_pending())retire_startup_restore();
+            if(!startup_restore_pending())forget_last_session();
         }
         if(!preserveSetup){resume_checkpoint.reset();generic_resuming=false;}
 #endif
@@ -16689,7 +16695,11 @@ void AssistantViewModel::restoreLastSession() {
     try {
         if(original->restore_last_attempted)return;
         if(!original->restore_last_requested) {
-            if(original->restore_last_target.isEmpty())original->restore_last_target=original->session_associations().value("last").toString();
+            if(original->restore_last_target.isEmpty()) {
+                original->restore_last_metadata_unavailable=true;
+                original->restore_last_target=original->session_associations().value("last").toString();
+                original->restore_last_metadata_unavailable=false; // Successful absence is distinct from read failure.
+            }
             original->restore_last_requested=true;
             const auto id=original->restore_last_target;
             if(id.isEmpty()){original->restore_last_attempted=true;return;}
@@ -17707,7 +17717,17 @@ void AssistantViewModel::signIn() {
     if (!state_->controller) return;
 #ifndef __EMSCRIPTEN__
     if(state_->startup_restore_pending() && !state_->session_preparation) {
-        restoreLastSession();return;
+        const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();
+        // The automatic attempt is once-only. This explicit Connect retries only
+        // preparation/account verification/resume, never an input or native write.
+        if(original->session_selection_target.isEmpty() && original->session_switch_idle(false)) {
+            original->restore_last_attempted=false;
+            if(original->restore_last_metadata_unavailable)original->restore_last_requested=false;
+        }
+        restoreLastSession();
+        if(!receiver || receiver->state_.get()!=original || !publication.input_current() ||
+            original->startup_restore_pending() || original->session_preparation || !original->session_selection_target.isEmpty())return;
+        // A successful reread proved there is no saved intent: normal Connect is allowed.
     }
     if(state_->account_confirmation_pending && !state_->session_preparation) {
         state_->error=tr("The current account is being verified. Your conversation and inputs are preserved.");state_->notify();return;
