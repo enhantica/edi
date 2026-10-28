@@ -15,6 +15,7 @@ Rectangle {
     required property AssistantViewModel assistant
     required property Item toggleControl
     property Item popupBoundary: composer.parent
+    property var sessionDraftIntent: null
     property Item previousFocusItem: toggleControl
     readonly property Item firstFocusItem: editor
     readonly property alias actionsControl: showActionsControl
@@ -450,6 +451,16 @@ Rectangle {
     }
     Connections {
         target: composer.assistant
+        function onSessionSelectionStarted(threadId) {
+            composer.sessionDraftIntent={id:threadId,text:editor.text,revision:composer.textRevision};
+        }
+        function onSessionDraftRestored(threadId,text) {
+            const original=composer.sessionDraftIntent;
+            composer.sessionDraftIntent=null;
+            if((!original || original.id===threadId && original.text===editor.text && original.revision===composer.textRevision)
+                && !editor.inputMethodComposing && !editor.preeditText.length)editor.text=text;
+            composer.assistant.sessionDraft=editor.text;
+        }
         function onConversationClearRequested(intent) {
             composer.clearDraft={intent: intent, text: editor.text, revision: composer.textRevision};
         }
@@ -605,7 +616,7 @@ Rectangle {
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: addFilesButton
                 KeyNavigation.backtab: composer.previousFocusItem
-                onTextChanged: ++composer.textRevision
+                onTextChanged: { ++composer.textRevision; composer.assistant.sessionDraft=editor.text; }
                 onPreeditTextChanged: ++composer.textRevision
                 onInputMethodComposingChanged: ++composer.textRevision
                 onSelectionStartChanged: composer.rememberSelection()
