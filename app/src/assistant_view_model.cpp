@@ -2265,6 +2265,9 @@ struct AssistantViewModel::State {
         Object original, canonical, outcome, response, terminal;
         std::shared_ptr<NativeFitUndo> fit_undo;
         std::shared_ptr<ProjectViewModel::EditOutcome> estimate_receipt;
+        QPointer<ExperimentViewModel> estimate_view;
+        edi::ExperimentBase* estimate_member=nullptr;
+        QString estimate_id;
         ControlDiagnostic control_diagnostic;
         bool control_capacity = false;
             bool reserved = true, retired = false, discarded = false, completed = false, answered = false;
@@ -2474,6 +2477,20 @@ struct AssistantViewModel::State {
             !run->call.record->answered && !run->call.record->retired && !run->call.record->completed &&
             native_current(run->call.receipt);
     }
+    bool native_estimate_selection_current(const NativeCall& call, ProjectViewModel* target) const {
+        const auto record=call.record;
+        if(!record || !target || project!=target || !record->estimate_view || !record->estimate_member ||
+            target->currentExperiment()!=record->estimate_view || !target->experimentModels().contains(record->estimate_view) ||
+            record->estimate_view->experiment()!=record->estimate_member)return false;
+        bool held=false;
+        for(const auto& member:target->assistantProject()->experiments)if(member.get()==record->estimate_member)held=true;
+        return held && QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(record->estimate_member->name.value()))==record->estimate_id;
+    }
+    bool native_estimate_target_current(const NativeCall& call) const {
+        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<ProjectViewModel> target(project);
+        if(!target || !native_current(call.receipt))return false;
+        return receiver && receiver->state_.get()==this && native_estimate_selection_current(call,target);
+    }
     static const NativeWidget::ParameterEntry* widget_parameter_entry(const std::shared_ptr<NativeWidget>& run) noexcept {
         if (!run) return nullptr;
         if (run->parameter_at < run->parameter_entries.size()) return &run->parameter_entries[run->parameter_at];
@@ -2486,13 +2503,13 @@ struct AssistantViewModel::State {
         if (!widget_entry_owned(run, entry)) return false;
         const bool current = widget_current(run);
         if (!widget_entry_owned(run, entry) || !current) return false;
-        if(run->tool=="edit_background" && run->tab=="appBar.tab.analysis") {
-            auto* view=run->project->currentExperiment();
+        if(run->tool=="estimate_background" && !native_estimate_target_current(run->call))return false;
+        if(run->background_experiment) {
+            const auto view=run->project->currentExperiment();
             if(!view || !run->project->experimentModels().contains(view) || view->experiment()!=run->background_experiment)return false;
-            bool owned=false;
-            for(const auto& experiment:run->project->assistantProject()->experiments)
-                if(experiment.get()==run->background_experiment)owned=true;
-            if(!owned)return false;
+            bool held=false;
+            for(const auto& member:run->project->assistantProject()->experiments)if(member.get()==run->background_experiment)held=true;
+            if(!held)return false;
         }
         return !entry || (run->parameter == entry->parameter && widget_parameter_binding_current(*entry));
     }
@@ -4107,20 +4124,40 @@ struct AssistantViewModel::State {
     void native_apply_estimate() {
         if(!native_call || !project)return;
         const auto original=*native_call;const QPointer<AssistantViewModel> receiver(&owner);const QPointer<ProjectViewModel> target(project);
+        const auto owns=[&]{return receiver && receiver->state_.get()==this && native_call && native_call->record==original.record && native_call->receipt==original.receipt;};
+        if(!native_estimate_target_current(original)) {
+            if(!owns())return;
+            native_finish(false,{{"status","refused"},{"applied",false},{"published",false},{"complete",false},{"steps_completed",0},
+                {"message","The originally requested Estimate experiment is no longer selected; no estimate was applied"}});return;
+        }
         auto receipt=std::make_shared<ProjectViewModel::EditOutcome>();original.record->estimate_receipt=receipt;
         const auto scope=begin_own_edit();
-        const auto result=target->estimateBackgroundOutcome(receipt.get());
+        if(!receiver || receiver->state_.get()!=this)return;
+        if(!native_estimate_target_current(original)) {
+            if(!owns())return;
+            end_own_edit(scope);
+            native_finish(false,{{"status","refused"},{"applied",false},{"published",false},{"complete",false},{"steps_completed",0},
+                {"message","The originally requested Estimate experiment changed before its native edit; no estimate was applied"}});return;
+        }
+        auto result=target->estimateBackgroundFor(original.record->estimate_member,receipt.get());
         if(!receiver || receiver->state_.get()!=this)return;
         end_own_edit(scope);
         if(!native_call || native_call->record!=original.record || native_call->receipt!=original.receipt)return;
         native_call->may_have_written=result.applied;
         if(result.applied && target && project==target)native_refresh(*native_call);
+        if(!receiver || receiver->state_.get()!=this || !native_call || native_call->record!=original.record || native_call->receipt!=original.receipt)return;
+        if(result.applied && !native_estimate_selection_current(original,target)) {
+            result.published=false;
+            result.message=QObject::tr("The requested background was estimated and Undo retained; its selected presentation changed");
+            *receipt=result;
+        }
         native_finish(result.applied && result.published,{{"status",result.applied?(result.published?"completed":"applied_unconfirmed"):"refused"},
             {"applied",result.applied},{"published",result.published},{"complete",result.applied && result.published},{"atomic",true},
             {"steps_completed",result.applied?1:0},{"message",bounded_error(result.message)}});
     }
     QQuickItem* widget_background_group(const std::shared_ptr<NativeWidget>& run) const {
-        if(!widget_current(run) || !widget_page_selected(run) || !run->project->currentExperiment())return nullptr;
+        if(!widget_entry_current(run,widget_parameter_entry(run)) || !widget_page_selected(run) || !run->project->currentExperiment() ||
+            run->project->currentExperiment()->experiment()!=run->background_experiment)return nullptr;
         QQuickItem* found=nullptr;
         for(auto* item:widget_items()) {
             if(item->objectName()!="background.rows" || item->window()!=run->window ||
@@ -4149,15 +4186,15 @@ struct AssistantViewModel::State {
         return found;
     }
     void widget_estimate_background(const std::shared_ptr<NativeWidget>& run) {
-        if(!widget_current(run) || !widget_input){widget_refuse(run,widget_outcome_error);return;}
+        if(!widget_entry_current(run,nullptr) || !widget_input){widget_refuse(run,widget_outcome_error);return;}
         const QPointer<QQuickItem> target(widget_background_named(run,"background.estimate"));
         if(!target){control_failure(run,ControlCause::Unavailable);widget_refuse(run,QObject::tr("The current experiment's original Estimate control is unavailable"));return;}
         if(!target->isEnabled()){control_failure(run,ControlCause::Unavailable);widget_refuse(run,QObject::tr("The original Estimate control is disabled; inspect measured data and the current estimation mode"));return;}
         if(!widget_reveal_parameter(run,target))return;
         AssistantWidgetInput::Request request;request.kind=AssistantWidgetInput::Kind::FileLoadCue;request.target=target;
-        auto current=[this,run,target]{return target && widget_current(run);};
+        auto current=[this,run,target]{return target && widget_entry_current(run,nullptr) && target==widget_background_named(run,"background.estimate");};
         request.current=current;request.restoreCurrent=current;request.prepareCommit=current;request.finishCommit=[]{};
-        request.completed=[this,run](bool delivered,const QString& message,ControlCause cause){if(!widget_owned(run))return;control_failure(run,delivered?ControlCause::None:cause);if(!delivered){widget_refuse(run,message);return;}native_apply_estimate();};
+        request.completed=[this,run](bool delivered,const QString& message,ControlCause cause){if(!widget_owned(run))return;control_failure(run,delivered?ControlCause::None:cause);if(!delivered){widget_refuse(run,message);return;}if(!native_estimate_target_current(run->call)){widget_refuse(run,QObject::tr("The originally requested Estimate experiment is no longer selected"));return;}native_apply_estimate();};
         control_start(run->call,ControlField::Background,std::move(request));
     }
     void widget_click_main(const std::shared_ptr<NativeWidget>& run) {
@@ -5205,6 +5242,8 @@ struct AssistantViewModel::State {
         auto run = std::make_shared<NativeWidget>();
         run->call = *native_call; run->receiver = &owner; run->project = project; run->window = action_window; run->tool = tool;
         if(tool=="estimate_background") {
+            if(!native_estimate_target_current(run->call))throw std::runtime_error("The originally requested Estimate experiment is no longer selected");
+            run->background_experiment=run->call.record->estimate_member;
             run->tab="appBar.tab.experiment";
         } else if (tool == "edit_background") {
             const auto background = assistant_native_background(*project->assistantProject(), args);
@@ -6730,6 +6769,11 @@ struct AssistantViewModel::State {
             const auto* selected=project->currentExperiment();
             if(!selected || QString::fromStdString(edi::KeyTraits<edi::BraggPdExperiment>::canonical(selected->experiment()->name.value()))!=args.value("experiment").toString())
                 throw std::invalid_argument("Estimate requires the exact current experiment ID");
+            native_call->record->estimate_view=project->currentExperiment();
+            for(const auto& member:project->assistantProject()->experiments)
+                if(member.get()==selected->experiment())native_call->record->estimate_member=member.get();
+            if(!native_call->record->estimate_member)throw std::runtime_error("The requested Estimate member is no longer owned by this project");
+            native_call->record->estimate_id=args.value("experiment").toString();
         }
         if (name == "run_fit") native_call->fit_attempt = fit_attempt;
         if (!native_follow_page(name, args)) return;
@@ -7204,6 +7248,7 @@ struct AssistantViewModel::State {
                 creation->population_outcome["completed_existing"] = true;
                 creation->population_outcome["saved"] = false;
                 creation->population_outcome["message"] = "The current project was populated and is modified; no files were saved.";
+                const auto* estimateMember=creation->candidate->project.experiments.at(0).get();
                 creation->population = edi::EmptyProjectPopulation::prepare(std::move(creation->candidate->project));
                 creation->candidate.reset();
                  // actual extra outcome/shell owners before the scientific write
@@ -7221,7 +7266,7 @@ struct AssistantViewModel::State {
                 creation->adopted = creation->population->committed();
                 std::optional<ProjectViewModel::EditOutcome> estimated;
                 if(creation->adopted && creation->estimate_default && creation->completion_project) {
-                    estimated=creation->completion_project->estimateBackgroundOutcome(creation->estimate_outcome.get());
+                    estimated=creation->completion_project->estimateBackgroundFor(estimateMember,creation->estimate_outcome.get());
                 }
                 if (!receiver) return;
                 end_own_edit(edit_scope);
@@ -7243,6 +7288,7 @@ struct AssistantViewModel::State {
                 auto* session = result_session();
                 const auto current = [this, receiver, creation] { return receiver && receiver->state_.get() == this && native_creation_current(creation); };
                 auto outcome = native_creation_outcome(*creation->candidate);
+                const auto* estimateMember=creation->candidate->project.experiments.at(0).get();
                 auto model = session->prepareAssistantNativeModel(std::move(creation->candidate->project), creation->epoch, current);
                 creation->candidate.reset();
                 if (!model || !current()) throw std::runtime_error("Native creation owner changed before attachment");
@@ -7252,7 +7298,7 @@ struct AssistantViewModel::State {
                 std::optional<ProjectViewModel::EditOutcome> estimated;
                 if(adopted && creation->estimate_default && receiver && receiver->state_.get()==this && project && session->project()==project) {
                     const auto scope=begin_own_edit();
-                    estimated=project->estimateBackgroundOutcome(creation->estimate_outcome.get());
+                    estimated=project->estimateBackgroundFor(estimateMember,creation->estimate_outcome.get());
                     if(receiver && receiver->state_.get()==this){end_own_edit(scope);if(native_call)native_refresh(*native_call);}
                 }
                 // Session observers can genuinely admit B before returning to A.
@@ -9333,7 +9379,9 @@ struct AssistantViewModel::State {
             if(!step.structure_action && step.kind!=AssistantWidgetInput::Kind::Text && step.kind!=AssistantWidgetInput::Kind::Value)create_widget_finish_control(run);
         };
         const auto control_step=run->step;
-        auto captured_completed = [this, run, step, target = QPointer<QQuickItem>(target), option, control_step](bool delivered, const QString& message, ControlCause cause) {
+        const auto* estimateMember=step.target=="background.estimate" && run->project && run->project->assistantProject()->experiments.size()==1
+            ? run->project->assistantProject()->experiments[0].get():nullptr;
+        auto captured_completed = [this, run, step, target = QPointer<QQuickItem>(target), option, control_step, estimateMember](bool delivered, const QString& message, ControlCause cause) {
             if (!create_widget_owned(run)) return;
             if(run->receiver && run->receiver->state_.get()==this && run->step==control_step)control_failure(run, delivered ? ControlCause::None : cause);
             const char* branch="control.capture";
@@ -9342,7 +9390,8 @@ struct AssistantViewModel::State {
                     const auto receiver=run->receiver;const auto scope=begin_own_edit();
                     const auto receipt=run->call.record->estimate_receipt;
                     if(!receipt)throw std::runtime_error("The original required Estimate outcome is unavailable");
-                    const auto estimated=run->project->estimateBackgroundOutcome(receipt.get());
+                    if(!estimateMember)throw std::runtime_error("The original setup Estimate experiment is unavailable");
+                    const auto estimated=run->project->estimateBackgroundFor(estimateMember,receipt.get());
                     if(!receiver || receiver->state_.get()!=this)return;
                     end_own_edit(scope);
                     if(!create_widget_owned(run))return;

@@ -1547,7 +1547,9 @@ bool ProjectViewModel::namePointsByPosition() {
 
 bool ProjectViewModel::estimateBackground() { return estimateBackgroundOutcome().applied; }
 
-ProjectViewModel::EditOutcome ProjectViewModel::estimateBackgroundOutcome(EditOutcome* receipt) {
+ProjectViewModel::EditOutcome ProjectViewModel::estimateBackgroundOutcome(EditOutcome* receipt) { return estimateBackgroundFor(nullptr,receipt); }
+
+ProjectViewModel::EditOutcome ProjectViewModel::estimateBackgroundFor(const edi::ExperimentBase* expected,EditOutcome* receipt) {
     const PublicationScope publication(*this);
     const QPointer<ProjectViewModel> self(this);
     EditOutcome local;
@@ -1563,6 +1565,9 @@ ProjectViewModel::EditOutcome ProjectViewModel::estimateBackgroundOutcome(EditOu
         if(fit_ && fit_->running()){result.message=tr("The project cannot be edited while a fit is running");return result;}
         if(current_experiment_<0 || current_experiment_>=static_cast<int>(project_->experiments.size()))return result;
         const auto member=project_->experiments[static_cast<std::size_t>(current_experiment_)];
+        if(expected && member.get()!=expected){result.message=tr("The originally requested Estimate experiment is no longer selected");return result;}
+        const auto selected=[&]{return self && !retired_ && current_experiment_>=0 && current_experiment_<static_cast<int>(project_->experiments.size()) &&
+            project_->experiments[static_cast<std::size_t>(current_experiment_)]==member;};
         const auto revision=revision_;
         const auto current=[&]{return self && !retired_ && revision_==revision && current_experiment_>=0 &&
             current_experiment_<static_cast<int>(project_->experiments.size()) && project_->experiments[static_cast<std::size_t>(current_experiment_)]==member;};
@@ -1580,14 +1585,14 @@ ProjectViewModel::EditOutcome ProjectViewModel::estimateBackgroundOutcome(EditOu
         // LivePreview pins result.applied before any scientific publication callback.
         const auto applied=applyEdit(edit,true);
         result=applied;
-        if(!self || retired_){if(result.applied){result.published=false;result.message=applied_warning;}return result;}
-        if(!result.applied){undo_history_.pop_back();history_owned=false;return result;}
+        if(!result.applied){if(self)undo_history_.pop_back();history_owned=false;return result;}
+        if(!selected()){result.published=false;result.message=applied_warning;return result;}
         syncUndo();
-        if(!self || retired_){result.published=false;result.message=applied_warning;return result;}
+        if(!selected()){result.published=false;result.message=applied_warning;return result;}
         emit message(summary);
-        if(!self || retired_){result.published=false;result.message=applied_warning;return result;}
+        if(!selected()){result.published=false;result.message=applied_warning;return result;}
         postAutoModelReason(member->name,reason);
-        if(!self || retired_){result.published=false;result.message=applied_warning;return result;}
+        if(!selected()){result.published=false;result.message=applied_warning;return result;}
         return result;
     } catch(...) {
         if(result.applied){result.published=false;result.message=applied_warning;}
