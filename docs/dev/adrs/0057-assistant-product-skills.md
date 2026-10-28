@@ -474,3 +474,23 @@ calculation and residual evidence. Poor agreement may require data/uncertainty/
 model diagnosis instead of forcing a statistic to unity. Scientific choice and
 public research remain available; no specimen values, fixed free-count goal,
 mandatory extra pass or completion metric is added.
+
+
+### Existing native diagnostics at adopted fit completion
+
+The FIRST core diagnostic/parameter context owners now supply optional facts in
+the app's adopted fit reply. The exact completed/latest/history attempt, original
+call/receipt/disclosure, current project/FitVM/controller, actual PVM revision and
+fresh WorkStamps must agree around the read. Only matching error-path parameter
+rows accompany the original diagnostics; no entire context or new scientific
+validator is published. Retired/unavailable/resource-failed optional inspection
+does not replace the actual adopted/status/termination outcome or consume Undo.
+The internal guard does not relabel the core context revision as a PVM revision.
+
+Refinement-strategy1.4.7 owns the scientific trial/restore and conditional simpler
+ADP-model guidance. run_fit retains its executable live outcome, one-fit Undo and
+specific native identifiability diagnostic, with a concise actual residual-data
+cue. Compiled defaults retention is scoped to initial setup starts; genuine user
+calibration/chemical constraints remain authoritative. A fixed flag is not a
+value repair, uncertainty is not observed correlation, and no example grouping,
+free-count/metric target, forced equality or scientific bounds are added.
