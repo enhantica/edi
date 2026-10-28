@@ -8547,3 +8547,18 @@ publicity pertaining to distribution of the software without specific,
 written prior permission.  M.I.T. makes no representations about the
 suitability of this software for any purpose.  It is provided "as is"
 without express or implied warranty.
+
+## JKQTMathText and JKQTCommon
+
+Version: 5.0.0, commit 9e9f0af8b140192e3de7ff866a0013e7da5e1e93
+Licence: LGPL-2.1-or-later
+Copyright (c) 2008-2026 Jan W. Krieger
+Source: https://github.com/jkriege2/JKQtPlotter/tree/9e9f0af8b140192e3de7ff866a0013e7da5e1e93
+In edi: original native MathText/Common source only, linked into the desktop assistant.
+The complete original licence is bundled as data/assistant/math/JKQtPlotter-LICENSE.
+
+## XITS
+
+Licence: OFL-1.1
+In edi: original XITS fonts supplied with the pinned native math source.
+The complete original copyright, reserved names and licence are bundled as data/assistant/math/XITS-OFL.txt.
