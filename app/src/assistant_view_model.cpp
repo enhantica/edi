@@ -11562,6 +11562,21 @@ struct AssistantViewModel::State {
                         typed_refusal=true;
                         outcome["action_error"]=action->error;outcome["action_field"]=action->field;
                     }
+                    const auto tool=params.value("tool").toString();
+                    const auto* core_refusal=dynamic_cast<const edi::assistant::detail::Refusal*>(&failure);
+                    const bool parameter_preparation=tool=="set_parameters" || tool=="set_free";
+                    if(!typed_refusal && core_refusal && (parameter_preparation || tool=="add_relations") &&
+                        (core_refusal->code=="invalid_argument" || core_refusal->code=="out_of_scope" ||
+                         core_refusal->code=="unsupported_model" || core_refusal->code=="resource_exhausted")) {
+                        const auto refusal=edi::assistant::detail::failure(core_refusal->code,core_refusal->what());
+                        const auto message=object(refusal.value).value("message").toString();
+                        outcome["code"]=core_refusal->code=="invalid_argument"?"invalid_arguments":
+                            core_refusal->code=="unsupported_model"?"unavailable":core_refusal->code=="resource_exhausted"?"resource_exhausted":"refused";
+                        outcome["message"]=message;outcome["target"]=parameter_preparation?"parameter":"relation";
+                        outcome["diagnostics"]=QJsonArray{Object{{"code",QString::fromStdString(core_refusal->code)},
+                            {"message",message},{"severity","error"},{"actionable",true}}};
+                        typed_refusal=true;
+                    }
                     if(!typed_refusal) {
                         outcome["code"]=dynamic_cast<const std::bad_alloc*>(&failure) || dynamic_cast<const std::length_error*>(&failure)
                             ? "resource_exhausted" : dynamic_cast<const std::invalid_argument*>(&failure) ? "invalid_arguments" : "unclassified";
