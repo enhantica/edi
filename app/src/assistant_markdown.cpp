@@ -158,7 +158,7 @@ class NativeMathText final : public JKQTMathText {
     static QObject* initializeBundledFallback() {
         // The upstream constructor estimates every font, including Fraktur,
         // before useXITS(). Avoid an unavailable generic-family lookup there.
-        const auto family=getXITSFamilies().mathFontName();
+        const auto family=JKQTMathTextFontSpecifier::getXITSFamilies().mathFontName();
         const std::lock_guard<std::mutex> lock(s_mutex);
         if(!family.isEmpty() && init_fracturFont==QStringLiteral("fraktur"))init_fracturFont=family;
         return nullptr;
