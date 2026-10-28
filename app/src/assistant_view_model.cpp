@@ -15,6 +15,7 @@
 #include <QFile>
 #include <QCoreApplication>
 #include <QQmlComponent>
+#include <QQmlProperty>
 #include <QDateTime>
 #include <QElapsedTimer>
 #include <QSettings>
@@ -2296,9 +2297,8 @@ struct AssistantViewModel::State {
                 const auto date=QDateTime::fromSecsSinceEpoch(static_cast<qint64>(seconds)).toLocalTime();
                 if(date.isValid())modified=QLocale(QLocale::English).toString(date,"dd MMM yyyy 'at' HH:mm");
             }
-            const auto status=thread.value("status").toObject().value("type").toString();
             rows.append(Object{{"id",id},{"name",name},{"modified",modified},{"current",id==generic_thread},
-                {"canArchive",status=="idle" || status=="notLoaded"}});
+                {"canArchive",owned_session(thread)}});
         }
         sessions.assign(rows);
         if(receiver && receiver->state_.get()==this && proof.input_current() && sessions_epoch==epoch)emit owner.sessionsChanged();
@@ -2322,6 +2322,7 @@ struct AssistantViewModel::State {
         QString rpc;
         try {rpc=transport->request(method,params,[&](const QString& id) {
             if(!current())return false;
+            if(request.kind=="archive" && !owned_session(session_metadata.value(request.target)))return false;
             if(account_confirmation_pending) {
                 request.account_method=method;request.account_params=params;
                 request.account_unwritten=true;request.account_issuing=true;
@@ -2402,36 +2403,24 @@ struct AssistantViewModel::State {
                 session_metadata[request.target]=thread;
                 resume_selected_session(request.target);return;
             }
-            if(request.kind=="archive-read") {
-                const auto thread=result.value("thread").toObject();
-                if(thread.value("id")!=request.target || !owned_session(thread) ||
-                    thread.value("cwd")!=session_metadata.value(request.target).value("cwd") || !session_idle())
-                    throw std::runtime_error("The original session or current operation changed before archiving");
-                const auto status=thread.value("status").toObject().value("type").toString();
-                if(status!="idle" && status!="notLoaded")throw std::runtime_error("Finish the session's active operation before archiving it");
-                (void)session_request("thread/list",{{"ancestorThreadId",request.target},{"sourceKinds",session_source_kinds()},{"archived",false}},"archive-children",request.target);return;
-            }
-            if(request.kind=="archive-children") {
-                if(!result.value("data").isArray())throw std::runtime_error("Linked session state could not be checked");
-                if(!result.value("data").toArray().isEmpty())throw std::runtime_error("This session has linked sessions; their archive state must be resolved first");
-                const auto next=result.value("nextCursor").toString();
-                if(!next.isEmpty()) {
-                    if(next==request.cursor)throw std::runtime_error("The linked-session cursor did not advance");
-                    (void)session_request("thread/list",{{"ancestorThreadId",request.target},{"sourceKinds",session_source_kinds()},{"archived",false},{"cursor",next}},"archive-children",request.target);return;
-                }
-                if(!session_idle())throw std::runtime_error("Finish the current operation before archiving");
-                (void)session_request("thread/archive",{{"threadId",request.target}},"archive",request.target);return;
-            }
             if(request.kind=="archive" && method=="thread/archive") {
                 if(!result.isEmpty())throw std::runtime_error("The runtime archive acknowledgment was unexpected");
                 // This is the correlated acknowledgment for the exact original ID,
                 // never disappearance from a page or another thread's notification.
                 session_metadata.remove(request.target);sessions_loading=false;sessions_error.clear();
                 if(request.target==generic_thread) {
-                    retire_result();resume_checkpoint.reset();generic_thread.clear();generic_thread_has_input=false;
+                    retire_result();if(!current())return;
+                    resume_checkpoint.reset();generic_thread.clear();generic_thread_has_input=false;
                     generic_durable=false;invalidate_policy();generic_native["connection_id"]=QString();
                 }
-                publish_sessions();return;
+                const auto proof=file_projection();const auto operation=session_operation;
+                publish_sessions();
+                // The acknowledged target alone is known here. Ordinary runtime
+                // pagination discovers the actual archived subtree; do not guess
+                // unrelated removals or require a local descendant walk.
+                if(receiver && receiver->state_.get()==this && proof.input_current() && operation==session_operation &&
+                    transport && agent.get()==transport && transport->outputGeneration()==request.transport)owner.refreshSessions();
+                return;
             }
         }catch(const std::exception& error) {
             if(receiver && receiver->state_.get()==this && request.operation==session_operation && request.kind=="select-read")session_preparation_observation["failure_class"]="std_exception";
@@ -4464,7 +4453,7 @@ struct AssistantViewModel::State {
             std::source_location caller = std::source_location::current()) {
         if (!widget_owned(run)) return;
         control_failure(run,ControlCause::Unavailable);
-        if ((run->tool != "add_relations" && run->tool != "edit_relation") || (!lcAssistantWidgetLookup().isDebugEnabled() && !work_reports.collecting())) {
+        if ((run->tool != "add_relations" && run->tool != "edit_relation" && run->tool!="background_names" && run->tool!="estimate_background" && run->tool!="edit_background") || (!lcAssistantWidgetLookup().isDebugEnabled() && !work_reports.collecting())) {
             widget_refuse(run,message,caller); return;
         }
         const auto receiver=run->receiver;
@@ -4526,7 +4515,7 @@ struct AssistantViewModel::State {
             work_latch_ui(run,"target_reveal",cause,items,actual_row);
             if(!original())return;
             if(!lcAssistantWidgetLookup().isDebugEnabled()){widget_refuse(run,message,caller);return;}
-            qCDebug(lcAssistantWidgetLookup) << "relation reveal refusal" << "cause" << cause
+            qCDebug(lcAssistantWidgetLookup) << "control reveal refusal" << "cause" << cause
                 << "constraint" << constraint << "row" << row_index << "field" << field_index
                 << "completed" << prefix << "reveal_steps" << steps << "collapsed" << collapsed
                 << "content_y" << content_y << "content_height" << content_height
@@ -4534,7 +4523,7 @@ struct AssistantViewModel::State {
             // Each log can invoke an arbitrary message handler. Never log a successor or dereference a retired target.
             for (std::size_t i=0;i<facts.size() && original();++i) {
                 const auto& fact=facts[i];
-                qCDebug(lcAssistantWidgetLookup) << "relation reveal geometry" << "role" << i
+                qCDebug(lcAssistantWidgetLookup) << "control reveal geometry" << "role" << i
                     << "present" << fact.present << "survived" << bool(items[i]) << "same_window" << fact.same_window
                     << "visible" << fact.visible << "enabled" << fact.enabled << "opacity" << fact.opacity
                     << "clipped" << fact.clipped << "bounds" << fact.bounds << "scene" << fact.scene
@@ -4598,6 +4587,86 @@ struct AssistantViewModel::State {
         }
         return current();
     }
+    bool widget_wait_group_layout(const std::shared_ptr<NativeWidget>& run,QQuickItem* field) {
+        const auto* entry=widget_parameter_entry(run);
+        const QPointer<AssistantViewModel> receiver(&owner);const QPointer<QQuickItem> target(field);
+        QList<QPointer<QQuickItem>> chain;
+        for(auto* item=field;item;item=item->parentItem()) {
+            chain.append(item);if(item->objectName().endsWith(".manualSidebar"))break;
+        }
+        const auto original=[this,run,entry,receiver,target,chain] {
+            if(!receiver || receiver->state_.get()!=this || !target || !widget_entry_current(run,entry) || !widget_page_selected(run))return false;
+            if(!receiver || receiver->state_.get()!=this || !target || target->window()!=run->window)return false;
+            auto* item=target.data();
+            for(const auto& captured:chain){if(!captured || captured!=item)return false;item=item->parentItem();}
+            if(run->background_experiment && (!run->project || !run->project->currentExperiment() ||
+                run->project->currentExperiment()->experiment()!=run->background_experiment))return false;
+            return true;
+        };
+        if(!original())return false; // The ordinary reveal owner supplies its stale refusal.
+        struct PendingHeight {QPointer<QQuickItem> group;QPointer<QObject> behavior,animation;};
+        QList<PendingHeight> pending;
+        for(const auto& group:chain) {
+            if(!original())return false;
+            if(!group || !group->objectName().startsWith("group.") || !group->property("collapsed").isValid())continue;
+            QList<QPointer<QObject>> children;
+            for(auto* child:group->children())children.append(child);
+            for(const auto& behavior:children) {
+                if(!original())return false;
+                if(!behavior || !behavior->inherits("QQuickBehavior"))continue;
+                const auto property=behavior->property("targetProperty").value<QQmlProperty>();
+                if(!original())return false;
+                if(property.object()!=group || (property.name()!="implicitHeight" && property.name()!="height"))continue;
+                const QPointer<QObject> animation(behavior->property("animation").value<QObject*>());
+                if(!original())return false;
+                if(!behavior || !animation)continue;
+                const bool running=animation->property("running").toBool();
+                if(!original() || !behavior || !animation)return false;
+                const bool paused=animation->property("paused").toBool();
+                if(!original() || !behavior || !animation)return false;
+                const auto loops=animation->property("loops").toInt();
+                if(!original() || !behavior || !animation)return false;
+                // Only a real finite, currently running original geometry
+                // animation supplies a completion event. No invented delay.
+                if(running && !paused && loops==1)pending.append({group,behavior,animation});
+            }
+        }
+        if(pending.isEmpty())return false;
+        if(run->page_wait)return true; // The same original readiness owner already waits.
+        const QPointer<QTimer> wait(new QTimer(&owner));wait->setSingleShot(true);wait->setInterval(0);run->page_wait=wait;
+        QObject::connect(wait,&QTimer::timeout,&owner,[this,run,entry,receiver,target,original,pending,wait] {
+            if(!receiver || receiver->state_.get()!=this || !wait || run->page_wait!=wait)return;
+            const auto refuse=[&](const QString& message) {widget_end_page_wait(run);if(widget_entry_owned(run,entry))widget_refuse(run,message);};
+            try {
+                if(!original()){refuse(QObject::tr("The original control changed while its group layout was settling"));return;}
+                for(const auto& height:pending) {
+                    if(!height.group || !height.behavior || !height.animation){refuse(QObject::tr("The original group layout owner was removed"));return;}
+                    const bool running=height.animation->property("running").toBool();
+                    if(!original() || !height.animation){refuse(QObject::tr("The original group layout owner changed"));return;}
+                    const bool paused=height.animation->property("paused").toBool();
+                    if(!original() || !height.animation){refuse(QObject::tr("The original group layout owner changed"));return;}
+                    if(paused){refuse(QObject::tr("The original group layout animation is paused"));return;}
+                    if(running)return; // A native runningChanged event, not polling, resumes it.
+                }
+                widget_end_page_wait(run);
+                if(original())widget_resume_revealed(run); // Settle/reveal SAME target afresh before any cue/press.
+            }catch(...) {if(receiver && receiver->state_.get()==this && run->page_wait==wait)refuse(widget_outcome_error);}
+        });
+        for(const auto& height:pending) {
+            if(!QObject::connect(height.animation,SIGNAL(runningChanged(bool)),wait,SLOT(start())) ||
+                !QObject::connect(height.animation,SIGNAL(pausedChanged(bool)),wait,SLOT(start()))) {
+                widget_end_page_wait(run);if(widget_entry_owned(run,entry))widget_refuse(run,QObject::tr("The original group layout completion is unavailable"));return true;
+            }
+            QObject::connect(height.animation,&QObject::destroyed,wait,qOverload<>(&QTimer::start));
+            QObject::connect(height.behavior,&QObject::destroyed,wait,qOverload<>(&QTimer::start));
+            QObject::connect(height.group,&QObject::destroyed,wait,qOverload<>(&QTimer::start));
+        }
+        work_latch_ui(run,"target_layout","original_height_animation_pending",{target,target,pending.front().group,nullptr,nullptr,nullptr,nullptr,nullptr});
+        if(receiver && receiver->state_.get()==this && wait && run->page_wait==wait) {
+            if(widget_entry_owned(run,entry))wait->start();else widget_end_page_wait(run);
+        }
+        return true;
+    }
     bool widget_reveal_parameter(const std::shared_ptr<NativeWidget>& run, QQuickItem* field) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input || !field || field->window() != run->window ||
@@ -4610,6 +4679,8 @@ struct AssistantViewModel::State {
                 widget_refuse(run,QObject::tr("The original control group changed while its pending layout was settled"));
             return false;
         }
+        if(!originalField || !widget_entry_current(run,entry))return false;
+        if(widget_wait_group_layout(run,originalField))return false;
         if(!originalField || !widget_entry_current(run,entry))return false;
         QPointer<QQuickItem> wanted(originalField), group, viewport, wholeRow;
         const bool boundedControl=!field->property("tableRowHeight").isValid() && !field->inherits("QQuickTextEdit");
@@ -16023,7 +16094,8 @@ void AssistantViewModel::archiveSession(const QString& threadId) {
         if(original->session_operation==UINT64_MAX)return;++original->session_operation;
         original->sessions_loading=true;original->sessions_error.clear();const auto epoch=original->sessions_epoch;emit sessionsChanged();
         if(!current() || original->sessions_epoch!=epoch || !original->session_idle())return;
-        (void)original->session_request("thread/read",{{"threadId",threadId},{"includeTurns",false}},"archive-read",threadId);
+        if(!original->owned_session(original->session_metadata.value(threadId)))throw std::runtime_error("The original listed app session changed before Archive");
+        (void)original->session_request("thread/archive",{{"threadId",threadId}},"archive",threadId);
     }catch(...) {if(current() && original->generic_authenticated && !original->generic_retiring) {
         original->sessions_loading=false;original->sessions_error=tr("The archive request could not be confirmed. Refresh the original session before trying again.");emit sessionsChanged();}}
 #else
