@@ -426,3 +426,14 @@ coordinates/occupancies for that trial, and does not equate general anisotropic
 tensors across frames. Existing native affine relations remain the executable
 authority. No element/site IDs, reference result, forced family, fitted seed,
 solver bound or scientific API changes.
+
+
+Refinement-strategy1.4.5 also names a physically justified broader or overall
+isotropic displacement candidate when site-specific information is inadequate
+(Toby, section4.7.10). It reports lost site-specific information and does not use
+a negative ADP as automatic justification for global sharing. Candidate choices
+remain optional and evidence-dependent, not a fixed progression or new solver
+policy; existing chemical/symmetry/calibration authority remains intact.
+The same guidance preserves physical Biso/Uiso convention and units, distinguishes
+independent-site modelling constraints from native symmetry, and does not collapse
+an established anisotropic model automatically.
