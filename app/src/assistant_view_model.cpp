@@ -3408,8 +3408,15 @@ struct AssistantViewModel::State {
     void append_outgoing_context(Object& context,ProjectViewModel* target,
                                  std::shared_ptr<const AssistantSkillInventory> captured = {}) {
         const auto original=file_projection();
+        const QPointer<ProjectViewModel> formattingTarget(target);
+        const auto* formattingProject=target?target->assistantProject():nullptr;
         (void)generic_measured_size(context);
         append_native_context(context,target);
+        // FIRST already-published registry spelling; no inspection-time Save or
+        // rounded-copy calculation. Pending/stale presentation simply omits it.
+        if(original.input_current() && formattingTarget && formattingTarget->assistantProject()==formattingProject && context.value("parameters").isArray())try {
+            context["parameters"]=formattingTarget->assistantParameterText(context.value("parameters").toArray());
+        }catch(...){/* Optional formatting is absent; retain the actual original raw rows. */}
         const auto inventory=captured ? std::move(captured) : source_inventory();
         if(!original.input_current())throw std::runtime_error("The original skill context owner changed");
         (void)generic_size(inventory->declarations,Limits::context_bytes);

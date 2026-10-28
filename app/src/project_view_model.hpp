@@ -6,6 +6,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 #include <QJsonObject>
+#include <QJsonArray>
 #include <QList>
 #include <QStringList>
 #include <QObject>
@@ -349,6 +350,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     const edi::Project& project() const { return *project_; }
     /// Native assistant access to the same model and worker used by manual controls.
     edi::Project* assistantProject() { return project_.get(); }
+    // Optional native file spelling on exact current canonical inspection rows.
+    QJsonArray assistantParameterText(const QJsonArray& rows) const;
     edi::work::Worker& assistantWorker() { return *worker_; }
     // The demo's seam: the project's created and last-modified times, which a loaded example takes
     // from the clock, set to a fixed value so its saved Text is reproducible.

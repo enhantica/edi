@@ -89,7 +89,7 @@ inline const Field* fields(Role role, std::size_t& count) {
     case Role::Relations: { ROWS(A("aliases",Alias),A("constraints",Constraint)); }
     case Role::Alias: { ROWS(T("id"),T("parameter_unique_name")); }
     case Role::Constraint: { ROWS(T("id"),T("expression"),B("enabled")); }
-    case Role::Parameter: { ROWS(T("path"),T("unique_name"),N("value"),N("uncertainty"),B("free"),T("dependence"),B("refinable"),B("fittable"),T("fit_reason"),T("unit")); }
+    case Role::Parameter: { ROWS(T("path"),T("unique_name"),N("value"),N("uncertainty"),T("file_value"),T("file_su"),B("free"),T("dependence"),B("refinable"),B("fittable"),T("fit_reason"),T("unit")); }
     case Role::Diagnostic: { ROWS(T("message"),T("code"),T("severity"),T("path"),B("actionable")); }
     case Role::Selection: { ROWS(T("collection_id"),T("generation"),A("files",File)); }
     case Role::File: { ROWS(T("id"),T("file_id"),N("ordinal"),N("bytes"),T("format"),T("reader_hint"),B("textReadable")); }
