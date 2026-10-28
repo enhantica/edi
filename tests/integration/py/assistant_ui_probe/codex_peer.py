@@ -26,6 +26,11 @@ cursor = {'position': 0, 'sequence': 0, 'pending_final': False, 'research': None
 native_ids = {}
 emit_lock = threading.RLock()
 usage_notifications_delivered = False
+pending_archive = None
+client_originator = None
+if config.get("session_fixture"):
+    with trace.open("a", encoding="utf-8") as output:
+        output.write(json.dumps({"fixture_runtime_started": {"pid": os.getpid(), "parent_pid": os.getppid()}}) + "\n")
 # Provider-owned offline persistence, using pinned092d Thread/Resume/Read shapes.
 # This never fabricates application state or scientific results. A killed helper
 # must resume the original stored ID, rather than silently starting another one.
@@ -226,6 +231,7 @@ for line in sys.stdin:
         continue
     method, params = request['method'], request.get('params', {})
     if method == 'initialize':
+        client_originator = params.get('clientInfo', {}).get('name')
         reply(
             request,
             {
@@ -256,6 +262,12 @@ for line in sys.stdin:
             usage_notifications_delivered = True
             for event in current['usage_notifications']:
                 notify(event['method'], {**event['params'], 'threadId': thread_id})
+        if pending_archive and Path(config['session_fixture']['archive_hold']).exists():
+            original = pending_archive
+            pending_archive = None
+            state.setdefault('archived_threads', []).append(original['params']['threadId'])
+            persist()
+            reply(original, {})
         if cursor['research'] and Path(cursor['research'][0]).exists():
             notify('item/completed', cursor['research'][1])
             cursor['research'] = None
@@ -324,8 +336,58 @@ for line in sys.stdin:
             'agentRole': None, 'gitInfo': None, 'name': None,
             'status': {'type': 'idle'}, 'turns': [],
         }
+        if config.get('session_fixture'):
+            # Actual stock0.162.1 CLI default; explicit launch flag takes priority.
+            source = sys.argv[sys.argv.index('--session-source') + 1] if '--session-source' in sys.argv else 'vscode'
+            state['threads'][thread_id]['source'] = source
+            state['threads'][thread_id]['originator'] = client_originator
         persist()
         reply(request, thread_response())
+    elif method == 'thread/list':
+        fixture = config.get('session_fixture', {})
+        if params.get('originators'):
+            emit({'id': request['id'], 'error': {'code': -32602,
+                  'message': 'nonempty originators filter is unavailable on the local app-server'}})
+            continue
+        if not state.get('session_fixtures_seeded'):
+            for original in fixture.get('threads', []):
+                value = {**original, 'cwd': cwd if original['cwd'] == '{CURRENT_WORKSPACE}' else original['cwd']}
+                state['threads'][value['id']] = value
+            state['session_fixtures_seeded'] = True
+            persist()
+        archived = set(state.get('archived_threads', []))
+        rows = [row for key, row in state['threads'].items()
+                if (key in archived) == bool(params.get('archived', False))]
+        if fixture.get('list_only_fixture_threads'):
+            known = {row['id'] for row in fixture.get('threads', [])}
+            rows = [row for row in rows if row['id'] in known]
+        if params.get('sourceKinds'):
+            rows = [row for row in rows if row['source'] in params['sourceKinds']]
+        if params.get('modelProviders'):
+            rows = [row for row in rows if row['modelProvider'] in params['modelProviders']]
+        if params.get('cwd'):
+            choices = params['cwd'] if isinstance(params['cwd'], list) else [params['cwd']]
+            rows = [row for row in rows if row['cwd'] in choices]
+        key = 'updatedAt' if params.get('sortKey') == 'updated_at' else 'createdAt'
+        rows.sort(key=lambda row: (row[key], row['id']), reverse=params.get('sortDirection', 'desc') == 'desc')
+        cursor_value = params.get('cursor')
+        offset = 0 if cursor_value is None else int(cursor_value.removeprefix('independent-page:'))
+        count = min(fixture.get('page_size', 2), params.get('limit', 100))
+        page = rows[offset:offset + count]
+        reply(request, {'data': [{**row, 'turns': []} for row in page],
+                        'nextCursor': 'independent-page:' + str(offset + count) if offset + count < len(rows) else None})
+    elif method == 'thread/archive':
+        fixture = config.get('session_fixture', {})
+        if params['threadId'] not in state['threads']:
+            emit({'id': request['id'], 'error': {'code': -32000, 'message': 'independent original session unavailable'}})
+        elif fixture.get('archive_error'):
+            emit({'id': request['id'], 'error': {'code': -32000, 'message': 'independent archive refusal'}})
+        elif fixture.get('archive_hold') and not Path(fixture['archive_hold']).exists():
+            pending_archive = request
+        else:
+            state.setdefault('archived_threads', []).append(params['threadId'])
+            persist()
+            reply(request, {})
     elif method == 'thread/resume':
         # Actual pinned selector and metadata, not history-based reconstruction.
         assert params['threadId'] in state['threads']

@@ -28,6 +28,7 @@
 #include <QMouseEvent>
 #include <QDirIterator>
 #include <QGuiApplication>
+#include <QSettings>
 #include <QClipboard>
 #include <QCryptographicHash>
 #include <QElapsedTimer>
@@ -184,6 +185,24 @@ int main(int argc,char** argv) {
     QGuiApplication::setApplicationName("assistant-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
     edi_app::use_design_font();
     edi_app::use_fresh_settings();
+    Object settings_restore_info;
+    const auto settings_restore_source=qEnvironmentVariable("EDI_TEST_ASSISTANT_RESTORE_SETTINGS");
+    if(!settings_restore_source.isEmpty()) {
+        QFile original(settings_restore_source);
+        if(!QFileInfo(settings_restore_source).isAbsolute() || !original.open(QIODevice::ReadOnly))return 83;
+        const auto bytes=original.readAll();original.close();
+        const auto destination=QSettings().fileName();
+        if(QFileInfo::exists(destination) || !QDir().mkpath(QFileInfo(destination).absolutePath()))return 82;
+        QFile copy(destination);if(!copy.open(QIODevice::WriteOnly)||copy.write(bytes)!=bytes.size())return 81;copy.close();
+        {QSettings reload;reload.sync();if(reload.status()!=QSettings::NoError)return 80;}
+        QFile verify(destination);if(!verify.open(QIODevice::ReadOnly)||verify.readAll()!=bytes)return 79;
+        settings_restore_info={{"source",settings_restore_source},{"destination",destination},
+            {"source_application_name_from_actual_filename",QFileInfo(settings_restore_source).completeBaseName()},
+            {"destination_application_name",QGuiApplication::applicationName()},
+            {"bytes",static_cast<double>(bytes.size())},
+            {"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())},
+            {"exact_copy",true},{"keys_rewritten",false}};
+    }
     Object history_restore_info;
     const auto history_restore_source=qEnvironmentVariable("EDI_TEST_ASSISTANT_RESTORE_HISTORY");
     if(!history_restore_source.isEmpty()) {
@@ -224,6 +243,22 @@ int main(int argc,char** argv) {
     Array message_model_events;
     QPointer<edi_app::RowTableModel> message_model_watched;
     std::vector<QMetaObject::Connection> message_model_connections;
+    bool capture_message_cells=false;
+    Array message_model_cells;
+    auto snapshot_message_cells=[&]() {
+        Array rows;
+        if(!message_model_watched)return rows;
+        const auto roles=message_model_watched->roleNames();
+        for(int row=0;row<message_model_watched->count();++row) {
+            Object cells;
+            for(auto it=roles.cbegin();it!=roles.cend();++it) {
+                const auto encoded=encode(Object{{"value",QJsonValue::fromVariant(message_model_watched->data(message_model_watched->index(row),it.key()))}});
+                cells[QString::fromUtf8(it.value())]=QString::fromLatin1(QCryptographicHash::hash(encoded,QCryptographicHash::Sha256).toHex());
+            }
+            rows.append(cells);
+        }
+        return rows;
+    };
     QObject message_model_observer;
     auto stop_message_model_watch=[&] {
         for(const auto& connection:message_model_connections)QObject::disconnect(connection);
@@ -493,13 +528,30 @@ int main(int argc,char** argv) {
                 const auto role_names=model->roleNames();
                 auto role_number=[&](const QString& name) {for(auto it=role_names.cbegin();it!=role_names.cend();++it)if(it.value()==name.toUtf8())return it.key();return -1;};
                 if(mode=="watch") {
-                    stop_message_model_watch();message_model_events=Array{};message_model_watched=model;
+                    stop_message_model_watch();message_model_events=Array{};message_model_watched=model;capture_message_cells=input["capture_cells"].toBool();message_model_cells=capture_message_cells?snapshot_message_cells():Array{};
                     message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::dataChanged,&message_model_observer,
-                        [&](const QModelIndex& first,const QModelIndex& last,const QList<int>& roles){Array names;const auto live=message_model_watched?message_model_watched->roleNames():QHash<int,QByteArray>{};for(const auto role:roles)names.append(QString::fromUtf8(live.value(role,QByteArray::number(role))));message_model_events.append(Object{{"kind","dataChanged"},{"first",first.row()},{"last",last.row()},{"roles",names}});}));
-                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsInserted,&message_model_observer,[&](const QModelIndex&,int first,int last){message_model_events.append(Object{{"kind","insert"},{"first",first},{"last",last}});}));
-                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsRemoved,&message_model_observer,[&](const QModelIndex&,int first,int last){message_model_events.append(Object{{"kind","remove"},{"first",first},{"last",last}});}));
-                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsMoved,&message_model_observer,[&](const QModelIndex&,int first,int last,const QModelIndex&,int destination){message_model_events.append(Object{{"kind","move"},{"first",first},{"last",last},{"destination",destination}});}));
-                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::modelReset,&message_model_observer,[&]{message_model_events.append(Object{{"kind","reset"}});}));
+                        [&](const QModelIndex& first,const QModelIndex& last,const QList<int>& roles){
+                            Array names,all;
+                            const auto live=message_model_watched?message_model_watched->roleNames():QHash<int,QByteArray>{};
+                            for(const auto role:roles)names.append(QString::fromUtf8(live.value(role,QByteArray::number(role))));
+                            for(auto it=live.cbegin();it!=live.cend();++it)all.append(QString::fromUtf8(it.value()));
+                            Object event{{"kind","dataChanged"},{"first",first.row()},{"last",last.row()},{"roles",names},{"all_role_names",all}};
+                            if(capture_message_cells) {
+                                const auto after=snapshot_message_cells();Array changed;
+                                for(qsizetype row=0;row<after.size();++row) {
+                                    const auto next=after[row].toObject();
+                                    const auto before=row<message_model_cells.size()?message_model_cells[row].toObject():Object{};
+                                    for(auto it=next.begin();it!=next.end();++it)
+                                        if(before.value(it.key())!=it.value())changed.append(Object{{"row",static_cast<int>(row)},{"role",it.key()}});
+                                }
+                                event["changed_cells"]=changed;message_model_cells=after;
+                            }
+                            message_model_events.append(event);
+                        }));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsInserted,&message_model_observer,[&](const QModelIndex&,int first,int last){message_model_events.append(Object{{"kind","insert"},{"first",first},{"last",last}});if(capture_message_cells)message_model_cells=snapshot_message_cells();}));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsRemoved,&message_model_observer,[&](const QModelIndex&,int first,int last){message_model_events.append(Object{{"kind","remove"},{"first",first},{"last",last}});if(capture_message_cells)message_model_cells=snapshot_message_cells();}));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsMoved,&message_model_observer,[&](const QModelIndex&,int first,int last,const QModelIndex&,int destination){message_model_events.append(Object{{"kind","move"},{"first",first},{"last",last},{"destination",destination}});if(capture_message_cells)message_model_cells=snapshot_message_cells();}));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::modelReset,&message_model_observer,[&]{message_model_events.append(Object{{"kind","reset"}});if(capture_message_cells)message_model_cells=snapshot_message_cells();}));
                 } else if(mode=="events") {
                     result["events"]=message_model_events;
                     if(input["clear"].toBool())message_model_events=Array{};
@@ -997,7 +1049,7 @@ int main(int argc,char** argv) {
             drain();
             auto output=fixture.snapshot();output["reply"]=result;
             output["ui"]=(op=="messages_probe" || op=="message_input") ? Object{{"alive",bool(observed)&&bool(window)},{"state",observed?observed->assistant()->state():QString()},{"connected",observed&&observed->assistant()->connected()},{"can_cancel",observed&&observed->assistant()->canCancel()}} : ui_snapshot();
-            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;
+            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["test_settings"]=Object{{"path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()}};
             output["state"]=observed ? Object{{"last_error",observed->assistant()->lastError()}} : QJsonValue();
             output["image_requests"]=urls.image_requests;output["activated_urls"]=urls.activated;
             output["image_url"]=QString("http://127.0.0.1:%1/untrusted.png").arg(urls.images.serverPort());
