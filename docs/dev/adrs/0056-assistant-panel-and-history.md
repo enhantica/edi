@@ -3378,3 +3378,25 @@ Actual ordinary commit controls saved, the actual destination is returned as pat
 a copy does not claim the current project moved. No queued/suggested path is a save,
 no helper reply substitutes for commit, and no new provider resume/chooser API exists.
 Native schemas, compiled instructions and the bundled skill describe the same route.
+
+
+## 2026-10-28: failure-atomic history activation and published UI messages
+
+The shared canonical archive handle is provisional while State/AVM bind and its
+original Session initialize. Initial background reads may proceed, but a candidate
+can neither revoke the previous lease nor queue its own canonical replacement.
+Session commits the receiver/token only at the end of its actual initialization;
+standalone AVMs commit after their own bind. An abandoned candidate therefore leaves
+the surviving owner's token, notices and already accepted ordered snapshots intact.
+Activation prepares before its callback-free token transfer. Latest accepted rows
+are carried forward and genuinely new candidate rows appended without resurrecting
+old rows removed by Clear. Committed retired predecessors cannot reclaim a new token.
+Accepted writes still drain without the GUI receiver, and local failures remain
+non-durable/non-veto facts through the same persistence metadata owner.
+
+Automatic local report observations additionally snapshot the original current
+Session.loadWarnings published table, including actual text/severity and its existing
+public key ordering. They identify the exact current scope and are explicitly a UI
+publication list, potentially historical within that project, not a new current-error
+classification. They do not clear/recolor warnings or enter default provider context.
+Missing/current-owner failures stay explicit and do not veto scientific work.

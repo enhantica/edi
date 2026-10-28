@@ -57,7 +57,8 @@ const char* write_history_file(const QString& path,const QJsonArray& rows) {
     return file.commit()?nullptr:"commit";
 }
 }
-AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,QString requested,Notice notice) {
+AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,QString requested,Notice notice,bool provisional)
+    : pending_receiver_(receiver),pending_notice_(std::move(notice)) {
     // A replacement VM reuses the same file owner, including its accepted final
     // snapshot. An older worker can never land after a newer archive revision.
     static std::mutex ownersMutex;
@@ -71,21 +72,33 @@ AssistantHistoryArchive::AssistantHistoryArchive(QObject* receiver,QString reque
     bool start=false;
     {
         std::lock_guard lock(control_->mutex);
-        if(control_->owner==std::numeric_limits<std::uint64_t>::max())throw std::overflow_error("History owner identity exhausted");
-        owner_=++control_->owner;
-        control_->receiver=receiver;control_->notice=std::move(notice);
         if(!control_->running && (!control_->loaded || control_->pending || control_->latest.revision>control_->durable)) {
             if(!control_->pending && control_->latest.revision>control_->durable)control_->pending=control_->latest;
             control_->running=true;start=true;
         }
     }
     if(start)launch(control_);
-    else notify(control_);
+    if(!provisional)activate();
+}
+void AssistantHistoryArchive::activate() {
+    if(owner_)return; // A committed predecessor cannot reclaim a newer owner's token.
+    const auto state=control_;
+    if(!state)throw std::logic_error("The history candidate has closed");
+    Notice retired_notice;
+    {
+        std::lock_guard lock(state->mutex);
+        if(state->owner==std::numeric_limits<std::uint64_t>::max())throw std::overflow_error("History owner identity exhausted");
+        // All fallible preparation precedes this callback-free token transfer.
+        retired_notice=std::move(state->notice);
+        state->receiver=pending_receiver_;state->notice=std::move(pending_notice_);
+        owner_=++state->owner;
+    }
+    notify(state);
 }
 AssistantHistoryArchive::~AssistantHistoryArchive(){closeOwner();}
 void AssistantHistoryArchive::closeOwner() noexcept {
     try {if(control_) {std::lock_guard lock(control_->mutex);
-        if(control_->owner==owner_) {control_->receiver.clear();control_->notice={};}}}catch(...){}
+        if(owner_ && control_->owner==owner_) {control_->receiver.clear();control_->notice={};}}}catch(...){}
     // Accepted immutable snapshots remain owned/drained independently of Qt.
     control_.reset();
 }
@@ -99,7 +112,7 @@ bool AssistantHistoryArchive::retain(QJsonArray rows,bool includesInitial,bool l
         bool start=false;
         {
             std::lock_guard lock(state->mutex);
-            if(state->owner!=owner_ || state->latest.revision==std::numeric_limits<std::uint64_t>::max())return false;
+            if(!owner_ || state->owner!=owner_ || state->latest.revision==std::numeric_limits<std::uint64_t>::max())return false;
             Control::Snapshot next{std::move(rows),state->latest.revision+1,includesInitial || logicalClear};
             state->pending=next;state->latest=std::move(next);
             if(logicalClear)state->clear=state->latest.revision;

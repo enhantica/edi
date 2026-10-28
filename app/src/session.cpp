@@ -209,6 +209,9 @@ void Session::initializeSession() {
     if (WebFiles::available()) {
         connect(WebStorage::instance(), &WebStorage::usableChanged, this, &Session::locationTextChanged);
     }
+    // Commit the shared history lease only after this actual owner finished
+    // every fallible initialization step (ADR-0056).
+    assistant_->finishHistoryInitialization();
 }
 
 Session::~Session() {

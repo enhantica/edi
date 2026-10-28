@@ -875,6 +875,7 @@ struct AssistantViewModel::State {
         if(work_first_cause.isEmpty() && turns.isEmpty())gap("first_cause","not_observed");
         scope["turns"]=turns;scope["history_persistence"]=history_persistence();document["scope_coverage"]=scope;
         identities["objectives"]=objectives;identities["skills"]=capturedSkills;identities["inputs"]=capturedInputs;document["identity_inputs"]=identities;
+        ui.append(Object{{"phase","published_app_messages"},{"observation",published_app_messages()}});
         document["agent_assessment"]=assessment;document["observations"]=Object{{"ui",ui},{"science",science}};
         coverage["retained_rows"]=QString::number(retained);coverage["included_rows"]=QString::number(evidence.size());
         coverage["excluded_unbound_rows"]=QString::number(excluded);coverage["known_omitted_rows"]=QString::number(omitted);
@@ -1178,10 +1179,34 @@ struct AssistantViewModel::State {
     QTimer timer{&owner};
     QString history_path;
     std::unique_ptr<AssistantHistoryArchive> history_archive;
-    bool history_base_included=false, history_unqueued=false;
+    bool history_base_included=false, history_unqueued=false, history_initialized=false;
+    QJsonArray history_initial_snapshot;
     std::uint64_t history_retry_revision=0;
     QString history_error; // Local durability, never account/native authority.
     Object history_seen_metadata;
+    Object published_app_messages() const {
+        const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
+        const QPointer<ProjectViewModel> target(project);
+        const auto scope=work_reports.scope();
+        if(!session || session->assistant()!=&owner || !target || session->project()!=target || scope.isEmpty())
+            return work_report_missing("unbound_owner");
+        const QPointer<WarningListModel> model(session->loadWarnings());
+        if(!model)return work_report_missing("not_present");
+        const auto count=model->count();const auto keys=model->keys(QString{});
+        QJsonArray rows;
+        for(int i=0;i<count;++i) {
+            Object row{{"row",i},{"text",model->get(i,QStringLiteral("message")).toString()},
+                {"severity",model->get(i,QStringLiteral("severity")).toString()}};
+            if(keys.size()==count)row["key"]=keys.at(i);
+            rows.append(row);
+        }
+        if(!session || !target || !model || session->assistant()!=&owner || session->project()!=target ||
+            project!=target || session->loadWarnings()!=model || work_reports.scope()!=scope ||
+            model->count()!=count || model->keys(QString{})!=keys)return work_report_missing("owner_changed");
+        return work_report_observed(Object{{"source","Session.loadWarnings"},{"scope_id",scope},
+            {"meaning","currently published UI messages; not a claim that each historical entry is a current error"},
+            {"count",count},{"rows",rows}});
+    }
     Object history_persistence() const {
         const auto missing=work_report_missing();
         if(!history_archive)return {{"state","unavailable"},{"durable_revision",missing},{"failure_stage",work_report_observed("retain")}};
@@ -1230,16 +1255,18 @@ struct AssistantViewModel::State {
         const QPointer<AssistantViewModel> receiver(&owner);
         history_archive=std::make_unique<AssistantHistoryArchive>(&owner,history_path,[this,receiver](const AssistantHistoryArchive::View&) {
             if(receiver && receiver->state_.get()==this && publishing)history_completed();
-        });
+        },!history_initialized);
         const auto view=history_archive->view();
         // A replacement VM takes the already accepted immutable memory, not a
         // stale disk file while the previous receiver's final write drains.
         if(adoptInitial) {history=view.latest_rows;history_base_included=view.includes_initial;}
+        if(!history_initialized)history_initial_snapshot=history;
     }
     bool queue_history(const QJsonArray& rows,bool logicalClear=false) noexcept {
         if(logicalClear)history_base_included=true; // Never restore an old async initial prefix after Clear.
         try {
             if(!history_archive)initialize_history(false);
+            if(history_initialized && history_archive)history_archive->activate();
             if(!history_archive || !history_archive->retain(rows,history_base_included,logicalClear)) {
                 history_unqueued=true;history_retry_revision=0;history_error=storage_error;return false;
             }
@@ -14013,11 +14040,46 @@ bool AssistantViewModel::commitNativeProject(ProjectViewModel* target) noexcept 
 #endif
 }
 
-AssistantViewModel::AssistantViewModel(QObject* parent, AssistantWorkReportOptions options) : QObject(parent), state_(std::make_unique<State>(*this, options)) { state_->bind(nullptr); }
+AssistantViewModel::AssistantViewModel(QObject* parent, AssistantWorkReportOptions options) : QObject(parent), state_(std::make_unique<State>(*this, options)) {
+    state_->bind(nullptr);
+    auto* session=qobject_cast<Session*>(parent);
+    if(!session || session->assistant())finishHistoryInitialization();
+}
 #ifndef __EMSCRIPTEN__
 AssistantViewModel::AssistantViewModel(edi::assistant::native::NativeDependencies dependencies, QObject* parent, AssistantWorkReportOptions options)
-    : QObject(parent), state_(std::make_unique<State>(*this, std::move(dependencies), options)) { state_->bind(nullptr); }
+    : QObject(parent), state_(std::make_unique<State>(*this, std::move(dependencies), options)) {
+    state_->bind(nullptr);
+    auto* session=qobject_cast<Session*>(parent);
+    if(!session || session->assistant())finishHistoryInitialization();
+}
 #endif
+void AssistantViewModel::finishHistoryInitialization() noexcept {
+    auto* const original=state_.get();
+    if(original->history_initialized)return;
+    const QPointer<AssistantViewModel> receiver(this);
+    try {
+        if(!original->history_archive)original->initialize_history();
+        const auto view=original->history_archive->view();
+        auto merged=view.latest_rows;
+        QSet<QString> previousIds,latestIds;
+        for(const auto& row:original->history_initial_snapshot)previousIds.insert(row.toObject().value("id").toString());
+        for(const auto& row:merged)latestIds.insert(row.toObject().value("id").toString());
+        for(qsizetype i=0;i<original->history.size();++i) {
+            const auto row=original->history[i];const auto id=row.toObject().value("id").toString();
+            if((!id.isEmpty() && !previousIds.contains(id) && !latestIds.contains(id)) ||
+               (id.isEmpty() && i>=original->history_initial_snapshot.size()))merged.append(row);
+        }
+        original->history=std::move(merged);original->history_base_included=view.includes_initial;
+        original->messages.assign(original->history);
+        if(!receiver || receiver->state_.get()!=original)return;
+        original->history_archive->activate();
+        original->history_initialized=true;original->history_initial_snapshot={};
+        if(original->history_unqueued)(void)original->queue_history(original->history);
+        original->history_completed();
+    }catch(...) {if(receiver && receiver->state_.get()==original) {
+        original->history_initialized=true;original->history_unqueued=true;original->history_error=original->storage_error;
+    }}
+}
 AssistantViewModel::~AssistantViewModel() {
     // Freeze while the original State is still intact. Block only this dying
     // VM's outward signals; the immutable native writer is independent of it.
