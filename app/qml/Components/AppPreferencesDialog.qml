@@ -82,7 +82,10 @@ AppDialog {
         let widest = 0;
         for (let i = 0; i < box.count; ++i)
             widest = Math.max(widest, boxMetrics.advanceWidth(box.textAt(i)));
-        return Math.ceil(widest + box.leftPadding + box.rightPadding + box.indicator.width + box.contentItem.leftPadding + box.contentItem.rightPadding);
+        // Read the FIRST control's natural scalar measurements, not deferred
+        // indicator/content Items whose creation can ask for this width again.
+        const contentInsets = Math.max(0, box.implicitContentWidth - boxMetrics.advanceWidth(box.displayText));
+        return Math.ceil(widest + 2 * box.padding + box.spacing + 2 * box.implicitIndicatorWidth + contentInsets);
     }
     // The width a button needs for its text with an em at each side (its content reports no width of its own).
     function buttonNeed(button) {
@@ -834,7 +837,8 @@ AppDialog {
         contentHeight: webContent.implicitHeight
         Column {
             id: webContent
-            width: parent.width
+            implicitWidth: webSource.contentWidth
+            width: webSource.contentWidth
             spacing: AppSizes.unit
             EaElements.Label {
                 width: parent.width
