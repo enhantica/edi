@@ -134,7 +134,7 @@ def notify(method, params):
 
 
 def turn(status):
-    return {'id': turn_id, 'rootTurnId': None, 'items': [], 'itemsView': 'full',
+    return {'id': turn_id, 'rootTurnId': None, 'items': [], 'itemsView': 'notLoaded',
             'status': status, 'error': None, 'startedAt': None, 'completedAt': None,
             'durationMs': None}
 
@@ -168,9 +168,16 @@ def advance():
         completed = turn('completed')
         if config.get('observe_context_continuity'):
             completed['items'] = [entry['item'] for entry in state.get('item_history', {}).get(thread_id, []) if entry['turnId'] == turn_id]
+            completed['itemsView'] = 'full'
         state['threads'][thread_id]['turns'].append(completed)
         persist()
-        notify('turn/completed', {'threadId': thread_id, 'turn': completed})
+        # Pinned092d live notifications are summaries, not the persisted full
+        # item history. bespoke_event_handling.rs1329-1349 and upstream test3480.
+        summary_item = dict(item)
+        for optional in ('phase', 'memoryCitation', 'delivery', 'questions'):
+            summary_item.setdefault(optional, None)
+        summary = {**completed, 'items': [summary_item], 'itemsView': 'summary'}
+        notify('turn/completed', {'threadId': thread_id, 'turn': summary})
         title = config.get('automatic_thread_name_after_first_turn')
         if title and len(state['threads'][thread_id]['turns']) == 1:
             state['threads'][thread_id]['name'] = title
