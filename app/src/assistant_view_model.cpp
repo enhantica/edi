@@ -1163,6 +1163,7 @@ struct AssistantViewModel::State {
                 if(!thread.isEmpty())turn["thread_id"]=work_report_observed(thread);
                 if(!turnId.isEmpty())turn["turn_id"]=work_report_observed(turnId);
                 if(generic_mode && !terminalIdentity.value("native_pending").toBool() && !native_call && !native_worker_admitted() && (!native_fit || !native_fit->nativeRunning()))turn["native_settlement"]="settled";
+                if(terminalIdentity.contains("provider_error_presence"))turn["provider_error_presence"]=terminalIdentity.value("provider_error_presence");
                 if(!generic_mode && terminalIdentity.value("turn_id").isString())turn["turn_id"]=work_report_observed(terminalIdentity.value("turn_id"));
 #endif
                 work_merge(row.value("id").toString(),{{"workTurn",turn}});break;
@@ -2080,6 +2081,15 @@ struct AssistantViewModel::State {
         }
         advance_session_preparation();
     }
+    QString original_session_email(const QString& id,const Object& record) const {
+        const auto saved=record.value("email").toString();
+        // This operation captured the verified original account BEFORE Open;
+        // never fill historical absence from a later/successor account read.
+        const auto captured=session_account_target==id && session_account_operation==session_operation?session_account_email:QString();
+        if(!saved.isEmpty() && !captured.isEmpty() && saved!=captured)
+            throw std::runtime_error("The saved conversation account changed during selection; the original project and connection were preserved");
+        return !saved.isEmpty()?saved:captured;
+    }
     bool begin_saved_session(const QString& id,bool automatic=false) {
         if(!session_switch_idle())return false;
         const QPointer<AssistantViewModel> receiver(&owner);auto proof=file_projection();
@@ -2100,6 +2110,7 @@ struct AssistantViewModel::State {
             throw std::runtime_error("The current managed account did not provide an identity that can confirm this selection; the original conversation and project were preserved");
         if(generic_authenticated && !savedEmail.isEmpty() && savedEmail!=email)
             throw std::runtime_error("That conversation belongs to another managed account; its project was not opened");
+        if(generic_authenticated){session_account_target=id;session_account_operation=session_operation;session_account_email=email;}
         if(!generic_authenticated && !verified) {
             if(savedEmail.isEmpty())throw std::runtime_error("Sign in before selecting this older conversation; its original account association is unavailable");
             session_restore_target=id;sessions_loading=true;
@@ -2114,7 +2125,6 @@ struct AssistantViewModel::State {
             const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
             const auto current=session && session->project()==project?session->projectLocation():QString();
             if(available && (current.isEmpty() || QFileInfo(current).canonicalFilePath()!=association.value("canonical"))) {
-                if(generic_authenticated){session_account_target=id;session_account_operation=session_operation;session_account_email=email;}
                 session_restore_target=id;sessions_loading=false;session_preparation_observation["stage"]="awaiting_original_project_open";
                 emit owner.sessionProjectRequested(id,QUrl::fromLocalFile(path),owner.sessionSelection());
                 return true;
@@ -2122,7 +2132,7 @@ struct AssistantViewModel::State {
             if(!available)throw std::runtime_error("The conversation's original project is unavailable or changed. Its saved association was preserved; no other project was substituted.");
         }
         if(automatic && record.value("email").toString().isEmpty()){session_selection_target.clear();return false;}
-        const auto expectedEmail=!savedEmail.isEmpty()?savedEmail:email;
+        const auto expectedEmail=original_session_email(id,record);
         sessions_loading=true;
         session_preparation=stage_session_preparation(id,project,record,expectedEmail);
         if(session_preparation)offer_session_preparation();
@@ -13351,6 +13361,10 @@ struct AssistantViewModel::State {
         ProviderErrorObservation observation;
         try {
             if(!current())return {};
+            if(!supplied.isObject()) {
+                if(!supplied.isNull() && !supplied.isUndefined())work_reports.missEvidence();
+                return {}; // Terminal absence belongs to workTurn, not a failed provider row.
+            }
             Object payload{{"type","providerError"},{"source",QLatin1StringView(source)},{"threadId",thread},{"turnId",turn},{"willRetry",willRetry}};
             payload["error_presence"]=supplied.isUndefined()?"absent":supplied.isNull()?"null":supplied.isObject()?"object":"invalid";
             const auto errorObject=supplied.toObject();const auto message=errorObject.value("message");
@@ -13392,7 +13406,6 @@ struct AssistantViewModel::State {
             const bool retained=generic_present(std::move(row));
             if(!current())return {};
             if(!retained)work_reports.missEvidence();
-            if(!supplied.isObject())observation.cause.clear(); // Absence is not a provider root cause.
             observation.message=text;return observation;
         }catch(...) {if(current())work_reports.missEvidence();return {};}
     }
@@ -13850,8 +13863,9 @@ struct AssistantViewModel::State {
             if (status != "completed" && status != "interrupted" && status != "failed") throw std::runtime_error("Agent terminal status is invalid");
             diagnostic.stage="TURN_END_ERROR";
             const auto originalThread=generic_thread,originalTurn=generic_turn;
-            const auto observedError=(status!="completed" || (turn.contains("error") && !turn.value("error").isNull()))
-                ?retain_provider_error(turn.value("error"),"terminal",false):ProviderErrorObservation{};
+            const auto suppliedError=turn.value("error");
+            const auto errorPresence=suppliedError.isUndefined()?"absent":suppliedError.isNull()?"null":suppliedError.isObject()?"object":"invalid";
+            const auto observedError=retain_provider_error(suppliedError,"terminal",false);
             if(!publication.input_current() || generic_thread!=originalThread || generic_turn!=originalTurn)return;
             diagnostic.stage = "TURN_END_NATIVE";
             if (native_fit || native_worker_admitted()) {
@@ -13906,7 +13920,8 @@ struct AssistantViewModel::State {
             if (generic_interrupt_thread == generic_thread && generic_interrupt_turn == generic_turn) {
                 generic_interrupt_thread.clear(); generic_interrupt_turn.clear();
             }
-            work_end(status=="completed"?"completed":status=="interrupted"?"interrupted":"failed",status=="completed"?QString{}:observedError.cause);
+            work_end(status=="completed"?"completed":status=="interrupted"?"interrupted":"failed",status=="completed"?QString{}:observedError.cause,
+                {{"provider_error_presence",QLatin1StringView(errorPresence)}});
             if(!publication.input_current())return;
             generic_terminal_turn = generic_turn;
             generic_busy = false; generic_turn.clear(); generic_items.clear(); generic_item_rows.clear(); generic_final_items.clear(); generic_item_bytes = 0; generic_progress_bytes = 2; generic_plan_progress = {}; generic_summary_parts.clear(); /* Explicit Stop remains the only input-caused revoke latch. */
@@ -13919,7 +13934,8 @@ struct AssistantViewModel::State {
             else agent->settleOperation();
             if (!publication.input_current()) return;
             if(status!="completed" && !generic_clear_pending)error=!observedError.message.isEmpty()?observedError.message:
-                QObject::tr("The official agent turn was interrupted or failed without an available explanation. Retained work is preserved.");
+                status=="interrupted"?QObject::tr("The agent turn was interrupted. Retained work is preserved."):
+                QObject::tr("The agent turn failed without an available explanation. Retained work is preserved.");
         }
         diagnostic.stage = "EVENT_PRESENT";
         if (!publication.input_current()) return;
@@ -15907,7 +15923,7 @@ bool AssistantViewModel::prepareSessionProjectRestore(ProjectViewModel* target,c
     }
     if(s->account_confirmation_pending)return false;
     try {
-        auto prepared=s->stage_session_preparation(id,target,record,record.value("email").isString()?record.value("email").toString():s->generic_native.value("account").toObject().value("email").toString());
+        auto prepared=s->stage_session_preparation(id,target,record,s->original_session_email(id,record));
         if(!prepared || !proof.input_current() || s->account_confirmation_pending)return false;
         prepared->cross_project=true;prepared->original_open=commit;s->session_preparation=std::move(prepared);
         if(s->session_preparation->approved)return true;
@@ -17352,9 +17368,11 @@ void AssistantViewModel::signIn() {
             }
             if(!state_->session_restore_target.isEmpty()) {
                 const auto target=state_->session_restore_target;const auto record=state_->saved_session(target);
+                const auto expectedEmail=state_->original_session_email(target,record);
+                if(expectedEmail.isEmpty())throw std::runtime_error("The original managed account identity is unavailable; the conversation was not resumed");
                 state_->approved_scope=approval;state_->generic_prepare_workspace();
                 if(!publication.input_current())return;
-                state_->resume_checkpoint=State::ResumeCheckpoint{target,state_->generic_workspace,record.value("email").isString()?record.value("email").toString():state_->generic_native.value("account").toObject().value("email").toString(),state_->project,approval,state_->generation,bool(state_->project),true,false};
+                state_->resume_checkpoint=State::ResumeCheckpoint{target,state_->generic_workspace,expectedEmail,state_->project,approval,state_->generation,bool(state_->project),true,false};
             }
             state_->generic_sign_in(std::move(approval), publication);
         } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("The approved account/project scope could not be prepared safely.")); }
