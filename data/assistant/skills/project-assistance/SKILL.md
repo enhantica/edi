@@ -5,7 +5,7 @@ description: Work with the displayed Edi project through current native controls
 
 # Work with the displayed Edi project
 
-Version: 1.8.0. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
+Version: 1.8.1. Use the tools actually offered in this request. Inspect the current project, input scopes, scientific shape, selections, relations, background ownership and fit eligibility before choosing actions. Tool schemas describe executable operations; they do not prescribe a scientific recipe.
 
 ## Inputs and setup
 
@@ -30,6 +30,8 @@ Choose steps from the actual residuals, model, uncertainty and user's goal. Use 
 If a native operation refuses, inspect its factual cause, current state and completed prefix. Investigate actual UI/native diagnostics and current public Edi source/docs/skills for stale route guidance, then continue supported normal actions autonomously. Current Fit is the ordinary status-bar control, not a legacy Analysis-only button. Do not tell the user that only they can make a control accessible without establishing an actual missing capability. Research does not fabricate an executable API. A missing control or unsupported operation is a capability limit, not a scientific conclusion. Research supported alternatives and continue authorized work that remains possible. Ask for genuinely missing scientific information or an indispensable user action; do not repeat consent for already delegated work. Never invent results, replay uncertain mutations, switch action modes or bypass controls to force success.
 
 ## Fits and relations
+
+Use the exact current parameters[].path for parameter value/free requests and native alias targets. unique_name is the separate native relation identity, not an interchangeable tool address; do not prepend a dataset ID or translate between them. Single-owner addresses use experiment. or structure.; multiple owners use their offered experiments[ID]. or structures[ID]. spelling. Copy returned paths after selections, renames, imports or type changes rather than constructing them. A proved prewrite unknown/duplicate/dependent-path refusal is guidance to inspect and correct the request, not permission to loosen validation or repeat an uncertain write.
 
 Use inspect_project, list_parameters and diagnostics for current native facts. set_parameters, set_free, run_fit and undo_fit operate on the displayed project through its ordinary editor, worker and Undo. Wait for actual asynchronous calculation completion before fitting. Interpret done, max_iterations, no_step, cancelled and error as their actual outcomes; none alone establishes scientific adequacy or a global optimum.
 

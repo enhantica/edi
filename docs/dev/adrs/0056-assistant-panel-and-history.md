@@ -3216,3 +3216,19 @@ still exists. Refresh also requires the original continuation; visible setup che
 its existing owner immediately before the same effect and after publication.
 Actual population/adoption and Estimate/Undo prefixes remain partial facts when
 interrupted, without rollback, replay, or answering/releasing a successor's owners.
+
+### 2026-10-28: tool addresses and native parameter identities are distinct
+
+The first parameter walker supplies parameters[].path to context, parameter tools,
+GUI registry and alias-target decoding. Its separate unique_name is the native
+relation identity. Tool path fields and the project-assistance skill explain this
+difference and require copying the actual offered path, including the native
+single/multiple-owner grammar. No accepted address, prefix alias or name rewrite
+is added; decoder identity, dependence and scientific validation stay unchanged.
+
+Before native admission, recognized core Refusal values from parameter/relation
+preparation retain the first Controller failure owner's sanitized message. The
+existing closed native result code maps its broad category, while existing
+diagnostics retain the exact core code/message and target identifies parameter
+or relation. Other exception types keep their existing safe generic handling; no
+arbitrary exception payload is published or new error mechanism introduced.
