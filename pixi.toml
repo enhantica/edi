@@ -238,11 +238,15 @@ CMAKE_C_COMPILER_LAUNCHER = "ccache"
 # The sole developer pin/checksum owner. This task uses existing developer Python;
 # installed Edi carries only the provisioned native executables/resources.
 cmd = ["python", "tools/deps/provision-assistant-runtime.py"]
+inputs = ["pixi.toml", "tools/deps/provision-assistant-runtime.py", "tools/assistant-runtime/edi-app-server.patch"]
+outputs = ["build/deps/codex/provisioned/**", "build/deps/codex/**/input-*/**"]
 env = { EDI_CODEX_VERSION = "0.162.1", EDI_CODEX_LINUX_SHA256 = "8748f9f8b708b3bc5a52b3f0a1ccddb22e6985f0efb4f45dafa1677e324abe0e", EDI_CODEX_MACOS_SHA256 = "28c0e2fbfb39a422dcfdd5bb87027a12242da7fa2dc997811bc0a6d2316c4f93" }
 
 [feature.app.tasks.assistant-math]
 # Original native source/font closure only; no Python or TeX ships with the application.
 cmd = ["python", "tools/deps/provision-assistant-math.py"]
+inputs = ["pixi.toml", "tools/deps/provision-assistant-math.py"]
+outputs = ["build/deps/assistant-math.json", "build/deps/jkqtmathtext/*/source/**"]
 env = { EDI_MATH_COMMIT = "9e9f0af8b140192e3de7ff866a0013e7da5e1e93", EDI_MATH_ARCHIVE_SHA256 = "e70f491cee4203a74f76a86c197bd456c89371db35cf7b0068d4db1b21e44e00" }
 
 [feature.app.tasks]
