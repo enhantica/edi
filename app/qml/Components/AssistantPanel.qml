@@ -312,29 +312,33 @@ Popup {
                     anchors.rightMargin: EaStyle.Sizes.fontPixelSize * 0.5
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: AppSizes.unit * 0.5
-                    EaElements.ToolButton {
+                    EaElements.Button {
                         id: clearButton
                         visible: panel.assistant.connected
                         objectName: "assistant.clear"
-                        fontIcon: "eraser"
-                        font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-                        implicitWidth: panel.headerActionExtent
-                        implicitHeight: EaStyle.Sizes.toolButtonHeight
-                        showBackground: false
-                        background: Item {
-                            implicitWidth: panel.headerActionExtent
-                            implicitHeight: implicitWidth
-                            Rectangle {
-                                border.width: 0
-                                anchors.centerIn: parent
-                                width: EaStyle.Sizes.toolButtonHeight * 0.75
-                                height: width
-                                radius: width * 0.5
-                                color: clearButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
+                        text: qsTr("Clear")
+                        leftPadding: AppSizes.unit * 0.75
+                        rightPadding: leftPadding
+                        implicitHeight: usageButton.implicitHeight
+                        contentItem: RowLayout {
+                            spacing: AppSizes.unit * 0.4
+                            EaElements.Label {
+                                text: "eraser"
+                                font.family: EaStyle.Fonts.iconsFamily
+                                font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
+                                color: EaStyle.Colors.themeForegroundMinor
+                                Accessible.ignored: true
                             }
+                            EaElements.Label { text: clearButton.text; color: EaStyle.Colors.themeForegroundMinor }
                         }
-                        ToolTip.text: qsTr("Clear conversation")
-                        Accessible.name: ToolTip.text
+                        background: Rectangle {
+                            border.width: 0
+                            implicitHeight: EaStyle.Sizes.toolButtonHeight * 0.75
+                            radius: height * 0.5
+                            color: clearButton.visualFocus ? EaStyle.Colors.themeRowHovered : panel.actionBackground
+                        }
+                        ToolTip.text: qsTr("Start a new conversation for this project. Your ChatGPT account stays connected.")
+                        Accessible.name: qsTr("Clear conversation")
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: panel.toggleControl
                         KeyNavigation.tab: usageButton
@@ -380,15 +384,23 @@ Popup {
                         enabled: !pendingConnection || panel.assistant.canCancel
                         leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
                         rightPadding: leftPadding
-                        contentItem: EaElements.Label {
-                            text: connectionButton.accountView ? (panel.accountInitial.length ? panel.accountInitial : "user") : connectionButton.text
-                            font.family: connectionButton.accountView && !panel.accountInitial.length ? EaStyle.Fonts.iconsFamily : EaStyle.Fonts.fontFamily
-                            font.pixelSize: EaStyle.Sizes.fontPixelSize
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                : connectionButton.accountView ? (EaStyle.Colors.isDarkPalette ? "black" : "white")
-                                : (EaStyle.Colors.isDarkPalette ? "black" : "white")
+                        contentItem: RowLayout {
+                            spacing: AppSizes.unit * 0.4
+                            EaElements.Label {
+                                visible: !connectionButton.accountView
+                                text: connectionButton.pendingConnection ? "times" : "comment-dots"
+                                font.family: EaStyle.Fonts.iconsFamily
+                                color: EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                Accessible.ignored: true
+                            }
+                            EaElements.Label {
+                                text: connectionButton.accountView ? (panel.accountInitial.length ? panel.accountInitial : "user") : connectionButton.text
+                                font.family: connectionButton.accountView && !panel.accountInitial.length ? EaStyle.Fonts.iconsFamily : EaStyle.Fonts.fontFamily
+                                font.pixelSize: EaStyle.Sizes.fontPixelSize
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                            }
                         }
                         Layout.preferredWidth: connectionButton.accountView ? panel.headerActionExtent : implicitWidth
                         Layout.minimumWidth: connectionButton.accountView ? panel.headerActionExtent : 0
@@ -504,6 +516,7 @@ Popup {
                     delegate: Column {
                         id: messageDelegate
                         required property var model
+                        required property int index
                         readonly property string rowId: model.id
                         readonly property string kind: model.kind
                         readonly property string text: model.text
@@ -523,6 +536,7 @@ Popup {
                             payload: messageDelegate.payload
                             status: messageDelegate.status
                             rowId: messageDelegate.rowId
+                            stepNumber: messageDelegate.index + 1
                             onReportRequested: (sourceRowId, link) => panel.openReportLink(sourceRowId, link)
                             onDetailsChanging: {
                                 conversation.cancelFlick();

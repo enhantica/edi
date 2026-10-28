@@ -21,6 +21,7 @@ QtObject {
 
     property bool dialogShown: false
     property bool assistantShown: false
+    property bool assistantCopyTechnicalDetails: false
     property real assistantWidth: AppSizes.assistantDefaultWidth
 
     property bool toolTips: true
@@ -118,6 +119,7 @@ QtObject {
         location: EaGlobals.Vars.settingsFile
         category: "Assistant"
         property alias width: preferences.assistantWidth
+        property alias copyTechnicalDetails: preferences.assistantCopyTechnicalDetails
     }
 
     property Settings projectsSettings: Settings {

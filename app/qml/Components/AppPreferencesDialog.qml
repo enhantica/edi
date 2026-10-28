@@ -405,18 +405,41 @@ AppDialog {
             id: aiPage
             implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height-bar.implicitHeight-AppSizes.unit*8))
             readonly property var original: Session.assistant
+            property string copyError: ""
+            onOriginalChanged: {
+                copyError = "";
+                if (copyWorkReport) copyWorkReport.copied = false;
+                if (copyConnection) copyConnection.copied = false;
+            }
+            function copyDiagnostics(button, report) {
+                const page = aiPage, owner = Session.assistant, project = Session.project;
+                const current = () => Qt.isQtObject(page) && Qt.isQtObject(button) && Qt.isQtObject(owner)
+                    && Session.assistant === owner && page.original === owner && Session.project === project;
+                try {
+                    if (!current()) return;
+                    page.copyError = "";
+                    const literal = report ? owner.workReportDocument() : JSON.stringify({
+                        connection: owner.connectionLabel, state: owner.state, account: owner.account,
+                        model: owner.selectedModel, effort: owner.selectedEffort, error: owner.lastError,
+                        context: owner.contextPreview
+                    }, null, 2);
+                    if (!current()) return;
+                    if (typeof literal !== "string" || !literal.length) {
+                        page.copyError = qsTr("No report is available to copy yet."); return;
+                    }
+                    ApplicationInfo.copyText(literal);
+                    if (!current()) return;
+                    button.copied = true;
+                    if (report) reportCopyFeedback.restart(); else connectionCopyFeedback.restart();
+                } catch (error) {
+                    if (current()) { button.copied = false; page.copyError = qsTr("The details could not be copied. Try again."); }
+                }
+            }
             clip: true
             Column {
                 id: aiContent
                 width: Math.max(0, aiPage.availableWidth)
                 spacing: AppSizes.unit
-                EaElements.SideBarButton {
-                    objectName: "preferences.ai.workReport"
-                    width: parent.width
-                    text: qsTr("Show current or last work report")
-                    fontIcon: "file-alt"
-                    onClicked: workReport.open()
-                }
                 EaElements.Label {
                     width: parent.width
                     text: qsTr("Skill sources")
@@ -529,6 +552,81 @@ AppDialog {
                     visible: text.length>0
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
+                    color: EaStyle.Colors.red
+                }
+                EaElements.CheckBox {
+                    objectName: "preferences.ai.copyTechnicalDetails"
+                    text: qsTr("Include technical details when copying steps")
+                    checked: Preferences.assistantCopyTechnicalDetails
+                    onToggled: Preferences.assistantCopyTechnicalDetails = checked
+                }
+                EaElements.Label { text: qsTr("Diagnostics"); font.bold: true }
+                EaElements.SideBarButton {
+                    id: copyWorkReport
+                    objectName: "preferences.ai.workReport"
+                    width: parent.width
+                    property bool copied: false
+                    text: copied ? qsTr("Copied") : qsTr("Copy current or last work report")
+                    fontIcon: copied ? "check" : "copy"
+                    contentItem: Item {
+                        implicitWidth: copyWorkReportContent.implicitWidth
+                        Row {
+                            id: copyWorkReportContent
+                            anchors.centerIn: parent
+                            spacing: AppSizes.unit * 0.5
+                        EaElements.Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: copyWorkReport.fontIcon
+                            font.family: EaStyle.Fonts.iconsFamily
+                            color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                            Accessible.ignored: true
+                        }
+                        EaElements.Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: copyWorkReport.text
+                            color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                        }
+                    }
+                    }
+                    onClicked: aiPage.copyDiagnostics(copyWorkReport, true)
+                    Timer { id: reportCopyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: copyWorkReport.copied = false }
+                }
+                EaElements.SideBarButton {
+                    id: copyConnection
+                    objectName: "preferences.ai.copyConnection"
+                    width: parent.width
+                    property bool copied: false
+                    text: copied ? qsTr("Copied") : qsTr("Copy connection and context details")
+                    fontIcon: copied ? "check" : "copy"
+                    contentItem: Item {
+                        implicitWidth: copyConnectionContent.implicitWidth
+                        Row {
+                            id: copyConnectionContent
+                            anchors.centerIn: parent
+                            spacing: AppSizes.unit * 0.5
+                        EaElements.Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: copyConnection.fontIcon
+                            font.family: EaStyle.Fonts.iconsFamily
+                            color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                            Accessible.ignored: true
+                        }
+                        EaElements.Label {
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: copyConnection.text
+                            color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                        }
+                    }
+                    }
+                    onClicked: aiPage.copyDiagnostics(copyConnection, false)
+                    Timer { id: connectionCopyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: copyConnection.copied = false }
+                }
+                EaElements.Label {
+                    width: parent.width
+                    text: aiPage.copyError
+                    visible: text.length > 0
+                    textFormat: Text.PlainText
+                    wrapMode: Text.Wrap
                     color: EaStyle.Colors.red
                 }
             }
@@ -728,14 +826,6 @@ AppDialog {
         font: themeLabel.font
     }
 
-    DiagnosticsDialog {
-        id: workReport
-        objectName: "assistant.workReport"
-        objectNamePrefix: "assistant.workReport"
-        parent: Overlay.overlay
-        title: qsTr("Current or last assistant work report")
-        readText: () => Session.assistant.workReportDocument()
-    }
     DiagnosticsDialog {
         id: diagnostics
         parent: Overlay.overlay

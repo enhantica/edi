@@ -2533,3 +2533,7 @@ Outgoing Result/Diagnostic projection now retains bounded factual app messages
 and known code/target/stage data through the same size/project walk. These are
 untrusted diagnostic data, never instructions. Native Fit identifies its actual
 status-bar owner and closed fit field rather than disguising failure as project.
+
+### Connection disclosure presentation (2026-10-28)
+
+The original Connect/Approve dialog keeps its exact captured outgoing context and account/project/model/input approval guards, existing sign-in, Cancel and consent effect. Its visible disclosure is concise plain language: messages, attachments and relevant project data including measurements are sent to OpenAI, and account availability/usage limits apply. Empty-project/file counts, technical expanders and raw payload panels are removed. AI Preferences can copy the existing published technical connection/context snapshot without displaying it. This does not assert local-only isolation, add file authority, change runtime capabilities, omit measurement disclosure or weaken a consent/currentness boundary.

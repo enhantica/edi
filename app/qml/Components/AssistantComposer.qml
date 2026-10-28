@@ -717,29 +717,36 @@ Rectangle {
             EaElements.ToolButton {
                 id: showActionsControl
                 objectName: "assistant.showActions"
-                Layout.minimumWidth: composer.actionSize
-                Layout.maximumWidth: composer.actionSize
+                Layout.minimumWidth: implicitWidth
+                Layout.maximumWidth: implicitWidth
                 Layout.minimumHeight: composer.actionSize
                 Layout.maximumHeight: composer.actionSize
-                implicitWidth: composer.actionSize
+                implicitWidth: contentItem.implicitWidth + AppSizes.unit
                 implicitHeight: composer.actionSize
                 fontIcon: "eye"
+                text: qsTr("Show actions")
                 checkable: true
                 checked: composer.assistant.showActions
                 highlighted: checked
                 font.pixelSize: EaStyle.Sizes.fontPixelSize*0.75
-                contentItem: EaElements.Label {
-                    text: showActionsControl.fontIcon
-                    font.family: EaStyle.Fonts.iconsFamily
-                    font.pixelSize: showActionsControl.font.pixelSize*1.25
-                    horizontalAlignment: Text.AlignHCenter
-                    verticalAlignment: Text.AlignVCenter
-                    color: !showActionsControl.enabled ? EaStyle.Colors.themeForegroundDisabled : showActionsControl.checked ? EaStyle.Colors.themeAccent : showActionsControl.foregroundColor()
+                contentItem: RowLayout {
+                    spacing: AppSizes.unit * 0.4
+                    EaElements.Label {
+                        text: showActionsControl.fontIcon
+                        font.family: EaStyle.Fonts.iconsFamily
+                        font.pixelSize: showActionsControl.font.pixelSize * 1.25
+                        color: showActionsControl.checked ? EaStyle.Colors.themeAccent : showActionsControl.foregroundColor()
+                        Accessible.ignored: true
+                    }
+                    EaElements.Label {
+                        text: showActionsControl.text
+                        color: showActionsControl.checked ? EaStyle.Colors.themeAccent : showActionsControl.foregroundColor()
+                    }
                 }
                 background: Rectangle {
                     border.width: 0
-                    implicitWidth: composer.actionSize; implicitHeight: implicitWidth
-                    radius: width*0.5
+                    implicitHeight: composer.actionSize
+                    radius: height * 0.5
                     color: showActionsControl.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
                         : showActionsControl.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
                 }
