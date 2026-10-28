@@ -302,3 +302,22 @@ and preserves the current/native scientific strategy and conditional recovery gu
 The native tool description and compiled developer instruction follow the same contract.
 SkillCreator quick_validate and the exact catalog/body hash bond validate packaging; no
 specimen values, fit target, fixed procedure or phrase-mirroring behavior test is introduced.
+
+
+## 2026-10-28: current control tiers and already admitted inputs
+
+The original CategoryListModel places SC extinction selectors in Experiment Basic.
+The individual action's declared Basic/Extras sequence and its target discovery now
+agree: absorption/cutoff and dataset weight retain their actual Extras routes, while
+extinction type/mosaic distribution use Basic. Existing collapsed-category reveal
+recognizes the same original extinction group; no control is enabled or recreated.
+
+The input catalogue's already_admitted fact is derived from an actual selected-file
+receipt or a completed acquisition, never an attachment pathname. Existing selected
+file IDs can be used directly. A scope ID absent from the current original receipt
+is an invalid argument, with a factual exact-copy recovery message, rather than a
+claim that a previously valid scope was retired. Exact ID and native once checks
+remain unchanged. Project-assistance1.8.3 (SHA256 `28c94bb5340e9c8b714ec1322d275457bf9e552344bfcda8f295b9c3b89d19ee`) and the tool descriptions
+prefer ordinary current-project CIF/data import and native Estimate; the complete
+powder operation remains optional. No specimen, fixed refinement procedure, default
+parameter list or new input authority is introduced.
