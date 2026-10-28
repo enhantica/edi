@@ -422,6 +422,17 @@ def control_expression(name):
     return '(' + _whole_window_objects_expression() + '.find(x=>x.objectName===' + json.dumps(name) + ')||null)'
 
 
+def _scene_control_expression(name):
+    # Normal original controls and this test's observer Item belong to the
+    # current Main visual tree. Follow each actual visual child only: no QObject
+    # data graph, aliases or Set identity traversal. The finite acyclic parent
+    # tree bounds the read, and absence still returns null without creating UI.
+    return ("(function(){const root=window.contentItem,queue=root?[root]:[];"
+            "while(queue.length){const x=queue.shift();if(x.objectName===" + json.dumps(name) + ")return x;"
+            "const children=x.children;for(let i=0;i<children.length;i++){const child=children[i];"
+            "if(child&&child.parent===x)queue.push(child);}}return null;})()")
+
+
 def tool_call(tool, identity, **arguments):
     return {
         'tool': tool,
@@ -5407,9 +5418,9 @@ def test_native_estimate_then_ids_matches_separate_original_methods_and_undo_seq
         # read-only public pressed-signal observation. No fabricated click/slot.
         wait_positive_tab(actor, 'appBar.tab.experiment')
         actor.command('click', name='appBar.tab.experiment')
-        button = control_expression('background.namePoints')
+        button = _scene_control_expression('background.namePoints')
         observer = '(function(){const b=' + button + ';if(!b)return false;'
-        observer += 'const t=' + control_expression('background.list') + ';if(!t||!t.sourceModel)return false;'
+        observer += 'const t=' + _scene_control_expression('background.list') + ';if(!t||!t.sourceModel)return false;'
         observer += 'const m=t.sourceModel,o=Qt.createQmlObject(\'import QtQuick; Item {visible:false;objectName:"e11.test.namingPresses";property int presses:0;property bool exposed:false;property int shapeEvents:0;property var events:[];property var atPress:null}\',contentItem);'
         observer += 'function snap(kind){const p=b.mapToItem(contentItem,0,0),n=Math.min(t.count,t.maxRowCountShow),last=n>0?t.itemAtIndex(n-1):null,lp=last?last.mapToItem(t,0,0):null;return {kind:kind,nativeCount:m.count,viewCount:t.count,tableHeight:t.height,contentHeight:t.contentHeight,cap:t.maxRowCountShow,buttonY:p.y,lastShownRow:last?{y:lp.y,height:last.height}:null};}'
         observer += 'function shape(kind){o.shapeEvents++;o.events=o.events.concat([snap(kind)]);}'
@@ -5423,7 +5434,7 @@ def test_native_estimate_then_ids_matches_separate_original_methods_and_undo_seq
     actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=show_actions)
     assert len(actor.responses()) == 1, 'Estimate and naming settle one original native call without replaying an uncertain Estimate'
     if show_actions:
-        naming_geometry = qml(actor, '(function(){const o=' + control_expression('e11.test.namingPresses')
+        naming_geometry = qml(actor, '(function(){const o=' + _scene_control_expression('e11.test.namingPresses')
                               + ';return {shapeEvents:o.shapeEvents,events:o.events,atPress:o.atPress,presses:o.presses,exposed:o.exposed};})()')
         (actor.folder / 'actual-estimate-model-layout-and-name-input.json').write_text(json.dumps(naming_geometry, indent=2))
     result = native_result(actor.responses()[0])
@@ -5432,7 +5443,7 @@ def test_native_estimate_then_ids_matches_separate_original_methods_and_undo_seq
     assert point_rows(actor) == named, (
         'Both modes match the two independent original native Estimate/Id-from-position owners exactly')
     if show_actions:
-        proof = qml(actor, '(function(){const o=' + control_expression('e11.test.namingPresses')
+        proof = qml(actor, '(function(){const o=' + _scene_control_expression('e11.test.namingPresses')
                     + ';return {presses:o.presses,exposed:o.exposed};})()')
         assert proof['presses'] == 1 and proof['exposed'], (
             'Show ON genuinely presses the exposed original naming button once, including an ordinary naming no-op')

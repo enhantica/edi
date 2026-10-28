@@ -106,15 +106,19 @@ def metadata_reply(request, value, family):
         reply(request, value)
 
 
+def agent_message(identity, text):
+    # Pinned092d event_mapping.rs406-420 and v2/item.rs252-263,889-904:
+    # live item events and terminal Summary serialize the SAME nullable fields.
+    return {'type': 'agentMessage', 'id': identity, 'text': text,
+            'phase': None, 'memoryCitation': None, 'delivery': None, 'questions': None}
+
+
 def remember_actual_item(method, params):
     if not config.get('observe_context_continuity') or method not in ('item/started', 'item/completed'):
         return
     identity = params.get('threadId')
     assert identity in state['threads'] and params.get('turnId') and isinstance(params.get('item'), dict)
     item = json.loads(json.dumps(params['item']))
-    if item.get('type') == 'agentMessage':
-        for optional in ('phase', 'memoryCitation', 'delivery', 'questions'):
-            item.setdefault(optional, None)
     entries = state.setdefault('item_history', {}).setdefault(identity, [])
     key = (params['turnId'], item['id'])
     old = next((entry for entry in entries if (entry['turnId'], entry['item']['id']) == key), None)
@@ -161,7 +165,7 @@ def advance():
         text = config.get(
             'final_text', 'No supported improvement recommendation from this finite fixture.'
         )
-        item = {'type': 'agentMessage', 'id': turn_id + '-final', 'text': text}
+        item = agent_message(turn_id + '-final', text)
         binding = {'threadId': thread_id, 'turnId': turn_id, 'item': item}
         notify('item/started', binding)
         notify('item/completed', {**binding, 'completedAtMs': 1})
@@ -173,10 +177,7 @@ def advance():
         persist()
         # Pinned092d live notifications are summaries, not the persisted full
         # item history. bespoke_event_handling.rs1329-1349 and upstream test3480.
-        summary_item = dict(item)
-        for optional in ('phase', 'memoryCitation', 'delivery', 'questions'):
-            summary_item.setdefault(optional, None)
-        summary = {**completed, 'items': [summary_item], 'itemsView': 'summary'}
+        summary = {**completed, 'items': [dict(item)], 'itemsView': 'summary'}
         notify('turn/completed', {'threadId': thread_id, 'turn': summary})
         title = config.get('automatic_thread_name_after_first_turn')
         if title and len(state['threads'][thread_id]['turns']) == 1:
@@ -200,7 +201,7 @@ def advance():
         stream = spec['message_stream']
         chunks = [stream['chunk']] * stream['count']
         binding = {'threadId': thread_id, 'turnId': turn_id}
-        item = {'type': 'agentMessage', 'id': call_id, 'text': ''}
+        item = agent_message(call_id, '')
         notify('item/started', {**binding, 'item': item})
         for chunk in chunks:
             notify('item/agentMessage/delta', {**binding, 'itemId': call_id, 'delta': chunk})
