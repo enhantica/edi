@@ -5,6 +5,7 @@
 #include "assistant_history.hpp"
 #include <map>
 #include <QSet>
+#include <QAbstractItemModel>
 #include <QMap>
 #include "assistant_markdown.hpp"
 #include <QAbstractTextDocumentLayout>
@@ -334,6 +335,7 @@ int main(int argc,char** argv) {
     };
     QMetaObject::Connection session_notification_fault;
     QMetaObject::Connection session_transport_failure_watch;
+    QMetaObject::Connection pending_send_write_fault;
     Object session_fault_facts;
     unsigned session_notification_hits=0;
     QObject session_fault_observer;
@@ -1397,6 +1399,45 @@ int main(int argc,char** argv) {
                 else if(operation=="archive")original->archiveSession(input["thread_id"].toString());
                 else throw std::invalid_argument("original public Refresh/Archive operation required");
                 result={{"called",true},{"original_vm_after",bool(original)&&observed&&observed->assistant()==original}};
+            }
+            else if(op=="arm_pending_send_write_fault") {
+                if(!observed || !window)throw std::runtime_error("original Main owner required for pending Send fault");
+                QPointer<edi_app::AssistantViewModel> original=observed->assistant();
+                QPointer<edi_app::ProjectViewModel> original_project=observed->project();
+                if(!original || !original->connected() || !original->draftAdmissionReady())
+                    throw std::runtime_error("pending Send fault requires the original connected ready owner");
+                QPointer<edi_app::RowTableModel> rows=original->messages();
+                const auto expected_text=input["text"].toString();
+                if(!rows || expected_text.isEmpty())throw std::invalid_argument("exact original pending user text required");
+                for(int at=0;at<rows->count();++at)
+                    if(rows->text(at,"kind")=="user" && rows->text(at,"status")=="pending")
+                        throw std::runtime_error("an existing pending user row cannot be used as a future Send fault");
+                QObject::disconnect(pending_send_write_fault);session_fault_facts=Object{};
+                pending_send_write_fault=QObject::connect(rows.data(),&QAbstractItemModel::rowsInserted,&session_fault_observer,
+                    [&,original,original_project,rows,expected_text](const QModelIndex& parent,int first,int last) {
+                        if(parent.isValid() || !observed || !window || !original || !rows ||
+                           observed->assistant()!=original || observed->project()!=original_project || original->messages()!=rows)return;
+                        for(int at=first;at<=last && at<rows->count();++at) {
+                            if(rows->text(at,"kind")!="user" || rows->text(at,"status")!="pending" || rows->text(at,"text")!=expected_text)continue;
+                            // Close only the proved owned child at the REAL original
+                            // row publication. Never propagate an exception through Qt.
+                            const auto row_id=rows->text(at,"id");
+                            QObject::disconnect(pending_send_write_fault);
+                            session_fault_facts["pending_user_row_inserted"]=true;
+                            session_fault_facts["pending_user_row_id"]=row_id;
+                            session_fault_facts["original_vm_before"]=true;
+                            session_fault_facts["original_message_model_before"]=true;
+                            session_fault_facts["original_project_before"]=true;
+                            try {close_owned_session_write();}
+                            catch(const std::exception& failure) {
+                                session_fault_facts["pending_send_fault_error"]=QString::fromUtf8(failure.what());
+                            } catch(...) {session_fault_facts["pending_send_fault_error"]="unclassified test-owned fault preparation error";}
+                            session_fault_facts["original_vm_after"]=bool(original)&&observed&&observed->assistant()==original;
+                            return;
+                        }
+                    },Qt::DirectConnection);
+                result={{"armed",true},{"boundary","original messages.rowsInserted pending user"},
+                    {"original_vm",true},{"original_message_model",true}};
             }
             else if(op=="close_owned_transport_write") {close_owned_session_write();result=session_fault_facts;}
             else if(op=="session_fault_facts") {result=session_fault_facts;result["notification_hits"]=static_cast<int>(session_notification_hits);}

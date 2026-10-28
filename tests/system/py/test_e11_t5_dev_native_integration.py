@@ -5982,30 +5982,106 @@ def _archive_candidates(actor):
 
 def _capture_genuine_archive(actor, label):
     actual_rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
-    desired = {row['id']: row for row in actual_rows}
+    # Hf51d49068/H92: activity/error display text is intentionally blank. Full
+    # canonical text belongs only to the backend, never to these view cells.
+    desired = {row['id']: {key: value for key, value in row.items()
+               if key != 'text' or row['kind'] in ('user', 'assistant')}
+               for row in actual_rows}
     original_ids = set(desired)
     assert original_ids, 'A captured archive comes from actual nonempty first-run app rows rather than a constructed snapshot'
-    observation = {}
+    receipt = qml(actor, 'Session.assistant.workReportReceipt')
+    report_paths = set()
+    def reported_paths(value):
+        if isinstance(value, dict):
+            for child in value.values():reported_paths(child)
+        elif isinstance(value, list):
+            for child in value:reported_paths(child)
+        elif isinstance(value, str) and value.endswith('.json'):
+            from urllib.parse import unquote, urlparse
+            path = Path(unquote(urlparse(value).path)) if value.startswith('file:') else Path(value)
+            if path.is_absolute():report_paths.add(path)
+    reported_paths(receipt)
+    storage = Path(actor.last['test_storage']).resolve()
+    project_path = actor.last['ui'].get('project', {}).get('path')
+    report_root = Path(project_path).resolve() / 'reports' if project_path else None
+    observation = {};reports = {};report_copies = {}
+    def actual_report_rows():
+        if report_root and report_root.is_dir():report_paths.update(report_root.glob('*.json'))
+        def modified(path):
+            try:return (path.stat().st_mtime_ns, str(path))
+            except OSError:return (-1, str(path))
+        # Current canonical publication wins over older same-status snapshots;
+        # filesystem freshness only orders actual reports, never creates rows.
+        for path in sorted(report_paths, key=modified):
+            try:
+                actual = path.resolve(strict=True)
+                allowed = actual.is_relative_to(storage) or (report_root and actual.is_relative_to(report_root))
+                if not allowed or path.is_symlink() or actual.stat().st_uid != os.geteuid():continue
+                raw = actual.read_bytes();document = json.loads(raw)
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not isinstance(document, dict) or not isinstance(document.get('history_evidence'), list):continue
+            fingerprint = hashlib.sha256(raw).hexdigest()
+            for entry in document['history_evidence']:
+                row = entry.get('row') if isinstance(entry, dict) else None
+                if not isinstance(row, dict) or row.get('id') not in original_ids:continue
+                # A stale report is evidence of its old state, never a reason to
+                # demand that the current cache regress to an older status.
+                if row.get('status') != desired[row['id']]['status']:continue
+                reports[row['id']] = {'row': row, 'source': str(actual), 'sha256': fingerprint}
+            if any(row['source'] == str(actual) and row['sha256'] == fingerprint for row in reports.values()):
+                copied = actor.folder / ('genuine-' + label + '-report-' + fingerprint[:16] + '.json')
+                if not copied.exists():copied.write_bytes(raw)
+                report_copies[fingerprint] = {'source': str(actual), 'copy': str(copied), 'sha256': fingerprint}
+        return reports
     def ready(_value):
+        actual_report_rows()
         for path in _archive_candidates(actor):
             try:
                 raw = path.read_bytes();rows = json.loads(raw)
             except (OSError, json.JSONDecodeError):
                 continue
             indexed = {row['id']: row for row in rows if isinstance(row, dict) and 'id' in row} if isinstance(rows, list) else {}
-            if original_ids <= indexed.keys() and all(all(indexed[identity].get(key) == value for key, value in expected.items()) for identity, expected in desired.items()):
-                observation.update(source=path, raw=raw, rows=rows)
-                return True
+            if not original_ids <= indexed.keys():continue
+            if not all(all(indexed[identity].get(key) == value for key, value in expected.items())
+                       for identity, expected in desired.items()):continue
+            # Cross-check actual canonical report text where genuinely retained;
+            # never manufacture canonical rows from compact display values.
+            if not all(all(indexed[identity].get(key) == value['row'].get(key)
+                           for key in ('id', 'kind', 'status', 'text'))
+                       for identity, value in reports.items()):continue
+            observation.update(source=path, raw=raw, rows=rows)
+            return True
         return False
-    actor.until(ready)
+    try:
+        actor.until(ready)
+    except BaseException:
+        # Preserve reached raw files before the temporary ordinary owner closes.
+        # These are failed-boundary observations, NOT positive restore fixtures.
+        failed = []
+        for index, path in enumerate(_archive_candidates(actor)):
+            try:raw = path.read_bytes()
+            except OSError:continue
+            copied = actor.folder / ('failed-' + label + '-cache-' + str(index) + '.json')
+            copied.write_bytes(raw);failed.append({'source': str(path), 'copy': str(copied),
+                'sha256': hashlib.sha256(raw).hexdigest(), 'qualification': 'failed capture boundary only'})
+        (actor.folder / ('failed-' + label + '-capture.json')).write_text(json.dumps({
+            'raw_observations': failed, 'canonical_report_copies': list(report_copies.values()),
+            'display_projection': actual_rows, 'positive_snapshot': False}, indent=2))
+        raise
     copied = actor.folder / ('genuine-' + label + '.json')
     copied.write_bytes(observation['raw'])
-    receipt = {'source': str(observation['source']), 'captured': str(copied),
+    result = {'source': str(observation['source']), 'captured': str(copied),
         'sha256': hashlib.sha256(observation['raw']).hexdigest(), 'bytes': len(observation['raw']),
-        'original_visible_ids': sorted(original_ids), 'source_bytes_unchanged': observation['source'].read_bytes() == copied.read_bytes()}
-    (actor.folder / ('genuine-' + label + '-provenance.json')).write_text(json.dumps(receipt, indent=2))
-    assert receipt['source_bytes_unchanged'], 'Only byte-exact genuine app history is supplied to the original public archive owner'
-    return copied, observation['rows'], receipt
+        'original_visible_ids': sorted(original_ids),
+        'source_bytes_unchanged': observation['source'].read_bytes() == copied.read_bytes(),
+        'canonical_report_crosschecked_ids': sorted(reports),
+        'canonical_report_copies': list(report_copies.values()),
+        'report_crosscheck': 'observed matching canonical rows' if reports else 'not observed; no report-derived cache content invented',
+        'projection_contract': 'IDs/kinds/status plus exact user/assistant text; full raw canonical bytes copied unchanged'}
+    (actor.folder / ('genuine-' + label + '-provenance.json')).write_text(json.dumps(result, indent=2))
+    assert result['source_bytes_unchanged'], 'Only byte-exact genuine app history is supplied to the original public archive owner'
+    return copied, observation['rows'], result
 
 
 def _arm_owned_archive_io(gate, actor, target, mode):
@@ -6837,3 +6913,1668 @@ def test_display_math_keeps_original_list_and_heading_semantic_membership(main_a
     assert document['whole_source_copy'] == source, 'Display placement preserves the complete original list/heading source for copying and backend history'
     frame = actor.folder / ('actual-display-' + container + '-' + position + '.png')
     assert actor.command('capture_frame', path=str(frame))['reply']['saved'], 'The original semantic display placement has an actual current-window frame for visual qualification'
+
+
+# Independently authored original-owner gate packet: explicit_new_project_saved_ready.py
+# Qualified materialization: only saved-current New; old full private parameterization retained unchanged.
+# PRIVATE/UNRUN: Hd8055f37d explicit NEW authority, original GetStarted Create /
+# AppState.afterChanges, independent byte conservation and ordinary Session Save
+# owners. This is a focused native transition gate, not provider intent or full
+# powder/scientific qualification. No destination is planted for native Create.
+
+def _new_project_scientific_bytes(root):
+    return {str(path.relative_to(root)): path.read_bytes()
+            for path in root.rglob('*') if path.is_file()
+            and 'reports' not in path.relative_to(root).parts}
+
+
+def _new_project_file_hashes(values):
+    return {name: hashlib.sha256(raw).hexdigest() for name, raw in values.items()}
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+@pytest.mark.parametrize('old_choice', ['saved'])
+def test_explicit_new_project_never_reuses_current_and_preserves_original_choices_inputs_and_task(
+    main_actor, tmp_path, show_actions, old_choice
+):
+    description = 'An explicit unsaved description belonging only to the original project.'
+    # A separate original ordinary Save provides the byte-level transition
+    # baseline when the user elects Save. No output from native Create supplies
+    # scientific expected values, and no new numerical correctness is claimed.
+    expected_saved = None
+    if old_choice == 'modified_save':
+        reference = main_actor([[]]);reference_root = copied_estimate_project(tmp_path / 'ordinary-save-reference')
+        assert reference.command('open', path=str(reference_root))['reply']['opened'], (
+            'The Save reference opens an independent complete source through the original ordinary owner')
+        reference.until(lambda value: not value['ui']['project']['calculating'])
+        qml(reference, 'Session.project.description=' + json.dumps(description))
+        assert reference.command('save')['reply']['saved'], (
+            'The independent original Save owner persists the explicit old-project edit without native New')
+        reference.until(lambda value: not value['ui']['project']['calculating'])
+        expected_saved = _new_project_scientific_bytes(reference_root)
+        reference.close()
+    actor = main_actor([[]], show_actions=show_actions)
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    old_root = copied_estimate_project(tmp_path / 'original-current')
+    assert actor.command('open', path=str(old_root))['reply']['opened'], (
+        'Explicit New begins with a genuinely already-open complete project instead of a seeded empty Session')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    original_bytes = _new_project_scientific_bytes(old_root)
+    shutil.copytree(old_root, actor.folder / 'original-project-byte-preimage')
+    current_old_root = old_root
+    if old_choice != 'saved':
+        qml(actor, 'Session.project.description=' + json.dumps(description))
+        assert qml(actor, 'Session.project.modified'), (
+            'Modified-state branches reach a genuine ordinary metadata edit before the new-project request')
+    if old_choice == 'ordinary_save_as_before_new':
+        # Explicit driver fixture preparation through the public original owner,
+        # never fabricated native chooser acceptance. This is NOT a claim that
+        # queued Create->SaveAs chooser continuation has been exercised.
+        current_old_root = tmp_path / 'ordinary-user-selected-save-as-copy'
+        assert not current_old_root.exists(), 'The actual original SaveAs owner creates its absent fixture destination'
+        assert actor.command('save_as', path=str(current_old_root))['reply']['saved'], (
+            'The explicitly elected ordinary SaveAs uses the existing Session API and actual write result')
+        assert _new_project_scientific_bytes(old_root) == original_bytes, (
+            'Ordinary SaveAs preserves the prior source project bytes instead of overwriting the old location')
+    before_new = _new_project_scientific_bytes(current_old_root)
+    original_project = actor.last['ui']['project']
+    source = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    original_input = source.stat();input_sha = hashlib.sha256(source.read_bytes()).hexdigest()
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
+        'Explicit New retains a genuinely admitted unchanged source input rather than substituting copied or inferred attachments')
+    selected = actor.last['ui']['selected_files']
+    original_files = [{key: row[key] for key in ('id', 'name', 'bytes')} for row in selected]
+    name = 'new_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    title = 'Explicitly requested distinct new project'
+    new_description = 'Independent original-current-project preservation gate.'
+    documents = Path(actor.last['ui']['environment']['documents_root']);destination = documents / name
+    assert not destination.exists() and destination != current_old_root, (
+        'The native new-project action owns an absent ordinary Documents destination distinct from the original project')
+    actor.configure_turns([[
+        tool_call('create_project', 'explicit-new-from-existing', name=name, title=title, description=new_description),
+        tool_call('read_selected_file', 'same-original-file-after-new-choice', file_id=original_files[0]['id'],
+                  offset=0, max_bytes=source.stat().st_size)]])
+    actor.connect();marker='e11.new.original-project-change';_watch_original_project_open(actor, marker)
+    actor.command('clear_ui_sequence')
+    task = 'Create and save a new project using the attached files. One phase, NPD, wavelength 1.49 Å. Refine the structure and show the report.'
+    _session_request_with_original_disclosure(actor, task)
+    if old_choice in ('modified_save', 'modified_cancel'):
+        actor.until(lambda value: any(c['name'] == 'unsavedChanges' and c['fully_exposed'] and c['enabled']
+            for c in value['ui']['controls']))
+        assert Path(actor.last['ui']['project']['path']).resolve() == current_old_root.resolve() \
+            and qml(actor, '(' + _scene_control_expression(marker) + ').changes') == 0, (
+                'The original unsaved-work decision is reached before New can retire or replace the still-current original project')
+        assert _new_project_scientific_bytes(old_root) == original_bytes and not destination.exists(), (
+            'Pending user choice neither silently saves/discards old work nor precreates the requested new destination')
+        role = 'save' if old_choice == 'modified_save' else 'cancel'
+        button = actor.command('dialog_ok', name='unsavedChanges', role=role)['reply']
+        assert button['pressed_changes'] > 0 and button['actual_dialog_name'] == 'unsavedChanges', (
+            'Only genuine input on the original standard Save or Cancel button settles the old-work choice')
+    actor.until(lambda value: len(actor.responses()) == 2 and value['ui']['state'] == 'idle',
+                visible_progress=show_actions)
+    current = actor.last['ui']['project']
+    actual_create = actor.responses()[0]['result']
+    create_body = json.loads(actual_create['contentItems'][0]['text'])
+    if old_choice == 'modified_cancel':
+        assert not create_body.get('adopted') and not create_body.get('complete') and create_body.get('status') != 'created', (
+            'Cancel cannot be published as successful adoption or completed New merely because old science remains usable')
+        assert Path(current['path']).resolve() == current_old_root.resolve() \
+            and qml(actor, 'Session.project.modified') and qml(actor, 'Session.project.description') == description, (
+                'Cancel retains the same original modified scientific owner and its unsaved edit rather than silently reusing it as New')
+        assert qml(actor, '(' + _scene_control_expression(marker) + ').changes') == 0 \
+            and not destination.exists() and _new_project_scientific_bytes(old_root) == original_bytes, (
+                'Canceled explicit New performs no project replacement or write to old/new science destinations')
+    else:
+        assert actual_create['success'] and create_body['adopted'] and create_body['complete'], (
+            'A genuine new current project also settles its original Create call truthfully rather than hiding an unconfirmed applied prefix')
+        assert Path(current['path']).resolve() == destination.resolve() and destination != current_old_root, (
+            'Explicit New adopts a genuinely distinct actual project at the requested normal destination, never the matching old project')
+        assert current['structures'] == 0 and current['backgrounds'] == [] \
+            and qml(actor, 'Session.project.name') == name and qml(actor, 'Session.project.title') == title \
+            and qml(actor, 'Session.project.description') == new_description, (
+                'The new ordinary project owns only its requested metadata and original empty scientific defaults, not old structures or data')
+        assert (destination / 'project.edi').is_file(), 'The original ordinary Create actually saves its new project rather than reporting a boolean alone'
+        if old_choice == 'modified_save':
+            assert _new_project_scientific_bytes(old_root) == expected_saved, (
+                'Choosing Save before New matches the independently exercised original Save owner for every old source byte')
+        else:
+            assert _new_project_scientific_bytes(current_old_root) == before_new \
+                and _new_project_scientific_bytes(old_root) == original_bytes, (
+                    'A saved old project and any real ordinary SaveAs source remain byte-exact after explicit New')
+    assert [{key: row[key] for key in ('id', 'name', 'bytes')} for row in actor.last['ui']['selected_files']] == original_files, (
+        'The explicitly delegated original task retains all actual selected-input identities across either New or Cancel')
+    readback = native_result(actor.responses()[1])
+    assert any(value == source.read_text() for row in objects(readback) for value in row.values() if isinstance(value, str)), (
+        'The continuing real native reader still reaches the original approved source bytes without reattachment or substitute input')
+    assert source.stat().st_ino == original_input.st_ino and hashlib.sha256(source.read_bytes()).hexdigest() == input_sha, (
+        'Neither project transition changes the physical original source identity or byte authority')
+    inputs = _session_state(actor)['inputs']
+    assert len(inputs) == 1 and any(task in str(value) for value in inputs[0]['input']), (
+        'The original captured New objective is one genuine model input, not a fresh injected continuation or an added placeholder task')
+    events = actor.last['ui']['ui_sequence']
+    if show_actions and old_choice != 'modified_cancel':
+        assert any(e['kind'] == 'mouse_press' and e.get('create_contains_press') for e in events), (
+            'Show ON genuinely clicks the FIRST normal current-window Create control even while an old project was open')
+        assert any(e['kind'] in {'key_press', 'input_method'} and e.get('focus') == 'createProject.name'
+                   and e.get('dialog_visible') for e in events), (
+            'Show ON enters the supplied new name through the actual original Create dialog editor')
+        assert any(e['kind'] == 'mouse_press' and e.get('confirm_contains_press')
+                   and e.get('dialog_name') == name and e.get('dialog_title') == title
+                   and e.get('dialog_description') == new_description for e in events), (
+            'Show ON confirms the real original form with all requested new metadata instead of a hidden backend shortcut')
+    elif not show_actions:
+        assert not any(e['kind'].startswith('pointer_') or e.get('dialog_visible') for e in events), (
+            'Show OFF retains ordinary required unsaved-work choice while avoiding assistant-driven Create presentation')
+    (actor.folder / 'explicit-new-from-original-current.json').write_text(json.dumps({
+        'old_choice': old_choice, 'mode': show_actions, 'original_path': str(old_root),
+        'current_before_new': str(current_old_root), 'requested_new': str(destination),
+        'original_byte_hashes': _new_project_file_hashes(original_bytes),
+        'current_old_byte_hashes': _new_project_file_hashes(_new_project_scientific_bytes(current_old_root)),
+        'actual_create_reply': actual_create, 'original_selected_files': original_files,
+        'task_input': inputs[0], 'normal_save_as_qualification': 'explicit ordinary API preparation only; queued native chooser continuation not exercised',
+        'workflow_qualification': 'creation/choice/task-input transition only; no fit/provider/scientific matrix acceptance'}, indent=2))
+
+
+# Independently authored original-owner gate packet: review66_private_gates.py
+# Independent review66 classes: actual current account proof, admitted human
+# input/settings continuation, and preservation of viable A before B consent.
+# This append is PRIVATE/UNRUN. It requires the same peer's pinned question and
+# correlated account-read hold carriers, not a production hook or seeded state.
+
+def _review66_hold_original_identity(actor, release):
+    value = json.loads((actor.folder / 'peer.json').read_bytes())
+    fixture = dict(value.get('session_fixture', {}));fixture['account_read_hold'] = str(release)
+    _session_configure(actor, session_fixture=fixture,
+        usage_notifications=[{'method': 'account/updated', 'params': {'authMode': 'chatgpt', 'planType': None}}])
+    before = len(_session_wire(actor, 'account/read'))
+    actor.command('refresh_usage')
+    actor.until(lambda _value: len(_session_wire(actor, 'account/read')) > before)
+    request = _session_wire(actor, 'account/read')[-1]
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    assert not any(row.get('id') == request['id'] and ('result' in row or 'error' in row) for row in sent), (
+        'The admission witness really holds the original correlated account reply after a mode-only notification')
+    return request
+
+
+@pytest.mark.parametrize('answer_kind', ['free_text', 'offered_option'])
+def test_existing_human_question_retains_original_waiter_until_same_account_confirmation(main_actor, answer_kind):
+    question = {'id': 'original-question', 'header': 'Current task',
+        'question': 'Should the current read-only task continue?', 'isOther': True,
+        'isSecret': False, 'options': [{'label': 'Keep current', 'description': 'Keep the original task.'}]}
+    actor = main_actor([[{'human_question': question, 'call_id': 'original-question-owner'}]])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();actor.request('Ask the existing question before continuing this original read-only task.')
+    actor.until(lambda value: bool(value['ui']['pending_question']))
+    original = actor.last['ui']['pending_question'];account = qml(actor, 'Session.assistant.account')
+    release = actor.folder / 'release-original-question-identity'
+    try:
+        held = _review66_hold_original_identity(actor, release)
+        answer = 'The original task may continue.' if answer_kind == 'free_text' else 'Keep current'
+        qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(original['question_id']) + ',' + json.dumps(answer) + ')')
+        actor.command('refresh_usage')
+        assert actor.last['ui']['pending_question'] == original and not _session_state(actor).get('human_answers'), (
+            'Neither free-text nor offered-option input is transmitted or consumes its already displayed original human waiter while identity is unconfirmed')
+        assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
+            'Holding new human input preserves the original connection and known account without manufacturing its pending identity result')
+        release.touch();actor.command('refresh_usage')
+        actor.until(lambda _value: any(row.get('id') == held['id'] and 'result' in row
+            for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
+        qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(original['question_id']) + ',' + json.dumps(answer) + ')')
+        _session_completed(actor, 1)
+        actual = _session_state(actor)['human_answers']
+        assert len(actual) == 1 and actual[0]['result']['answers']['original-question']['answers'] == [answer], (
+            'After exact unchanged-account proof, one genuine answer settles the retained original question once without replaying earlier work')
+        (actor.folder / 'original-question-account-boundary.json').write_text(json.dumps({
+            'held_read': held, 'original_question': original, 'actual_answers': actual}, indent=2))
+    finally:
+        release.touch()
+
+
+def test_latest_selected_model_and_effort_continue_after_exact_unchanged_identity(main_actor):
+    models = [{'id': model, 'model': model, 'displayName': model,
+        'description': 'Independent offline settings fixture', 'hidden': False,
+        'isDefault': model == 'gpt-6.1-sol', 'defaultReasoningEffort': 'medium',
+        'supportedReasoningEfforts': [{'reasoningEffort': effort, 'description': effort}
+            for effort in ['medium', 'high']]} for model in ['gpt-6.1-sol', 'gpt-5.6-luna']]
+    actor = main_actor([[]]);_session_configure(actor, fixture_models=models,
+        session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();account = qml(actor, 'Session.assistant.account')
+    release = actor.folder / 'release-original-settings-identity'
+    try:
+        held = _review66_hold_original_identity(actor, release)
+        boundary = len(_session_wire(actor, 'thread/settings/update'))
+        actor.command('select_effort', id='high')
+        actor.command('select_model', id='gpt-5.6-luna')
+        actor.command('select_effort', id='medium')
+        assert len(_session_wire(actor, 'thread/settings/update')) == boundary, (
+            'Actual model and effort setters cannot send new thread policy while the correlated original account check is outstanding')
+        release.touch();actor.command('refresh_usage')
+        actor.until(lambda _value: len(_session_wire(actor, 'thread/settings/update')) > boundary)
+        updates = _session_wire(actor, 'thread/settings/update')[boundary:]
+        assert len(updates) == 1 and updates[0]['params']['model'] == 'gpt-5.6-luna' \
+            and updates[0]['params']['effort'] == 'medium', (
+                'Exact unchanged identity reconciles the latest actual selected model/effort rather than reviving an older intermediate choice')
+        assert qml(actor, 'Session.assistant.account') == account, (
+            'A deferred settings continuation is not a new account or a fabricated identity success')
+        actor.request('Continue the same read-only conversation with the selected current settings.')
+        _session_completed(actor, 1)
+        (actor.folder / 'latest-settings-after-identity.json').write_text(json.dumps({
+            'held_read': held, 'actual_updates': updates, 'actual_input': _session_state(actor)['inputs'][-1]}, indent=2))
+    finally:
+        release.touch()
+
+
+def test_declining_unapproved_other_project_session_preserves_original_before_open(main_actor, tmp_path):
+    actor = main_actor([[], [], []]);_session_configure(actor,
+        session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    target = copied_estimate_project(tmp_path);current = tmp_path / 'viable-original-current-project'
+    shutil.copytree(target, current)
+    assert actor.command('open', path=str(target))['reply']['opened'], (
+        'The target association begins with an actual ordinary complete project')
+    actor.connect();source = _attachment_fixtures(tmp_path, 1)[0];original_bytes = source.read_bytes()
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
+        'The target has a genuine admitted original file whose later identity change requires honest current disclosure')
+    _session_request_with_original_disclosure(actor, 'Remember this original project and actual attached input.')
+    _session_completed(actor, 1);target_id = _session_state(actor)['inputs'][0]['threadId']
+    assert actor.command('open', path=str(current))['reply']['opened'], (
+        'The viable unrelated original current project is adopted through ordinary Open before selecting the target')
+    actor.connect();actor.request('Keep this distinct original current conversation usable until another target is approved.')
+    _session_completed(actor, 2);current_id = _session_state(actor)['inputs'][1]['threadId']
+    account = qml(actor, 'Session.assistant.account');marker = 'e11.session.before-other-consent'
+    _watch_original_project_open(actor, marker)
+    source.write_bytes(original_bytes + b'\n_audit_update_record "genuine changed old attachment disclosure"\n')
+    try:
+        before = len(_session_wire(actor, 'thread/resume'))
+        actor.command('click', name='assistant.sessions');_session_wait(actor)
+        clicked = actor.command('session_row_click', thread_id=target_id)['reply']
+        assert clicked['reached'] and clicked['actual_pressed_changes'] > 0, (
+            'The unapproved other-project intent is initiated by genuine input on its original realized session row')
+        actor.until(lambda value: any(c['name'] == 'AssistantConnectionDialog' and c['fully_exposed'] and c['enabled']
+            for c in value['ui']['controls']))
+        assert actor.last['ui']['context_consent_required'], (
+            'The discriminator genuinely reaches required current disclosure rather than assuming a saved boolean is approval')
+        assert Path(actor.last['ui']['project']['path']).resolve() == current.resolve() \
+            and qml(actor, '(' + _scene_control_expression(marker) + ').changes') == 0, (
+                'Required other-project consent is offered before any original project replacement can retire the viable current conversation')
+        actor.command('manual_key', key='escape')
+        actor.until(lambda _value: not qml(actor, 'Session.assistant.sessionSelection'))
+        assert len(_session_wire(actor, 'thread/resume')) == before \
+            and qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
+                'Genuine original-dialog cancellation adopts no unapproved target and preserves the actual original account/connection')
+        actor.request('Continue the still-current original conversation after declining that other project.')
+        _session_completed(actor, 3);followup = _session_state(actor)['inputs'][-1]
+        assert followup['threadId'] == current_id and followup['actual_prior_input_count'] == 1, (
+            'Cancellation preserves real original model continuity instead of injecting old display text into another or a fresh thread')
+        (actor.folder / 'declined-other-project-preserved-original.json').write_text(json.dumps({
+            'target': target_id, 'original_current': current_id, 'physical_click': clicked,
+            'actual_followup': followup, 'original_path': str(current)}, indent=2))
+    finally:
+        source.write_bytes(original_bytes)
+
+
+# Independently authored original-owner gate packet: review67_archive_private_gates.py
+# PRIVATE/UNRUN Archive property gates from H review67 Finding1 and the original
+# owned-ID authority. Static metadata is a pinned RPC fixture, never app history,
+# account evidence or a scientific outcome. Native subtree disk policy remains
+# independently sourced from pinned092d thread_processor.rs1709-1792.
+
+def _archive_original_row_input(actor, identity):
+    rows = _session_wait(actor)
+    index = next(i for i, row in enumerate(rows) if row['id'] == identity)
+    name = 'assistant.session.archive.' + str(index)
+    def actual_owner(_value):
+        return qml(actor, '(function(){const b=' + _scene_control_expression(name)
+            + ';if(!b)return null;let r=b;while(r&&typeof r.threadId!=="string")r=r.parent;'
+            'if(!r)return null;const p=b.mapToItem(window.contentItem,0,0);return {'
+            'threadId:r.threadId,button:String(b),name:b.objectName,visible:b.visible,enabled:b.enabled,'
+            'x:p.x,y:p.y,width:b.width,height:b.height};})()')
+    owner = actual_owner(actor.last)
+    assert owner and owner['threadId'] == identity and owner['visible'] and owner['enabled'], (
+        'The original enabled Archive button belongs to the exact currently realized session row before genuine input')
+    assert any(row['name'] == name and row['fully_exposed'] and row['enabled']
+               for row in actor.last['ui']['controls']), (
+        'The original Archive button is exposed in its current Main window rather than merely visible below a clip')
+    actor.command('click', name=name)
+    return owner
+
+
+@pytest.mark.parametrize('status', [{'type': 'systemError'}, {'type': 'active', 'activeFlags': []}],
+                         ids=['retained-system-error', 'native-loaded-active'])
+def test_owned_archive_ignores_old_workspace_and_ui_status_without_read_dependency(main_actor, status):
+    actor = main_actor([[]]);release = actor.folder / 'release-original-owned-archive'
+    fixture = _session_fixture(actor, archive_hold=str(release), read_error=True,
+                               list_only_fixture_threads=True, page_size=12)
+    victim = fixture['thread_list']['expected_owned_ids'][0]
+    value = json.loads((actor.folder / 'peer.json').read_bytes())
+    original = next(row for row in value['session_fixture']['threads'] if row['id'] == victim)
+    original['cwd'] = str(actor.folder / 'unavailable-original-workspace')
+    original['status'] = status
+    assert not Path(original['cwd']).exists(), (
+        'The listed creation-owned legacy target genuinely has no usable old scientific workspace')
+    (actor.folder / 'peer.json').write_text(json.dumps(value));actor.connect()
+    actor.command('click', name='assistant.sessions');before = _session_wait(actor)
+    account = qml(actor, 'Session.assistant.account')
+    project = qml(actor, 'Session.project===null ? null : String(Session.project)')
+    try:
+        physical = _archive_original_row_input(actor, victim)
+        actor.until(lambda _value: any(row['params']['threadId'] == victim
+            for row in _session_wire(actor, 'thread/archive')))
+        assert victim in {row['id'] for row in _session_wait(actor)}, (
+            'A live Archive request preserves the original row until its exact correlated native acknowledgement')
+        release.touch();actor.command('refresh_usage')
+        actor.until(lambda _value: victim not in {row['id'] for row in _session_wait(actor)})
+        requests = _session_wire(actor, 'thread/archive')
+        assert len(requests) == 1 and requests[0]['params'] == {'threadId': victim}, (
+            'Owned-ID Archive delegates once to the ordinary runtime operation without making old cwd/read/UI status into authority')
+        assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account \
+            and qml(actor, 'Session.project===null ? null : String(Session.project)') == project, (
+                'Organizing a different owned runtime target preserves the current account and scientific owner')
+        (actor.folder / 'owned-archive-without-science-prerequisites.json').write_text(json.dumps({
+            'target': victim, 'published_before': before, 'physical_owner': physical,
+            'actual_archive_requests': requests, 'status': status,
+            'actual_peer_archived': _session_state(actor)['archived_threads'],
+            'qualification': 'app-to-native RPC delegation, not a real-provider filesystem Archive execution'}, indent=2))
+    finally:
+        release.touch()
+
+
+def test_last_remaining_owned_row_keeps_its_identity_after_prior_archives_and_prefetch(main_actor):
+    actor = main_actor([[]]);fixture = _session_page_fixture(actor, foreign=0, owned=5, page=2)
+    actor.connect();actor.command('click', name='assistant.sessions');_session_wait(actor)
+    remaining = {row['id'] for row in fixture};observed=[]
+    while remaining:
+        rows = _session_wait(actor)
+        candidates = [row['id'] for row in rows if row['id'] in remaining]
+        if not candidates:
+            delivery = actor.command('session_wheel', angle_y=-120)['reply']
+            assert delivery['same_window'] and delivery['same_source_model'], (
+                'Only a genuine wheel on the original current session viewport requests the next pending page')
+            actor.until(lambda _value: any(row['id'] in remaining for row in _session_wait(actor)))
+            rows = _session_wait(actor);candidates = [row['id'] for row in rows if row['id'] in remaining]
+        victim = candidates[0]
+        before = len(_session_wire(actor, 'thread/archive'))
+        physical = _archive_original_row_input(actor, victim)
+        actor.until(lambda _value: len(_session_wire(actor, 'thread/archive')) > before
+            and victim not in {row['id'] for row in _session_wait(actor)})
+        actual = _session_wire(actor, 'thread/archive')[before:]
+        assert len(actual) == 1 and actual[0]['params'] == {'threadId': victim}, (
+            'Every original Archive input retains its row-owned opaque ID after deletion, reuse and page publication rather than using a display ordinal')
+        observed.append({'target': victim, 'physical_owner': physical, 'actual_request': actual[0]})
+        remaining.remove(victim)
+    assert len(_session_wire(actor, 'thread/list')) > 1, (
+        'The final-row discriminator actually includes native pagination before all listed owned targets are archived')
+    actual = _session_state(actor)['archived_threads']
+    assert set(actual) == {row['id'] for row in fixture} and len(actual) == len(fixture), (
+        'The final remaining original row is archived once with no foreign or duplicate target inferred from list disappearance')
+    (actor.folder / 'last-owned-row-archive-inputs.json').write_text(json.dumps({
+        'actual_inputs': observed, 'actual_archived': actual,
+        'delegate_reuse_observed': len({row['physical_owner']['button'] for row in observed}) < len(observed),
+        'reuse_qualification': 'only an actual repeated QObject string is a reached reuse witness'}, indent=2))
+
+
+def test_idle_current_native_archive_owns_its_loaded_descendant_closure_and_notifications(main_actor):
+    actor = main_actor([[]]);fixture = _session_fixture(actor, page_size=12,
+        native_archive_subtree=True, emit_archived_notifications=True)
+    actor.connect();current = next(iter(_session_state(actor)['threads']))
+    value = json.loads((actor.folder / 'peer.json').read_bytes())
+    child = value['session_fixture']['threads'][0]
+    child['parentThreadId'] = current;child['status'] = {'type': 'active', 'activeFlags': []}
+    unrelated = value['session_fixture']['threads'][1]['id']
+    (actor.folder / 'peer.json').write_text(json.dumps(value))
+    actor.request('Retain one actual read-only current conversation before organizing it.');_session_completed(actor, 1)
+    actor.command('click', name='assistant.sessions');_session_wait(actor)
+    before = len(_session_wire(actor, 'thread/archive'))
+    physical = _archive_original_row_input(actor, current)
+    actor.until(lambda _value: len(_session_wire(actor, 'thread/archive')) > before)
+    actor.until(lambda _value: current not in {row['id'] for row in _session_wait(actor)})
+    requests = _session_wire(actor, 'thread/archive')[before:]
+    assert len(requests) == 1 and requests[0]['params'] == {'threadId': current}, (
+        'An idle current owned target with descendants is delegated as one exact native subtree operation rather than app-owned child policy')
+    state = _session_state(actor)
+    assert {current, child['id']} <= set(state['archived_threads']) and unrelated not in state['archived_threads'], (
+        'The pinned native peer acknowledges its actual parent closure without optimistically deleting unrelated runtime owners')
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    ids = {row['params']['threadId'] for row in sent if row.get('method') == 'thread/archived'}
+    assert {current, child['id']} <= ids, (
+        'Affected rows are reconciled from actual captured native archived notifications rather than assumed from the requested parent')
+    (actor.folder / 'native-archive-loaded-subtree.json').write_text(json.dumps({
+        'physical_owner': physical, 'native_request': requests[0], 'actual_notifications': sorted(ids),
+        'actual_archived': state['archived_threads'],
+        'real_provider_shutdown': 'not exercised by this offline metadata peer'}, indent=2))
+
+
+@pytest.mark.parametrize('boundary', ['nonowned', 'pending_identity', 'active_work', 'sign_out'])
+def test_archive_preserves_real_account_and_active_operation_admission_boundaries(main_actor, boundary):
+    actor = main_actor([[_rows_research('original-active-archive-boundary')]], hold_final=True)
+    fixture = _session_fixture(actor);actor.connect();actor.command('click', name='assistant.sessions');rows=_session_wait(actor)
+    victim = fixture['thread_list']['expected_owned_ids'][0]
+    release = actor.folder / 'release-original-negative-archive-identity'
+    try:
+        if boundary == 'nonowned':
+            victim = next(row['id'] for row in fixture['thread_list']['threads'] if row['originator'] != 'edi')
+        elif boundary == 'pending_identity':
+            _review66_hold_original_identity(actor, release)
+        elif boundary == 'sign_out':
+            actor.command('sign_out')
+        else:
+            actor.command('manual_key', key='escape');actor.request('Keep one real read-only task active before metadata organization.')
+            actor.until(lambda value: value['ui']['can_cancel'])
+        before = len(_session_wire(actor, 'thread/archive'))
+        qml(actor, 'Session.assistant.archiveSession(' + json.dumps(victim) + ')')
+        actor.command('refresh_usage')
+        assert len(_session_wire(actor, 'thread/archive')) == before, (
+            'Foreign creation identity, pending account proof, signed-out old ownership and actual active work cannot admit a new Archive write')
+    finally:
+        release.touch();actor.gate.touch()
+
+# Uncertain Stop is explicitly UNREACHED here: the existing peer immediately
+# acknowledges turn/interrupt. A completed Stop must not become a permanent
+# Archive prohibition; no stronger policy is inferred or synthesized.
+
+
+# Independently authored original-owner gate packet: review70_archive_async_private_gates.py
+# PRIVATE/UNRUN review70 actual asynchronous Archive owners. All late frames
+# belong to genuine fixture-received original requests and captured runtime IDs;
+# no old scientific operation is replayed and no app receipt is manufactured.
+
+@pytest.mark.parametrize('late_reply', ['success', 'refusal'])
+def test_actual_archived_notice_retires_original_pending_turn_start_without_resurrection(main_actor, late_reply):
+    actor = main_actor([[], []]);_session_configure(actor,
+        session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();account = qml(actor, 'Session.assistant.account')
+    original_thread = next(iter(_session_state(actor)['threads']))
+    release = actor.folder / 'release-original-admitted-start-after-archive'
+    _session_configure(actor, archive_before_start_reply={'hold': str(release), 'reply': late_reply})
+    original_task = 'An original read-only input awaiting its actual native runtime admission reply.'
+    actor.request(original_task)
+    actor.until(lambda _value: bool(_session_wire(actor, 'turn/start')) and any(
+        row.get('method') == 'thread/archived' and row['params']['threadId'] == original_thread
+        for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
+    original_request = _session_wire(actor, 'turn/start')[0]
+    before_release = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    assert not any(row.get('id') == original_request['id'] and ('result' in row or 'error' in row)
+                   for row in before_release), (
+        'The actual original turn/start is still awaiting its own reply when the matching archived-ID notification arrives')
+    try:
+        release.touch();actor.command('refresh_usage')
+        actor.until(lambda _value: any(row.get('id') == original_request['id'] and ('result' in row or 'error' in row)
+            for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
+        actor.until(lambda value: value['ui']['state'] == 'idle' and not value['ui']['can_cancel'])
+        assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
+            'A late start acknowledgement or refusal settles only its retired input and cannot resurrect busy state or revoke the unchanged valid account')
+        assert len(_session_wire(actor, 'turn/start')) == 1, (
+            'Archive uncertainty never authorizes an automatic replay of the original admitted user input')
+        _session_configure(actor, archive_before_start_reply=None)
+        next_task = 'A distinct fresh read-only input after the original archived owner is settled.'
+        actor.request(next_task)
+        actor.until(lambda value: value['ui']['state'] == 'idle' and len(_session_state(actor)['inputs']) == 2)
+        inputs = _session_state(actor)['inputs']
+        assert inputs[0]['threadId'] == original_thread and inputs[1]['threadId'] != original_thread, (
+            'The next explicit input obtains its own current runtime thread and cannot inherit the archived late reply')
+        assert len(_session_wire(actor, 'turn/start')) == 2 and original_task in str(inputs[0]['input']) \
+            and next_task in str(inputs[1]['input']), (
+                'Only the two actually submitted user inputs reach the runtime, with original text kept once under its captured identity')
+        (actor.folder / 'actual-archive-pending-start-boundary.json').write_text(json.dumps({
+            'original_request': original_request, 'reply_case': late_reply, 'actual_inputs': inputs,
+            'actual_before_release': before_release, 'account_preserved': True}, indent=2))
+    finally:
+        release.touch()
+
+
+@pytest.mark.parametrize('entrance', ['root_ack', 'actual_notice'])
+def test_archive_retires_original_inflight_history_before_later_same_current_read(main_actor, entrance):
+    actor = main_actor([[], []]);_session_configure(actor,
+        session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();actor.request('First genuine read-only A conversation before its current history walk.')
+    _session_completed(actor, 1);original_thread = _session_state(actor)['inputs'][0]['threadId']
+    release = actor.folder / 'release-original-A-history'
+    value = json.loads((actor.folder / 'peer.json').read_bytes());fixture = dict(value['session_fixture'])
+    fixture['read_hold'] = str(release);_session_configure(actor, session_fixture=fixture)
+    actor.command('click', name='assistant.sessions');_session_wait(actor)
+    before = len(_session_wire(actor, 'thread/read'))
+    actual = actor.command('session_row_click', thread_id=original_thread)['reply']
+    assert actual['reached'] and actual['actual_pressed_changes'] > 0, (
+        'A real current-row click starts the original current runtime-history owner before Archive')
+    actor.until(lambda _value: len(_session_wire(actor, 'thread/read')) > before)
+    original_history = _session_wire(actor, 'thread/read')[-1]
+    assert original_history['params']['threadId'] == original_thread, (
+        'The deliberately held history request belongs to the exact original current A thread')
+    try:
+        if entrance == 'root_ack':
+            qml(actor, 'Session.assistant.archiveSession(' + json.dumps(original_thread) + ')')
+            actor.until(lambda _value: any(row['params']['threadId'] == original_thread
+                for row in _session_wire(actor, 'thread/archive')))
+        else:
+            _session_configure(actor, usage_notifications=[{'method': 'thread/archived', 'params': {'threadId': original_thread}}])
+            actor.command('refresh_usage')
+        actor.until(lambda value: not value['ui']['can_cancel'] and value['ui']['connected'])
+        actor.request('A new explicit B conversation after original A was archived with history still outstanding.')
+        actor.until(lambda value: value['ui']['state'] == 'idle' and len(_session_state(actor)['inputs']) == 2)
+        current_thread = _session_state(actor)['inputs'][-1]['threadId']
+        assert current_thread != original_thread, 'The later history owner is a genuinely different actually submitted B thread'
+        release.touch();actor.command('refresh_usage')
+        actor.until(lambda _value: any(row.get('id') == original_history['id'] and 'result' in row
+            for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
+        actor.command('click', name='assistant.sessions');_session_wait(actor)
+        boundary = len(_session_wire(actor, 'thread/read'))
+        selected = actor.command('session_row_click', thread_id=current_thread)['reply']
+        assert selected['reached'] and selected['actual_pressed_changes'] > 0, (
+            'The later same-current B coverage request is also exercised through its original realized row input')
+        actor.until(lambda _value: any(row['params']['threadId'] == current_thread
+            for row in _session_wire(actor, 'thread/read')[boundary:]))
+        assert not qml(actor, 'Session.assistant.sessionsError') and qml(actor, 'Session.assistant.connected'), (
+            'A retired A history reply cannot leave immortal loading state or suppress the actual new same-current B history request')
+        (actor.folder / 'retired-A-current-B-history-owner.json').write_text(json.dumps({
+            'entrance': entrance, 'original_held_history': original_history,
+            'current_B': current_thread, 'actual_B_reads': _session_wire(actor, 'thread/read')[boundary:]}, indent=2))
+    finally:
+        release.touch()
+
+
+def test_failed_durable_archive_last_write_survives_successful_ordinary_browser_refresh(main_actor):
+    actor = main_actor([[]]);_session_configure(actor,
+        session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();actor.request('One genuine current conversation retained by the original normal session settings owner.')
+    _session_completed(actor, 1);original = _session_state(actor)['inputs'][0]['threadId']
+    observed = actor.command('inspect');identity = observed['test_settings'];settings = Path(identity['path'])
+    assert settings.name == identity['application_name'] + '.ini' and settings.parent.name == identity['organization_name'] \
+        and settings.stat().st_uid == os.geteuid() and not settings.is_symlink() and os.geteuid() != 0, (
+            'The storage fault is confined to the exact genuine isolated fixture QSettings file reported by its current Main owner')
+    original_bytes = settings.read_bytes();saved = actor.folder / 'genuine-settings-before-archive.ini';saved.write_bytes(original_bytes)
+    assert original.encode() in original_bytes, (
+        'The genuine first normal settings write actually contains the original connected runtime ID before the durable Archive fault')
+    file_mode = settings.stat().st_mode & 0o777;parent_mode = settings.parent.stat().st_mode & 0o777
+    account = qml(actor, 'Session.assistant.account')
+    actor.command('click', name='assistant.sessions');_session_wait(actor)
+    marker = 'e11.archive.durable-failure'
+    assert qml(actor, '(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"' + marker + '";property var errors:[]}\',contentItem);Session.assistant.sessionsChanged.connect(function(){const error=Session.assistant.sessionsError;if(error)o.errors=o.errors.concat([error]);});return true;})()'), (
+        'The unresolved original settings failure is observed at its real public notification before any automatic refresh can hide it')
+    settings.chmod(file_mode & ~0o222);settings.parent.chmod(parent_mode & ~0o222)
+    try:
+        assert not os.access(settings, os.W_OK) and not os.access(settings.parent, os.W_OK), (
+            'The exact file and its atomic-save directory are genuinely unwritable for this fixture user; no global filesystem hook is used')
+        qml(actor, 'Session.assistant.archiveSession(' + json.dumps(original) + ')')
+        actor.until(lambda _value: any(row['params']['threadId'] == original for row in _session_wire(actor, 'thread/archive')))
+        actor.until(lambda _value: bool(qml(actor, '(' + _scene_control_expression(marker) + ').errors.length')))
+        failure = qml(actor, '(' + _scene_control_expression(marker) + ').errors[0]')
+        assert settings.read_bytes() == original_bytes, (
+            'The failed original durable-last update preserves the exact preexisting settings evidence instead of pretending it was committed')
+        before = len(_session_wire(actor, 'thread/list'))
+        qml(actor, 'Session.assistant.refreshSessions()');_session_wait(actor)
+        assert len(_session_wire(actor, 'thread/list')) > before, (
+            'The failure-retention property is exercised after an actual later successful ordinary browser metadata refresh')
+        assert qml(actor, 'Session.assistant.sessionsError') == failure and settings.read_bytes() == original_bytes, (
+            'A successful list refresh cannot erase the unresolved distinct original durable-last persistence failure or upgrade it to saved intent')
+        assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
+            'Valid native Archive and failed local durability remain distinct from account revocation')
+        (actor.folder / 'failed-durable-last-after-actual-refresh.json').write_text(json.dumps({
+            'original_thread': original, 'settings_identity': identity,
+            'original_settings_sha256': hashlib.sha256(original_bytes).hexdigest(),
+            'actual_unresolved_error': failure, 'actual_archive': _session_wire(actor, 'thread/archive'),
+            'actual_later_lists': _session_wire(actor, 'thread/list')[before:],
+            'automatic_reopen_proven_prevented': False}, indent=2))
+    finally:
+        settings.parent.chmod(parent_mode);settings.chmod(file_mode)
+
+
+# Independently authored original-owner gate packet: review72_unsaved_flow_private_gates.py
+# PRIVATE/UNRUN review72. Routine delegated Save may choose the genuine normal
+# role itself; this gate does not require an unnecessary second user approval.
+# Read-only original signals prove guard-before-write and SaveAs abandonment.
+
+def _watch_first_unsaved_flow(actor, marker):
+    expression = '(function(){const d=unsavedChanges,p=Session.project;if(!d||!p)return false;'
+    expression += 'const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"' + marker + '";property var original:null;property var events:[];property int savePresses:0;property bool saveButtonBound:false;property int saveAsOffers:0}\',contentItem);o.original=p;'
+    expression += 'function event(kind){o.events=o.events.concat([{kind:kind,sameOriginal:Session.project===p,modified:p.modified,needsSaveAs:Session.needsSaveAs}]);}'
+    expression += 'function bindSave(){if(o.saveButtonBound)return;const b=d.standardButton(Dialog.Save);if(b){o.saveButtonBound=true;b.pressedChanged.connect(function(){if(b.pressed)o.savePresses++;});}}d.aboutToShow.connect(function(){event("originalUnsavedGuard");bindSave();});d.opened.connect(bindSave);p.modifiedChanged.connect(function(){event(p.modified?"originalModified":"originalMarkedSaved");});'
+    expression += 'bindSave();'
+    expression += 'saveAsChoice.aboutToShow.connect(function(){o.saveAsOffers++;});return true;})()'
+    assert qml(actor, expression), (
+        'The unsaved-flow witness attaches only to original current Main dialog, model and standard Save owners without forcing state or outcomes')
+
+
+def _unsaved_flow_observation(actor, marker):
+    return qml(actor, '(function(){const o=' + _scene_control_expression(marker)
+        + ';return {events:o.events,savePresses:o.savePresses,saveButtonBound:o.saveButtonBound,saveAsOffers:o.saveAsOffers,sameOriginal:Session.project===o.original};})()')
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_native_new_enters_original_unsaved_guard_before_any_preservation_save(main_actor, tmp_path, show_actions):
+    name = 'guard_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    actor = main_actor([[tool_call('create_project', 'original-unsaved-before-new', name=name)]], show_actions=show_actions)
+    old = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(old))['reply']['opened'], (
+        'Original unsaved-flow ordering begins with a genuine complete saved project')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    description = 'The original user edit must enter the first ordinary unsaved guard before it is saved.'
+    qml(actor, 'Session.project.description=' + json.dumps(description))
+    assert qml(actor, 'Session.project.modified') and not qml(actor, 'Session.needsSaveAs'), (
+        'The specific preservation-write case really is modified ordinary in-place work before New')
+    original = _new_project_scientific_bytes(old)
+    destination = Path(actor.last['ui']['environment']['documents_root']) / name
+    assert not destination.exists(), 'The normal new-project destination remains absent before its real owner acts'
+    actor.connect();marker='e11.new.first-unsaved-order';_watch_first_unsaved_flow(actor, marker)
+    actor.command('clear_ui_sequence');actor.request('Create a genuinely new project while preserving my current unsaved work through the normal app choices.')
+    actor.until(lambda value: len(actor.responses()) == 1 and value['ui']['state'] == 'idle', visible_progress=show_actions)
+    proof = _unsaved_flow_observation(actor, marker)
+    guards = [i for i, row in enumerate(proof['events']) if row['kind'] == 'originalUnsavedGuard']
+    saves = [i for i, row in enumerate(proof['events']) if row['kind'] == 'originalMarkedSaved']
+    assert guards and saves and guards[0] < saves[0] and proof['events'][guards[0]]['sameOriginal'] \
+        and proof['events'][guards[0]]['modified'], (
+            'A real FIRST unsaved decision precedes every preservation Save; calling afterChanges only after a preemptive write is insufficient')
+    if show_actions:
+        assert proof['saveButtonBound'], (
+            'The ON Save input witness must reach its actual original standard button before interpreting a missing press')
+        assert proof['savePresses'] > 0, (
+            'Show ON actually delivers the original normal Save choice rather than replacing it with a pre-guard Save cue/API shortcut')
+    created = native_result(actor.responses()[0])
+    assert created['adopted'] and created['complete'] and Path(actor.last['ui']['project']['path']) == destination, (
+        'After the original Save decision succeeds, the same captured creation action adopts the genuinely new requested ordinary project')
+    assert description in (old / 'project.edi').read_text() and _new_project_scientific_bytes(old) != original, (
+        'The legitimate preservation write actually kept the original explicit user edit rather than silently Discarding it')
+    (actor.folder / 'first-unsaved-before-new-save.json').write_text(json.dumps({
+        'mode': show_actions, 'proof': proof, 'old_source_hashes': _new_project_file_hashes(original),
+        'actual_old_after': _new_project_file_hashes(_new_project_scientific_bytes(old)),
+        'requested_new': str(destination), 'actual_create': created}, indent=2))
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_native_new_preserves_original_save_as_abandonment_without_resurrecting_create(main_actor, tmp_path, show_actions):
+    actor = main_actor([[]], show_actions=show_actions);source = copied_estimate_project(tmp_path)
+    original = _new_project_scientific_bytes(source)
+    modes = {path: path.stat().st_mode & 0o777 for path in [source, *source.rglob('*')]}
+    try:
+        for path in source.rglob('*'):path.chmod(0o555 if path.is_dir() else 0o444)
+        source.chmod(0o555)
+        assert actor.command('open', path=str(source))['reply']['opened'], (
+            'An actual ordinary read-only source Open creates its normal mutable working-copy owner')
+        assert qml(actor, 'Session.needsSaveAs'), (
+            'The SaveAs branch is reached from the real original Session predicate, never a forced saved/path property')
+        actor.until(lambda value: not value['ui']['project']['calculating'])
+        qml(actor, 'Session.project.description="A genuine modified read-only-source working copy before New."')
+        assert qml(actor, 'Session.project.modified'), 'The original mutable working copy has a real unsaved user edit'
+        name='abandon_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+        destination=Path(actor.last['ui']['environment']['documents_root']) / name
+        assert not destination.exists(), 'The requested New destination is absent before the original guard'
+        actor.configure_turns([[tool_call('create_project', 'new-with-original-save-as-abandonment', name=name)]])
+        actor.connect();marker='e11.new.original-save-as-abandon';_watch_first_unsaved_flow(actor, marker)
+        actor.request('Create a new project and preserve current work through the app\'s original Save choices.')
+        actor.until(lambda value: len(actor.responses()) == 1 and value['ui']['state'] == 'idle', visible_progress=show_actions)
+        proof=_unsaved_flow_observation(actor,marker)
+        assert any(row['kind']=='originalUnsavedGuard' and row['needsSaveAs'] and row['modified'] for row in proof['events']) \
+            and proof['saveAsOffers'] > 0, (
+                'The actual original needs-SaveAs guard and ordinary SaveAs offer are both observed before classifying abandonment')
+        body=json.loads(actor.responses()[0]['result']['contentItems'][0]['text'])
+        assert not body.get('adopted') and not body.get('complete') and proof['sameOriginal'] and not destination.exists(), (
+            'The FIRST SaveAs branch abandons its captured original New action; later SaveAs cannot silently keep or resume that queued creation')
+        assert _new_project_scientific_bytes(source)==original, (
+            'Readonly-source preservation never overwrites the real original source while a different place is selected or abandoned')
+        # If the original offer remains open, cancel it using genuine keyboard
+        # input. No chooser acceptance or destination is manufactured.
+        open_offer=qml(actor,'saveAsChoice.opened')
+        if open_offer:
+            assert any(c['name']=='saveAs.folder' and c['fully_exposed'] for c in actor.last['ui']['controls']), (
+                'A pending ordinary SaveAs offer belongs to the actual exposed original Main controls before Cancel input')
+            actor.command('manual_key',key='escape')
+            actor.until(lambda _value:not qml(actor,'saveAsChoice.opened'))
+        assert not destination.exists() and _unsaved_flow_observation(actor,marker)['sameOriginal'], (
+            'Canceling or settling a later format offer cannot revive the abandoned original New continuation')
+        (actor.folder/'original-save-as-abandons-new.json').write_text(json.dumps({
+            'mode':show_actions,'proof':proof,'actual_create_reply':body,
+            'offer_was_pending':open_offer,'old_source_hashes':_new_project_file_hashes(original),
+            'new_destination_absent':not destination.exists(),
+            'platform_chooser_accepted':False},indent=2))
+    finally:
+        # Restore only this isolated source's exact original modes.
+        source.chmod(modes[source])
+        for path,mode in modes.items():
+            if path.exists():path.chmod(mode)
+
+
+# Independently authored original-owner gate packet: ordinary_partial_projects_private_gates.py
+# PRIVATE/UNRUN Hf51d49068 / review74. This supersedes only the explicitly
+# complete-only ordinary Open expectation, not schema/reference/data integrity.
+# Preparation and all positives use original Session/PVM APIs and native Save;
+# no hidden load flag, placeholder observations or direct passing file rewrite.
+
+def _construction_enabled_tabs(actor):
+    names = sorted({row['name'] for row in actor.last['ui']['controls']
+                    if row['name'].startswith('appBar.tab.')})
+    assert names, 'Partial-state tab restoration observes actual normal Main tab controls'
+    def settled(_value):
+        values = qml(actor, '[' + ','.join('(function(){const b=' + _scene_control_expression(name)
+            + ';return b?{name:b.objectName,enabled:b.enabled,preparing:b.preparing===true}:null;})()'
+            for name in names) + ']')
+        return values if all(value and not value['preparing'] for value in values) else None
+    actor.until(lambda value: bool(settled(value)))
+    return {value['name']: value['enabled'] for value in settled(actor.last)}
+
+
+def _construction_science(actor):
+    project = actor.command('inspect')['ui']['project']
+    metadata = qml(actor, '({name:Session.project.name,title:Session.project.title,description:Session.project.description,'
+        'authors:Session.project.authors,rule:Session.project.suRule,libraries:Session.project.report.embedLibraries})')
+    return {'metadata': metadata, 'structures': project['structures'],
+        'structure_rows': project['structure_rows'], 'parameters': project['parameters'],
+        'backgrounds': project['backgrounds'], 'aliases': project['aliases'],
+        'constraints': project['constraints']}
+
+
+def _prepare_ordinary_construction_state(actor, state, name):
+    if any(row['name'] == 'home.start' and row['fully_exposed'] and row['enabled'] for row in actor.last['ui']['controls']):
+        actor.command('click', name='home.start')
+    assert actor.command('create', name=name)['reply']['created'], (
+        'The actual original Session Create owner constructs the unsaved working state without an assistant recipe or fixture science write')
+    if state != 'empty':
+        source = ROOT / 'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+        assert qml(actor, 'Session.project.loadStructures([' + json.dumps(source.as_uri()) + '])'), (
+            'The structure-only construction member comes through the original ordinary CIF reader at its unchanged source identity')
+    if state == 'experiment_without_data':
+        assert qml(actor, 'Session.project.createExperiment()'), (
+            'The original default experiment owner is exercised without adding measurements or a scientific starting seed')
+        actual = actor.command('scientific_receipt')['reply']['files']
+        experiment = next(row for row in actual if row['relative'].startswith('experiments/') and row['relative'].endswith('.edi'))
+        # A legitimate Text-tab edit removes an optional range, if the ordinary
+        # factory supplied one. It never writes a fake disk postimage or grid.
+        without_range = ''.join(line for line in experiment['text'].splitlines(keepends=True)
+                                if not line.lstrip().startswith('_data_range.'))
+        if without_range != experiment['text']:
+            assert qml(actor, 'Session.project.applyText(' + json.dumps(experiment['relative']) + ',' + json.dumps(without_range) + ')') == '', (
+                'Ordinary Text apply accepts a lawful construction state with no optional calculation range while retaining native reference checks')
+        actor.until(lambda value: not value['ui']['project']['calculating'])
+        banks = actor.last['ui']['project']['backgrounds']
+        assert len(banks) == 1 and banks[0]['input_count'] == 0 and banks[0]['input_intensity_count'] == 0, (
+            'The missing-data discriminator actually has neither original observations nor a fabricated calculation grid')
+    # The same normal Text owner must also accept metadata on an empty or
+    # structure-only project; completeness is not a reason to reject that edit.
+    files = actor.command('scientific_receipt')['reply']['files']
+    project_text = next(row['text'] for row in files if row['relative'] == 'project.edi')
+    text = ''.join(line for line in project_text.splitlines(keepends=True)
+                   if not line.lstrip().startswith('_metadata.description'))
+    text += '\n_metadata.description "Ordinary construction-state Text edit survives Save and Open."\n'
+    assert qml(actor, 'Session.project.applyText("project.edi",' + json.dumps(text) + ')') == '', (
+        'The ordinary Text-tab copy/readback shares construction-state Open semantics rather than a hidden permissive test loader')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+
+
+@pytest.mark.parametrize('state', ['empty', 'structure_only', 'experiment_without_data'])
+@pytest.mark.parametrize('format_kind', ['folder', 'record', 'zip'])
+def test_ordinary_saved_construction_state_reopens_and_restarts_with_real_members_tabs_and_history(
+    main_actor, tmp_path, monkeypatch, state, format_kind
+):
+    actor = main_actor([[tool_call('inspect_project', 'genuine-construction-state-history')]])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    name = 'partial_' + hashlib.sha256(str(tmp_path).encode()).hexdigest()[:14]
+    _prepare_ordinary_construction_state(actor, state, name)
+    target = tmp_path / ('ordinary-state.zip' if format_kind == 'zip' else 'ordinary-state-folder')
+    assert not target.exists(), 'The genuine ordinary Save format owner creates its absent fixture destination'
+    assert actor.command('save_project_as', path=str(target), zip=format_kind == 'zip', copy=False)['reply']['saved'], (
+        'Normal Session SaveAs actually writes the construction state through its original folder/archive format owner')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    original = _construction_science(actor);tabs = _construction_enabled_tabs(actor)
+    before = ({'archive': target.read_bytes()} if target.is_file() else _new_project_scientific_bytes(target))
+    location = target / 'project.edi' if format_kind == 'record' else target
+    assert actor.command('open', path=str(location))['reply']['opened'], (
+        'Ordinary Open restores its own genuinely saved empty/intermediate state rather than imposing computation completeness')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    assert _construction_science(actor) == original and _construction_enabled_tabs(actor) == tabs, (
+        'Actual serialized metadata, members, optional uncertainties, flags, references and enabled normal tabs roundtrip without invented placeholders')
+    assert qml(actor, 'Session.lastError') == '', 'Successful construction-state Open is not a dismissed ordinary startup/load error'
+    after = ({'archive': target.read_bytes()} if target.is_file() else _new_project_scientific_bytes(target))
+    assert after == before, 'Ordinary Open never repairs, deletes or overwrites the original saved project to manufacture successful restore'
+    actor.connect();actor.request('Inspect this actual saved work-in-progress without inventing missing structures, observations or a fit.')
+    _session_completed(actor, 1);native_result(actor.responses()[0])
+    thread = _session_state(actor)['inputs'][0]['threadId']
+    _capture_genuine_archive(actor, 'construction-state-current')
+    manifest = _capture_exact_cache_manifest(actor, 'construction-state-current')
+    sources = _finish_genuine_restart_sources(actor, manifest)
+    restored = _start_exact_original_fixture_restart(tmp_path, monkeypatch, sources, [])
+    try:
+        _ordinary_restart_connect(restored)
+        restored.until(lambda value: value['ui']['connected'] and bool(value['ui']['project']))
+        assert _construction_science(restored) == original and _construction_enabled_tabs(restored) == tabs, (
+            'A real fresh ordinary restart restores the same partial scientific state/tab availability through the normal Session project owner')
+        resumes = _session_wire(restored, 'thread/resume')
+        assert resumes and resumes[-1]['params']['threadId'] == thread and not _session_wire(restored, 'turn/start'), (
+            'Construction-state project restoration binds the actual original conversation without replaying a prompt or any scientific operation')
+        (restored.folder / 'ordinary-construction-state-roundtrip.json').write_text(json.dumps({
+            'state': state, 'format': format_kind, 'saved_source': str(target), 'opened_location': str(location),
+            'original_tabs': tabs, 'original_science': original, 'actual_resume': resumes[-1],
+            'source_sha256': hashlib.sha256(before['archive']).hexdigest() if 'archive' in before else _new_project_file_hashes(before),
+            'platform_chooser_input': 'not claimed; public original Session format API exercised'}, indent=2))
+    finally:
+        _close_explicit_restart_actor(restored)
+
+
+@pytest.mark.parametrize('corruption', ['malformed_metadata', 'unsupported_schema', 'dangling_structure', 'malformed_present_data'])
+def test_construction_state_open_preserves_original_schema_data_and_held_reference_refusals(main_actor, tmp_path, corruption):
+    actor = main_actor([[]]);_prepare_ordinary_construction_state(actor, 'empty', 'safe_partial_current')
+    safe = tmp_path / 'safe-original-partial'
+    assert actor.command('save_as', path=str(safe))['reply']['saved'], (
+        'The refusal control has an independently saved viable ordinary partial original before reading the malformed target')
+    original = _construction_science(actor);original_files = _new_project_scientific_bytes(safe)
+    broken = copied_estimate_project(tmp_path / 'explicit-corrupted-complete-source', overrides=False)
+    if corruption == 'malformed_metadata':
+        with (broken / 'project.edi').open('a') as output:output.write('\n_metadata.title "unterminated deliberate negative fixture\n')
+    elif corruption == 'unsupported_schema':
+        path = broken / 'project.edi';path.write_text(path.read_text().replace('_edi.schema_version 3', '_edi.schema_version 999999', 1))
+    elif corruption == 'dangling_structure':
+        linked = broken / 'structures/phase.edi'
+        assert linked.is_file(), 'The actual original reference fixture contains the held phase member before explicit negative removal'
+        linked.unlink()  # Only the corrupted copy loses its real referenced member.
+    else:
+        path = broken / 'experiments/bank.edi';text = path.read_text()
+        old = '10 167 12.6'
+        assert old in text, 'Malformed-present-data control mutates one actual original numeric row, not an invented empty category'
+        path.write_text(text.replace(old, '10 not-a-number 12.6', 1))
+    malformed = _new_project_scientific_bytes(broken)
+    assert not actor.command('open', path=str(broken))['reply']['opened'] and qml(actor, 'Session.lastError'), (
+        'Allowing absent construction members cannot permit malformed schema/metadata/present observations or actual dangling held references')
+    assert _construction_science(actor) == original and _new_project_scientific_bytes(safe) == original_files, (
+        'A truthful malformed-target refusal preserves the actual viable original partial project and its saved source bytes')
+    assert _new_project_scientific_bytes(broken) == malformed, (
+        'Ordinary Open does not silently delete or repair the deliberately failing source to hide an integrity error')
+
+# Strict computation/model loading, web stored/recovery, readonly/example
+# copies and all installer platforms remain separately unrun. These positives
+# use only ordinary Session restoration; they do not relax the strict consumer.
+
+
+# Independently authored original-owner gate packet: review73_74_76_private_gates.py
+# PRIVATE / AUTHORED / UNRUN. Append candidate for the existing real Main actor.
+# Expectations: owner truthful terminal/Stop/currentness contracts, reviews73/74/76,
+# pinned092d Turn Option<TurnError>; no expected values read from repair drafts.
+
+def _provider_actual_report(actor, project, status=None):
+    path = project / 'reports/work-report.json'
+    def ready(_value):
+        if not path.is_file():
+            return False
+        try:
+            report = json.loads(path.read_bytes())
+        except (OSError, ValueError):
+            return False
+        turns = report.get('scope_coverage', {}).get('turns', [])
+        return bool(turns) and turns[-1].get('terminal', {}).get('value') in ('completed', 'interrupted', 'failed') \
+            and (status is None or turns[-1].get('terminal', {}).get('value') == status)
+    actor.until(ready)
+    original = path.read_bytes();value = json.loads(original)
+    destination = actor.folder / ('actual-provider-report-' + str(len(list(actor.folder.glob('actual-provider-report-*.json')))) + '.json')
+    destination.write_bytes(original)
+    (destination.with_suffix('.identity.json')).write_text(json.dumps({'source': str(path),
+        'copy': str(destination), 'bytes': len(original), 'sha256': hashlib.sha256(original).hexdigest(),
+        'exact_copy': original == destination.read_bytes()}, indent=2))
+    rows = [entry['row'] for entry in value['history_evidence']]
+    return value, rows
+
+
+def _provider_read_then_terminal(main_actor, tmp_path, terminal, *, hold=False):
+    call = {'tool': 'inspect_project', 'call_id': 'original-read-before-terminal',
+        'arguments': {'purpose': 'Read the actual original current project before the finite runtime terminal.'}}
+    actor = main_actor([[call]], hold_final=hold)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Terminal ownership starts with a genuine ordinary current project, not fabricated native output')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        observe_context_continuity=True, fixture_provider_terminal=terminal)
+    actor.connect();_session_request_with_original_disclosure(actor,
+        'Observe the current project through the original read-only native operation once.')
+    actor.until(lambda _value: len(actor.responses()) == 1)
+    native_result(actor.responses()[0])
+    return actor, project, call
+
+
+def test_real_stop_with_null_error_does_not_invent_provider_failure(main_actor, tmp_path):
+    actor, project, call = _provider_read_then_terminal(main_actor, tmp_path, None, hold=True)
+    before = json.loads(json.dumps(actor.responses()[0]))
+    assert actor.last['ui']['can_cancel'], (
+        'The original accepted task remains genuinely cancellable after its completed native read and before a final runtime response')
+    actor.command('cancel')
+    actor.until(lambda value: value['ui']['state'] == 'idle' and not value['ui']['can_cancel'])
+    report, rows = _provider_actual_report(actor, project, 'interrupted')
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    ended = [row for row in sent if row.get('method') == 'turn/completed'][-1]['params']
+    assert ended['turn']['status'] == 'interrupted' and ended['turn']['error'] is None, (
+        'The actual Stop reaches its original supported interrupted/null-error runtime boundary')
+    assert len(_session_wire(actor, 'turn/interrupt')) == 1 and len(_session_wire(actor, 'turn/start')) == 1, (
+        'One real Stop sends one interrupt and never resubmits the original user work')
+    assert not [row for row in rows if row.get('payload', {}).get('type') == 'providerError'], (
+        'A successful interruption with no supplied provider error must not fabricate a failed provider-error observation')
+    assert actor.responses() == [before] and call['call_id'] in json.dumps(report), (
+        'Stop preserves the exact already-completed original native receipt and factual partial history once')
+
+
+@pytest.mark.parametrize('status', ['completed', 'interrupted', 'failed'])
+@pytest.mark.parametrize('presence', ['absent', 'null', 'actual'])
+def test_runtime_terminal_preserves_supplied_error_truth_and_original_native_owner(main_actor, tmp_path, status, presence):
+    message = 'Original supplied public runtime failure explanation.'
+    secret = 'PRIVATE-ADDITIONAL-DETAILS-MUST-NOT-BE-PUBLISHED'
+    terminal = {'status': status, 'error_presence': presence}
+    if presence == 'actual':
+        terminal['error'] = {'message': message, 'codexErrorInfo': 'rateLimitExceeded',
+            'additionalDetails': secret, 'misalignment': None}
+    actor, project, call = _provider_read_then_terminal(main_actor, tmp_path, terminal)
+    actor.until(lambda value: value['ui']['state'] == 'idle' and not value['ui']['can_cancel'])
+    report, rows = _provider_actual_report(actor, project, status)
+    provider = [row for row in rows if row.get('payload', {}).get('type') == 'providerError']
+    if presence == 'actual':
+        assert any(row['payload'].get('message') == message for row in provider), (
+            'An actual supplied public error remains observable even on completed or interrupted terminals')
+    elif status != 'failed':
+        assert not provider, (
+            'Absent or null optional error on completed/interrupted work is terminal metadata, not an invented provider failure')
+    else:
+        assert not any(row['payload'].get('message') for row in provider), (
+            'A failed turn without an explanation must remain explicitly unknown rather than invent an observed public message')
+    assert secret not in json.dumps(report), (
+        'Private additionalDetails are not an allowed public error explanation or report payload')
+    assert len(actor.responses()) == 1 and len(_session_wire(actor, 'turn/start')) == 1 \
+        and call['call_id'] in json.dumps(report), (
+            'Terminal diagnostic publication neither replays the user input nor loses or mutates its completed native result')
+    ended = [row for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
+        if row.get('method') == 'turn/completed'][-1]['params']['turn']
+    assert ('error' in ended) == (presence != 'absent'), (
+        'The absent compatibility input is distinguished from the pinned normal explicit-null serialization')
+
+
+@pytest.mark.parametrize('will_retry', [False, True])
+def test_actual_error_notification_keeps_retry_and_native_facts_without_client_replay(main_actor, tmp_path, will_retry):
+    message = 'Original runtime notification before its terminal boundary.'
+    terminal = {'status': 'completed' if will_retry else 'failed', 'error_presence': 'null',
+        'notification': {'error': {'message': message, 'codexErrorInfo': 'serverOverloaded',
+            'additionalDetails': None, 'misalignment': None}, 'willRetry': will_retry, 'duplicate': True}}
+    actor, project, call = _provider_read_then_terminal(main_actor, tmp_path, terminal)
+    actor.until(lambda value: value['ui']['state'] == 'idle' and not value['ui']['can_cancel'])
+    report, rows = _provider_actual_report(actor, project, terminal['status'])
+    observed = [row for row in rows if row.get('payload', {}).get('type') == 'providerError'
+        and row['payload'].get('source') == 'notification' and row['payload'].get('message') == message]
+    assert len(observed) == 1 and observed[0]['payload']['willRetry'] is will_retry, (
+        'Duplicate identical actual notifications retain their original factual retry decision once')
+    assert len(_session_wire(actor, 'turn/start')) == 1 and len(actor.responses()) == 1 \
+        and call['call_id'] in json.dumps(report), (
+            'Provider retry metadata does not authorize any client input/native replay')
+
+
+@pytest.mark.parametrize('email', [None, ''])
+def test_nullable_current_account_metadata_is_not_proof_of_change_or_new_admission(main_actor, email):
+    actor = main_actor([[], []]);_session_configure(actor,
+        session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();_session_request_with_original_disclosure(actor, 'First actual input under a proved managed account.')
+    _session_completed(actor, 1)
+    original = _session_state(actor)['inputs'][0]
+    before = len(_session_wire(actor, 'account/read'))
+    _session_configure(actor, fixture_account_read_reply={'account': {'type': 'chatgpt',
+        'email': email, 'planType': 'plus'}, 'requiresOpenaiAuth': False},
+        fixture_usage_notification_generation=1,
+        fixture_usage_notifications=[{'method': 'account/updated', 'params': {'authMode': 'chatgpt', 'planType': None}}])
+    actor.command('refresh_usage')
+    actor.until(lambda _value: len(_session_wire(actor, 'account/read')) > before)
+    identity_expression = '(JSON.parse(Session.assistant.workReportDocument()).scope_coverage.current_session_browser.account_check || {}).same_identity'
+    actor.until(lambda _value: qml(actor, identity_expression) == 'unknown')
+    pending_text = 'Second explicit input after actual unchanged nonempty identity proof.'
+    qml(actor, 'Session.assistant.send(' + json.dumps(pending_text) + ')')
+    actor.command('inspect')
+    assert len(_session_state(actor)['inputs']) == 1 and len(_session_wire(actor, 'turn/start')) == 1, (
+        'Nullable/empty optional account metadata is not authority to start or replay user work')
+    retained = actor.last['ui']['messages']
+    assert any(row.get('kind') == 'user' and 'First actual input' in row.get('text', '') for row in retained), (
+        'Unavailable current identity proof must not erase original accepted current history')
+    _session_configure(actor, fixture_account_read_reply={'account': {'type': 'chatgpt',
+        'email': 'integration@example.invalid', 'planType': 'plus'}, 'requiresOpenaiAuth': False},
+        fixture_usage_notification_generation=2,
+        fixture_usage_notifications=[{'method': 'account/updated', 'params': {'authMode': 'chatgpt', 'planType': None}}])
+    actor.command('refresh_usage')
+    actor.until(lambda _value: qml(actor, identity_expression) is True)
+    # Do not resubmit the attempted input: whether a blocked draft is retained
+    # or refused is a separate public contract. Read-only Refresh reaches the
+    # restored account authority without an uncertain second turn/start.
+    boundary = len(_session_wire(actor, 'thread/list'))
+    qml(actor, 'Session.assistant.refreshSessions()');_session_wait(actor)
+    actor.until(lambda _value: len(_session_wire(actor, 'thread/list')) > boundary)
+    inputs = _session_state(actor)['inputs']
+    assert len(inputs) <= 2 and inputs[0] == original and all(
+        row['threadId'] == original['threadId'] and pending_text in str(row['input'])
+        for row in inputs[1:]), (
+        'Restored identity cannot replay accepted old input, duplicate the blocked new input, or silently switch its conversation')
+    (actor.folder / 'nullable-current-account-boundary.json').write_text(json.dumps({
+        'supplied_optional_email': email, 'original_input': original, 'actual_inputs': inputs,
+        'actual_account_reads': _session_wire(actor, 'account/read')}, indent=2))
+
+
+@pytest.mark.parametrize('status', ['completed', 'interrupted', 'failed'])
+@pytest.mark.parametrize('invalid_error', ['NOT-A-TURN-ERROR', {'message': 17, 'codexErrorInfo': None}])
+def test_wrong_typed_terminal_error_stays_unknown_not_a_supplied_public_message(main_actor, tmp_path, status, invalid_error):
+    # Explicit parser-negative inputs. Pinned normal runtime uses TurnError|null;
+    # these never count as positive stock-runtime serialization proof.
+    terminal = {'status': status, 'error_presence': 'malformed', 'error': invalid_error}
+    actor, project, call = _provider_read_then_terminal(main_actor, tmp_path, terminal)
+    actor.until(lambda value: value['ui']['state'] == 'idle' and not value['ui']['can_cancel'])
+    report, rows = _provider_actual_report(actor, project)
+    provider = [row for row in rows if row.get('payload', {}).get('type') == 'providerError']
+    assert not any(row['payload'].get('message') for row in provider), (
+        'A wrong-typed optional terminal field is not evidence of an actual supplied public provider message')
+    assert any(row.get('error_presence') == 'invalid' or row.get('message_presence') == 'invalid'
+        or isinstance(row.get('event_failure'), dict) for row in objects(report)), (
+        'Wrong-typed terminal input retains an explicit invalid/processing diagnostic rather than silently becoming a usable provider error')
+    assert 'NOT-A-TURN-ERROR' not in json.dumps(report), (
+        'Malformed raw terminal values cannot become user-facing error explanations or public diagnostic payloads')
+    assert len(actor.responses()) == 1 and len(_session_wire(actor, 'turn/start')) == 1 \
+        and call['call_id'] in json.dumps(report), (
+            'A malformed terminal diagnostic never erases or repeats the completed original native read')
+    (actor.folder / 'parser-negative-terminal-classification.json').write_text(json.dumps({
+        'classification': 'EXPLICIT_NEGATIVE_NOT_PINNED_VALID', 'terminal_status': status,
+        'supplied_error': invalid_error, 'observed_provider_rows': provider,
+        'actual_ui_state': actor.last['ui']['state'], 'actual_native_responses': actor.responses()}, indent=2))
+
+
+# Independently authored original-owner gate packet: reset_pending_attachments_private_gates.py
+# PRIVATE AUTHORED / UNRUN. Hd85e919d0: FIRST toolbar Reset/afterChanges,
+# immutable pending input owners and real standard Save/Discard/Cancel controls.
+# No assumption that old project approval transfers to the no-project successor.
+
+@pytest.mark.parametrize('outcome', ['save', 'discard', 'cancel'])
+@pytest.mark.parametrize('draft_kind', ['connected_mixed', 'connected_file_only', 'disconnected_file_only'])
+def test_original_reset_preserves_only_genuine_pending_draft_inputs_and_rejects_late_picker(main_actor, tmp_path, outcome, draft_kind):
+    actor = main_actor([[]]);project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Reset begins with its genuine ordinary current saved project')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    files = _attachment_fixtures(tmp_path, 3)
+    consumed = None
+    if draft_kind != 'disconnected_file_only':
+        actor.connect()
+    if draft_kind == 'connected_mixed':
+        _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+        token = actor.begin_current_file_selection()
+        assert actor.command('selected_add', token=token, paths=[str(files[0])])['reply']['added'], (
+            'The consumed prefix is an actual first admitted input, not a hand-written history row')
+        consumed = _attachment_rows(actor)[0]['id']
+        _session_request_with_original_disclosure(actor, 'Keep this accepted original input in its original task history.')
+        _session_completed(actor, 1)
+        assert not any(row['id'] == consumed and row['pending'] for row in _attachment_rows(actor)), (
+            'The original file was genuinely consumed before the new pending draft is composed')
+    token = qml(actor, 'Session.assistant.beginFileSelection(' + ('false' if draft_kind == 'disconnected_file_only' else 'true') + ')')
+    assert token and actor.command('selected_add', token=token, paths=[str(files[1])])['reply']['added'], (
+        'The pending file is admitted by the actual original selected-input owner, even for disconnected composition')
+    pending = [row for row in _attachment_rows(actor) if row['pending']]
+    assert len(pending) == 1 and pending[0]['name'] == files[1].name, (
+        'Exactly the newly chosen unsent file belongs to this actual pending draft')
+    text = 'Keep this exact unsent mixed draft.' if draft_kind == 'connected_mixed' else ''
+    editor = _scene_control_expression('assistant.composer')
+    if text:
+        actor.command('click', name='assistant.composer');actor.command('manual_text', text=text)
+    assert qml(actor, '(' + editor + ').text') == text, (
+        'The real composer owns the exact literal file-only or mixed draft before Reset')
+    late = qml(actor, 'Session.assistant.beginFileSelection(' + ('false' if draft_kind == 'disconnected_file_only' else 'true') + ')')
+    assert late, 'A real outstanding picker token exists before the original project reset intent'
+    hashes = {str(path): {'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+        'dev': path.stat().st_dev, 'ino': path.stat().st_ino} for path in files}
+    source_before = (project / 'project.edi').read_bytes()
+    description = 'A genuine unsaved ordinary edit before the original Reset choice.'
+    qml(actor, 'Session.project.description=' + json.dumps(description))
+    assert qml(actor, 'Session.project.modified'), 'The ordinary Reset really has an unsaved current owner requiring its normal choice'
+    start_count = len(_session_wire(actor, 'turn/start'))
+    actor.command('click', name='appBar.button.reset')
+    actor.until(lambda value: any(row['name'] == 'unsavedChanges' and row['fully_exposed']
+        for row in value['ui']['controls']))
+    chosen = actor.command('dialog_ok', name='unsavedChanges', role=outcome)['reply']
+    assert chosen['pressed_changes'] > 0 and chosen['role'] == outcome, (
+        'The original standard Save/Discard/Cancel button receives genuine current-window input; no direct closeProject bypass qualifies')
+    if outcome == 'cancel':
+        actor.until(lambda value: value['ui']['project'] and value['ui']['project']['path'] == str(project))
+        assert qml(actor, 'Session.project.modified') and (project / 'project.edi').read_bytes() == source_before, (
+            'Cancelling Reset preserves the modified original project and its last saved bytes')
+    else:
+        actor.until(lambda value: not value['ui']['project'])
+        if outcome == 'save':
+            assert description in (project / 'project.edi').read_text(), (
+                'The actual standard Save choice preserves the original ordinary metadata edit before close')
+        else:
+            assert (project / 'project.edi').read_bytes() == source_before, (
+                'The actual standard Discard choice closes without silently writing the unsaved original edit')
+    after = _attachment_rows(actor)
+    assert [row for row in after if row['pending']] == pending and qml(actor, '(' + editor + ').text') == text, (
+        'Accepted Reset and cancellation retain the same genuine pending descriptors and exact draft text without synthesizing input')
+    if consumed:
+        assert not any(row['id'] == consumed and row['pending'] for row in after), (
+            'An accepted history attachment is never revived as a fresh pending input by Reset')
+    if outcome != 'cancel':
+        before_late = json.loads(json.dumps(after))
+        assert actor.command('selected_add', token=late, paths=[str(files[2])])['reply']['added'] is False, (
+            'A retired original picker callback cannot add files under the reset successor project context')
+        assert _attachment_rows(actor) == before_late, (
+            'Refusing a late picker callback preserves the current actual pending draft unchanged')
+    assert len(_session_wire(actor, 'turn/start')) == start_count, (
+        'Reset choices, draft retention and late chooser cleanup never submit or replay a provider task')
+    assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == entry['sha256']
+        and Path(path).stat().st_dev == entry['dev'] and Path(path).stat().st_ino == entry['ino']
+        for path, entry in hashes.items()), (
+        'Draft retention keeps the original physical admitted inputs rather than replacing them with copied scientific files')
+    (actor.folder / 'ordinary-reset-pending-input-boundary.json').write_text(json.dumps({
+        'choice': outcome, 'draft_kind': draft_kind, 'before_pending': pending, 'after': after,
+        'original_consumed_id': consumed, 'source_input_identities': hashes,
+        'actual_project_after': actor.last['ui']['project'], 'ordinary_button_receipt': chosen}, indent=2))
+
+
+@pytest.mark.parametrize('retirement', ['awaiting_ack', 'lost_transport'])
+def test_original_reset_does_not_revive_wire_admitted_or_uncertain_ack_files_as_new_pending(main_actor, tmp_path, retirement):
+    # Negative counterpart to genuinely-pending Reset. The client request is
+    # actually received; only its original RPC reply is held or lost. A visible
+    # pending history status is not proof that this input was never written.
+    actor = main_actor([[]]);project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Admitted-input Reset uses its actual ordinary saved project and original owner')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    release = actor.folder / 'release-original-before-reset-start-ack'
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        observe_context_continuity=True, fixture_unacked_start_hold=str(release))
+    actor.connect();source = _attachment_fixtures(tmp_path, 1)[0]
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
+        'The original outgoing file was genuinely admitted through the existing immutable file owner')
+    first_file = [row for row in _attachment_rows(actor) if row['pending']]
+    saved = {str(path.relative_to(project)): path.read_bytes() for path in project.rglob('*.edi')}
+    _session_request_with_original_disclosure(actor, 'This actually written original read-only input is not a fresh draft after Reset.')
+    actor.until(lambda _value: len(_session_wire(actor, 'turn/start')) == 1
+        and len(_session_state(actor).get('actual_unacked_requests', [])) == 1)
+    original = _session_wire(actor, 'turn/start')[0]
+    accepted = _session_state(actor)['actual_unacked_requests'][0]
+    emitted = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    assert accepted == original and not any(row.get('id') == original['id'] and ('result' in row or 'error' in row) for row in emitted), (
+        'The original request is genuinely on the runtime wire while its own acknowledgement remains unobserved')
+    before = json.loads(json.dumps(_attachment_rows(actor)))
+    fault = None
+    try:
+        if retirement == 'lost_transport':
+            fault = actor.command('close_owned_transport_write')['reply']
+            assert fault['original_vm_child'] and fault['public_close_write_channel_invoked'], (
+                'Only the proved original fixture-owned helper loses its unacknowledged transport; no provider or global process is touched')
+            actor.until(lambda value: not value['ui']['connected'])
+        actor.command('clear_ui_sequence');actor.command('click', name='appBar.button.reset')
+        actor.until(lambda value: not value['ui']['project'])
+        after = _attachment_rows(actor)
+        assert not any(row['pending'] for row in after), (
+            'Reset cannot reintroduce an actually wire-admitted or delivery-uncertain attachment as a new pending file merely because its history row was not completed')
+        assert _session_wire(actor, 'turn/start') == [original], (
+            'Reset and actual original-helper retirement never replay the uncertain original request into a no-project successor')
+        assert {str(path.relative_to(project)): path.read_bytes() for path in project.rglob('*.edi')} == saved, (
+            'Retiring an admitted read-only task does not mutate the original saved scientific project')
+        (actor.folder / 'reset-actual-admitted-input-negative.json').write_text(json.dumps({
+            'retirement': retirement, 'actual_original_request': original, 'actual_server_received': accepted,
+            'original_response_absent_at_boundary': True, 'original_file_descriptors': first_file,
+            'actual_before_reset': before, 'actual_after_reset': after, 'actual_owned_transport_fault': fault,
+            'actual_ui_sequence': actor.last['ui']['ui_sequence'],
+            'classification': 'WIRE_ADMITTED_UNACKNOWLEDGED_NOT_GENUINELY_UNSENT; no completed-provider/native-outcome claim'}, indent=2))
+    finally:
+        release.touch()
+
+
+# Independently authored original-owner gate packet: single_approval_admission_private_gates.py
+# PRIVATE / UNRUN. Hda0eda0c6 class: volatile presentation-clock bytes must not
+# consume the original draft or require a second Send after genuine approval.
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_one_actual_send_and_visible_share_after_real_clock_crossing_admits_original_input_once(main_actor, tmp_path, show_actions):
+    actor = main_actor([[]], show_actions=show_actions)
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();source = _attachment_fixtures(tmp_path, 1)[0]
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
+        'The new draft has a genuine immutable user-selected file and actual original chooser owner')
+    pending = [row for row in _attachment_rows(actor) if row['pending']]
+    assert len(pending) == 1 and pending[0]['name'] == source.name, (
+        'Approval begins with one actual pending attachment rather than a planted context or seeded receipt')
+    text = 'Use this original attached input for the current read-only task.'
+    source_bytes = source.read_bytes();source_inode = (source.stat().st_dev, source.stat().st_ino)
+    before_inputs = len(_session_state(actor)['inputs'])
+    actor.command('send_text', text=text)
+    actor.until(lambda value: any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
+        for row in value['ui']['controls']))
+    assert len(_session_state(actor)['inputs']) == before_inputs, (
+        'The actual first Send reaches its original sharing dialog before any provider input is admitted')
+    original_preview = qml(actor, 'Session.assistant.contextPreview')
+    marker = 'e11.original-approval-clock-boundary'
+    timer_source = ('import QtQuick; Item {id:clockBoundary;objectName:"' + marker + '"; '
+        'property double startSecond: Math.floor(Date.now()/1000); property double endSecond: startSecond; '
+        'property bool crossed:false; Timer {interval:20;repeat:true;running:true; '
+        'onTriggered:{clockBoundary.endSecond=Math.floor(Date.now()/1000);if(clockBoundary.endSecond>clockBoundary.startSecond){clockBoundary.crossed=true;stop();}}}}')
+    assert qml(actor, '(function(){const item=Qt.createQmlObject(' + json.dumps(timer_source)
+        + ',window.contentItem);return item!==null;})()'), (
+        'The fixture observes a real Qt clock transition without changing the app clock or approval state')
+    watched = _scene_control_expression(marker)
+    actor.until(lambda _value: qml(actor, '(' + watched + ').crossed'))
+    clock = qml(actor, '(function(){const o=' + watched
+        + ';return {start:o.startSecond,end:o.endSecond,crossed:o.crossed};})()')
+    assert clock['crossed'] and clock['end'] > clock['start'], (
+        'Approval genuinely occurs after a real second boundary; no arbitrary delay substitutes for reaching the volatile-clock escape')
+    current_preview = qml(actor, 'Session.assistant.contextPreview')
+    delivery = actor.command('dialog_ok', name='AssistantConnectionDialog', role='ok')['reply']
+    assert delivery['pressed_changes'] > 0 and delivery['actual_dialog_name'] == 'AssistantConnectionDialog', (
+        'One physical click reaches the original currently exposed Share project information standard button')
+    _session_completed(actor, before_inputs + 1)
+    inputs = _session_state(actor)['inputs']
+    assert len(_session_wire(actor, 'turn/start')) == before_inputs + 1 and text in str(inputs[-1]['input']), (
+        'The original captured draft is admitted exactly once after approval without a second Send or fabricated placeholder text')
+    assert not any(row['pending'] and row['id'] == pending[0]['id'] for row in _attachment_rows(actor)), (
+        'Only actual admission consumes the original pending attachment')
+    editor = _scene_control_expression('assistant.composer')
+    assert qml(actor, '(' + editor + ').text') == '', (
+        'The admitted original text clears once instead of leaving an apparently unsent draft requiring resubmission')
+    assert source.read_bytes() == source_bytes and (source.stat().st_dev, source.stat().st_ino) == source_inode, (
+        'The accepted input remains the original immutable physical file throughout sharing and admission')
+    (actor.folder / 'single-send-after-real-clock-approval.json').write_text(json.dumps({
+        'actual_clock': clock, 'original_preview': original_preview, 'preview_at_approval': current_preview,
+        'physical_approval': delivery, 'original_pending': pending, 'actual_inputs': inputs,
+        'send_count': 1, 'approval_count': 1, 'source_sha256': hashlib.sha256(source_bytes).hexdigest()}, indent=2))
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_one_send_share_waits_for_real_same_account_readiness_without_losing_original_draft(main_actor, tmp_path, show_actions):
+    # The original user clicks Send and Share once. A held genuine correlated
+    # account/read is a proved prewire wait, not an uncertain turn admission.
+    actor = main_actor([[]], show_actions=show_actions)
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();source = _attachment_fixtures(tmp_path, 1)[0]
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
+        'Waiting admission owns a genuinely selected original input and its immutable descriptor')
+    pending = [row for row in _attachment_rows(actor) if row['pending']]
+    text = 'Continue this exact original attached read-only task after sharing approval.'
+    account = qml(actor, 'Session.assistant.account')
+    actor.command('send_text', text=text)
+    actor.until(lambda value: any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
+        for row in value['ui']['controls']))
+    marker = 'e11.original-send-actual-readiness'
+    watch_source = ('import QtQuick; Item {id:witness;objectName:"' + marker + '";'
+        'property var events:[];property int readinessChanges:0;property double startSecond:Math.floor(Date.now()/1000);'
+        'property double endSecond:startSecond;property bool crossed:false;'
+        'Timer {interval:20;running:true;repeat:true;onTriggered:{witness.endSecond=Math.floor(Date.now()/1000);'
+        'if(witness.endSecond>witness.startSecond){witness.crossed=true;stop();}}}}')
+    assert qml(actor, '(function(){const vm=Session.assistant,o=Qt.createQmlObject(' + json.dumps(watch_source)
+        + ',window.contentItem);vm.draftAdmissionReadyChanged.connect(function(){if(Qt.isQtObject(o)&&Session.assistant===vm){'
+        'o.readinessChanges++;o.events.push({ready:vm.draftAdmissionReady,connected:vm.connected,state:vm.state});}});return true;})()'), (
+        'A read-only witness observes the actual original public readiness signal and Qt clock, without inventing admission status')
+    release = actor.folder / 'release-original-send-account-read'
+    try:
+        request = _review66_hold_original_identity(actor, release)
+        actor.until(lambda _value: not qml(actor, 'Session.assistant.draftAdmissionReady'))
+        assert qml(actor, 'Session.assistant.connected') and qml(actor, 'Session.assistant.account') == account, (
+            'The actual supported account verification is pending while the original same-account connection remains viable')
+        watcher = _scene_control_expression(marker)
+        actor.until(lambda _value: qml(actor, '(' + watcher + ').crossed'))
+        delivery = actor.command('dialog_ok', name='AssistantConnectionDialog', role='ok')['reply']
+        assert delivery['pressed_changes'] > 0 and delivery['actual_dialog_name'] == 'AssistantConnectionDialog', (
+            'The user shares once through the original exposed standard button while real prewire readiness remains pending')
+        # Pump through the existing actual command/event loop; no resubmission.
+        actor.command('inspect')
+        assert not _session_wire(actor, 'turn/start') and not _session_state(actor)['inputs'], (
+            'Before the captured account reply is released, approval must not admit the original user input on unproved authority')
+        editor = _scene_control_expression('assistant.composer')
+        assert qml(actor, '(' + editor + ').text') == text \
+            and [row for row in _attachment_rows(actor) if row['pending']] == pending, (
+            'A proved waiting admission keeps the exact original text and genuinely pending input instead of clearing them early')
+        release.touch();actor.command('refresh_usage')
+        _session_completed(actor, 1)
+        actual = _session_state(actor)['inputs']
+        assert len(_session_wire(actor, 'turn/start')) == 1 and len(actual) == 1 and text in str(actual[0]['input']), (
+            'The actual unchanged-account readiness wake admits the originally approved draft once, with no second Send or artificial input')
+        observed = qml(actor, '(function(){const o=' + watcher + ';return {events:o.events,changes:o.readinessChanges,'
+            'start:o.startSecond,end:o.endSecond,crossed:o.crossed};})()')
+        assert observed['changes'] > 0 and any(row['ready'] for row in observed['events']) \
+            and observed['crossed'] and observed['end'] > observed['start'], (
+            'The test genuinely reaches a public readiness transition after a real clock crossing, not merely an idle UI observation')
+        assert qml(actor, '(' + editor + ').text') == '' \
+            and not any(row['pending'] and row['id'] == pending[0]['id'] for row in _attachment_rows(actor)), (
+            'Only the actual admitted original input consumes its original draft text and pending attachment')
+        sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+        reply = [row for row in sent if row.get('id') == request['id'] and 'result' in row]
+        assert len(reply) == 1 and reply[0]['result']['account']['email'] == 'integration@example.invalid', (
+            'The readiness transition belongs to the original genuinely received unchanged nonempty account proof, never a fabricated success')
+        (actor.folder / 'one-send-share-actual-prewire-wait.json').write_text(json.dumps({
+            'original_held_account_request': request, 'actual_correlated_reply': reply,
+            'actual_signal_and_clock_observations': observed, 'actual_approval': delivery,
+            'original_pending_files': pending, 'actual_inputs': actual, 'send_count': 1,
+            'share_count': 1, 'classification': 'ACTUAL_PREWIRE_WAIT_THEN_READINESS_NOT_UNCERTAIN_WRITE'}, indent=2))
+    finally:
+        release.touch()
+
+
+def test_uncertain_original_send_write_does_not_auto_replay_on_actual_same_owner_readiness(main_actor, tmp_path):
+    # The opt-in existing probe fault reaches the actual pending-row publication
+    # inside original admission, before its transport write. It does not return
+    # a fake admission map or preemptively turn the owner disconnected.
+    actor = main_actor([[]]);_session_configure(actor,
+        session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();source = _attachment_fixtures(tmp_path, 1)[0]
+    original_account = qml(actor, 'Session.assistant.account')
+    original_vm = qml(actor, 'String(Session.assistant)')
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
+        'Uncertain admission begins with a real pending original input and disclosure owner')
+    pending = [row for row in _attachment_rows(actor) if row['pending']]
+    text = 'This original draft must not be replayed after an uncertain transport write.'
+    actor.command('send_text', text=text)
+    actor.until(lambda value: any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
+        for row in value['ui']['controls']))
+    armed = actor.command('arm_pending_send_write_fault', text=text)['reply']
+    assert armed['armed'] and armed['original_vm'] and armed['original_message_model'], (
+        'The one-shot fault is armed on the actual original connected ready model before the original approval')
+    approval = actor.command('dialog_ok', name='AssistantConnectionDialog', role='ok')['reply']
+    assert approval['pressed_changes'] > 0, 'One real original Share click precedes the reached uncertain admission boundary'
+    actor.until(lambda _value: actor.command('session_fault_facts')['reply'].get('pending_user_row_inserted'))
+    facts = actor.command('session_fault_facts')['reply']
+    assert facts['pending_user_row_id'] and facts['original_vm_before'] and facts['original_message_model_before'] \
+        and facts.get('original_vm_child') and facts.get('public_close_write_channel_invoked') \
+        and not facts.get('pending_send_fault_error'), (
+        'The actual matching pending user row synchronously reaches the already-proved same-owned-child public write-channel close')
+    actor.until(lambda _value: actor.command('session_fault_facts')['reply'].get('actual_transport_failed_signal'))
+    facts = actor.command('session_fault_facts')['reply']
+    assert facts['actual_transport_error'], (
+        'A real transport failure is observed; merely arming a callback or disconnecting before admission is not a reached uncertain-write witness')
+    before_reconnect = json.loads(json.dumps(_session_wire(actor, 'turn/start')))
+    editor = _scene_control_expression('assistant.composer')
+    assert qml(actor, '(' + editor + ').text') == text \
+        and [row for row in _attachment_rows(actor) if row['pending']] == pending, (
+        'An unconfirmed write cannot acknowledge/clear the original unsent draft as if real admission had completed')
+    # Ordinary sign-in/reconnect is explicit; no second Send or second Share.
+    # If actual normal readiness cannot be reached, classify this channel as
+    # unreached instead of approving context or fabricating a replacement ID.
+    actor.command('sign_in')
+    actor.until(lambda value: value['ui']['connected'] and qml(actor, 'Session.assistant.draftAdmissionReady'))
+    assert qml(actor, 'Session.assistant.account') == original_account and qml(actor, 'String(Session.assistant)') == original_vm, (
+        'The no-replay boundary reaches actual readiness on the same original current account/window VM rather than a substituted fixture owner')
+    boundary = len(_session_wire(actor, 'thread/list'))
+    qml(actor, 'Session.assistant.refreshSessions()')
+    actor.until(lambda _value: len(_session_wire(actor, 'thread/list')) > boundary)
+    _session_wait(actor)
+    barrier = 'e11.uncertain-send-real-ready-loop'
+    tick = ('import QtQuick; Item {id:owner;objectName:"' + barrier + '";property bool done:false;'
+        'Timer {interval:0;running:true;onTriggered:Qt.callLater(function(){owner.done=true;})}}')
+    assert qml(actor, '(function(){return Qt.createQmlObject(' + json.dumps(tick) + ',window.contentItem)!==null;})()'), (
+        'The post-readiness witness uses a real owned Qt event-loop turn, not an inflated sleep or a second submission')
+    actor.until(lambda _value: qml(actor, '(' + _scene_control_expression(barrier) + ').done'))
+    assert _session_wire(actor, 'turn/start') == before_reconnect, (
+        'Actual same-owner readiness must not replay an old unconfirmed input after its uncertain original write')
+    assert qml(actor, '(' + editor + ').text') == text \
+        and [row for row in _attachment_rows(actor) if row['pending']] == pending, (
+        'The refused automatic replay leaves the original draft available for a genuinely new explicit user decision')
+    (actor.folder / 'uncertain-original-send-no-replay.json').write_text(json.dumps({
+        'original_pending_row': facts['pending_user_row_id'], 'actual_owned_fault': facts,
+        'actual_original_approval': approval, 'actual_turn_requests_before_readiness': before_reconnect,
+        'actual_turn_requests_after_readiness': _session_wire(actor, 'turn/start'),
+        'send_count': 1, 'share_count': 1, 'actual_ready': actor.last['ui']['connected'],
+        'typed_return': 'NOT_DIRECTLY_INTERCEPTED; source-qualified original request/write failure, no fabricated return',
+        'scope': 'Reached original pending-row write fault and actual later readiness; not a real-provider/server delivery guarantee'}, indent=2))
+
+
+# Independently authored original-owner gate packet: visible_offered_choice_private_gates.py
+# PRIVATE / UNRUN: He496132d6 actual offered-list selection, original controls.
+# Read-only signal witnesses do not create delegates, change popup/scroll state,
+# set currentIndex, focus a field or dispatch a replacement scientific mutation.
+
+def _watch_original_offered_choices(actor, marker):
+    observer = r'''(function(){
+        const original=Session.project,vm=Session.assistant;
+        const probe=Qt.createQmlObject('import QtQuick; Item {id:choiceProbe;property var facts:[];property var combos:[];property var rows:[];property var lastPointer:null;property bool finished:false;property var scan:null;Timer {interval:16;repeat:true;running:!choiceProbe.finished;onTriggered:if(choiceProbe.scan)choiceProbe.scan();}}',window.contentItem);
+        probe.objectName=MARKER;
+        function current(){return Session.project===original&&Session.assistant===vm;}
+        function rect(item){const p=item.mapToItem(null,0,0);return {x:p.x,y:p.y,width:item.width,height:item.height};}
+        function visible(item){if(!item||item.Window.window!==window||!item.visible||!item.enabled||item.width<=0||item.height<=0)return false;
+            const b=rect(item);let clip={x:0,y:0,right:window.width,bottom:window.height};
+            for(let p=item;p;p=p.parent){if(!p.visible||p.opacity===0)return false;if(p.clip){const r=rect(p);clip.x=Math.max(clip.x,r.x);clip.y=Math.max(clip.y,r.y);clip.right=Math.min(clip.right,r.x+r.width);clip.bottom=Math.min(clip.bottom,r.y+r.height);}}
+            return b.x>=clip.x&&b.y>=clip.y&&b.x+b.width<=clip.right&&b.y+b.height<=clip.bottom;}
+        function snap(kind,box,row,index){const p=box.popup;return {kind:kind,control:box.objectName,controlObject:String(box),popupObject:String(p),
+            popupOpened:p.opened,popupVisible:p.visible,popupWindow:String(p.Window.window),sameWindow:box.Window.window===window,
+            rowObject:row?String(row):null,rowText:row&&typeof row.text==='string'?row.text:null,index:index,
+            offered:index>=0&&index<box.count?box.textAt(index):null,searchText:box.searchText,
+            rowVisible:row?visible(row):false,rowBounds:row?rect(row):null,pointer:probe.lastPointer,ownerCurrent:current()};}
+        vm.actionPointerMoved.connect(function(position){if(current())probe.lastPointer={x:position.x,y:position.y};});
+        function bindRow(box,row){if(probe.rows.indexOf(row)>=0||!row.pressedChanged||!row.clicked)return;
+            probe.rows.push(row);row.pressedChanged.connect(function(){if(current()&&Qt.isQtObject(box)&&Qt.isQtObject(row)&&row.pressed){const index=typeof row.index==='number'?row.index:box.find(row.text);probe.facts.push(snap('real_delegate_pressed',box,row,index));}});}
+        function bind(box){if(probe.combos.indexOf(box)>=0||!box.popup||!box.activated)return;
+            probe.combos.push(box);box.popup.visibleChanged.connect(function(){if(current()&&box.popup.visible)probe.facts.push(snap('original_popup_visible',box,null,-1));});
+            box.activated.connect(function(index){if(current())probe.facts.push(snap('original_choice_activated',box,null,index));});}
+        probe.scan=function(){if(!current()||probe.finished)return;
+            const stack=[window.contentItem];while(stack.length){const item=stack.pop();
+                if(item.objectName==='parameters.category'||String(item.objectName).startsWith('alias.parameter.'))bind(item);
+                const kids=item.children;for(let i=0;i<kids.length;i++)if(kids[i].parent===item)stack.push(kids[i]);}
+            for(let k=0;k<probe.combos.length;k++){const box=probe.combos[k];if(!Qt.isQtObject(box))continue;const popup=box.popup;if(!Qt.isQtObject(popup))continue;const list=popup.contentItem;
+                if(!popup.visible||!Qt.isQtObject(list))continue;const root=list.contentItem||list;const rows=root.children;
+                for(let i=0;i<rows.length;i++)if(rows[i].parent===root)bindRow(box,rows[i]);}};
+        probe.scan();return true;
+    })()'''.replace('MARKER', json.dumps(marker))
+    assert qml(actor, observer), 'Read-only witnesses bind only genuine original offered selectors in the actual current Main window'
+
+
+def test_show_on_alias_search_physically_chooses_actual_offered_row_once(main_actor, tmp_path):
+    actor = main_actor([[]], show_actions=True);project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Visible offered choices begin with a genuine ordinary project and its original Analysis owners')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    actor.command('click', name='appBar.tab.analysis')
+    actor.until(lambda value: any(row['name'] == 'parameters.category' and row['visible']
+        for row in value['ui']['controls']))
+    original = json.loads(json.dumps(actor.last['ui']['project']))
+    parameter = next(row for row in original['parameters'] if row['category'] == 'cell' and row['field'] == 'length_a')
+    marker = 'e11.original-visible-offered-choice'
+    _watch_original_offered_choices(actor, marker)
+    call = {'tool': 'add_relations', 'call_id': 'original-visible-search-choice',
+        'arguments': {'purpose': 'Create one alias for the exact actually offered original cell parameter.',
+            'aliases': [{'id': 'visible_original_cell', 'path': parameter['path']}], 'constraints': []}}
+    actor.configure_turns([[call]]);actor.connect();_session_request_with_original_disclosure(actor,
+        'Use the exact ordinary original offered parameter for this one explicitly requested alias.')
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=True)
+    result = native_result(actor.responses()[0])
+    watcher = _scene_control_expression(marker)
+    qml(actor, '(' + watcher + ').finished=true')
+    facts = qml(actor, '(' + watcher + ').facts')
+    physical = [row for row in facts if row['kind'] == 'real_delegate_pressed'
+        and row['control'].startswith('alias.parameter.')]
+    assert physical, (
+        'A real offered alias row must receive actual ordinary button input; popup visibility or keyboard-currentIndex alone is insufficient')
+    for row in physical:
+        b = row['rowBounds'];point = row['pointer']
+        assert row['ownerCurrent'] and row['sameWindow'] and row['popupOpened'] and row['popupVisible'] and row['rowVisible'], (
+            'The physically chosen offered row belongs to the original open popup and is fully exposed in the same current window')
+        assert row['offered'] == row['rowText'] and row['searchText'] == row['offered'], (
+            'The original searchable alias control contains the exact desired offered name when its actual row is chosen')
+        assert point and b['x'] <= point['x'] <= b['x'] + b['width'] and b['y'] <= point['y'] <= b['y'] + b['height'], (
+            'The existing assistant pointer actually reaches the visible original offered row before its physical selection')
+    current = actor.last['ui']['project']
+    assert current['aliases'] == original['aliases'] + [{'id': 'visible_original_cell', 'parameter': parameter['path']}], (
+        'Visible choice creates exactly one original native alias with its requested canonical parameter')
+    assert len(actor.responses()) == 1, 'The visible chooser does not repeat the scientific operation through a second backend setter'
+    actor.command('undo');actor.until(lambda value: value['ui']['project']['aliases'] == original['aliases'])
+    assert actor.last['ui']['project']['parameters'] == original['parameters'], (
+        'One original Undo restores the actual alias operation without changing parameter values, free flags or uncertainties')
+    (actor.folder / 'actual-visible-offered-choice.json').write_text(json.dumps({
+        'actual_call': call, 'actual_result': result, 'original_offered_parameter': parameter,
+        'actual_original_control_events': facts}, indent=2))
+
+
+def test_show_on_original_background_filter_choice_has_visible_row_pointer_and_physical_input(main_actor, tmp_path):
+    actor = main_actor([[]], show_actions=True);project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Whole-group visible choice begins with an actual ordinary saved background model')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    actor.command('click', name='appBar.tab.analysis')
+    actor.until(lambda value: any(row['name'] == 'parameters.category' and row['visible']
+        for row in value['ui']['controls']))
+    original = json.loads(json.dumps(actor.last['ui']['project']))
+    group = [row for row in original['parameters'] if row['category'] == 'background' and row['field'] == 'intensity']
+    assert group, 'The original model actually offers a nonempty background intensity group before a whole-group request'
+    requested = not all(row['free'] for row in group)
+    marker = 'e11.original-filter-offered-choice'
+    _watch_original_offered_choices(actor, marker)
+    call = {'tool': 'set_free', 'call_id': 'original-visible-whole-background-choice',
+        'arguments': {'purpose': 'Change the flags of the exact currently offered whole background intensity group.',
+            'values': [{'path': row['path'], 'free': requested} for row in group]}}
+    actor.configure_turns([[call]]);actor.connect();_session_request_with_original_disclosure(actor,
+        'Use the original offered whole background group for these explicit free flags.')
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=True)
+    result = native_result(actor.responses()[0]);watcher = _scene_control_expression(marker)
+    qml(actor, '(' + watcher + ').finished=true');facts = qml(actor, '(' + watcher + ').facts')
+    chosen = [row for row in facts if row['kind'] == 'real_delegate_pressed' and row['control'] == 'parameters.category']
+    assert chosen, (
+        'The genuinely needed original category choice must physically press its offered row rather than hide keyboard selection behind a box cue')
+    for row in chosen:
+        bounds = row['rowBounds'];point = row['pointer']
+        assert row['ownerCurrent'] and row['sameWindow'] and row['popupOpened'] and row['popupVisible'] and row['rowVisible'] \
+            and row['offered'] == row['rowText'], (
+            'The actual chosen category is an offered visible original row in its own current popup')
+        assert point and bounds['x'] <= point['x'] <= bounds['x'] + bounds['width'] \
+            and bounds['y'] <= point['y'] <= bounds['y'] + bounds['height'], (
+            'The original assistant pointer reaches the real category row before its ordinary press')
+    after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
+    targeted = {row['path'] for row in group}
+    assert all(after[row['path']]['free'] is requested for row in group), (
+        'The one actual bulk choice reaches exactly the requested whole background flags')
+    assert all(after[row['path']] == row for row in original['parameters'] if row['path'] not in targeted), (
+        'Visible choice does not broaden the original offered group or mutate unrelated parameters')
+    actor.command('undo');actor.until(lambda value: value['ui']['project']['parameters'] == original['parameters'])
+    assert len(actor.responses()) == 1, 'One visible original operation remains one native result and one ordinary Undo'
+    (actor.folder / 'actual-original-filter-offered-row.json').write_text(json.dumps({
+        'actual_call': call, 'actual_result': result, 'actual_original_control_events': facts}, indent=2))
+
+
+# Independently authored original-owner gate packet: relation_optional_purpose_private_gates.py
+# PRIVATE / UNRUN. seq118 owner5c071122: purpose is optional, while a present
+# value remains validated. Uses existing ordinary relation owners as reference;
+# no new relation-creation oracle or example-specific relation identity.
+
+_RELATION_PURPOSE_CASES = ['alias_rename', 'alias_target', 'alias_remove',
+    'constraint_rename', 'constraint_expression', 'constraint_enabled_false',
+    'constraint_enabled_true', 'constraint_remove']
+
+
+def _ordinary_relation_purpose_fixture(actor, tmp_path, case):
+    project = tmp_path / 'ordinary-original-relations'
+    shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Optional-purpose coverage opens the existing genuine ordinary relation fixture')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    initial = actor.last['ui']['project']
+    canonical = {row['field']: row['path'] for row in initial['parameters']
+        if row['category'] == 'cell' and row['field'] in ('length_a', 'length_b')}
+    offered = qml(actor, 'Session.project.analysis.aliases.parameterNames')
+    original_names = {}
+    for field in canonical:
+        matching = [name for name in offered if name.endswith('.cell.' + field)]
+        assert len(matching) == 1, (
+            'Reference relation target uses the unique actually offered original ordinary parameter name')
+        original_names[field] = matching[0]
+    unused = 'e11_optional_purpose_alias'
+    assert unused not in {row['id'] for row in initial['aliases']}, (
+        'The unused fixture alias is a new test declaration, never an assumed live example ID')
+    prep = qml(actor, '(function(){const rows=Session.project.analysis.aliases;rows.append();const n=rows.count-1;'
+        'const a=rows.setText(n,"id",' + json.dumps(unused) + ');'
+        'return a&&rows.setText(n,"parameter",' + json.dumps(original_names['length_a']) + ');})()')
+    assert prep, 'The unused alias is prepared by the original ordinary AliasListModel setters, not serialized fixture postimages'
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    if case == 'constraint_enabled_true':
+        count = len(actor.last['ui']['project']['constraints'])
+        assert count and qml(actor, 'Session.project.analysis.constraints.setEnabled(' + str(count - 1) + ',false)'), (
+            'The true-enable case genuinely begins disabled through its ordinary original checkbox owner')
+        actor.until(lambda value: not value['ui']['project']['calculating'])
+    before = json.loads(json.dumps(actor.command('inspect')['ui']['project']))
+    target = before['aliases'][-1] if case.startswith('alias_') else before['constraints'][-1]
+    row = len(before['aliases']) - 1 if case.startswith('alias_') else len(before['constraints']) - 1
+    operation = 'constraint_enabled' if case.startswith('constraint_enabled_') else case
+    args = {'operation': operation, 'id': target['id']}
+    reference = {'row': row, 'operation': operation}
+    if case == 'alias_rename':
+        args['value'] = unused + '_renamed';reference.update(role='id', value=args['value'])
+    elif case == 'alias_target':
+        args['value'] = canonical['length_b'];reference.update(role='parameter', value=original_names['length_b'])
+    elif case == 'constraint_rename':
+        args['value'] = 'e11_optional_purpose_constraint';reference.update(role='id', value=args['value'])
+        assert args['value'] not in {entry['id'] for entry in before['constraints']}, (
+            'The requested replacement identifier is independently distinct from all actual original constraint IDs')
+    elif case == 'constraint_expression':
+        args['value'] = target['expression'] + ' + 0.125';reference.update(role='expression', value=args['value'])
+    elif operation == 'constraint_enabled':
+        args['value'] = case.endswith('_true');reference['value'] = args['value']
+        assert target['enabled'] is not args['value'], 'Each enabled boolean case requests a real state transition, not a no-op'
+    return project, before, args, reference
+
+
+def _ordinary_relation_reference(actor, reference):
+    group = 'aliases' if reference['operation'].startswith('alias_') else 'constraints'
+    owner = 'Session.project.analysis.' + group
+    if reference['operation'].endswith('_remove'):
+        qml(actor, '(function(){const rows=' + owner + ';rows.remove(' + str(reference['row']) + ');return rows.count;})()')
+    elif reference['operation'] == 'constraint_enabled':
+        assert qml(actor, owner + '.setEnabled(' + str(reference['row']) + ',' + json.dumps(reference['value']) + ')'), (
+            'The independent expected enabled effect is reached through the original ordinary checkbox setter')
+    else:
+        assert qml(actor, owner + '.setText(' + str(reference['row']) + ',' + json.dumps(reference['role'])
+            + ',' + json.dumps(reference['value']) + ')'), (
+            'The independent expected rename/expression/target effect is reached through its original ordinary row setter')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    return {key: json.loads(json.dumps(actor.last['ui']['project'][key])) for key in ('aliases', 'constraints', 'parameters')}
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+@pytest.mark.parametrize('purpose_kind', ['omitted', 'provided'])
+@pytest.mark.parametrize('case', _RELATION_PURPOSE_CASES)
+def test_original_relation_edits_preserve_all_semantics_with_or_without_optional_purpose(main_actor, tmp_path, show_actions, purpose_kind, case):
+    actor = main_actor([[]], show_actions=show_actions)
+    project, before, args, reference = _ordinary_relation_purpose_fixture(actor, tmp_path, case)
+    expected = _ordinary_relation_reference(actor, reference)
+    actor.command('undo');actor.until(lambda value: not value['ui']['project']['calculating'])
+    assert all(actor.last['ui']['project'][key] == before[key] for key in expected), (
+        'One ordinary reference Undo restores the exact pre-native relation/parameter model before exercising the new call')
+    if purpose_kind == 'provided':
+        args['purpose'] = 'Edit the original requested relationship — once.'
+    call = {'tool': 'edit_relation', 'call_id': 'original-optional-purpose-' + case, 'arguments': args}
+    actor.configure_turns([[call]]);actor.connect();actor.command('clear_ui_sequence')
+    _session_request_with_original_disclosure(actor, 'Apply this explicit original relation edit once and report its actual outcome.')
+    actor.until(lambda value: len(actor.responses()) == 1 and value['ui']['state'] == 'idle', visible_progress=show_actions)
+    outcome = native_result(actor.responses()[0])
+    actual = actor.last['ui']['project']
+    assert all(actual[key] == expected[key] for key in expected), (
+        'Omitting or supplying optional purpose must preserve the same original ordinary relation and scientific effect in both modes')
+    assert len(actor.responses()) == 1, 'Optional-purpose handling cannot replay the original native relation call'
+    actor.command('undo');actor.until(lambda value: not value['ui']['project']['calculating'])
+    assert all(actor.last['ui']['project'][key] == before[key] for key in expected), (
+        'One native relation edit remains exactly one ordinary Undo, including enabled flags and coupled parameter values')
+    if show_actions:
+        events = actor.last['ui']['ui_sequence']
+        assert any(row['kind'] == 'pointer_pressed' for row in events), (
+            'Show actions ON reaches genuine original input rather than reporting only a backend reference effect')
+    (actor.folder / 'optional-purpose-original-relation.json').write_text(json.dumps({
+        'case': case, 'purpose_kind': purpose_kind, 'show_actions': show_actions,
+        'actual_call': call, 'actual_outcome': outcome, 'ordinary_reference': expected,
+        'original_current_ids': {'aliases': [row['id'] for row in before['aliases']],
+            'constraints': [row['id'] for row in before['constraints']]}}, indent=2))
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+@pytest.mark.parametrize('invalid_purpose', [None, '', '   ', 17, {}, 'invalid\ncontrol'])
+def test_present_invalid_relation_purpose_refuses_before_original_effect_or_presentation(main_actor, tmp_path, show_actions, invalid_purpose):
+    actor = main_actor([[]], show_actions=show_actions)
+    project, before, args, _reference = _ordinary_relation_purpose_fixture(actor, tmp_path, 'constraint_enabled_false')
+    assert qml(actor, 'Session.save()'), 'The invalid-input negative begins from a genuinely saved original model'
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    before = json.loads(json.dumps(actor.command('inspect')['ui']['project']))
+    saved = {str(path.relative_to(project)): path.read_bytes() for path in project.rglob('*.edi')}
+    args['purpose'] = invalid_purpose
+    call = {'tool': 'edit_relation', 'call_id': 'original-invalid-present-purpose', 'arguments': args}
+    actor.configure_turns([[call]]);actor.connect();actor.command('clear_ui_sequence')
+    _session_request_with_original_disclosure(actor, 'Exercise one explicit invalid argument without changing the original model.')
+    actor.until(lambda value: len(actor.responses()) == 1 and value['ui']['state'] == 'idle')
+    response = actor.responses()[0]['result']
+    assert response['success'] is False, 'A present null/blank/nonstring/control-character purpose remains invalid despite the field being optional'
+    after = actor.last['ui']['project']
+    assert all(after[key] == before[key] for key in ('aliases', 'constraints', 'parameters', 'can_undo', 'can_redo')), (
+        'Purpose validation refuses before any actual relation, scientific, or ordinary history effect')
+    assert {str(path.relative_to(project)): path.read_bytes() for path in project.rglob('*.edi')} == saved, (
+        'A rejected purpose does not modify original saved scientific bytes')
+    assert not any(row['kind'].startswith('pointer_') for row in actor.last['ui']['ui_sequence']), (
+        'Invalid purpose is rejected before assistant-driven Show actions presentation or original control input')
+    (actor.folder / 'invalid-present-purpose-original-relation.json').write_text(json.dumps({
+        'actual_call': call, 'actual_refusal': response, 'actual_ui_sequence': actor.last['ui']['ui_sequence'],
+        'saved_source_sha256': {name: hashlib.sha256(raw).hexdigest() for name, raw in saved.items()}}, indent=2))
