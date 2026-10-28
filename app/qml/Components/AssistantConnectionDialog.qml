@@ -38,6 +38,7 @@ AppDialog {
         }
     }
     property string disclosedContextText: ""
+    property string disclosedContextIdentity: ""
     property var contextPresentation: ({})
     function refreshDisclosedContext() {
         const component = dialog, original = dialog.assistant;
@@ -50,11 +51,19 @@ AppDialog {
         try {
             // The getter may synchronously publish a newer inventory/context.
             // That notification refreshes with a new identity; its value wins.
+            const identity = original.contextConsentIdentity;
+            if (!current()) return;
             const exact = original.contextPreview;
-            if (current()) component.disclosedContextText = exact;
+            if (!current()) return;
+            const actualIdentity = original.contextConsentIdentity;
+            if (current() && identity.length && identity === actualIdentity) {
+                component.disclosedContextText = exact;
+                if (current()) component.disclosedContextIdentity = identity;
+            }
         } catch (error) {
             if (!current()) return;
             component.disclosedContextText = "";
+            if (current()) component.disclosedContextIdentity = "";
             if (current()) component.approvalOwner = ({});
         }
     }
@@ -168,14 +177,14 @@ AppDialog {
             && (!wasConnected || (original.account.email === email && original.account.planType === plan))
             && !original.contextApprovalBlocked;
         if (!ownerCurrent()) return;
-        const offered = dialog.disclosedContextText;
+        const offered = dialog.disclosedContextIdentity;
         if (!ownerCurrent()) return;
         const current = () => {
             if (!ownerCurrent()) return false;
-            const context = original.contextPreview;
-            // Consent-state notification may rebuild the parsed presentation
-            // object without changing the exact offered outgoing context.
-            return ownerCurrent() && dialog.disclosedContextText === offered && context === offered;
+            const context = original.contextConsentIdentity;
+            // Approval/readiness may refresh presentation without replacing
+            // the original backend disclosure authority.
+            return ownerCurrent() && offered.length > 0 && dialog.disclosedContextIdentity === offered && context === offered;
         };
         if (!current()) return;
         connectionFailure.close();
