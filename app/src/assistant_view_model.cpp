@@ -1816,7 +1816,7 @@ struct AssistantViewModel::State {
     void forget_last_session(const QString& archived={}) noexcept {
         try {
             auto index=session_associations();
-            if(index.isEmpty()){if(!archived.isEmpty())session_archive_persistence_errors.remove(archived);return;}
+            if(index.isEmpty())return; // An unavailable/absent read cannot erase an unresolved durable write.
             bool changed=false;
             if(archived.isEmpty() || index.value("last")==archived){changed=index.contains("last");index.remove("last");}
             if(!archived.isEmpty()) {
