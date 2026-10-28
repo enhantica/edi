@@ -377,6 +377,7 @@ Rectangle {
                 id: markdownPresentation
                 anchors.fill: parent
                 document: body.textDocument
+                editor: body
                 source: row.summarizedActivity ? "" : row.text
                 textColor: body.color
                 accentColor: EaStyle.Colors.link
