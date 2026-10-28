@@ -3420,3 +3420,27 @@ and the fixed cause/scope/revision of a failed capture. It does not relabel the
 original report's project/account/scope, overwrite useful history on failure,
 create a second log, or turn diagnostic failure into a scientific veto. A failed
 cache attempt does not itself advance history/report revision indefinitely.
+
+
+## 2026-10-28: fresh native save namespace
+
+The first folder serializer remains save_project_via_crysta and the elected
+unchanged native SDK writer; the first ZIP encoder remains write_project_archive.
+A precheck of only the requested final path did not protect the writers'
+predictable staging/previous sidecars or a concurrently created final entry.
+Fresh Create/Save As/Folder/ZIP/copy now execute the existing native staged save,
+readback/adoption and scan preparation inside an exclusive recorded sibling root.
+The same ZIP encoder has a private fresh publication route. One existing atomic
+no-replace primitive publishes the requested final child; no destination is
+reserved and no sidecar outside the owned root is overwritten. Existing owned
+current/manual overwrite routes remain ordinary native operations.
+
+Folder publication prepares native project/metadata paths and the original scan
+listing's immutable source before moving the staged folder. Nested or alias
+sources use the actual physical native seed spelling, so unchanged SDK output
+exclusions remain effective; only the known empty copied scratch directory is
+removed. Recorded cleanup resolves its nearest actual owned root, not an older
+live ancestor. The existing Session pending-source/origin lifetime pin spans
+ZIP commit/adoption/final bookkeeping. Actual partial commits and successor
+ownership remain factual; no rollback, repeated write, second serializer, SDK
+patch, general reservation manager or whole-Open policy change is introduced.

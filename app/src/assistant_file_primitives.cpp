@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_file_primitives.hpp"
 #include "assistant_result.hpp"
+#include "../../core/src/atomic_publish.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include <QStringView>
@@ -77,13 +78,7 @@ Fd below(int parent, const QString& name, bool dir) {
     return fd;
 }
 int atomic_publish(int sp, const char* sn, int p, const char* leaf, bool exchange) noexcept {
-#if defined(__linux__) && defined(SYS_renameat2)
-    return static_cast<int>(::syscall(SYS_renameat2,sp,sn,p,leaf,exchange?RENAME_EXCHANGE:RENAME_NOREPLACE));
-#elif defined(__APPLE__)
-    return ::renameatx_np(sp,sn,p,leaf,exchange?RENAME_SWAP:RENAME_EXCL);
-#else
-    return -1;
-#endif
+    return edi::detail::atomic_publish(sp,sn,p,leaf,exchange);
 }
 } // namespace edi_app::assistant_files
 #endif

@@ -123,6 +123,16 @@ QString ScanSession::load(const edi::Project& project) {
     return reindex(project);
 }
 
+void ScanSession::relocate(std::shared_ptr<const edi::Project> snapshot,const QString& from,const QString& to) {
+    if(!source_)return;
+    const auto root=fs::path(from.toStdString()).lexically_normal();
+    const auto directory=fs::path(datasets_.directory).lexically_normal();
+    const auto relative=directory.lexically_relative(root);
+    if(!relative.empty() && !relative.is_absolute() && *relative.begin()!="..")
+        datasets_.directory=(fs::path(to.toStdString())/relative).lexically_normal().string();
+    source_=std::move(snapshot);
+}
+
 void ScanSession::take(ScanSession& listing) {
     stopMetadata();
     datasets_ = std::move(listing.datasets_);
