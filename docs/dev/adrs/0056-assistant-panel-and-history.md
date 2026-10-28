@@ -3200,3 +3200,19 @@ incomplete presentation. The same private effect is used for the optional compou
 setup's captured native member. Model WorkStamps are still required but do not stand
 in for UI selection; no forced selection, AUTO enablement or scientific algorithm
 change is introduced.
+
+### 2026-10-28: separate compound writes retain the original operation
+
+Completing an existing empty project and adopting a fresh compound project both
+publish ordinary callbacks before the optional default Estimate. The real candidate
+member is captured through ItemVec's indexed API only after checking that the
+collection is nonempty; a missing required member refuses before adoption.
+
+After population/adoption returns, the next Estimate requires the original live
+creation/call/receipt, actual Session/project target and uncanceled operation. Its
+post-adoption ownership check does not compare stale pre-population WorkStamps.
+Stop or a successor revokes this next separate write even when the original member
+still exists. Refresh also requires the original continuation; visible setup checks
+its existing owner immediately before the same effect and after publication.
+Actual population/adoption and Estimate/Undo prefixes remain partial facts when
+interrupted, without rollback, replay, or answering/releasing a successor's owners.

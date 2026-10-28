@@ -7224,6 +7224,13 @@ struct AssistantViewModel::State {
                 (!native_call || original_call()) && (!native_creation || native_creation == creation) &&
                 (!native_attachment || native_attachment->creation == creation);
         };
+        const auto effect_current = [&](ProjectViewModel* expected) {
+            if(!original_call() || !completion_scope() || native_creation!=creation || creation->cancelled ||
+                native_call->resolved || native_call->retiring || creation->record->answered || creation->record->completed || creation->record->retired ||
+                creation->receipt->stale || !expected || project!=expected || !native_owner(creation->receipt))return false;
+            const auto* session=result_session();
+            return session && session->project()==expected;
+        };
         try {
             if (!native_creation_current(creation) || !creation->candidate) {
                 release_original();
@@ -7248,14 +7255,16 @@ struct AssistantViewModel::State {
                 creation->population_outcome["completed_existing"] = true;
                 creation->population_outcome["saved"] = false;
                 creation->population_outcome["message"] = "The current project was populated and is modified; no files were saved.";
-                const auto* estimateMember=creation->candidate->project.experiments.at(0).get();
+                const auto* estimateMember=creation->candidate->project.experiments.empty()?nullptr:creation->candidate->project.experiments[0].get();
+                if(creation->estimate_default && !estimateMember)throw std::runtime_error("The required native Estimate experiment is unavailable before setup adoption");
                 creation->population = edi::EmptyProjectPopulation::prepare(std::move(creation->candidate->project));
                 creation->candidate.reset();
                  // actual extra outcome/shell owners before the scientific write
                 if (!native_creation_current(creation)) throw std::runtime_error("The current empty project changed before completion");
+                const QPointer<ProjectViewModel> completion_target=creation->completion_project;
                 const auto edit_scope = begin_own_edit();
                 ProjectViewModel::EditOutcome result;
-                try { result = creation->completion_project->populateEmptyProject(creation->population); }
+                try { result = completion_target->populateEmptyProject(creation->population); }
                 catch (...) {
                     creation->adopted = creation->population->committed();
                     if (!receiver) return;
@@ -7265,10 +7274,10 @@ struct AssistantViewModel::State {
                 }
                 creation->adopted = creation->population->committed();
                 std::optional<ProjectViewModel::EditOutcome> estimated;
-                if(creation->adopted && creation->estimate_default && creation->completion_project) {
-                    estimated=creation->completion_project->estimateBackgroundFor(estimateMember,creation->estimate_outcome.get());
+                if(creation->adopted && creation->estimate_default && effect_current(completion_target)) {
+                    estimated=completion_target->estimateBackgroundFor(estimateMember,creation->estimate_outcome.get());
                 }
-                if (!receiver) return;
+                if (!receiver || receiver->state_.get()!=this) return;
                 end_own_edit(edit_scope);
                 if (original_call()) native_call->may_have_written = creation->adopted;
                 // Actual commit was latched inside the closed operation before any UI
@@ -7279,8 +7288,10 @@ struct AssistantViewModel::State {
                 outcome["presentation_complete"] = result.published;
                 outcome["calculation_pending"] = creation->completion_project && creation->completion_project->calculating();
                 if (!result.message.isEmpty()) outcome["message"] = bounded_error(result.message);
-                if(estimated){outcome["background_estimate"]=Object{{"applied",estimated->applied},{"published",estimated->published},{"message",bounded_error(estimated->message)}};
-                    if(!estimated->applied || !estimated->published){outcome["status"]="partial";outcome["complete"]=false;outcome["message"]="Setup was applied; the default native Estimate did not complete";}}
+                if(estimated)outcome["background_estimate"]=Object{{"applied",estimated->applied},{"published",estimated->published},{"message",bounded_error(estimated->message)}};
+                if(creation->estimate_default && (!estimated || !estimated->applied || !estimated->published)) {
+                    outcome["status"]="partial";outcome["complete"]=false;outcome["message"]="Setup was applied; the default native Estimate did not complete";
+                }
                 const bool complete=creation->adopted && result.published && (!creation->estimate_default || (estimated && estimated->applied && estimated->published));
                 release_original();
                 if (original_call()) native_finish(complete, outcome);
@@ -7288,18 +7299,23 @@ struct AssistantViewModel::State {
                 auto* session = result_session();
                 const auto current = [this, receiver, creation] { return receiver && receiver->state_.get() == this && native_creation_current(creation); };
                 auto outcome = native_creation_outcome(*creation->candidate);
-                const auto* estimateMember=creation->candidate->project.experiments.at(0).get();
+                const auto* estimateMember=creation->candidate->project.experiments.empty()?nullptr:creation->candidate->project.experiments[0].get();
+                if(creation->estimate_default && !estimateMember)throw std::runtime_error("The required native Estimate experiment is unavailable before setup adoption");
                 auto model = session->prepareAssistantNativeModel(std::move(creation->candidate->project), creation->epoch, current);
                 creation->candidate.reset();
                 if (!model || !current()) throw std::runtime_error("Native creation owner changed before attachment");
                 installed_attachment = prepare_creation_attachment(creation, model.get(), outcome);
+                const QPointer<ProjectViewModel> created_target(model.get());
                 bool presented = false;
                 const bool adopted = session->commitAssistantNativeModel(std::move(model), creation->epoch, current, presented);
                 std::optional<ProjectViewModel::EditOutcome> estimated;
-                if(adopted && creation->estimate_default && receiver && receiver->state_.get()==this && project && session->project()==project) {
+                if(adopted && creation->estimate_default && effect_current(created_target)) {
                     const auto scope=begin_own_edit();
-                    estimated=project->estimateBackgroundFor(estimateMember,creation->estimate_outcome.get());
-                    if(receiver && receiver->state_.get()==this){end_own_edit(scope);if(native_call)native_refresh(*native_call);}
+                    estimated=created_target->estimateBackgroundFor(estimateMember,creation->estimate_outcome.get());
+                    if(receiver && receiver->state_.get()==this) {
+                        end_own_edit(scope);
+                        if(effect_current(created_target))native_refresh(*native_call);
+                    }
                 }
                 // Session observers can genuinely admit B before returning to A.
                 // A's committed outcome is already owned by A's record; neither
@@ -9387,6 +9403,7 @@ struct AssistantViewModel::State {
             const char* branch="control.capture";
             try {
                 if(delivered && step.target=="background.estimate") {
+                    if(!create_widget_current(run))throw std::runtime_error("The original setup no longer owns the required Estimate");
                     const auto receiver=run->receiver;const auto scope=begin_own_edit();
                     const auto receipt=run->call.record->estimate_receipt;
                     if(!receipt)throw std::runtime_error("The original required Estimate outcome is unavailable");
@@ -9397,7 +9414,9 @@ struct AssistantViewModel::State {
                     if(!create_widget_owned(run))return;
                     if(estimated.applied){++run->completed_steps;run->step_counted=true;native_call->may_have_written=true;}
                     if(!estimated.applied || !estimated.published)throw std::runtime_error("The native Estimate did not complete; actual setup/estimate effects and Undo are retained");
-                    native_refresh(*native_call);create_widget_advance(run);return;
+                    if(native_call->resolved || native_call->retiring || run->call.record->answered || run->call.record->completed || run->call.record->retired ||
+                        !native_owner(run->call.receipt))throw std::runtime_error("Setup Estimate was applied; its original continuation retired");
+                    native_refresh(run->call);if(create_widget_owned(run))create_widget_advance(run);return;
                 }
                 if(delivered && (step.structure_action || step.kind==AssistantWidgetInput::Kind::Text || step.kind==AssistantWidgetInput::Kind::Value)) {
                     const auto receiver=run->receiver;
