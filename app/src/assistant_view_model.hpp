@@ -47,6 +47,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(bool sessionsLoading READ sessionsLoading NOTIFY sessionsChanged)
     Q_PROPERTY(bool sessionsHaveMore READ sessionsHaveMore NOTIFY sessionsChanged)
     Q_PROPERTY(QString sessionsError READ sessionsError NOTIFY sessionsChanged)
+    Q_PROPERTY(QString sessionSelection READ sessionSelection NOTIFY sessionsChanged)
     Q_PROPERTY(QString sessionDraft READ sessionDraft WRITE setSessionDraft)
     Q_PROPERTY(bool cachedHistoryClearing READ cachedHistoryClearing NOTIFY cachedHistoryChanged)
     Q_PROPERTY(QString cachedHistoryError READ cachedHistoryError NOTIFY cachedHistoryChanged)
@@ -92,6 +93,8 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void refreshSessions(bool nextPage = false);
     Q_INVOKABLE void archiveSession(const QString& threadId);
     Q_INVOKABLE void selectSession(const QString& threadId);
+    QString sessionSelection() const;
+    Q_INVOKABLE void cancelSessionSelection();
     QString sessionDraft() const;
     void setSessionDraft(const QString&);
     Q_INVOKABLE void restoreLastSession();
@@ -162,7 +165,7 @@ class AssistantViewModel : public QObject {
     void cachedHistoryChanged();
     void sessionSelectionStarted(const QString& threadId);
     void sessionDraftRestored(const QString& threadId,const QString& text);
-    void sessionProjectRequested(const QString& threadId,const QUrl& location);
+    void sessionProjectRequested(const QString& threadId,const QUrl& location,const QString& intent);
     void sessionConsentRequested(const QString& threadId);
     void workReportFinished(QVariantMap receipt);
     void workReportReceiptChanged();
