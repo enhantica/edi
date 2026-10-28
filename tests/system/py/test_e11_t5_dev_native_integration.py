@@ -4281,3 +4281,119 @@ def test_held_old_history_clear_new_conversation_and_vm_destruction_flush_latest
             assert_canonical_disk_row(gate.disk(),row)
         assert not any(row['phase']=='auto_release' for row in gate.rows())
     finally:gate.finish()
+
+
+# Independent defaults: unchanged dev08cafc45 ProjectMetadata/model.hpp4423,
+# empty_project/io.cpp3258, Session::createProject/session.cpp599, original
+# GetStartedGroup and ProjectDescriptionDialog; not candidate receipt values.
+@pytest.mark.parametrize('show_actions',[False,True],ids=['off','on'])
+def test_name_only_native_create_keeps_original_optional_metadata_defaults(main_actor,tmp_path,show_actions):
+    name='optional_'+hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    actor=main_actor([[tool_call('create_project','normal-name-only',name=name)]],show_actions=show_actions)
+    assert not actor.last['ui']['project']
+    documents=Path(actor.last['ui']['environment']['documents_root'])
+    expected=documents/name
+    assert not expected.exists(),'Only the actual normal current Session owner may create its absent destination'
+    preferences=qml(actor,'({rule:Preferences.newProjectSuRule,libraries:Preferences.newReportLibraries === "embedded"})')
+    actor.connect();actor.command('clear_ui_sequence')
+    actor.request('Create a new project with the requested name and retain every omitted ordinary metadata default.')
+    actor.until(lambda row:len(actor.responses())==1 and row['ui']['state']=='idle',visible_progress=show_actions)
+    result=native_result(actor.responses()[0])
+    assert result['adopted'] and result['complete'] and result['saved'] is True and result['presentation_complete']
+    assert result['name']==name and Path(result['path'])==expected
+    assert result['title']=='Untitled Project' and result['description']=='',(
+        'An omitted title/description retains original dev metadata defaults instead of becoming a false precondition')
+    actual=qml(actor,'({name:Session.project.name,title:Session.project.title,description:Session.project.description,authors:Session.project.authors,rule:Session.project.suRule,libraries:Session.project.report.embedLibraries})')
+    assert actual=={'name':name,'title':'Untitled Project','description':'','authors':'','rule':preferences['rule'],'libraries':preferences['libraries']}
+    assert actor.last['ui']['project']['structures']==0 and actor.last['ui']['project']['backgrounds']==[]
+    import shlex
+    text=(expected/'project.edi').read_text()
+    metadata={parts[0]:parts[1] for line in text.splitlines() if len(parts:=shlex.split(line,comments=True))==2 and parts[0] in {'_metadata.name','_metadata.title'}}
+    assert metadata=={'_metadata.name':name,'_metadata.title':'Untitled Project'},'Real ordinary Save writes original defaults independently of the native reply'
+    events=actor.last['ui']['ui_sequence']
+    if show_actions:
+        assert any(e['kind']=='mouse_press' and e.get('create_contains_press') for e in events)
+        assert any(e['kind'] in {'key_press','input_method'} and e['focus']=='createProject.name' and e['dialog_visible'] for e in events)
+        assert any(e['kind']=='mouse_press' and e.get('confirm_contains_press') and e['dialog_name']==name for e in events),(
+            'Name-only ON actually opens, edits and confirms the original normal dialog')
+    else:
+        assert not any(e['kind'].startswith('pointer_') or e['dialog_visible'] for e in events if not e['project_present'])
+
+
+@pytest.mark.parametrize('show_actions',[False,True],ids=['off','on'])
+def test_native_fit_suppresses_auto_results_but_original_user_fit_still_opens_them(main_actor,tmp_path,show_actions):
+    actor=main_actor([[tool_call('run_fit','assistant-fit-no-results-overlay')]],show_actions=show_actions)
+    path=tmp_path/'ordinary-fit';shutil.copytree(ROOT/'tests/fixtures/fit_quality/uncertainty',path)
+    assert actor.command('open',path=str(path))['reply']['opened']
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    wait_positive_tab(actor,'appBar.tab.structure');actor.command('click',name='appBar.tab.structure')
+    actor.until(lambda row:any(c['name']=='statusBar.fit.button' and c['enabled'] and c['fully_exposed'] for c in row['ui']['controls']))
+    before=actor.last['ui']['project']['parameters']
+    actor.connect();actor.request('Fit this current native fixture without opening a separate fit-results popup.')
+    actor.until(lambda row:len(actor.responses())==1 and row['ui']['state']=='idle',visible_progress=show_actions)
+    native_result(actor.responses()[0])
+    assert qml(actor,'Session.project.fit.canUndo')
+    assert any(a['value']!=b['value'] for a,b in zip(before,actor.last['ui']['project']['parameters'],strict=True))
+    def exposed_results(row):
+        return any(c['name']=='fit.results.list' and c['visible'] and c['enabled'] and c['fully_exposed'] for c in row['ui']['controls'])
+    assert not exposed_results(actor.last),(
+        'Assistant-origin Fit leaves the real Main unobscured by automatic Results in both action modes')
+    actor.command('undo')
+    assert actor.last['ui']['project']['parameters']==before,'Original native fit Undo retains every value/free/dependent field'
+    actor.until(lambda row:any(c['name']=='statusBar.fit.button' and c['enabled'] and c['fully_exposed'] for c in row['ui']['controls']))
+    actor.command('click',name='statusBar.fit.button')
+    actor.until(exposed_results)
+    assert qml(actor,'Session.project.fit.canUndo'),'An actual ordinary user status-bar Fit still owns its result and original popup'
+    actor.command('undo')
+    assert actor.last['ui']['project']['parameters']==before,'Ordinary user Fit keeps its exact existing Undo behavior'
+
+
+@pytest.mark.parametrize('show_actions',[False,True],ids=['off','on'])
+def test_unsaved_native_setup_autonomous_save_uses_original_suggested_folder(main_actor,tmp_path,show_actions):
+    actor=main_actor([[]],show_actions=show_actions)
+    assert not actor.last['ui']['project']
+    documents=Path(actor.last['ui']['environment']['documents_root'])
+    data=ROOT/'tests/fixtures/background_estimate/meas-lbco-hrpt.xye'
+    cif=ROOT/'tests/fixtures/dictionary_display/published_cod_9008506.cif'
+    token=actor.begin_current_file_selection()
+    assert actor.command('selected_add',token=token,paths=[str(data),str(cif)])['reply']['added']
+    files=actor.last['ui']['selected_files'];name='unsaved_'+hashlib.sha256(str(tmp_path).encode()).hexdigest()[:16]
+    recipe={'project_name':name,'description':'Explicit native unsaved-setup persistence witness',
+        'experiment_name':'sourcebank','sample_form':'powder','beam_mode':'constant wavelength',
+        'radiation_probe':'neutron','scattering_type':'bragg','peak_profile':'cwl-tch-pseudo-voigt',
+        'wavelength':1.237,'zero_offset':0.013,'phase_scale':1.1,'exclusions':[],'initial_parameters':[]}
+    actor.configure_turns([[tool_call('create_cwl_project','native-unsaved-setup',recipe=recipe,
+        data_file_id=next(x['id'] for x in files if x['name']==data.name),
+        cif_file_id=next(x['id'] for x in files if x['name']==cif.name))]])
+    actor.request('Create this requested native setup from its admitted files; do not save until the following separate action.')
+    actor.until(lambda row:len(actor.responses())==1 and row['ui']['state']=='idle',visible_progress=show_actions)
+    native_result(actor.responses()[0]);actor.until(lambda row:not row['ui']['project']['calculating'])
+    assert actor.last['ui']['project']['path']=='','This exact channel genuinely begins unsaved; a normal pre-saved Create is not a substitute'
+    expected=documents/name
+    assert not expected.exists()
+    # dev08cafc45 Session::suggestedSaveTarget670: an unsaved ordinary native
+    # project defaults to Documents/folderNameFor(name); desktop original
+    # Main.saveAsChoice defaults Folder and copy=false. No chooser is supplied.
+    from urllib.parse import urlparse,unquote
+    original=qml(actor,'String(Session.suggestedSaveTarget(false))')
+    assert Path(unquote(urlparse(original).path))==expected
+    actor.append_turn([tool_call('save_project','native-unsaved-current-save',destination='current')])
+    actor.command('clear_ui_sequence')
+    actor.request('Save this current unsaved project using the app\'s original normal defaults, without operator format or path assistance.')
+    actor.until(lambda row:len(actor.responses())==2 and row['ui']['state']=='idle',visible_progress=show_actions)
+    saved=native_result(actor.responses()[-1])
+    assert saved['saved'] and saved['committed'] and saved['active'] and not saved.get('uncertain',False)
+    assert Path(actor.last['ui']['project']['path'])==expected and (expected/'project.edi').is_file()
+    assert not any(row['name'] in {'saveAs.folder','saveAs.zip','saveAs.copy'} and row['visible'] and row['enabled'] for row in actor.last['ui']['controls']),(
+        'Native Save settles its ordinary owner instead of leaving the unanswerable format dialog pending')
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    before=actor.last['ui']['project'];flags=[(p['path'],p['free'],p['dependence']) for p in before['parameters']]
+    assert before['structures']==1 and before['backgrounds'][0]['input_intensity_count']>0
+    assert actor.command('open',path=str(expected))['reply']['opened'],'A genuinely complete CIF/measured native setup reopens through the original whole-project API'
+    actor.until(lambda row:not row['ui']['project']['calculating'])
+    after=actor.last['ui']['project']
+    assert after['structure_rows']==before['structure_rows']
+    assert [(p['path'],p['free'],p['dependence']) for p in after['parameters']]==flags
+    for key in ('type','mode','points','input_count','input_intensity_count','input_sigma_count','input_first'):
+        assert after['backgrounds'][0][key]==before['backgrounds'][0][key],(
+            'Ordinary autonomous Save/Open preserves actual inputs and decoded background identity/values without a fabricated filename or measurement')
