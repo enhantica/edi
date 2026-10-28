@@ -28,6 +28,9 @@
 #include <QMouseEvent>
 #include <QDirIterator>
 #include <QGuiApplication>
+#include <QClipboard>
+#include <QCryptographicHash>
+#include <QElapsedTimer>
 #include <QSocketNotifier>
 #include <cerrno>
 #if defined(Q_OS_UNIX)
@@ -181,6 +184,18 @@ int main(int argc,char** argv) {
     QGuiApplication::setApplicationName("assistant-"+QUuid::createUuid().toString(QUuid::WithoutBraces));
     edi_app::use_design_font();
     edi_app::use_fresh_settings();
+    Object history_restore_info;
+    const auto history_restore_source=qEnvironmentVariable("EDI_TEST_ASSISTANT_RESTORE_HISTORY");
+    if(!history_restore_source.isEmpty()) {
+        QFile original(history_restore_source);
+        if(!QFileInfo(history_restore_source).isAbsolute() || !original.open(QIODevice::ReadOnly))return 87;
+        const auto bytes=original.readAll();original.close();
+        const auto destination=QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)+"/assistant/history.json";
+        if(!QDir().mkpath(QFileInfo(destination).absolutePath()) || QFileInfo::exists(destination))return 86;
+        QFile copy(destination);if(!copy.open(QIODevice::WriteOnly)||copy.write(bytes)!=bytes.size())return 85;copy.close();
+        QFile verify(destination);if(!verify.open(QIODevice::ReadOnly)||verify.readAll()!=bytes)return 84;
+        history_restore_info={{"source",history_restore_source},{"destination",destination},{"bytes",static_cast<double>(bytes.size())},{"sha256",QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex())},{"exact_copy",true}};
+    }
     FixtureServices fixture; // Outlives all engines, QML, Session, VM and operation teardown.
     UrlObserver urls;
     auto engine=std::make_unique<QQmlApplicationEngine>();
@@ -205,6 +220,15 @@ int main(int argc,char** argv) {
     preferences->setProperty("assistantShown",true);
     Array disclosures;
     Array action_transitions;
+    // Tests-only public model observation. No production history setter/cache.
+    Array message_model_events;
+    QPointer<edi_app::RowTableModel> message_model_watched;
+    std::vector<QMetaObject::Connection> message_model_connections;
+    QObject message_model_observer;
+    auto stop_message_model_watch=[&] {
+        for(const auto& connection:message_model_connections)QObject::disconnect(connection);
+        message_model_connections.clear();message_model_watched.clear();
+    };
     QMetaObject::Connection publication_fault;
     int publication_fault_hits=0;
     bool publication_undo_seen=false;
@@ -424,6 +448,91 @@ int main(int argc,char** argv) {
             auto input=decode(line).toObject();
             auto op=input["op"].toString();Object result;
             if((!observed || !window) && op!="inspect" && op!="destroy")throw std::runtime_error("the original Main owner has retired");
+            if(op=="message_input") {
+                const auto identity=input["row_id"].toString(),name=input["name"].toString();
+                const auto action=input["action"].toString("click");
+                if(identity.isEmpty() || (name!="assistant.activity.toggle" && name!="assistant.activity.copy"))
+                    throw std::invalid_argument("exact original row identity and declared activity control required");
+                QPointer<QQuickItem> target,original_row;
+                for(auto* object:objects(window)) {
+                    auto* item=qobject_cast<QQuickItem*>(object);
+                    if(!item || item->objectName()!=name)continue;
+                    for(auto* ancestor=item->parentItem();ancestor;ancestor=ancestor->parentItem())
+                        if(ancestor->property("rowId").toString()==identity) {
+                            if(target && target!=item)throw std::runtime_error("ambiguous realized original row control");
+                            target=item;original_row=ancestor;break;
+                        }
+                }
+                if(!target || !original_row) {
+                    result={{"reached",false},{"reason","original row/control is not realized"},{"row_id",identity}};
+                } else {
+                    const auto scene=target->mapToScene(QPointF(target->width()/2,target->height()/2));
+                    bool exposed=target->window()==window && target->isVisible() && target->isEnabled()
+                        && target->width()>0 && target->height()>0 && QRectF(0,0,window->width(),window->height()).contains(scene);
+                    for(auto* ancestor=target->parentItem();ancestor;ancestor=ancestor->parentItem())
+                        if(!ancestor->isVisible() || !ancestor->isEnabled() || (ancestor->clip()
+                            && !QRectF(0,0,ancestor->width(),ancestor->height()).contains(ancestor->mapFromScene(scene))))exposed=false;
+                    if(!exposed)result={{"reached",false},{"reason","original control center is not exposed in its original window/clipping ancestors"},{"row_id",identity}};
+                    else {
+                        if(action=="hover") {QTest::mouseMove(window,scene.toPoint());drain();}
+                        else if(action=="click")click(target);
+                        else throw std::invalid_argument("only genuine mouse click/hover is supported");
+                        result={{"reached",true},{"row_id",identity},{"name",name},{"action",action},
+                            {"same_row_after",bool(original_row)&&original_row->property("rowId").toString()==identity},
+                            {"same_window_after",bool(target)&&target->window()==window},
+                            {"clipboard",QGuiApplication::clipboard()->text()}};
+                    }
+                }
+            } else
+            if(op=="messages_probe") {
+                const auto model_name=input["model"].toString("messages");
+                const auto property=observed->assistant()->property(model_name.toUtf8().constData());
+                auto* model=qobject_cast<edi_app::RowTableModel*>(property.value<QObject*>());
+                if(!model)throw std::invalid_argument("an actual public Assistant RowTableModel property is required");
+                const auto mode=input["mode"].toString("snapshot");
+                const auto role_names=model->roleNames();
+                auto role_number=[&](const QString& name) {for(auto it=role_names.cbegin();it!=role_names.cend();++it)if(it.value()==name.toUtf8())return it.key();return -1;};
+                if(mode=="watch") {
+                    stop_message_model_watch();message_model_events=Array{};message_model_watched=model;
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::dataChanged,&message_model_observer,
+                        [&](const QModelIndex& first,const QModelIndex& last,const QList<int>& roles){Array names;const auto live=message_model_watched?message_model_watched->roleNames():QHash<int,QByteArray>{};for(const auto role:roles)names.append(QString::fromUtf8(live.value(role,QByteArray::number(role))));message_model_events.append(Object{{"kind","dataChanged"},{"first",first.row()},{"last",last.row()},{"roles",names}});}));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsInserted,&message_model_observer,[&](const QModelIndex&,int first,int last){message_model_events.append(Object{{"kind","insert"},{"first",first},{"last",last}});}));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsRemoved,&message_model_observer,[&](const QModelIndex&,int first,int last){message_model_events.append(Object{{"kind","remove"},{"first",first},{"last",last}});}));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsMoved,&message_model_observer,[&](const QModelIndex&,int first,int last,const QModelIndex&,int destination){message_model_events.append(Object{{"kind","move"},{"first",first},{"last",last},{"destination",destination}});}));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::modelReset,&message_model_observer,[&]{message_model_events.append(Object{{"kind","reset"}});}));
+                } else if(mode=="events") {
+                    result["events"]=message_model_events;
+                    if(input["clear"].toBool())message_model_events=Array{};
+                } else if(mode=="stop") {
+                    result["events"]=message_model_events;stop_message_model_watch();
+                } else if(mode=="send") {
+                    observed->assistant()->send(input["text"].toString());
+                } else if(mode=="read" || mode=="roles") {
+                    const int row=input["row"].toInt(-1);
+                    if(row<0 || row>=model->count())throw std::invalid_argument("an existing public model row is required");
+                    if(mode=="read") {
+                        const auto role=input["role"].toString();const auto number=role_number(role);const auto api=input["api"].toString("data");
+                        const int repetitions=input["repetitions"].toInt(1);
+                        if((model_name=="messages" && !QStringList{"id","kind","text","status"}.contains(role)) || number<0 || (api!="data" && api!="get") || repetitions<1 || repetitions>4096)throw std::invalid_argument("finite public role read required");
+                        const auto index=model->index(row);QVariant value;QElapsedTimer timer;timer.start();
+                        for(int n=0;n<repetitions;++n)value=api=="data"?model->data(index,number):model->get(row,role);
+                        const auto elapsed=timer.nsecsElapsed();
+                        result["read"]=Object{{"api",api},{"role",role},{"repetitions",repetitions},{"elapsed_ns",static_cast<double>(elapsed)},{"type",QString::fromUtf8(value.typeName()?value.typeName():"")},{"scalar",QJsonValue::fromVariant(value)}};
+                    } else {
+                        Array roles;const auto marker=input["marker"].toString().toUtf8();
+                        for(auto it=role_names.cbegin();it!=role_names.cend();++it) {
+                            const auto value=model->data(model->index(row),it.key());
+                            const auto encoded=encode(Object{{"value",QJsonValue::fromVariant(value)}});
+                            roles.append(Object{{"name",QString::fromUtf8(it.value())},{"type",QString::fromUtf8(value.typeName()?value.typeName():"")},
+                                {"encoded_bytes",static_cast<double>(encoded.size())},{"sha256",QString::fromLatin1(QCryptographicHash::hash(encoded,QCryptographicHash::Sha256).toHex())},
+                                {"marker_present",!marker.isEmpty()&&encoded.contains(marker)}});
+                        }
+                        result["roles"]=roles;
+                    }
+                } else if(mode!="snapshot")throw std::invalid_argument("unknown finite messages probe mode");
+                result["model"]=model_name;result["count"]=model->count();result["state"]=observed->assistant()->state();
+                Array names;for(auto it=role_names.cbegin();it!=role_names.cend();++it)names.append(QString::fromUtf8(it.value()));result["role_names"]=names;
+            } else
             if(op=="missing_constructor") {
                 auto incomplete=fixture.dependencies;
                 switch(input["index"].toInt()) {
@@ -886,8 +995,9 @@ int main(int argc,char** argv) {
             } else if(op=="destroy") {engine.reset();singleton=nullptr;}
             else result=fixture.dispatch(input);
             drain();
-            auto output=fixture.snapshot();output["reply"]=result;output["ui"]=ui_snapshot();
-            output["test_storage"]=storage.path();
+            auto output=fixture.snapshot();output["reply"]=result;
+            output["ui"]=(op=="messages_probe" || op=="message_input") ? Object{{"alive",bool(observed)&&bool(window)},{"state",observed?observed->assistant()->state():QString()},{"connected",observed&&observed->assistant()->connected()},{"can_cancel",observed&&observed->assistant()->canCancel()}} : ui_snapshot();
+            output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;
             output["state"]=observed ? Object{{"last_error",observed->assistant()->lastError()}} : QJsonValue();
             output["image_requests"]=urls.image_requests;output["activated_urls"]=urls.activated;
             output["image_url"]=QString("http://127.0.0.1:%1/untrusted.png").arg(urls.images.serverPort());
