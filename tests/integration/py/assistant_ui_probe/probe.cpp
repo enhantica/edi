@@ -385,6 +385,9 @@ int main(int argc,char** argv) {
         const QPointer<QQuickWindow> original_window=window;
         if(!original_window || !item || item->window()!=original_window || !item->isVisible() || !item->isEnabled() ||
             !std::isfinite(item->width()) || !std::isfinite(item->height()) || !(item->width()>0) || !(item->height()>0))return false;
+        // Supported app controls use the native unmasked hit-test. A custom
+        // mask can execute QML and change named membership while it is proved.
+        if(item->containmentMask())return false;
         const QSizeF layout(item->width(),item->height());
         const QPointF center(layout.width()/2,layout.height()/2);
         const auto finite=[](const QPointF& point){return std::isfinite(point.x()) && std::isfinite(point.y());};
@@ -394,7 +397,7 @@ int main(int argc,char** argv) {
         const QPointF press=scene.toPoint();
         const auto local=item->mapFromScene(press);
         if(!finite(local) || !item->contains(local))return false;
-        // A custom containmentMask can call QML; do not retain a retired/moved owner.
+        // Keep the captured owner/window/layout through the genuine native hit-test.
         if(!owner_current() || !item || !original_window || window!=original_window || item->window()!=original_window ||
             !item->isVisible() || !item->isEnabled() || QSizeF(item->width(),item->height())!=layout || item->mapToScene(center)!=scene)return false;
         if(!QRectF(QPointF(),original_window->size()).contains(press))return false;
@@ -416,6 +419,8 @@ int main(int argc,char** argv) {
         QPointer<QObject> match;bool selected=false;
         for(const auto& object:candidates) {
             if(!object || object->objectName()!=name)continue;
+            if(auto* item=qobject_cast<QQuickItem*>(object);item && item->window()==window && item->isVisible() && item->isEnabled() && item->containmentMask())
+                throw std::runtime_error("custom containmentMask is unsupported by the original named input proof; no input was sent");
             const bool reachable=input_reachable(object);
             if(!owner_current())return nullptr; // Never continue under a successor owner.
             if(!reachable)continue;
@@ -460,6 +465,7 @@ int main(int argc,char** argv) {
         const auto owner_current=capture_input_owner();
         auto* item=qobject_cast<QQuickItem*>(object);
         const QString original_name=item?item->objectName():QString();
+        if(item && item->containmentMask())throw std::runtime_error("custom containmentMask is unsupported by the original physical input proof; no input was sent");
         if(!input_reachable(item)) throw std::runtime_error("requested real UI control is not reachable");
         const auto center=item->mapToScene(QPointF(item->width()/2,item->height()/2)).toPoint();
         if(item->objectName()!=original_name || (original_owner && !original_owner()) || !owner_current())throw std::runtime_error("original input owner retired before physical click; no input was sent");
@@ -549,7 +555,7 @@ int main(int argc,char** argv) {
                 const bool reachable=input_reachable(item);
                 if(!owner_current() || !original_item || !original_window || window!=original_window)throw std::runtime_error("original snapshot owner retired during input hit-test");
                 controls.push_back(Object{{"name",object->objectName()},{"visible",item->isVisible()},
-                    {"enabled",item->isEnabled()},{"same_window",item->window()==window},{"input_reachable",reachable},
+                    {"enabled",item->isEnabled()},{"same_window",item->window()==window},{"input_reachable",reachable},{"custom_containment_mask",item->containmentMask()!=nullptr},
                     {"text_property_owner",property_owner_reachable(item,"text")},{"layout_exposed",!exposed_layout_rect(item).isEmpty()},
                     {"bounding_rect",Array{item->boundingRect().x(),item->boundingRect().y(),item->boundingRect().width(),item->boundingRect().height()}},
                     {"width",item->width()},{"height",item->height()},
