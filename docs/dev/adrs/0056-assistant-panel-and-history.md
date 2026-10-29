@@ -4026,3 +4026,18 @@ full-rotation bounds and original mode/Stop/press ownership are unchanged. This
 addresses outer solid fill versus inner-circle apparent size, not control behavior
 or an elected status grouping design. Actual theme/hover/focus/disabled/rotation
 optical qualification remains required; source dimensions do not prove appearance.
+
+## Short faint existing status separators
+
+Owner elects preview C only (hub H287e26350), superseding exploration of rounded
+status surfaces or a taller bar. FIRST StatusBar's Fit rule defines the shared
+short style: six-sevenths of the current theme font size, rounded to logical
+pixels (twelve at the original fourteen-pixel font), with the existing theme-aware
+appBarBorder at45percent opacity. The existing Assistant rule inherits its height,
+width/color and now opacity; both remain vertically centered.
+
+No bar/group background, height, margin, status item, control receiver, requested/
+effective mode, Stop/press, working animation or hidden-area spacing changes.
+The exact preceding standalone-display math and optical Stop changes remain in
+these composed preimages. Actual native theme/narrow-width/Fit-present/absent
+rendering remains to be qualified; source style is not runtime acceptance.
