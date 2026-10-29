@@ -87,8 +87,7 @@ class MainActor:
         # Manual GUI fixtures must enter the normal app before choosing its
         # tabs. This is driver input, never assistant-driven OFF presentation.
         if op == 'click' and arguments.get('name', '').startswith('appBar.tab.') and hasattr(self, 'last'):
-            if any(row['name'] == 'home.start' and row['visible'] and row['enabled']
-                   for row in self.last['ui'].get('controls', [])):
+            if _unique_input_control(self.last, 'home.start') is not None:
                 self.command('click', name='home.start')
         assert self.process.poll() is None, 'The real Main host must remain alive'
         sequence = getattr(self, '_command_sequence', 0) + 1
@@ -235,8 +234,7 @@ class MainActor:
 
     def connect(self):
         if not self.last['ui']['connected']:
-            if any(row['name'] == 'home.start' and row['visible'] and row['enabled']
-                   for row in self.last['ui']['controls']):
+            if _unique_input_control(self.last, 'home.start') is not None:
                 self.command('click', name='home.start')
             self.until(lambda row: any(c['name'] == 'assistant.connection' and c['fully_exposed']
                                       and c['enabled'] for c in row['ui']['controls']))
@@ -361,7 +359,7 @@ def main_actor(tmp_path):
 
 def wait_positive_tab(actor, name):
     """Normal setup only: wait for the actual loader-backed enabled tab, without revealing controls."""
-    if any(c['name'] == 'home.start' and c['visible'] and c['enabled'] for c in actor.last['ui']['controls']):
+    if _unique_input_control(actor.last, 'home.start') is not None:
         actor.command('click', name='home.start')
     actor.until(lambda row: _unique_input_control(row, name) is not None)
 
@@ -8382,7 +8380,7 @@ def test_show_on_alias_search_physically_chooses_actual_offered_row_once(main_ac
     assert actor.command('open', path=str(project))['reply']['opened'], (
         'Visible offered choices begin with a genuine ordinary project and its original Analysis owners')
     actor.until(lambda value: not value['ui']['project']['calculating'])
-    if any(row['name'] == 'home.start' and row['visible'] and row['enabled'] for row in actor.last['ui']['controls']):
+    if _unique_input_control(actor.last, 'home.start') is not None:
         actor.command('click', name='home.start')
     actor.until(lambda value: any(row['name'] == 'appBar.tab.analysis' and row['enabled'] and row['fully_exposed']
         for row in value['ui']['controls']))
@@ -8435,7 +8433,7 @@ def test_show_on_original_background_filter_choice_has_visible_row_pointer_and_p
     assert actor.command('open', path=str(project))['reply']['opened'], (
         'Whole-group visible choice begins with an actual ordinary saved background model')
     actor.until(lambda value: not value['ui']['project']['calculating'])
-    if any(row['name'] == 'home.start' and row['visible'] and row['enabled'] for row in actor.last['ui']['controls']):
+    if _unique_input_control(actor.last, 'home.start') is not None:
         actor.command('click', name='home.start')
     actor.until(lambda value: any(row['name'] == 'appBar.tab.analysis' and row['enabled'] and row['fully_exposed']
         for row in value['ui']['controls']))
