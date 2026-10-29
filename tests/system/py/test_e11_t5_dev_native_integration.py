@@ -9568,5 +9568,3 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
             and after['parameters']==before['parameters'] and len(actor.responses())==1, (
                 'Interference preserves only the actual appended/renamed alias and no changed parameter, second alias, constraint or automatic retry')
         _match_original_alias_undo_sequence(actor,before,first_undos[1:],True)
-
-
