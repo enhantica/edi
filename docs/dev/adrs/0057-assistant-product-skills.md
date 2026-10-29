@@ -633,3 +633,118 @@ Undo or replaying earlier successful work. Original current residual/total-width
 uncertainty/correlation/ordinary Undo/Save contracts remain. Global and refinement
 skill delivery are aligned, with source-only/model-adherence qualification still
 open. The compact-inspection feature remains a separate source unit.
+## Compact numerical inspection: arithmetic owner only
+
+The first compact-inspection unit adds a normal private standard-C++ arithmetic
+owner beside FIRST assistant_data. Explicit typed row-space, source mask,
+metadata, numeric/optional-cell views and source-row mapping feed exact native
+ranges, contiguous partitions, coverage, actual extrema witnesses and scaled
+compensated mean/RMS. Its two populations retain independent denominators; a
+noncurrent/short mask is unknown, and Bragg has no measurement inclusion mask.
+Missing, NaN, positive/negative infinity and genuine zero stay distinct. No
+uncertainty formatter, weighting/fit factor, peak finder or physical validator
+is added. Caller currentness/units are copied source facts, not established by
+arithmetic; actual source-specific capture remains a separate required unit.
+
+The header borrows views only for one synchronous call and returns owned results;
+no model, QObject, numeric cache, serializer or persistent snapshot authority.
+It validates original exact index/extent law before allocation, keeps first-row
+extrema ties and explicit unrepresentable moment outcomes. Allocation failure is
+not a partial successful summary. FIRST exact raw inspection remains untouched.
+No summary tool schema/routing/help or skill capability is advertised in this
+stage. Independent literal C++ characterization must precede materialization and
+later original capture/wire/delivery qualification. No source-only efficiency,
+scientific adequacy, native width observation or runtime pass is claimed.
+
+## Compact native capture, closed response and actual inspect_data exposure
+
+The coherent feature completes the arithmetic boundary above through FIRST
+assistant_data metadata/capture adapters and original native_data_slice. Existing
+powder/reflection/Bragg zero-row builders supply unchanged metadata; actual cells
+are summarized before raw JSON-null conversion. Powder borrows original captured
+native columns and the same member's current calc_status buffer, never a new
+exclusion rule or cached chart. SC uses the original published file-order model,
+including its actual fitUse flag, with missing/nonfinite distinction and unchanged
+frame/current/shape facts. Bragg retains separate phase extents and source mapping.
+All original project/member/view/revision/generation/stamp/receipt guards remain.
+
+The optional inspect_data view=summary requires explicit positive partitions;
+view=rows or omission retains original exact raw behavior. Every selected native
+row contributes to actual coverage/contiguous bins without sampling or truncation.
+The fixed data-summary/1 projection retains independent finite/included
+populations, counts, units and real extrema witnesses; unknown masks are unknown,
+Bragg fit use is inapplicable, and unavailable arithmetic is not fabricated zero.
+A current SC file-fit-use projection is distinct from computed-model currentness;
+a live fit frame stays non-adopted even if its input inclusion flags are published.
+No weighted fit metric, covariance, peak finder or total-component validator is
+introduced: physical_components explicitly remains unavailable here. Existing
+full raw ranges remain callable, with no row/work quota or silent fallback.
+
+FIRST outgoing closed roles measure/project only declared summary fields. Native
+schema/validator, capture routing and concise global/project/refinement guidance
+ship together; older raw calls retain their existing meaning. Prefer offered
+compact broad evidence and needed exact rows, without skipping current physical/
+residual/Save checks or inventing a fixed scientific recipe. All computation is
+C++ under the existing synchronous model owner; QML, SDK, persistent caches and
+scientific parameters/flags/Undo/selection remain unchanged.
+
+Original capture_pattern still copies raw powder vectors and constructs current
+phase/component captures; this change does not claim zero-copy, worker execution,
+constant cost, token counts or model/provider latency. Independent arithmetic,
+actual-source/currentness/closed-schema/raw-equivalence/capacity and real workflow
+qualification remain required; source alone is not scientific or runtime acceptance.
+
+## One readable refinement workflow with explicit evidence limits
+
+FIRST refinement-strategy now starts with a short ordered decision loop: establish
+essential facts/wait, inspect sufficient current evidence, isolate the implicated
+block, assess before spending Undo, then preserve useful work and state the saved
+endpoint honestly. Named reference/exception sections in the SAME delivered skill
+retain engine conventions, SC, mixed-site/sharing, native eligibility, research,
+Save precision/current metrics and diagnostic-feedback contracts. No companion
+file loader or new instruction surface is assumed.
+
+The always-delivered global refinement paragraph follows the same loop and owns
+its essential safety/decision facts. Repeated global category and fit-Undo clauses
+are folded into it; unique FullProf normalization, privacy/input, ordinary-control,
+partial/once/current-owner and saving contracts stay in place. Project-assistance
+keeps operation/setup/persistence facts and references the common scientific loop;
+tool schemas/default raw slice semantics and native computation are unchanged.
+The full current free population is inspected, rather than inferred from a tool's
+purpose or the listed flag changes: omitted alignment/scale flags remain as they
+actually are. Isolating the chosen diagnostic blocks does not invent a globally
+fixed remainder or silently change unrelated accepted settings.
+
+Routine broad numerical coverage begins with actually offered native summary,
+then exact peak/baseline/Bragg/SC rows for unresolved details. Complete raw arrays
+remain explicitly available when requested or scientifically needed; there is no
+count quota, data suppression, summary-only adequacy claim or forced fit recipe.
+This editorial delta composes ONLY after the complete summary capture/schema/
+projection feature, not onto an app without that feature. Summary coverage/moments
+cannot assign peaks, establish alignment, validate total widths, supply chi/Rwp or
+compute correlations; the genuine physical/scientific assessment remains owed.
+
+Actual unchanged-data reuse and model adherence, captured instruction delivery,
+summary currentness/masks/units, raw access and scientific endpoints still require
+independent execution. Lexical UTF8 measures describe only this source scope,
+not tokens, latency reduction or scientific acceptance. Owner's requested simple
+guides do not authorize weakening native operations/permissions or overriding
+explicit scientific flags; no procedural QML or policy engine is added.
+
+## Fit guidance branches on actual returned adoption
+
+FIRST global instructions, run_fit help and both bundled guides read the actual
+returned status/adopted before describing a candidate as live work. Native
+FitReport distinguishes adopted DONE/MAX_ITER/NO_STEP/CANCELLED outcomes from
+ERROR/SUPERSEDED/refused attempts. Cancellation may retain an adopted partial
+result; a live frame or successful control delivery is not itself adoption.
+Unadopted outcomes do not adopt that fit candidate, and SUPERSEDED may reflect a
+separate edit: reconcile actual current state rather than assume no change.
+
+The sole latest-adopted fit Undo remains conditional on actual native availability;
+a refused/unadopted attempt cannot authorize undoing earlier accepted science.
+Convergence/objective do not establish adequacy, and no scientific policy/retry,
+new metric, native FitReport change or response reinterpretation is introduced.
+Complete compact/raw capture, currentness, user flags, partial effects and prior
+scientific exceptions remain unchanged. Source-only correction of the retained
+wording contradiction does not establish runtime/model adherence or qualification.

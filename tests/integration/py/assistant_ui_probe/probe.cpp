@@ -133,6 +133,7 @@ public:
     QTcpServer images;
     int image_requests=0;
     Array activated;
+    bool files_observed=false;
     UrlObserver() {
         if(!images.listen(QHostAddress::LocalHost,0)) throw std::runtime_error("isolated image observation listener unavailable");
         QObject::connect(&images,&QTcpServer::newConnection,this,[this]{
@@ -148,9 +149,22 @@ public:
         QDesktopServices::setUrlHandler("http",this,"activate");
         QDesktopServices::setUrlHandler("https",this,"activate");
     }
-    ~UrlObserver() {QDesktopServices::unsetUrlHandler("http");QDesktopServices::unsetUrlHandler("https");}
+    ~UrlObserver() {QDesktopServices::unsetUrlHandler("http");QDesktopServices::unsetUrlHandler("https");if(files_observed)QDesktopServices::unsetUrlHandler("file");}
 public slots:
     void activate(const QUrl& url) {activated.push_back(url.toString(QUrl::FullyEncoded));}
+};
+// Passive receiver for the original TextEdit signal, never an emitted input.
+class OriginalLinkActivationObserver final:public QObject {
+    Q_OBJECT
+public:
+    Array activations;
+    QString original_row;
+    std::function<bool()> original_current;
+public slots:
+    void activated(const QString& href) {
+        activations.append(Object{{"href",href},{"row_id",original_row},
+            {"original_owner_current",original_current && original_current()}});
+    }
 };
 void drain(int milliseconds=30) {
     QElapsedTimer timer;timer.start();
@@ -1339,6 +1353,26 @@ int main(int argc,char** argv) {
                     if(bank->data && view) {
                         const auto& raw=bank->data->intensity_calc.values();const auto& status=bank->data->calc_status.values();
                         const auto& graph=view->patternSource();const auto& axis=bank->data->axis();
+                        if(input["inspection_reference"].toBool()) {
+                            // Opt-in original-engine scalar CLASS evidence, not
+                            // summary arithmetic or inclusion policy. Defaults unchanged.
+                            Object classes;
+                            const auto classify=[&](const char* name,const auto& values) {
+                                Array cells;
+                                for(std::size_t i=0;i<axis.size();++i) {
+                                    if(i>=values.size())cells.append("missing");
+                                    else if(std::isnan(values[i]))cells.append("nan");
+                                    else if(std::isinf(values[i]))cells.append(values[i]>0?"positive_infinity":"negative_infinity");
+                                    else cells.append("finite");
+                                }
+                                classes[name]=cells;
+                            };
+                            classify("x",axis);classify("measured",bank->data->intensity_meas);classify("sigma",bank->data->intensity_meas_su);
+                            classify("calculated",raw);classify("background",bank->data->intensity_bkg.values());classify("residual",bank->data->residual.values());
+                            Array originalStatus;for(const auto& value:status)originalStatus.append(QString::fromStdString(value));
+                            row["original_inspection_cell_classes"]=classes;row["original_native_status_rows"]=originalStatus;
+                            row["original_pattern_generation"]=QString::number(view->patternGeneration());
+                        }
                         const std::vector<double> empty;const auto& chart=graph.calc?*graph.calc:empty;
                         bool equal=raw.size()==chart.size();qsizetype included=0,available=0,chartAvailable=0;
                         for(std::size_t i=0;i<raw.size();++i) {
@@ -1555,6 +1589,119 @@ int main(int argc,char** argv) {
                 const auto key=input["key"].toString();auto found=public_archives.find(key);
                 if(found==public_archives.end())throw std::invalid_argument("original test archive handle required");
                 public_archives.erase(found);result={{"dropped",true}};
+            }
+            else if(op=="observe_file_urls") {
+                // Opt-in same QDesktopServices observer; no application is launched.
+                if(!urls.files_observed) {
+                    QDesktopServices::setUrlHandler("file",&urls,"activate");
+                    urls.files_observed=true;
+                }
+                result={{"installed",urls.files_observed},{"prior_activations",urls.activated}};
+            }
+            else if(op=="message_link_click") {
+                const auto identity=input["row_id"].toString(),href=input["href"].toString();
+                if(!urls.files_observed || identity.isEmpty() || href.isEmpty())
+                    throw std::invalid_argument("exact row/link and explicit file handler observation required before input");
+                const auto owner_current=capture_input_owner();
+                QPointer<edi_app::AssistantMarkdown> presentation;
+                QPointer<QQuickItem> body,original_row;
+                for(auto* object:objects(window)) {
+                    auto* candidate=qobject_cast<edi_app::AssistantMarkdown*>(object);if(!candidate)continue;
+                    for(auto* parent=candidate->parentItem();parent;parent=parent->parentItem())
+                        if(parent->property("rowId").toString()==identity) {
+                            if(presentation && presentation!=candidate)throw std::runtime_error("ambiguous original message document");
+                            presentation=candidate;body=candidate->parentItem();original_row=parent;break;
+                        }
+                }
+                if(!presentation || !body || !original_row || !presentation->document() || !presentation->document()->textDocument())
+                    throw std::runtime_error("original message/document is not realized; no link input sent");
+                const auto source=presentation->source();
+                QPointer<QQuickTextDocument> original_document=presentation->document();
+                const QPointer<QTextDocument> original_text_document=original_document->textDocument();
+                const int original_revision=original_text_document->revision();
+                int position=-1,matches=0;
+                for(auto block=original_document->textDocument()->begin();block.isValid();block=block.next())
+                    for(auto it=block.begin();!it.atEnd();++it) {
+                        const auto fragment=it.fragment();if(!fragment.isValid() || !fragment.charFormat().isAnchor())continue;
+                        if(fragment.charFormat().anchorHref()!=href)continue;
+                        ++matches;position=fragment.position();
+                    }
+                if(matches!=1)throw std::runtime_error("requested exact original anchor is absent or ambiguous; no input sent");
+                QRectF first,next;
+                if(!QMetaObject::invokeMethod(body,"positionToRectangle",Qt::DirectConnection,Q_RETURN_ARG(QRectF,first),Q_ARG(int,position))
+                    || !QMetaObject::invokeMethod(body,"positionToRectangle",Qt::DirectConnection,Q_RETURN_ARG(QRectF,next),Q_ARG(int,position+1)))
+                    throw std::runtime_error("original anchor position geometry is unavailable");
+                const QPointF local((first.left()+next.left())/2,first.center().y());
+                const QSizeF original_layout(body->width(),body->height());
+                const QPointer<QQuickWindow> original_window=window;
+                const auto scene=body->mapToScene(local);
+                // This exact integer point, not the fractional discovery point,
+                // owns both the native hit proof and the one delivered click.
+                const auto finite=[](const QPointF& p){return std::isfinite(p.x()) && std::isfinite(p.y());};
+                if(!original_window || !finite(scene) || !QRectF(QPointF(),original_window->size()).contains(scene))
+                    throw std::runtime_error("original anchor geometry is nonfinite or outside its window; no input sent");
+                const QPoint press=scene.toPoint();
+                const auto current=[&] {
+                    if(!owner_current() || !presentation || !body || !original_row || !original_document || !original_text_document
+                        || !original_window || window!=original_window || presentation->source()!=source
+                        || presentation->document()!=original_document || original_document->textDocument()!=original_text_document
+                        || original_text_document->revision()!=original_revision || presentation->parentItem()!=body
+                        || original_row->property("rowId").toString()!=identity || body->window()!=original_window
+                        || presentation->window()!=original_window || original_row->window()!=original_window
+                        || !body->isVisible() || !body->isEnabled() || body->containmentMask()
+                        || QSizeF(body->width(),body->height())!=original_layout
+                        || !std::isfinite(original_layout.width()) || !std::isfinite(original_layout.height())
+                        || original_layout.width()<=0 || original_layout.height()<=0 || !finite(scene)
+                        || body->mapToScene(local)!=scene || !QRectF(QPointF(),original_window->size()).contains(QPointF(press)))return false;
+                    bool below_original_row=false;
+                    for(auto* parent=body->parentItem();parent;parent=parent->parentItem()) {
+                        if(parent==original_row)below_original_row=true;
+                        if(!parent->isVisible() || !parent->isEnabled())return false;
+                    }
+                    return below_original_row;
+                };
+                const auto reachable=[&] {
+                    if(!current())return false;
+                    const auto hit=body->mapFromScene(QPointF(press));
+                    if(!finite(hit) || !body->contains(hit) || !current())return false;
+                    for(auto* parent=body->parentItem();parent;parent=parent->parentItem()) {
+                        const auto point=parent->mapFromScene(QPointF(press));if(!finite(point))return false;
+                        if(parent->clip()) {
+                            const auto clip=parent->clipRect();
+                            if(!std::isfinite(clip.x()) || !std::isfinite(clip.y()) || !std::isfinite(clip.width())
+                                || !std::isfinite(clip.height()) || !clip.contains(point) || !current())return false;
+                        }
+                    }
+                    return current();
+                };
+                if(!reachable())throw std::runtime_error("original rounded anchor point is clipped, outside native contains, or retired; no input sent");
+                QString actual;
+                QMetaMethod link_at;
+                for(int i=0;i<body->metaObject()->methodCount();++i) {
+                    const auto method=body->metaObject()->method(i);
+                    if(method.name()=="linkAt" && method.parameterCount()==2){link_at=method;break;}
+                }
+                if(!link_at.isValid())throw std::runtime_error("original public linkAt is unavailable");
+                const auto types=link_at.parameterTypes();const auto exact_local=body->mapFromScene(QPointF(press));
+                const qreal x=exact_local.x(),y=exact_local.y();
+                if(!link_at.invoke(body,Qt::DirectConnection,QGenericReturnArgument("QString",&actual),
+                    QGenericArgument(types[0].constData(),&x),QGenericArgument(types[1].constData(),&y))
+                    || actual!=href || !reachable())throw std::runtime_error("exact rounded original link hit-test/owner no longer proves this target; no input sent");
+                OriginalLinkActivationObserver delivery;
+                delivery.original_row=identity;delivery.original_current=reachable;
+                const auto connection=QObject::connect(body,SIGNAL(linkActivated(QString)),&delivery,SLOT(activated(QString)),Qt::DirectConnection);
+                if(!connection)throw std::runtime_error("the original TextEdit linkActivated signal could not be observed; no input sent");
+                const auto prior=urls.activated.size();
+                if(!reachable())throw std::runtime_error("original link receiver retired before physical delivery; no input sent");
+                QTest::mouseClick(original_window,Qt::LeftButton,Qt::NoModifier,press);drain();
+                QObject::disconnect(connection);
+                const bool delivered=delivery.activations.size()==1 && delivery.activations[0].toObject()["href"]==href
+                    && delivery.activations[0].toObject()["row_id"]==identity
+                    && delivery.activations[0].toObject()["original_owner_current"]==true;
+                result={{"reached",delivered},{"row_id",identity},{"href",href},{"actual_link_at_press",actual},
+                    {"link_activations",delivery.activations},{"document_revision",original_revision},
+                    {"new_url_count",static_cast<double>(urls.activated.size()-prior)},
+                    {"same_owner_after",reachable()},{"scene_x",press.x()},{"scene_y",press.y()}};
             }
             else if(op=="markdown_probe") {
                 const auto identity=input["row_id"].toString();
