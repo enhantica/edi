@@ -1,0 +1,82 @@
+{
+  "schema": "edi.tests.native-document-interface-snapshot/1",
+  "kind": "BYTE_EXACT_ORIGINAL_INTERFACE_HEADERS_ONLY_NO_PARSER_IMPLEMENTATION",
+  "source_repository": "crysta",
+  "source_commit": "c815d994d132fc31d10e26aaf4ac8385a965e518",
+  "source_tree": "4752b54155e044fb54bb26e6fd3f4f17252f5f30",
+  "files": [
+    {
+      "snapshot": "edi.hpp",
+      "original_path": "src/core/edi.hpp",
+      "sha256": "fee5a54128a7359ba7dd98e675ba5957958ec46f17ed8733257ec03d8aaba29a"
+    },
+    {
+      "snapshot": "version.hpp",
+      "original_path": "src/core/version.hpp",
+      "sha256": "5cc5e1eef2d982c0e22435497b77e3386e3843a49089da6145a90a3c3abd4097"
+    },
+    {
+      "snapshot": "LICENSE",
+      "original_path": "LICENSE",
+      "sha256": "4e8ce2382ae80c7f6b7d51d480e7d8f39c5b83618aa9507785b267be5346d41c"
+    }
+  ],
+  "license": "Original BSD-3-Clause license/copyright retained byte-exact in adjacent LICENSE. Header bytes are unmodified; parser implementation stays in the linked original native SDK.",
+  "header_compatibility_comparison": [
+    {
+      "source": "405b4f477371bee24f3c4f410ad2157701bf52cc",
+      "src/core/edi.hpp": {
+        "sha256": "d38412d8c383b9abdebc5a48af0069f64fd94142619c847929df4a2d6918c651",
+        "bytes": 8652,
+        "git_blob": "d71d87cf536bc5a24c53054be4bd7468e0a87db1"
+      },
+      "src/core/version.hpp": {
+        "sha256": "5cc5e1eef2d982c0e22435497b77e3386e3843a49089da6145a90a3c3abd4097",
+        "bytes": 732,
+        "git_blob": "28300d4a25c8caf51f34a452621c247c2c46635a"
+      },
+      "exact_header_snapshot_match": false
+    },
+    {
+      "source": "79010b0c73ddec01abf80ce00037d138ec7c1b8d",
+      "src/core/edi.hpp": {
+        "sha256": "fee5a54128a7359ba7dd98e675ba5957958ec46f17ed8733257ec03d8aaba29a",
+        "bytes": 8058,
+        "git_blob": "ed31f0cb1b81589e22ffc6282351863846372d77"
+      },
+      "src/core/version.hpp": {
+        "sha256": "5cc5e1eef2d982c0e22435497b77e3386e3843a49089da6145a90a3c3abd4097",
+        "bytes": 732,
+        "git_blob": "28300d4a25c8caf51f34a452621c247c2c46635a"
+      },
+      "exact_header_snapshot_match": true
+    },
+    {
+      "source": "c815d994d132fc31d10e26aaf4ac8385a965e518",
+      "src/core/edi.hpp": {
+        "sha256": "fee5a54128a7359ba7dd98e675ba5957958ec46f17ed8733257ec03d8aaba29a",
+        "bytes": 8058,
+        "git_blob": "ed31f0cb1b81589e22ffc6282351863846372d77"
+      },
+      "src/core/version.hpp": {
+        "sha256": "5cc5e1eef2d982c0e22435497b77e3386e3843a49089da6145a90a3c3abd4097",
+        "bytes": 732,
+        "git_blob": "28300d4a25c8caf51f34a452621c247c2c46635a"
+      },
+      "exact_header_snapshot_match": true
+    }
+  ],
+  "known_compatible_linked_build_commits": [
+    "79010b0c73ddec01abf80ce00037d138ec7c1b8d",
+    "c815d994d132fc31d10e26aaf4ac8385a965e518"
+  ],
+  "default405_disposition": "NOT allowed: edi.hpp is different8652B/d384...; matching version declarations alone do not prove document ABI. Unsupported linked revision fails/unreached before document API; never skip/pass.",
+  "local_SDK_manifest": "Original locally built SDK2 has no installed share/crysta-sdk/manifest.json; generated Edi app info therefore cannot prove a manifest source. Actual linked native build_commit/version functions + root SDK2 artifact bond are separate honest inputs.",
+  "current_actual_SDK2": {
+    "receipt": "/tmp/edi-assistant-integration-20261027/native-companion/SDK2-IDENTITY.json",
+    "receipt_sha256": "46809afd1decb2fc8e597f4d916b0347b2fc5c6cfc62d4589485e6351f9c318e",
+    "source": "c815d994d132fc31d10e26aaf4ac8385a965e518",
+    "archive_sha256": "ecc35a3277430a05d9a225efce4476609948974f9a3de4437c1ca123f3db3552"
+  },
+  "maintenance": "A changed native source/header ABI requires an explicit comparison/update before qualification. No sibling checkout/absolute source include, installed-private header dependency, production interface or parser copy is added."
+}
