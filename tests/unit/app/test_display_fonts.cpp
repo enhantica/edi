@@ -117,7 +117,7 @@ public:
             "# Heading\n\n**Bold** body and `inline-code`.\n\n"
             "```text\nfixed β 23\n```\n\n"
             "Inline $x^2$ remains native. Scaled $x \\circ y$ also remains native.\n\n| Name | Value |\n| --- | --- |\n| cell | $a+b$ |\n| sum | $\\sum_{i=1}^{3} a_i$ |\n");
-        struct Geometry { QVector<QSizeF> images; QVector<qreal> quantum; qreal bodyHeight=0; };
+        struct Geometry { QVector<QSizeF> images,ink; QVector<qreal> quantum; qreal bodyHeight=0; };
         QMap<QString,Geometry> previousByMode,pixelByZoom;
         for (const auto& mode : {QStringLiteral("default"),QStringLiteral("pixel"),QStringLiteral("point"),QStringLiteral("equivalent-point")}) {
             for (const qreal zoom : {qreal(0.7),qreal(1),qreal(1.25)}) {
@@ -206,8 +206,20 @@ public:
                                 stage+QStringLiteral("Actual native document geometry is finite, positive and uses logical units"));
                         require(logical==image.deviceIndependentSize(),stage+QStringLiteral("The original QTextImageFormat consumes the actual resource in its device-independent units"));
                         geometry.images.append(logical);geometry.quantum.append(dpr>0 ? 1/dpr : 0);
+                        // The resource canvas includes transparent padding for
+                        // Qt Quick's baseline. Equivalence/scale concern actual
+                        // painted glyphs, not that independent padding policy.
+                        const bool scanBounded=image.sizeInBytes()>0 && image.sizeInBytes()<=2097152;
+                        require(scanBounded,stage+QStringLiteral("The original small formula's actual resource fits the independent capacity before an ink scan"));
+                        QRect ink;
+                        if(scanBounded)for(int y=0;y<image.height();++y)for(int x=0;x<image.width();++x)
+                            if(image.pixelColor(x,y).alpha()!=0)ink=ink.united(QRect(x,y,1,1));
+                        const bool inkAvailable=!ink.isEmpty() && std::isfinite(dpr) && dpr>0;
+                        require(inkAvailable,stage+QStringLiteral("The actual native formula contains nontransparent painted glyphs"));
+                        if(inkAvailable)geometry.ink.append(QSizeF(ink.width()/dpr,ink.height()/dpr));
                         imageFacts.append(QJsonObject{{"source",expectedFormula.value(images-1)},{"width",logical.width()},
-                            {"height",logical.height()},{"resource_dpr",dpr},{"pixel_rounding_quantum",dpr>0 ? 1/dpr : 0}});
+                            {"height",logical.height()},{"resource_dpr",dpr},{"pixel_rounding_quantum",dpr>0 ? 1/dpr : 0},
+                            {"ink_available",inkAvailable},{"ink_pixels",QJsonArray{ink.x(),ink.y(),ink.width(),ink.height()}}});
                     }
                 }
                 require(images==4 && code>=2 && headings==1 && bold,
@@ -217,16 +229,18 @@ public:
                 const QFontMetricsF metrics(body);
                 require(std::isfinite(metrics.height()) && metrics.height()>0,stage+QStringLiteral("The actual source font resolves to finite positive Qt metrics"));
                 geometry.bodyHeight=metrics.height();
+                require(geometry.ink.size()==geometry.images.size(),stage+QStringLiteral("Every original native resource supplies its own measured ink geometry, never a fabricated absent-image default"));
                 if (previousByMode.contains(mode)) {
                     const auto& previous=previousByMode[mode];
                     require(geometry.bodyHeight>previous.bodyHeight,stage+QStringLiteral("The chosen real body-size inputs genuinely have increasing resolved Qt metrics"));
                     require(geometry.images.size()==previous.images.size(),stage+QStringLiteral("Font comparison keeps the complete same original formula inventory"));
-                    for (qsizetype i=0;i<std::min(geometry.images.size(),previous.images.size());++i) {
-                        // One physical pixel per independent ceil/raster edge:
-                        // compare real units, never guessed renderer font sizes.
+                    require(geometry.ink.size()==previous.ink.size(),stage+QStringLiteral("Font comparison retains complete original painted formula membership"));
+                    for (qsizetype i=0;i<std::min(geometry.ink.size(),previous.ink.size());++i) {
+                        // One physical pixel per independent raster edge; no
+                        // semantic relationship is imposed on baseline padding.
                         const auto rounding=std::max(geometry.quantum[i],previous.quantum[i]);
-                        require(geometry.images[i].width()>previous.images[i].width()+rounding &&
-                                geometry.images[i].height()+rounding>=previous.images[i].height(),
+                        require(geometry.ink[i].width()>previous.ink[i].width()+rounding &&
+                                geometry.ink[i].height()+rounding>=previous.ink[i].height(),
                                 stage+QStringLiteral("Every original native formula responds meaningfully to actual body-size growth; a universal fixed positive math font cannot pass"));
                     }
                 }
@@ -238,18 +252,23 @@ public:
                     if (pixelByZoom.contains(key)) {
                         const auto& pixel=pixelByZoom[key];
                         require(pixel.images.size()==geometry.images.size(),stage+QStringLiteral("Equivalent units retain all original formula occurrences"));
-                        for (qsizetype i=0;i<std::min(pixel.images.size(),geometry.images.size());++i) {
+                        require(pixel.ink.size()==geometry.ink.size(),stage+QStringLiteral("Equivalent units retain all actual original painted formula occurrences"));
+                        for (qsizetype i=0;i<std::min(pixel.ink.size(),geometry.ink.size());++i) {
                             const auto rounding=2*std::max(pixel.quantum[i],geometry.quantum[i]);
-                            require(std::abs(pixel.images[i].width()-geometry.images[i].width())<=rounding &&
-                                    std::abs(pixel.images[i].height()-geometry.images[i].height())<=rounding,
-                                    stage+QStringLiteral("Qt-equivalent point/pixel fonts preserve actual native dimensions within two independent one-physical-pixel raster roundings"));
+                            require(std::abs(pixel.ink[i].width()-geometry.ink[i].width())<=rounding &&
+                                    std::abs(pixel.ink[i].height()-geometry.ink[i].height())<=rounding,
+                                    stage+QStringLiteral("Qt-equivalent point/pixel fonts preserve actual painted native dimensions within two independent one-physical-pixel raster roundings"));
                         }
                     }
                 }
                 const QJsonObject fact{{"mode",mode},{"zoom",zoom},{"body_pixel_size",body.pixelSize()},
                     {"body_point_size",body.pointSizeF()},{"height",metrics.height()},{"formula_images",images},
                     {"resource_bytes",static_cast<qint64>(bytes)},{"same_window",editor->window()==host->window()},
-                    {"image_geometry",imageFacts},{"circ_source_face_has_o",raw.isValid() && raw.supportsCharacter('o')}};
+                    {"image_geometry",imageFacts},{"circ_source_face_has_o",raw.isValid() && raw.supportsCharacter('o')},
+                    {"document_plain_text",document->toPlainText()},
+                    {"document_text_width",document->textWidth()},{"editor_width",editor->width()},{"editor_height",editor->height()},
+                    {"row_width",item->width()},{"row_height",item->height()},
+                    {"observation_stage","synchronous original font/text setters before a new-row frame/polish qualification"}};
                 facts.append(fact);
                 qInfo().noquote()<<"OriginalAssistantFontUnits"<<QJsonDocument(fact).toJson(QJsonDocument::Compact);
             }
