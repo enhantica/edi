@@ -4126,3 +4126,32 @@ as manual selection; original draft readiness signals continue only an already
 accepted Send. The old transport's history waiter/cursors retire through FIRST
 retire_session_history before missing coverage is loaded on verified resume. No
 read result, Archive acknowledgment or scientific outcome is manufactured.
+
+## Native math font units at the original renderer boundary
+
+FIRST PassiveDocument::picture preserves the actual surrounding font's size and
+units while supplying a positive point size to the pinned native parser. The
+original pixel-font entry reaches an upstream scaled-symbol path which calls
+pointSizeF without inspecting units; a pixel font returns the minus-one sentinel,
+so its actual0.7 symbol scale requests invalid minus0.7 points. This is a source
+counterexample matching the warning, not exclusive attribution of a Mac log.
+
+Use actual positive point size directly. Convert a pixel size through the same
+original probe paint device's logical DPI (seventy-two typographic points per
+inch); when size is unresolved, use existing device-specific native font metrics.
+Nonfinite/nonpositive unresolved size keeps that formula's complete literal source
+through the existing local fallback, never a guessed universal font or log filter.
+The body QFont, native family/style/glyph fallback, DPR, baselines, source/copy,
+resource cap and ordinary Markdown remain owned by their original paths. No
+installed pinned source or dependency identity is rewritten. Actual native symbol,
+point/pixel font, DPR and Mac visual/warning qualification remains required.
+
+## Shared Stop square optical size
+
+The original AppSizes control glyph token remains the eye's size. A Stop-only
+shared token derives a modestly smaller square (eighty-five percent of that glyph
+font size); both original composer and status Stop content labels bind it. Circle
+paint/diameter, hit/layout target, color/contrast, border, margins, centering and
+Stop/working/mode semantics remain unchanged. No per-instance override or new
+procedural QML logic is added. Actual theme/native appearance remains subject to
+ordinary visual qualification, not inferred from these source dimensions.

@@ -21,6 +21,8 @@ QtObject {
     readonly property real assistantIndicatorExtent: Math.max(0, assistantIconExtent - 2 * assistantControlBorderWidth)
     // The original composer Stop/eye font size, shared by their status-bar copies.
     readonly property real assistantControlIconSize: unit * 0.75 * 1.25
+    // Stop square only: keep the existing eye, circle paint and full hit target.
+    readonly property real assistantStopIconSize: assistantControlIconSize * 0.85
 
     // The wordmark's mark (Components/Wordmark.qml; its name is 0.4309 of it): easydiffractionbeta's 5 units,
     // the same on Home and in About (WordmarkWithVersion, edi ADR-0017 §1).
