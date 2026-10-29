@@ -12123,3 +12123,189 @@ def test_actual_compact_inspection_registration_and_current_guidance_are_deliver
     (actor.folder / 'original-compact-inspection-guidance-delivery.json').write_text(json.dumps({
         'actual_thread_start': starts[0], 'original_body_hashes': {key: hashlib.sha256(body.encode()).hexdigest() for key, body in expected.items()},
         'qualification': 'Actual capability/full-body/once delivery only. Source-content correctness is independently reviewed; no English phrase heuristic or provider/model-adherence claim. Explicit combined flags/order and actual per-mode Undo remain original unchanged native gates.'}, indent=2)+'\n')
+
+
+def _original_settings_diagnostic_frame(actor):
+    # Freeze at the real getter entrance; do not retain attached QVariantMaps.
+    document = qml(actor, '(function(){const raw=Session.assistant.workReportDocument();'
+        'return typeof raw==="string"&&raw.length?JSON.parse(raw):null;})()')
+    assert isinstance(document, dict) and isinstance(document.get('scope_coverage'), dict), (
+        'Settings diagnostic getter is genuinely available; semantic suffix UNREACHED otherwise')
+    observed = document['scope_coverage'].get('current_settings_observation')
+    assert isinstance(observed, dict) and observed.get('capture') == 'current_local_observation' \
+        and observed.get('diagnostic_only') is True and observed.get('capture_available') is True, (
+            'Original settings evidence is current local diagnostic data, not a historical readiness substitute')
+    attempt = observed.get('latest_attempt')
+    assert isinstance(attempt, dict), 'The actual original settings record is exposed; absent record is UNREACHED'
+    for key in ('attempt', 'owner_generation', 'account_epoch', 'output_generation'):
+        assert isinstance(attempt.get(key), str) and attempt[key].isascii() and attempt[key].isdigit(), (
+            'Original diagnostic generation/serial fields retain their declared unsigned-decimal STRING type')
+    assert int(attempt['attempt']) > 0 and isinstance(attempt.get('request_id'), str) \
+        and isinstance(attempt.get('reply_id'), str), (
+            'A real original entry has a nonzero local serial and typed actual request/reply IDs')
+    for key in ('request_call_in_flight', 'reply_id_correlated', 'same_original_settings_owner', 'original_input_current'):
+        assert type(attempt.get(key)) is bool, 'Diagnostic correlation/currentness facts use actual declared booleans'
+    assert attempt.get('ack_validation') in ('not_observed', 'empty_queue_ack_validated', 'refusal_validated'), (
+        'Original semantic ACK categories are explicit, never inferred from selected/connected state')
+    return observed
+
+
+def _original_settings_model_fixture():
+    return [{'id': 'gpt-6.1-sol', 'model': 'gpt-6.1-sol',
+        'displayName': 'Independent settings attribution model', 'description': 'Offline protocol fixture',
+        'hidden': False, 'isDefault': True, 'defaultReasoningEffort': 'medium',
+        'supportedReasoningEfforts': [{'reasoningEffort': effort, 'description': effort}
+            for effort in ['medium', 'high']]}]
+
+
+def _original_settings_ready(actor):
+    actor.until(lambda value: value['ui']['connected'] and value['ui']['state'] == 'idle'
+                and not value['ui']['can_cancel'])
+
+
+def _original_settings_prepare_high(actor):
+    actor.connect()
+    before = len(_session_wire(actor, 'thread/settings/update'))
+    actor.command('select_effort', id='high')
+    _original_settings_ready(actor)
+    requests = _session_wire(actor, 'thread/settings/update')[before:]
+    assert len(requests) == 1 and requests[0]['params']['effort'] == 'high', (
+        'A distinct offered high effort reaches exactly one original current-thread settings RPC')
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    assert any(row.get('id') == requests[0]['id'] and row.get('result') == {} for row in sent), (
+        'The normal original settings request has an actual empty-object queue ACK')
+    assert any(row.get('method') == 'thread/settings/updated' and
+        row['params']['threadId'] == requests[0]['params']['threadId'] and
+        row['params']['threadSettings']['effort'] == 'high' for row in sent), (
+            'The actual matching full current-thread applied notification is independent of that ACK')
+    assert qml(actor, 'Session.assistant.selectedEffort') == 'high', (
+        'The original setter and current owning VM retain the genuinely selected offered effort')
+    assert not _session_wire(actor, 'turn/start'), 'Metadata attribution never invents a user/scientific turn'
+    return requests[0]
+
+
+def _original_settings_require_matched_ack(observed, request):
+    value = observed['latest_attempt']
+    assert value['request_id'] == request['id'] == value['reply_id'] \
+        and value['reply_id_correlated'] is True and value['request_call_in_flight'] is False \
+        and value['same_original_settings_owner'] is True and value['original_input_current'] is True, (
+            'A completed ordinary request records its exact original returned/replied ID and current owner after return')
+    assert value['ack_validation'] == 'empty_queue_ack_validated' \
+        and 'refusal_code' not in value and 'validation_failure_stage' not in value, (
+            'Only the actual original empty result validates this queue ACK, independently of policy application')
+    assert value['applied_notification'] == 'actual_current_thread_policy_validated' \
+        and value['applied_effort'] == request['params']['effort'] \
+        and observed['policy_current'] is True and observed['verified_policy_effort'] == request['params']['effort'], (
+            'The real full policy notification separately proves applied current effort, never the queue ACK alone')
+
+
+def _original_settings_require_no_rpc(value):
+    assert value['request_id'] == '' and value['request_call_in_flight'] is False \
+        and value['reply_id_correlated'] is False and value['ack_validation'] == 'not_observed' \
+        and 'refusal_code' not in value and 'validation_failure_stage' not in value, (
+            'A no-RPC original entry cannot inherit any older request validated ACK/refusal/malformed-processing stage')
+
+
+def test_original_settings_diagnostic_correlates_normal_ack_separately_from_applied_policy(main_actor):
+    actor = main_actor([[]])
+    _session_configure(actor, fixture_models=_original_settings_model_fixture())
+    request = _original_settings_prepare_high(actor)
+    observed = _original_settings_diagnostic_frame(actor)
+    (actor.folder / 'original-settings-normal.json').write_text(json.dumps({
+        'actual_request': request, 'current_observation': observed}, indent=2))
+    _original_settings_require_matched_ack(observed, request)
+
+
+@pytest.mark.parametrize('reply_kind', ['ack', 'refusal', 'malformed_result'])
+def test_original_settings_no_rpc_default_cannot_adopt_delayed_prior_receipt(main_actor, reply_kind):
+    actor = main_actor([[]])
+    _session_configure(actor, fixture_models=_original_settings_model_fixture(), fixture_settings_observation=True,
+        fixture_usage_default_response={'result': _original_usage_window(37)})
+    first = _original_settings_prepare_high(actor)
+    baseline = _original_settings_diagnostic_frame(actor)
+    _original_settings_require_matched_ack(baseline, first)
+    envelope = {'result': {}} if reply_kind == 'ack' else (
+        {'error': {'code': -32000, 'message': 'Independent original settings refusal'}}
+        if reply_kind == 'refusal' else {'result': {'unexpected': True}})
+    spec = _original_usage_fifo_reply(actor, 214, **envelope)
+    _session_configure(actor, fixture_original_settings_reply=spec)
+    facts = {'reply_kind': reply_kind, 'baseline': baseline, 'first_request': first}
+    artifact = actor.folder / 'original-settings-delayed-attribution.json'
+    try:
+        boundary = len(_session_wire(actor, 'thread/settings/update'))
+        actor.command('select_effort', id='medium')
+        actor.until(lambda _value: Path(spec['ready']).is_file())
+        _original_settings_ready(actor)
+        requests = _session_wire(actor, 'thread/settings/update')[boundary:]
+        facts['requests_after_explicit_default'] = requests
+        assert len(requests) == 1, 'Exactly one genuine settings request A is issued for explicit offered default effort'
+        request = requests[0]
+        assert request['params']['model'] == 'gpt-6.1-sol' and request['params']['effort'] == 'medium' \
+            and request['params']['approvalPolicy'] == 'never' \
+            and request['params']['sandboxPolicy'] == {'type': 'readOnly', 'networkAccess': False}, (
+                'A preserves original actual model/default-effort and exact no-native-write transport policy')
+        sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+        applied = [row for row in sent if row.get('method') == 'thread/settings/updated' and
+            row['params']['threadId'] == request['params']['threadId'] and
+            row['params']['threadSettings']['effort'] == 'medium']
+        assert applied and not any(row.get('id') == request['id'] and
+            ('result' in row or 'error' in row) for row in sent), (
+                'A actual applied notification reaches settlement while its real same-owner reply is still withheld')
+        assert actor.last['ui']['last_error'] == '', 'A held valid applied policy has no earlier error to impersonate the later negative receiver fence'
+        before = _original_settings_diagnostic_frame(actor)
+        facts['A_before_reply'] = before
+        pending = before['latest_attempt']
+        assert pending['request_id'] == request['id'] and pending['ack_validation'] == 'not_observed' \
+            and pending['applied_notification'] == 'actual_current_thread_policy_validated', (
+                'Original A records application independently, without inventing its still-unseen queue ACK')
+        actor.command('select_effort', id='')
+        assert qml(actor, 'Session.assistant.selectedEffort') == '' \
+            and len(_session_wire(actor, 'thread/settings/update')) == boundary + 1, (
+                'Ordinary explicit-default to Default changes the token but issues no settings RPC B')
+        no_rpc = _original_settings_diagnostic_frame(actor)
+        facts['B_before_A_reply'] = no_rpc
+        latest = no_rpc['latest_attempt']
+        assert latest['attempt'] != pending['attempt'] and latest['selected_effort'] == '' \
+            and latest['admission'] == 'effective_policy_already_current' \
+            and no_rpc['policy_current'] is True and no_rpc['verified_policy_effort'] == 'medium', (
+                'A distinct no-request B entrance really preserves the same already verified effective default policy')
+        _original_settings_require_no_rpc(latest)
+        facts['original_release_proof'] = _release_original_usage_reply(
+            actor, spec, request['id'], method='thread/settings/update')
+        actor.until(lambda _value: any(row.get('id') == request['id'] and
+            ('result' in row or 'error' in row) for row in [json.loads(line) for line in
+                actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]))
+        if reply_kind == 'ack':
+            # Seeing peer emission alone is not receiver processing. A later
+            # genuine usage reply on the SAME stdout follows A, and its new
+            # typed public value proves the host processed beyond A's envelope.
+            usage_boundary = len(_session_wire(actor, 'account/rateLimits/read'))
+            _session_configure(actor, fixture_usage_default_response={'result': _original_usage_window(21)})
+            actor.command('refresh_usage')
+            actor.until(lambda _value: len(_session_wire(actor, 'account/rateLimits/read')) > usage_boundary
+                and _original_usage_value(actor).get('state') == 'ready'
+                and any(window['usedPercent'] == 21 for bucket in _original_usage_value(actor)['buckets']
+                        for window in bucket.get('windows', [])))
+            facts['following_actual_usage_request'] = _session_wire(actor, 'account/rateLimits/read')[-1]
+            facts['following_actual_usage_value'] = _original_usage_value(actor)
+            ordered = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+            a_index = next(index for index, row in enumerate(ordered) if row.get('id') == request['id'])
+            u_index = next(index for index, row in enumerate(ordered)
+                if row.get('id') == facts['following_actual_usage_request']['id'])
+            assert a_index < u_index, 'Receiver fence is an actual later same-pipe original response, not an idle-frame assumption'
+        else:
+            actor.until(lambda value: bool(value['ui']['last_error']) or not value['ui']['connected'])
+            facts['actual_negative_receiver_state'] = {key: actor.last['ui'][key]
+                for key in ('connected', 'state', 'last_error')}
+            assert facts['actual_negative_receiver_state']['last_error'], (
+                'The actual original negative reply is processed as a real failure before its diagnostic suffix is read')
+        after = _original_settings_diagnostic_frame(actor)
+        facts['B_after_A_reply'] = after
+        assert after['latest_attempt']['attempt'] == latest['attempt'], (
+            'The same no-RPC B record remains observable; replacement/unavailable record leaves this suffix UNREACHED')
+        _original_settings_require_no_rpc(after['latest_attempt'])
+        assert len(_session_wire(actor, 'thread/settings/update')) == boundary + 1 \
+            and not _session_wire(actor, 'turn/start'), (
+                'Diagnostic observation and delayed reply do not retry settings or submit an invented task')
+    finally:
+        artifact.write_text(json.dumps(facts, indent=2))

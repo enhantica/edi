@@ -817,7 +817,17 @@ for line in sys.stdin:
         }
         effective = effective_configs.setdefault(thread_id, {})
         effective.update({key: params[key] for key in ('model', 'effort') if key in params})
-        reply(request, {})
+        held_settings_reply = None
+        if config.get('fixture_settings_observation'):
+            settings_fixture = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
+            held_settings_reply = settings_fixture.get('fixture_original_settings_reply')
+        if held_settings_reply is None:
+            reply(request, {})
+        else:
+            # Reuse the original exact-request/FIFO metadata carrier. The real
+            # current-thread applied notification below may precede its ACK.
+            # No new RPC, forged success, request ID or app state is introduced.
+            reply_configured_original_usage(request, held_settings_reply)
         notify(
             'thread/settings/updated',
             {
