@@ -4,6 +4,7 @@ import EasyApplication.Gui.Style as EaStyle
 import DisplayFontTests 1.0
 
 TestCase {
+    id: originalTestHost
     name: "BundledDisplayFonts"
     DisplayFontProof { id: proof }
     function test_actual_shaping_uses_only_packaged_faces_data() {
@@ -28,5 +29,10 @@ TestCase {
         verify(family.length > 0, "The escape witness must load an actual unbundled test face");
         verify(proof.failures("A", family, 400, "", 400).length > 0,
                "An unbundled font must not satisfy the actual rendering-face invariant");
+    }
+    function test_original_assistant_renderer_keeps_valid_pixel_point_and_default_font_units() {
+        tryVerify(() => originalTestHost.windowShown, undefined, "The original Qt Quick window must exist before font-unit rendering");
+        const result=proof.assistantRendererFontUnits(originalTestHost, EaStyle.Fonts.fontFamily);
+        verify(result.ok, "The original reply renderer must not convert pixel sentinels to invalid point sizes: " + result.error);
     }
 }
