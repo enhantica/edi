@@ -26,6 +26,8 @@ class CodexAgent final : public QObject {
 public:
     explicit CodexAgent(QObject* parent = nullptr,std::shared_ptr<const void> releaseOwner = {});
     enum class OutputOwnerState { Unobserved, Live, Releasing, Released };
+    enum class UsageDisposition { Preempted, TimedOut };
+    Q_ENUM(UsageDisposition)
     OutputOwnerState outputOwnerState() const noexcept;
     static QString executable();
     static QString policyPatch();
@@ -69,7 +71,7 @@ signals:
     void event(const QString& method, const QJsonObject& params);
     void failed(const QString& explanation);
     // Only a correlated optional account/rateLimits/read disposition; not a provider error.
-    void optionalUsageUnavailable(const QString& id);
+    void optionalUsageUnavailable(const QString& id, UsageDisposition disposition);
     // Hint after the original write queue drains; never a retry/error loop.
     void optionalUsageReady();
 private:
@@ -90,6 +92,7 @@ private:
     // optional record occupying the physical QProcess queue. No partial retry.
     QByteArray deferred_required_;
     quint64 optional_queued_bytes_ = 0;
+    bool preempting_optional_usage_ = false;
     qint64 deferred_deadline_ = -1;
     QHash<QString, QString> pending_;
     QSet<QString> optional_usage_ids_; // Outstanding or timed-out exact issued IDs, bounded by completed_calls.
@@ -121,7 +124,7 @@ private:
     void receive(const QByteArray& record);
     void fail(const char* explanation, FailureKind kind = FailureKind::Other) noexcept;
     void checkDeadline();
-    void retireOptionalUsage(const QString& id);
+    void retireOptionalUsage(const QString& id, UsageDisposition disposition);
     void preemptOptionalUsage();
     void flushRequired() noexcept;
     static QString idKey(const QJsonValue& value);

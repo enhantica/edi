@@ -272,22 +272,27 @@ void CodexAgent::settleOperation() {
 bool CodexAgent::optionalUsageBackpressured() const noexcept {
     return !failed_ && process_ && process_->state()==QProcess::Running &&
         next_id_!=std::numeric_limits<quint64>::max() &&
-        (!deferred_required_.isEmpty() || optional_queued_bytes_!=0 || process_->bytesToWrite()!=0);
+        (preempting_optional_usage_ || !deferred_required_.isEmpty() || optional_queued_bytes_!=0 || process_->bytesToWrite()!=0);
 }
-void CodexAgent::retireOptionalUsage(const QString& id) {
+void CodexAgent::retireOptionalUsage(const QString& id, UsageDisposition disposition) {
     if (pending_.value(id) != "account/rateLimits/read" || !optional_usage_ids_.contains(id)) return;
     pending_.remove(id); pending_deadlines_.remove(id); pending_bytes_ -= pending_sizes_.take(id);
-    emit optionalUsageUnavailable(id); // No activity/operation/deadline role transition.
+    emit optionalUsageUnavailable(id, disposition); // No activity/operation/deadline role transition.
 }
 void CodexAgent::preemptOptionalUsage() {
     const QPointer<CodexAgent> receiver(this);
     const auto scope = generation_;
+    const bool prior = preempting_optional_usage_;
+    preempting_optional_usage_ = true;
+    const auto release = qScopeGuard([receiver,scope,prior] {
+        if(receiver && receiver->generation_==scope)receiver->preempting_optional_usage_=prior;
+    }); // A disposition observer cannot rearm usage inside this required-write loop.
     for (;;) {
         QString id;
         for (auto i = pending_.constBegin(); i != pending_.constEnd(); ++i)
             if (i.value() == "account/rateLimits/read" && optional_usage_ids_.contains(i.key())) { id = i.key(); break; }
         if (id.isEmpty()) return;
-        retireOptionalUsage(id); // Exact issued late-ID ownership remains.
+        retireOptionalUsage(id, UsageDisposition::Preempted); // Exact issued late-ID ownership remains.
         if (!receiver || generation_ != scope || failed_) return;
     }
 }
@@ -327,7 +332,7 @@ void CodexAgent::checkDeadline() {
             optional = it.key(); break;
         }
         if (optional.isEmpty()) break;
-        retireOptionalUsage(optional);
+        retireOptionalUsage(optional, UsageDisposition::TimedOut);
         if (!receiver || generation_ != scope || process_ != process || failed_) return;
     }
     if (operation_start_ < 0) return;
@@ -392,7 +397,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         scope = ++generation_;
         settleOperation();
         failure_kind_ = FailureKind::Other;
-        failed_ = false; eof_pending_=false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; deferred_deadline_ = -1;
+        failed_ = false; eof_pending_=false; incoming_.clear(); deferred_required_.clear(); optional_queued_bytes_ = 0; preempting_optional_usage_ = false; deferred_deadline_ = -1;
         pending_.clear(); optional_usage_ids_.clear(); server_requests_.clear();
         pending_sizes_.clear(); pending_deadlines_.clear(); server_sizes_.clear();
         pending_bytes_ = 0; wire_bytes_ = 0; event_count_ = 0;
@@ -494,7 +499,7 @@ bool CodexAgent::write(const QJsonObject& envelope, const std::function<bool()>&
     }
     const auto initialQueued = static_cast<quint64>(process_->bytesToWrite());
     const auto lineSize = encoded + 1;
-    if(optionalUsage && (initialQueued!=0 || optional_queued_bytes_!=0 || !deferred_required_.isEmpty()))return false;
+    if(optionalUsage && (preempting_optional_usage_ || initialQueued!=0 || optional_queued_bytes_!=0 || !deferred_required_.isEmpty()))return false;
     if(!optionalUsage)preemptOptionalUsage();
     if(!receiver || process_!=process || generation_!=epoch || failed_ || !process_)return false;
     const auto queued=static_cast<quint64>(process_->bytesToWrite());
@@ -538,7 +543,7 @@ QString CodexAgent::request(const QString& method, const QJsonObject& params, co
     try {
         const bool optional = method == "account/rateLimits/read";
         if (failed_ || method.isEmpty() || next_id_ == std::numeric_limits<quint64>::max()) return {};
-        if (optional && (!deferred_required_.isEmpty() || optional_queued_bytes_ != 0 || !process_ || process_->bytesToWrite() != 0)) return {};
+        if (optional && (preempting_optional_usage_ || !deferred_required_.isEmpty() || optional_queued_bytes_ != 0 || !process_ || process_->bytesToWrite() != 0)) return {};
         if (optional) for (auto i = pending_.constBegin(); i != pending_.constEnd(); ++i)
             if (i.value() == "account/rateLimits/read") return {};
         id = QStringLiteral("edi-%1-%2").arg(generation_).arg(++next_id_);

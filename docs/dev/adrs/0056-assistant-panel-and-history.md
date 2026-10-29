@@ -4044,40 +4044,45 @@ rendering remains to be qualified; source style is not runtime acceptance.
 
 ## Account usage readiness and immediate presentation
 
-FIRST usage already starts a read after real thread bootstrap; it is not absent.
-Original CodexAgent may decline an optional read while required physical/deferred
-writes remain queued. Its existing bytesWritten/flushRequired owner now provides
-an optional readiness hint only for the same running process/generation after
-that queue drains. App retries only an explicitly unadmitted backpressured usage
-intent on a queued hint; errors, unsupported/preempted/prepared or uncertain writes
-never become automatic retries. Required work retains priority. No new poll,
-response-driven loop, quota, transport service or approval is introduced.
+FIRST usage starts a read after real thread bootstrap. Genuine bootstrap,
+rate-limit notification and explicit popup refresh record ONE logical refresh
+intent for the already verified account epoch and original transport generation
+before temporary account-confirmation or physical-queue barriers. The issued RPC
+ID is a distinct original transport owner. Reentrant triggers coalesce; required
+work retains priority. Queue hints only attempt existing intent and never create
+one after a terminal outcome. No polling, quota, disclosure or parallel service.
 
-Original account epoch/transport and exact RPC remain authority. The existing
-request preparation callback owns its ID before write reentry; a scoped starting
-guard coalesces reentrant refresh. Bookkeeping cleanup checks original ownership,
-while admission also checks actual readiness/account confirmation. Draft/file
-changes alone do not invalidate an account-only observation; real account/transport
-retirement cannot reuse old buckets or mutate a successor. Normal optional
-preemption remains unavailable, not a manufactured provider failure.
+FIRST CodexAgent reports the actual optional-read disposition: Preempted by a
+required write versus TimedOut by its existing deadline. Both retain the original
+exact late-ID tombstone. Only Preempted retains the logical intent; a later genuine
+queue-drain or confirmed-account continuation may issue a NEW read ID. Nothing
+replays the retired wire. The original preemption loop blocks optional admission
+during its callbacks, preventing a reentrant refresh from starving the required
+write. The account-ready continuation is queued after required admissions unwind
+and rechecks original receiver, account, transport/output generation and intent.
+It cannot revive a retired account or manufacture a new request after timeout,
+error, unsupported reply, uncertain delivery or transport failure.
 
-FIRST usage QVariantMap publishes C++ loading/waiting/unknown/ready/unavailable/
-unsupported/error state, a compact fallback caption and human status text. Actual
-zero percent is valid data, not a fallback. Last valid same-account observations
-remain explicitly stale during refresh/error/empty readings. Unsupported requires
-an actual method-not-found response; an unreported allowance is not zero.
+The existing request preparation callback owns its exact ID before write reentry;
+starting cleanup checks original ownership separately from admission readiness.
+A fully validated response cannot publish through an outstanding identity check;
+its logical read can wait for real same-account readiness instead. Actual error
+responses remain terminal even during confirmation. Draft/file changes do not
+retire an account-only observation; actual account/transport retirement clears
+intent and old account visibility through FIRST owners. There is no inference,
+project sharing or new approval associated with this optional account read.
 
-The existing popup refreshes at aboutToShow and binds nonempty status immediately,
-with a minimum content height from that label's own natural geometry. Its original
-session/weekly readings, percentages, account association and reset-clock timer
-remain; that timer never polls usage. There is no new procedural QML state or
-parallel model. Actual first-open/ready/backpressure/reentry/account/transport/
-stock-runtime/theme qualification remains required; source is not a runtime pass.
+FIRST usage QVariantMap supplies C++ loading/waiting/unknown/ready/unavailable/
+unsupported/error state, compact caption and human status. Actual zero percent
+is data. Last valid same-account observations remain explicitly stale during
+refresh/error/empty readings. Unsupported requires actual method-not-found;
+unreported windows are unknown. Existing sparse-update freshness is preserved:
+a newer notification can leave a completed observation stale, without starting a
+response-driven loop or claiming globally latest-snapshot linearizability.
 
-The same original account-ready admission owner also revisits a never-admitted
-usage wait after a correlated same-account confirmation. A final queue-drain hint
-can precede that reply; its earlier pending-account refusal must not strand the
-intent. The continuation keeps original account/transport/output generation and
-runs after required admission work unwinds, including unrelated draft-proof exits.
-Only waiting with no prepared/pending read is eligible; changed/null account or
-retired transport and prepared/preempted/uncertain/error outcomes cannot retry.
+The existing popup refreshes at aboutToShow and immediately binds nonempty status,
+with a content floor from the label's own natural geometry. Original session/
+weekly readings, percentages, account association and reset-clock timer remain;
+that timer never polls usage. There is no new procedural QML logic. Automatic
+first-open/priority/account/reentry/late-ID/error/stock-runtime/theme qualification
+remains required; source alone is not runtime repair or exclusive owner-cause proof.
