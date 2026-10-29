@@ -1058,6 +1058,7 @@ struct AssistantViewModel::State {
         if(work_first_cause.isEmpty() && turns.isEmpty())gap("first_cause","not_observed");
         scope["turns"]=turns;scope["history_persistence"]=history_persistence();
 #ifndef __EMSCRIPTEN__
+        scope["current_settings_observation"]=settings_readiness_observation();
         scope["current_session_browser"]=Object{{"operation",QString::number(session_operation)},
             {"target",session_selection_target},{"loading",sessions_loading},{"error",session_browser_error()},
             {"startup_target",restore_last_target},{"startup_requested",restore_last_requested},{"startup_attempted",restore_last_attempted},
@@ -1695,6 +1696,153 @@ struct AssistantViewModel::State {
     }
     QString generic_policy_model, generic_policy_effort;
     QString generic_settings_model, generic_settings_effort;
+    // One bounded latest diagnostic value, never settings/admission authority.
+    struct SettingsObservation {
+        FileProjection proof;
+        QPointer<CodexAgent> transport;
+        quint64 output=0,serial=0;
+        bool request_in_flight=false;
+        Object fields,provisional_receipt;
+    };
+    std::optional<SettingsObservation> settings_observation;
+    quint64 settings_observation_serial=0;
+    bool settings_observation_unavailable=false;
+    bool settings_observation_owns(quint64 serial) const noexcept {
+        try {
+            if(!serial || !settings_observation || settings_observation->serial!=serial)return false;
+            const auto& seen=*settings_observation;
+            return seen.proof.retirement_current() && agent.get()==seen.transport.data() &&
+                (!seen.transport || seen.transport->outputGeneration()==seen.output) &&
+                seen.fields.value("thread_id")==generic_thread;
+        }catch(...){return false;}
+    }
+    quint64 settings_observation_begin(const FileProjection& proof) noexcept {
+        try {
+            // An existing admitted exchange is not erased by another deferred entry.
+            if(generic_connecting && settings_observation_current())return settings_observation->serial;
+            settings_observation.reset();settings_observation_unavailable=false;
+            if(settings_observation_serial==UINT64_MAX){settings_observation_unavailable=true;return 0;}
+            SettingsObservation seen;seen.proof=proof;seen.transport=agent.get();
+            seen.output=agent?agent->outputGeneration():0;seen.serial=++settings_observation_serial;
+            seen.fields={{"attempt",QString::number(seen.serial)},{"thread_id",generic_thread},
+                {"owner_generation",QString::number(generation)},{"account_epoch",QString::number(usage_epoch)},
+                {"output_generation",QString::number(seen.output)},{"selected_model",model},{"selected_effort",effort},
+                {"stage","entered"},{"admission","not_observed"},{"request_id",QString()},{"reply_id",QString()},
+                {"reply_observation","not_observed"},{"ack_validation","not_observed"},
+                {"applied_notification","not_observed"},{"settlement","not_observed"},{"terminal","not_observed"},
+                {"previous_policy_verified",generic_policy_verified}};
+            if(generic_policy_verified){seen.fields["previous_verified_model"]=generic_policy_model;seen.fields["previous_verified_effort"]=generic_policy_effort;}
+            settings_observation=std::move(seen);return settings_observation->serial;
+        }catch(...){settings_observation.reset();settings_observation_unavailable=true;return 0;}
+    }
+    template<class Value> void settings_observe(quint64 serial,const char* field,const Value& value) noexcept {
+        try {if(settings_observation_owns(serial))settings_observation->fields[QLatin1StringView(field)]=value;}
+        catch(...){settings_observation_unavailable=true;}
+    }
+    quint64 settings_observation_current() const noexcept {
+        const auto serial=settings_observation?settings_observation->serial:0;
+        return settings_observation_owns(serial)?serial:0;
+    }
+    quint64 settings_observation_reply_entry(const QString& id) const noexcept {
+        try {
+            const auto serial=settings_observation_current();if(!serial)return 0;
+            const auto& fields=settings_observation->fields;const auto rpc=fields.value("request_id").toString();
+            return fields.value("reply_id")==id &&
+                ((!rpc.isEmpty() && rpc==id) || (rpc.isEmpty() && settings_observation->request_in_flight)) &&
+                !fields.value("reply_conflict").toBool()?serial:0;
+        }catch(...){return 0;}
+    }
+    void settings_observe_request_enter(quint64 serial) noexcept {
+        try {if(settings_observation_owns(serial)) {
+            settings_observation->request_in_flight=true;
+            settings_observation->fields["stage"]="request_call_entered";
+        }}catch(...){settings_observation_unavailable=true;}
+    }
+    void settings_observe_request_exit(quint64 serial) noexcept {
+        // Called only with the original live State; retirement may make its proof stale.
+        try {if(settings_observation && settings_observation->serial==serial) {
+            settings_observation->request_in_flight=false;
+            settings_observation->provisional_receipt={};
+        }}catch(...){settings_observation_unavailable=true;}
+    }
+    template<class Value> void settings_observe_receipt(quint64 serial,const QString& id,const char* field,const Value& value) noexcept {
+        try {
+            if(!serial || settings_observation_reply_entry(id)!=serial)return;
+            auto& seen=*settings_observation;
+            if(seen.fields.value("request_id").toString().isEmpty())
+                seen.provisional_receipt[QLatin1StringView(field)]=value; // Private until actual return-ID binding.
+            else seen.fields[QLatin1StringView(field)]=value;
+        }catch(...){settings_observation_unavailable=true;}
+    }
+    void settings_observe_reply(const QString& id,const Object& reply) noexcept {
+        try {
+            const auto serial=settings_observation_current();if(!serial)return;
+            auto& fields=settings_observation->fields;const auto rpc=fields.value("request_id").toString();
+            if((rpc.isEmpty() && !settings_observation->request_in_flight) || (!rpc.isEmpty() && rpc!=id))return;
+            const auto previous=fields.value("reply_id").toString();
+            if(!previous.isEmpty() && previous!=id) {
+                fields["reply_conflict"]=true;fields["ack_validation"]="not_observed";
+                fields.remove("refusal_code");fields.remove("validation_failure_stage");
+                settings_observation->provisional_receipt={};return;
+            }
+            fields["reply_id"]=id;
+            fields["reply_observation"]=reply.contains("error")?"error_envelope":reply.contains("result")?"result_envelope":"missing_envelope";
+        }catch(...){settings_observation_unavailable=true;}
+    }
+    void settings_observe_request_return(quint64 serial,const QString& id) noexcept {
+        try {
+            if(!settings_observation_owns(serial))return;
+            settings_observation->request_in_flight=false;
+            auto& fields=settings_observation->fields;fields["request_id"]=id;
+            fields["stage"]=id.isEmpty()?"request_returned_empty":"request_returned_id";
+            const auto early=fields.value("reply_id").toString();
+            if(!id.isEmpty() && early==id && !fields.value("reply_conflict").toBool()) {
+                const auto held=settings_observation->provisional_receipt;
+                for(auto it=held.begin();it!=held.end();++it)fields[it.key()]=it.value();
+            } else if(!early.isEmpty()) {
+                fields["early_reply_unmatched"]=true;fields["reply_id"]=QString();
+                fields["reply_observation"]="not_observed";fields["ack_validation"]="not_observed";
+                fields.remove("refusal_code");fields.remove("validation_failure_stage");
+            }
+            settings_observation->provisional_receipt={};
+        }catch(...){settings_observation_unavailable=true;}
+    }
+    void settings_observe_terminal(CodexAgent::FailureKind kind) noexcept {
+        try {
+            const auto serial=settings_observation_current();if(!serial)return;
+            const auto& fields=settings_observation->fields;
+            if(fields.value("settlement")=="ordinary_settle_returned" || fields.value("terminal")!="not_observed")return;
+            settings_observe(serial,"terminal",kind==CodexAgent::FailureKind::OperationDeadline?"operation_deadline":
+                kind==CodexAgent::FailureKind::LocalCapacity?"local_capacity":"transport_or_processing_failure");
+        }catch(...){settings_observation_unavailable=true;}
+    }
+    Object settings_readiness_observation() const {
+        Object result{{"capture","current_local_observation"},{"diagnostic_only",true},
+            {"capture_available",!settings_observation_unavailable},{"current_thread",generic_thread},
+            {"current_owner_generation",QString::number(generation)},{"current_account_epoch",QString::number(usage_epoch)},
+            {"selected_model",model},{"selected_effort",effort},{"authenticated",generic_authenticated},
+            {"account_confirmation_pending",account_confirmation_pending},{"connecting",generic_connecting},
+            {"busy",generic_busy},{"retiring",generic_retiring},{"policy_verified",generic_policy_verified}};
+        try {result["requested_effective_effort"]=effective_effort();result["policy_current"]=policy_current();}
+        catch(...){result["requested_effort_observation"]="unavailable";}
+        if(generic_policy_verified){result["verified_policy_model"]=generic_policy_model;result["verified_policy_effort"]=generic_policy_effort;}
+        if(agent) {
+            result["current_output_generation"]=QString::number(agent->outputGeneration());
+            const auto output=agent->outputOwnerState();
+            result["current_output_owner"]=output==CodexAgent::OutputOwnerState::Live?"live":
+                output==CodexAgent::OutputOwnerState::Releasing?"releasing":output==CodexAgent::OutputOwnerState::Released?"released":"unobserved";
+        } else result["current_output_owner"]="no_transport";
+        if(settings_observation) {
+            auto seen=settings_observation->fields;
+            seen["same_original_settings_owner"]=settings_observation_owns(settings_observation->serial);
+            seen["original_input_current"]=settings_observation->proof.input_current();
+            seen["request_call_in_flight"]=settings_observation->request_in_flight;
+            seen["reply_id_correlated"]=!seen.value("request_id").toString().isEmpty() &&
+                seen.value("request_id")==seen.value("reply_id") && !seen.value("reply_conflict").toBool();
+            result["latest_attempt"]=seen;
+        } else result["attempt_observation"]="not_observed";
+        return result;
+    }
     QString effective_effort() const {
         if (!effort.isEmpty()) return effort;
         for (const auto& value : generic_native.value("models").toArray()) {
@@ -1715,9 +1863,14 @@ struct AssistantViewModel::State {
     }
     void update_thread_settings() {
         const auto publication=file_projection();
-        if (account_confirmation_pending || !generic_authenticated || generic_retiring || generic_thread.isEmpty() || generic_busy || generic_connecting) return;
-        if (policy_current()) return;
+        const auto observation=settings_observation_begin(publication);
+        if (account_confirmation_pending || !generic_authenticated || generic_retiring || generic_thread.isEmpty() || generic_busy || generic_connecting) {
+            settings_observe(observation,"latest_entry_barrier",account_confirmation_pending?"account_confirmation_pending":!generic_authenticated?"not_authenticated":
+                generic_retiring?"retiring":generic_thread.isEmpty()?"no_thread":generic_busy?"busy":"already_connecting");return;
+        }
+        if (policy_current()) {settings_observe(observation,"admission","effective_policy_already_current");return;}
         if(!CodexAgent::policyPatch().isEmpty()) {
+            settings_observe(observation,"admission","dedicated_context_reprepare");
             generic_retire_context(false);
             if(!publication.input_current())return;
             (void)generic_prepare_thread();return;
@@ -1725,12 +1878,21 @@ struct AssistantViewModel::State {
         invalidate_policy();
         try {
         generic_settings_model=model; generic_settings_effort=effective_effort();
+        settings_observe(observation,"requested_model",generic_settings_model);
+        settings_observe(observation,"requested_effort",generic_settings_effort);
+        settings_observe(observation,"admission","entering_original_operation");
         generic_connecting=true;
         agent->beginOperation(Limits::sign_in_ms,0);
         if (!publication.input_current()) return;
-        generic_request("thread/settings/update",{{"threadId",generic_thread},{"model",generic_settings_model},
+        settings_observe_request_enter(observation);
+        const auto observationReceiver=publication.receiver;
+        const auto observationExit=qScopeGuard([this,observationReceiver,observation] {
+            if(observationReceiver && observationReceiver->state_.get()==this)settings_observe_request_exit(observation);
+        });
+        const auto rpc=generic_request("thread/settings/update",{{"threadId",generic_thread},{"model",generic_settings_model},
             {"effort",generic_settings_effort},{"approvalPolicy","never"},{"approvalsReviewer","user"},
             {"sandboxPolicy",Object{{"type","readOnly"},{"networkAccess",false}}}});
+        if(publication.retirement_current())settings_observe_request_return(observation,rpc);
         } catch(...) {
             if(publication.input_current())generic_fail(QObject::tr("The selected model's read-only settings could not be verified."));
         }
@@ -12352,6 +12514,7 @@ struct AssistantViewModel::State {
         try {
             projection = file_projection();
             const auto original_explanation = explanation;
+            settings_observe_terminal(kind);
             const auto browserOperation=session_operation;const auto browserTarget=session_selection_target;
             capture_resume_checkpoint();generic_resuming=false;
             // Transport failure retires execution; the verified recovery checkpoint is a separate owner.
@@ -12938,11 +13101,18 @@ struct AssistantViewModel::State {
                 generic_fail(message, originalTransport->failureKind());
         });
         QObject::connect(agent.get(), &CodexAgent::response, &owner,
-            [this](const QString& id, const QString& method, const Object& reply) {
+            [this,originalTransport](const QString& id, const QString& method, const Object& reply) {
                 auto publication = file_projection();
+                quint64 settingsObservation=0;
+                if(method=="thread/settings/update" && originalTransport && agent.get()==originalTransport.data()) {
+                    settings_observe_reply(id,reply);settingsObservation=settings_observation_reply_entry(id);
+                }
                 const char* reason = "UNEXPECTED_PROCESSING";
-                try { generic_response(id, method, reply, reason, publication); }
-                catch (...) { if (publication.input_current()) generic_response_failure(method, reason); }
+                try { generic_response(id, method, reply, reason, publication, settingsObservation); }
+                catch (...) { if (publication.input_current()) {
+                    if(method=="thread/settings/update")settings_observe_receipt(settingsObservation,id,"validation_failure_stage",reason);
+                    generic_response_failure(method, reason);
+                } }
             });
         QObject::connect(agent.get(), &CodexAgent::event, &owner, [this,originalTransport](const QString& method, const Object& params) {
             const auto publication = file_projection();
@@ -12950,7 +13120,9 @@ struct AssistantViewModel::State {
             EventFailure diagnostic;
             try {
                 diagnostic.method = event_method_family(method);
-                generic_event(method, params, diagnostic);
+                const auto settingsObservation=method=="thread/settings/updated" && originalTransport &&
+                    agent.get()==originalTransport.data()?settings_observation_current():0;
+                generic_event(method, params, diagnostic, settingsObservation);
                 if (!publication.input_current() || !originalTransport || agent.get() != originalTransport.data() ||
                     (method != "item/completed" && method != "turn/completed")) return;
                 // All generic_item local copies have unwound. The original
@@ -13317,7 +13489,7 @@ struct AssistantViewModel::State {
             generic_request("thread/resume",resumed);
         } else generic_request("thread/start",params);
     }
-    void generic_response(const QString& id, const QString& method, const Object& reply, const char*& reason_code, FileProjection& publication) {
+    void generic_response(const QString& id, const QString& method, const Object& reply, const char*& reason_code, FileProjection& publication, quint64 settingsObservation=0) {
         if (!publishing || !generic_mode || (generic_retiring && method != "account/logout")) return;
         if (method == "account/rateLimits/read") { usage_response(id, reply); return; }
         if(method=="account/read" && id!=account_read_rpc)return;
@@ -13361,6 +13533,10 @@ struct AssistantViewModel::State {
                 throw std::runtime_error("Agent request refusal has an invalid shape");
             if (generic_bootstrap_stage(method)) { generic_response_failure(method, "RPC_REFUSED"); return; }
             const auto number = static_cast<qint32>(code.toDouble());
+            if(method=="thread/settings/update") {
+                const auto observation=settingsObservation;
+                settings_observe_receipt(observation,id,"ack_validation","refusal_validated");settings_observe_receipt(observation,id,"refusal_code",number);
+            }
             const auto reason = message.toString();
             native_pending.remove(id);
             const auto origin = generic_rpc_turns.take(id);
@@ -13773,6 +13949,7 @@ struct AssistantViewModel::State {
             usage_refresh();
         } else if (method == "thread/settings/update") {
             if (!result.isEmpty()) throw std::runtime_error("Unexpected thread settings acknowledgment");
+            settings_observe_receipt(settingsObservation,id,"ack_validation","empty_queue_ack_validated");
         } else if (method == "turn/start") {
             const auto turn = result.value("turn").toObject();
             if(!CodexAgent::policyPatch().isEmpty())(void)verified_runtime_policy(result.value("ediPolicy"),generic_thread,turn.value("id"));
@@ -14152,11 +14329,13 @@ struct AssistantViewModel::State {
         }
     }
 
-    void generic_event(const QString& method, const Object& params, EventFailure& diagnostic) {
+    void generic_event(const QString& method, const Object& params, EventFailure& diagnostic, quint64 settingsObservation=0) {
         if (!publishing) return;
         if (method == "thread/settings/updated") {
             diagnostic.stage = "THREAD_SETTINGS_VALIDATE";
             const auto publication=file_projection();
+            const auto observation=params.value("threadId")==generic_thread?settingsObservation:0;
+            settings_observe(observation,"applied_notification","received_not_yet_validated");
             if (!generic_authenticated || generic_retiring || generic_revoke_pending || generic_blocked ||
                 generic_thread.isEmpty() || params.value("threadId")!=generic_thread) return;
             const auto settings=params.value("threadSettings").toObject();
@@ -14168,10 +14347,14 @@ struct AssistantViewModel::State {
             diagnostic.stage = "THREAD_SETTINGS_PUBLISH";
             invalidate_policy();
             generic_policy_model=model; generic_policy_effort=effective_effort(); generic_policy_verified=true;
+            settings_observe(observation,"applied_notification","actual_current_thread_policy_validated");
+            settings_observe(observation,"applied_model",generic_policy_model);settings_observe(observation,"applied_effort",generic_policy_effort);
             if (generic_connecting && !generic_busy) {
                 generic_connecting=false;
+                settings_observe(observation,"settlement","ordinary_settle_called");
                 agent->settleOperation();
                 if (!publication.input_current()) return;
+                settings_observe(observation,"settlement","ordinary_settle_returned");
                 notify();
             }
             return;
@@ -17961,6 +18144,8 @@ QString AssistantViewModel::workReportDocument() {
         if(encoded.isEmpty())return {};
         auto document=QJsonDocument::fromJson(encoded).object();
         auto scope=document.value("scope_coverage").toObject();
+        // Explicit current local diagnostic, separate from any retained snapshot's historical evidence.
+        scope["current_settings_observation"]=state_->settings_readiness_observation();
         const bool failed=state_->work_report_cache_error && state_->work_report_cache_error_scope==state_->work_reports.scope() &&
             state_->work_report_cache_error_revision==state_->work_reports.revision();
         const bool current=!failed && scope.value("scope_id")==state_->work_reports.scope() &&
