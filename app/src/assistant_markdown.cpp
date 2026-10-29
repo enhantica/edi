@@ -196,15 +196,25 @@ class PassiveDocument final : public QTextDocument {
         if(pictures_.contains(key)) {const auto result=pictures_.value(key);nextPictures_.insert(key,result);return result;}
         quint64 retained=newBytes_;for(auto it=pictures_.cbegin();it!=pictures_.cend();++it)retained+=static_cast<quint64>(it.value().image.sizeInBytes());
         constexpr auto capacity=edi::assistant::Limits::ui_history_bytes;
+        QImage probe(1,1,QImage::Format_ARGB32_Premultiplied);probe.setDevicePixelRatio(dpr);
+        probe.setDotsPerMeterX(96*(10000/254));probe.setDotsPerMeterY(96*(10000/254));
+        // The pinned symbol scaler uses QFont::pointSizeF(), even for fonts
+        // requested in pixels. Supply equivalent native points on THIS device,
+        // never the pixel font's -1 point-size sentinel or a guessed base size.
+        qreal points=font.pointSizeF();
+        if(!std::isfinite(points) || points<=0) {
+            const qreal pixels=font.pixelSize()>0?font.pixelSize():QFontMetricsF(font,&probe).height();
+            const qreal dpi=probe.logicalDpiY();
+            if(!std::isfinite(pixels) || pixels<=0 || !std::isfinite(dpi) || dpi<=0)return {};
+            points=pixels*72.0/dpi; // Typographic points per inch; preserve the original logical pixel size.
+        }
+        if(!std::isfinite(points) || points<=0)return {};
         NativeMathText math;math.useXITS(); // Genuine mathematical-symbol fallback.
         math.useAnyUnicode(font.family(),font.family());
         math.setFontOption(JKQTMathText::BaseFontBold,font.bold());
         math.setFontOption(JKQTMathText::BaseFontItalic,font.italic());
-        // A pixel-sized body font is the original editor's source of scale.
-        math.setFontSizePixels(font.pixelSize()>0?font.pixelSize():QFontMetricsF(font).height());math.setFontColor(color);
+        math.setFontPointSize(points);math.setFontColor(color);
         if(!math.parse("$"+formula+"$") || math.hadErrors() || !math.getErrorList().isEmpty())return {};
-        QImage probe(1,1,QImage::Format_ARGB32_Premultiplied);probe.setDevicePixelRatio(dpr);
-        probe.setDotsPerMeterX(96*(10000/254));probe.setDotsPerMeterY(96*(10000/254));
         QPainter painter(&probe);double width=0,ascent=0,descent=0,strike=0;math.getSizeDetail(painter,width,ascent,descent,strike);painter.end();
         const auto pixelsWide=std::ceil(width+2)*dpr,pixelsHigh=std::ceil(ascent+descent+2)*dpr;
         if(!std::isfinite(pixelsWide) || !std::isfinite(pixelsHigh) || pixelsWide<=0 || pixelsHigh<=0 ||

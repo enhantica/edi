@@ -932,7 +932,7 @@ Rectangle {
                 contentItem: EaElements.Label {
                     text: stopButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
-                    font.pixelSize: AppSizes.assistantControlIconSize
+                    font.pixelSize: AppSizes.assistantStopIconSize
                     color: stopButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : stopButton.foregroundColor()
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter

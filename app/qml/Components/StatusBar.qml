@@ -246,7 +246,7 @@ EaElements.StatusBar {
             contentItem: EaElements.Label {
                 text: visibleStop.fontIcon
                 font.family: EaStyle.Fonts.iconsFamily
-                font.pixelSize: AppSizes.assistantControlIconSize
+                font.pixelSize: AppSizes.assistantStopIconSize
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: visibleStop.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : visibleStop.foregroundColor()
