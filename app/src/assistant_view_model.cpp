@@ -9113,9 +9113,9 @@ struct AssistantViewModel::State {
     Object usage_cache{{"available", false}, {"stale", false}, {"buckets", QJsonArray{}}};
     enum class UsageState { Unknown, Loading, Waiting, Ready, Unavailable, Unsupported, Error };
     UsageState usage_state=UsageState::Unknown;
-    bool usage_starting=false, usage_waiting=false;
+    bool usage_starting=false, usage_refresh_pending=false;
     QString usage_rpc;
-    quint64 usage_epoch = 0, usage_pending_epoch = 0, usage_read_epoch = 0;
+    quint64 usage_epoch = 0, usage_pending_epoch = 0, usage_pending_output = 0, usage_read_epoch = 0;
     quint64 usage_snapshot_epoch = UINT64_MAX, usage_update_serial = 0, usage_pending_update_serial = 0;
     bool usage_account_ready = false, usage_epoch_exhausted = false;
     bool usage_snapshot_valid = false, usage_fresh = false, usage_observation_available = false;
@@ -9129,7 +9129,7 @@ struct AssistantViewModel::State {
         usage_account_ready = false; usage_snapshot_valid = false; usage_fresh = false; usage_observation_available = false;
         generic_thread_has_input=false;
         usage_update_serial = 0; usage_rpc.clear();
-        usage_state=UsageState::Unknown;usage_starting=false;usage_waiting=false;
+        usage_state=UsageState::Unknown;usage_starting=false;usage_refresh_pending=false;
         if (usage_epoch == UINT64_MAX) usage_epoch_exhausted = true;
         else ++usage_epoch;
         projection.account = usage_epoch; // Exact own transition, before any observer can publish B.
@@ -9141,15 +9141,20 @@ struct AssistantViewModel::State {
         return current();
     }
     void usage_unavailable(UsageState state=UsageState::Unavailable) noexcept {
-        usage_fresh = false;usage_waiting=false;usage_state=state;
+        usage_fresh = false;usage_refresh_pending=false;usage_state=state;
         usage_rpc.clear();
         // Retain the last valid same-account snapshot, explicitly stale. Its
         // availability is not replaced with a fabricated zero/error reading.
         try { emit owner.usageChanged(); } catch (...) {}
     }
-    void usage_refresh() noexcept {
-        if (!publishing || !generic_mode || !usage_account_ready || usage_epoch_exhausted || generic_retiring || account_confirmation_pending ||
-            usage_starting || !usage_rpc.isEmpty() || !agent) return;
+    void usage_wait() noexcept {
+        usage_fresh=false;usage_state=UsageState::Waiting;
+        try {emit owner.usageChanged();}catch(...){}
+    }
+    void usage_attempt() noexcept {
+        if (!usage_refresh_pending || !publishing || !generic_mode || !usage_account_ready || usage_epoch_exhausted ||
+            generic_retiring || usage_starting || !usage_rpc.isEmpty() || !agent || usage_pending_epoch!=usage_epoch ||
+            usage_pending_output!=agent->outputGeneration())return;
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<CodexAgent> transport(agent.get());
         const auto account=usage_epoch, output=transport->outputGeneration();
@@ -9157,34 +9162,49 @@ struct AssistantViewModel::State {
             return receiver && receiver->state_.get()==this && transport && agent.get()==transport.data() &&
                 transport->outputGeneration()==output && usage_epoch==account;
         };
-        const auto current=[&] {
-            return owned() && publishing && generic_mode && usage_account_ready && !generic_retiring &&
-                !usage_epoch_exhausted && !account_confirmation_pending;
+        const auto eligible=[&] {
+            return owned() && publishing && generic_mode && usage_account_ready && !generic_retiring && !usage_epoch_exhausted;
         };
+        const auto current=[&] {return eligible() && !account_confirmation_pending;};
         usage_starting=true;
         const auto release=qScopeGuard([&]{if(owned())usage_starting=false;});
         try {
-            usage_pending_epoch=account;usage_pending_update_serial=usage_update_serial;
-            usage_fresh=false;usage_waiting=false;usage_state=UsageState::Loading;
+            if(account_confirmation_pending){usage_wait();return;}
+            usage_pending_update_serial=usage_update_serial;
+            usage_fresh=false;usage_state=UsageState::Loading;
             emit owner.usageChanged();
-            if(!current()) {if(owned())usage_unavailable();return;}
+            if(!current()) {
+                if(eligible())usage_wait();else if(owned())usage_unavailable();
+                return;
+            }
             QString prepared;
             const auto request=transport->request("account/rateLimits/read",{},[&](const QString& id) {
-                if(!current() || !usage_starting || !usage_rpc.isEmpty())return false;
+                if(!current() || !usage_refresh_pending || !usage_starting || !usage_rpc.isEmpty())return false;
                 prepared=id;usage_rpc=id;return true; // Own the exact ID BEFORE a reentrant write/disposition.
             });
-            if(!current()) {if(owned() && usage_rpc.isEmpty())usage_unavailable();return;}
-            if(!request.isEmpty())return; // An actual response/preemption may already have settled it.
+            if(!owned())return;
+            if(!eligible()){usage_unavailable();return;}
+            if(account_confirmation_pending) {
+                if(usage_refresh_pending)usage_wait();
+                return;
+            }
+            if(!request.isEmpty())return; // A correlated response/preemption may already have settled this ID.
             if(!prepared.isEmpty()) {
                 if(usage_rpc==prepared)usage_unavailable();
-                return; // Entered/preempted/uncertain write is never a readiness retry.
+                return; // Only an explicit Preempted disposition can retain a prepared read's logical intent.
             }
-            if(transport->optionalUsageBackpressured()) {
-                usage_rpc.clear();usage_waiting=true;usage_state=UsageState::Waiting;
-                emit owner.usageChanged();return;
-            }
+            if(!usage_refresh_pending)return;
+            if(transport->optionalUsageBackpressured()){usage_wait();return;}
             usage_unavailable();
         } catch (...) { if(owned())usage_unavailable(UsageState::Error); }
+    }
+    void usage_refresh() noexcept {
+        if(!publishing || !generic_mode || !usage_account_ready || usage_epoch_exhausted || generic_retiring || !agent)return;
+        if(!usage_refresh_pending) {
+            usage_pending_epoch=usage_epoch;usage_pending_output=agent->outputGeneration();
+            usage_refresh_pending=true;
+        }
+        usage_attempt(); // Record genuine intent BEFORE temporary account/queue admission barriers.
     }
     void usage_updated() noexcept {
         const auto publication = file_projection();
@@ -9209,10 +9229,9 @@ struct AssistantViewModel::State {
         return text;
     }
     void usage_response(const QString& id, const Object& envelope) noexcept {
-        if (id != usage_rpc || !usage_account_ready || usage_pending_epoch != usage_epoch || usage_epoch_exhausted || generic_retiring) return;
+        if (id != usage_rpc || !agent || usage_pending_output!=agent->outputGeneration() || !usage_account_ready || usage_pending_epoch != usage_epoch || usage_epoch_exhausted || generic_retiring) return;
         const auto publication = file_projection();
-        usage_rpc.clear();usage_waiting=false;
-        if(account_confirmation_pending) {usage_unavailable();return;}
+        usage_rpc.clear();
         try {
             if(envelope.contains("error")) {
                 const auto code=envelope.value("error").toObject().value("code");
@@ -9276,6 +9295,8 @@ struct AssistantViewModel::State {
             if(!available && usage_snapshot_valid && usage_snapshot_epoch==usage_epoch && usage_observation_available) {
                 usage_unavailable(UsageState::Unknown);return;
             }
+            if(account_confirmation_pending){usage_wait();return;} // A complete read cannot publish through unverified identity.
+            usage_refresh_pending=false;
             usage_cache = std::move(snapshot); usage_snapshot_epoch = usage_epoch;
             usage_snapshot_valid = true; usage_fresh = fresh; usage_observation_available = available;
             usage_state=available?UsageState::Ready:UsageState::Unknown;
@@ -12748,13 +12769,21 @@ struct AssistantViewModel::State {
         const QPointer<CodexAgent> usageTransport(agent.get());
         const auto usageAccount=usage_epoch,usageOutput=usageTransport?usageTransport->outputGeneration():0;
         const auto usageReady=qScopeGuard([this,receiver,usageTransport,usageAccount,usageOutput] {
-            // A queue-drain hint may have arrived before identity confirmation.
-            // Revisit only this account's never-admitted optional intent, after
-            // required admissions unwind; prepared/uncertain reads never wait.
-            if(receiver && receiver->state_.get()==this && usageTransport && agent.get()==usageTransport.data() &&
-                usage_epoch==usageAccount && usageTransport->outputGeneration()==usageOutput &&
-                !account_confirmation_pending && generic_authenticated && !generic_retiring &&
-                usage_waiting && !usage_starting && usage_rpc.isEmpty())usage_refresh();
+            // Continue the original logical read only after required admissions unwind.
+            // Queuing also keeps a reentrant confirmation out of an active usage callback.
+            const auto owns=[&] {
+                return receiver && receiver->state_.get()==this && usageTransport && agent.get()==usageTransport.data() &&
+                    usage_epoch==usageAccount && usageTransport->outputGeneration()==usageOutput;
+            };
+            if(!owns() || !usage_refresh_pending)return;
+            try {
+                QMetaObject::invokeMethod(receiver.data(),[this,receiver,usageTransport,usageAccount,usageOutput] {
+                    if(receiver && receiver->state_.get()==this && usageTransport && agent.get()==usageTransport.data() &&
+                        usage_epoch==usageAccount && usageTransport->outputGeneration()==usageOutput &&
+                        !account_confirmation_pending && generic_authenticated && !generic_retiring &&
+                        usage_refresh_pending && !usage_starting && usage_rpc.isEmpty())usage_attempt();
+                },Qt::QueuedConnection);
+            }catch(...) {if(owns() && usage_refresh_pending && !usage_starting && usage_rpc.isEmpty())usage_unavailable(UsageState::Error);}
         });
         emit owner.draftAdmissionReadyChanged();
         if(!proof.input_current() || !receiver || receiver->state_.get()!=this || account_confirmation_pending)return;
@@ -12815,14 +12844,19 @@ struct AssistantViewModel::State {
                 generic_request("initialize", {{"clientInfo", Object{{"name", "edi"}, {"title", "Edi"}, {"version", "1"}}}, {"capabilities", Object{{"experimentalApi", true}}}});
             } catch (...) { if (publication.input_current()) generic_fail(QObject::tr("The official agent could not be initialized.")); }
         });
-        QObject::connect(agent.get(), &CodexAgent::optionalUsageUnavailable, &owner, [this](const QString& id) {
-            if (id == usage_rpc) usage_unavailable();
-        });
         const QPointer<CodexAgent> originalTransport(agent.get());
-        QObject::connect(agent.get(), &CodexAgent::optionalUsageReady, &owner, [this,originalTransport] {
-            const QPointer<AssistantViewModel> receiver(&owner);
-            if(receiver && receiver->state_.get()==this && originalTransport && agent.get()==originalTransport.data() &&
-                usage_waiting && !usage_starting && !originalTransport->optionalUsageBackpressured())usage_refresh();
+        const QPointer<AssistantViewModel> usageReceiver(&owner);
+        QObject::connect(agent.get(), &CodexAgent::optionalUsageUnavailable, &owner,
+                         [this,usageReceiver,originalTransport](const QString& id,CodexAgent::UsageDisposition disposition) {
+            if(!usageReceiver || usageReceiver->state_.get()!=this || !originalTransport || agent.get()!=originalTransport.data() || id!=usage_rpc ||
+                usage_pending_epoch!=usage_epoch || usage_pending_output!=originalTransport->outputGeneration())return;
+            if(disposition==CodexAgent::UsageDisposition::Preempted) {
+                usage_rpc.clear();usage_wait(); // Fresh ID only after a genuine queued drain/account-ready continuation.
+            } else usage_unavailable(); // A real deadline is terminal; later idle hints cannot recreate its intent.
+        });
+        QObject::connect(agent.get(), &CodexAgent::optionalUsageReady, &owner, [this,usageReceiver,originalTransport] {
+            if(usageReceiver && usageReceiver->state_.get()==this && originalTransport && agent.get()==originalTransport.data() &&
+                usage_refresh_pending && !usage_starting && !originalTransport->optionalUsageBackpressured())usage_attempt();
         },Qt::QueuedConnection); // Recheck after the original write callback has unwound.
         QObject::connect(agent.get(), &CodexAgent::outputOwnersReleased, &owner, [this,originalTransport] {
             const QPointer<AssistantViewModel> receiver(&owner);
