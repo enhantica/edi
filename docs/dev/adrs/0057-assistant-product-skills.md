@@ -615,3 +615,21 @@ native science policy. Real latest-fit Undo remains separate and does not restor
 free flags. Source/guidance delivery is not actual model adherence or proof of an
 exclusive cause for the owner's observed atomwise cycling. Existing profile,
 residual, calibration, completion, uncertainty and Save contracts remain intact.
+
+## Initial background/profile trials preserve the accepted other block
+
+Owner H97cf1e0ca clarifies the FIRST generic refinement planning contract: delegated
+initial baseline/profile assessment establishes actual baseline evidence first,
+then holds accepted background settings/eligible values stable during early
+profile trials. Assess the chosen blocks separately before a later joint release
+supported by stable identifiable evidence. Native automatic-background eligibility
+and explicit user combined groups/subsets/order remain controlling; no mandatory
+all-free background stage, fixed profile family/sequence/count or backend veto.
+
+Actual latest-fit Undo reverses its whole admitted fit; it does not select only
+a failed parameter category. Keeping unrelated accepted values fixed before an
+isolated trial preserves their accepted baseline instead of inventing selective
+Undo or replaying earlier successful work. Original current residual/total-width/
+uncertainty/correlation/ordinary Undo/Save contracts remain. Global and refinement
+skill delivery are aligned, with source-only/model-adherence qualification still
+open. The compact-inspection feature remains a separate source unit.
