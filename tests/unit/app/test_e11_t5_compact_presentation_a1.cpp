@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // A1 only: the original public rendered compact row, not a replacement formatter.
 #include <QCoreApplication>
+#include <QColor>
+#include <QJsonArray>
+#include <QScopeGuard>
+#include <QSignalSpy>
+#include <QList>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJSValue>
@@ -13,6 +18,7 @@
 #include <QTranslator>
 #include <QtQml/qqml.h>
 #include <QtTest/qtestcase.h>
+#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -39,6 +45,8 @@ public:
         if(c=="AssistantMessage" && s=="Assistant error")return QString::fromUtf8("Erreur Å\u00a0β 🧪");
         if(c=="AssistantMessage" && s=="Failed")return QString::fromUtf8("Échec β");
         if(c=="AssistantActions" && s=="Create a project")return QString::fromUtf8("Créer Å\u00a0β 🧪");
+        if(c=="AssistantMessage" && s=="Work on the current project")return QString::fromUtf8("Projet sans propriétaire β🧪");
+        if(c=="AssistantActions" && s=="Work on the current project")return QString::fromUtf8("Projet natif inconnu β🧪");
         return {};
     }
 };
@@ -53,7 +61,9 @@ class CompactPresentationA1Proof final : public QObject {
         if(value.hasError())throw std::runtime_error(value.error().toString().toStdString());
         return result.toString();
     }
-    void checkRow(Checks& check,const Expected& expected) const {
+    void checkRow(Checks& check,const Expected& expected,
+                  const std::function<void(QObject*,QObject*)>& inspect={}) const {
+        QSignalSpy warnings(engine_,&QQmlEngine::warnings);
         QQmlComponent component(engine_);
         component.setData("import QtQuick\nimport edi.app\nAssistantMessage { assistant: Session.assistant }\n",QUrl("qrc:/tests/A1OriginalOwner.qml"));
         if(component.isError())throw std::runtime_error(component.errorString().toStdString());
@@ -85,6 +95,135 @@ class CompactPresentationA1Proof final : public QObject {
         const auto retained=QJsonDocument::fromJson(expression(row.get(),"JSON.stringify(payload)").toUtf8()).object();
         check.require(retained==expected.payload,prefix+"public compact input is unchanged, including technical/error carriers");
         check.require(!header->property("checked").toBool() && !row->property("technicalCopied").toBool(),prefix+"characterization never expands or copies the row");
+        if(inspect)inspect(row.get(),header);
+        check.require(warnings.isValid() && warnings.isEmpty(),prefix+"the original typed compact input emits no QML binding/JavaScript errors");
+    }
+    static void checkOutcome(Checks& check,QObject* row,QObject* header,
+                             const QString& caption,const QString& explanation,
+                             const QString& icon,const QString& key) {
+        check.require(header->property("text").toString()==caption,
+                      "A1 current original compact control retains the literal human caption");
+        const auto accessible=explanation+QStringLiteral(" · ")+caption;
+        check.require(expression(header,"ToolTip.text")==accessible &&
+                      expression(header,"Accessible.name")==accessible,
+                      "A1 current tooltip and accessibility retain the independent truthful explanation");
+        auto* content=qobject_cast<QQuickItem*>(header->property("contentItem").value<QObject*>());
+        check.require(content,"A1 original compact status content remains present");
+        QList<QObject*> marks;
+        if(content)for(auto* child:content->findChildren<QObject*>())
+            if(child->property("text").toString()==icon)marks.push_back(child);
+        check.require(marks.size()==1,"A1 has one truthful current rendered status mark");
+        if(marks.size()==1) {
+            const auto expected=key=="running"?expression(header,"String(EaStyle.Colors.themeAccent)"):
+                expression(header,("String(FitOutcomes.color("+QJsonDocument(QJsonArray{key}).toJson(QJsonDocument::Compact).mid(1).chopped(1)+"))").constData());
+            check.require(marks.front()->property("color").value<QColor>()==QColor(expected),
+                          "A1 status mark uses the existing independent semantic outcome colour owner");
+        }
+        const auto details=row->findChildren<QObject*>(QStringLiteral("assistant.activity.details"));
+        check.require(details.size()==1,"A1 original lazy human-detail field remains identifiable");
+        if(details.size()==1)check.require(!details.front()->property("visible").toBool() &&
+            details.front()->property("text").toString().isEmpty(),
+            "Collapsed A1 never renders or retains full human/technical detail text");
+        check.require(expression(row,"humanDetailsSnapshot === null")=="true" &&
+                      !header->property("checked").toBool() && !row->property("technicalCopied").toBool(),
+                      "A1 compact observation stays collapsed with no human snapshot or copy feedback");
+    }
+    void malformedFieldsAndColdBoundary(Checks& check) const {
+        const QString unknown=QStringLiteral("The result could not be confirmed. Inspect the project before continuing.");
+        const std::vector<Expected> rows{
+            {"running-mark-colour","activity","in_progress","Read files","In progress","hourglass-half",
+                {{"type","commandExecution"},{"commandCategory","read"},{"status","inProgress"}}},
+            {"stopped-neutral-colour","activity","interrupted","Perform assistant action","Stopped","stop-circle",{}},
+            {"refused-mark-colour","activity","refused","Perform assistant action","Refused","times-circle",{}},
+            {"native-uncertain-before-running","activity","in_progress","Perform assistant action",unknown,"exclamation-circle",
+                {{"nativeOutcome",QJsonObject{{"status","unconfirmed"}}}}},
+            {"native-applied-before-failure","activity","failed","Perform assistant action","Changes were made, but completion could not be confirmed.","exclamation-circle",
+                {{"nativeOutcome",QJsonObject{{"status","applied_unconfirmed"}}}}},
+            {"typed-native-status-ignored","activity","failed","Perform assistant action","Failed","times-circle",
+                {{"nativeOutcome",QJsonObject{{"status",true},{"message","RAW_ONLY_native"}}}}},
+            {"typed-native-array-ignored","activity","failed","Perform assistant action","Failed","times-circle",
+                {{"nativeOutcome",QJsonArray{QStringLiteral("unconfirmed")}}}},
+            {"unknown-public-state","activity","inProgress","Perform assistant action",unknown,"exclamation-circle",{}},
+            {"empty-public-state","activity","","Perform assistant action",unknown,"exclamation-circle",{}},
+            {"public-state-not-trimmed","activity",QString::fromUtf8("completed\u00a0"),"Perform assistant action",unknown,"exclamation-circle",{}},
+            {"old-command-with-exit-zero","activity","failed","Read files",unknown,"exclamation-circle",
+                {{"type","commandExecution"},{"commandCategory","read"},{"status","inProgress"},{"exitCode",0}}},
+            {"terminal-command-not-success-from-exit","activity","failed","Searched files","Failed","times-circle",
+                {{"type","commandExecution"},{"commandCategory","search"},{"status","failed"},{"exitCode",0}}},
+            {"terminal-refusal-not-renamed","activity","refused","Listed files",unknown,"exclamation-circle",
+                {{"type","commandExecution"},{"commandCategory","listFiles"},{"status","declined"}}},
+            {"typed-command-status","activity","completed","Ran command",unknown,"exclamation-circle",
+                {{"type","commandExecution"},{"status",0},{"exitCode",0}}},
+            {"typed-command-category","activity","completed","Ran command","Completed","check-circle",
+                {{"type","commandExecution"},{"commandCategory",QJsonArray{QStringLiteral("read")}},{"status","completed"}}},
+            {"decision-really-precedes-command-caption","activity","completed","Review requested action","Completed","check-circle",
+                {{"type","commandExecution"},{"status","completed"},{"commandCategory","read"},{"decision","deny"},{"item_id","original-compact-id"}}},
+            {"typed-decision-does-not-shadow-native","activity","completed","Create a project","Completed","check-circle",
+                {{"type","dynamicToolCall"},{"tool","create_project"},{"decision",false},{"item_id","original-compact-id"}}},
+            {"typed-item-id-does-not-shadow-native","activity","completed","Create a project","Completed","check-circle",
+                {{"type","dynamicToolCall"},{"tool","create_project"},{"decision","deny"},{"item_id",7}}},
+            {"prototype-name-is-not-human-label","activity","completed","Perform assistant action","Completed","check-circle",{{"type","constructor"}}},
+            {"typed-native-tool-fallback","activity","completed","Work on the current project","Completed","check-circle",
+                {{"type","dynamicToolCall"},{"tool",QJsonArray{QStringLiteral("create_project")}}}},
+            {"native-name-is-literal","activity","completed","Work on the current project","Completed","check-circle",
+                {{"type","dynamicToolCall"},{"tool",QString::fromUtf8("create_project\u00a0β🧪")}}},
+            {"unconfirmed-error-kind-before-label","error","failed","Assistant error",unknown,"exclamation-circle",
+                {{"type","dynamicToolCall"},{"tool","create_project"},{"nativeOutcome",QJsonObject{{"status","unconfirmed"},{"action_error","project_required"},{"message","RAW_ONLY_native_error"}}}}}
+        };
+        for(const auto& expected:rows)try {
+            checkRow(check,expected,[&](QObject* row,QObject* header){
+                const QString key=expected.icon=="times-circle"?(expected.status=="refused"?"refused":"failed"):
+                    expected.icon=="check-circle"?"success":expected.icon=="stop-circle"?"stopped":
+                    expected.icon=="hourglass-half"?"running":"notConverged";
+                checkOutcome(check,row,header,expected.caption,expected.explanation,expected.icon,key);
+            });
+        }catch(const std::exception& error){check.require(false,expected.name+": "+QString::fromUtf8(error.what()));}
+        // Public compact payload is var. Wrong JSON root shapes are observed as
+        // presentation inputs, never injected into canonical native history.
+        const std::vector<QJsonValue> malformed{QJsonValue(QJsonValue::Null),false,17.5,
+            QStringLiteral("RAW_ONLY_scalar"),QJsonArray{QStringLiteral("RAW_ONLY_array")}};
+        for(const auto& value:malformed)try {
+            checkRow(check,{"typed-root-payload","activity","mystery","Perform assistant action",unknown,"exclamation-circle",{}},
+                [&](QObject* row,QObject* header){
+                    check.require(row->setProperty("payload",value.toVariant()),
+                                  "The original public var payload accepts the explicit typed input");
+                    checkOutcome(check,row,header,"Perform assistant action",unknown,"exclamation-circle","notConverged");
+                    const auto retained=QJsonDocument::fromJson(expression(row,"JSON.stringify([payload])").toUtf8()).array();
+                    check.require(retained==QJsonArray{value},"A1 never rewrites malformed/Unicode literal payload input to manufacture a label");
+                });
+        }catch(const std::exception& error){check.require(false,"typed-root-payload: "+QString::fromUtf8(error.what()));}
+    }
+    void liveOwnerAndLanguage(Checks& check) const {
+        try {
+            checkRow(check,{"live-owner-language","activity","completed","Create a project","Completed","check-circle",
+                {{"type","dynamicToolCall"},{"tool","create_project"}}},[&](QObject* row,QObject* header){
+                const auto original=row->property("assistant");
+                check.require(original.value<QObject*>(),"A1 native label starts with the original actual Session assistant");
+                check.require(row->setProperty("assistant",QVariant::fromValue<QObject*>(nullptr)),
+                              "A1 null owner is the original public component property, not a replacement controller");
+                checkOutcome(check,row,header,"Work on the current project","Completed","check-circle","success");
+                ContextTranslator translator;
+                bool installed=QCoreApplication::installTranslator(&translator);
+                const auto cleanup=qScopeGuard([&]{if(installed){QCoreApplication::removeTranslator(&translator);engine_->retranslate();}});
+                check.require(installed,"A1 installs an independent ordinary Qt translator");
+                engine_->retranslate();
+                checkOutcome(check,row,header,QString::fromUtf8("Projet sans propriétaire β🧪"),"Completed","check-circle","success");
+                check.require(row->setProperty("assistant",original),"A1 original owner can be rebound through its normal public property");
+                checkOutcome(check,row,header,QString::fromUtf8("Créer Å\u00a0β 🧪"),"Completed","check-circle","success");
+                check.require(row->setProperty("payload",QJsonObject{{"type","dynamicToolCall"},{"tool","unknown-native-action"}}.toVariantMap()),
+                              "A1 unknown native action uses ordinary compact input");
+                checkOutcome(check,row,header,QString::fromUtf8("Projet natif inconnu β🧪"),"Completed","check-circle","success");
+                QCoreApplication::removeTranslator(&translator);installed=false;engine_->retranslate();
+                checkOutcome(check,row,header,"Work on the current project","Completed","check-circle","success");
+                check.require(row->setProperty("kind",QStringLiteral("error")) && row->setProperty("status",QStringLiteral("failed")),
+                              "A1 current row kind/status invalidation uses original presentation properties");
+                checkOutcome(check,row,header,"Assistant error","Failed","times-circle","failed");
+                installed=QCoreApplication::installTranslator(&translator);engine_->retranslate();
+                checkOutcome(check,row,header,QString::fromUtf8("Erreur Å\u00a0β 🧪"),QString::fromUtf8("Échec β"),"times-circle","failed");
+                QCoreApplication::removeTranslator(&translator);installed=false;engine_->retranslate();
+                checkOutcome(check,row,header,"Assistant error","Failed","times-circle","failed");
+            });
+        }catch(const std::exception& error){check.require(false,"live-owner-language: "+QString::fromUtf8(error.what()));}
     }
 public:
     explicit CompactPresentationA1Proof(QQmlEngine* engine):QObject(engine),engine_(engine){}
@@ -112,6 +251,7 @@ public:
     }
     Q_INVOKABLE QVariantMap statusAndCommandPrecedence() const {
         Checks check;
+        malformedFieldsAndColdBoundary(check);
         const std::vector<Expected> rows{
             {"complete","activity","completed","Perform assistant action","Completed","check-circle",{}},
             {"failed","activity","failed","Perform assistant action","Failed","times-circle",{}},
@@ -150,6 +290,7 @@ public:
             checkRow(check,{"native-"+tool,"activity","completed",label,"Completed","check-circle",
                 QJsonObject{{"type","dynamicToolCall"},{"tool",tool},{"purpose","RAW_ONLY_supplied-purpose"}}});
         }catch(const std::exception& e){check.require(false,tool+": "+QString::fromUtf8(e.what()));}
+        liveOwnerAndLanguage(check);
         ContextTranslator translator;
         QCoreApplication::installTranslator(&translator);
         try {
