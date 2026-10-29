@@ -1248,6 +1248,54 @@ int main(int argc,char** argv) {
             else if(op=="save_project_as") result={{"saved",observed->saveProjectAs(
                 QUrl::fromLocalFile(input["path"].toString()),input["zip"].toBool(),input["copy"].toBool())}};
             else if(op=="save") result={{"saved",observed->save()}};
+            else if(op=="session_association_snapshot") {
+                const auto target=input["thread_id"].toString();
+                if(target.isEmpty() || target.toUtf8().size()>static_cast<qsizetype>(edi::assistant::Limits::id_bytes))
+                    throw std::invalid_argument("exact fixture-created original session ID required");
+                const auto settingsPath=edi_app::settings_file_path();
+                if(settingsPath.isEmpty())throw std::runtime_error("original fresh host settings path unavailable");
+                const QFileInfo info(settingsPath);
+                result={{"target",target},{"settings_path",settingsPath},{"settings_exists",info.exists()},
+                    {"settings_canonical",info.canonicalFilePath()},{"settings_is_symlink",info.isSymLink()},
+                    {"settings_owner_id",static_cast<double>(info.ownerId())},{"settings_bytes",static_cast<double>(info.size())},
+                    {"record_found",false},{"read_only",true},{"store_sync_or_write",false}};
+                QFile originalFile(settingsPath);
+                if(originalFile.open(QIODevice::ReadOnly)) {
+                    result["settings_sha256"]=QString::fromLatin1(QCryptographicHash::hash(originalFile.readAll(),QCryptographicHash::Sha256).toHex());
+                } else result["settings_read_error"]=originalFile.errorString();
+                // The FIRST exact key/IniFormat reader; never materialize other
+                // records, account email, credentials or raw settings in output.
+                QSettings settings(settingsPath,QSettings::IniFormat);
+                const auto bytes=settings.value(QStringLiteral("Assistant/Providers/chatgpt/sessions")).toByteArray();
+                result["settings_status"]=static_cast<int>(settings.status());
+                result["association_bytes"]=bytes.size();
+                result["association_sha256"]=QString::fromLatin1(QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex());
+                QJsonParseError error;
+                const auto document=QJsonDocument::fromJson(bytes,&error);
+                result["association_parse_error"]=error.errorString();
+                result["association_json_valid"]=error.error==QJsonParseError::NoError && document.isObject();
+                if(error.error==QJsonParseError::NoError && document.isObject()) {
+                    const auto index=document.object();result["version"]=index.value("version");
+                    const auto record=index.value("threads").toObject().value(target).toObject();
+                    const bool found=record.value("thread")==target && record.value("originator")=="edi";
+                    result["record_found"]=found;
+                    if(found) {
+                        Object retained;
+                        for(const auto* key:{"thread","originator","approved","inputs","metadata","selected","skills","skillConfiguration","capabilities","cacheCleared"})
+                            if(record.contains(QLatin1StringView(key)))retained[QLatin1StringView(key)]=record.value(QLatin1StringView(key));
+                        retained["draft_sha256"]=QString::fromLatin1(QCryptographicHash::hash(record.value("draft").toString().toUtf8(),QCryptographicHash::Sha256).toHex());
+                        retained["draft_characters"]=record.value("draft").toString().size();
+                        Array files;
+                        for(const auto& value:record.value("files").toArray()) {
+                            const auto file=value.toObject();Object retainedFile;
+                            for(const auto* key:{"id","name","bytes","consumed","source","canonical","identity","sha256"})
+                                if(file.contains(QLatin1StringView(key)))retainedFile[QLatin1StringView(key)]=file.value(QLatin1StringView(key));
+                            files.append(retainedFile);
+                        }
+                        retained["files"]=files;result["record"]=retained;
+                    }
+                }
+            }
             else if(op=="save_readback_snapshot") {
                 QPointer<edi_app::ProjectViewModel> original=observed?observed->project():nullptr;
                 if(!original || original->path().isEmpty())throw std::runtime_error("original current owned project required for read-only Save facts");
