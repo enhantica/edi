@@ -48,7 +48,7 @@ Popup {
     }
     function usageCaption() {
         if (usageWindow) return qsTr("%1 · %2% used").arg(usageWindow.label).arg(usageWindow.usedPercent);
-        return qsTr("Usage unavailable");
+        return usageData.statusText || qsTr("Usage unavailable");
     }
     function allowanceWindow(minutes) {
         let selected = null;
@@ -399,7 +399,7 @@ Popup {
                         id: usageButton
                         visible: panel.assistant.connected
                         objectName: "assistant.usage"
-                        text: !panel.usageWindow ? "–" : qsTr("%1% used").arg(panel.usageWindow.usedPercent)
+                        text: panel.usageWindow ? qsTr("%1% used").arg(panel.usageWindow.usedPercent) : panel.usageData.caption || qsTr("Usage")
                         font.bold: false
                         leftPadding: AppSizes.unit * 0.75
                         rightPadding: AppSizes.unit * 0.75
@@ -912,9 +912,10 @@ Popup {
             width: Math.min(AppSizes.unit * 30, Math.max(0, parent.width - AppSizes.unit * 2))
             height: Math.min(implicitHeight, viewportHeight)
             contentWidth: Math.max(0, width-leftPadding-rightPadding)
-            contentHeight: Math.min(usageContent.implicitHeight, Math.max(0, viewportHeight-topPadding-bottomPadding
+            contentHeight: Math.min(Math.max(usageContent.implicitHeight, usageStatus.implicitHeight), Math.max(0, viewportHeight-topPadding-bottomPadding
                 -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
-            onOpened: { resetClock = Date.now(); panel.assistant.refreshUsage(); }
+            onAboutToShow: panel.assistant.refreshUsage()
+            onOpened: resetClock = Date.now()
             Timer {
                 interval: 60000
                 repeat: true
@@ -932,10 +933,12 @@ Popup {
                     width: Math.max(0, usageDialog.contentWidth-AppSizes.unit)
                     spacing: AppSizes.unit * 1.5
                     EaElements.Label {
+                        id: usageStatus
                         objectName: "assistant.usageUnavailable"
-                        visible: usageAllowances.count === 0
+                        visible: panel.usageData.loading || panel.usageData.stale || panel.usageData.state !== "ready" || usageAllowances.count === 0
                         width: parent.width
-                        text: qsTr("Session and weekly usage unavailable")
+                        text: panel.usageData.state === "ready" && usageAllowances.count === 0
+                            ? qsTr("Session and weekly usage were not reported.") : panel.usageData.statusText || qsTr("Usage unavailable")
                         wrapMode: Text.WordWrap
                     }
                     Repeater {

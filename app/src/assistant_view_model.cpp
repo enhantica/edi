@@ -9111,6 +9111,9 @@ struct AssistantViewModel::State {
     }
 
     Object usage_cache{{"available", false}, {"stale", false}, {"buckets", QJsonArray{}}};
+    enum class UsageState { Unknown, Loading, Waiting, Ready, Unavailable, Unsupported, Error };
+    UsageState usage_state=UsageState::Unknown;
+    bool usage_starting=false, usage_waiting=false;
     QString usage_rpc;
     quint64 usage_epoch = 0, usage_pending_epoch = 0, usage_read_epoch = 0;
     quint64 usage_snapshot_epoch = UINT64_MAX, usage_update_serial = 0, usage_pending_update_serial = 0;
@@ -9126,6 +9129,7 @@ struct AssistantViewModel::State {
         usage_account_ready = false; usage_snapshot_valid = false; usage_fresh = false; usage_observation_available = false;
         generic_thread_has_input=false;
         usage_update_serial = 0; usage_rpc.clear();
+        usage_state=UsageState::Unknown;usage_starting=false;usage_waiting=false;
         if (usage_epoch == UINT64_MAX) usage_epoch_exhausted = true;
         else ++usage_epoch;
         projection.account = usage_epoch; // Exact own transition, before any observer can publish B.
@@ -9136,23 +9140,51 @@ struct AssistantViewModel::State {
         try { usage_cache = {{"available", false}, {"stale", false}, {"buckets", QJsonArray{}}}; emit owner.usageChanged(); } catch (...) {}
         return current();
     }
-    void usage_unavailable() noexcept {
-        usage_fresh = false; usage_observation_available = false;
+    void usage_unavailable(UsageState state=UsageState::Unavailable) noexcept {
+        usage_fresh = false;usage_waiting=false;usage_state=state;
         usage_rpc.clear();
-        try { usage_cache["stale"] = true; usage_cache["available"] = false; emit owner.usageChanged(); } catch (...) {}
+        // Retain the last valid same-account snapshot, explicitly stale. Its
+        // availability is not replaced with a fabricated zero/error reading.
+        try { emit owner.usageChanged(); } catch (...) {}
     }
     void usage_refresh() noexcept {
-        const auto publication = file_projection();
-        if (!publishing || !generic_mode || !usage_account_ready || usage_epoch_exhausted || generic_retiring || !usage_rpc.isEmpty()) return;
+        if (!publishing || !generic_mode || !usage_account_ready || usage_epoch_exhausted || generic_retiring || account_confirmation_pending ||
+            usage_starting || !usage_rpc.isEmpty() || !agent) return;
+        const QPointer<AssistantViewModel> receiver(&owner);
+        const QPointer<CodexAgent> transport(agent.get());
+        const auto account=usage_epoch, output=transport->outputGeneration();
+        const auto owned=[&] {
+            return receiver && receiver->state_.get()==this && transport && agent.get()==transport.data() &&
+                transport->outputGeneration()==output && usage_epoch==account;
+        };
+        const auto current=[&] {
+            return owned() && publishing && generic_mode && usage_account_ready && !generic_retiring &&
+                !usage_epoch_exhausted && !account_confirmation_pending;
+        };
+        usage_starting=true;
+        const auto release=qScopeGuard([&]{if(owned())usage_starting=false;});
         try {
-            usage_pending_epoch = usage_epoch; usage_pending_update_serial = usage_update_serial;
-            usage_fresh = false;
-            const auto request = agent->request("account/rateLimits/read", {});
-            if (!publication.input_current()) return;
-            usage_rpc = request;
-            if (usage_rpc.isEmpty()) { usage_unavailable(); return; }
-            usage_cache["stale"] = true; emit owner.usageChanged();
-        } catch (...) { if (publication.input_current()) usage_unavailable(); }
+            usage_pending_epoch=account;usage_pending_update_serial=usage_update_serial;
+            usage_fresh=false;usage_waiting=false;usage_state=UsageState::Loading;
+            emit owner.usageChanged();
+            if(!current()) {if(owned())usage_unavailable();return;}
+            QString prepared;
+            const auto request=transport->request("account/rateLimits/read",{},[&](const QString& id) {
+                if(!current() || !usage_starting || !usage_rpc.isEmpty())return false;
+                prepared=id;usage_rpc=id;return true; // Own the exact ID BEFORE a reentrant write/disposition.
+            });
+            if(!current()) {if(owned() && usage_rpc.isEmpty())usage_unavailable();return;}
+            if(!request.isEmpty())return; // An actual response/preemption may already have settled it.
+            if(!prepared.isEmpty()) {
+                if(usage_rpc==prepared)usage_unavailable();
+                return; // Entered/preempted/uncertain write is never a readiness retry.
+            }
+            if(transport->optionalUsageBackpressured()) {
+                usage_rpc.clear();usage_waiting=true;usage_state=UsageState::Waiting;
+                emit owner.usageChanged();return;
+            }
+            usage_unavailable();
+        } catch (...) { if(owned())usage_unavailable(UsageState::Error); }
     }
     void usage_updated() noexcept {
         const auto publication = file_projection();
@@ -9179,9 +9211,14 @@ struct AssistantViewModel::State {
     void usage_response(const QString& id, const Object& envelope) noexcept {
         if (id != usage_rpc || !usage_account_ready || usage_pending_epoch != usage_epoch || usage_epoch_exhausted || generic_retiring) return;
         const auto publication = file_projection();
-        usage_rpc.clear();
+        usage_rpc.clear();usage_waiting=false;
+        if(account_confirmation_pending) {usage_unavailable();return;}
         try {
-            if (envelope.contains("error") || !envelope.value("result").isObject()) { usage_unavailable(); return; }
+            if(envelope.contains("error")) {
+                const auto code=envelope.value("error").toObject().value("code");
+                usage_unavailable(code.isDouble() && code.toDouble()==-32601 ? UsageState::Unsupported : UsageState::Error);return;
+            }
+            if(!envelope.value("result").isObject()) {usage_unavailable(UsageState::Error);return;}
             const auto result = envelope.value("result").toObject();
             generic_size(result, Limits::http_json_bytes);
             if (!result.value("rateLimits").isObject()) throw std::invalid_argument("Usage snapshot is unavailable");
@@ -9236,10 +9273,14 @@ struct AssistantViewModel::State {
             const bool fresh = usage_update_serial != UINT64_MAX && usage_pending_update_serial == usage_update_serial;
             Object snapshot{{"available", available}, {"stale", !fresh}, {"buckets", buckets}, {"observedAt", QDateTime::currentDateTimeUtc().toString(Qt::ISODate)}};
             generic_size(snapshot, Limits::http_json_bytes);
+            if(!available && usage_snapshot_valid && usage_snapshot_epoch==usage_epoch && usage_observation_available) {
+                usage_unavailable(UsageState::Unknown);return;
+            }
             usage_cache = std::move(snapshot); usage_snapshot_epoch = usage_epoch;
             usage_snapshot_valid = true; usage_fresh = fresh; usage_observation_available = available;
+            usage_state=available?UsageState::Ready:UsageState::Unknown;
             emit owner.usageChanged();
-        } catch (...) { if (publication.input_current()) usage_unavailable(); }
+        } catch (...) { if (publication.input_current()) usage_unavailable(UsageState::Error); }
     }
 
     // A genuine form submission owns an empty Session and admitted source IDs;
@@ -12704,6 +12745,17 @@ struct AssistantViewModel::State {
     void resume_account_admissions() {
         const auto proof=file_projection();const QPointer<AssistantViewModel> receiver(&owner);
         if(account_confirmation_pending || !generic_authenticated || generic_retiring)return;
+        const QPointer<CodexAgent> usageTransport(agent.get());
+        const auto usageAccount=usage_epoch,usageOutput=usageTransport?usageTransport->outputGeneration():0;
+        const auto usageReady=qScopeGuard([this,receiver,usageTransport,usageAccount,usageOutput] {
+            // A queue-drain hint may have arrived before identity confirmation.
+            // Revisit only this account's never-admitted optional intent, after
+            // required admissions unwind; prepared/uncertain reads never wait.
+            if(receiver && receiver->state_.get()==this && usageTransport && agent.get()==usageTransport.data() &&
+                usage_epoch==usageAccount && usageTransport->outputGeneration()==usageOutput &&
+                !account_confirmation_pending && generic_authenticated && !generic_retiring &&
+                usage_waiting && !usage_starting && usage_rpc.isEmpty())usage_refresh();
+        });
         emit owner.draftAdmissionReadyChanged();
         if(!proof.input_current() || !receiver || receiver->state_.get()!=this || account_confirmation_pending)return;
         const QPointer<CodexAgent> transport(agent.get());const auto output=transport?transport->outputGeneration():0;
@@ -12767,6 +12819,11 @@ struct AssistantViewModel::State {
             if (id == usage_rpc) usage_unavailable();
         });
         const QPointer<CodexAgent> originalTransport(agent.get());
+        QObject::connect(agent.get(), &CodexAgent::optionalUsageReady, &owner, [this,originalTransport] {
+            const QPointer<AssistantViewModel> receiver(&owner);
+            if(receiver && receiver->state_.get()==this && originalTransport && agent.get()==originalTransport.data() &&
+                usage_waiting && !usage_starting && !originalTransport->optionalUsageBackpressured())usage_refresh();
+        },Qt::QueuedConnection); // Recheck after the original write callback has unwound.
         QObject::connect(agent.get(), &CodexAgent::outputOwnersReleased, &owner, [this,originalTransport] {
             const QPointer<AssistantViewModel> receiver(&owner);
             const auto resume=qScopeGuard([this,receiver]{if(!receiver || receiver->state_.get()!=this)return;
@@ -17093,15 +17150,37 @@ bool AssistantViewModel::canCancel() const {
     return state_->auth_pending || state_->file_selection.has_value() || state_->file_staging || state_->core.value("can_cancel").toBool(); }
 QString AssistantViewModel::lastError() const { return !state_->error.isEmpty() ? state_->error : !state_->workflow_error.isEmpty() ? state_->workflow_error : !state_->preference_save_error.isEmpty() ? state_->preference_save_error : !state_->preference_error.isEmpty() ? state_->preference_error : state_->history_error; }
 QVariantMap AssistantViewModel::usage() const {
+    QVariantMap result{{"available",false},{"stale",false},{"buckets",QVariantList{}},
+        {"state",QStringLiteral("unavailable")},{"loading",false},{"caption",tr("Usage")},
+        {"statusText",tr("Usage unavailable")}};
 #ifndef __EMSCRIPTEN__
-    if (state_->generic_mode && state_->usage_account_ready && !state_->generic_retiring && !state_->usage_epoch_exhausted &&
-        state_->usage_snapshot_valid && state_->usage_snapshot_epoch == state_->usage_epoch) {
-        auto result = state_->usage_cache.toVariantMap();
-        result["stale"] = !state_->usage_fresh; result["available"] = state_->usage_observation_available;
-        return result;
+    if(state_->generic_mode && state_->usage_account_ready && !state_->generic_retiring && !state_->usage_epoch_exhausted) {
+        const bool retained=state_->usage_snapshot_valid && state_->usage_snapshot_epoch==state_->usage_epoch;
+        const bool available=retained && state_->usage_observation_available;
+        if(retained)result=state_->usage_cache.toVariantMap();
+        result["available"]=available;result["stale"]=retained && !state_->usage_fresh;
+        result["loading"]=false;result["caption"]=tr("Usage");
+        switch(state_->usage_state) {
+        case State::UsageState::Loading:
+            result["state"]=QStringLiteral("loading");result["loading"]=true;
+            result["caption"]=tr("Loading…");result["statusText"]=available?tr("Updating usage…"):tr("Loading usage…");break;
+        case State::UsageState::Waiting:
+            result["state"]=QStringLiteral("waiting");result["loading"]=true;
+            result["caption"]=tr("Loading…");result["statusText"]=available?tr("Updating usage when the connection is ready…"):tr("Waiting for the connection to read usage…");break;
+        case State::UsageState::Ready:
+            result["state"]=QStringLiteral("ready");result["statusText"]=state_->usage_fresh?tr("Usage information updated."):tr("Last reported usage may be outdated.");break;
+        case State::UsageState::Unsupported:
+            result["state"]=QStringLiteral("unsupported");result["statusText"]=available?tr("Last reported usage; this connection does not provide a new reading."):tr("This connection does not provide usage information.");break;
+        case State::UsageState::Error:
+            result["state"]=QStringLiteral("error");result["statusText"]=available?tr("Last reported usage; refresh failed."):tr("Usage could not be loaded.");break;
+        case State::UsageState::Unavailable:
+            result["state"]=QStringLiteral("unavailable");result["statusText"]=available?tr("Last reported usage; refresh unavailable."):tr("Usage is temporarily unavailable.");break;
+        case State::UsageState::Unknown:
+            result["state"]=QStringLiteral("unknown");result["statusText"]=available?tr("No current usage reported; showing the last reading."):tr("Usage has not been reported for this account.");break;
+        }
     }
 #endif
-    return {{"available", false}, {"stale", false}, {"buckets", QVariantList{}}};
+    return result;
 }
 QVariantMap AssistantViewModel::account() const {
 #ifndef __EMSCRIPTEN__
