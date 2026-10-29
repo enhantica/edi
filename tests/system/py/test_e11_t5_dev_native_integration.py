@@ -9470,9 +9470,7 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
     actor.connect()
     # Original model removal is declared fixture preparation, not a serialized
     # postimage: index0/index1 then match the actual first/second append class.
-    assert qml(actor, '(function(){const a=Session.project.analysis;while(a.constraints.count)a.constraints.remove(a.constraints.count-1);'
-        'while(a.aliases.count)a.aliases.remove(a.aliases.count-1);return a.aliases.count===0&&a.constraints.count===0;})()'), (
-            'The isolated original ordinary relation owners remove only their own fixture rows before independent new declarations')
+    _remove_original_fixture_relations_once(actor)
     actor.until(lambda value: not value['ui']['project']['calculating'])
     wait_positive_tab(actor, 'appBar.tab.analysis');actor.command('click', name='appBar.tab.analysis')
     if _original_toolbar_pane_state(actor)['visible']:
@@ -9567,3 +9565,41 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
             and after['parameters']==before['parameters'] and len(actor.responses())==1, (
                 'Interference preserves only the actual appended/renamed alias and no changed parameter, second alias, constraint or automatic retry')
         _match_original_alias_undo_sequence(actor,before,first_undos[1:],True)
+
+
+def _remove_original_fixture_relations_once(actor):
+    # Each original mutation crosses a complete real host command boundary.
+    # A refused/nonsettling remove is never retried, and a Qt model's pending
+    # notification cannot trap the GUI in a readback-dependent JS while loop.
+    original_project = actor.command('inspect')['ui']['project']
+    original_path = original_project['path']
+    receipts = []
+    for model in ('constraints', 'aliases'):
+        expression = 'Session.project.analysis.' + model
+        snapshot = qml(actor, '(function(){const m=' + expression + ';const ids=[];'
+            'for(let i=0;i<m.count;i++)ids.push(m.text(i,"id"));return {owner:String(Session.project),ids:ids};})()')
+        assert len(snapshot['ids']) == len(set(snapshot['ids'])), (
+            'Ordinary fixture removal starts with actual unique original identities, not invented rows or count assumptions')
+        for index in range(len(snapshot['ids']) - 1, -1, -1):
+            target = snapshot['ids'][index]
+            prior = qml(actor, '(function(){const m=' + expression + ';return {owner:String(Session.project),count:m.count,id:m.text('
+                + str(index) + ',"id")};})()')
+            assert prior['owner'] == snapshot['owner'] and prior['count'] == index + 1 and prior['id'] == target, (
+                'Each one-shot remove still owns the exact original last row/current project before entering the genuine ordinary API')
+            entry = {'model':model,'index':index,'original_id':target,'before':prior,'request_count':1,'settlement':'pending'}
+            receipts.append(entry)
+            (actor.folder/'ordinary-fixture-removals.json').write_text(json.dumps(receipts,indent=2)+'\n')
+            assert qml(actor, '(function(){const m=' + expression + ';m.remove(' + str(index) + ');return true;})()'), (
+                'The original remove is requested once; this return proves only command delivery, not a fabricated accepted mutation')
+            actor.until(lambda value: value['ui']['project'] and value['ui']['project']['path'] == original_path
+                and not value['ui']['project']['calculating']
+                and qml(actor, expression + '.count') == index)
+            after = qml(actor, '(function(){const m=' + expression + ';const ids=[];'
+                'for(let i=0;i<m.count;i++)ids.push(m.text(i,"id"));return {owner:String(Session.project),ids:ids};})()')
+            assert after['owner'] == snapshot['owner'] and after['ids'] == snapshot['ids'][:index], (
+                'The actual original removal settles exactly its requested identity before the next different row; refusal/currentness/pending failure never causes automatic replay')
+            entry.update(settlement='observed',after=after)
+            (actor.folder/'ordinary-fixture-removals.json').write_text(json.dumps(receipts,indent=2)+'\n')
+    final = actor.command('inspect')['ui']['project']
+    assert not final['aliases'] and not final['constraints'] and final['path'] == original_path, (
+        'Only the genuine original fixture relation rows are removed before the independent requested alias characterization')
