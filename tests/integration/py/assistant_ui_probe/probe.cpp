@@ -9,6 +9,8 @@
 #include <QMap>
 #include "assistant_markdown.hpp"
 #include "experiment_view_model.hpp"
+#include "parameter_table_model.hpp"
+#include "report_view_model.hpp"
 #include "edi/assistant_limits.hpp"
 #include <vector>
 #include <QAbstractTextDocumentLayout>
@@ -1298,6 +1300,43 @@ int main(int argc,char** argv) {
                     result["disk_relations_completed"]=true;
                     result["disk_decoded_parameters"]=parameters(disk);result["disk_read_warnings"]=warnings;result["disk_decoded"]=true;
                 } catch(const std::exception& error) {result["disk_decoded"]=false;result["disk_read_error"]=QString::fromUtf8(error.what());}
+                result["project_last_error"]=original->lastError();
+                result["metadata_last_modified"]=QString::fromStdString(model.metadata.last_modified);
+                Array registry;
+                auto* table=original->parameters();
+                for(int index=0;index<table->count();++index) {
+                    auto* item=table->item(index,QStringLiteral("parameter"));
+                    if(!item)throw std::runtime_error("actual original Registry parameter owner unavailable");
+                    registry.append(Object{{"path",table->text(index,QStringLiteral("path"))},
+                        {"value",QJsonValue::fromVariant(item->property("value"))},
+                        {"uncertainty",QJsonValue::fromVariant(item->property("uncertainty"))},
+                        {"free",QJsonValue::fromVariant(item->property("free"))}});
+                }
+                result["registry_parameters"]=registry;
+                Array textSemantics;
+                try {
+                    const auto fresh=edi::project_edi_files(model); // FIRST projection, used only to detect stale app cache, NOT a numerical formatting oracle.
+                    for(const auto& [relative,text]:original->savedFiles()) {
+                        const auto expected=std::find_if(fresh.begin(),fresh.end(),[&](const auto& row){return row.first==relative;});
+                        auto local=edi::project_with_file_text(model,relative,text);
+                        edi::complete_relations(local);
+                        textSemantics.append(Object{{"file",QString::fromStdString(relative)},
+                            {"sha256",QString::fromLatin1(QCryptographicHash::hash(QByteArray::fromStdString(text),QCryptographicHash::Sha256).toHex())},
+                            {"fresh_sha256",expected==fresh.end()?QString():QString::fromLatin1(QCryptographicHash::hash(QByteArray::fromStdString(expected->second),QCryptographicHash::Sha256).toHex())},
+                            {"matches_fresh_projection",expected!=fresh.end() && expected->second==text},
+                            {"parameters",parameters(local)}});
+                    }
+                    result["text_semantics"]=textSemantics;
+                } catch(const std::exception& error) {result["text_error"]=QString::fromUtf8(error.what());result["text_semantics"]=textSemantics;}
+                auto reportParameters=[](const edi::ReportModel& report) {
+                    Array values;
+                    for(const auto& item:report.parameters)values.append(Object{{"id",QString::fromStdString(item.unique_name)},
+                        {"value",item.value},{"uncertainty",item.su?QJsonValue(*item.su):QJsonValue()},{"free",item.free}});
+                    return values;
+                };
+                result["report_parameters"]=reportParameters(original->report()->reportModel());
+                try {result["native_report_parameters"]=reportParameters(edi::build_report(model,edi::effective_report_options(model)));}
+                catch(const std::exception& error) {result["native_report_error"]=QString::fromUtf8(error.what());}
                 result["original_owner_current"]=original && observed && observed->project()==original && original->path()==path;
             }
             else if(op=="report_toggle") observed->project()->report()->setEmbedLibraries(!observed->project()->report()->embedLibraries());
