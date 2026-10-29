@@ -3818,3 +3818,47 @@ effect; there is no replay, new session service or transcript-derived authority.
 Source changes require independent same-account selection, changed account/scope,
 first real send and transition qualification; no runtime result follows from this
 separation alone. Header New-session visibility is a separate owner change.
+
+## Transient question and terminal-response reveal
+
+FIRST C++ question/terminal publication requests the existing Main Assistant
+sidebar through one transient presentation flag. Main binds that flag with its
+existing visibility expression; it does not rewrite Preferences. A genuine manual
+hide dismisses this request, while the pending question and original human wait
+remain. A later readiness notification cannot reassert the same question's
+presentation request. New native control reveal and context retirement release
+the transient request.
+
+The original structured-question owner validates its actual thread/turn-bound RPC and
+enters `beginHumanWait`; the original native QuestionPending gate remains. Its
+public question signal follows reveal notification. A still-owned control input
+cannot be covered: public question presentation waits for its ordinary settlement,
+retaining actual partial/published outcomes. A validated completed turn also
+requests the sidebar before its final history-status publication, so the ordinary
+final-question fallback restores chat without inspecting question prose.
+
+For the stock pinned runtime, original process/thread configuration explicitly
+enables its supported Default-mode request-user-input feature and registration.
+The existing callback/question/answer owner is reused. The optional dedicated
+runtime's closed catalogue and policy remain unchanged and are not inferred from
+source presence. No runtime swap, new question tool/writer, prose parser or
+scientific mutation permission is introduced. Actual advertisement, visibility,
+manual override and question/answer lifecycle still require qualification.
+
+The stock builtin admits its actual one-to-three-question batch through that one
+server request. All question IDs, text and offered options are validated before
+publication; existing cards appear sequentially and retain only actual answers.
+Only the final answer submits the accumulated original-ID response, once, through
+`CodexAgent::answer`. The same original human-wait interval remains open between
+cards. The actual request call ID need not have a separate preceding public item;
+a finalized conflicting item is still refused. Human question and answer text is
+retained by the existing canonical history owner, without invented native outcomes.
+Original input/account/window retirement rejects the outstanding original request;
+confirmation-pending answers remain available rather than spending it. These are
+source contracts, not proof of actual provider tool choice or user interaction.
+
+The original typed question validator also requires a string header and boolean
+isOther/isSecret values when supplied, for every member before human wait or
+prefix publication. Omitted default booleans and legitimate nullable options
+retain their protocol meanings. Unused presentation metadata does not escape
+validation. This type check is not a new secret-input display policy.
