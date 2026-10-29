@@ -58,6 +58,7 @@
 #include <QDir>
 #include <QJsonValue>
 #include <QMetaMethod>
+#include <QMetaProperty>
 #include <QPointer>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -168,6 +169,16 @@ QRectF exposed_rect(QQuickItem* item) {
     QRectF rect=item->boundingRect();
     for(auto* parent=item->parentItem();parent;parent=parent->parentItem())
         if(parent->clip())rect=rect.intersected(item->mapRectFromItem(parent,parent->boundingRect()));
+    if(item->window())rect=rect.intersected(item->mapRectFromScene(QRectF(QPointF(),item->window()->size())));
+    return rect;
+}
+// Property editing owns a current visible layout object, not an ink rectangle
+// or a physical click-center. No input coordinate is invented by this helper.
+QRectF exposed_layout_rect(QQuickItem* item) {
+    if(!item || !item->isVisible())return {};
+    QRectF rect(0,0,item->width(),item->height());
+    for(auto* parent=item->parentItem();parent;parent=parent->parentItem())
+        if(parent->clip())rect=rect.intersected(item->mapRectFromItem(parent,parent->clipRect()));
     if(item->window())rect=rect.intersected(item->mapRectFromScene(QRectF(QPointF(),item->window()->size())));
     return rect;
 }
@@ -374,6 +385,22 @@ int main(int argc,char** argv) {
         }
         return match;
     };
+    auto property_owner_reachable=[&](QObject* object,const char* property)->bool {
+        auto* item=qobject_cast<QQuickItem*>(object);
+        if(!window || !item || item->window()!=window || !item->isVisible() || !item->isEnabled() ||
+            !(item->width()>0) || !(item->height()>0) || exposed_layout_rect(item).isEmpty())return false;
+        const auto index=object->metaObject()->indexOfProperty(property);
+        return index>=0 && object->metaObject()->property(index).isWritable();
+    };
+    auto find_property_owner=[&](const QString& name,const char* property)->QObject* {
+        QObject* match=nullptr;
+        for(auto* object:objects(window)) {
+            if(object->objectName()!=name || !property_owner_reachable(object,property))continue;
+            if(match)return nullptr;
+            match=object;
+        }
+        return match;
+    };
     auto find=[&](const QString& name)->QObject* {
         // Readonly observers include nonvisual/zero-size objects and deliberate
         // hidden-state checks. They are NOT physical-input readiness proofs.
@@ -474,6 +501,8 @@ int main(int argc,char** argv) {
             if(auto* item=qobject_cast<QQuickItem*>(object);item&&!object->objectName().isEmpty())
                 controls.push_back(Object{{"name",object->objectName()},{"visible",item->isVisible()},
                     {"enabled",item->isEnabled()},{"same_window",item->window()==window},{"input_reachable",input_reachable(item)},
+                    {"text_property_owner",property_owner_reachable(item,"text")},{"layout_exposed",!exposed_layout_rect(item).isEmpty()},
+                    {"bounding_rect",Array{item->boundingRect().x(),item->boundingRect().y(),item->boundingRect().width(),item->boundingRect().height()}},
                     {"width",item->width()},{"height",item->height()},
                     {"x",item->mapToScene(QPointF()).x()},{"y",item->mapToScene(QPointF()).y()},
                     {"exposed",!exposed_rect(item).isEmpty()},
@@ -986,12 +1015,13 @@ int main(int argc,char** argv) {
                 result={{"added",observed->assistant()->addSelectedFiles(input["token"].toString(),files)}};
             }
             else if(op=="send_text") {
-                QPointer<QObject> composer=find_control("assistant.composer");
+                QPointer<QObject> composer=find_property_owner("assistant.composer","text");
                 const QPointer<edi_app::Session> original_session=observed;
                 const QPointer<edi_app::ProjectViewModel> original_project=observed?observed->project():nullptr;
-                if(!composer || !composer->setProperty("text",input["text"].toString())) throw std::runtime_error("actual composer text property unavailable");
+                if(!composer)throw std::runtime_error("original current composer text property owner is absent or ambiguous");
+                if(!composer->setProperty("text",input["text"].toString()))throw std::runtime_error("original composer text property write was refused");
                 if(!composer || observed!=original_session || !observed || observed->project()!=original_project ||
-                    find_control("assistant.composer")!=composer)throw std::runtime_error("original composer owner retired before Send; no input was sent");
+                    find_property_owner("assistant.composer","text")!=composer)throw std::runtime_error("original composer owner retired before Send; no input was sent");
                 click(find_control("assistant.send"));
             } else if(op=="accept_dialog") result={{"accepted",accept_dialog()}};
             else if(op=="sc_input") {
