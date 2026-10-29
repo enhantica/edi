@@ -18,6 +18,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <stdexcept>
 #include <vector>
 
 namespace {
@@ -246,7 +247,9 @@ public:
         try {
             const auto root=QDir(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath()).absoluteFilePath("../../..");
             auto project=edi::load_project((root+"/docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project").toStdString());
-            project.calculate();const auto& member=*project.experiments.at(0);
+            project.calculate();
+            if(project.experiments.empty())throw std::out_of_range("The original SC fixture has no experiment");
+            const auto& member=*project.experiments.front();
             edi_app::SingleCrystalReflectionModel model(member,project,nullptr);model.sync();
             const auto total=static_cast<std::size_t>(model.fileRowCount());c.require(total>2 && member.reflections && member.computed_current(),"Genuine original SC fixture/calculation/reflection owner is reached");
             const auto before=edi_app::assistant_data::reflections(member,model,0,total);
