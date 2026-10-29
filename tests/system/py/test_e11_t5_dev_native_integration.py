@@ -10,6 +10,7 @@ from __future__ import annotations
 import errno
 import hashlib
 import json
+import math
 import os
 import re
 import select
@@ -11370,7 +11371,12 @@ def test_original_close_restart_keeps_repeated_pending_edits_separate_from_consu
         displayed = {_rows_values(restored, 'messages', index)['id']: _rows_values(restored, 'messages', index)
                      for index in range(_rows_probe(restored)['count'])}
         assert all(displayed.get(row['id']) == row for row in first_rows), 'Full original accepted history remains original; no pending edit is invented as a sent user/native row'
-        assert not _original_context_disclosure_present(restored.last), (
+        # Scalar model reads intentionally replace .last with the compact
+        # messages_probe envelope, not a complete original Main scene snapshot.
+        disclosure_observation = restored.command('inspect')
+        assert 'controls' in disclosure_observation['ui'], (
+            'The no-Share assertion requires a fresh complete original scene observation; absent controls never mean no disclosure')
+        assert not _original_context_disclosure_present(disclosure_observation), (
             'View restoration of original thread/history is not fresh Share approval for its unsubmitted pending files')
     finally:
         _close_explicit_restart_actor(restored)
@@ -11430,3 +11436,402 @@ def test_original_pending_draft_invalidation_keeps_chooser_and_disclosure_owners
     facts['real_cancel'] = _cancel_original_pending_send_without_admission(actor, facts['new_pending'], fresh_text)
     assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest for path, digest in original_bytes.items())
     (actor.folder / 'original-pending-ownership-fences.json').write_text(json.dumps(facts, indent=2)+'\n')
+
+def _original_saved_link_row(actor, source):
+    rows = [_rows_values(actor, 'messages', i) for i in range(_rows_probe(actor)['count'])]
+    matches = [row for row in rows if row['kind'] == 'assistant' and row['text'] == source and row['status'] == 'completed']
+    assert len(matches) == 1, 'The exact genuinely emitted completed assistant row owns the original visible link'
+    row = matches[0]
+    document = actor.command('markdown_probe', row_id=row['id'])['reply']
+    assert document['reached'] and document['same_window'] and document['source'] == source, (
+        'The exact original row/document is realized in its original current Main window; no synthetic message stands in')
+    return row
+
+
+def _original_saved_link_click(actor, row, href, *, allowed, exact_folder=None):
+    before = actor.command('save_readback_snapshot')['reply']
+    before_project = json.loads(json.dumps(actor.last['ui']['project']))
+    prior = list(actor.last['activated_urls'])
+    actual = actor.command('message_link_click', row_id=row['id'], href=href)['reply']
+    assert actual['reached'] and actual['same_owner_after'] and actual['actual_link_at_press'] == href, (
+        'A genuine physical click belongs to the exact retained row/anchor/current window without guessed coordinates or signal injection')
+    assert actual['link_activations'] == [{'href': href, 'row_id': row['id'], 'original_owner_current': True}], (
+        'Every positive and zero-dispatch negative first requires one matching real original TextEdit linkActivated receipt under its original row/document/window owner; a missed click cannot prove refusal')
+    urls = actor.last['activated_urls'][len(prior):]
+    assert len(urls) == (1 if allowed else 0) and actual['new_url_count'] == len(urls), (
+        'Only one ordinary OS URL request follows an authorized exact link; arbitrary/failed/stale links open nothing')
+    if exact_folder is not None:
+        from urllib.parse import urlparse, unquote
+        target = urlparse(urls[0])
+        assert target.scheme == 'file' and not target.netloc and not target.query and not target.fragment \
+            and Path(unquote(target.path)).resolve() == exact_folder.resolve(), (
+                'The OS handler receives the exact independently proven successful native Save directory, never a captive report copy or another project')
+    after = actor.command('save_readback_snapshot')['reply']
+    assert after == before and actor.last['ui']['project'] == before_project, (
+        'Link navigation cannot load/replace/discard/save/refit/recalculate the current project, its values/SUs/free/dependence/dirty/graph/report owners')
+    assert qml(actor, '(function(){const o=' + _scene_control_expression('originalSavedLinkOwner') + ';return o && Session.project===o.project && Session.assistant===o.vm;})()'), (
+        'Original project/Assistant QObject identity survives the link; equal replacement snapshots cannot substitute')
+    return {'input': actual, 'activated': urls, 'before': before, 'after': after}
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_original_successful_native_save_folder_link_uses_os_handler_without_replacing_project(main_actor, tmp_path, show_actions):
+    project = copied_estimate_project(tmp_path)
+    outside = tmp_path / 'Unowned folder';outside.mkdir()
+    gate = tmp_path / 'original-final-message-release'
+    actor = main_actor([[]], show_actions=show_actions)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    assert actor.command('observe_file_urls')['reply']['installed'], 'The test-owned ordinary file URL handler is installed before any possible external launch'
+    assert qml(actor, '(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"originalSavedLinkOwner"; property var project:null; property var vm:null}\',contentItem);o.project=Session.project;o.vm=Session.assistant;return o.project!==null && o.vm!==null;})()'), 'A readonly original-owner witness retains real QObject identities without constructing native authority'
+    source = '[SAVED-FOLDER](' + str(project) + ') [UNOWNED](' + outside.as_uri() + ') [CHILD](' + (project / 'project.edi').as_uri() + ') [REPORT](retained-proof.html)'
+    actor.connect()
+    _session_configure(actor, final_text='[UNPROVEN](' + str(project) + ')')
+    _session_request_with_original_disclosure(actor, 'Read the existing project without saving it. The final folder text alone grants no local link authority.')
+    _session_completed(actor, 1)
+    spoof = _original_saved_link_row(actor, '[UNPROVEN](' + str(project) + ')')
+    _original_saved_link_click(actor, spoof, str(project), allowed=False)
+    actor.append_turn([tool_call('save_project', 'original-saved-folder-owner', destination='current')])
+    _session_configure(actor, final_text=source, final_gate=str(gate))
+    actor.request('Save this exact current project once, preserving the normal native destination.')
+    actor.until(lambda value: len(actor.responses()) == 1)
+    saved = native_result(actor.responses()[0])
+    assert saved['saved'] and saved['committed'] and saved['active'] and not saved['uncertain'] \
+        and Path(saved['destination']).resolve() == project.resolve(), (
+            'Actual immutable native Save settlement, not model text or a proposed path, independently proves this exact folder')
+    starts = _session_wire(actor, 'thread/start');assert len(starts) == 1
+    workspace = Path(starts[0]['params']['cwd']).resolve()
+    assert workspace.is_relative_to(Path(actor.last['test_storage']).resolve()), 'The captive-report control belongs to this real fixture-owned runtime workspace'
+    original_report = b'<!doctype html><title>Original retained proof</title><p>Independent report bytes.</p>'
+    (workspace / 'retained-proof.html').write_bytes(original_report)
+    gate.touch();actor.command('refresh_usage');_session_completed(actor, 2)
+    row = _original_saved_link_row(actor, source)
+    # A genuine later unsaved edit must not be discarded by clicking a saved location.
+    qml(actor, 'Session.project.title="Retain this unsaved title while opening a folder"')
+    assert actor.command('save_readback_snapshot')['reply']['modified'], 'The click witness has real current unsaved project state to preserve'
+    facts = [_original_saved_link_click(actor, row, str(project), allowed=True, exact_folder=project)]
+    facts.append(_original_saved_link_click(actor, row, outside.as_uri(), allowed=False))
+    facts.append(_original_saved_link_click(actor, row, (project / 'project.edi').as_uri(), allowed=False))
+    # Legacy owned captive report opening remains a file snapshot, not the new directory grant.
+    report = _original_saved_link_click(actor, row, 'retained-proof.html', allowed=True)
+    from urllib.parse import urlparse, unquote
+    captured = Path(unquote(urlparse(report['activated'][0]).path))
+    assert captured != workspace / 'retained-proof.html' and captured.read_bytes() == original_report, (
+        'The original captive report route still opens its immutable captured file with exact original bytes')
+    facts.append(report)
+    old_count = len(actor.last['activated_urls'])
+    assert not qml(actor, 'Session.assistant.openReport(' + json.dumps(spoof['id']) + ',' + json.dumps(str(project)) + ')'), (
+        'A different retained completed row without this Save cannot borrow another row’s native folder authority')
+    assert len(actor.last['activated_urls']) == old_count
+    qml(actor, 'Session.assistant.clearHistory()')
+    actor.until(lambda value: not value['ui']['messages'])
+    assert not qml(actor, 'Session.assistant.openReport(' + json.dumps(row['id']) + ',' + json.dumps(str(project)) + ')'), (
+        'A cleared row is stale and cannot retain a local folder-opening grant')
+    assert len(actor.last['activated_urls']) == old_count
+    (actor.folder / 'original-saved-folder-link-route.json').write_text(json.dumps({'saved': saved, 'row': row, 'clicks': facts,
+        'qualification': 'File URL requests observed through original QDesktopServices handler; no actual external application launched. Original route and exact native Save row proven. No OS file-manager behavior or owner Mac run claimed.'}, indent=2)+'\n')
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_original_failed_native_save_cannot_authorize_its_proposed_folder_link(
+    main_actor, tmp_path, monkeypatch, post_adoption_rename_failure_library, show_actions
+):
+    assert sys.platform.startswith('linux'), 'This independently reached original transaction fault is Linux-qualified; another platform is an unreached failure boundary'
+    project = copied_estimate_project(tmp_path)
+    armed = tmp_path / 'arm-original-link-save-failure'
+    receipt = tmp_path / 'original-link-save-failure.jsonl'
+    monkeypatch.setenv('LD_PRELOAD', str(post_adoption_rename_failure_library))
+    monkeypatch.setenv('TEMPORARY_FAILURE_TARGET', str(project.resolve()))
+    monkeypatch.setenv('TEMPORARY_FAILURE_RECEIPT', str(receipt))
+    monkeypatch.delenv('TEMPORARY_FAILURE_AFTER_FIRST', raising=False)
+    monkeypatch.setenv('TEMPORARY_FAILURE_ARMED', str(armed))
+    actor = main_actor([[tool_call('save_project', 'original-failed-save-link', destination='current')]], show_actions=show_actions)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    assert actor.command('observe_file_urls')['reply']['installed'], 'File dispatch interception is active before the negative local-link gesture'
+    assert qml(actor, '(function(){const o=Qt.createQmlObject(\'import QtQuick; Item {objectName:"originalSavedLinkOwner"; property var project:null; property var vm:null}\',contentItem);o.project=Session.project;o.vm=Session.assistant;return o.project!==null;})()')
+    qml(actor, 'Session.project.title="Original genuine failed Save location"')
+    source = '[FAILED-SAVE](' + str(project) + ')'
+    _session_configure(actor, final_text=source)
+    actor.connect();armed.touch()
+    _session_request_with_original_disclosure(actor, 'Attempt the one authorized ordinary current Save once; retain an actual failure without retrying it.')
+    _session_completed(actor, 1)
+    responses = actor.responses()
+    assert len(responses) == 1 and responses[0]['result']['success'] is False, (
+        'A genuine one-shot native Save failure is required; an unentered/invalid-argument attempt is not a failing Save witness')
+    outcome = json.loads(responses[0]['result']['contentItems'][0]['text'])
+    assert outcome['saved'] is False and outcome['committed'] is False, 'A proposed or uncertain destination never becomes successful saved-folder evidence'
+    faults = receipt.read_text().splitlines()
+    assert faults == ['rename-after-write', 'rename'], (
+        'The unchanged original scoped interceptor must actually refuse this exact run-owned destination replacement, never fake a failed Save reply')
+    row = _original_saved_link_row(actor, source)
+    facts = _original_saved_link_click(actor, row, str(project), allowed=False)
+    assert len(actor.responses()) == 1, 'Clicking a failed Save link cannot silently repeat Save or fabricate another native receipt'
+    (actor.folder / 'original-failed-save-folder-link.json').write_text(json.dumps({
+        'response': responses[0], 'outcome': outcome, 'actual_fault_receipts': faults, 'click': facts,
+        'qualification': 'Original destination rename failure reached once through unchanged default filesystem seam, OS handler intercepted; no post-adoption/rollback/numeric-state claim.'}, indent=2)+'\n')
+
+
+def _original_inspection_integer(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) \
+        and 0 <= value <= 9007199254740991 and value == int(value)
+
+
+def _original_inspection_reply(actor, identity):
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    requests = [row for row in sent if row.get('method') == 'item/tool/call' and row['params'].get('callId') == identity]
+    assert len(requests) == 1, 'One exact original native inspection call owns this reply; no replay/other call can substitute'
+    replies = [row for row in actor.responses() if row['id'] == requests[0]['id']]
+    assert len(replies) == 1, 'Exactly one native reply settles the original RPC'
+    return native_result(replies[0])
+
+
+def _original_inspection_expected_moments(values):
+    # Independent mathematical oracle over the UNCHANGED original raw-native
+    # binary64 scalars; arbitrary-precision rationals, not the new helper algorithm.
+    from fractions import Fraction
+    if not values:
+        return None
+    total = sum((Fraction.from_float(float(value)) for value in values), Fraction())
+    squares = sum((Fraction.from_float(float(value)) ** 2 for value in values), Fraction())
+    return float(total / len(values)), math.sqrt(float(squares / len(values)))
+
+
+def _assert_original_inspection_moments(actual, values, population, complete, *, empty, available):
+    assert actual['population'] == population and actual['count'] == len(values) \
+        and actual['population_complete'] is complete, 'Every moment names its exact own denominator/population, never another column or a fitted population assumption'
+    expected = _original_inspection_expected_moments(values)
+    if expected is None:
+        state = 'empty_range' if empty else 'unavailable_column' if not available else \
+            'no_finite_values' if population == 'all_finite' else 'no_known_included_finite_values'
+        assert actual['state'] == state and actual['mean'] is None and actual['rms'] is None, (
+            'Missing/unavailable/empty populations stay explicit instead of becoming valid zero')
+        return
+    assert actual['state'] == 'ok' and all(isinstance(actual[key], (int, float)) and not isinstance(actual[key], bool)
+        and math.isfinite(actual[key]) for key in ('mean', 'rms'))
+    k = 8 * len(values) + 8
+    gamma = k * sys.float_info.epsilon / (1 - k * sys.float_info.epsilon)
+    for key, value in zip(('mean', 'rms'), expected, strict=True):
+        assert abs(actual[key] - value) <= gamma * max(1, abs(value)), (
+            'Actual moments retain independent exact-rational raw-data meaning within a predeclared binary64 operation bound')
+
+
+def _assert_original_inspection_range(actual, raw, selected, *, reference=None, bragg=False):
+    assert set(actual) == {'start', 'count', 'end', 'mask', 'axis_order', 'columns'}
+    assert all(_original_inspection_integer(actual[key]) for key in ('start', 'count', 'end'))
+    assert (actual['start'], actual['count'], actual['end']) == (selected['start'], selected['count'], selected['end'])
+    rows = [row for row in raw['rows'] if selected['start'] <= row['row'] < selected['end']]
+    assert len(rows) == selected['count'], 'Every selected native row belongs to the exact original raw source, not a resampled axis'
+    mask = actual['mask']
+    assert set(mask) == {'source', 'applicable', 'current', 'included', 'excluded', 'unknown'}
+    if bragg:
+        assert mask == {'source': 'not_applicable', 'applicable': False, 'current': False,
+            'included': None, 'excluded': None, 'unknown': None}
+        included = None
+    elif raw['row_space'] == 'native_reflection':
+        assert mask['source'] == 'single_crystal_file_fitUse' and mask['applicable'] is True \
+            and mask['current'] is raw['shape_valid'], 'Actual settled SC shape/file-fitUse owner must really provide current known inclusion'
+        included = [row.get('used') if mask['current'] else None for row in rows]
+    else:
+        assert mask['source'] == 'native_calc_status' and mask['applicable'] is True and reference is not None
+        assert mask['current'] is (reference['native_current'] and reference['graph_current'])
+        status = reference['original_native_status_rows']
+        included = [True if row['row'] < len(status) and status[row['row']] == 'incl' else
+                    False if row['row'] < len(status) and status[row['row']] == 'excl' else None for row in rows] if mask['current'] else [None] * len(rows)
+    if included is not None:
+        assert mask['included'] == sum(value is True for value in included) \
+            and mask['excluded'] == sum(value is False for value in included) \
+            and mask['unknown'] == sum(value is None for value in included) \
+            and mask['included'] + mask['excluded'] + mask['unknown'] == len(rows), (
+                'Actual original statuses/file-fitUse, not sigma or residual availability, supply inclusion and unknown coverage')
+    x = [row.get('x') for row in rows]
+    if raw['row_space'] == 'native_reflection':
+        order = 'not_applicable'
+    elif len(x) < 2 or any(value is None or not math.isfinite(value) for value in x):
+        order = 'unknown'
+    elif all(a == b for a, b in zip(x, x[1:])):
+        order = 'constant'
+    elif all(a < b for a, b in zip(x, x[1:])):
+        order = 'strictly_increasing'
+    elif all(a > b for a, b in zip(x, x[1:])):
+        order = 'strictly_decreasing'
+    elif all(a <= b for a, b in zip(x, x[1:])):
+        order = 'nondecreasing'
+    elif all(a >= b for a, b in zip(x, x[1:])):
+        order = 'nonincreasing'
+    else:
+        order = 'unordered'
+    assert actual['axis_order'] == order, 'Ordering describes original selected native x only, never SC intensity/file sorting or equal-width bins'
+    metadata = [column for column in raw['columns'] if column['name'] != 'used']
+    assert [column['name'] for column in actual['columns']] == [column['name'] for column in metadata]
+    for column, original in zip(actual['columns'], metadata, strict=True):
+        assert all(column[key] == value for key, value in original.items()), 'All original ordered units/quantity/availability/currentness/length fields survive outgoing projection'
+        count_keys = ('finite', 'missing', 'nan', 'positive_infinity', 'negative_infinity')
+        assert all(_original_inspection_integer(column[key]) for key in count_keys) \
+            and sum(column[key] for key in count_keys) == len(rows)
+        values = [row.get(column['name']) for row in rows]
+        finite = [(row, value) for row, value in zip(rows, values, strict=True) if value is not None and math.isfinite(value)]
+        assert column['finite'] == len(finite)
+        if reference is not None:
+            if not original['available']:
+                classes = ['missing'] * len(rows)
+            else:
+                source = reference['original_inspection_cell_classes'][column['name']]
+                classes = [source[row['row']] for row in rows]
+            assert all(column[key] == classes.count(key) for key in count_keys), (
+                'Pre-null original engine cell classes distinguish NaN/Inf from missing, never infer classes from raw JSON null')
+        for endpoint, pair in [('first', (rows[0], values[0]) if rows else None),
+                               ('last', (rows[-1], values[-1]) if rows else None)]:
+            expected = None if pair is None or pair[1] is None else {'value': pair[1], 'row': pair[0]['row'], 'source_row': pair[0]['source_row']}
+            assert column[endpoint] == expected, 'Physical endpoints never silently advance to the first/last finite sample'
+        for field, chooser in [('minimum', min), ('maximum', max)]:
+            if finite:
+                target = chooser(value for _row, value in finite)
+                row = next(row for row, value in finite if value == target)
+                expected = {'value': target, 'row': row['row'], 'source_row': row['source_row']}
+            else:
+                expected = None
+            assert column[field] == expected, 'Finite extremum witnesses keep the earliest original native row and exact mapping'
+        if column['name'] == 'sigma':
+            assert column['sigma_quality'] == {'positive': sum(value > 0 for _row, value in finite),
+                'zero': sum(value == 0 for _row, value in finite), 'negative': sum(value < 0 for _row, value in finite)}
+        else:
+            assert column.get('sigma_quality') is None, 'Non-sigma columns do not invent a sigma-quality role'
+        if column['name'] in {'measured', 'sigma', 'calculated', 'background', 'residual'}:
+            _assert_original_inspection_moments(column['all_finite'], [value for _row, value in finite], 'all_finite', True,
+                empty=not rows, available=original['available'])
+            if bragg:
+                assert column['included_finite'] is None
+            else:
+                _assert_original_inspection_moments(column['included_finite'],
+                    [value for value, use in zip(values, included, strict=True) if use is True and value is not None and math.isfinite(value)],
+                    'known_included_finite', mask['current'] and mask['unknown'] == 0,
+                    empty=not rows, available=original['available'])
+        else:
+            assert column.get('all_finite') is None and column.get('included_finite') is None, 'Axes/HKL/geometrical columns do not invent signal moments'
+
+
+def _assert_original_inspection_summary(data, raw, partitions, *, reference=None, bragg=False):
+    assert data['view'] == 'summary' and 'rows' not in data
+    assert all(data[key] == value for key, value in raw.items() if key != 'rows'), 'Summary preserves all applicable original capture metadata, phases kept separate'
+    summary = data['summary']
+    assert set(summary) == {'schema', 'partitioning', 'requested_partitions', 'partitions', 'physical_components', 'overall', 'bins'}
+    assert summary['schema'] == 'edi.assistant.data-summary/1' and summary['partitioning'] == 'contiguous_native_rows'
+    assert _original_inspection_integer(summary['requested_partitions']) and _original_inspection_integer(summary['partitions'])
+    assert summary['requested_partitions'] == partitions and summary['partitions'] == min(partitions, raw['count'])
+    assert summary['physical_components'] == {'available': False, 'reason': 'not_exposed_by_this_inspection'}, (
+        'Descriptive summaries cannot fabricate Gaussian/Lorentz/total-width or physical validity evidence')
+    _assert_original_inspection_range(summary['overall'], raw, raw, reference=reference, bragg=bragg)
+    bins = summary['bins'];assert len(bins) == summary['partitions']
+    cursor = raw['start'];sizes = []
+    for item in bins:
+        assert item['start'] == cursor and item['count'] > 0 and item['end'] == item['start'] + item['count']
+        _assert_original_inspection_range(item, raw, item, reference=reference, bragg=bragg)
+        cursor = item['end'];sizes.append(item['count'])
+    assert cursor == raw['end'] and sum(sizes) == raw['count'] \
+        and (not sizes or max(sizes) - min(sizes) <= 1 and sizes == sorted(sizes, reverse=True)), (
+            'Bins form the exact balanced contiguous native partition, not sampled/empty/equal-x-width buckets')
+
+
+@pytest.mark.parametrize('kind', ['powder', 'single-crystal-cwl', 'single-crystal-tof'])
+def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and_archive(main_actor, tmp_path, kind):
+    actor = main_actor([[]])
+    folder = tmp_path / 'original-inspection-project'
+    original = ROOT / 'tests/fixtures/background_estimate/projects/hrpt' if kind == 'powder' else ROOT / 'docs/user/cli' / (
+        'sc-neut-cwl_tb2ti2o7-heidi_basic' if kind == 'single-crystal-cwl' else 'sc-neut-tof_taurine-unknown_basic') / 'project'
+    shutil.copytree(original, folder)
+    file_hashes = {str(path.relative_to(folder)): hashlib.sha256(path.read_bytes()).hexdigest() for path in folder.rglob('*') if path.is_file()}
+    assert actor.command('open', path=str(folder))['reply']['opened']
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    actor.connect();context = json.loads(actor.last['ui']['context'])
+    assert len(context['datasets']) == 1, 'The original fixture has one exact offered native dataset owner'
+    dataset = context['datasets'][0];identity = dataset['id'];total = dataset['axis']['count']
+    assert isinstance(total, int) and total > 8
+    assert 'rows' not in dataset and 'measured' not in dataset and 'calculated' not in dataset, 'Default original context still contains metadata rather than hidden whole curve arrays'
+    before = actor.command('save_readback_snapshot', inspection_reference=True)['reply']
+    before_model = json.loads(json.dumps(actor.last['ui']['project']))
+    calls = [tool_call('inspect_data', 'original-full-legacy', dataset_id=identity, start=0, count=total+31),
+        tool_call('inspect_data', 'original-explicit-slice', dataset_id=identity, start=1, count=8, view='rows'),
+        tool_call('inspect_data', 'original-compact-whole', dataset_id=identity, start=0, count=total+31, view='summary', partitions=7),
+        tool_call('inspect_data', 'original-bragg-full', dataset_id=identity, start=0, count=total+31, source='bragg'),
+        tool_call('inspect_data', 'original-bragg-summary', dataset_id=identity, start=0, count=total+31, source='bragg', view='summary', partitions=3),
+        tool_call('inspect_data', 'original-empty-summary', dataset_id=identity, start=total, count=0, view='summary', partitions=3),
+        tool_call('inspect_data', 'original-rows-after-summary', dataset_id=identity, start=1, count=8, view='rows')]
+    actor.configure_turns([calls]);actor.request('Inspect this exact current dataset without edits: retain the requested whole native rows, exact focused rows and the offered compact summaries; do not fit or save.')
+    _session_completed(actor, 1)
+    outcomes = {call['call_id']: _original_inspection_reply(actor, call['call_id'])['data'] for call in calls}
+    raw = outcomes['original-full-legacy'];explicit = outcomes['original-explicit-slice']
+    assert 'summary' not in raw and 'view' not in raw and len(raw['rows']) == total \
+        and raw['start'] == 0 and raw['end'] == total and raw['eof'], 'Legacy/default full access retains every source row with no decimation/new quota or summary fields'
+    assert explicit['rows'] == raw['rows'][1:9] and 'summary' not in explicit and 'view' not in explicit
+    assert explicit == outcomes['original-rows-after-summary'], 'Later explicit raw retrieval remains byte-meaning-equivalent after compact inspection'
+    assert raw['current'] is True and raw['publication'] == 'native', 'This positive current-computed fixture must really reach adopted native calculation, not a frame or empty stale curve'
+    reference = next(row for row in before['banks'] if row['id'] == identity) if kind == 'powder' else None
+    _assert_original_inspection_summary(outcomes['original-compact-whole'], raw, 7, reference=reference)
+    empty_raw = {**raw, 'rows': [], 'start': total, 'count': 0, 'end': total, 'eof': True}
+    _assert_original_inspection_summary(outcomes['original-empty-summary'], empty_raw, 3, reference=reference)
+    old_bragg = outcomes['original-bragg-full'];new_bragg = outcomes['original-bragg-summary']
+    assert new_bragg['view'] == 'summary' and 'summary' not in new_bragg and 'rows' not in new_bragg \
+        and len(new_bragg['phases']) == len(old_bragg['phases']), 'Bragg summaries remain per-phase, never one global measured-axis aggregate'
+    assert all(new_bragg[key] == value for key, value in old_bragg.items() if key != 'phases')
+    for phase, old_phase in zip(new_bragg['phases'], old_bragg['phases'], strict=True):
+        # Phase entries retain original metadata and get their OWN summary;
+        # top-level view belongs to the DataInspection envelope only.
+        _assert_original_inspection_summary({**phase, 'view': 'summary'}, old_phase, 3, bragg=True)
+    after = actor.command('save_readback_snapshot', inspection_reference=True)['reply']
+    assert actor.last['ui']['project'] == before_model and after['current_parameters'] == before['current_parameters'] \
+        and after['current_descriptors'] == before['current_descriptors'] and after['modified'] == before['modified'] \
+        and after['metadata_last_modified'] == before['metadata_last_modified'] and after['banks'] == before['banks'], (
+            'Actual summary/raw inspection changes no native values/free/dependence/calculation/publication/dirty/Undo or descriptor owner')
+    report = json.loads(qml(actor, 'Session.assistant.workReportDocument()'))
+    retained = {}
+    for call in calls:
+        matches = [item['row']['payload'] for item in report['history_evidence']
+                   if item.get('row', {}).get('payload', {}).get('tool') == 'inspect_data'
+                   and item['row']['payload'].get('id') == call['call_id']]
+        assert len(matches) == 1, 'Every real original call has one complete canonical backend outcome, not a trimmed/overwritten conversational surrogate'
+        assert json.loads(matches[0]['contentItems'][0]['text'])['data'] == outcomes[call['call_id']] \
+            and matches[0]['nativeOutcome']['data'] == outcomes[call['call_id']], (
+                'Actual outgoing projection keeps the declared summary/raw fields, while full retained backend call evidence remains accessible')
+        retained[call['call_id']] = matches[0]
+    assert len(retained['original-full-legacy']['nativeOutcome']['data']['rows']) == total
+    assert {str(path.relative_to(folder)): hashlib.sha256(path.read_bytes()).hexdigest() for path in folder.rglob('*') if path.is_file()} == file_hashes
+    assert not any(row.get('params', {}).get('tool') in {'set_parameters', 'set_free', 'run_fit', 'save_project'}
+                   for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())), 'Original read-only inspection never smuggles mutation/Fit/Save to make summary evidence current'
+    (actor.folder / 'original-compact-inspection-native-wire-report.json').write_text(json.dumps({
+        'kind': kind, 'dataset': dataset, 'before': before, 'outcomes': outcomes, 'after': after,
+        'retained_call_ids': sorted(retained), 'original_source_hashes': file_hashes,
+        'qualification': 'No provider/model-adherence/scientific acceptance; exact original raw access is reference, native classes precede JSON null. Actual async stale/edit/Undo/account retirement capture races remain separate original-owner gates.'}, indent=2)+'\n')
+
+
+def test_actual_compact_inspection_registration_and_current_guidance_are_delivered_once(main_actor):
+    actor = main_actor([[tool_call('inspect_project', 'original-summary-guidance-registration')]])
+    actor.command('create', name='original-summary-guidance')
+    specs = actor.command('tool_specs')['reply']['tools']
+    inspection = [tool for tool in specs if tool['name'] == 'inspect_data']
+    assert len(inspection) == 1
+    properties = inspection[0]['inputSchema']['properties']
+    assert set(properties['view']['enum']) == {'rows', 'summary'} and properties['partitions']['type'] == 'integer', (
+        'Only an actually registered same-tool summary capability may be advertised by current guidance')
+    embedded = actor.command('embedded_skills')['reply']
+    expected = {}
+    for declaration in embedded['index']['skills']:
+        body = (ROOT / 'data/assistant/skills' / declaration['path']).read_bytes()
+        assert hashlib.sha256(body).hexdigest() == declaration['sha256'], 'Actual compiled registration binds the original complete current skill bytes before delivery'
+        expected[declaration['id']] = body.decode()
+    actor.connect();_session_request_with_original_disclosure(actor, 'Inspect the current project without editing science or choosing a new refinement strategy.')
+    _session_completed(actor, 1)
+    starts = _session_wire(actor, 'thread/start')
+    assert len(starts) == 1, 'One original thread admission owns the actual offered tools and complete guidance'
+    params = starts[0]['params']
+    actual = [tool for tool in params['dynamicTools'] if tool['name'] == 'inspect_data']
+    assert actual == inspection, 'Actual stock registration/wire receives the same offered schema, not an undelivered backend-only feature'
+    instructions = params['developerInstructions']
+    assert instructions.startswith(_SHARED_CONTROL_REGRESSION_PIN) and instructions.count(_SHARED_CONTROL_REGRESSION_PIN) == 1
+    assert instructions.count(_SKILL_INTRO_REGRESSION_PIN) == 1
+    assert instructions.endswith(_SKILL_INTRO_REGRESSION_PIN + ''.join(expected[key] + '\n' for key in sorted(expected)))
+    assert all(instructions.count(body) == 1 for body in expected.values()), 'Every entire current original skill body survives once, including declared summary/category/user-scope/Undo guidance; this is delivery, not model adherence'
+    assert all(_SHARED_CONTROL_REGRESSION_PIN not in tool['description'] for tool in params['dynamicTools']), 'The global original control contract is not duplicated per tool'
+    (actor.folder / 'original-compact-inspection-guidance-delivery.json').write_text(json.dumps({
+        'actual_thread_start': starts[0], 'original_body_hashes': {key: hashlib.sha256(body.encode()).hexdigest() for key, body in expected.items()},
+        'qualification': 'Actual capability/full-body/once delivery only. Source-content correctness is independently reviewed; no English phrase heuristic or provider/model-adherence claim. Explicit combined flags/order and actual per-mode Undo remain original unchanged native gates.'}, indent=2)+'\n')

@@ -60,6 +60,7 @@ qt_add_qml_module(edi_app_module
         src/assistant_work_report.hpp src/assistant_work_report.cpp
         src/assistant_history.hpp src/assistant_history.cpp
         src/assistant_data.hpp
+        src/assistant_data_summary.hpp
         src/assistant_markdown.hpp src/assistant_markdown.cpp
         src/assistant_skill_import.hpp src/assistant_skill_import.cpp
         src/example_list_model.hpp src/example_list_model.cpp
