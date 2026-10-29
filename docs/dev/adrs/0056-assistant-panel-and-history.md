@@ -3884,3 +3884,31 @@ original cancel call. Its label area keeps the existing chat-visible suppression
 controls do not acquire a second QML state. Theme/selected/keyboard/accessibility
 and original Stop press-retention geometry remain. No runtime/rendered behavior,
 current-action equivalence or latency qualification follows from source alone.
+
+## View-only conversation recovery retains identity without approval
+
+FIRST capture_resume_checkpoint now retains the already verified original
+thread/account/project/workspace/backend scope for an authenticated durable
+view-only session as well as an approved session. The current disclosure and
+staged-skill identity must still match the original backend scope, with renewed
+receiver/input/account/thread/workspace proof after capture. share_approved is
+true only when the actual approved scope matches that same current scope. No
+approval, provider input or history-derived identity is manufactured.
+
+Ordinary transport failure can therefore preserve the original view-only
+checkpoint before clearing live execution. Existing same-account metadata/read/
+resume/policy checks own reconnect; fresh Send/native admissions still require
+genuine current disclosure approval. New/sign-out/matching Archive/unrelated
+project or scope replacement keep their original intentional retirement. This
+repairs a source-reachable lifecycle channel; neither an owner's blank-chat
+screenshot nor source inspection alone establishes its exclusive runtime cause
+or completed recovery qualification. No uncertain earlier action is replayed.
+
+Both stock skills/list and dedicated local skill registration now capture their
+original local scope role: matching verified resume uses login_scope, fresh
+preparation uses approved_scope. Inventory/path/bytes validation is unchanged.
+The original role, receiver/input and staged identity are renewed before and
+after publication. Registration never populates approved_scope; execution-time
+generic_skills_current and actual new Send/native admission remain approved-only.
+These complete source channels do not establish successful actual view/reconnect,
+stock advertisement or changed-scope behavior without independent execution.
