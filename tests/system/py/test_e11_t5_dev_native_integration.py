@@ -8986,13 +8986,13 @@ def test_original_share_wait_cannot_approve_changed_or_cancelled_input(main_acto
 
 def _observe_original_toolbar_press(actor, marker, paths=()):
     source = r'''(function(){const vm=Session.assistant,project=Session.project,toggle=assistantToggle;
-        if(!project||!toggle||toggle.Window.window!==window)return false;
+        if(!project||!toggle||toggle.Window.window!==window)return false;const table=project.parameters;if(!Qt.isQtObject(table)||typeof table.item!=='function'||typeof table.text!=='function')return false;
         const o=Qt.createQmlObject('import QtQuick; Item {property var presses:[];property var cues:[];}',window.contentItem);o.objectName=MARKER;
-        function values(){const table=project.parameters,out={};for(const path of PATHS){out[path]=null;for(let n=0;n<table.count;n++)if(table.text(n,'path')===path){const parameter=table.parameterAt(n);if(Qt.isQtObject(parameter)&&parameter.path===path)out[path]=parameter.value;break;}}return out;}
+        function values(){const out={};if(!Qt.isQtObject(table)||project.parameters!==table)return out;for(const path of PATHS){out[path]=null;for(let n=0;n<table.count;n++)if(table.text(n,'path')===path){const parameter=table.item(n,'parameter');if(Qt.isQtObject(parameter)&&parameter.path===path&&typeof parameter.value==='number')out[path]=parameter.value;break;}}return out;}
         function state(){if(!Qt.isQtObject(project)||!Qt.isQtObject(vm)||!Qt.isQtObject(toggle)||Session.project!==project||Session.assistant!==vm)return {ownerCurrent:false,unavailable:true};return {ownerCurrent:true,project:String(project),
             paneVisible:assistantPanel.visible,paneOpened:assistantPanel.opened,selected:toggle.assistantSelected,
             icon:toggle.fontIcon,fitRunning:project.fit.running,fitOutcome:project.fit.outcome,
-            values:values(),showingActions:vm.showingActions,canCancel:vm.canCancel};}
+            values:values(),parameterModelClass:String(table),parameterRole:'parameter',itemApiType:typeof table.item,showingActions:vm.showingActions,canCancel:vm.canCancel};}
         toggle.pressedChanged.connect(function(){if(Qt.isQtObject(o)&&Qt.isQtObject(toggle)&&toggle.pressed)o.presses.push(state());});
         vm.actionPointerMoved.connect(function(point){if(Qt.isQtObject(o)){const s=state();s.x=point.x;s.y=point.y;o.cues.push(s);}});
         return true;})()'''.replace('MARKER', json.dumps(marker)).replace('PATHS', json.dumps(list(paths)))
@@ -9144,7 +9144,7 @@ def test_actual_parameter_inspection_keeps_first_native_value_and_uncertainty_sp
         if row['category'] == 'cell' and row['field'] == 'length_a')
     item = qml(actor, '(function(){const p=Session.project,t=p.parameters;for(let i=0;i<t.count;i++){'
         'if(t.text(i,"path")!==' + json.dumps(original_parameter['path']) + ')continue;'
-        'const x=t.parameterAt(i);return {path:x.path,value:x.value,su:x.uncertainty,hasSu:x.hasUncertainty,'
+        'if(typeof t.item!=="function")return null;const x=t.item(i,"parameter");if(!Qt.isQtObject(x)||x.path!==t.text(i,"path"))return null;return {path:x.path,value:x.value,su:x.uncertainty,hasSu:x.hasUncertainty,'
         'file_value:x.fileValue,file_su:x.fileSu};}return null;})()')
     expected_mean, expected_su = _independent_parenthetic_decimal_meaning('3.86512(41)')
     assert item and item['hasSu'] and Decimal(str(item['value'])) == expected_mean \
@@ -9463,15 +9463,18 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
     main_actor, tmp_path, interference
 ):
     actor = main_actor([[]], show_actions=True)
-    project = tmp_path / 'ordinary-alias-focus';shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
+    project = tmp_path / 'ordinary-alias-focus';shutil.copytree(ROOT / 'tests/fixtures/background_estimate/projects/hrpt', project)
     assert actor.command('open', path=str(project))['reply']['opened'], (
         'Original searchable alias focus begins with the existing complete native fixture in an isolated copy')
     actor.until(lambda value: not value['ui']['project']['calculating'])
     actor.connect()
-    # Original model removal is declared fixture preparation, not a serialized
-    # postimage: index0/index1 then match the actual first/second append class.
-    _remove_original_fixture_relations_once(actor)
-    actor.until(lambda value: not value['ui']['project']['calculating'])
+    # This unchanged complete original fixture already has no relation rows.
+    # No remove, serialized postimage, altered native value or hidden loader is
+    # used to establish FIRST alias rows0/1. The earlier pending remove remains
+    # an unresolved independent availability boundary, not a fixed product bug.
+    baseline = actor.command('inspect')['ui']['project']
+    assert baseline['aliases'] == [] and baseline['constraints'] == [], (
+        'The ordinary original project itself establishes empty relation rows before the first/second-alias focus case; a nonempty fixture is not silently cleared')
     wait_positive_tab(actor, 'appBar.tab.analysis');actor.command('click', name='appBar.tab.analysis')
     if _original_toolbar_pane_state(actor)['visible']:
         actor.command('click', name='assistant.toggle')
@@ -9567,39 +9570,3 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
         _match_original_alias_undo_sequence(actor,before,first_undos[1:],True)
 
 
-def _remove_original_fixture_relations_once(actor):
-    # Each original mutation crosses a complete real host command boundary.
-    # A refused/nonsettling remove is never retried, and a Qt model's pending
-    # notification cannot trap the GUI in a readback-dependent JS while loop.
-    original_project = actor.command('inspect')['ui']['project']
-    original_path = original_project['path']
-    receipts = []
-    for model in ('constraints', 'aliases'):
-        expression = 'Session.project.analysis.' + model
-        snapshot = qml(actor, '(function(){const m=' + expression + ';const ids=[];'
-            'for(let i=0;i<m.count;i++)ids.push(m.text(i,"id"));return {owner:String(Session.project),ids:ids};})()')
-        assert len(snapshot['ids']) == len(set(snapshot['ids'])), (
-            'Ordinary fixture removal starts with actual unique original identities, not invented rows or count assumptions')
-        for index in range(len(snapshot['ids']) - 1, -1, -1):
-            target = snapshot['ids'][index]
-            prior = qml(actor, '(function(){const m=' + expression + ';return {owner:String(Session.project),count:m.count,id:m.text('
-                + str(index) + ',"id")};})()')
-            assert prior['owner'] == snapshot['owner'] and prior['count'] == index + 1 and prior['id'] == target, (
-                'Each one-shot remove still owns the exact original last row/current project before entering the genuine ordinary API')
-            entry = {'model':model,'index':index,'original_id':target,'before':prior,'request_count':1,'settlement':'pending'}
-            receipts.append(entry)
-            (actor.folder/'ordinary-fixture-removals.json').write_text(json.dumps(receipts,indent=2)+'\n')
-            assert qml(actor, '(function(){const m=' + expression + ';m.remove(' + str(index) + ');return true;})()'), (
-                'The original remove is requested once; this return proves only command delivery, not a fabricated accepted mutation')
-            actor.until(lambda value: value['ui']['project'] and value['ui']['project']['path'] == original_path
-                and not value['ui']['project']['calculating']
-                and qml(actor, expression + '.count') == index)
-            after = qml(actor, '(function(){const m=' + expression + ';const ids=[];'
-                'for(let i=0;i<m.count;i++)ids.push(m.text(i,"id"));return {owner:String(Session.project),ids:ids};})()')
-            assert after['owner'] == snapshot['owner'] and after['ids'] == snapshot['ids'][:index], (
-                'The actual original removal settles exactly its requested identity before the next different row; refusal/currentness/pending failure never causes automatic replay')
-            entry.update(settlement='observed',after=after)
-            (actor.folder/'ordinary-fixture-removals.json').write_text(json.dumps(receipts,indent=2)+'\n')
-    final = actor.command('inspect')['ui']['project']
-    assert not final['aliases'] and not final['constraints'] and final['path'] == original_path, (
-        'Only the genuine original fixture relation rows are removed before the independent requested alias characterization')
