@@ -1,0 +1,16 @@
+{
+  "source": "/home/andrewsazonov/.codex/attachments/5b70c004-1ea6-402b-aad5-e241c5ced17f/Pasted text.txt",
+  "sha256": "49717e4fb5457d1bf347e751f8820723b1de70eead7ef5ba91e35b3b6a4532c6",
+  "pre_parameter_ordinal": "122",
+  "pre_parameter_row_id": "00ae5b77-9e76-49ec-823d-d5588065e54f",
+  "initial_context_ordinal": "82",
+  "post_context_ordinal": "131",
+  "exact_capture": "All raw mean/SU/free values are original latest pre-Save list_parameters ordinal122, no fitted outputs are requested or regenerated. The input EDI parenthetic decimal preserves BOTH absolute mean/SU decimal meanings without rounding; native original Open must prove its actual loaded parameter readback before any Save.",
+  "topology_provenance": "Original earlier pre-Save context ordinal82 supplies same hrpt axis/profile/cutoff and background IDs/positions. Original POST-Save inspect131 supplies structure site metadata and alias/constraint topology. These are explicitly labelled post-Save facts; no immutable pre-Save relation snapshot is claimed where original report omitted it.",
+  "measurement": {
+    "path": "/home/andrewsazonov/Development/github.com/enhantica/relay/.worktrees/edi-ai-assistant-on-dev/tests/fixtures/background_estimate/meas-lbco-hrpt.xye",
+    "sha256": "70dba3f642b394f0e7e7802a8637e0e287164562671993ee0701b813c902e360",
+    "bytes": 83671
+  },
+  "limitations": "Independent testfixture reproduction, NOT exact original Mac directory/artifact and NOT an agent recipe/seed or complete scientific acceptance. Actual Open must match captured fields; if topology/SU/flags cannot faithfully load, Save entrance is UNREACHED. No original Session.lastError/raw disk was retained in owner reports, so original exclusive cause remains unknown."
+}

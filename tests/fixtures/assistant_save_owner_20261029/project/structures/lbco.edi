@@ -1,0 +1,23 @@
+data_lbco
+_edi.schema_version 3
+_cell.length_a 3.88037571780333600000(3665222790021926)
+_cell.length_b 3.88037571780333600000(3665222790021926)
+_cell.length_c 3.88037571780333600000(3665222790021926)
+_cell.angle_alpha 90
+_cell.angle_beta 90
+_cell.angle_gamma 90
+_space_group.name_h_m "P m -3 m"
+loop_
+_atom_site.id
+_atom_site.type_symbol
+_atom_site.fract_x
+_atom_site.fract_y
+_atom_site.fract_z
+_atom_site.wyckoff_letter
+_atom_site.occupancy
+_atom_site.adp_iso
+_atom_site.adp_type
+La La 0 0 0 a 0.5 0.403395342277274140(34780449730145165) Biso
+Ba Ba 0 0 0 a 0.5 0.403395342277274140(34780449730145165) Biso
+Co Co 0.5 0.5 0.5 b 1 0.22800177389775816(6369197487112903) Biso
+O O 0 0.5 0.5 c 1 1.35844782744714100(2566450524732622) Biso

@@ -6962,6 +6962,7 @@ def test_native_math_real_document_images_keep_source_and_every_original_copy_en
     (actor.folder / 'native-math-original-copy-entrances.json').write_text(json.dumps({
         'source': source, 'actual_document': document, 'actual_copy_entrances': copies,
         'frame': str(frame), 'baseline_semantic_acceptance': 'requires actual rendered-frame assessment; no baselineOffset-only success claim'}, indent=2))
+    _original_streamed_math_capacity_keeps_formatted_prefix_and_source(actor, document)
 
 
 def test_native_math_parser_errors_keep_exact_complete_readable_source(main_actor):
@@ -10271,3 +10272,124 @@ def _assert_original_question_callback_wire(actor, call_id, delivery):
                    and row['params']['item']['tool'] == 'request_user_input' for row in lifecycle), (
                        'The original public-item control remains explicit and distinct from builtin coverage')
     return original
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_current_save_retains_original_owner_error_rounded_model_graph_and_independent_disk(main_actor, tmp_path, show_actions):
+    fixture = ROOT / 'tests/fixtures/assistant_save_owner_20261029'
+    captured = json.loads((fixture / 'pre-save-parameters.json').read_text())
+    project = tmp_path / 'actual-owner-before-save'
+    shutil.copytree(fixture / 'project', project)
+    actor = main_actor([[tool_call('save_project', 'original-owner-save-once', destination='current')]],
+                       show_actions=show_actions)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'The independently captured actual pre-Save inputs must enter through ordinary original Open, never a synthesized passing receipt')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    qml(actor, 'Session.project.title="Original pending Save regression"')
+    assert qml(actor, 'Session.project.modified'), 'One ordinary metadata edit makes this genuine current owner unsaved before the single Save'
+    actor.connect()
+    before = actor.command('save_readback_snapshot')['reply']
+    current = {row['path']: row for row in before['current_parameters']}
+    assert set(current) == {row['path'] for row in captured} and all(
+        current[row['path']]['value'] == row['value'] and (current[row['path']]['uncertainty'] or 0) == row['uncertainty']
+        and current[row['path']]['free'] == row['free'] for row in captured), (
+            'Original Open must reproduce every exact retained pre-Save mean/SU/free field, including the constrained/symmetry flags; otherwise Save reproduction is unreached')
+    assert before['original_owner_current'] and before['banks'] and all(
+        row['native_current'] and row['graph_current'] and row['included_rows'] > 0
+        and row['included_native_finite'] == row['included_rows'] and row['graph_equals_native_calc']
+        and row['graph_axis_matches_native'] for row in before['banks']), (
+            'The reproduction begins with genuinely available current native calculated columns and the same graph owner, not a visible stale curve')
+    marker = 'e11.original-save-owner-errors'
+    assert qml(actor, r'''(function(){const session=Session,project=Session.project;
+        const o=Qt.createQmlObject('import QtQuick; Item {property var facts:[];}',window.contentItem);o.objectName=MARKER;
+        session.lastErrorChanged.connect(function(){if(Qt.isQtObject(o))o.facts.push({error:session.lastError,
+            current:Qt.isQtObject(project)&&Session===session&&Session.project===project,modified:Qt.isQtObject(project)?project.modified:null});});return true;})()'''.replace('MARKER', json.dumps(marker))), (
+                'The original Session lastError owner is observed before the one native Save can fail')
+    disk_before = _new_project_file_hashes(_new_project_scientific_bytes(project))
+    actor.request('Save this current project once; retain the original failure if it cannot be confirmed.')
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=show_actions)
+    response = actor.responses()[0]
+    # Read-only facts FIRST, even for uncertain/refused Save. No replay or recovery Save.
+    after = actor.command('save_readback_snapshot')['reply']
+    error_events = qml(actor, '(' + _scene_control_expression(marker) + ').facts')
+    facts = {'show_actions': show_actions, 'before': before, 'actual_response': response,
+             'after': after, 'original_session_error_events': error_events,
+             'disk_before': disk_before, 'disk_after': _new_project_file_hashes(_new_project_scientific_bytes(project)),
+             'no_retry': True, 'current_native_values_and_graph_are_observed_without_recalculation': True}
+    (actor.folder / 'original-save-error-model-graph-disk.json').write_text(json.dumps(facts, indent=2))
+    outcome = json.loads(response['result']['contentItems'][0]['text'])
+    facts['actual_outcome'] = outcome
+    (actor.folder / 'original-save-error-model-graph-disk.json').write_text(json.dumps(facts, indent=2))
+    assert len(actor.responses()) == 1 and after['original_owner_current'] and after['path'] == before['path'], (
+        'The exact settled current Save remains one original invocation/owner; uncertainty never grants a retry')
+    assert response['result']['success'] and outcome.get('saved') is True and outcome.get('committed') is True, (
+        'The original valid current-owner Save must actually confirm its write; failure evidence, rounded state, disk and lastError are already retained')
+    assert after['session_last_error'] == '' and not after['modified'] and after['disk_decoded'], (
+        'Confirmed ordinary Save has no retained original Session error, is clean and is independently readable from actual disk')
+    assert after['current_parameters'] == after['disk_decoded_parameters'], (
+        'The saved adopted means/SUs/free/dependence equal a separate original native load of literal disk inputs, not a writer echo')
+    assert all(row['native_current'] and row['graph_current'] and row['included_rows'] > 0
+               and row['included_native_finite'] == row['included_rows'] and row['graph_equals_native_calc']
+               and row['graph_axis_matches_native'] for row in after['banks']), (
+        'Current native calculated availability survives ordinary rounding/adoption and agrees with the actual immutable graph source, not just its visible trace')
+
+def _original_streamed_math_capacity_keeps_formatted_prefix_and_source(actor, baseline):
+    budget = baseline['image_budget_bytes']
+    original_sizes = [row['resource_bytes'] for row in baseline['images'] if not row['resource_null']]
+    assert budget > 0 and original_sizes and all(0 < size <= budget for size in original_sizes), (
+        'The original tiny native formula/resources establish actual admissible image bytes before the aggregate escape')
+    count = budget // min(original_sizes) + 2
+    formula = r'\[\boxed{\frac{a}{b}}\]'
+    chunk = '**Retained formatted prefix**\n\n' + formula + '\n\n'
+    release = actor.folder / 'release-original-math-stream'
+    actor.append_turn([{'call_id': 'original-formula-capacity-stream', 'message_stream': {
+        'chunk': chunk, 'count': count, 'hold_after_first': str(release)}}])
+    _session_configure(actor, final_text='The original streamed presentation observation is complete.')
+    actor.request('Present these retained ordinary formatted paragraphs and original valid formulas.')
+    observed = {}
+    def first_prefix(_value):
+        rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
+        matches = [row for row in rows if row['kind'] == 'assistant' and row['text'] == chunk]
+        if len(matches) != 1:
+            return False
+        row = matches[0]
+        snapshot = actor.command('markdown_probe', row_id=row['id'])['reply']
+        if not snapshot['reached']:
+            return False
+        observed.update({'row': row, 'document': snapshot})
+        return len(snapshot['images']) == 1 and not snapshot['images'][0]['resource_null']
+    try:
+        actor.until(first_prefix)
+        first = observed['document'];row = observed['row']
+        image = first['images'][0]
+        assert first['source'] == chunk and image['nontransparent'] and image['resource_bytes'] > 0 \
+            and any(fragment['bold'] and 'Retained formatted prefix' in fragment['text'] for fragment in first['formats']), (
+                'The SAME original live row first has genuine native math and parsed bold formatting before further stream deltas')
+        assert first['image_budget_bytes'] == budget and count * image['resource_bytes'] > budget \
+            and image['resource_bytes'] <= budget, (
+                'Actual same-row aligned bytes times original identical admissible occurrences cross the unchanged declared aggregate budget; otherwise this premise is unreached')
+        release.touch();actor.command('refresh_usage')
+        _session_completed(actor, 2)
+        final = actor.command('markdown_probe', row_id=row['id'], literal=formula)['reply']
+        source = chunk * count
+        (actor.folder / 'native-math-stream-capacity.json').write_text(json.dumps({
+            'count': count, 'unchanged_budget': budget, 'actual_per_aligned_image_bytes': image['resource_bytes'],
+            'attempted_aligned_bytes': count * image['resource_bytes'], 'before': first, 'after': final,
+            'original_source_sha256': hashlib.sha256(source.encode()).hexdigest(),
+            'optional_overlay_failure_entrance': 'not exercised; no allocation exception injected'}, indent=2))
+        assert final['reached'] and final['same_window'] and final['source'] == source, (
+            'All streamed source belongs to the original realized current row, not a replacement synthetic document')
+        assert any(fragment['bold'] and 'Retained formatted prefix' in fragment['text'] for fragment in final['formats']), (
+            'A later optional image admission failure cannot turn earlier unrelated bold Markdown into literal asterisks')
+        assert final['images'] and len(final['images']) < count and final['generated_image_bytes'] <= budget \
+            and all(not picture['resource_null'] and picture['selected_source'] == formula for picture in final['images']), (
+                'Earlier admitted formulas remain genuine resources while later budget-refused spans fall back locally, without raising the resource cap')
+        assert final['literal_copy']['found'] and final['literal_copy']['selected_source'] == formula \
+            and final['plain_text'].count(formula) == count - len(final['images']), (
+                'Every unrendered original span remains complete literal TeX; neither dropped terms nor internal tokens can stand in for fallback')
+        assert final['whole_source_copy'] == source and '\ufffc' not in final['whole_source_copy'], (
+            'The original whole-source copy path retains every exact original streamed byte even after the mixed image/literal presentation boundary')
+        frame = actor.folder / 'actual-native-math-capacity-prefix.png'
+        assert actor.command('capture_frame', path=str(frame))['reply']['saved'], 'The actual mixed native/literal current document frame is retained'
+    finally:
+        release.touch()

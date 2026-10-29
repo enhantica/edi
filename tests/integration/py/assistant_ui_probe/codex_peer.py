@@ -26,7 +26,7 @@ first_response_for_retry = {}
 calls = []
 turn_number = 0
 thread_number = 0
-cursor = {'position': 0, 'sequence': 0, 'pending_final': False, 'research': None}
+cursor = {'position': 0, 'sequence': 0, 'pending_final': False, 'research': None, 'message_stream': None}
 native_ids = {}
 emit_lock = threading.RLock()
 usage_notifications_delivered = False
@@ -302,6 +302,12 @@ def advance():
         binding = {'threadId': thread_id, 'turnId': turn_id}
         item = agent_message(call_id, '')
         notify('item/started', {**binding, 'item': item})
+        gate = stream.get('hold_after_first')
+        if gate:
+            assert len(chunks) > 1 and not cursor['message_stream']
+            notify('item/agentMessage/delta', {**binding, 'itemId': call_id, 'delta': chunks[0]})
+            cursor['message_stream'] = {'gate': gate, 'chunks': chunks, 'binding': binding, 'item': item}
+            return
         for chunk in chunks:
             notify('item/agentMessage/delta', {**binding, 'itemId': call_id, 'delta': chunk})
         notify('item/completed', {**binding, 'item': {**item, 'text': ''.join(chunks)}, 'completedAtMs': 1})
@@ -532,6 +538,14 @@ for line in sys.stdin:
             original = pending_archive
             pending_archive = None
             finish_native_archive(original)
+        held_stream = cursor['message_stream']
+        if held_stream and Path(held_stream['gate']).exists():
+            cursor['message_stream'] = None
+            binding, item, chunks = held_stream['binding'], held_stream['item'], held_stream['chunks']
+            for chunk in chunks[1:]:
+                notify('item/agentMessage/delta', {**binding, 'itemId': item['id'], 'delta': chunk})
+            notify('item/completed', {**binding, 'item': {**item, 'text': ''.join(chunks)}, 'completedAtMs': 1})
+            advance()
         if cursor['research'] and Path(cursor['research'][0]).exists():
             notify('item/completed', cursor['research'][1])
             cursor['research'] = None

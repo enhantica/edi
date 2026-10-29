@@ -8,6 +8,9 @@
 #include <QAbstractItemModel>
 #include <QMap>
 #include "assistant_markdown.hpp"
+#include "experiment_view_model.hpp"
+#include "edi/assistant_limits.hpp"
+#include <vector>
 #include <QAbstractTextDocumentLayout>
 #include <QTextTable>
 #include <QTextBlock>
@@ -1242,6 +1245,61 @@ int main(int argc,char** argv) {
             else if(op=="save_project_as") result={{"saved",observed->saveProjectAs(
                 QUrl::fromLocalFile(input["path"].toString()),input["zip"].toBool(),input["copy"].toBool())}};
             else if(op=="save") result={{"saved",observed->save()}};
+            else if(op=="save_readback_snapshot") {
+                QPointer<edi_app::ProjectViewModel> original=observed?observed->project():nullptr;
+                if(!original || original->path().isEmpty())throw std::runtime_error("original current owned project required for read-only Save facts");
+                const auto path=original->path();auto& model=*original->assistantProject();
+                auto parameters=[](edi::Project& source) {
+                    Array rows;
+                    for(const auto& entry:edi::parameter_entries(source)) {
+                        const auto& item=*entry.parameter;const auto uncertainty=item.uncertainty.get();
+                        rows.append(Object{{"path",QString::fromStdString(entry.path)},{"value",item.value.get()},
+                            {"uncertainty",uncertainty?QJsonValue(*uncertainty):QJsonValue()},
+                            {"free",item.free.get()},{"dependence",static_cast<int>(item.dependence)}});
+                    }
+                    return rows;
+                };
+                auto digest=[](const std::vector<double>& values) {
+                    Array data;for(const auto value:values)data.append(std::isfinite(value)?QJsonValue(value):QJsonValue());
+                    return QString::fromLatin1(QCryptographicHash::hash(QJsonDocument(data).toJson(QJsonDocument::Compact),QCryptographicHash::Sha256).toHex());
+                };
+                Array banks;
+                for(const auto& bank:model.experiments) {
+                    Object row{{"id",QString::fromStdString(bank->name.value())},{"native_current",bank->computed_current()},{"has_data",bool(bank->data)}};
+                    const edi_app::ExperimentViewModel* view=nullptr;
+                    for(auto* candidate:original->experimentModels())if(candidate && candidate->experiment()==bank.get())view=candidate;
+                    row["original_view_found"]=view!=nullptr;
+                    if(bank->data && view) {
+                        const auto& raw=bank->data->intensity_calc.values();const auto& status=bank->data->calc_status.values();
+                        const auto& graph=view->patternSource();const auto& axis=bank->data->axis();
+                        const std::vector<double> empty;const auto& chart=graph.calc?*graph.calc:empty;
+                        bool equal=raw.size()==chart.size();qsizetype included=0,available=0,chartAvailable=0;
+                        for(std::size_t i=0;i<raw.size();++i) {
+                            if(i<status.size() && status[i]=="incl") {++included;if(std::isfinite(raw[i]))++available;}
+                            if(i<chart.size() && !(raw[i]==chart[i] || (std::isnan(raw[i])&&std::isnan(chart[i]))))equal=false;
+                        }
+                        for(const auto value:chart)if(std::isfinite(value))++chartAvailable;
+                        row["axis_rows"]=static_cast<qint64>(axis.size());row["native_calc_rows"]=static_cast<qint64>(raw.size());
+                        row["included_rows"]=included;row["included_native_finite"]=available;row["graph_finite"]=chartAvailable;
+                        row["graph_current"]=graph.current;row["graph_rows"]=static_cast<qint64>(chart.size());
+                        row["graph_axis_matches_native"]=graph.x && *graph.x==axis;
+                        row["graph_equals_native_calc"]=equal;row["native_calc_sha256"]=digest(raw);row["graph_calc_sha256"]=digest(chart);
+                    }
+                    banks.append(row);
+                }
+                result={{"path",path},{"session_last_error",observed->lastError()},{"modified",original->modified()},
+                    {"calculating",original->calculating()},{"current_parameters",parameters(model)},{"banks",banks},
+                    {"readback_recalculates_or_adopts",false}};
+                try {
+                    Array warnings;
+                    auto disk=edi::load_project(path.toStdString(),[&](const std::string& message){warnings.append(QString::fromStdString(message));});
+                    result["disk_literal_parameters"]=parameters(disk);
+                    edi::complete_relations(disk); // FIRST normal dependent-value reader, on the local disk model ONLY.
+                    result["disk_relations_completed"]=true;
+                    result["disk_decoded_parameters"]=parameters(disk);result["disk_read_warnings"]=warnings;result["disk_decoded"]=true;
+                } catch(const std::exception& error) {result["disk_decoded"]=false;result["disk_read_error"]=QString::fromUtf8(error.what());}
+                result["original_owner_current"]=original && observed && observed->project()==original && original->path()==path;
+            }
             else if(op=="report_toggle") observed->project()->report()->setEmbedLibraries(!observed->project()->report()->embedLibraries());
             else if(op=="undo") observed->project()->undo();
             else if(op=="session_row_click") {
@@ -1393,11 +1451,12 @@ int main(int argc,char** argv) {
                         && QRectF(0,0,window->width(),window->height()).contains(center);
                     for(auto* parent=presentation->parentItem();parent;parent=parent->parentItem())
                         if(!parent->isVisible() || (parent->clip() && !QRectF(0,0,parent->width(),parent->height()).contains(parent->mapFromScene(center))))exposed=false;
-                    Array images,tables,anchors,blocks;
+                    Array images,tables,anchors,blocks,formats;quint64 generatedImageBytes=0;
                     for(auto block=document->begin();block.isValid();block=block.next())blocks.append(Object{{"position",block.position()},{"text",block.text()},
                         {"heading",block.blockFormat().headingLevel()},{"list_item",block.textList()!=nullptr},{"list_object",block.blockFormat().objectIndex()}});
                     for(auto block=document->begin();block.isValid();block=block.next())for(auto it=block.begin();!it.atEnd();++it) {
                         const auto fragment=it.fragment();if(!fragment.isValid())continue;
+                        formats.append(Object{{"text",fragment.text()},{"bold",fragment.charFormat().font().bold()},{"image",fragment.charFormat().isImageFormat()}});
                         if(fragment.charFormat().isAnchor())anchors.append(Object{{"href",fragment.charFormat().anchorHref()},{"text",fragment.text()},{"tooltip",fragment.charFormat().toolTip()}});
                         if(!fragment.charFormat().isImageFormat())continue;
                         const auto format=fragment.charFormat().toImageFormat();const auto resource=document->resource(QTextDocument::ImageResource,QUrl(format.name()));
@@ -1413,7 +1472,9 @@ int main(int argc,char** argv) {
                         const auto line=block.layout()?block.layout()->lineForTextPosition(fragment.position()-block.position()):QTextLine();
                         const auto baseline=line.isValid()?block.layout()->position().y()+line.y()+line.ascent():0;
                         const auto logical_height=format.height()>0?format.height():(image.devicePixelRatio()>0?image.height()/image.devicePixelRatio():0);
+                        generatedImageBytes+=static_cast<quint64>(image.sizeInBytes());
                         images.append(Object{{"position",fragment.position()},{"length",fragment.length()},{"name",format.name()},
+                            {"resource_bytes",static_cast<qint64>(image.sizeInBytes())},
                             {"width",format.width()},{"height",format.height()},{"resource_width",image.width()},{"resource_height",image.height()},
                             {"resource_dpr",image.devicePixelRatio()},{"resource_null",image.isNull()},{"nontransparent",nontransparent},
                             {"fixture_sized",fixture_sized},{"format_font_descent",font_descent},{"format_baseline_offset",format.baselineOffset()},
@@ -1446,6 +1507,8 @@ int main(int argc,char** argv) {
                     result={{"reached",true},{"row_id",identity},{"same_window",presentation->window()==window},{"center_exposed",exposed},
                         {"source",presentation->source()},{"literal_copy",literal_copy},{"plain_text",document->toPlainText()},{"whole_source_copy",presentation->selectedSource(0,std::max(0,document->characterCount()-1))},
                         {"markdown",presentation->markdown()},{"images",images},{"tables",tables},{"anchors",anchors},{"blocks",blocks},
+                        {"formats",formats},{"generated_image_bytes",static_cast<qint64>(generatedImageBytes)},
+                        {"image_budget_bytes",static_cast<qint64>(edi::assistant::Limits::ui_history_bytes)},
                         {"chat_color",color(original_row->property("chatBackgroundColor").value<QColor>())},
                         {"base_color",color(presentation->tableBaseColor())},{"alternate_color",color(presentation->tableShadeColor())},
                         {"border_color",color(presentation->tableBorderColor())},{"document_scene_x",presentation->mapToScene(QPointF()).x()},{"document_scene_y",presentation->mapToScene(QPointF()).y()},{"body_font_family",presentation->bodyFont().family()},
