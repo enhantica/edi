@@ -3794,3 +3794,27 @@ Review128 (hub `dbec92310dcf70cdf098e77f402cf0ac4868d774`) records an original A
 The same lookup now pins the original workflow Loader/item/project/window, qualifies the actual expected sidebar ancestry and uniqueness before usability, and exposes only that qualified candidate to the existing bounded refusal facts. Main admission reuses the original workflow-loading lifecycle where pending, then the FIRST control-layout owner performs one captured original sidebar-header/ancestor polish pass before measuring the same target. It does not recursively lay out unrelated child tables. The same owner is used on already-selected Main and after its genuine click; entry/window/page and exact ancestry are rechecked after each ordinary polish callback. This is pre-input layout settlement, not replay of a scientific edit or a new retry/poll loop.
 
 No checked/index/contentY/expanded property is forced, no time budget/sleep/limit is changed, and currentness/Stop/manual/uniqueness/clipping requirements remain. A still-unusable original target still refuses with bounded facts; no same-named successor is adopted. Original group post-click evidence remains a separate diagnostic, not an established collapse cause or claimed behavioral fix. Actual original control completion must qualify this source candidate; no whole-matrix or science pass follows from it.
+
+## Saved-session transport is separate from new-message sharing
+
+FIRST saved-session preparation and its existing resume checkpoint distinguish
+local account/thread/project/input readiness from permission to share fresh
+project information. Selecting a same-account retained conversation uses its
+original account check, project association and ordinary unsaved-work/Open path,
+then confirms the exact runtime thread and read-only policy. Selection alone
+requests neither another Share dialog nor a model turn, and sends no fresh
+project-context message.
+
+The checkpoint records whether outgoing disclosure approval was actually proved.
+A matching prior approval is retained; otherwise the captured local scope owns
+authentication, skill staging and `thread/resume` only, without populating
+`approved_scope`. FIRST new-message disclosure and native receipt admission still
+require the actual approved current scope. Broader or changed data is therefore
+not approved merely because the old conversation was viewed. Actual explicit
+Share remains the original approval entrance. Account changes, scope/currentness
+changes, New session, Cancel and uncertain-operation fences retain their existing
+effect; there is no replay, new session service or transcript-derived authority.
+
+Source changes require independent same-account selection, changed account/scope,
+first real send and transition qualification; no runtime result follows from this
+separation alone. Header New-session visibility is a separate owner change.

@@ -1742,7 +1742,7 @@ struct AssistantViewModel::State {
         QPointer<ProjectViewModel> project;
         std::shared_ptr<const DisclosureScope> disclosure;
         quint64 generation=0;
-        bool has_project=false,had_input=false,attempted=false;
+        bool has_project=false,had_input=false,attempted=false,share_approved=false;
     };
     std::optional<ResumeCheckpoint> resume_checkpoint;
     bool generic_durable=false,generic_resuming=false;
@@ -2023,7 +2023,7 @@ struct AssistantViewModel::State {
         // All input, disclosure and workspace I/O is complete while the old helper
         // is still viable. Only this final transfer commits its retirement.
         ResumeCheckpoint checkpoint{prepared->id,prepared->workspace.workspace,prepared->email,project,prepared->disclosure,
-            prepared->inputs->generation,bool(project),true,false};
+            prepared->inputs->generation,bool(project),true,false,prepared->approved};
         if(!prepared->installed)connect_project(project,prepared->inputs->generation,prepared->inputs->active);
         if(!session_preparation_current(*prepared))return;
         if(!generic_revoke_workspace(&proof,true) || !proof.retirement_current() || prepared->operation!=session_operation || session_selection_target!=prepared->id ||
@@ -2037,7 +2037,9 @@ struct AssistantViewModel::State {
         }
         disclosure_cache.reset();disclosure_raw.reset();
         prepared->disclosure->account=usage_epoch;
-        approved_scope=prepared->disclosure;backend_scope=prepared->disclosure;
+        approved_scope.reset();
+        if(prepared->approved)approved_scope=prepared->disclosure;
+        backend_scope=prepared->disclosure;
         generic_workspace=std::move(prepared->workspace.workspace);generic_skill_paths=std::move(prepared->workspace.skills);
         staged_skill_inventory=prepared->disclosure->skills;generic_skill_declarations=staged_skill_inventory->declarations;
         prepared->workspace.root->setAutoRemove(false);
@@ -2104,7 +2106,7 @@ struct AssistantViewModel::State {
         if(!session_preparation || !session_preparation_current(*session_preparation))throw std::runtime_error("The original prepared conversation changed before approval continued");
         const auto prepared=session_preparation;
         if(!prepared->cross_project || prepared->installed){commit_session_preparation();return;}
-        if(!prepared->approved || !prepared->original_open)return;
+        if(!prepared->original_open)return;
         const QPointer<AssistantViewModel> receiver(&owner);const auto operation=prepared->operation;const auto id=prepared->id;
         const auto association=saved_session(id).value("project").toObject();
         const auto source=association.value("location").toString();
@@ -2120,10 +2122,8 @@ struct AssistantViewModel::State {
     void offer_session_preparation() {
         if(!session_preparation || !session_preparation_current(*session_preparation))throw std::runtime_error("The original prepared conversation changed before selection continued");
         sessions_error=session_preparation->unavailable_inputs;
-        if(!session_preparation->approved) {
-            const auto proof=file_projection();const auto id=session_preparation->id;
-            emit owner.contextPreviewChanged();if(proof.input_current())emit owner.sessionConsentRequested(id);return;
-        }
+        // Selecting retained history is not a new disclosure or a model turn.
+        // Actual outgoing approval remains separate until a real new message.
         advance_session_preparation();
     }
     QString original_session_email(const QString& id,const Object& record) const {
@@ -2613,7 +2613,7 @@ struct AssistantViewModel::State {
                 generic_clear_pending || generic_context_pending || !same_disclosure(approved_scope,backend_scope) || !disclosure_approved())return;
             const auto email=generic_native.value("account").toObject().value("email").toString();
             if(email.isEmpty())return; // No invented account identity.
-            resume_checkpoint=ResumeCheckpoint{generic_thread,generic_workspace,email,project,approved_scope,generation,bool(project),generic_thread_has_input,false};
+            resume_checkpoint=ResumeCheckpoint{generic_thread,generic_workspace,email,project,approved_scope,generation,bool(project),generic_thread_has_input,false,true};
         }catch(...) {} // Recovery is optional; it cannot change the original actual failure.
     }
     void schedule_resume_connection() noexcept {
@@ -12289,15 +12289,18 @@ struct AssistantViewModel::State {
     void generic_prepare_workspace() {
         const auto original=file_projection();const auto current=current_disclosure();
         if(!original.input_current())throw std::runtime_error("The original skill preparation owner changed");
-        const auto approved=approved_scope;
-        if(!same_disclosure(approved,current))throw std::runtime_error("The approved skill inventory changed");
+        const auto scope_owner=[&]() -> std::shared_ptr<const DisclosureScope> {
+            return generic_resuming?std::shared_ptr<const DisclosureScope>(login_scope):approved_scope;
+        };
+        const auto scope=scope_owner();
+        if(!same_disclosure(scope,current))throw std::runtime_error("The original skill inventory changed");
         if(!generic_workspace.isEmpty()) {
-            if(!staged_skills_match(approved))throw std::runtime_error("The original staged inventory changed");return;
+            if(!staged_skills_match(scope))throw std::runtime_error("The original staged inventory changed");return;
         }
-        auto prepared=prepare_skill_workspace(approved->skills);
-        if(!original.input_current() || approved_scope!=approved || !same_disclosure(approved,current))throw std::runtime_error("The original skill preparation owner changed");
+        auto prepared=prepare_skill_workspace(scope->skills);
+        if(!original.input_current() || scope_owner()!=scope || !same_disclosure(scope,current))throw std::runtime_error("The original skill preparation owner changed");
         generic_workspace=std::move(prepared.workspace);generic_skill_paths=std::move(prepared.skills);
-        staged_skill_inventory=approved->skills;generic_skill_declarations=approved->skills->declarations;prepared.root->setAutoRemove(false);
+        staged_skill_inventory=scope->skills;generic_skill_declarations=scope->skills->declarations;prepared.root->setAutoRemove(false);
     }
     bool generic_revoke_workspace(FileProjection* continuation = nullptr, bool required = false) noexcept {
         FileProjection local;
@@ -12644,7 +12647,7 @@ struct AssistantViewModel::State {
             if(waiting.proof.input_current() && waiting.operation==session_operation && waiting.thread==generic_thread && session_selection_target==waiting.target && sessions_loading)
                 (void)session_request("thread/read",{{"threadId",waiting.target},{"includeTurns",false}},"select-read",waiting.target);
             else fail_session_operation(waiting.operation,waiting.target,QObject::tr("The original conversation selection changed while its account was being verified."));
-        } else if(session_preparation && session_preparation->approved && session_switch_idle()) {
+        } else if(session_preparation && session_switch_idle()) {
             if(session_preparation_current(*session_preparation))advance_session_preparation();
             else fail_session_operation(session_preparation->operation,session_preparation->id,QObject::tr("The project or inputs changed while the conversation was waiting for account confirmation."));
         }
@@ -12815,7 +12818,11 @@ struct AssistantViewModel::State {
         if (!same_disclosure(approval, actual)) throw std::runtime_error("The original sign-in disclosure changed");
 
         login_scope = std::make_shared<DisclosureScope>(*approval);
-        approved_scope = std::move(approval); consented_context.clear();
+        // Authentication/resume may use the captured local scope without granting
+        // permission to send new project data on this retained conversation.
+        approved_scope.reset();
+        if(!resume || resume_checkpoint->share_approved)approved_scope=std::move(approval);
+        consented_context.clear();
         generic_prepare_workspace();
         if(!projection.input_current())return;
         generic_catalog_bytes = 2;
@@ -12906,11 +12913,14 @@ struct AssistantViewModel::State {
         const auto publication = file_projection();
         const bool approved=disclosure_approved();
         if(!publication.input_current())return;
-        if (!approved || usage_read_epoch != usage_epoch)
-            throw std::runtime_error("The approved account/project disclosure changed during bootstrap");
+        const bool resume_only=generic_resuming && resume_checkpoint &&
+            !resume_checkpoint->share_approved && resume_identity_current();
+        if ((!approved && !resume_only) || usage_read_epoch != usage_epoch)
+            throw std::runtime_error("The original account/project scope changed during bootstrap");
         if (!select_from_catalog(generic_native.value("models").toArray(), true)) return;
         if (!publication.input_current()) return;
         bootstrap_scope = approved_scope;
+        if(generic_resuming)bootstrap_scope=login_scope;
         invalidate_policy();
         generic_settings_model=model; generic_settings_effort=effective_effort();
         if(!publication.input_current())return;
@@ -13404,9 +13414,12 @@ struct AssistantViewModel::State {
             reason_code = "THREAD_ROOTS"; // Preserve the existing following identity guard's diagnostic.
             const auto actual_scope=current_disclosure();
             if(!publication.input_current())return;
-            if (!same_disclosure(bootstrap_scope, actual_scope) || !same_disclosure(bootstrap_scope, approved_scope))
-                throw std::runtime_error("The original bootstrap disclosure scope changed");
             const bool resumed=method==QStringLiteral("thread/resume");
+            const bool resume_only=resumed && generic_resuming && resume_checkpoint &&
+                !resume_checkpoint->share_approved;
+            if (!same_disclosure(bootstrap_scope, actual_scope) ||
+                (!resume_only && !same_disclosure(bootstrap_scope, approved_scope)))
+                throw std::runtime_error("The original bootstrap disclosure scope changed");
             const auto actual_thread=generic_id(thread.value("id"));
             if(resumed && (!generic_resuming || !resume_checkpoint || actual_thread!=resume_checkpoint->thread || !resume_identity_current()))
                 throw std::runtime_error("The provider did not resume the original project session");
@@ -16263,11 +16276,10 @@ bool AssistantViewModel::prepareSessionProjectRestore(ProjectViewModel* target,c
         auto prepared=s->stage_session_preparation(id,target,record,s->original_session_email(id,record));
         if(!prepared || !proof.input_current() || s->account_confirmation_pending)return false;
         prepared->cross_project=true;prepared->original_open=commit;s->session_preparation=std::move(prepared);
-        if(s->session_preparation->approved)return true;
-        s->session_preparation_observation["stage"]="awaiting_project_consent_before_replacement";
-        emit contextPreviewChanged();
-        if(receiver && receiver->state_.get()==s && proof.input_current() && s->session_preparation && s->session_preparation->id==id)emit sessionConsentRequested(id);
-        return false;
+        // The user's original Open/unsaved-work choice owns local replacement.
+        // No fresh project context is sent by selecting the stored conversation.
+        s->session_preparation_observation["stage"]="prepared_original_project_restore";
+        return true;
     }catch(const std::exception& failure) {
         if(receiver && receiver->state_.get()==s && proof.input_current())s->fail_session_operation(operation,id,s->bounded_error(QString::fromUtf8(failure.what())));
         return false;
@@ -17952,7 +17964,7 @@ void AssistantViewModel::signIn() {
                 if(expectedEmail.isEmpty())throw std::runtime_error("The original managed account identity is unavailable; the conversation was not resumed");
                 state_->approved_scope=approval;state_->generic_prepare_workspace();
                 if(!publication.input_current())return;
-                state_->resume_checkpoint=State::ResumeCheckpoint{target,state_->generic_workspace,expectedEmail,state_->project,approval,state_->generation,bool(state_->project),true,false};
+                state_->resume_checkpoint=State::ResumeCheckpoint{target,state_->generic_workspace,expectedEmail,state_->project,approval,state_->generation,bool(state_->project),true,false,true};
             }
             state_->generic_sign_in(std::move(approval), publication);
         } catch (...) { if (publication.input_current() && receiver && state_->generation == binding) state_->generic_fail(tr("The approved account/project scope could not be prepared safely.")); }
