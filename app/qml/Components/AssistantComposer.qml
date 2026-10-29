@@ -921,6 +921,9 @@ Rectangle {
                     border.width: 0
                     implicitWidth: composer.actionSize
                     implicitHeight: implicitWidth
+                    width: AppSizes.assistantIndicatorExtent
+                    height: width
+                    anchors.centerIn: parent
                     radius: width * 0.5
                     color: !stopButton.enabled ? composer.actionBackground
                         : stopButton.hovered || stopButton.down || stopButton.visualFocus ? EaStyle.Colors.themeAccent

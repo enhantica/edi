@@ -10614,3 +10614,59 @@ def test_original_save_second_replacement_failure_publishes_retained_adopted_sta
         (row['native_current'] and row['graph_current'] and row['graph_equals_native_calc'])
         or (not row['native_current'] and not row['graph_current']) for row in after['banks']), (
             'Failure does not refit/recalculate to hide stale columns: actual chart currentness agrees with the retained native calculation authority')
+
+@pytest.mark.parametrize('requested_dpr', [1, 2], ids=['dpr1', 'dpr2'])
+def test_original_owner_normal_math_reply_renders_every_formula_and_table_at_actual_dpr(main_actor, monkeypatch, requested_dpr):
+    # The original host process must be born at the requested DPR; this cannot
+    # be changed on an already constructed QGuiApplication/document.
+    monkeypatch.setenv('QT_SCALE_FACTOR', str(requested_dpr))
+    fixture = ROOT / 'tests/fixtures/assistant_math_owner_20261029'
+    source = (fixture / 'owner186-reply.txt').read_text()
+    provenance = json.loads((fixture / 'PROVENANCE.json').read_text())
+    expected = json.loads((fixture / 'owner186-expected.json').read_text())
+    assert hashlib.sha256(source.encode()).hexdigest() == provenance['source_sha256']
+    spans = expected['formula_spans_in_source_order']
+    cursor = 0
+    for span in spans:
+        assert source.count(span) == 1, 'Every independently authored formula span belongs once to the exact original reply'
+        cursor = source.index(span, cursor) + len(span)
+    actor, row, document = _genuine_math_message(main_actor, source)
+    frame = actor.folder / ('owner-normal-math-dpr' + str(requested_dpr) + '.png')
+    assert actor.command('capture_frame', path=str(frame))['reply']['saved']
+    evidence = {'requested_dpr': requested_dpr, 'source_sha256': provenance['source_sha256'],
+        'expected_original_formula_spans': spans, 'actual_document': document,
+        'actual_frame': str(frame), 'actual_environment': actor.last['ui'].get('environment', {}),
+        'dpr_qualification': 'Requested QT_SCALE_FACTOR is setup only; resource_dpr below must prove the actual native-image entrance.',
+        'copy_qualification': 'Actual original whole-source and per-image selectedSource entrances; the separate existing public/keyboard/Linux-primary physical-copy baseline remains unchanged.',
+        'list_qualification': 'This exact original reply has no list or heading. Separate existing real list/heading Markdown cases are retained, not claimed exercised here.'}
+    (actor.folder / 'owner-normal-math-dpr-evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2)+'\n')
+    assert document['reached'] and document['same_window'] and document['source'] == source
+    assert document['images'] and all(image['resource_dpr'] == requested_dpr for image in document['images']), (
+        'Actual native resource DPR must reach the requested entrance; environment configuration alone is not DPR proof')
+    assert [image['selected_source'] for image in document['images']] == spans, (
+        'Every exact original inline/display/table formula appears natively once in source order; partial count, duplicate, omitted or substituted formula cannot qualify the normal reply')
+    assert all(not image['resource_null'] and image['nontransparent'] and image['resource_width'] > 0
+               and image['resource_height'] > 0 for image in document['images']), (
+        'Every original eligible expression has a genuine nonempty native resource')
+    assert document['whole_source_copy'] == source and '\ufffc' not in document['whole_source_copy'], (
+        'Whole original copy remains byte-exact source, including all delimiters/table/reference and Unicode, never internal object placeholders')
+    assert all(delimiter not in document['plain_text'] for delimiter in (r'\(', r'\)', r'\[', r'\]')), (
+        'This normal reply cannot leave eligible formula delimiters in visible literal fallback')
+    assert len(document['tables']) == 1 and document['tables'][0]['rows'] == expected['table_rows'] \
+        and document['tables'][0]['columns'] == expected['table_columns'], (
+            'All original coefficient entries remain in the one real six-by-two Markdown table')
+    blocks = [block['text'] for block in document['blocks']]
+    first = blocks.index('Coefficient')
+    cells = expected['table_cell_plain_text_in_order']
+    assert blocks[first:first+len(cells)] == cells, (
+        'The original table keeps both headers, each native coefficient/value cell and its exact degree units in their original order')
+    assert sum(block['list_item'] for block in document['blocks']) == expected['original_markdown_list_items'] \
+        and sum(block['heading'] > 0 for block in document['blocks']) == expected['original_markdown_headings'], (
+            'Display insertion cannot manufacture list/heading roles absent from the original reply')
+    for literal in expected['bold_text']:
+        assert any(fragment['bold'] and literal in fragment['text'] for fragment in document['formats']), (
+            'Unrelated original human bold formatting survives every normal-message formula insertion')
+    assert any(anchor['href'] == expected['reference_href'] for anchor in document['anchors']), (
+        'The original standard-TCH reference remains the actual Markdown link destination')
+    assert document['generated_image_bytes'] <= document['image_budget_bytes'], (
+        'Ordinary all-native rendering must fit the unchanged real resource budget; no cap increase is a test repair')

@@ -3992,3 +3992,37 @@ existing visibility. No lifecycle latch, cancellation, reply, scientific effect
 or restoration policy is cleared merely to hide a control. The source explains
 an idle disabled Stop retained by this path; actual owner screenshot identity and
 full rendered idle/active/press qualification remain separate evidence.
+
+## Tight standalone display-math resources
+
+The exact owner186 reply at actual DPR2 on app36/source5f3c reached the original
+aggregate generated-image budget: thirteen images used2096592 of2097152 bytes,
+leaving nine later inline delimiters literal (root-owned diagnostics
+app36-owner-table-dpr2/RESULT.json and DOCUMENT.json). This is a reached ordinary
+message capacity failure, not a parser, coefficient or scientific-data repair.
+
+FIRST AssistantMarkdown now centers an exact standalone display token through
+its SAME original QTextBlockFormat and installs a tight baseline-padded native
+image. Only horizontal alignment changes after successful image admission;
+paragraph/list/heading/quote/table-cell identity and every other block property
+remain. Mixed-content or whitespace-bearing blocks retain the existing full-line
+canvas and soft-boundary path. No paragraph, spacer object or copy token is added.
+
+Original parser/error eligibility, measured baseline/DPR scaling, authored-image
+stripping, passive resource denial, aggregate/per-image bounds, local fallback,
+original source/selection copying and receiver/document/revision ownership remain.
+The budget is unchanged; larger valid messages can still reach its honest local
+fallback. Source alone does not establish repaired rendered output, optical
+placement, streaming/copy or table/list qualification; those remain actual checks.
+
+## Stop painted body and unchanged interaction circle
+
+FIRST composer and status Stop retain their original implicit/hit diameter and
+original glyph sizes. Only their centered Rectangle paint uses the existing
+assistantIndicatorExtent: the eye circle's inner diameter after its original
+border. Stop's border remains zero and fill/hover/disabled/contrast colors remain;
+there was no extra inherited outline to remove. Eye geometry/border, working
+full-rotation bounds and original mode/Stop/press ownership are unchanged. This
+addresses outer solid fill versus inner-circle apparent size, not control behavior
+or an elected status grouping design. Actual theme/hover/focus/disabled/rotation
+optical qualification remains required; source dimensions do not prove appearance.

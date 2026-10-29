@@ -717,6 +717,9 @@ void AssistantMarkdown::render() noexcept {
             auto slot=document->find(span.token);if(slot.isNull())continue;
             try {
             const auto originalFormat=slot.charFormat();const auto blockFormat=slot.blockFormat();
+            // Only an exact standalone token owns its whole original block.
+            // Mixed content/whitespace keeps the existing soft-line canvas path.
+            const bool centeredBlock=span.display && slot.block().text()==span.token;
             const bool code=originalFormat.fontFixedPitch() || blockFormat.hasProperty(QTextFormat::BlockCodeLanguage) || blockFormat.hasProperty(QTextFormat::BlockCodeFence);
             const auto picture=span.formula.isEmpty() || code?PassiveDocument::Picture{}:passive->picture(span.formula,document->defaultFont(),text_color_.isValid()?text_color_:QColor(Qt::black),dpr);
             if(!current())return;
@@ -742,7 +745,7 @@ void AssistantMarkdown::render() noexcept {
                 // Qt Quick ImageObject uses imageHeight - FORMAT font descent.
                 // Pad/paint the image so that this supported baseline is the actual
                 // measured formula baseline, including width scaling and DPR rounding.
-                const auto width=std::ceil((span.display?available:logical.width()*scale)*dpr),height=std::ceil((logical.height()*scale+fontDescent-descent)*dpr);
+                const auto width=std::ceil((span.display && !centeredBlock?available:logical.width()*scale)*dpr),height=std::ceil((logical.height()*scale+fontDescent-descent)*dpr);
                 if(!std::isfinite(width) || !std::isfinite(height) || width<=0 || height<=0 ||
                     width>std::numeric_limits<int>::max() || height>std::numeric_limits<int>::max() || width*height*4>edi::assistant::Limits::ui_history_bytes) {
                     slot.insertText(span.literal,originalFormat);continue;
@@ -752,7 +755,7 @@ void AssistantMarkdown::render() noexcept {
                 aligned.setDevicePixelRatio(dpr);aligned.fill(Qt::transparent);
                 const auto size=aligned.deviceIndependentSize();const auto top=size.height()-fontDescent-(logical.height()-picture.descent)*scale;
                 QPainter painter(&aligned);painter.setRenderHint(QPainter::SmoothPixmapTransform);
-                painter.drawImage(QRectF(span.display?(size.width()-logical.width()*scale)/2:0,top,logical.width()*scale,logical.height()*scale),picture.image);painter.end();
+                painter.drawImage(QRectF(span.display && !centeredBlock?(size.width()-logical.width()*scale)/2:0,top,logical.width()*scale,logical.height()*scale),picture.image);painter.end();
                 const auto resource=passive->install(aligned);
                 if(resource.isEmpty()){slot.insertText(span.literal,originalFormat);continue;}
                 QTextImageFormat image;image.merge(originalFormat);image.setFont(placementFont);image.setName(resource.toString());
@@ -761,7 +764,13 @@ void AssistantMarkdown::render() noexcept {
                 image.setVerticalAlignment(QTextCharFormat::AlignBaseline);
                 const auto imagePosition=slot.selectionStart();slot.insertImage(image);
                 if(!current())return;
-                if(span.display) {
+                if(centeredBlock) {
+                    // Keep this same paragraph/list item/cell/quote and all its
+                    // other properties. Qt centers the tight image without a
+                    // full-line transparent raster or extra source-copy objects.
+                    auto centered=blockFormat;centered.setAlignment(Qt::AlignHCenter);
+                    slot.setBlockFormat(centered);if(!current())return;
+                } else if(span.display) {
                     // Soft line boundaries preserve ONE original paragraph/list
                     // item/heading/cell/quote. Centering is inside the image's
                     // original line-width canvas, not cloned semantic blocks.

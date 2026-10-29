@@ -1,0 +1,12 @@
+{
+  "original_input": "/home/andrewsazonov/Development/github.com/enhantica/relay/.worktrees/edi-ai-assistant-on-dev/build/assistant-dev/diagnostics/app36-owner-table-dpr2/actor/peer.json",
+  "original_input_sha256": "b685eea4e8a96e6033bf5d4d0cab449b21b688cb48852051ef0959a59e97ec46",
+  "original_result": "/home/andrewsazonov/Development/github.com/enhantica/relay/.worktrees/edi-ai-assistant-on-dev/build/assistant-dev/diagnostics/app36-owner-table-dpr2/RESULT.json",
+  "original_result_sha256": "1856ce4f7003b605a1816a0ad68f59a750f317c2730a7d96cc31c0fd9092be5e",
+  "source_sha256": "6ce20be5d5571b16f187598972e548aa08ab1da68f23003036126c83175ad8eb",
+  "original_observed_source_commit": "5f3ce698f2b698089a8cb60e3b9dfd32a0fdd0c2",
+  "source_capture": "Byte-exact original normal reply from peer final_text. No live instruction, fitted seed, scientific input/model or output-generated expected rendering.",
+  "expectation_basis": "Owner requires every eligible formula of this ordinary reply natively rendered, including its coefficient table, at DPR1 and2. The 22 explicit formula literals and original Markdown roles come from source, not the observed 13-image partial result or a copied formatter.",
+  "prior_result_qualification": "Root observed DPR2 partial rendering and retained raw facts; this is not a new author runtime or an expected passing golden.",
+  "mathematics_qualification": "These source formulas/numeric explanatory text are a display fixture, not validation or a refinement recipe."
+}
