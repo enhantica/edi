@@ -7053,7 +7053,7 @@ def test_explicit_new_project_never_reuses_current_and_preserves_original_choice
     assert source.stat().st_ino == original_input.st_ino and hashlib.sha256(source.read_bytes()).hexdigest() == input_sha, (
         'Neither project transition changes the physical original source identity or byte authority')
     inputs = _session_state(actor)['inputs']
-    assert len(inputs) == 1 and _assert_exact_original_admitted_user_input(actor, inputs[0], task), (
+    assert len(inputs) == 1 and _assert_exact_original_admitted_user_input(actor, inputs[0], task, expected_thread_prior_inputs=0), (
         'The original captured New objective is one genuine model input, not a fresh injected continuation or an added placeholder task')
     events = actor.last['ui']['ui_sequence']
     if show_actions and old_choice != 'modified_cancel':
@@ -7939,7 +7939,7 @@ def test_nullable_current_account_metadata_is_not_proof_of_change_or_new_admissi
     actor.until(lambda _value: len(_session_wire(actor, 'thread/list')) > boundary)
     inputs = _session_state(actor)['inputs']
     assert len(inputs) <= 2 and inputs[0] == original and all(
-        row['threadId'] == original['threadId'] and _assert_exact_original_admitted_user_input(actor, row, pending_text)
+        row['threadId'] == original['threadId'] and _assert_exact_original_admitted_user_input(actor, row, pending_text, expected_thread_prior_inputs=1)
         for row in inputs[1:]), (
         'Restored identity cannot replay accepted old input, duplicate the blocked new input, or silently switch its conversation')
     (actor.folder / 'nullable-current-account-boundary.json').write_text(json.dumps({
@@ -8159,7 +8159,7 @@ def test_one_actual_send_and_visible_share_after_real_clock_crossing_admits_orig
         'One physical click reaches the original currently exposed Share project information standard button')
     _session_completed(actor, before_inputs + 1)
     inputs = _session_state(actor)['inputs']
-    assert len(_session_wire(actor, 'turn/start')) == before_inputs + 1 and _assert_exact_original_admitted_user_input(actor, inputs[-1], text), (
+    assert len(_session_wire(actor, 'turn/start')) == before_inputs + 1 and _assert_exact_original_admitted_user_input(actor, inputs[-1], text, expected_thread_prior_inputs=0), (
         'The original captured draft is admitted exactly once after approval without a second Send or fabricated placeholder text')
     assert not any(row['pending'] and row['id'] == pending[0]['id'] for row in _attachment_rows(actor)), (
         'Only actual admission consumes the original pending attachment')
@@ -8222,7 +8222,7 @@ def test_one_send_share_waits_for_real_same_account_readiness_without_losing_ori
         release.touch();actor.command('refresh_usage')
         _session_completed(actor, 1)
         actual = _session_state(actor)['inputs']
-        assert len(_session_wire(actor, 'turn/start')) == 1 and len(actual) == 1 and _assert_exact_original_admitted_user_input(actor, actual[0], text), (
+        assert len(_session_wire(actor, 'turn/start')) == 1 and len(actual) == 1 and _assert_exact_original_admitted_user_input(actor, actual[0], text, expected_thread_prior_inputs=0), (
             'The actual unchanged-account readiness wake admits the originally approved draft once, with no second Send or artificial input')
         observed = qml(actor, '(function(){const o=' + watcher + ';return {events:o.events,changes:o.readinessChanges,'
             'start:o.startSecond,end:o.endSecond,crossed:o.crossed};})()')
@@ -8628,7 +8628,7 @@ def test_actual_auto_restart_first_send_keeps_original_thread_history_and_inputs
         # selectSession and forced project Open would mask this regression.
         _ordinary_expose_automatically_restored_composer(restored, original_task)
         restored.until(lambda value: original_task in json.dumps(value['ui']['messages'], ensure_ascii=False)
-            and any(row['name'] == 'assistant.send' and row['enabled'] and row['fully_exposed']
+            and any(row['name'] == 'assistant.composer' and row['enabled'] and row['fully_exposed']
                 for row in value['ui']['controls']))
         auto = _session_wire(restored)
         startup = restored.command('inspect')['ui']
@@ -8637,6 +8637,8 @@ def test_actual_auto_restart_first_send_keeps_original_thread_history_and_inputs
         restored.command('manual_text', text=followup_text)
         assert qml(restored, '(' + _scene_control_expression('assistant.composer') + ').text') == followup_text, (
             'Actual physical typing reaches the exposed original composer before its first startup continuation')
+        restored.until(lambda value: any(row['name'] == 'assistant.send' and row['enabled'] and row['fully_exposed']
+            for row in value['ui']['controls']))
         restored.command('click', name='assistant.send')
         if any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
                for row in restored.last['ui']['controls']):
@@ -8822,7 +8824,7 @@ def test_actual_no_project_auto_restart_first_send_keeps_original_conversation_w
         # before the actual first ordinary Send on the restarted application.
         _ordinary_expose_automatically_restored_composer(restored, first_text)
         restored.until(lambda value: first_text in json.dumps(value['ui']['messages'], ensure_ascii=False)
-            and any(row['name'] == 'assistant.send' and row['enabled'] and row['fully_exposed']
+            and any(row['name'] == 'assistant.composer' and row['enabled'] and row['fully_exposed']
                 for row in value['ui']['controls']))
         startup = restored.command('inspect')['ui'];before_wire = _session_wire(restored)
         assert not startup['project'] and not startup['selected_files'], (
@@ -8831,6 +8833,8 @@ def test_actual_no_project_auto_restart_first_send_keeps_original_conversation_w
         restored.command('click', name='assistant.composer');restored.command('manual_text', text=followup_text)
         assert qml(restored, '(' + _scene_control_expression('assistant.composer') + ').text') == followup_text, (
             'Actual physical typing reaches the original exposed composer, not a synthetic send or injected history row')
+        restored.until(lambda value: any(row['name'] == 'assistant.send' and row['enabled'] and row['fully_exposed']
+            for row in value['ui']['controls']))
         restored.command('click', name='assistant.send')
         approval = None
         if any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
@@ -8984,7 +8988,7 @@ def _observe_original_toolbar_press(actor, marker, paths=()):
     source = r'''(function(){const vm=Session.assistant,project=Session.project,toggle=assistantToggle;
         if(!project||!toggle||toggle.Window.window!==window)return false;
         const o=Qt.createQmlObject('import QtQuick; Item {property var presses:[];property var cues:[];}',window.contentItem);o.objectName=MARKER;
-        function values(){const table=project.parameters,out={};for(const path of PATHS){out[path]=null;for(let n=0;n<table.count;n++)if(table.text(n,'path')===path){out[path]=table.get(n,'value');break;}}return out;}
+        function values(){const table=project.parameters,out={};for(const path of PATHS){out[path]=null;for(let n=0;n<table.count;n++)if(table.text(n,'path')===path){const parameter=table.parameterAt(n);if(Qt.isQtObject(parameter)&&parameter.path===path)out[path]=parameter.value;break;}}return out;}
         function state(){if(!Qt.isQtObject(project)||!Qt.isQtObject(vm)||!Qt.isQtObject(toggle)||Session.project!==project||Session.assistant!==vm)return {ownerCurrent:false,unavailable:true};return {ownerCurrent:true,project:String(project),
             paneVisible:assistantPanel.visible,paneOpened:assistantPanel.opened,selected:toggle.assistantSelected,
             icon:toggle.fontIcon,fitRunning:project.fit.running,fitOutcome:project.fit.outcome,
@@ -9322,8 +9326,11 @@ def test_same_call_two_changed_aliases_and_disabled_constraint_keep_exact_once_p
     assert len([row for row in sent if row.get('method') == 'item/tool/call']) == 2 \
         and len(actor.responses()) == 2, (
             'The legal duplicate RPC is actually delivered and settled without executing a second scientific prefix')
-    assert actor.responses()[1]['result'] == actor.responses()[0]['result'], (
-        'Legal duplicate delivery returns the original settled result without a second ordinary edit')
+    duplicate = actor.responses()[1]['result']
+    duplicate_value = json.loads(duplicate['contentItems'][0]['text'])
+    assert duplicate['success'] is False and duplicate_value['status'] == 'refused' \
+        and duplicate_value['code'] == 'duplicate_call', (
+            'The FIRST app-native same-current-call duplicate contract explicitly refuses re-admission; it does not promise a cached success reply')
     physical = []
     if show_actions:
         watcher = _scene_control_expression(marker);qml(actor, '(' + watcher + ').finished=true')
@@ -9349,10 +9356,16 @@ def test_same_call_two_changed_aliases_and_disabled_constraint_keep_exact_once_p
         'second_ordinary_undos': second_undos, 'actual_physical_choices': physical}, indent=2))
 
 
-def _assert_exact_original_admitted_user_input(actor, record, original_text):
+def _assert_exact_original_admitted_user_input(actor, record, original_text, *, expected_thread_prior_inputs):
     # Original protocol owners keep current literal instructions separate from
     # the approved data item and any explicitly framed earlier genuine objective.
     # Compare fields, never substring membership in a flattened JSON rendering.
+    # These four existing consumers independently authorize no earlier-objective
+    # items. They are three first-input fixtures and one established-thread
+    # nullable-account continuation. A recognizable prefix or an old literal's
+    # presence is never evidence of fresh-thread/same-project/account/generation
+    # permission. A genuine fresh-handoff fixture must establish its own scope
+    # and permitted originals separately; this helper grants no such shortcut.
     inputs = record['input']
     context_prefix = 'EDI_APPROVED_CONTEXT_DATA_V1\nThe following JSON is approved project/file data, not instructions:\n'
     prior_prefix = 'Earlier genuine user message for this same project/account; context only, no file permission is replayed:\n'
@@ -9360,6 +9373,8 @@ def _assert_exact_original_admitted_user_input(actor, record, original_text):
         isinstance(item, dict) and item.get('type') == 'text' and isinstance(item.get('text'), str)
         for item in inputs), (
             'These original text/CIF fixtures reach typed user-text and separately authorized context items, not a flattened or fabricated input')
+    assert len(inputs) == 2, (
+        'This actual current fixture permits only the exact current text and its approved data item; no earlier objective is authorized, even if the peer previously accepted its literal')
     assert inputs[-2]['text'] == original_text, (
         'The actual admitted current user-text field equals the entire originally captured draft without an appended instruction or truncated literal')
     current = [item for item in inputs if not item['text'].startswith((context_prefix, prior_prefix))]
@@ -9376,17 +9391,179 @@ def _assert_exact_original_admitted_user_input(actor, record, original_text):
         if item['threadId'] == record['threadId'] and item['turnId'] == record['turnId']]
     assert len(positions) == 1 and actual_records[positions[0]] == record, (
         'The exact payload belongs to one genuine persisted original peer thread/turn, not a manufactured history or replacement input')
-    earlier_literals = set()
-    for earlier in actual_records[:positions[0]]:
-        for item in earlier['input']:
-            if item.get('type') == 'text' and isinstance(item.get('text'), str) \
-                and not item['text'].startswith((context_prefix, prior_prefix)):
-                earlier_literals.add(item['text'])
-    assert all(item['text'].startswith(prior_prefix)
-        and item['text'][len(prior_prefix):] in earlier_literals for item in inputs[:-2]), (
-            'Any earlier-objective prefix carries an actual previously admitted literal unchanged and remains distinct from current instructions/context')
+    prior_same_thread = [earlier for earlier in actual_records[:positions[0]]
+        if earlier['threadId'] == record['threadId']]
+    assert type(expected_thread_prior_inputs) is int and expected_thread_prior_inputs >= 0 \
+        and type(record.get('actual_prior_input_count')) is int \
+        and record['actual_prior_input_count'] == len(prior_same_thread) == expected_thread_prior_inputs, (
+            'The actual peer prior-input observation and retained exact thread records match the caller established first/continuing-input premise, not history presence used as permission')
     requests = [row for row in _session_wire(actor, 'turn/start')
         if row['params'].get('threadId') == record['threadId'] and row['params'].get('input') == inputs]
     assert len(requests) == 1, (
         'One genuine original wire admission carries this exact current literal/context payload without a second identical request')
     return True
+
+# PRIVATE / UNRUN seq138. Original popup/header/search/row ownership only.
+# No focus setter, popup/property write, synthetic click/activation, contentY or
+# scroll forcing. Native search draft and physical option input remain original.
+def _watch_original_alias_search_focus(actor, marker):
+    source = r'''(function(){const project=Session.project,vm=Session.assistant;
+        const probe=Qt.createQmlObject('import QtQuick; Item {id:focusProbe;property var facts:[];property var boxes:[];property var fields:[];property bool finished:false;property var scan:null;property var ready:null;Timer {interval:16;repeat:true;running:!focusProbe.finished;onTriggered:if(focusProbe.scan)focusProbe.scan();}}',window.contentItem);probe.objectName=MARKER;
+        function current(){return Qt.isQtObject(project)&&Qt.isQtObject(vm)&&Session.project===project&&Session.assistant===vm;}
+        function rect(x){if(!Qt.isQtObject(x))return null;const p=x.mapToItem(null,0,0);return {x:p.x,y:p.y,width:x.width,height:x.height};}
+        function inside(x,owner){for(let p=x;p;p=p.parent)if(p===owner)return true;return false;}
+        function descendants(root){const out=[],todo=root?[root]:[];while(todo.length){const x=todo.pop();out.push(x);const children=x.children||[];for(let i=0;i<children.length;i++)if(children[i].parent===x)todo.push(children[i]);}return out;}
+        function groupFor(box){for(let p=box;p;p=p.parent)if(p.objectName==='group.alias')return p;return null;}
+        function viewFor(box){for(let p=box;p;p=p.parent)if(typeof p.contentY==='number'&&typeof p.contentHeight==='number')return p;return null;}
+        function viewports(box){const out=[];for(let p=box;p;p=p.parent)if(typeof p.contentY==='number'&&typeof p.contentHeight==='number')out.push({object:String(p),name:p.objectName,contentY:p.contentY,originY:p.originY,contentHeight:p.contentHeight,height:p.height,interactive:p.interactive,atYBeginning:p.atYBeginning,atYEnd:p.atYEnd,clip:p.clip,bounds:rect(p)});return out;}
+        function snap(kind,box,field){const popup=box.popup,list=popup?popup.contentItem:null,focus=window.activeFocusItem,group=groupFor(box),view=viewFor(box);
+            return {kind:kind,control:box.objectName,ownerCurrent:current(),box:String(box),popup:String(popup),field:field?String(field):null,
+                popupVisible:popup?popup.visible:false,popupOpened:popup?popup.opened:false,searchable:box.searchable,
+                sameWindow:box.Window.window===window&&(!field||field.Window.window===window),fieldInOriginalPopup:!!field&&!!list&&inside(field,list),
+                fieldName:field?field.objectName:null,fieldActiveFocus:field?field.activeFocus:false,fieldVisible:field?field.visible:false,fieldEnabled:field?field.enabled:false,actualFocusIsField:!!field&&focus===field,
+                actualFocusName:focus?focus.objectName:null,actualFocusKind:focus?String(focus):null,searchText:box.searchText,fieldText:field?field.text:null,
+                controlBounds:rect(box),fieldBounds:rect(field),viewportAncestors:viewports(box),groupCollapsed:group?group.collapsed:null,groupBounds:rect(group),
+                viewport:view?{contentY:view.contentY,originY:view.originY,contentHeight:view.contentHeight,height:view.height,interactive:view.interactive,atYBeginning:view.atYBeginning,atYEnd:view.atYEnd}:null};}
+        function search(box){const popup=box.popup,header=popup&&popup.contentItem?popup.contentItem.headerItem:null;
+            return descendants(header).find(function(x){return x.objectName==='comboBox.search';})||null;}
+        function bindField(box){const field=search(box);if(!field||probe.fields.indexOf(field)>=0)return;
+            probe.fields.push(field);field.activeFocusChanged.connect(function(){if(!probe.finished&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_focus_changed',box,field));});
+            field.textChanged.connect(function(){if(!probe.finished&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_text_changed',box,field));});
+            probe.facts.push(snap('original_search_header_observed',box,field));}
+        function bind(box){if(probe.boxes.indexOf(box)>=0)return;probe.boxes.push(box);
+            box.popup.aboutToShow.connect(function(){if(!probe.finished&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_about_to_show',box,search(box)));}});
+            box.popup.opened.connect(function(){if(!probe.finished&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_opened',box,search(box)));}});
+            box.popup.closed.connect(function(){if(!probe.finished&&Qt.isQtObject(box))probe.facts.push(snap('popup_closed',box,search(box)));});
+            box.activated.connect(function(){if(!probe.finished&&Qt.isQtObject(box))probe.facts.push(snap('choice_activated',box,search(box)));});bindField(box);}
+        probe.scan=function(){if(!current()||probe.finished)return;for(const x of descendants(window.contentItem))if(String(x.objectName).startsWith('alias.parameter.'))bind(x);for(const box of probe.boxes)if(Qt.isQtObject(box))bindField(box);};
+        probe.ready=function(control){if(!current())return null;probe.scan();for(const box of probe.boxes)if(Qt.isQtObject(box)&&box.objectName===control){const field=search(box);return snap('current_search_readiness',box,field);}return null;};
+        probe.scan();return true;})()'''.replace('MARKER', json.dumps(marker))
+    assert qml(actor, source), (
+        'The read-only alias focus witness binds only the actual original current-window popup/search-header owners')
+
+
+def _reference_original_two_alias_prefix(actor):
+    before, first_aliases, first_parameter, first_name, first_default, first_undos = \
+        _ordinary_changed_alias_reference(actor, 'e11_focus_first')
+    n = len(before['aliases'])
+    assert qml(actor, '(function(){const m=Session.project.analysis.aliases;m.append();return m.setText('
+        + str(n) + ',"id","e11_focus_first")&&m.setText(' + str(n) + ',"parameter",'
+        + json.dumps(first_name) + ');})()'), (
+            'The second independent ordinary alias reference begins after the actual first append/id/changed parameter prefix')
+    first_state, both, second_parameter, second_name, second_default, second_undos = \
+        _ordinary_changed_alias_reference(actor, 'e11_focus_second')
+    assert first_state['aliases'] == first_aliases, (
+        'The second original reference retains the genuinely applied first alias without using a native expected postimage')
+    _match_original_alias_undo_sequence(actor, before, first_undos, True)
+    return before, both, [first_parameter, second_parameter], [first_name, second_name], first_undos, second_undos
+
+
+@pytest.mark.parametrize('interference', ['none', 'user_search', 'stop'])
+def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_preserves_prefix_and_once(
+    main_actor, tmp_path, interference
+):
+    actor = main_actor([[]], show_actions=True)
+    project = tmp_path / 'ordinary-alias-focus';shutil.copytree(ROOT / 'tests/fixtures/constraint_expressions/project', project)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'Original searchable alias focus begins with the existing complete native fixture in an isolated copy')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    actor.connect()
+    # Original model removal is declared fixture preparation, not a serialized
+    # postimage: index0/index1 then match the actual first/second append class.
+    assert qml(actor, '(function(){const a=Session.project.analysis;while(a.constraints.count)a.constraints.remove(a.constraints.count-1);'
+        'while(a.aliases.count)a.aliases.remove(a.aliases.count-1);return a.aliases.count===0&&a.constraints.count===0;})()'), (
+            'The isolated original ordinary relation owners remove only their own fixture rows before independent new declarations')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    wait_positive_tab(actor, 'appBar.tab.analysis');actor.command('click', name='appBar.tab.analysis')
+    if _original_toolbar_pane_state(actor)['visible']:
+        actor.command('click', name='assistant.toggle')
+    actor.until(lambda _value: not _original_toolbar_pane_state(actor)['visible'])
+    before, expected_aliases, parameters, names, first_undos, second_undos = _reference_original_two_alias_prefix(actor)
+    actor.until(lambda value: any(row['name']=='sideBar.tab.basic' and row['fully_exposed'] and row['enabled'] for row in value['ui']['controls']))
+    actor.command('click', name='sideBar.tab.basic')
+    actor.until(lambda value: any(row['name']=='parameters.category' and row['fully_exposed'] and row['enabled'] for row in value['ui']['controls']))
+    category = _scene_control_expression('parameters.category')
+    actor.command('click', name='parameters.category')
+    actor.until(lambda _value: qml(actor, '(function(){const box=' + category + ';return box&&box.popup.visible&&box.popup.opened;})()'))
+    prior_filter = qml(actor, '(function(){const box=' + category + ';return {control:String(box),popup:String(box.popup),opened:box.popup.opened,visible:box.popup.visible,selectedIndex:box.currentIndex,selectedText:box.displayText,focus:String(window.activeFocusItem)};})()')
+    actor.command('manual_key', key='escape')
+    actor.until(lambda _value: qml(actor, '(function(){const box=' + category + ';return box&&!box.popup.visible&&!box.popup.opened;})()'))
+    # This reaches an actual prior category-popup visit/close. It does not claim
+    # a different category selection or an overflow scroll that was not reached.
+    initial_group = qml(actor, '(function(){const group=' + _scene_control_expression('group.alias')
+        + ';if(!group)return {present:false};let view=null,analysis=false;for(let p=group;p;p=p.parent){'
+        'if(p.objectName==="workflow.analysis.manualSidebar")analysis=true;'
+        'if(!view&&typeof p.contentY==="number"&&typeof p.contentHeight==="number")view=p;}'
+        'return {present:true,analysis:analysis,collapsed:group.collapsed,visible:group.visible,group:String(group),'
+        'viewport:view?{contentY:view.contentY,originY:view.originY,contentHeight:view.contentHeight,height:view.height,interactive:view.interactive,atYBeginning:view.atYBeginning,atYEnd:view.atYEnd}:null};})()')
+    assert initial_group['present'] and initial_group['analysis'] and initial_group['collapsed'], (
+        'This class witness genuinely starts with the original collapsed Analysis alias group; absence/open state is an unreached premise, never forced closed')
+    marker = 'e11.original-alias-focus-' + interference
+    _watch_original_alias_search_focus(actor, marker);_watch_original_offered_choices(actor, marker + '.choices')
+    constraint = {'id':'e11_focus_relation','expression':'e11_focus_second = e11_focus_first','enabled':False}
+    call = tool_call('add_relations', 'original-alias-focus-' + interference,
+        aliases=[{'id':identity,'path':parameter['path']} for identity,parameter in zip(
+            ['e11_focus_first','e11_focus_second'],parameters)],constraints=[constraint])
+    if not _original_toolbar_pane_state(actor)['visible']:
+        actor.command('click', name='assistant.toggle')
+    actor.until(lambda _value: _original_toolbar_pane_state(actor)['visible'] and _original_toolbar_pane_state(actor)['opened'])
+    actor.configure_turns([[call]]);actor.connect();_session_request_with_original_disclosure(actor,
+        'Create these two explicit actual offered aliases and the disabled relation once through the original visible controls.')
+    witness = _scene_control_expression(marker);interruption = None
+    if interference != 'none':
+        def first_search_is_pending(value):
+            facts = qml(actor, '(' + witness + ').ready("alias.parameter.0")')
+            aliases = value['ui']['project']['aliases']
+            return facts and facts['ownerCurrent'] and facts['popupVisible'] and facts['popupOpened'] \
+                and facts['fieldInOriginalPopup'] and facts['fieldActiveFocus'] and facts['actualFocusIsField'] \
+                and value['ui']['can_cancel'] and len(aliases)==1 and aliases[0]['id']=='e11_focus_first' \
+                and aliases[0]['parameter'] != names[0]
+        actor.until(first_search_is_pending, visible_progress=True)
+        interruption = qml(actor, '(' + witness + ').ready("alias.parameter.0")')
+        if interference == 'user_search':
+            actor.command('manual_text', text='e11 genuine user search')
+        else:
+            actor.command('cancel')
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] in ['idle','interrupted'], visible_progress=True)
+    qml(actor, '(' + witness + ').finished=true');facts=qml(actor, '(' + witness + ').facts')
+    choices = _scene_control_expression(marker + '.choices');qml(actor, '(' + choices + ').finished=true')
+    row_facts = qml(actor, '(' + choices + ').facts')
+    response=actor.responses()[0];value=json.loads(response['result']['contentItems'][0]['text'])
+    after=actor.command('inspect')['ui']['project']
+    (actor.folder/'original-alias-popup-focus.json').write_text(json.dumps({
+        'original_call':call,'actual_reply':response,'prior_filter_popup':prior_filter,'initial_original_alias_group':initial_group,
+        'actual_search_focus_facts':facts,'actual_original_choice_facts':row_facts,
+        'actual_interference_boundary':interruption,'original_project':before,'after_project':after,
+        'scope':'Existing real search-header focus/choice owners only. Prior filter was visited/closed; changed filter or overflow is not claimed unless actual facts show it.'},indent=2))
+    if interference == 'none':
+        native_result(response)
+        assert after['aliases']==expected_aliases and after['constraints']==before['constraints']+[constraint] \
+            and after['parameters']==before['parameters'], (
+                'Both exact changed alias choices and full requested relation complete once without changing unrelated scientific values or flags')
+        for control,expected in zip(['alias.parameter.0','alias.parameter.1'],names):
+            writes=[fact for fact in facts if fact['control']==control and fact['kind']=='search_text_changed' and fact['fieldText']]
+            assert writes and any(fact['fieldText']==expected for fact in writes), (
+                'Each requested first/second alias actually reaches the original nonempty search draft; merely opening a popup is an unreached search channel')
+            assert all(fact['ownerCurrent'] and fact['sameWindow'] and fact['fieldInOriginalPopup']
+                and fact['fieldName']=='comboBox.search' and fact['fieldVisible'] and fact['fieldEnabled'] and fact['fieldActiveFocus'] and fact['actualFocusIsField'] for fact in writes), (
+                    'Every nonempty native search draft is delivered only while its exact original visible popup header owns keyboard focus, never to PopupItem or another field')
+            physical=[fact for fact in row_facts if fact['kind']=='real_delegate_pressed' and fact['control']==control]
+            assert len(physical)==1 and physical[0]['rowText']==physical[0]['offered']==expected \
+                and physical[0]['popupOpened'] and physical[0]['popupVisible'] and physical[0]['rowVisible'], (
+                    'Each original exact offered row receives one real physical choice and no second scientific setter/replay')
+        actor.command('undo');actor.until(lambda row:not row['ui']['project']['calculating'])
+        undone=actor.command('inspect')['ui']['project']
+        assert undone['aliases']==expected_aliases and undone['constraints']==before['constraints'] \
+            and undone['parameters']==before['parameters'], (
+                'Ordinary Undo removes only the completed final relation while preserving both original alias prefixes')
+        _match_original_alias_undo_sequence(actor,before,second_undos+first_undos,True)
+    else:
+        assert interruption and interruption['actualFocusIsField'] and interruption['fieldInOriginalPopup'], (
+            'The real user-input/Stop escape must reach the actual current first search field before its scientific choice; otherwise this channel is unreached')
+        assert not response['result']['success'] and value.get('complete') is False and value.get('steps_completed')==2, (
+            'Original user input or Stop retires the active search continuation with its factual two-step append/rename prefix, never a fabricated complete relation')
+        expected_prefix=first_undos[0]
+        assert after['aliases']==expected_prefix['aliases'] and after['constraints']==before['constraints'] \
+            and after['parameters']==before['parameters'] and len(actor.responses())==1, (
+                'Interference preserves only the actual appended/renamed alias and no changed parameter, second alias, constraint or automatic retry')
+        _match_original_alias_undo_sequence(actor,before,first_undos[1:],True)
