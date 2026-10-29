@@ -269,6 +269,7 @@ EaComponents.ApplicationWindow {
                 if (!assistantToggle.enabled)
                     return;
                 const show = !assistantPanel.shown;
+                if (!show) Session.assistant.dismissChatReveal();
                 if (show && !Session.assistant.requestAssistantPane(assistantToggle))return;
                 if (show && window.assistantManualTakeover) {
                     window.assistantManualTakeoverProject = null;
@@ -581,7 +582,9 @@ EaComponents.ApplicationWindow {
         id: assistantPanel
         parent: assistantFallbackHost
         assistant: Session.assistant
-        shown: Preferences.assistantShown && (!Session.assistant.showingActions || window.assistantManualPane) && !window.assistantManualTakeover && window.assistantWorkflowPage !== null
+        shown: (Session.assistant.chatRevealRequested
+            || Preferences.assistantShown && (!Session.assistant.showingActions || window.assistantManualPane) && !window.assistantManualTakeover)
+            && window.assistantWorkflowPage !== null
         toggleControl: assistantToggle
         onAboutToHide: window.retireAssistantFocus()
         onOpened: focusComposer()

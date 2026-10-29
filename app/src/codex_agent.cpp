@@ -397,7 +397,7 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
         // start/error/started callback, including failed-to-start.
         if(release_owner_){process_birth_=scope;process_owner_alive_=true;}
         process->setProgram(executable);
-        process->setArguments({QStringLiteral("--listen"), QStringLiteral("stdio://"),
+        QStringList arguments{QStringLiteral("--listen"), QStringLiteral("stdio://"),
             QStringLiteral("-c"), QStringLiteral("sandbox_mode=\"read-only\""),
             QStringLiteral("-c"), QStringLiteral("approval_policy=\"never\""),
             QStringLiteral("-c"), QStringLiteral("features.shell_zsh_fork=false"),
@@ -408,7 +408,11 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             QStringLiteral("-c"), QStringLiteral("features.plugins=false"),
             QStringLiteral("-c"), QStringLiteral("features.remote_plugin=false"),
             QStringLiteral("-c"), QStringLiteral("features.multi_agent=false"),
-            QStringLiteral("-c"), QStringLiteral("orchestrator.mcp.enabled=false")});
+            QStringLiteral("-c"), QStringLiteral("orchestrator.mcp.enabled=false")};
+        if(policyPatch().isEmpty())arguments <<
+            QStringLiteral("-c") << QStringLiteral("features.default_mode_request_user_input=true") <<
+            QStringLiteral("-c") << QStringLiteral("tools.experimental_request_user_input.enabled=true");
+        process->setArguments(arguments);
         process->setWorkingDirectory(workspace);
         process->setProcessChannelMode(QProcess::SeparateChannels);
         // The runtime owns its ordinary profile and managed login. Never assign

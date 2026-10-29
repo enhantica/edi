@@ -57,6 +57,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(edi_app::RowTableModel* skills READ skills CONSTANT)
     Q_PROPERTY(QString selectedSkill READ selectedSkill NOTIFY selectedSkillChanged)
     Q_PROPERTY(QVariantMap pendingPlan READ pendingPlan NOTIFY pendingPlanChanged)
+    Q_PROPERTY(bool chatRevealRequested READ chatRevealRequested NOTIFY chatRevealRequestedChanged)
     Q_PROPERTY(QVariantMap pendingQuestion READ pendingQuestion NOTIFY pendingQuestionChanged)
     Q_PROPERTY(QString activeJobId READ activeJobId NOTIFY activeJobIdChanged)
     Q_PROPERTY(bool canCancel READ canCancel NOTIFY canCancelChanged)
@@ -113,6 +114,8 @@ class AssistantViewModel : public QObject {
     RowTableModel* skills() const;
     QString selectedSkill() const;
     QVariantMap pendingPlan() const;
+    bool chatRevealRequested() const;
+    Q_INVOKABLE void dismissChatReveal();
     QVariantMap pendingQuestion() const;
     QString activeJobId() const;
     bool canCancel() const;
@@ -211,6 +214,7 @@ class AssistantViewModel : public QObject {
     void selectedEffortChanged();
     void availableEffortsChanged();
     void pendingPlanChanged();
+    void chatRevealRequestedChanged();
     void pendingQuestionChanged();
     void activeJobIdChanged();
     void canCancelChanged();

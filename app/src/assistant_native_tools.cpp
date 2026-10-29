@@ -52,7 +52,9 @@ QJsonArray native_tool_specs(bool include_profiles) {
         {{"dataset_id",text},{"start",Object{{"type","integer"},{"minimum",0}}},{"count",Object{{"type","integer"},{"minimum",0}}},
          {"source",Object{{"enum",Array{"data","bragg"}}}}},{"dataset_id","start","count"});
     add("list_parameters", "Read actual native parameter paths/values/free flags, dependence and native refinable/fittable/fit_reason. These eligibility facts govern freeing a flag, not whether a supported independent numeric setup value can be set. Optional file_value/file_su are the already-published current native file spelling; when file_su is present, quote that pair verbatim as value ± SU instead of inventing parenthetic digits. Raw value/uncertainty remain available; null file_su means that spelling carries no SU, not zero. No mutation.");
-    add("diagnostics", "Read actual available native physical diagnostics plus original app native_state.calculations for each exact dataset: published error/stale and calculated-column count/availability. Published old errors and idle are not current success; calculated availability is not legend/series visibility. No mutation.");
+    add("diagnostics", "Read actual available native physical diagnostics plus original app native_state.calculations for each exact dataset: published error/stale and calculated-column count/availability. Published old errors and idle are not current success; calculated availability is not legend/series visibility. Optional developer_feedback records concise observed app/tool/skill improvement suggestions only in the diagnostic work report, as unverified agent assessment; never put those suggestions in purpose, chat or the scientific report. Scientific caveats and user-needed errors remain public. No scientific mutation.",
+        {{"developer_feedback",Object{{"type","string"},{"minLength",1},
+            {"description","Optional diagnostic-only observed gap, proposed improvement and supporting call/source references. Not scientific conclusions or hidden reasoning."}}}});
     add("set_parameters", "Set independent parameter values after complete native validation. When Analysis is already the current project workflow, refinable values prefer its original Value table, with its actual category/filter and virtual-row reveal. Original Structure or Experiment setup controls remain the fallback for descriptors or values not supported by that table. Choose setup operations from actual native dependencies, admitted scientific evidence and explicit user scope. Map FullProf occupancy before writes: qraw=OccFP*M/m and, only for established common phase c, chemical occupancy=qraw/c with already-mapped scale times c*c once; preserve partial/shared fractions. Use fresh native_state.interface_groups to locate current controls, without imposing a universal scientific sequence. Preserve explicit values-array order. Normal mode follows the last changed requested member page and is one atomic edit/Undo; Show actions navigates/cues original exposed controls in order then calls their ordinary app parameter setters, with no scientific key/click input; separate Undo per change and actual applied/published receipts determine honest complete/partial/uncertain outcomes.",
         {{"values", Object{{"type", "array"}, {"minItems", 1},
             {"items", object({{"path", parameterPath}, {"value", Object{{"type", "number"}}}}, {"path", "value"})}}}}, {"values"});
@@ -311,6 +313,15 @@ QString assistant_native_purpose(const Object& args,const QString& action) {
 void assistant_native_arguments(const QString& name, const Object& args) {
     (void)assistant_native_purpose(args);
     if(name=="show_report"){shape(args,{"purpose"});return;}
+    if(name=="diagnostics") {
+        QSet<QString> fields{"purpose"};if(args.contains("developer_feedback"))fields.insert("developer_feedback");shape(args,fields);
+        if(args.contains("developer_feedback")) {
+            const auto feedback=args.value("developer_feedback");quint64 encoded=0;
+            if(!feedback.isString() || feedback.toString().trimmed().isEmpty() || !codex_measured_size(feedback,encoded))
+                throw std::invalid_argument("Diagnostic developer feedback must be nonempty valid text");
+        }
+        return;
+    }
     if(name=="inspect_data") {
         QSet<QString> keys{"purpose","dataset_id","start","count"};if(args.contains("source"))keys.insert("source");shape(args,keys);
         if(!args.value("dataset_id").isString() || args.value("dataset_id").toString().isEmpty())

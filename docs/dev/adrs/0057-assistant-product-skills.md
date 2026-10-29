@@ -562,3 +562,22 @@ import, setup, refinement or Save is treated as independent preparation while
 awaiting the answer. This is generic assistant guidance, not a new parser rule,
 backend mutation veto, fixed scientific recipe or model-adherence guarantee.
 Actual clarification/continuation behavior still requires independent model runs.
+
+The question guidance selects the actually offered structured flow first and
+waits for its real answer; only an unavailable structured flow uses a final
+clarification response and ends the turn. This does not claim that arbitrary
+progress prose is a typed pause or that the model always chooses the right flow.
+
+## Diagnostic feedback and current native profile conventions
+
+Project-assistance1.9.8/refinement-strategy1.5.4 and FIRST global developer guidance
+remove contrary public improvement-recommendation instructions. The existing
+diagnostics optional typed field is the only offered feedback route; scientific
+limitations remain public and missing channels are not invented. Verified native
+CW family conventions cite original Crysta source, retain current-family/version
+availability and profile-reset checks, and never supply fitted specimen seeds.
+The Evidence clause reuses unchanged measurements/sigma/geometry while requiring
+fresh current residual/calculation/physical checks. Full inspection remains
+available without quotas. Source lexical changes do not establish lower latency,
+provider compliance or scientific adequacy; actual model/report behavior remains
+unqualified.

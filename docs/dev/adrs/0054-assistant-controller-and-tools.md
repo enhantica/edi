@@ -2560,3 +2560,16 @@ Review129 (hub `5432029ec0899559efea35729cf8811fffa06221`) records an empty Crea
 The FIRST append_native_context now exposes the captured ProjectViewModel's existing modified() flag as optional native_state.project_modified, with the same current project/publication owner as the surrounding native facts and the closed outgoing boolean role. It is absent without a project. No filesystem path, new disk probe, saved-state registry, shadow model or persistence service is introduced. The flag is exactly original GUI dirty status; false is not an independently verified disk/commit certificate. Actual ordinary Save outcome/owner/path/uncertainty remains authoritative.
 
 The existing create_project help clarifies that its saved receipt covers its created state, not subsequent imports/edits; inspect_project help identifies the dirty flag and its limit. The existing global requirement to save the settled current imported/edited project before a requested result remains. A blocked refinement does not prohibit an otherwise authorized ordinary Save. If that Save is unreached/refused, current imported work must be described as unsaved; no automatic Save, extra permission, control bypass, uncertain replay or scientific success is added. Native tool IDs, schemas and actions are unchanged. Source fact delivery is not proof that a model will use it or a runtime-qualified fix.
+
+## Diagnostic-only developer feedback
+
+FIRST diagnostics keeps its original physical/native inspection and optional
+purpose. One optional validated developer_feedback text field reuses the original
+immutable dynamic-call arguments. It does not mutate scientific state, add a tool
+name, or echo feedback in the native result/public human label. The existing work
+snapshot derives a developer_feedback agent_assessment entry with original row ID,
+actual submission status and unverified provenance. A refused/failed call is not
+presented as accepted feedback or a verified defect. Original complete canonical
+history and explicit technical copying remain intact; no regex filtering or past
+message rewrite is introduced. Ordinary scientific limitations and user-needed
+errors remain public. Actual model use and report/UI separation need qualification.

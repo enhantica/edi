@@ -48,6 +48,7 @@ Column {
         id: answer
         visible: card.assistant.pendingQuestion.allow_free_text === true
         objectName: "assistant.question.answer"
+        text: card.assistant.pendingQuestion.draftText || ""
         width: parent.width
         placeholderText: qsTr("Or write your answer")
         Accessible.name: placeholderText
