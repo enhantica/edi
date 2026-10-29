@@ -15,6 +15,7 @@ import os
 import re
 import select
 import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -11497,7 +11498,7 @@ def test_original_successful_native_save_folder_link_uses_os_handler_without_rep
     actor.until(lambda value: len(actor.responses()) == 1)
     saved = native_result(actor.responses()[0])
     assert saved['saved'] and saved['committed'] and saved['active'] and not saved['uncertain'] \
-        and Path(saved['destination']).resolve() == project.resolve(), (
+        and Path(saved['path']).resolve() == project.resolve(), (
             'Actual immutable native Save settlement, not model text or a proposed path, independently proves this exact folder')
     starts = _session_wire(actor, 'thread/start');assert len(starts) == 1
     workspace = Path(starts[0]['params']['cwd']).resolve()
@@ -11733,6 +11734,149 @@ def _assert_original_inspection_summary(data, raw, partitions, *, reference=None
             'Bins form the exact balanced contiguous native partition, not sampled/empty/equal-x-width buckets')
 
 
+def _original_inspection_files_keep_science_and_owned_diagnostic(
+    actor, folder, original_hashes, original_entries, marker, instance_id
+):
+    observed = {}
+    diagnostic = 'reports/work-report.json'
+
+    def producer():
+        sample = qml(actor, '(' + _scene_control_expression(marker) + ').snapshot()')
+        observed['producer'] = sample
+        assert sample['original_owner_current'], (
+            'The original VM/project must still own both the capture request and completion')
+        receipt = sample['current_receipt']
+        request = sample['requested']
+        rows = sample['receipts']
+        if receipt.get('phase') != 'terminal' or receipt.get('scope_retired', True) \
+            or receipt.get('scope_id', {}).get('value') != request['requested_scope_id'] \
+            or receipt.get('snapshot_revision', {}).get('value') != request['requested_snapshot_revision'] \
+            or not str(receipt.get('id', '')).startswith('wr/' + instance_id + '/'):
+            return None
+        finished = {row['receipt']['id'] for row in rows
+                    if row['source'] == 'finished' and row['original_owner_current']
+                    and row['receipt'].get('phase') == 'terminal'}
+        # The receipt getter's original failed-dispatch fallback settles only
+        # after the actual worker lease is gone; it never fabricates Finished.
+        dispatch_unavailable = receipt.get('error_code', {}).get('value') == 'completion_dispatch_unavailable'
+        completed = finished | ({receipt['id']} if dispatch_unavailable else set())
+        admitted = {row['receipt']['id'] for row in rows
+                    if row['original_owner_current'] and row['receipt'].get('phase') == 'accepted'}
+        if receipt['id'] not in completed or not admitted <= completed:
+            return None
+        return receipt
+
+    def science():
+        for name in original_entries:
+            path = folder / name
+            mode = path.lstat().st_mode
+            assert stat.S_ISREG(mode) if name in original_hashes else stat.S_ISDIR(mode), (
+                'Every original source file/directory remains the same regular scientific roster; missing/linked originals are never an asynchronous exception')
+        files = {name: hashlib.sha256((folder / name).read_bytes()).hexdigest()
+                 for name in original_hashes}
+        assert files == original_hashes, (
+            'Every original project/analysis/structure/experiment/source file remains byte-exact; diagnostic permissions never weaken scientific read-only preservation')
+        return files
+
+    def settled(_value):
+        files = science()
+        receipt = producer()
+        if receipt is None:
+            return False
+        entries = {str(path.relative_to(folder)) for path in folder.rglob('*')}
+        observed.update(entries=sorted(entries), files=files)
+        assert original_entries <= entries, (
+            'Every original file and directory remains present, even while the diagnostic writer settles')
+        # Classify names before opening any potential atomic-write candidate.
+        # A persistent unknown entry never qualifies; no glob exception is made.
+        if not entries <= original_entries | {'reports', diagnostic}:
+            return False
+        if 'reports' in entries - original_entries:
+            try:
+                mode = (folder / 'reports').lstat().st_mode
+            except FileNotFoundError:
+                return False
+            assert stat.S_ISDIR(mode), 'The sole permitted new report directory is an actual unlinked directory owner'
+        mirror = receipt.get('project_mirror', {})
+        artifact = mirror.get('artifact', {})
+        if diagnostic not in entries:
+            if artifact.get('state') == 'observed':
+                return False
+            if mirror.get('disposition') == 'saved':
+                return False
+            observed['diagnostic'] = {'state': 'settled_absent', 'owner_receipt': receipt}
+        else:
+            path = folder / diagnostic
+            try:
+                descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+            except FileNotFoundError:
+                return False
+            with os.fdopen(descriptor, 'rb') as stream:
+                identity = os.fstat(stream.fileno())
+                assert stat.S_ISREG(identity.st_mode), 'The exact permitted diagnostic artifact is a regular file, never a linked or special output'
+                raw = stream.read()
+                final_identity = os.fstat(stream.fileno())
+            try:
+                named_identity = path.lstat()
+            except FileNotFoundError:
+                return False
+            if (identity.st_dev, identity.st_ino, identity.st_size, identity.st_mtime_ns) != (
+                final_identity.st_dev, final_identity.st_ino, final_identity.st_size, final_identity.st_mtime_ns) \
+                or (identity.st_dev, identity.st_ino) != (named_identity.st_dev, named_identity.st_ino):
+                return False
+            digest = hashlib.sha256(raw).hexdigest()
+            document = json.loads(raw)
+            assert document['schema'] == 'edi.assistant.work-report/1' \
+                and document['scope_coverage']['trigger'] == 'automatic' \
+                and document['scope_coverage']['instance_id'] == instance_id, (
+                    'The sole permitted new JSON is the FIRST automatic schema from the actual native writer instance')
+            candidates = [receipt]
+            if mirror.get('disposition') != 'saved' and artifact.get('state') != 'observed':
+                # A genuinely settled unavailable refresh may retain a useful
+                # prior mirror; its own physical publication must still match.
+                candidates += [row['receipt'] for row in observed['producer']['receipts']
+                               if row['source'] == 'finished' and row['original_owner_current']]
+            owner = None
+            for candidate in candidates:
+                proof = candidate.get('project_mirror', {})
+                installed = proof.get('artifact', {})
+                value = installed.get('value', {})
+                if candidate.get('phase') == 'terminal' \
+                    and str(candidate.get('id', '')).startswith('wr/' + instance_id + '/') \
+                    and proof.get('disposition') == 'saved' and installed.get('state') == 'observed' \
+                    and proof.get('binding', {}).get('state') == 'observed' \
+                    and isinstance(proof.get('binding', {}).get('value'), str) and bool(proof['binding']['value']) \
+                    and proof['binding'] == mirror.get('binding') \
+                    and not proof.get('binding_retired', False) and not mirror.get('binding_retired', False) \
+                    and value.get('path') == str(path) and value.get('sha256') == digest \
+                    and value.get('bytes') == str(len(raw)) \
+                    and value.get('physical_identity') == str(identity.st_dev) + ':' + str(identity.st_ino) \
+                    and candidate['id'] == document['artifact']['receipt_id'] \
+                    and candidate.get('scope_id', {}).get('value') == document['scope_coverage']['scope_id'] \
+                    and candidate.get('snapshot_revision', {}).get('value') == document['scope_coverage']['snapshot_revision']:
+                    owner = candidate
+                    break
+            if owner is None:
+                return False
+            files[diagnostic] = digest
+            observed.update(diagnostic={'path': str(path), 'sha256': digest, 'bytes': len(raw),
+                'current_terminal': receipt, 'artifact_owner_receipt': owner,
+                'scope_coverage': document['scope_coverage']})
+        # Reading the document is not a flush: require the actual native current
+        # request and terminal completion to remain identical after file proof.
+        if producer() != receipt:
+            return False
+        assert science() == original_hashes
+        return True
+
+    try:
+        actor.until(settled)
+    finally:
+        (actor.folder / 'original-inspection-scientific-and-diagnostic-files.json').write_text(
+            json.dumps(observed, indent=2) + '\n')
+    return observed
+
+
 @pytest.mark.parametrize('kind', ['powder', 'single-crystal-cwl', 'single-crystal-tof'])
 def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and_archive(main_actor, tmp_path, kind):
     actor = main_actor([[]])
@@ -11741,8 +11885,23 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
         'sc-neut-cwl_tb2ti2o7-heidi_basic' if kind == 'single-crystal-cwl' else 'sc-neut-tof_taurine-unknown_basic') / 'project'
     shutil.copytree(original, folder)
     file_hashes = {str(path.relative_to(folder)): hashlib.sha256(path.read_bytes()).hexdigest() for path in folder.rglob('*') if path.is_file()}
+    original_entries = {str(path.relative_to(folder)) for path in folder.rglob('*')}
     assert actor.command('open', path=str(folder))['reply']['opened']
     actor.until(lambda value: not value['ui']['project']['calculating'])
+    marker = 'e11.original-inspection-mirror-owner'
+    assert qml(actor, r'''(function(){const vm=Session.assistant,p=Session.project;
+        if(!vm.workReportFinished || typeof vm.workReportFinished.connect!=="function" ||
+           !vm.workReportReceiptChanged || typeof vm.workReportReceiptChanged.connect!=="function")return false;
+        const o=Qt.createQmlObject('import QtQuick; Item {property var receipts:[];property var callback:null;property var changed:null;property var snapshot:null;}',contentItem);o.objectName=MARKER;
+        function record(source,receipt){if(Qt.isQtObject(o))o.receipts=o.receipts.concat([{source:source,receipt:receipt,original_owner_current:Session.assistant===vm && Session.project===p}]);}
+        o.callback=function(receipt){record("finished",receipt);};
+        o.changed=function(){record("receipt",vm.workReportReceipt);};
+        o.snapshot=function(){const receipt=vm.workReportReceipt,doc=JSON.parse(vm.workReportDocument());
+            return {original_owner_current:Session.assistant===vm && Session.project===p,
+                current_receipt:receipt,requested:doc.scope_coverage.view,receipts:o.receipts};};
+        vm.workReportFinished.connect(o.callback);vm.workReportReceiptChanged.connect(o.changed);
+        record("initial",vm.workReportReceipt);return true;})()'''.replace('MARKER', json.dumps(marker))), (
+            'The original public automatic producer admission/completion/current-request observations precede assistant work; no manual capture or fabricated writer state is introduced')
     actor.connect();context = json.loads(actor.last['ui']['context'])
     assert len(context['datasets']) == 1, 'The original fixture has one exact offered native dataset owner'
     dataset = context['datasets'][0];identity = dataset['id'];total = dataset['axis']['count']
@@ -11795,7 +11954,8 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
                 'Actual outgoing projection keeps the declared summary/raw fields, while full retained backend call evidence remains accessible')
         retained[call['call_id']] = matches[0]
     assert len(retained['original-full-legacy']['nativeOutcome']['data']['rows']) == total
-    assert {str(path.relative_to(folder)): hashlib.sha256(path.read_bytes()).hexdigest() for path in folder.rglob('*') if path.is_file()} == file_hashes
+    _original_inspection_files_keep_science_and_owned_diagnostic(
+        actor, folder, file_hashes, original_entries, marker, report['scope_coverage']['instance_id'])
     assert not any(row.get('params', {}).get('tool') in {'set_parameters', 'set_free', 'run_fit', 'save_project'}
                    for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())), 'Original read-only inspection never smuggles mutation/Fit/Save to make summary evidence current'
     (actor.folder / 'original-compact-inspection-native-wire-report.json').write_text(json.dumps({
