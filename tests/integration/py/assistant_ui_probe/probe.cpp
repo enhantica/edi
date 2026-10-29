@@ -19,6 +19,7 @@
 #include "assistant_native_tools.hpp"
 #include "assistant_outgoing.hpp"
 #include <algorithm>
+#include <functional>
 #include <cmath>
 #include <limits>
 #include "codex_agent.hpp"
@@ -370,20 +371,58 @@ int main(int argc,char** argv) {
     // The same original full-center predicate owns named input selection,
     // its readonly readiness observation, and the final pre-delivery check.
     // Never choose a hidden first match or retarget the point into a viewport.
+    auto capture_input_owner=[&] {
+        const QPointer<edi_app::Session> session=observed;
+        const QPointer<edi_app::ProjectViewModel> project=session?session->project():nullptr;
+        const bool project_present=project!=nullptr;
+        return [&,session,project,project_present] {
+            return session && observed==session && (!project_present || project) && session->project()==project;
+        };
+    };
     auto input_reachable=[&](QObject* object)->bool {
-        auto* item=qobject_cast<QQuickItem*>(object);
-        return window && item && item->window()==window && item->isVisible() && item->isEnabled() &&
-            item->width()>0 && item->height()>0 &&
-            exposed_rect(item).contains(QPointF(item->width()/2,item->height()/2));
+        const auto owner_current=capture_input_owner();
+        const QPointer<QQuickItem> item=qobject_cast<QQuickItem*>(object);
+        const QPointer<QQuickWindow> original_window=window;
+        if(!original_window || !item || item->window()!=original_window || !item->isVisible() || !item->isEnabled() ||
+            !std::isfinite(item->width()) || !std::isfinite(item->height()) || !(item->width()>0) || !(item->height()>0))return false;
+        const QSizeF layout(item->width(),item->height());
+        const QPointF center(layout.width()/2,layout.height()/2);
+        const auto finite=[](const QPointF& point){return std::isfinite(point.x()) && std::isfinite(point.y());};
+        const auto scene=item->mapToScene(center);
+        if(!finite(scene) || !QRectF(QPointF(),original_window->size()).contains(scene))return false;
+        // Prove the same rounded scene center that the original QTest click sends.
+        const QPointF press=scene.toPoint();
+        const auto local=item->mapFromScene(press);
+        if(!finite(local) || !item->contains(local))return false;
+        // A custom containmentMask can call QML; do not retain a retired/moved owner.
+        if(!owner_current() || !item || !original_window || window!=original_window || item->window()!=original_window ||
+            !item->isVisible() || !item->isEnabled() || QSizeF(item->width(),item->height())!=layout || item->mapToScene(center)!=scene)return false;
+        if(!QRectF(QPointF(),original_window->size()).contains(press))return false;
+        for(auto* parent=item->parentItem();parent;parent=parent->parentItem()) {
+            const auto point=parent->mapFromScene(press);
+            if(!finite(point))return false;
+            if(parent->clip()) {
+                const auto clip=parent->clipRect();
+                if(!std::isfinite(clip.x()) || !std::isfinite(clip.y()) || !std::isfinite(clip.width()) || !std::isfinite(clip.height()) ||
+                    !clip.contains(point))return false;
+            }
+        }
+        return true;
     };
     auto find_control=[&](const QString& name)->QObject* {
-        QObject* match=nullptr;
-        for(auto* object:objects(window)) {
-            if(object->objectName()!=name || !input_reachable(object))continue;
-            if(match)return nullptr; // Ambiguity refuses before any input.
-            match=object;
+        const auto owner_current=capture_input_owner();
+        QList<QPointer<QObject>> candidates;
+        for(auto* object:objects(window))candidates.push_back(object);
+        QPointer<QObject> match;bool selected=false;
+        for(const auto& object:candidates) {
+            if(!object || object->objectName()!=name)continue;
+            const bool reachable=input_reachable(object);
+            if(!owner_current())return nullptr; // Never continue under a successor owner.
+            if(!reachable)continue;
+            if(!object || object->objectName()!=name || selected)return nullptr;
+            match=object;selected=true; // Ambiguity or retired/replaced selection refuses.
         }
-        return match;
+        return owner_current()?match.data():nullptr;
     };
     auto property_owner_reachable=[&](QObject* object,const char* property)->bool {
         auto* item=qobject_cast<QQuickItem*>(object);
@@ -417,10 +456,13 @@ int main(int argc,char** argv) {
         if(current_count>1)return nullptr;
         return count==1?sole:nullptr; // Exact unique observation only; never first-of-many.
     };
-    auto click=[&](QObject* object) {
+    auto click=[&](QObject* object,const std::function<bool()>& original_owner={}) {
+        const auto owner_current=capture_input_owner();
         auto* item=qobject_cast<QQuickItem*>(object);
+        const QString original_name=item?item->objectName():QString();
         if(!input_reachable(item)) throw std::runtime_error("requested real UI control is not reachable");
         const auto center=item->mapToScene(QPointF(item->width()/2,item->height()/2)).toPoint();
+        if(item->objectName()!=original_name || (original_owner && !original_owner()) || !owner_current())throw std::runtime_error("original input owner retired before physical click; no input was sent");
         QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,center);drain();
     };
     auto activate_item_link=[&](QObject* object)->bool {
@@ -494,13 +536,20 @@ int main(int argc,char** argv) {
         if(!observed || !window) return {{"alive",false}};
         QQmlExpression expression(qmlContext(window),window,"Session.assistant");
         auto qml_assistant=expression.evaluate().value<QObject*>();
-        Array texts,controls;
-        for(auto* object:objects(window)) {
+        const auto owner_current=capture_input_owner();
+        const QPointer<QQuickWindow> original_window=window;
+        Array texts,controls;QList<QPointer<QObject>> snapshot;
+        for(auto* object:objects(window))snapshot.push_back(object);
+        for(const auto& object:snapshot) {
+            if(!object)continue;
             if(auto* item=qobject_cast<QQuickItem*>(object); item && item->isVisible() && object->property("text").isValid())
                 texts.push_back(text_observation(object));
-            if(auto* item=qobject_cast<QQuickItem*>(object);item&&!object->objectName().isEmpty())
+            if(auto* item=qobject_cast<QQuickItem*>(object);item&&!object->objectName().isEmpty()) {
+                const QPointer<QQuickItem> original_item=item;
+                const bool reachable=input_reachable(item);
+                if(!owner_current() || !original_item || !original_window || window!=original_window)throw std::runtime_error("original snapshot owner retired during input hit-test");
                 controls.push_back(Object{{"name",object->objectName()},{"visible",item->isVisible()},
-                    {"enabled",item->isEnabled()},{"same_window",item->window()==window},{"input_reachable",input_reachable(item)},
+                    {"enabled",item->isEnabled()},{"same_window",item->window()==window},{"input_reachable",reachable},
                     {"text_property_owner",property_owner_reachable(item,"text")},{"layout_exposed",!exposed_layout_rect(item).isEmpty()},
                     {"bounding_rect",Array{item->boundingRect().x(),item->boundingRect().y(),item->boundingRect().width(),item->boundingRect().height()}},
                     {"width",item->width()},{"height",item->height()},
@@ -509,6 +558,7 @@ int main(int argc,char** argv) {
                     {"fully_exposed",exposed_rect(item).contains(item->boundingRect())},
                     {"parameter_path",object->property("item").value<QObject*>()?
                         object->property("item").value<QObject*>()->property("path").toString():QString()}});
+            }
         }
         auto* assistant=observed->assistant();
         Object project;
@@ -1021,9 +1071,12 @@ int main(int argc,char** argv) {
                 const bool original_project_present=original_project!=nullptr;
                 if(!composer)throw std::runtime_error("original current composer text property owner is absent or ambiguous");
                 if(!composer->setProperty("text",input["text"].toString()))throw std::runtime_error("original composer text property write was refused");
-                if(!composer || observed!=original_session || !observed || (original_project_present && !original_project) || observed->project()!=original_project ||
-                    find_property_owner("assistant.composer","text")!=composer)throw std::runtime_error("original composer owner retired before Send; no input was sent");
-                click(find_control("assistant.send"));
+                const auto original_owner=[&] {
+                    return composer && observed==original_session && observed && (!original_project_present || original_project) && observed->project()==original_project &&
+                        find_property_owner("assistant.composer","text")==composer;
+                };
+                if(!original_owner())throw std::runtime_error("original composer owner retired before Send; no input was sent");
+                click(find_control("assistant.send"),original_owner);
             } else if(op=="accept_dialog") result={{"accepted",accept_dialog()}};
             else if(op=="sc_input") {
                 if(!observed->project())throw std::runtime_error("SC input witness requires actual current native project");
