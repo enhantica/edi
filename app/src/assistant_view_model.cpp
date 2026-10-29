@@ -3108,7 +3108,7 @@ struct AssistantViewModel::State {
                 const auto points=sc?(nativeCurrent && held->reflections?held->reflections->intensity_calc.size():0):pattern->calculatedPointCount();
                 if(points>(quint64(1)<<std::numeric_limits<double>::digits))
                     throw std::length_error("Calculation point count is not exactly representable");
-                row["stale"]=sc?!nativeCurrent:pattern->stale();row["calculated_points"]=static_cast<double>(points);
+                row["stale"]=!nativeCurrent || (!sc && pattern->stale());row["calculated_points"]=static_cast<double>(points);
                 row["calculated_available"]=points>0;row["calculation_error_present"]=!error.isEmpty();
                 row["calculation_error"]=text;row["calculation_error_complete"]=text==error;
             }
@@ -9684,13 +9684,30 @@ struct AssistantViewModel::State {
         task->submitting=true;task->visible_pending=false;task->call.may_have_written=true;native_call->may_have_written=true;
         session->assistant_save_origin_=own;task->project->assistant_save_origin_=own;
         const auto origin=qScopeGuard([session,target=task->project,own]{if(session && session->assistant_save_origin_==own)session->assistant_save_origin_=0;if(target && target->assistant_save_origin_==own)target->assistant_save_origin_=0;});
-        bool saved=false;try {saved=task->ordinary_current?session->save():session->saveProjectAsFresh(destination,zip,copy);}catch(...) {}
+        const auto retain_failure=[task](const QString& message) noexcept {
+            try {
+                const auto bytes=bounded_error(message).toUtf8();
+                std::copy_n(bytes.constData(),static_cast<std::size_t>(bytes.size()),task->failure.data());
+                task->failure_size=static_cast<std::size_t>(bytes.size());
+            }catch(...) {} // Optional evidence cannot replace the actual Save outcome.
+        };
+        bool saved=false;
+        try {saved=task->ordinary_current?session->save():session->saveProjectAsFresh(destination,zip,copy);}
+        catch(const std::exception& failure) {try{retain_failure(QString::fromUtf8(failure.what()));}catch(...) {}}
+        catch(...) {try{retain_failure(QObject::tr("Save raised an unclassified local exception; its write result is unconfirmed."));}catch(...) {}}
+        try {
+            if(!saved && task->failure_size==0 && session && task->project && session->project()==task->project &&
+                session->replacement_generation_==replacement && !session->lastError().isEmpty())
+                retain_failure(QObject::tr("Save is unconfirmed. The original Session currently reports: %1").arg(session->lastError()));
+        }catch(...) {} // Message construction itself is optional evidence too.
         task->committed=saved;task->submitting=false;task->copy=copy;task->destination=task->ordinary_current?task->source_directory:destination.toLocalFile();
         task->active=saved && !copy && session && task->project && session->project()==task->project && session->replacement_generation_==replacement;
         task->presented=task->active && !task->project->calculating();
         if(!receiver || receiver->state_.get()!=this)return saved;
         // Retain factual application before result publication; an owner change never invents rollback.
-        const auto outcome=native_save_outcome(*task,saved?QObject::tr("Project saved."):QObject::tr("Save could not confirm its result. Inspect the current project before repeating."));
+        const auto message=task->failure_size?QString::fromUtf8(task->failure.data(),static_cast<qsizetype>(task->failure_size)):
+            saved?QObject::tr("Project saved."):QObject::tr("Save could not confirm its result. Inspect the current project before repeating.");
+        const auto outcome=native_save_outcome(*task,message);
         task->call.record->outcome=outcome;task->call.record->outcome_ready=true;
         end_own_edit(own);
         native_save_finished(task);

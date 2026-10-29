@@ -4653,7 +4653,12 @@ namespace {
 // What a save wrote to `directory`, read as a reopen reads it, a project still being built included. The reopen's
 // warnings were the save's own concern.
 Project read_saved_project(const std::string& directory) {
-    return load_project_folder(directory, [](const std::string&) {}, ProjectLoadPolicy::SavedValues);
+    auto saved=load_project_folder(directory, [](const std::string&) {}, ProjectLoadPolicy::SavedValues);
+    // Adopt/compare the same completed relation values as the calculation, not
+    // separately rounded redundant tokens of tied/dependent parameters.
+    // Independent values and every saved uncertainty still come from the file.
+    complete_relations(saved);
+    return saved;
 }
 
 }  // namespace
