@@ -19,6 +19,8 @@ thread_id = '019a0290-0000-7000-8000-000000000001'
 turn_id = '019a0290-0000-7000-8000-000000000002'
 pending = {}
 human_pending = {}
+human_native_pending = {}
+human_native_scheduled = []
 retry_after_response = {}
 first_response_for_retry = {}
 calls = []
@@ -327,19 +329,27 @@ def advance():
             notify('item/completed', completion)
         advance()
         return
-    if 'human_question' in spec:
+    if 'human_question' in spec or 'human_questions' in spec:
         # Pinned092d ToolRequestUserInputParams/Question and ordinary pending
         # ThreadItem lifecycle. This is runtime question metadata, no Edi result.
+        questions = spec['human_questions'] if 'human_questions' in spec else [spec['human_question']]
         item = {'type': 'dynamicToolCall', 'id': call_id, 'namespace': None,
-                'tool': 'request_user_input', 'arguments': {'questions': [spec['human_question']]},
+                'tool': 'request_user_input', 'arguments': {'questions': questions},
                 'status': 'inProgress', 'contentItems': None, 'success': None, 'durationMs': None}
-        binding = {'threadId': thread_id, 'turnId': turn_id, 'item': item}
+        binding = {'threadId': thread_id, 'turnId': turn_id}
+        if spec.get('human_without_public_item'):
+            binding['question_item_id'] = call_id  # Pinned callback call ID only, NOT a public item.
+        else:
+            binding['item'] = item
         request_id = 'independent-human-envelope-' + str(cursor['sequence'])
         human_pending[request_id] = binding
-        notify('item/started', {**binding, 'startedAtMs': 1})
+        for probe in spec.get('human_native_probes', []):
+            human_native_scheduled.append((request_id, probe))
+        if 'item' in binding:
+            notify('item/started', {**binding, 'startedAtMs': 1})
         emit({'id': request_id, 'method': 'item/tool/requestUserInput', 'params': {
             'threadId': thread_id, 'turnId': turn_id, 'itemId': call_id,
-            'questions': [spec['human_question']], 'isBlocking': True, 'autoResolutionMs': None}})
+            'questions': questions, 'isBlocking': True, 'autoResolutionMs': None}})
         return
     spec = {**spec, 'arguments': operands(spec['arguments'])}
     item = {
@@ -376,20 +386,57 @@ def advance():
     })
 
 
+def emit_released_question_native_probes():
+    # Same original scripted runtime, real server requests only. The run-owned
+    # gate controls WHEN to try input; it cannot forge an app refusal/outcome.
+    for parent_rpc, probe in list(human_native_scheduled):
+        if parent_rpc not in human_pending or not Path(probe['release']).exists():
+            continue
+        human_native_scheduled.remove((parent_rpc, probe))
+        original = human_pending[parent_rpc]
+        arguments = operands(probe['arguments'])
+        item = {'type': 'dynamicToolCall', 'id': probe['call_id'], 'namespace': None,
+                'tool': probe['tool'], 'arguments': arguments, 'status': 'inProgress',
+                'contentItems': None, 'success': None, 'durationMs': None}
+        binding = {'threadId': original['threadId'], 'turnId': original['turnId'], 'item': item}
+        rpc = 'original-human-native-envelope-' + probe['call_id']
+        assert rpc not in human_native_pending and rpc not in pending and rpc not in human_pending
+        human_native_pending[rpc] = (parent_rpc, binding)
+        notify('item/started', {**binding, 'startedAtMs': 1})
+        emit({'id': rpc, 'method': 'item/tool/call', 'params': {
+            'threadId': binding['threadId'], 'turnId': binding['turnId'],
+            'callId': item['id'], 'namespace': None, 'tool': item['tool'], 'arguments': arguments}})
+
+
 for line in sys.stdin:
     request = json.loads(line)
     with trace.open('a', encoding='utf-8') as output:
         output.write(json.dumps(request) + '\n')
     if 'method' not in request:
+        if request['id'] in human_native_pending:
+            parent_rpc, original = human_native_pending.pop(request['id'])
+            state.setdefault('human_native_responses', []).append({
+                'parent_rpc': parent_rpc, 'response': json.loads(json.dumps(request))})
+            persist()
+            result = request.get('result', {})
+            item = {**original['item'], 'status': 'completed' if result.get('success') else 'failed',
+                    'success': bool(result.get('success')), 'contentItems': result.get('contentItems', []), 'durationMs': 1}
+            notify('item/completed', {**original, 'item': item, 'completedAtMs': 1})
+            # This distinct real native reply cannot answer or advance the
+            # original human RPC, nor execute another original scripted step.
+            continue
         if request['id'] in human_pending:
             original = human_pending.pop(request['id'])
             state.setdefault('human_answers', []).append(json.loads(json.dumps(request)))
             persist()
-            success = 'result' in request and 'error' not in request
-            item = {**original['item'], 'status': 'completed' if success else 'failed',
-                    'success': success, 'contentItems': [{'type': 'inputText',
-                    'text': json.dumps(request.get('result', request.get('error')))}], 'durationMs': 1}
-            notify('item/completed', {**original, 'item': item, 'completedAtMs': 2})
+            if 'item' in original:
+                success = 'result' in request and 'error' not in request
+                item = {**original['item'], 'status': 'completed' if success else 'failed',
+                        'success': success, 'contentItems': [{'type': 'inputText',
+                        'text': json.dumps(request.get('result', request.get('error')))}], 'durationMs': 1}
+                notify('item/completed', {**original, 'item': item, 'completedAtMs': 2})
+            # A real builtin callback resolves its original RPC without inventing
+            # item/completed for an item the runtime never published.
             advance()
             continue
         original = pending.pop(request['id'])
@@ -447,6 +494,7 @@ for line in sys.stdin:
             'requiresOpenaiAuth': False}
         metadata_reply(request, current_account.get('fixture_account_read_reply', normal_account), 'account_read')
     elif method == 'account/rateLimits/read':
+        emit_released_question_native_probes()
         current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
         settle_captured_archived_start()
         settle_fixture_unacked_start()
