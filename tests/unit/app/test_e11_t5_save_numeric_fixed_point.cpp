@@ -122,21 +122,44 @@ class SaveNumericFixedPointProof final : public QObject {
         const auto calcPosition=std::find(loop->keys().begin(),loop->keys().end(),"_data.intensity_calc");
         check.require(axisPosition!=loop->keys().end(),stage+": persisted calc rows carry the original measured-axis column");
         check.require(!loop->rows().empty() && loop->rows().size()==readAxis.size() && readAxis==currentAxis && readAxis.size()==current.experiment().data->intensity_calc.size(),stage+": original persisted row count and measured support agree with current calculation");
+        const auto statusPosition=std::find(loop->keys().begin(),loop->keys().end(),"_data.calc_status");
+        const auto& currentValues=currentMeasured.intensity_calc.values();
+        const auto& currentStatuses=currentMeasured.calc_status.values();
+        check.require(statusPosition!=loop->keys().end() && currentStatuses.size()==readAxis.size(),stage+": original persisted/current calculation-status support exists");
         bool supportEqual=axisPosition!=loop->keys().end() && loop->rows().size()==readAxis.size();
+        bool statusEqual=statusPosition!=loop->keys().end() && currentStatuses.size()==readAxis.size();
+        std::size_t available=0,numeric=0,excluded=0,missing=0,badCells=0;
         QByteArray calcTokens;
         if(axisPosition!=loop->keys().end()) {
             const auto axisIndex=static_cast<std::size_t>(axisPosition-loop->keys().begin());
             const auto calcIndex=static_cast<std::size_t>(calcPosition-loop->keys().begin());
+            const auto statusIndex=static_cast<std::size_t>(statusPosition-loop->keys().begin());
             for(std::size_t i=0;i<loop->rows().size();++i) {
                 const auto& row=loop->rows()[i];
                 if(axisIndex>=row.size() || calcIndex>=row.size())throw std::runtime_error("FIRST parser returned a ragged persisted data row");
                 if(i>=readAxis.size() || crysta::parse_edi_number(row[axisIndex])!=readAxis[i])supportEqual=false;
-                calcTokens.append(row[calcIndex].data(),static_cast<qsizetype>(row[calcIndex].size()));calcTokens.append('\0');
+                const auto& token=row[calcIndex];
+                calcTokens.append(token.data(),static_cast<qsizetype>(token.size()));calcTokens.append('\0');
+                if(statusPosition==loop->keys().end() || statusIndex>=row.size() || i>=currentStatuses.size() || i>=currentValues.size()) {++badCells;continue;}
+                const auto& status=currentStatuses[i];
+                if(row[statusIndex]!=status || (status!="incl" && status!="excl"))statusEqual=false;
+                if(status=="excl") {++excluded;if(token!=".")++badCells;}
+                else if(std::isfinite(currentValues[i])) {
+                    ++available;
+                    // FIRST numeric parsing accepts genuine zero; '.' is missing,
+                    // never an available calculation reconstructed by later Open.
+                    try {if(std::isfinite(crysta::parse_edi_number(token)))++numeric;else ++badCells;}
+                    catch(const std::exception&) {++badCells;}
+                } else {++missing;if(!std::isnan(currentValues[i]) || token!=".")++badCells;}
             }
         }
         check.require(supportEqual,stage+": FIRST-parsed original calc rows retain every measured-axis position");
+        check.require(statusEqual,stage+": original persisted statuses agree with the actual current included/excluded rows");
+        check.require(badCells==0 && numeric==available && available>0,stage+": actual available included calculations are finite numeric disk cells, retaining legitimate zero and excluded/uncomputed missing cells");
         fact(stage,{{"kind","original_persisted_calculation"},{"column_present",true},{"rows",static_cast<qint64>(loop->rows().size())},
-            {"measured_rows",static_cast<qint64>(readAxis.size())},{"support_equal",supportEqual},
+            {"measured_rows",static_cast<qint64>(readAxis.size())},{"support_equal",supportEqual},{"status_equal",statusEqual},
+            {"available_current_cells",static_cast<qint64>(available)},{"finite_numeric_disk_cells",static_cast<qint64>(numeric)},
+            {"excluded_cells",static_cast<qint64>(excluded)},{"uncomputed_cells",static_cast<qint64>(missing)},{"invalid_or_missing_cells",static_cast<qint64>(badCells)},
             {"original_file_sha256",QString::fromLatin1(QCryptographicHash::hash(QByteArray::fromStdString(original),QCryptographicHash::Sha256).toHex())},
             {"raw_calc_cells_sha256",QString::fromLatin1(QCryptographicHash::hash(calcTokens,QCryptographicHash::Sha256).toHex())},
             {"qualification","literal original document cells, not the ordinary unhydrated live cache; no quantization oracle"}});
