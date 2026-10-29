@@ -14,8 +14,11 @@ QtObject {
     readonly property real assistantMinimumWidth: unit * 23
     readonly property real assistantMaximumWidth: unit * 48
     readonly property real assistantMainMinimumWidth: unit * 40
-    // The original composer's Stop circle, shared by status controls and working glyphs.
+    // The original composer's Stop circle, shared by the status controls.
     readonly property real assistantIconExtent: EaStyle.Sizes.toolButtonHeight * 0.75
+    readonly property real assistantControlBorderWidth: 1 // The existing status eye/Success outline.
+    // Borderless working glyphs match the eye circle's inner diameter.
+    readonly property real assistantIndicatorExtent: Math.max(0, assistantIconExtent - 2 * assistantControlBorderWidth)
     // The original composer Stop/eye font size, shared by their status-bar copies.
     readonly property real assistantControlIconSize: unit * 0.75 * 1.25
 

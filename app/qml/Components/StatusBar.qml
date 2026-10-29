@@ -21,7 +21,7 @@ EaElements.StatusBar {
     property bool assistantChatShown: false
     property bool assistantManualTakeover: false
     readonly property bool assistantStatusNeeded: assistantArea.working
-        || Session.assistant.showingActions || assistantManualTakeover || visibleStop.pressed || visibleMode.pressed
+        || Session.assistant.showingActions || assistantManualTakeover && Session.assistant.canCancel || visibleStop.pressed || visibleMode.pressed
     // The pages built after a project opened, of those it shows (edi ADR-0052): while they build, the bar shows the
     // opening's progress in the fit area's place.
     property int pagesBuilt: 0
@@ -145,20 +145,22 @@ EaElements.StatusBar {
     Item {
         id: assistantGroup
         parent: bar
-        readonly property bool stopShown: assistantArea.working || Session.assistant.showingActions || bar.assistantManualTakeover || visibleMode.pressed
+        readonly property bool stopShown: assistantArea.working || Session.assistant.showingActions || bar.assistantManualTakeover && Session.assistant.canCancel || visibleMode.pressed
         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
-        readonly property real buttonExtent: assistantArea.iconExtent
+        readonly property real buttonExtent: AppSizes.assistantIconExtent
+        readonly property real contentSpacing: Math.max(0,
+            (assistantArea.visible ? 1 : 0) + (visibleMode.visible ? 1 : 0) + (visibleStop.visible ? 1 : 0) - 1) * gap
         // Keep the original Stop receiver and its text slot in place through
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
         implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
             + (assistantArea.visible ? assistantArea.implicitWidth : 0)
-            + (visibleMode.visible ? gap + visibleMode.implicitWidth : 0)
-            + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
+            + (visibleMode.visible ? visibleMode.implicitWidth : 0)
+            + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
         anchors.right: fitArea.visible ? fitArea.left : openingProgress.visible ? openingProgress.left : parent.right
-        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        anchors.rightMargin: fitArea.visible ? fitArea.spacing : EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         Rectangle {
             id: assistantRule
@@ -175,9 +177,9 @@ EaElements.StatusBar {
             objectName: "statusBar.assistant.working"
             assistant: Session.assistant
             presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
-            width: Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-                - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0)
-                - (visibleMode.visible ? assistantGroup.gap + visibleMode.width : 0))
+            width: visible ? Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
+                - (visibleStop.visible ? visibleStop.width : 0)
+                - (visibleMode.visible ? visibleMode.width : 0) - assistantGroup.contentSpacing) : 0
             height: Math.max(implicitHeight, iconExtent)
             anchors.left: parent.left
             anchors.leftMargin: assistantRule.visible ? assistantRule.width + fitArea.spacing : 0
@@ -201,7 +203,7 @@ EaElements.StatusBar {
                 implicitHeight: implicitWidth
                 radius: height / 2
                 color: AppColors.statusButtonBackground
-                border.width: 1 // The original Success badge's outline thickness.
+                border.width: AppSizes.assistantControlBorderWidth // The original Success badge's outline thickness.
                 border.color: AppColors.statusButtonBorder
             }
             contentItem: EaElements.Label {
