@@ -45,6 +45,8 @@ public:
     void resumeDeferredRequests(quint64 originalGeneration);
     void activity();
     quint64 outputGeneration() const noexcept { return generation_; }
+    // Optional usage waits only for genuine original transport backpressure.
+    bool optionalUsageBackpressured() const noexcept;
     void retire();
     void beginOperation(quint64 totalMs, quint64 idleMs);
     void settleOperation();
@@ -68,6 +70,8 @@ signals:
     void failed(const QString& explanation);
     // Only a correlated optional account/rateLimits/read disposition; not a provider error.
     void optionalUsageUnavailable(const QString& id);
+    // Hint after the original write queue drains; never a retry/error loop.
+    void optionalUsageReady();
 private:
     friend struct CodexAgentTestAccess; // Defined only by the independent finite native probe.
     class Process;

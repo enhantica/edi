@@ -269,6 +269,11 @@ void CodexAgent::settleOperation() {
     human_wait_start_=-1;human_wait_id_.clear();native_work_id_.clear();native_work_waiting_=false;wait_accounted_at_=-1;
     operation_start_=-1;total_ms_=0;idle_ms_=0;
 }
+bool CodexAgent::optionalUsageBackpressured() const noexcept {
+    return !failed_ && process_ && process_->state()==QProcess::Running &&
+        next_id_!=std::numeric_limits<quint64>::max() &&
+        (!deferred_required_.isEmpty() || optional_queued_bytes_!=0 || process_->bytesToWrite()!=0);
+}
 void CodexAgent::retireOptionalUsage(const QString& id) {
     if (pending_.value(id) != "account/rateLimits/read" || !optional_usage_ids_.contains(id)) return;
     pending_.remove(id); pending_deadlines_.remove(id); pending_bytes_ -= pending_sizes_.take(id);
@@ -428,7 +433,11 @@ bool CodexAgent::start(const QString& executable, const QString& workspace) {
             // Optional writes are admitted only at an empty physical queue, so
             // these bytes are its FIFO head even after required writes arrive.
             optional_queued_bytes_ -= qMin(optional_queued_bytes_, static_cast<quint64>(count));
-            flushRequired(); // Terminal: the helper can synchronously retire this scope.
+            const QPointer<CodexAgent> receiver(this);
+            flushRequired(); // Can synchronously retire this exact process scope.
+            if(!receiver || !original || process_!=original.data() || generation_!=scope || failed_ ||
+                original->state()!=QProcess::Running || optionalUsageBackpressured())return;
+            try {emit optionalUsageReady();}catch(...){} // Optional terminal hint, never a required-write failure.
         });
         connect(process, &QProcess::readyReadStandardOutput, this, [this, original = prepared, scope] { if (original) read(original.data(), scope); });
         connect(process, &QProcess::readyReadStandardError, this, [this, original = prepared, scope] {

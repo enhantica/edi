@@ -4041,3 +4041,43 @@ effective mode, Stop/press, working animation or hidden-area spacing changes.
 The exact preceding standalone-display math and optical Stop changes remain in
 these composed preimages. Actual native theme/narrow-width/Fit-present/absent
 rendering remains to be qualified; source style is not runtime acceptance.
+
+## Account usage readiness and immediate presentation
+
+FIRST usage already starts a read after real thread bootstrap; it is not absent.
+Original CodexAgent may decline an optional read while required physical/deferred
+writes remain queued. Its existing bytesWritten/flushRequired owner now provides
+an optional readiness hint only for the same running process/generation after
+that queue drains. App retries only an explicitly unadmitted backpressured usage
+intent on a queued hint; errors, unsupported/preempted/prepared or uncertain writes
+never become automatic retries. Required work retains priority. No new poll,
+response-driven loop, quota, transport service or approval is introduced.
+
+Original account epoch/transport and exact RPC remain authority. The existing
+request preparation callback owns its ID before write reentry; a scoped starting
+guard coalesces reentrant refresh. Bookkeeping cleanup checks original ownership,
+while admission also checks actual readiness/account confirmation. Draft/file
+changes alone do not invalidate an account-only observation; real account/transport
+retirement cannot reuse old buckets or mutate a successor. Normal optional
+preemption remains unavailable, not a manufactured provider failure.
+
+FIRST usage QVariantMap publishes C++ loading/waiting/unknown/ready/unavailable/
+unsupported/error state, a compact fallback caption and human status text. Actual
+zero percent is valid data, not a fallback. Last valid same-account observations
+remain explicitly stale during refresh/error/empty readings. Unsupported requires
+an actual method-not-found response; an unreported allowance is not zero.
+
+The existing popup refreshes at aboutToShow and binds nonempty status immediately,
+with a minimum content height from that label's own natural geometry. Its original
+session/weekly readings, percentages, account association and reset-clock timer
+remain; that timer never polls usage. There is no new procedural QML state or
+parallel model. Actual first-open/ready/backpressure/reentry/account/transport/
+stock-runtime/theme qualification remains required; source is not a runtime pass.
+
+The same original account-ready admission owner also revisits a never-admitted
+usage wait after a correlated same-account confirmation. A final queue-drain hint
+can precede that reply; its earlier pending-account refusal must not strand the
+intent. The continuation keeps original account/transport/output generation and
+runs after required admission work unwinds, including unrelated draft-proof exits.
+Only waiting with no prepared/pending read is eligible; changed/null account or
+retired transport and prepared/preempted/uncertain/error outcomes cannot retry.
