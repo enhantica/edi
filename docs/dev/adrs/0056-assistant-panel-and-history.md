@@ -4189,3 +4189,33 @@ unit-dependent placement and an insufficient-descent escape; it does not establi
 the exclusive cause of the targeted missing sum. Equivalent-unit geometry,
 scaled symbols, formula completeness, real fallback and native/Mac qualification
 remain required before any runtime repair claim.
+
+## Accepted Share survives its exact known-account cold transfer
+
+FIRST viewed-session preparation may intentionally retire only the settled helper
+and cold-resume the same verified conversation with freshly accepted scope. It
+keeps Controller, selected inputs, draft, generation and disclosure identity, while
+connected/input admission remain false until the original policy/account/resume
+handshake actually completes. The ordinary account presentation previously became
+an empty map in that interval. FIRST dialog/composer exact-email ownership then
+retired the accepted Share/Send even though no input had been issued.
+
+The original account getter now retains its already-verified public label only
+for that exact share-approved viewed/checkpoint transfer: original thread/email,
+account epoch, live Controller/project/model/generation, nonempty prepared
+workspace and matching approved disclosure. It does not infer account identity
+from a cached transcript, restore obsolete approval, change connected/readiness,
+start an input, or weaken dialog/draft/file ownership. The existing captured Send
+still waits for real verified connection/policy and dispatches once through the
+original admission/acknowledgment owner. Actual account replacement, failed
+transport, explicit New/sign-out, changed owner/scope, cancelled approval or
+successor draft continue to retire the original intent through existing fences.
+
+The retained42b run shows same-thread cold resume, real accepted permission and
+pending literal input but no turn/start. The source exposes this deterministic
+public-account ownership break; the run did not record the private QML intent's
+retirement branch, so no exclusive attribution or repaired runtime is claimed.
+Actual first-send Share, Cancel, same-account resume, changed-account/refused
+resume, late draft/files/model edits and exactly-one input qualification remain
+required. No QML state machine, repeated click, replay, new conversation, forced
+permission or persistent account authority is added.

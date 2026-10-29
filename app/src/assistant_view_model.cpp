@@ -17291,9 +17291,24 @@ QVariantMap AssistantViewModel::usage() const {
 }
 QVariantMap AssistantViewModel::account() const {
 #ifndef __EMSCRIPTEN__
-    if (state_->generic_mode && state_->generic_authenticated && !state_->generic_retiring &&
-        state_->generic_native.value("accountEpoch").toString()==QString::number(state_->usage_epoch))
-        return state_->generic_native.value("account").toObject().toVariantMap();
+    const auto& state=*state_;
+    if (state.generic_mode && !state.generic_retiring &&
+        state.generic_native.value("accountEpoch").toString()==QString::number(state.usage_epoch)) {
+        bool known=state.generic_authenticated;
+        if(!known && state.generic_resuming && state.resume_checkpoint && state.viewed_session) {
+            const auto& saved=*state.resume_checkpoint;
+            const auto& viewed=*state.viewed_session;
+            // A real Share may cold-transfer the SAME verified conversation.
+            // Keep its public account identity stable for the captured offer;
+            // this is not connected/policy/input admission or a new approval.
+            known=saved.share_approved && state.viewed_session_current(viewed) &&
+                saved.thread==viewed.thread && saved.email==viewed.email &&
+                saved.generation==state.generation && saved.project==state.project &&
+                saved.has_project==bool(state.project) && !saved.workspace.isEmpty() && saved.workspace==state.generic_workspace &&
+                State::same_disclosure(saved.disclosure,state.approved_scope);
+        }
+        if(known)return state.generic_native.value("account").toObject().toVariantMap();
+    }
 #endif
     return {};
 }
