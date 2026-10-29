@@ -4604,8 +4604,9 @@ struct AssistantViewModel::State {
             const char* cause, const QString& message,
             std::source_location caller = std::source_location::current()) {
         if (!widget_owned(run)) return;
+        const auto* entry=widget_parameter_entry(run);
         control_failure(run,ControlCause::Unavailable);
-        if ((run->tool != "add_relations" && run->tool != "edit_relation" && run->tool!="background_names" && run->tool!="estimate_background" && run->tool!="edit_background") || (!lcAssistantWidgetLookup().isDebugEnabled() && !work_reports.collecting())) {
+        if ((!entry && run->tool != "add_relations" && run->tool != "edit_relation" && run->tool!="background_names" && run->tool!="estimate_background" && run->tool!="edit_background") || (!lcAssistantWidgetLookup().isDebugEnabled() && !work_reports.collecting())) {
             widget_refuse(run,message,caller); return;
         }
         const auto receiver=run->receiver;
@@ -4618,7 +4619,7 @@ struct AssistantViewModel::State {
         const bool retiring=native_call->retiring, resolved=native_call->resolved;
         const bool answered=record->answered, retired=record->retired, completed=record->completed;
         const auto original=[&] {
-            return receiver && receiver->state_.get()==this && widget_owned(run) &&
+            return receiver && receiver->state_.get()==this && widget_entry_owned(run,entry) &&
                 run->call.record==record && run->call.receipt==receipt && native_receipt==receipt &&
                 generation==binding && native_serial==serial && usage_epoch==account && widget_input.get()==helper &&
                 run->relation_row==row_index && run->relation_field==field_index && run->completed_steps==prefix &&
