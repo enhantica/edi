@@ -9692,3 +9692,115 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
             and after['parameters']==before['parameters'] and len(actor.responses())==1, (
                 'Interference preserves only the actual appended/renamed alias and no changed parameter, second alias, constraint or automatic retry')
         _match_original_alias_undo_sequence(actor,before,first_undos[1:],True)
+
+
+def test_on_cell_flags_follow_experiment_transition_into_original_analysis_main(main_actor, tmp_path):
+    actor = main_actor([[]], show_actions=True)
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened'], (
+        'The original measured fixture opens through the current real Main owner')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    wait_positive_tab(actor, 'appBar.tab.experiment')
+    actor.command('click', name='appBar.tab.experiment')
+    assert qml(actor, 'appBarCentralTabs.currentIndex === AppState.Page.Experiment'), (
+        'The first native flag request starts from the genuinely selected Experiment workflow')
+    original_owner = qml(actor, 'String(Session.project)')
+    before = actor.last['ui']['project']['parameters']
+    cells = [row for row in before if row['category'] == 'cell' and row['refinable']
+             and row['fit_blocker'] == 0 and row['dependence'] == 0]
+    assert cells and len({row['path'] for row in cells}) == len(cells), (
+        'Actual offered eligible cell members define this fixture; no three-row assumption is used')
+    flags = [{'path': row['path'], 'free': not all(item['free'] for item in cells)} for row in cells]
+    restore = [{'path': row['path'], 'free': row['free']} for row in cells]
+    actor.configure_turns([
+        [tool_call('set_free', 'original-transition-cell-flags', flags=flags)],
+        [tool_call('set_free', 'original-current-main-cell-flags', flags=restore)],
+    ])
+    actor.connect()
+    assert qml(actor, 'String(Session.project)') == original_owner, (
+        'Normal connection cannot substitute the original measured project before the request')
+    assert qml(actor, 'appBarCentralTabs.currentIndex === AppState.Page.Experiment'), (
+        'The actual first native request still starts from Experiment after normal connection')
+    marker = 'e11.original.workflow.sidebar.trace'
+    trace_source = r'''(function(){const project=Session.project,vm=Session.assistant;
+        const o=Qt.createQmlObject('import QtQuick; Item {property var facts:[];property var note:null;property var handler:null;property var owner:null;property bool connected:false;}',window.contentItem);
+        o.objectName=MARKER;o.owner=vm;
+        function alive(x){return Qt.isQtObject(x);}
+        function identity(x){return alive(x)?String(x):null;}
+        function rect(x){if(!alive(x))return null;const p=x.mapToItem(null,0,0);return {x:p.x,y:p.y,width:x.width,height:x.height};}
+        function all(){const out=[],todo=[window.contentItem];while(todo.length){const x=todo.pop();if(!alive(x))continue;out.push(x);
+            for(const c of x.children||[])if(c.parent===x)todo.push(c);}return out;}
+        function parents(x){const out=[];for(let p=x;p;p=p.parent)out.push({object:identity(p),name:p.objectName,
+            current:typeof p.current==='boolean'?p.current:null,visible:p.visible,enabled:p.enabled,clip:p.clip,bounds:rect(p)});return out;}
+        function within(x,owner){if(!alive(owner))return false;for(let p=x;p;p=p.parent)if(p===owner)return true;return false;}
+        o.note=function(kind){if(!alive(o))return null;const items=all();
+            const tabs=items.filter(function(x){return x.objectName==='appBar.tab.analysis'&&x.Window.window===window;});
+            const loader=tabs.length===1?tabs[0].page:null,page=alive(loader)&&alive(loader.item)?loader.item:null;
+            const sidebarCandidates=items.filter(function(x){return x.objectName==='workflow.analysis.manualSidebar'&&x.Window.window===window;});
+            // ContentPage.sideBar is a data LIST, not a QObject getter. Scope the
+            // original named visual owner through the actual source-page ancestry.
+            const scoped=sidebarCandidates.filter(function(x){return within(x,page);});
+            const expected=scoped.length===1?scoped[0]:null;
+            const basics=items.filter(function(x){return x.objectName==='sideBar.tab.basic';}).map(function(x){return {
+                object:identity(x),sameWindow:x.Window.window===window,withinExpectedSidebar:within(x,expected),withinSourcePage:within(x,page),
+                visible:x.visible,enabled:x.enabled,checked:x.checked,bounds:rect(x),ancestors:parents(x)};});
+            const fact={kind:kind,ownerCurrent:alive(project)&&alive(vm)&&Session.project===project&&Session.assistant===vm,
+                workflowIndex:appBarCentralTabs.currentIndex,analysisSelected:appBarCentralTabs.currentIndex===AppState.Page.Analysis,
+                sourcePage:identity(page),sourcePageCurrent:alive(page)?page.current:null,sourcePageProjectSame:alive(page)&&page.project===project,
+                sourceScopedSidebars:scoped.map(identity),sidebarCandidates:sidebarCandidates.map(identity),expectedSidebar:identity(expected),
+                sidebarSource:alive(expected)?'source_page_visual_ancestry_and_declared_name':'UNREACHED_OR_AMBIGUOUS',
+                basicCandidates:basics,assistantVisible:assistantPanel.visible,mainActive:window.active,
+                clipQualification:'Original ancestor clip flags/layout recorded; exact native clipRect/hit proof remains in existing C++ input_reachable snapshot'};
+            o.facts.push(fact);return fact;};
+        o.handler=function(){if(alive(o))o.note('action_pointer_moved');};
+        if(!vm.actionPointerMoved||typeof vm.actionPointerMoved.connect!=='function')return false;
+        vm.actionPointerMoved.connect(o.handler);o.connected=true;o.note('before_first_native_request');return true;})()'''.replace('MARKER', json.dumps(marker))
+    assert qml(actor, trace_source), (
+        'The passive original-window pointer/source-page/sidebar observer must bind before native input')
+    captured = []
+    artifact = actor.folder / 'original-workflow-to-analysis-main.json'
+    try:
+        for ordinal, wanted in enumerate([flags, restore]):
+            if ordinal:
+                assert qml(actor, 'appBarCentralTabs.currentIndex === AppState.Page.Analysis'), (
+                    'The second original request exercises already-selected Analysis without a helper tab click')
+            actor.request('Apply the requested current cell flags through the original controls.')
+            actor.until(lambda value, ordinal=ordinal: len(actor.responses()) == ordinal + 1
+                        and value['ui']['state'] == 'idle', visible_progress=True)
+            # Keep actual settled refusal/partial and current flags BEFORE native_result can raise.
+            captured.append({'ordinal': ordinal, 'requested': wanted,
+                             'response': actor.responses()[-1], 'ui': actor.last['ui']})
+            artifact.write_text(json.dumps({'settlements': captured, 'passive_trace_pending': True}, indent=2) + '\n')
+            native_result(actor.responses()[-1])
+            assert len(actor.responses()) == ordinal + 1, (
+                'Each admitted original request yields one matching native response without replay')
+            after = {row['path']: row for row in actor.last['ui']['project']['parameters']}
+            assert set(after) == {row['path'] for row in before}, (
+                'Workflow and Main admission cannot replace or broaden the original parameter inventory')
+            wanted_by_path = {row['path']: row['free'] for row in wanted}
+            assert all(after[row['path']]['free'] == row['free'] for row in wanted), (
+                'The original request changes the complete actual offered cell set exactly as requested')
+            assert all(after[row['path']] == dict(row, free=wanted_by_path[row['path']])
+                       for row in before if row['path'] in wanted_by_path), (
+                'Changing the requested flags cannot alter their values, SUs or other native metadata')
+            assert all(after[row['path']] == row for row in before if row['path'] not in wanted_by_path), (
+                'Transition and Main readiness cannot write any unrelated scientific parameter')
+            state = qml(actor, '(' + control_expression(marker) + ').note("native_settled")')
+            assert state['ownerCurrent'] and state['analysisSelected'] and state['sourcePageCurrent'] and state['sourcePageProjectSame'], (
+                'The native result belongs to the original project and actual current Analysis page')
+            expected = [row for row in state['basicCandidates'] if row['withinExpectedSidebar'] and row['sameWindow']]
+            assert state['expectedSidebar'] and len(expected) == 1 and expected[0]['checked'], (
+                'The original expected Analysis sidebar has exactly one selected Main tab; unrelated duplicates cannot prove readiness')
+    finally:
+        evidence = {'settlements': captured}
+        if getattr(actor, '_stream_unusable', None) or actor.process.poll() is not None:
+            evidence['passive_gap'] = 'Original observer stream/owner unavailable; no successor command issued'
+        else:
+            try:
+                evidence['passive_facts'] = qml(actor, r'''(function(){const o=OBSERVER;if(!Qt.isQtObject(o))return null;
+                    o.note('final_original_observation');const facts=o.facts;
+                    if(o.connected&&Qt.isQtObject(o.owner)&&o.owner.actionPointerMoved&&typeof o.owner.actionPointerMoved.disconnect==='function')o.owner.actionPointerMoved.disconnect(o.handler);
+                    o.destroy();return facts;})()'''.replace('OBSERVER', control_expression(marker)))
+            except Exception as error:
+                evidence['passive_gap'] = type(error).__name__ + ': ' + str(error)[:400]
+        artifact.write_text(json.dumps(evidence, indent=2) + '\n')
