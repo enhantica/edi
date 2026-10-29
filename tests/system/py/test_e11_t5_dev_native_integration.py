@@ -9430,7 +9430,7 @@ def _assert_exact_original_admitted_user_input(actor, record, original_text, *, 
 # scroll forcing. Native search draft and physical option input remain original.
 def _watch_original_alias_search_focus(actor, marker):
     source = r'''(function(){const project=Session.project,vm=Session.assistant;
-        const probe=Qt.createQmlObject('import QtQuick; Item {id:focusProbe;property var facts:[];property var boxes:[];property var fields:[];property var groups:[];property var groupFacts:[];property var groupGaps:[];property bool finished:false;property var scan:null;property var ready:null;Timer {interval:16;repeat:true;running:!focusProbe.finished;onTriggered:if(focusProbe.scan)focusProbe.scan();}}',window.contentItem);probe.objectName=MARKER;
+        const probe=Qt.createQmlObject('import QtQuick; Item {id:focusProbe;property var facts:[];property var boxes:[];property var fields:[];property var groups:[];property var groupFacts:[];property var groupGaps:[];property var connections:[];property bool finished:false;property var scan:null;property var ready:null;Timer {interval:16;repeat:true;running:!focusProbe.finished;onTriggered:if(focusProbe.scan)focusProbe.scan();}}',window.contentItem);probe.objectName=MARKER;
         function current(){return Qt.isQtObject(project)&&Qt.isQtObject(vm)&&Session.project===project&&Session.assistant===vm;}
         function rect(x){if(!Qt.isQtObject(x))return null;const p=x.mapToItem(null,0,0);return {x:p.x,y:p.y,width:x.width,height:x.height};}
         function inside(x,owner){for(let p=x;p;p=p.parent)if(p===owner)return true;return false;}
@@ -9466,14 +9466,11 @@ def _watch_original_alias_search_focus(actor, marker):
                 mainActive:window.active,activeFocus:identity(window.activeFocusItem),
                 exclusiveMouseGrabber:'UNEXPOSED_TO_ORIGINAL_PUBLIC_QML'};}
         function recordGroup(rec,kind,receiver,event){if(!observing())return;try{probe.groupFacts.push(groupSnap(rec,kind,receiver,event));}catch(error){if(observing())gap(rec,'snapshot_unavailable',kind+':'+String(error));}}
-        function connectGroup(rec,object,signal,kind){if(!Qt.isQtObject(object)){gap(rec,'original_object_unavailable',kind);return;}
-            let source=null;try{source=object[signal];}catch(error){gap(rec,'signal_read_unavailable',signal);return;}
-            if(!source||typeof source.connect!=='function'){gap(rec,'signal_not_exposed',signal+':'+kind);return;}
+        function connectGroup(rec,object,signal,kind){if(!Qt.isQtObject(object)){gap(rec,'original_object_unavailable',kind);return false;}
             const originalReceiver=identity(object);
-            source.connect(function(event){if(!observing())return;
+            return connectPassive(object,signal,function(event){if(!observing())return;
                 if(signal==='destroyed') {
-                    // Destruction notification is observed without invoking any
-                    // method/property on the object whose destructor is active.
+                    // No getter on the destroying object; captured identity only.
                     probe.groupFacts.push({ordinal:probe.groupFacts.length,kind:kind,groupName:rec.name,
                         originalGroup:rec.groupIdentity,originalTitle:rec.titleIdentity,destroyedReceiver:originalReceiver,
                         ownerCurrent:current(),qualification:'original destruction signal; no destroying-object getter was read'});
@@ -9518,15 +9515,26 @@ def _watch_original_alias_search_focus(actor, marker):
                 viewport:view?{contentY:view.contentY,originY:view.originY,contentHeight:view.contentHeight,height:view.height,interactive:view.interactive,atYBeginning:view.atYBeginning,atYEnd:view.atYEnd}:null};}
         function search(box){const popup=box.popup,header=popup&&popup.contentItem?popup.contentItem.headerItem:null;
             return descendants(header).find(function(x){return x.objectName==='comboBox.search';})||null;}
+        function connectPassive(object,signal,callback){
+            if(!observing())return false;
+            if(!Qt.isQtObject(object)){probe.groupGaps.push({code:'original_signal_owner_unavailable',object:null,signal:signal});return false;}
+            for(const rec of probe.connections)if(rec.object===object&&rec.signal===signal)return rec.status==='connected';
+            const rec={object:object,identity:identity(object),signal:signal,status:'installing'};probe.connections.push(rec);
+            function result(status,detail){rec.status=status;probe.groupFacts.push({kind:'passive_signal_binding',object:rec.identity,signal:signal,status:status});
+                if(status!=='connected')probe.groupGaps.push({code:status,object:rec.identity,signal:signal,detail:detail});return status==='connected';}
+            try{const source=object[signal];if(!source||typeof source.connect!=='function')return result('signal_not_exposed','original property is not a connectable signal');
+                source.connect(callback);return result('connected','');
+            }catch(error){return result('connection_unconfirmed',String(error));}}
         function bindField(box){const field=search(box);if(!field||probe.fields.indexOf(field)>=0)return;
-            probe.fields.push(field);field.activeFocusChanged.connect(function(){if(observing()&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_focus_changed',box,field));});
-            field.textChanged.connect(function(){if(observing()&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_text_changed',box,field));});
-            probe.facts.push(snap('original_search_header_observed',box,field));}
+            probe.fields.push(field);const focusBound=connectPassive(field,'activeFocusChanged',function(){if(observing()&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_focus_changed',box,field));});
+            const textBound=connectPassive(field,'textChanged',function(){if(observing()&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_text_changed',box,field));});
+            const fact=snap('original_search_header_observed',box,field);fact.passiveBindingsComplete=focusBound&&textBound;probe.facts.push(fact);}
         function bind(box){if(probe.boxes.indexOf(box)>=0)return;probe.boxes.push(box);
-            box.popup.aboutToShow.connect(function(){if(observing()&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_about_to_show',box,search(box)));}});
-            box.popup.opened.connect(function(){if(observing()&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_opened',box,search(box)));}});
-            box.popup.closed.connect(function(){if(observing()&&Qt.isQtObject(box))probe.facts.push(snap('popup_closed',box,search(box)));});
-            box.activated.connect(function(){if(observing()&&Qt.isQtObject(box))probe.facts.push(snap('choice_activated',box,search(box)));});bindField(box);}
+            const showingBound=connectPassive(box.popup,'aboutToShow',function(){if(observing()&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_about_to_show',box,search(box)));}});
+            const openedBound=connectPassive(box.popup,'openedChanged',function(){if(observing()&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap(box.popup.opened?'popup_opened_state_changed':'popup_not_opened_state_changed',box,search(box)));}});
+            const closedBound=connectPassive(box.popup,'closed',function(){if(observing()&&Qt.isQtObject(box))probe.facts.push(snap('popup_closed',box,search(box)));});
+            const activatedBound=connectPassive(box,'activated',function(){if(observing()&&Qt.isQtObject(box))probe.facts.push(snap('choice_activated',box,search(box)));});
+            const fact=snap('original_popup_passive_binding',box,search(box));fact.passiveBindingsComplete=showingBound&&openedBound&&closedBound&&activatedBound;probe.facts.push(fact);bindField(box);}
         probe.scan=function(){if(!observing())return;observeGroupLifetimes();if(!current())return;for(const x of descendants(window.contentItem)){if(String(x.objectName).startsWith('alias.parameter.'))bind(x);if(x.objectName==='group.alias'||x.objectName==='group.constraint')bindGroup(x);}for(const box of probe.boxes)if(Qt.isQtObject(box))bindField(box);};
         probe.ready=function(control){if(!current())return null;probe.scan();for(const box of probe.boxes)if(Qt.isQtObject(box)&&box.objectName===control){const field=search(box);return snap('current_search_readiness',box,field);}return null;};
         probe.scan();return true;})()'''.replace('MARKER', json.dumps(marker))
