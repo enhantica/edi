@@ -3158,7 +3158,12 @@ struct AssistantViewModel::State {
     QMap<QString, QByteArray> generic_input_hashes; // SHA-256 of actual human-admitted immutable bytes.
     std::unique_ptr<QTemporaryDir> generic_input_cache;
     QStringList generic_skill_paths;
-    QMap<QString, QString> generic_report_roots;
+    struct SavedProjectDirectory { QString path,canonical,identity; };
+    struct ReportLinks {
+        QString workspace;
+        std::vector<std::shared_ptr<const SavedProjectDirectory>> saved_projects;
+    };
+    QMap<QString, std::shared_ptr<const ReportLinks>> generic_report_roots;
     QMap<QString, std::shared_ptr<ImmutableAssistantReport>> generic_report_views;
     quint64 generic_report_bytes = 0;
     QMap<QString, Object> generic_items;
@@ -3634,6 +3639,7 @@ struct AssistantViewModel::State {
         QString key, thread, turn, call, tool, purpose, row;
         Object original, canonical, outcome, response, terminal;
         std::shared_ptr<NativeFitUndo> fit_undo;
+        std::shared_ptr<const SavedProjectDirectory> saved_directory;
         std::shared_ptr<ProjectViewModel::EditOutcome> estimate_receipt;
         QPointer<ExperimentViewModel> estimate_view;
         edi::ExperimentBase* estimate_member=nullptr;
@@ -9815,6 +9821,21 @@ struct AssistantViewModel::State {
             saved?QObject::tr("Project saved."):QObject::tr("Save could not confirm its result. Inspect the current project before repeating.");
         const auto outcome=native_save_outcome(*task,message);
         task->call.record->outcome=outcome;task->call.record->outcome_ready=true;
+        // Optional navigation proof comes ONLY from this actual committed Save,
+        // never from provider text, a cached activity payload or a guessed path.
+        try {
+            const auto& record=task->call.record;const auto& receipt=task->call.receipt;
+            if(task->committed && task->active && record && receipt && !record->retired && !record->discarded &&
+                native_records.value(record->key)==record && record->thread==generic_thread && record->turn==generic_turn &&
+                receipt->generation==generation && receipt->disclosure && receipt->disclosure->account==usage_epoch && project==task->project) {
+                const QFileInfo folder(task->destination);
+                const auto canonical=folder.canonicalFilePath();
+                const auto identity=session_object_identity(canonical);
+                if(folder.isDir() && !folder.isSymLink() && !canonical.isEmpty() && !identity.isEmpty())
+                    record->saved_directory=std::make_shared<const SavedProjectDirectory>(SavedProjectDirectory{
+                        QDir::cleanPath(task->destination),canonical,identity});
+            }
+        }catch(...) {} // Losing optional link presentation never changes factual saved=true.
         end_own_edit(own);
         native_save_finished(task);
         return saved;
@@ -14370,9 +14391,14 @@ struct AssistantViewModel::State {
             if (!discarded && !retained) { generic_fail(storage_error); return; }
             diagnostic.stage = "TURN_END_RECEIPTS";
             if (retained && status == "completed" && !generic_revoke_pending) {
+                auto links=std::make_shared<ReportLinks>();links->workspace=generic_workspace;
+                for(const auto& record:native_records)if(record && record->thread==originalThread && record->turn==originalTurn &&
+                    record->tool=="save_project" && record->completed && !record->retired && !record->discarded && record->saved_directory &&
+                    record->outcome.value("saved")==true && record->outcome.value("committed")==true)
+                    links->saved_projects.push_back(record->saved_directory);
                 for (auto it = generic_item_rows.constBegin(); it != generic_item_rows.constEnd(); ++it)
                     if (generic_item_snapshot(it.key()).value("type") == "agentMessage" && generic_final_items.contains(it.key()))
-                        generic_report_roots.insert(it.value(), generic_workspace);
+                        generic_report_roots.insert(it.value(), links);
             }
             // This receipt follows validation AND durable original-outcome
             // retention. Keep it only on still-pending owned steer requests;
@@ -17959,7 +17985,26 @@ bool AssistantViewModel::openReport(const QString& rowId, const QString& link) {
         const auto url = QUrl::fromEncoded(link.toUtf8(), QUrl::StrictMode);
         if (!url.isValid() || !url.host().isEmpty() || url.hasQuery() || (!url.scheme().isEmpty() && url.scheme() != "file"))
             throw std::runtime_error("Unsupported report link");
-        const auto root = state_->generic_report_roots.value(rowId);
+        const auto links = state_->generic_report_roots.value(rowId);
+        if(!links)throw std::runtime_error("Retained link ownership is unavailable");
+        const auto direct=url.scheme()=="file"?url.toLocalFile():url.path();
+        if(QDir::isAbsolutePath(direct) && !url.hasFragment() && url.userInfo().isEmpty()) {
+            const auto cleaned=QDir::cleanPath(direct);bool savedPath=false;
+            for(const auto& saved:links->saved_projects)if(saved && (cleaned==saved->path || cleaned==saved->canonical)) {
+                savedPath=true;
+                const QFileInfo folder(direct);
+                if(!folder.isDir() || folder.isSymLink() || folder.canonicalFilePath()!=saved->canonical ||
+                    State::session_object_identity(saved->canonical)!=saved->identity)continue;
+                if(!publication.input_current() || state_->generic_report_roots.value(rowId)!=links)return false;
+                // Normal native directory handler only; no project replacement,
+                // local file execution or broader filesystem permission.
+                if(!QDesktopServices::openUrl(QUrl::fromLocalFile(saved->canonical)))
+                    throw std::runtime_error("The saved project directory viewer is unavailable");
+                return true;
+            }
+            if(savedPath)throw std::runtime_error("The original saved project directory changed");
+        }
+        const auto root = links->workspace;
         const auto path = url.isRelative() ? QDir(root).filePath(url.path()) : url.toLocalFile();
         const auto relative = QDir(root).relativeFilePath(path);
         const auto key = rowId + '\n' + relative;

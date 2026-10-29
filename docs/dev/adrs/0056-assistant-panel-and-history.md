@@ -4219,3 +4219,36 @@ Actual first-send Share, Cancel, same-account resume, changed-account/refused
 resume, late draft/files/model edits and exactly-one input qualification remain
 required. No QML state machine, repeated click, replay, new conversation, forced
 permission or persistent account authority is added.
+
+## Completed native Save links use the original retained link owner
+
+FIRST AssistantPanel web/report dispatch still delegates local links to AVM
+openReport. Captive assistant-report files keep their original workspace capture,
+regular-file/resource limits and passive viewer protections. A saved project
+DIRECTORY is a different artifact and cannot be opened by the file capturer.
+
+The existing native Save record may now hold an optional immutable directory
+proof captured only after actual committed active Save on its original live
+project/account/turn owner. It records the actual destination, canonical directory
+and native directory identity. Neither model text, provider history nor an imported
+cached nativeOutcome can create that proof. Only original completed successful
+save_project records of the same retained completed turn bind it into the FIRST
+per-message report-link owner. Existing workspace ownership is retained there too;
+there is no second path registry or persistent filesystem authority.
+
+An explicit click in that retained completed assistant row may open only the
+exact proven directory through QDesktopServices' normal native folder handler,
+after canonical/native identity and regular no-link-directory revalidation. It
+does not replace the current project, bypass unsaved changes, run a local file,
+follow arbitrary assistant paths or authorize descendants. Unsupported schemes,
+queries, missing/replaced/linked targets and all other local paths still refuse or
+use the unchanged captive report-file path. Input/native operation admission is
+unaffected. Optional proof allocation failure never changes factual saved=true.
+
+Proofs are local to the original live retained-link owner and are not reconstructed
+from cached/runtime history after restart. Archive-file and copied/exported output
+links are not silently granted directory authority. Original successful directory
+Save/Save As, multiple outputs/rows, old rows after a later turn, malformed or forged
+paths, changed directory identity, cancelled/partial/refused Save and ordinary
+native folder handling require independent qualification. Source alone is not a
+runtime fix or a scientific acceptance claim.
