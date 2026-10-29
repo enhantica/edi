@@ -3862,3 +3862,25 @@ isOther/isSecret values when supplied, for every member before human wait or
 prefix publication. Omitted default booleans and legitimate nullable options
 retain their protocol meanings. Unused presentation metadata does not escape
 validation. This type check is not a new secret-input display policy.
+
+## Requested mode changes preserve the entered action
+
+FIRST showActions exposes the user's latest requested choice. The existing
+show_actions member remains the effective mode for routing, resource admission
+and all callbacks of an entered original native call. The callback-free mode
+reconciliation runs only without the original call/pending/fit/Create/Save/widget/
+helper owners, before the next native admission and during ordinary notification.
+The existing pending-operation guard includes original widget/helper cleanup;
+clearing native_call before widget_end is not a fresh admission boundary. Repeated
+user changes retain the latest choice without superseding/cancelling/replaying
+any entered action or changing scientific effects. The existing
+native_state.show_actions remains effective mode; the public showActions property
+is the latest requested preference. Ordinary terminal/manual takeover/Stop ownership remains.
+
+The existing sidebar eye/text toggle stays enabled while connected. The original
+AI status group duplicates icon-only eye immediately left of ordinary Stop while
+the agent works, including with chat visible, using the same backend property and
+original cancel call. Its label area keeps the existing chat-visible suppression;
+controls do not acquire a second QML state. Theme/selected/keyboard/accessibility
+and original Stop press-retention geometry remain. No runtime/rendered behavior,
+current-action equivalence or latency qualification follows from source alone.
