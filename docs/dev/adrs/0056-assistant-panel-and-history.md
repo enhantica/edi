@@ -3933,3 +3933,9 @@ image limits, source-copy properties, passive authored-image denial and original
 receiver/document/revision checks remain. The reported screenshot is consistent
 with the old fallback class, not proof of its exclusive trigger; streaming,
 capacity, copy, replacement and decoration witnesses still require execution.
+
+Actual structured-question answers use the existing user-row presentation with
+literal human text and the original question turn association. This does not
+fabricate a runtime userMessage/item/turn/start, consume attachments, create an
+approval or weaken the generic activity text guard. The original per-card row
+identity and final original-ID answer map are unchanged.

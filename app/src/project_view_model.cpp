@@ -4106,6 +4106,8 @@ void ProjectViewModel::viewAfterSave(bool shown) {
 }
 
 QString ProjectViewModel::adoptSave(const QString& directory, const edi::ProjectMetadata& metadata) {
+    const PublicationScope publication(*this);
+    if(retired_)return tr("The original saved project owner was replaced");
     if (const QString refusal = saveRefusal(); !refusal.isEmpty()) {
         setLastError(refusal);
         return refusal;
@@ -4144,9 +4146,32 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
         const QString message =
             tr("The project was saved, but reading it back failed: %1").arg(QString::fromUtf8(error.what()));
         setLastError(message);
-        emit pathChanged();
-        publishMetadata();
-        setModified(true);
+        if(retired_)return message;
+        setModified(true); // Actual adopted values/files remain unsaved, even if presentation fails.
+        if(retired_)return message;
+        try {
+            // Reuse the ordinary edit's stale-frame owners without scheduling
+            // another calculation or inventing a successful Save publication.
+            for(ExperimentViewModel* experiment:experiment_models_) {
+                if(!experiment->experiment()->computed_current())experiment->markPatternStale();
+                if(retired_)return message;
+            }
+            for(StructureViewModel* structure:structure_models_) {
+                if(!structure->structure()->geometry_current())structure->markSceneStale();
+                if(retired_)return message;
+            }
+            publish(false); // Parameters, Text/cache, metadata and report follow retained values.
+            if(retired_)return message;
+            emit pathChanged();
+        }catch(...) {
+            if(retired_)return message;
+            // Invalidate stale exports even when broader publication refuses;
+            // the original Save error remains the primary failure text.
+            saved_files_.reset();
+            try{invalidateTexts();}catch(...) {}
+            if(retired_)return message;
+            holdPublicationFailure(message);
+        }
         return message;
     }
     setLastError({});
