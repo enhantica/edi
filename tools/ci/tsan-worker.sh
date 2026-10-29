@@ -26,15 +26,30 @@ if [ ! -f "$PROBE" ]; then
     exit 1
 fi
 
-# The pinned SDK's source, at the commit the linked prefix was built from.
+# The selected SDK's exact source: the pin normally, or the explicit consumer tree.
 bash tools/ci/build-crysta.sh
-bash tools/ci/crysta-src.sh
-SRC="$ROOT/build/crysta-src"
-SHA="$(cat "$SRC/CRYSTA_SOURCE_SHA")"
+if [ -n "${CRYSTA_SDK_DIR:-}" ]; then
+    SRC="${CRYSTA_CONSUMER_SRC:-}"
+    if [ -z "$SRC" ] || [ ! -f "$SRC/CMakeLists.txt" ]; then
+        echo "tsan-worker: the candidate SDK requires its CRYSTA_CONSUMER_SRC tree" >&2
+        exit 1
+    fi
+    SHA="$(python -c 'import json,sys; print(json.load(open(sys.argv[1]))["source_sha"])' \
+        "$CRYSTA_SDK_DIR/share/crysta-sdk/manifest.json")"
+else
+    bash tools/ci/crysta-src.sh
+    SRC="$ROOT/build/crysta-src"
+    SHA="$(cat "$SRC/CRYSTA_SOURCE_SHA")"
+fi
+live="$(git -C "$SRC" rev-parse HEAD)"
+if [ "$live" != "$SHA" ] || ! git -C "$SRC" diff --quiet "$SHA" --; then
+    echo "tsan-worker: the source must be the selected SDK's unchanged commit $SHA (found $live)" >&2
+    exit 1
+fi
 TREE="$ROOT/build/tsan"
 FLAGS="-fsanitize=thread -fno-omit-frame-pointer -g"
 
-# crysta under the sanitizer: rebuilt only when the pinned source moves.
+# crysta under the sanitizer: rebuilt only when the selected source moves.
 if [ "$(cat "$TREE/prefix/.crysta-sha" 2>/dev/null)" != "$SHA" ]; then
     rm -rf "$TREE/crysta" "$TREE/prefix"
     cmake -S "$SRC" -B "$TREE/crysta" -G Ninja --no-warn-unused-cli -DCMAKE_BUILD_TYPE=RelWithDebInfo \
