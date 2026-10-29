@@ -4086,3 +4086,43 @@ weekly readings, percentages, account association and reset-clock timer remain;
 that timer never polls usage. There is no new procedural QML logic. Automatic
 first-open/priority/account/reentry/late-ID/error/stock-runtime/theme qualification
 remains required; source alone is not runtime repair or exclusive owner-cause proof.
+
+## Viewed draft identity versus disposable execution context
+
+FIRST saved-session association now retains an independently proven viewed/draft
+binding from a verified live Edi runtime conversation: exact thread, nonempty
+managed-account identity/epoch, original Controller/generation and Project/model.
+Cached transcript rows, global last ID and a text-only history fallback cannot
+create that binding. Ordinary pending input edits may retire execution/thread
+policy while this local binding retains current files, consumed markers, draft
+and disclosure. Repeated add/removal, departure and ordinary close use the same
+full association writer; changed selected inputs do not inherit old approval.
+
+Real account retirement, unrelated Controller/project replacement, matching actual
+Archive and successful explicit New retire the binding. The original ordinary
+empty-project Create handoff can transfer it only with its captured original
+same-thread/account proof. Source file identities/digests are still written and
+restored through FIRST admission owners; unavailable inputs remain unavailable.
+
+After actual fresh Share, an empty execution key with a valid viewed binding
+prepares current instructions/scope first, then cold-resumes that exact runtime
+conversation through original ResumeCheckpoint/schedule_resume_connection and
+verified thread/read+resume. Controller/files/generation and the accepted offer's
+scope token remain; retired execution policy/approval is never revived. A stock
+loaded thread cannot silently keep an obsolete instruction workspace. Existing
+pending Send waits without a turn/write until original account/policy readiness;
+actual account mismatch, changed scope, New, Stop/retirement and input ownership
+continue to fence admission. No cached history is injected as a new prompt and no
+implicit fresh conversation replaces the retained viewed session.
+
+The Share return records only the real captured context permission while its
+exact known-account resume is pending; it does not report connected or admit input.
+No second store/service, UI state machine, model inference or scientific replay is
+introduced. Source alone does not qualify actual file restoration/reconnect or
+claim all older display-history symptoms have this exclusive cause.
+
+Existing browser work settles before cold transfer, through the same prerequisite
+as manual selection; original draft readiness signals continue only an already
+accepted Send. The old transport's history waiter/cursors retire through FIRST
+retire_session_history before missing coverage is loaded on verified resume. No
+read result, Archive acknowledgment or scientific outcome is manufactured.
