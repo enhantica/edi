@@ -87,6 +87,20 @@
 namespace edi_app {
 // One explicitly authorized friend, defined only in this tests-owned carrier.
 struct CodexAgentTestAccess {
+    static Object usageQueue(const CodexAgent& agent){
+        Array usage,account,issued,turns;
+        for(auto i=agent.pending_.constBegin();i!=agent.pending_.constEnd();++i){
+            if(i.value()=="account/rateLimits/read")usage.append(i.key());
+            if(i.value()=="account/read")account.append(i.key());
+            if(i.value()=="turn/start")turns.append(i.key());
+        }
+        for(const auto& id:agent.optional_usage_ids_)issued.append(id);
+        return {{"generation",QString::number(agent.generation_)},{"clock_ms",static_cast<double>(agent.clock_.elapsed())},
+            {"pending_usage_ids",usage},{"pending_account_read_ids",account},{"pending_turn_start_ids",turns},{"issued_optional_ids",issued},
+            {"deferred_required_bytes",agent.deferred_required_.size()},
+            {"optional_queued_bytes",static_cast<double>(agent.optional_queued_bytes_)},
+            {"failure_active",agent.failureActive()},{"original_optional_deadline_ms",static_cast<double>(edi::assistant::Limits::http_json_ms)}};
+    }
     static bool expiredAt(const CodexAgent& agent,qint64 now){return agent.operationExpired(now);}
     static qint64 future(const CodexAgent& agent){return std::max(agent.operation_start_,agent.last_activity_)+std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::hours(24)).count();}
     static Object timing(const CodexAgent& agent){return {{"active",agent.operation_start_>=0},{"total_ms",static_cast<double>(agent.total_ms_)},{"idle_ms",static_cast<double>(agent.idle_ms_)},{"expired_after_day",expiredAt(agent,future(agent))}};}
@@ -524,6 +538,8 @@ int main(int argc,char** argv) {
         }
         return false;
     };
+    Array usage_transport_events;
+    QPointer<edi_app::CodexAgent> usage_observed_agent;
     Array ui_sequence;
     UiInputObserver ui_inputs;
     auto ui_record=[&](const QString& kind,QEvent* event=nullptr) {
@@ -1751,6 +1767,68 @@ int main(int argc,char** argv) {
                     },Qt::DirectConnection);
                 result={{"armed",true},{"boundary","original messages.rowsInserted pending user"},
                     {"original_vm",true},{"original_message_model",true}};
+            }
+            else if(op=="usage_transport_snapshot" || op=="usage_expire_issued") {
+                QPointer<edi_app::AssistantViewModel> vm=observed->assistant();
+                QPointer<edi_app::CodexAgent> agent;QPointer<QProcess> child;
+                const auto expected=QFileInfo(qEnvironmentVariable("EDI_CODEX_DEVELOPMENT_EXECUTABLE")).canonicalFilePath();
+                const auto fixture=QFileInfo(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT")).canonicalPath();
+                if(expected.isEmpty() || fixture.isEmpty() || QFileInfo(expected).canonicalPath()!=fixture)
+                    throw std::runtime_error("usage observation refuses a process outside the exact owned fixture directory");
+                for(auto* candidate:vm->findChildren<edi_app::CodexAgent*>()) {
+                    if(candidate->parent()!=vm || candidate->outputOwnerState()!=edi_app::CodexAgent::OutputOwnerState::Live)continue;
+                    for(auto* process:candidate->findChildren<QProcess*>(QString(),Qt::FindDirectChildrenOnly)) {
+                        if(process->state()!=QProcess::Running || QFileInfo(process->program()).canonicalFilePath()!=expected)continue;
+                        if(child)throw std::runtime_error("ambiguous owned scripted usage child");
+                        child=process;agent=candidate;
+                    }
+                }
+                if(!child || !agent || child->parent()!=agent || !vm || observed->assistant()!=vm)
+                    throw std::runtime_error("original current owned usage transport was not proved");
+                const auto pid=child->processId();qlonglong parent=-1;
+#if defined(Q_OS_LINUX)
+                QFile status(QStringLiteral("/proc/")+QString::number(pid)+"/status");
+                if(status.open(QIODevice::ReadOnly))for(const auto& line:status.readAll().split('\n'))
+                    if(line.startsWith("PPid:"))parent=line.mid(5).trimmed().toLongLong();
+#endif
+                if(parent!=QCoreApplication::applicationPid())throw std::runtime_error("actual original usage child OS parent unproved on this platform");
+                if(usage_observed_agent!=agent) {
+                    usage_observed_agent=agent;
+                    const QPointer<edi_app::CodexAgent> originalAgent(agent);
+                    const QPointer<edi_app::AssistantViewModel> originalVm(vm);
+                    const QPointer<QProcess> originalChild(child);
+                    auto record=[&,originalAgent,originalVm,originalChild](const QString& kind,const QString& id) {
+                        if(!originalAgent || !originalChild)return;
+                        auto event=edi_app::CodexAgentTestAccess::usageQueue(*originalAgent);
+                        event["kind"]=kind;event["request_id"]=id;
+                        event["current_owner"]=originalVm && observed && observed->assistant()==originalVm && originalAgent->parent()==originalVm;
+                        event["backpressured"]=originalAgent->optionalUsageBackpressured();
+                        event["actual_bytes_to_write"]=static_cast<double>(originalChild->bytesToWrite());
+                        if(originalVm)event["usage"]=QJsonObject::fromVariantMap(originalVm->usage());
+                        usage_transport_events.append(event);
+                    };
+                    QObject::connect(agent,&edi_app::CodexAgent::optionalUsageReady,&ui_inputs,[record]{record(QStringLiteral("optional_usage_ready"),{});});
+                    QObject::connect(agent,&edi_app::CodexAgent::optionalUsageUnavailable,&ui_inputs,[record](const QString& id){record(QStringLiteral("optional_usage_unavailable"),id);});
+                }
+                result=edi_app::CodexAgentTestAccess::usageQueue(*agent);
+                result["events"]=usage_transport_events;
+                const Object ownership{{"host_pid",QCoreApplication::applicationPid()},{"peer_pid",static_cast<double>(pid)},
+                    {"peer_parent",static_cast<double>(parent)},{"original_vm_child",true},{"program",expected},
+                    {"actual_bytes_to_write",static_cast<double>(child->bytesToWrite())},
+                    {"optional_usage_backpressured",agent->optionalUsageBackpressured()}};
+                for(auto i=ownership.constBegin();i!=ownership.constEnd();++i)result[i.key()]=i.value();
+                if(op=="usage_expire_issued") {
+                    const auto id=input["request_id"].toString();
+                    if(id.isEmpty() || !result.value("pending_usage_ids").toArray().contains(id))
+                        throw std::runtime_error("deadline fault requires this exact current actually issued optional usage ID");
+                    const auto before=edi_app::CodexAgentTestAccess::usageQueue(*agent);
+                    edi_app::CodexAgentTestAccess::expireIssuedControl(*agent,id);
+                    result["deadline_fault_before"]=before;
+                    result["deadline_fault_after"]=edi_app::CodexAgentTestAccess::usageQueue(*agent);
+                    result["deadline_fault_id"]=id;
+                    result["events"]=usage_transport_events;
+                    result["qualification"]=QStringLiteral("Existing exact-issued deadline fault; not evidence that thirty seconds elapsed");
+                }
             }
             else if(op=="close_owned_transport_write") {close_owned_session_write();result=session_fault_facts;}
             else if(op=="session_fault_facts") {result=session_fault_facts;result["notification_hits"]=static_cast<int>(session_notification_hits);}

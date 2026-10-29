@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import hashlib
 import os
+import stat
 import sys
 import threading
 from pathlib import Path
@@ -35,6 +36,7 @@ account_mode_delivered = False
 effective_configs = {}
 subscribed_threads = set()
 held_usage = []
+fixture_usage_response_index = 0
 pending_metadata = []
 pending_archive = None
 pending_turn_start = None
@@ -103,6 +105,65 @@ def emit(value):
 def reply(request, value):
     emit({'id': request['id'], 'result': value})
 
+
+def reply_configured_original_usage(request, spec):
+    # Opt-in metadata only: capture the original ID and upstream envelope NOW,
+    # not when a later configuration/account changes. Default fixture is intact.
+    original = json.loads(json.dumps(request))
+    captured = json.loads(json.dumps(spec))
+    assert ('result' in captured) != ('error' in captured)
+    envelope = {'id': original['id'], **{key: captured[key] for key in ('result', 'error') if key in captured}}
+    fifo = captured.get('release_fifo')
+    if not fifo:
+        emit(envelope)
+        return
+    target = Path(fifo)
+    ready = Path(captured['ready'])
+    owner = Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).resolve().parent
+    assert target.is_absolute() and target.parent.resolve() == owner and ready.parent.resolve() == owner
+    assert not target.is_symlink() and stat.S_ISFIFO(target.stat().st_mode) and target.stat().st_uid == os.geteuid()
+    def release_original_once():
+        descriptor = os.open(target, os.O_RDWR)
+        try:
+            ready.write_text(json.dumps({'request_id': original['id'], 'method': original['method'],
+                'pid': os.getpid(), 'parent_pid': os.getppid(), 'captured_envelope_sha256':
+                    hashlib.sha256(json.dumps(envelope, sort_keys=True).encode()).hexdigest()}))
+            token = os.read(descriptor, 1)
+            assert token == b'R', 'Only the original owned fixture release settles this exact request'
+            emit(envelope)
+        finally:
+            os.close(descriptor)
+    thread = threading.Thread(target=release_original_once, daemon=True)
+    thread.start()
+
+def hold_original_usage_stdin_after_reply(spec):
+    hold = spec.get('hold_stdin_after_reply')
+    if not hold:
+        return
+    owner = Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).resolve().parent
+    drain = Path(hold['drain_fifo']);notify_fifo = Path(hold['notification_fifo'])
+    ready = Path(hold['ready']);notify_ready = Path(hold['notification_ready'])
+    for path in (drain, notify_fifo, ready, notify_ready):
+        assert path.is_absolute() and path.parent.resolve() == owner
+    for path in (drain, notify_fifo):
+        assert not path.is_symlink() and stat.S_ISFIFO(path.stat().st_mode) and path.stat().st_uid == os.geteuid()
+    original_event = json.loads(json.dumps(hold['notification']))
+    assert original_event['method'] == 'account/updated', 'This finite carrier releases only the original account-mode notification'
+    def release_account_notification():
+        descriptor = os.open(notify_fifo, os.O_RDWR)
+        try:
+            notify_ready.write_text(json.dumps({'pid': os.getpid(), 'parent_pid': os.getppid(), 'event': original_event}))
+            assert os.read(descriptor, 1) == b'N'
+            notify(original_event['method'], original_event['params'])
+        finally:
+            os.close(descriptor)
+    thread = threading.Thread(target=release_account_notification, daemon=True);thread.start()
+    descriptor = os.open(drain, os.O_RDWR)
+    try:
+        ready.write_text(json.dumps({'pid': os.getpid(), 'parent_pid': os.getppid(), 'actual_stdin_read_held': True}))
+        assert os.read(descriptor, 1) == b'D'
+    finally:
+        os.close(descriptor)
 
 def metadata_reply(request, value, family):
     current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
@@ -498,20 +559,33 @@ for line in sys.stdin:
         normal_account = {'account': {'type': 'chatgpt',
             'email': config.get('account_email', 'integration@example.invalid'), 'planType': 'plus'},
             'requiresOpenaiAuth': False}
-        metadata_reply(request, current_account.get('fixture_account_read_reply', normal_account), 'account_read')
+        if current_account.get('fixture_account_read_response') is not None:
+            reply_configured_original_usage(request, current_account['fixture_account_read_response'])
+        else:
+            metadata_reply(request, current_account.get('fixture_account_read_reply', normal_account), 'account_read')
     elif method == 'account/rateLimits/read':
         emit_released_question_native_probes()
         current = json.loads(Path(os.environ['EDI_TEST_CODEX_PEER_INPUT']).read_text(encoding='utf-8'))
         settle_captured_archived_start()
         settle_fixture_unacked_start()
-        barrier = current.get('hold_usage_until')
-        if barrier and not Path(barrier).exists():
-            held_usage.append(request)
+        configured = current.get('fixture_usage_responses')
+        if configured is not None:
+            assert fixture_usage_response_index < len(configured) or current.get('fixture_usage_response_tail') is not None, 'Unexpected extra usage read is not a fixture polling allowance'
+            captured = configured[fixture_usage_response_index] if fixture_usage_response_index < len(configured) else current['fixture_usage_response_tail']
+            fixture_usage_response_index += 1
+            reply_configured_original_usage(request, captured)
+            hold_original_usage_stdin_after_reply(captured)
+        elif current.get('fixture_usage_default_response') is not None:
+            reply_configured_original_usage(request, current['fixture_usage_default_response'])
         else:
-            for old in held_usage:
-                reply(old, {'rateLimits': None, 'rateLimitsByLimitId': {}})
-            held_usage.clear()
-            reply(request, {'rateLimits': None, 'rateLimitsByLimitId': {}})
+            barrier = current.get('hold_usage_until')
+            if barrier and not Path(barrier).exists():
+                held_usage.append(request)
+            else:
+                for old in held_usage:
+                    reply(old, {'rateLimits': None, 'rateLimitsByLimitId': {}})
+                held_usage.clear()
+                reply(request, {'rateLimits': None, 'rateLimitsByLimitId': {}})
         for old, value, family in list(pending_metadata):
             gate = current.get('session_fixture', {}).get(family + '_hold')
             if not gate or Path(gate).exists():

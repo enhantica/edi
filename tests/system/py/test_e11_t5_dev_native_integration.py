@@ -10756,3 +10756,395 @@ def _capture_original_target_association(actor, target, source, stage, marker):
     return {'stage': stage, 'target': target, 'association': association, 'original_source': source_fact,
         'browser': browser_fact, 'public_preparation_events': events,
         'qualification': 'Missing saved record/restore fields and unavailable-source fallback remain separate facts. Settings read does not invoke remember_current_session, flush or approve; absence of a public unavailable-input event is not proof no fallback occurred.'}
+
+
+def _original_usage_fifo_reply(actor, ordinal, *, result=None, error=None):
+    assert hasattr(os, 'mkfifo'), 'The original owned FIFO response hold is UNREACHED on this platform'
+    fifo = actor.folder / ('original-usage-' + str(ordinal) + '.fifo')
+    os.mkfifo(fifo, 0o600)
+    ready = actor.folder / ('original-usage-' + str(ordinal) + '.ready.json')
+    value = {'release_fifo': str(fifo), 'ready': str(ready)}
+    assert (result is None) != (error is None), 'One original response envelope is either result or error'
+    value['result' if error is None else 'error'] = result if error is None else error
+    return value
+
+
+def _release_original_usage_reply(actor, spec, expected_id, *, method='account/rateLimits/read'):
+    ready = Path(spec['ready']);fifo = Path(spec['release_fifo'])
+    actor.until(lambda _value: ready.is_file())
+    proof = json.loads(ready.read_text())
+    ownership = actor.command('usage_transport_snapshot')['reply']
+    assert proof['request_id'] == expected_id and proof['method'] == method \
+        and proof['pid'] == ownership['peer_pid'] and proof['parent_pid'] == ownership['host_pid'] \
+        and ownership['original_vm_child'] and fifo.parent == actor.folder, (
+            'Only the exact original current owned peer request/pipe is released, not a fabricated replacement ID')
+    descriptor = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+    try:
+        assert os.write(descriptor, b'R') == 1
+    finally:
+        os.close(descriptor)
+    return proof
+
+
+def _original_usage_value(actor):
+    return qml(actor, 'Session.assistant.usage')
+
+
+def _original_usage_window(used_percent):
+    return {'rateLimits': {'limitId': 'codex', 'limitName': None, 'planType': 'plus',
+        'primary': {'usedPercent': used_percent, 'windowDurationMins': 300, 'resetsAt': 2000000000},
+        'secondary': None, 'credits': None}, 'rateLimitsByLimitId': None}
+
+
+def test_original_usage_ready_loading_coalescing_empty_error_and_zero_keep_truthful_current_data(main_actor):
+    actor = main_actor([[]])
+    first = _original_usage_fifo_reply(actor, 0, result=_original_usage_window(37))
+    second = _original_usage_fifo_reply(actor, 1, result=_original_usage_window(0))
+    empty = _original_usage_fifo_reply(actor, 2, result={'rateLimits': None, 'rateLimitsByLimitId': {}})
+    failure = _original_usage_fifo_reply(actor, 3, error={'code': -32000, 'message': 'Original controlled usage failure'})
+    unsupported = _original_usage_fifo_reply(actor, 4, error={'code': -32601, 'message': 'Method not found'})
+    specs = [first, second, empty, failure, unsupported]
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        fixture_usage_default_response={'result': _original_usage_window(37)})
+    observations = []
+    released = set()
+    def retain(stage):
+        row = {'stage': stage, 'usage': _original_usage_value(actor),
+            'requests': _session_wire(actor, 'account/rateLimits/read'),
+            'texts': [row for row in actor.last['ui']['texts'] if row['visible']],
+            'transport': actor.command('usage_transport_snapshot')['reply']}
+        observations.append(row)
+        (actor.folder / 'original-usage-state-boundaries.json').write_text(json.dumps(observations, indent=2)+'\n')
+        return row['usage']
+    try:
+        actor.connect()
+        actor.until(lambda _value: _original_usage_value(actor)['state'] == 'ready')
+        automatic_count = len(_session_wire(actor, 'account/rateLimits/read'))
+        assert automatic_count > 0, 'Actual readiness has already issued real usage without popup/refresh'
+        _session_configure(actor, fixture_usage_responses=specs)
+        actor.command('refresh_usage')
+        actor.until(lambda _value: len(_session_wire(actor, 'account/rateLimits/read')) == automatic_count + 1)
+        requests = _session_wire(actor, 'account/rateLimits/read')
+        pending = retain('original_refresh_pending')
+        assert pending['state'] == 'loading' and pending['loading'] is True \
+            and isinstance(pending['caption'], str) and pending['caption'] \
+            and isinstance(pending['statusText'], str) and pending['statusText'], (
+                'The genuinely pending original request has immediate human loading feedback, never an unexplained dash or inferred zero')
+        actor.command('click', name='assistant.usage')
+        actor.until(lambda _value: qml(actor, control_expression('assistant.usageDialog') + '.opened'))
+        visible = retain('original_usage_popup_pending')
+        assert any(row['display'] == visible['statusText'] for row in actor.last['ui']['texts'] if row['visible']), (
+            'The original opened popup actually displays the current honest human status, not an empty content area')
+        actor.command('refresh_usage')
+        assert len(_session_wire(actor, 'account/rateLimits/read')) == automatic_count + 1, 'Popup/explicit refresh coalesces with the actual outstanding read'
+        _release_original_usage_reply(actor, first, requests[-1]['id']);released.add(0)
+        actor.until(lambda _value: _original_usage_value(actor)['state'] == 'ready')
+        accepted = retain('first_valid_original_reply')
+        assert accepted['available'] and not accepted['loading'] and not accepted['stale'] \
+            and any(window['usedPercent'] == 37 and window.get('windowDurationMins') == 300
+                    for bucket in accepted['buckets'] for window in bucket.get('windows', [])), (
+                'The accepted original protocol window and percentage, not fabricated default allowance, become current')
+        for index, (spec, final_state) in enumerate(zip(specs[1:], [('ready',), ('unknown', 'unavailable'), ('error',), ('unsupported',)]), start=1):
+            before = len(_session_wire(actor, 'account/rateLimits/read'))
+            actor.command('refresh_usage')
+            actor.until(lambda _value: len(_session_wire(actor, 'account/rateLimits/read')) == before + 1)
+            request = _session_wire(actor, 'account/rateLimits/read')[-1]
+            refreshing = retain('pending_refresh_' + str(index))
+            assert refreshing['loading'] and refreshing['stale'] and refreshing['buckets'] == accepted['buckets'], (
+                'The same-account refresh keeps every last valid allowance window while honestly marking it old/pending')
+            actor.command('refresh_usage')
+            assert len(_session_wire(actor, 'account/rateLimits/read')) == before + 1
+            _release_original_usage_reply(actor, spec, request['id']);released.add(index)
+            actor.until(lambda _value: _original_usage_value(actor)['state'] in final_state)
+            settled = retain('settled_refresh_' + str(index))
+            assert not settled['loading'] and settled['statusText'], 'The matching original reply settles loading with a nonempty human status'
+            if index == 1:
+                assert settled['available'] and not settled['stale'] \
+                    and any(window['usedPercent'] == 0 for bucket in settled['buckets'] for window in bucket.get('windows', [])), (
+                        'Real zero usage remains a valid accepted zero; absence and zero are not merged')
+                accepted = settled
+            else:
+                assert settled['stale'] and settled['buckets'] == accepted['buckets'], (
+                    'Empty/error/unsupported cannot erase or relabel last valid same-account windows as a fresh zero observation')
+            assert len(_session_wire(actor, 'account/rateLimits/read')) == before + 1, (
+                'Original completion alone does not dispatch a polling retry or invent another usage request')
+        assert not _session_wire(actor, 'turn/start'), (
+            'Read-only connection/usage cannot submit model work or scientific input')
+    finally:
+        # Unblock only captured own FIFO waiters during teardown; never issue a
+        # replacement RPC or scientific action to release an original request.
+        for index, spec in enumerate(specs):
+            if index in released or not Path(spec['ready']).is_file():
+                continue
+            try:
+                descriptor = os.open(spec['release_fifo'], os.O_WRONLY | os.O_NONBLOCK)
+                try:
+                    os.write(descriptor, b'R')
+                finally:
+                    os.close(descriptor)
+            except OSError:
+                pass
+
+
+def _release_original_owned_usage_gate(actor, fifo, ready, token):
+    actor.until(lambda _value: ready.is_file())
+    proof = json.loads(ready.read_text());owned = actor.command('usage_transport_snapshot')['reply']
+    assert proof['pid'] == owned['peer_pid'] and proof['parent_pid'] == owned['host_pid'] \
+        and owned['original_vm_child'] and fifo.parent == actor.folder
+    descriptor = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+    try:
+        assert os.write(descriptor, token) == 1
+    finally:
+        os.close(descriptor)
+    return proof
+
+
+def test_original_usage_waiting_last_drain_before_same_account_reply_continues_without_replay(main_actor):
+    actor = main_actor([[], []])
+    def fifo(name):
+        path = actor.folder / name;os.mkfifo(path, 0o600);return path
+    drain = fifo('original-usage-stdin-drain.fifo');notify_fifo = fifo('original-usage-mode-notification.fifo')
+    drain_ready = actor.folder / 'original-usage-stdin-held.json'
+    notify_ready = actor.folder / 'original-usage-notification-held.json'
+    confirm = _original_usage_fifo_reply(actor, 'same-account-read', result={
+        'account': {'type': 'chatgpt', 'email': 'integration@example.invalid', 'planType': 'plus'},
+        'requiresOpenaiAuth': False})
+    final = _original_usage_fifo_reply(actor, 'after-same-account', result=_original_usage_window(19))
+    block = {'result': _original_usage_window(37), 'hold_stdin_after_reply': {
+        'drain_fifo': str(drain), 'ready': str(drain_ready), 'notification_fifo': str(notify_fifo),
+        'notification_ready': str(notify_ready),
+        'notification': {'method': 'account/updated', 'params': {'authMode': 'chatgpt', 'planType': None}}}}
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        fixture_usage_default_response={'result': _original_usage_window(37)},
+        final_text='The original read-only transport scheduling observation is complete.')
+    facts = {'status': 'UNREACHED', 'original_mode_notification': block['hold_stdin_after_reply']['notification']}
+    def retain(stage):
+        row = {'stage': stage, 'usage': _original_usage_value(actor),
+            'transport': actor.command('usage_transport_snapshot')['reply'],
+            'wire': _session_wire(actor)}
+        facts.setdefault('boundaries', []).append(row)
+        (actor.folder / 'original-usage-last-drain-account-order.json').write_text(json.dumps(facts, indent=2)+'\n')
+        return row
+    try:
+        actor.connect();actor.until(lambda _value: _original_usage_value(actor)['state'] == 'ready')
+        original_account = qml(actor, 'Session.assistant.account')
+        assert original_account.get('email') == 'integration@example.invalid', 'The independent same-account fixture reaches its actual original correlated identity'
+        _session_request_with_original_disclosure(actor, 'Establish the actual ordinary retained thread before this separate read-only transport scheduling witness.')
+        _session_completed(actor, 1)
+        actor.until(lambda _value: actor.command('usage_transport_snapshot')['reply']['actual_bytes_to_write'] == 0
+                    and not actor.command('usage_transport_snapshot')['reply']['pending_turn_start_ids'])
+        retain('before_real_transport_hold')
+        _session_configure(actor, fixture_usage_responses=[block, final])
+        actor.command('refresh_usage')
+        actor.until(lambda _value: drain_ready.is_file() and notify_ready.is_file()
+                    and _original_usage_value(actor)['state'] == 'ready')
+        # A genuine ordinary bounded user turn fills the owned child pipe while
+        # its real stdin reader is held. No QProcess/private queue value is set.
+        large = 'Read-only original usage transport scheduling witness.\n' + '.' * (1048576 // 2)
+        facts['original_user_bytes'] = len(large.encode());facts['original_user_sha256'] = hashlib.sha256(large.encode()).hexdigest()
+        _session_request_with_original_disclosure(actor, large)
+        actor.command('refresh_usage')
+        waiting = retain('actual_unadmitted_usage_waiting')
+        assert waiting['usage']['state'] == 'waiting' and waiting['transport']['optional_usage_backpressured'] \
+            and waiting['transport']['actual_bytes_to_write'] > 0 \
+            and waiting['transport']['pending_turn_start_ids'] and not waiting['transport']['pending_usage_ids'], (
+                'A real nonempty physical queue and unadmitted optional read must reach waiting; otherwise this permutation is UNREACHED')
+        _session_configure(actor, fixture_account_read_response=confirm)
+        facts['notification_release'] = _release_original_owned_usage_gate(actor, notify_fifo, notify_ready, b'N')
+        actor.until(lambda _value: bool(actor.command('usage_transport_snapshot')['reply']['pending_account_read_ids']))
+        pending = retain('same_account_read_really_issued_before_drain')
+        assert pending['transport']['pending_account_read_ids'] and pending['usage']['state'] == 'waiting'
+        facts['drain_release'] = _release_original_owned_usage_gate(actor, drain, drain_ready, b'D')
+        actor.until(lambda _value: Path(confirm['ready']).is_file())
+        before_reply = retain('last_real_drain_before_account_reply')
+        account_id = json.loads(Path(confirm['ready']).read_text())['request_id']
+        hints = [event for event in before_reply['transport']['events'] if event['kind'] == 'optional_usage_ready'
+                 and event['current_owner'] and not event['backpressured']
+                 and account_id in event['pending_account_read_ids']]
+        assert hints and before_reply['transport']['actual_bytes_to_write'] == 0 \
+            and not before_reply['transport']['pending_usage_ids'] and before_reply['usage']['state'] == 'waiting', (
+                'The LAST actual original drain hint arrives while the exact account/read is still pending and optional usage is not admitted')
+        assert not any(row.get('id') == account_id and 'result' in row
+                       for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())), (
+            'The original same-account confirmation response is genuinely withheld, not an already-settled flag')
+        before_count = len(_session_wire(actor, 'account/rateLimits/read'))
+        _release_original_usage_reply(actor, confirm, account_id, method='account/read')
+        # No refresh/replayed send or synthetic ready hint after confirmation.
+        actor.until(lambda _value: len(_session_wire(actor, 'account/rateLimits/read')) == before_count + 1)
+        resumed = retain('account_completion_alone_admits_waiting_usage')
+        assert qml(actor, 'Session.assistant.account') == original_account
+        assert resumed['usage']['state'] == 'loading' and len(resumed['transport']['pending_usage_ids']) == 1
+        request = _session_wire(actor, 'account/rateLimits/read')[-1]
+        _release_original_usage_reply(actor, final, request['id'])
+        actor.until(lambda _value: _original_usage_value(actor)['state'] == 'ready')
+        facts['status'] = 'REACHED_REAL_QUEUE_DRAIN_BEFORE_SAME_ACCOUNT_REPLY'
+        retain('original_waiting_operation_settled_once')
+    finally:
+        # Release only owned descriptors; no RPC or model input retry. Original
+        # commands/child teardown retain any failed or uncertain boundary.
+        for path, ready, token in [(drain, drain_ready, b'D'), (notify_fifo, notify_ready, b'N'),
+                                  (Path(confirm['release_fifo']), Path(confirm['ready']), b'R'),
+                                  (Path(final['release_fifo']), Path(final['ready']), b'R')]:
+            if not ready.is_file():
+                continue
+            try:
+                descriptor = os.open(path, os.O_WRONLY | os.O_NONBLOCK)
+                try:
+                    os.write(descriptor, token)
+                finally:
+                    os.close(descriptor)
+            except OSError:
+                pass
+        (actor.folder / 'original-usage-last-drain-account-order.json').write_text(json.dumps(facts, indent=2)+'\n')
+
+
+
+@pytest.mark.parametrize('account_barrier', [False, True], ids=['normal', 'initial-account-pending'])
+def test_original_connect_without_usage_popup_automatically_obtains_current_valid_usage(main_actor, account_barrier):
+    actor = main_actor([[]])
+    initial = _original_usage_fifo_reply(actor, 'initial-account', result={
+        'account': {'type': 'chatgpt', 'email': 'integration@example.invalid', 'planType': 'plus'},
+        'requiresOpenaiAuth': False}) if account_barrier else None
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        fixture_usage_default_response={'result': _original_usage_window(37)}, fixture_account_read_response=initial)
+    marker = 'e11.original.usage.bootstrap-states'
+    assert qml(actor, '(function(){const vm=Session.assistant,o=Qt.createQmlObject(\'import QtQuick; Item {property var facts:[];}\',window.contentItem);o.objectName=' + json.dumps(marker) + ';vm.usageChanged.connect(function(){if(Qt.isQtObject(o)&&Qt.isQtObject(vm))o.facts.push({current:Session.assistant===vm,usage:JSON.parse(JSON.stringify(vm.usage))});});return true;})()')
+    if initial is not None:
+        if _unique_input_control(actor.last, 'home.start') is not None:
+            actor.command('click', name='home.start')
+        actor.until(lambda value: _unique_input_control(value, 'assistant.connection') is not None)
+        actor.command('sign_in')
+        actor.until(lambda _value: Path(initial['ready']).is_file())
+        actual_account_read = json.loads(Path(initial['ready']).read_text())
+        assert actual_account_read['method'] == 'account/read' and not _session_wire(actor, 'account/rateLimits/read'), (
+            'The initial actual correlated identity barrier is genuinely pending; no optional usage can invent ready-account authority')
+        _release_original_usage_reply(actor, initial, actual_account_read['request_id'], method='account/read')
+        actor.until(lambda value: value['ui']['connected'])
+        actor.command('accept_context')  # Same original positive connection prelude; no usage popup/refresh.
+    else:
+        actor.connect()
+    observed = {}
+    def actual_ready(_value):
+        observed.update(_original_usage_value(actor))
+        return observed.get('state') == 'ready' and observed.get('available') is True
+    try:
+        # No popup, explicit refresh, synthetic request or connection retry.
+        actor.until(actual_ready)
+    finally:
+        (actor.folder / 'original-connect-automatic-usage.json').write_text(json.dumps({
+            'actual_usage': observed, 'wire': _session_wire(actor),
+            'original_usage_states': qml(actor, '(' + _scene_control_expression(marker) + ').facts') if not getattr(actor, '_stream_unusable', None) else 'UNREACHED_POISONED_STREAM',
+            'constraint': 'No usage popup or refresh command issued; original Connect/bootstrap alone must provide actual valid current usage.',
+            'qualification': 'Actual required-metadata/preemption ordering is retained in original wire; no invented queue/preemption event.'}, indent=2)+'\n')
+    states = qml(actor, '(' + _scene_control_expression(marker) + ').facts')
+    assert any(row['current'] and row['usage'].get('state') == 'loading' and row['usage'].get('loading') is True
+               and row['usage'].get('statusText') and row['usage'].get('caption') for row in states), (
+        'An actual automatic original read publishes honest human loading feedback before ready, without requiring the popup')
+    assert not observed['loading'] and not observed['stale'] and any(
+        window['usedPercent'] == 37 for bucket in observed['buckets'] for window in bucket.get('windows', []))
+    assert _session_wire(actor, 'account/rateLimits/read') and not _session_wire(actor, 'turn/start'), (
+        'Automatic usage is an actual supported original read without model/science input')
+    accepted_count = len(_session_wire(actor, 'account/rateLimits/read'))
+    actor.command('inspect')
+    assert len(_session_wire(actor, 'account/rateLimits/read')) == accepted_count, (
+        'Observed valid completion alone does not dispatch an immediate usage polling cycle')
+
+
+def test_original_connect_preempted_usage_continues_after_real_bootstrap_without_popup_or_old_reply_replay(main_actor):
+    actor = main_actor([[]])
+    first = _original_usage_fifo_reply(actor, 'original-bootstrap-preempted', result=_original_usage_window(9))
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        fixture_usage_responses=[first], fixture_usage_response_tail={'result': _original_usage_window(37)})
+    facts = {'qualification': 'Requires an actual original optional read preempted by a real later required bootstrap request. No fake usage state, popup or refresh; absence is UNREACHED, not an inferred product cause.'}
+    released = False
+    try:
+        actor.connect()
+        actor.until(lambda _value: Path(first['ready']).is_file())
+        request_id = json.loads(Path(first['ready']).read_text())['request_id']
+        wire = _session_wire(actor)
+        index = next(i for i, row in enumerate(wire) if row.get('id') == request_id)
+        required = [row for row in wire[index+1:] if 'id' in row and row.get('method')
+                    and row['method'] != 'account/rateLimits/read']
+        transport = actor.command('usage_transport_snapshot')['reply']
+        facts.update({'held_original_id': request_id, 'original_wire': wire, 'later_required_controls': required,
+                      'actual_transport_before_late_reply': transport})
+        (actor.folder / 'original-connect-preempted-usage.json').write_text(json.dumps(facts, indent=2)+'\n')
+        assert required and request_id in transport['issued_optional_ids'] \
+            and request_id not in transport['pending_usage_ids'] and not transport['failure_active'] \
+            and transport['clock_ms'] < transport['original_optional_deadline_ms'], (
+                'The exact originally issued optional read is genuinely retired before its held response/deadline while a later real required bootstrap control runs; otherwise preemption is UNREACHED')
+        actor.until(lambda _value: _original_usage_value(actor)['state'] == 'ready')
+        current = _original_usage_value(actor)
+        reads = _session_wire(actor, 'account/rateLimits/read')
+        assert len(reads) >= 2 and len({row['id'] for row in reads}) == len(reads) and reads[-1]['id'] != request_id and any(
+            window['usedPercent'] == 37 for bucket in current['buckets'] for window in bucket.get('windows', [])), (
+                'Bootstrap completion itself admits one fresh current usage read before the old response is released, without requiring a popup or replayed refresh')
+        count_before_late = len(reads)
+        _release_original_usage_reply(actor, first, request_id);released = True
+        actor.command('inspect')
+        after = _original_usage_value(actor)
+        facts.update({'ready_before_late_reply': current, 'usage_after_old_reply': after,
+                      'final_wire': _session_wire(actor)})
+        assert after['state'] == 'ready' and not after['stale'] and after['buckets'] == current['buckets'], (
+            'The exact late preempted nine-percent result cannot replace the current accepted thirty-seven-percent snapshot')
+        assert len(_session_wire(actor, 'account/rateLimits/read')) == count_before_late and not _session_wire(actor, 'turn/start')
+    finally:
+        if not released and Path(first['ready']).is_file():
+            try:
+                descriptor = os.open(first['release_fifo'], os.O_WRONLY | os.O_NONBLOCK)
+                try:
+                    os.write(descriptor, b'R')
+                finally:
+                    os.close(descriptor)
+            except OSError:
+                pass
+        (actor.folder / 'original-connect-preempted-usage.json').write_text(json.dumps(facts, indent=2)+'\n')
+
+
+def test_original_issued_usage_deadline_disposition_retires_intent_without_replay_or_late_overwrite(main_actor):
+    actor = main_actor([[]])
+    late = _original_usage_fifo_reply(actor, 'deadline', result=_original_usage_window(9))
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        fixture_usage_default_response={'result': _original_usage_window(37)})
+    facts = {'qualification': 'Existing authorized exact-issued deadline fault exercises original checkDeadline/disposition, not actual thirty-second elapsed time; production clock unchanged.'}
+    released = False
+    try:
+        actor.connect();actor.until(lambda _value: _original_usage_value(actor)['state'] == 'ready')
+        accepted = _original_usage_value(actor)
+        _session_configure(actor, fixture_usage_responses=[late])
+        count = len(_session_wire(actor, 'account/rateLimits/read'))
+        actor.command('refresh_usage')
+        actor.until(lambda _value: Path(late['ready']).is_file())
+        request_id = json.loads(Path(late['ready']).read_text())['request_id']
+        original = actor.command('usage_transport_snapshot')['reply']
+        assert request_id in original['pending_usage_ids'] and _original_usage_value(actor)['loading'], (
+            'The deadline-fault entrance requires an actually issued current optional ID, never a fabricated pending role')
+        expired = actor.command('usage_expire_issued', request_id=request_id)['reply']
+        settled = _original_usage_value(actor)
+        facts.update({'original': original, 'deadline_receipt': expired, 'after_deadline': settled})
+        (actor.folder / 'original-usage-issued-deadline.json').write_text(json.dumps(facts, indent=2)+'\n')
+        assert request_id in expired['deadline_fault_before']['pending_usage_ids'] \
+            and request_id not in expired['deadline_fault_after']['pending_usage_ids'] \
+            and not expired['deadline_fault_after']['failure_active'], (
+                'Original optional deadline retires only the exact read without a provider/transport failure')
+        assert settled['state'] in ('unavailable', 'error') and not settled['loading'] \
+            and settled['stale'] and settled['statusText'] and settled['buckets'] == accepted['buckets']
+        assert len(_session_wire(actor, 'account/rateLimits/read')) == count + 1, (
+            'Timeout disposition retires refresh intent rather than automatically resubmitting the original read')
+        _release_original_usage_reply(actor, late, request_id);released = True
+        actor.command('inspect')
+        after = _original_usage_value(actor);facts['after_late_original_reply'] = after
+        assert after['buckets'] == accepted['buckets'] and after['state'] == settled['state'] \
+            and after['stale'] and not after['loading'], 'A late timed-out nine-percent result cannot replace the retained thirty-seven-percent observation'
+        assert len(_session_wire(actor, 'account/rateLimits/read')) == count + 1 and not _session_wire(actor, 'turn/start')
+    finally:
+        if not released and Path(late['ready']).is_file():
+            try:
+                descriptor = os.open(late['release_fifo'], os.O_WRONLY | os.O_NONBLOCK)
+                try:
+                    os.write(descriptor, b'R')
+                finally:
+                    os.close(descriptor)
+            except OSError:
+                pass
+        (actor.folder / 'original-usage-issued-deadline.json').write_text(json.dumps(facts, indent=2)+'\n')
