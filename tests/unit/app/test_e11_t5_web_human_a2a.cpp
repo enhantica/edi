@@ -153,8 +153,9 @@ public:
                     "\u2006\u2007\u2008\u2009\u200A\u2028\u2029\u202F\u205F\u3000\uFEFF"), ""},
                 {"BOM-NBSP-lines", QString::fromUtf8("\uFEFF\u00A0α\u2028β\u2029🧪\u00A0"),
                     QString::fromUtf8("α β 🧪")},
-                {"NEL-is-not-JS-space", QString::fromUtf8(" \u0085keep\u0085 "),
-                    QString::fromUtf8("\u0085keep\u0085")},
+                // Qt6.11.2 trim uses QChar::isSpace (edge NEL), while
+                // the following Yarr whitespace-run replacement excludes NEL.
+                {"NEL-at-Qt-trim-edges", QString::fromUtf8(" \u0085keep\u0085 "), "keep"},
                 {"zero-width-is-not-JS-space", QString::fromUtf8(" \u200Bα\u180Eβ\u200E "),
                     QString::fromUtf8("\u200Bα\u180Eβ\u200E")},
                 {"supplementary-combining-case", QString::fromUtf8("  A\u030A β🧪\nÉ  "),
@@ -168,6 +169,29 @@ public:
                     exact(check, owner.get(), "activityDescription(false,{" + carrier.first +
                               literal(item.source) + carrier.second + ")",
                           item.expected, item.name + "/" + carrier.first);
+            struct TwoPhaseText { QString name, source, compact, full; };
+            const std::vector<TwoPhaseText> qtNel{
+                {"only-NEL", QString::fromUtf8("\u0085"), "", ""},
+                {"NEL-edges-no-ASCII", QString::fromUtf8("\u0085keep\u0085"), "keep",
+                    QString::fromUtf8("\u0085keep\u0085")},
+                {"interior-NEL", QString::fromUtf8("left\u0085right"),
+                    QString::fromUtf8("left\u0085right"), QString::fromUtf8("left\u0085right")},
+                {"mixed-NEL-and-interior-regex-runs", QString::fromUtf8(" \u0085left\t\u0085 \nright\u0085 "),
+                    QString::fromUtf8("left \u0085 right"), QString::fromUtf8(" \u0085left\t\u0085 \nright\u0085 ")},
+                {"zero-width-protects-interior-NEL", QString::fromUtf8(" \u200B\u0085keep\u0085\u200B "),
+                    QString::fromUtf8("\u200B\u0085keep\u0085\u200B"), QString::fromUtf8(" \u200B\u0085keep\u0085\u200B ")},
+                {"BOM-NEL-NBSP-two-phase", QString::fromUtf8("\uFEFF\u0085α\u00A0\u0085\u00A0β\u0085\uFEFF"),
+                    QString::fromUtf8("α \u0085 β"), QString::fromUtf8("\uFEFF\u0085α\u00A0\u0085\u00A0β\u0085\uFEFF")},
+                {"only-NEL-and-trim-runs", QString::fromUtf8("\t\u0085 \n\u0085"), "", ""}
+            };
+            for (const auto& item : qtNel)
+                for (const auto& carrier : carriers) {
+                    const auto input = "{" + carrier.first + literal(item.source) + carrier.second;
+                    exact(check, owner.get(), "activityDescription(false," + input + ")",
+                          item.compact, item.name + "/compact/" + carrier.first);
+                    exact(check, owner.get(), "activityDescription(true," + input + ")",
+                          item.full, item.name + "/full/" + carrier.first);
+                }
             cold(check, owner.get(), header, field);
         } catch (const std::exception& error) {
             check.require(false, "A2a normalization prerequisite/caller: " + QString::fromUtf8(error.what()));
@@ -180,6 +204,35 @@ public:
         const QJsonValue null(QJsonValue::Null);
         const std::vector<A2aWebCase> cases{
             {"top-query-no-action", payload({{"query", "  alpha\n beta "}}), "Search the web for alpha beta"},
+            // Every original web-field owner uses the same trim-then-regex
+            // law; the complete original type/order/JSON/copy controls remain.
+            {"NEL-top-query", payload({{"query", QString::fromUtf8(" \u0085left\t\u0085 \nright\u0085 ")}}),
+                QString::fromUtf8("Search the web for left \u0085 right")},
+            {"NEL-action-query", payload({{"query", "ignored"}, {"action", QJsonObject{{"type", "search"},
+                {"query", QString::fromUtf8("\u0085α\u0085β\u0085")}, {"queries", QJsonArray{"ignored"}}}}}),
+                QString::fromUtf8("Search the web for α\u0085β")},
+            {"NEL-query-list-drops-only-NEL", payload({{"action", QJsonObject{{"type", "search"},
+                {"queries", QJsonArray{QString::fromUtf8("\u0085"), QString::fromUtf8("\u0085α\u0085"),
+                    QString::fromUtf8("β\t\u0085 \nγ")}}}}}),
+                QString::fromUtf8("Search the web for α · β \u0085 γ")},
+            {"NEL-empty-action-query-uses-list", payload({{"query", "ignored"}, {"action", QJsonObject{{"type", "search"},
+                {"query", QString::fromUtf8("\u0085")}, {"queries", QJsonArray{"list"}}}}}), "Search the web for list"},
+            {"NEL-empty-list-uses-outer-query", payload({{"query", QString::fromUtf8("\u0085outer\u0085")},
+                {"action", QJsonObject{{"type", "search"}, {"queries", QJsonArray{QString::fromUtf8("\u0085")}}}}}),
+                "Search the web for outer"},
+            {"NEL-open-url", payload({{"action", QJsonObject{{"type", "openPage"},
+                {"url", QString::fromUtf8("\u0085https://example.invalid/a\u0085b\u0085")}}}}),
+                QString::fromUtf8("Open web page https://example.invalid/a\u0085b")},
+            {"NEL-find-pattern-and-url", payload({{"action", QJsonObject{{"type", "findInPage"},
+                {"url", QString::fromUtf8("\u0085https://example.invalid/a\u0085b\u0085")},
+                {"pattern", QString::fromUtf8("\u0085α\t\u0085 \nβ\u0085")}}}}),
+                QString::fromUtf8("Find α \u0085 β on https://example.invalid/a\u0085b")},
+            {"NEL-empty-find-pattern", payload({{"action", QJsonObject{{"type", "findInPage"},
+                {"url", "https://example.invalid/reference"}, {"pattern", QString::fromUtf8("\u0085")}}}}),
+                "Find text on https://example.invalid/reference"},
+            {"NEL-empty-find-url", payload({{"action", QJsonObject{{"type", "findInPage"},
+                {"url", QString::fromUtf8("\u0085")}, {"pattern", "original"}}}}), "Find original on a web page"},
+            {"NEL-empty-web-object", payload({{"query", QString::fromUtf8("\u0085")}}), ""},
             {"null-action", payload({{"action", null}, {"query", "fallback"}}), "Search the web for fallback"},
             {"false-action-refuses-fallback", payload({{"action", false}, {"query", "must not leak"}}), ""},
             {"string-action-refuses-fallback", payload({{"action", "search"}, {"query", "must not leak"}}), ""},
