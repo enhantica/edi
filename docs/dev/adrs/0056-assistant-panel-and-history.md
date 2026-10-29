@@ -3912,3 +3912,24 @@ after publication. Registration never populates approved_scope; execution-time
 generic_skills_current and actual new Send/native admission remain approved-only.
 These complete source channels do not establish successful actual view/reconnect,
 stock advertisement or changed-scope behavior without independent execution.
+
+## Optional math/overlay failure stays local while streaming
+
+FIRST PassiveDocument retains the same aggregate image budget. An unavailable
+aligned-image installation now returns an absent resource for that formula's
+complete literal-source fallback; unexpected per-span picture/layout/install
+failures take the same local path. Previously admitted formulas and unrelated
+Qt Markdown remain. Resource URLs are tracked and charged before installation,
+so a failed Qt resource insertion cannot leave an untracked retained image.
+The next original render retires these exact resources as before; no cache/budget
+increase or remote-resource permission is added.
+
+A wider optional math-stage failure restores remaining private tokens (including
+metadata) to their original literals and keeps the parsed document. Only failure
+to construct/recover safe semantic content uses the existing complete-source
+fallback. Optional styling/table-overlay failure drops that decoration without
+changing document text or formula resources. Native parser eligibility/errors,
+image limits, source-copy properties, passive authored-image denial and original
+receiver/document/revision checks remain. The reported screenshot is consistent
+with the old fallback class, not proof of its exclusive trigger; streaming,
+capacity, copy, replacement and decoration witnesses still require execution.
