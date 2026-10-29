@@ -3939,3 +3939,21 @@ literal human text and the original question turn association. This does not
 fabricate a runtime userMessage/item/turn/start, consume attachments, create an
 approval or weaken the generic activity text guard. The original per-card row
 identity and final original-ID answer map are unchanged.
+
+## Shared working-control diameter and glyphs
+
+FIRST AppSizes.assistantIconExtent now takes the original composer Stop's
+EaStyle toolButtonHeight ×0.75 expression. Composer actionSize aliases that same
+token; its Stop diameter is unchanged. Both existing AssistantWorking instances
+and original status buttonExtent consume the shared diameter. Working images stay
+borderless; their existing variants, rotation envelope, timing and color remain.
+
+AppSizes.assistantControlIconSize records the original composer Stop/eye font
+expression (theme fontPixelSize ×0.75 ×1.25), used by those original glyphs and
+their status copies. The icon-only status eye retains the exact common circle
+while its background and one-pixel border take the existing Success badge's
+AppColors.statusButtonBackground/statusButtonBorder tokens. Stop keeps the
+original composer colors/hover/disabled style and no border. Existing requested/
+effective mode, Stop dispatch, press retention, accessibility and status placement
+are untouched. This is declarative source styling only; actual light/dark layout,
+rotating-glyph bounds and both controls still require rendered qualification.

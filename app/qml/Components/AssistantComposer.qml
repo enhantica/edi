@@ -19,7 +19,7 @@ Rectangle {
     property Item previousFocusItem: toggleControl
     readonly property Item firstFocusItem: editor
     readonly property alias actionsControl: showActionsControl
-    readonly property real actionSize: EaStyle.Sizes.toolButtonHeight * 0.75
+    readonly property real actionSize: AppSizes.assistantIconExtent
     function closeChoices() { if (Qt.isQtObject(choicePopup)) choicePopup.close(); }
     readonly property bool choicesEnabled: assistant.connected && !assistant.canCancel
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
@@ -764,7 +764,7 @@ Rectangle {
                     EaElements.Label {
                         text: showActionsControl.fontIcon
                         font.family: EaStyle.Fonts.iconsFamily
-                        font.pixelSize: showActionsControl.font.pixelSize * 1.25
+                        font.pixelSize: AppSizes.assistantControlIconSize
                         color: showActionsControl.checked ? EaStyle.Colors.themeAccent : showActionsControl.foregroundColor()
                         Accessible.ignored: true
                     }
@@ -929,7 +929,7 @@ Rectangle {
                 contentItem: EaElements.Label {
                     text: stopButton.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
-                    font.pixelSize: stopButton.font.pixelSize * 1.25
+                    font.pixelSize: AppSizes.assistantControlIconSize
                     color: stopButton.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : stopButton.foregroundColor()
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
