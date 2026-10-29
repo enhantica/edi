@@ -200,14 +200,14 @@ EaElements.StatusBar {
                 implicitWidth: assistantGroup.buttonExtent
                 implicitHeight: implicitWidth
                 radius: height / 2
-                color: visibleMode.hovered || visibleMode.down || visibleMode.visualFocus
-                    ? EaStyle.Colors.themeRowHovered : "transparent"
-                border.width: 0
+                color: AppColors.statusButtonBackground
+                border.width: 1 // The original Success badge's outline thickness.
+                border.color: AppColors.statusButtonBorder
             }
             contentItem: EaElements.Label {
                 text: visibleMode.fontIcon
                 font.family: EaStyle.Fonts.iconsFamily
-                font.pixelSize: assistantGroup.buttonExtent * 0.5
+                font.pixelSize: AppSizes.assistantControlIconSize
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: visibleMode.checked ? EaStyle.Colors.themeAccent : visibleMode.foregroundColor()
@@ -243,7 +243,7 @@ EaElements.StatusBar {
             contentItem: EaElements.Label {
                 text: visibleStop.fontIcon
                 font.family: EaStyle.Fonts.iconsFamily
-                font.pixelSize: assistantGroup.buttonExtent * 0.5
+                font.pixelSize: AppSizes.assistantControlIconSize
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 color: visibleStop.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : visibleStop.foregroundColor()
