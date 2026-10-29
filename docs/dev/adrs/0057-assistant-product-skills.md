@@ -546,3 +546,19 @@ Review117 (hub `7c2e9ba6144a4c3ee82b3196712a242646e745c4`, `knowledge/reviews-in
 The FIRST endpoint clause and existing global/save_project help distinguish current saved-model evidence from metric verification. Parameter/SU reads, calculation-current/no-error flags and unquantified residual inspection do not establish chi-square/Rwp or unchanged objective. A returned trial statistic remains labelled pre-Save/pre-edit unless an actually offered metric explicitly belongs to the post-Save model. Current residual inspection can still assess the saved state without relabelling that statistic. This creates no current-metric API, invented degrees of freedom, arithmetic formatter, native scientific veto, automatic refit or mandatory reopen. Genuine ordinary commit/path facts and incomplete Save remain valid.
 
 Only these existing instruction/help clauses, their catalog version/digest and this ADR change. Every other strategy paragraph and unique SC, calibration/composition, eligibility, partial/once, Undo, physical-width, weak-identifiability, research/privacy and native-SU contract is retained. Source wording is not evidence of model adherence, scientific acceptance, elapsed-time improvement or runtime qualification. The unrelated original group-click failure retains its completed prefix and separate unresolved diagnosis.
+
+## Native format handling and an essential-fact clarification turn
+
+FIRST global developer guidance and the bundled project/refinement skills use
+the native reader's supported format, column and sigma handling instead of
+requiring extra confirmation merely for a headerless file. A genuine load failure
+or unresolved interpretation ambiguity can require a question; already supplied
+facts do not. Missing/conflicting essential probe or wavelength/TOF calibration
+is established through current context and small read-only inspection, then asked
+promptly in the Assistant sidebar as a final response, not progress commentary.
+Use the existing structured-question flow when offered. The clarification ends
+that turn: no subsequent Create, structure/data
+import, setup, refinement or Save is treated as independent preparation while
+awaiting the answer. This is generic assistant guidance, not a new parser rule,
+backend mutation veto, fixed scientific recipe or model-adherence guarantee.
+Actual clarification/continuation behavior still requires independent model runs.

@@ -5,7 +5,9 @@ description: Choose and revise a refinement strategy from actual model, data, na
 
 # Adaptive refinement of an actual Edi project
 
-Version: 1.5.1. Use actually offered operations and the user's goal. The contract below is evidence → supported choice → assessment, not a fixed refinement recipe, family, pass count or target statistic.
+Version: 1.5.2. Use actually offered operations and the user's goal. The contract below is evidence → supported choice → assessment, not a fixed refinement recipe, family, pass count or target statistic.
+
+Before project mutations, establish essential probe and wavelength/TOF calibration through supplied facts and read-only inspection. If missing or conflicting, show the Assistant sidebar first and publish a final question (structured when offered), then END that turn; await the answer before creation/import/setup/refinement/Save, including independent structure preparation. Native-supported format/column/sigma handling is not a reason for extra confirmation unless loading fails or interpretation is genuinely ambiguous.
 
 **Evidence.** Once model/data exist, establish the dominant CURRENT mismatch. Use inspect_data for actual peak-containing measured/calculated/residual regions to assess positions/shape, and off-peak regions for baseline across the range; use separate Bragg rows or SC F-squared/intensity dependence where relevant. Off-peak windows anywhere in the range establish baseline only, not peak alignment/shape. Check units, weighting, exclusions and current/adopted calculation availability. Parameter lists, convergence, low objective, absent errors and unavailable diagnostics are not residual/physical evidence. Read sufficient native slices, including full data when needed, without a fixed quota or repeated full returns merely because a fit ran.
 
