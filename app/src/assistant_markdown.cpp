@@ -181,10 +181,12 @@ class PassiveDocument final : public QTextDocument {
     void endMath(){pictures_.swap(nextPictures_);nextPictures_.clear();}
     QUrl install(const QImage& image) {
         const auto bytes=static_cast<quint64>(image.sizeInBytes());
-        if(bytes>edi::assistant::Limits::ui_history_bytes-resourceBytes_)throw std::length_error("Formula image presentation is unavailable");
-        resourceBytes_+=bytes;
+        if(image.isNull() || bytes==0 || bytes>edi::assistant::Limits::ui_history_bytes-resourceBytes_)return {};
         const QUrl url("edi-generated-math:"+nonce_+"/"+QString::number(resources_.size()));
-        addResource(ImageResource,url,image);resources_.append(url);return url;
+        // Track/charge before Qt installation: even a failed optional install
+        // remains bounded and its exact resource is retired on the next render.
+        resources_.append(url);resourceBytes_+=bytes;
+        addResource(ImageResource,url,image);return url;
     }
     Picture picture(const QString& formula,const QFont& font,const QColor& color,qreal dpr) {
 #ifdef EDI_HAS_NATIVE_MATH
@@ -347,8 +349,8 @@ void AssistantMarkdown::updatePolish() {
     } catch (...) {
         if (!current()) return;
         decorations_.clear(); update();
-        // Preserve the complete original as literal text when decoration cannot be admitted.
-        try { document->setPlainText(source_); } catch (...) {}
+        // Optional shading/rules do not own the parsed document or math.
+        // Keep its original text/formats/resources when only the overlay fails.
     }
 }
 QSGNode* AssistantMarkdown::updatePaintNode(QSGNode* old, UpdatePaintNodeData*) {
@@ -661,15 +663,8 @@ void AssistantMarkdown::render() noexcept {
     const auto revision = presentation_revision_;
     if (!document) return;
     const auto current = [&] { return receiver && document && receiver->document_ == document && receiver->presentation_revision_ == revision; };
-    try {
-        math_text_width_=document->textWidth();
-        auto* passive=static_cast<PassiveDocument*>(document.data());passive->beginMath();
-        if (!markdown_) { document->setPlainText(source_);passive->endMath(); return; }
-        const auto captured=captureMath(source_);
-        document->setMarkdown(captured.markdown, QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub) | QTextDocument::MarkdownNoHTML);
-        if (!current()) return;
-        // Qt owns Markdown semantics. Tokens in href/title/reference metadata
-        // are restored there, never installed as formulas or changed destinations.
+    MathSource captured;bool parsed=false;
+    const auto restoreMetadata=[&] {
         struct Metadata {int position,length;QTextCharFormat format;};
         std::vector<Metadata> metadata;
         for(auto block=document->begin();block.isValid();block=block.next())for(auto it=block.begin();!it.atEnd();++it) {
@@ -690,6 +685,18 @@ void AssistantMarkdown::render() noexcept {
         }
         for(const auto& value:metadata) {QTextCursor target(document);target.setPosition(value.position);target.setPosition(value.position+value.length,QTextCursor::KeepAnchor);
             target.setCharFormat(value.format);if(!current())return;}
+    };
+    try {
+        math_text_width_=document->textWidth();
+        auto* passive=static_cast<PassiveDocument*>(document.data());passive->beginMath();
+        if (!markdown_) { document->setPlainText(source_);passive->endMath(); return; }
+        captured=captureMath(source_);
+        document->setMarkdown(captured.markdown, QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub) | QTextDocument::MarkdownNoHTML);
+        if (!current()) return;
+        parsed=true;
+        // Qt owns Markdown semantics. Tokens in href/title/reference metadata
+        // are restored there, never installed as formulas or changed destinations.
+        restoreMetadata();if(!current())return;
         // Qt owns Markdown parsing. Replace only its parsed image objects with
         // literal alternative text; no URI is fetched or second HTML parse made.
         QTextCursor cursor(document);
@@ -706,6 +713,7 @@ void AssistantMarkdown::render() noexcept {
         const auto dpr=window()?window()->effectiveDevicePixelRatio():qreal(1);
         for(const auto& span:captured.spans) {
             auto slot=document->find(span.token);if(slot.isNull())continue;
+            try {
             const auto originalFormat=slot.charFormat();const auto blockFormat=slot.blockFormat();
             const bool code=originalFormat.fontFixedPitch() || blockFormat.hasProperty(QTextFormat::BlockCodeLanguage) || blockFormat.hasProperty(QTextFormat::BlockCodeFence);
             const auto picture=span.formula.isEmpty() || code?PassiveDocument::Picture{}:passive->picture(span.formula,document->defaultFont(),text_color_.isValid()?text_color_:QColor(Qt::black),dpr);
@@ -743,7 +751,9 @@ void AssistantMarkdown::render() noexcept {
                 const auto size=aligned.deviceIndependentSize();const auto top=size.height()-fontDescent-(logical.height()-picture.descent)*scale;
                 QPainter painter(&aligned);painter.setRenderHint(QPainter::SmoothPixmapTransform);
                 painter.drawImage(QRectF(span.display?(size.width()-logical.width()*scale)/2:0,top,logical.width()*scale,logical.height()*scale),picture.image);painter.end();
-                QTextImageFormat image;image.merge(originalFormat);image.setFont(placementFont);image.setName(passive->install(aligned).toString());
+                const auto resource=passive->install(aligned);
+                if(resource.isEmpty()){slot.insertText(span.literal,originalFormat);continue;}
+                QTextImageFormat image;image.merge(originalFormat);image.setFont(placementFont);image.setName(resource.toString());
                 image.setWidth(size.width());image.setHeight(size.height());
                 image.setProperty(mathSourceProperty,span.literal);image.setProperty(QTextFormat::ImageAltText,span.literal);
                 image.setVerticalAlignment(QTextCharFormat::AlignBaseline);
@@ -763,13 +773,32 @@ void AssistantMarkdown::render() noexcept {
                     }
                 }
             }
+            } catch (...) {
+                if(!current())return;
+                // Failure before insertion affects only this original span.
+                // An already inserted image and its source mapping remain owned.
+                auto literal=document->find(span.token);
+                if(!literal.isNull())literal.insertText(span.literal,literal.charFormat());
+            }
             if(!current())return;
         }
         passive->endMath();
-        formatPresentation();
+        try {formatPresentation();}catch(...) {} // Optional style does not replace semantic content.
     } catch (...) {
         if (!current()) return;
-        // Preserve the complete original as literal text on presentation failure.
+        if(parsed)try {
+            // A wider optional-stage failure must resolve every remaining token,
+            // while keeping already admitted images and unrelated Qt Markdown.
+            restoreMetadata();if(!current())return;
+            for(const auto& span:captured.spans)for(;;) {
+                auto slot=document->find(span.token);if(slot.isNull())break;
+                slot.insertText(span.literal,slot.charFormat());if(!current())return;
+            }
+            static_cast<PassiveDocument*>(document.data())->endMath();
+            try {formatPresentation();}catch(...) {}
+            return;
+        }catch(...) {if(!current())return;}
+        // Only unsafe semantic construction/recovery falls back to full source.
         try {
             auto* passive=static_cast<PassiveDocument*>(document.data());passive->beginMath();passive->endMath();
             document->setPlainText(source_);
