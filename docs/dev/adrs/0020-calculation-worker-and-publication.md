@@ -217,3 +217,15 @@ calculation in the process.
 | The door takes any callable, and a copy of the project taken before it is restored when it throws | Withdrawn after three code reviews each found a route the restore missed (§8): the guard is over everything a change might do to the object graph, so the class stays open |
 | Stage a change on a copy and commit it back into the live objects by value | Rejected: the commit back is that same restore, now on every edit, and every change would have to address a project it is given instead of the objects it holds |
 | The door takes any callable, and every caller must validate before it writes | Rejected: a rule the type does not hold is kept until the first caller that breaks it |
+
+## Selected native source for the ThreadSanitizer witness
+
+The FIRST `tools/ci/tsan-worker.sh` instruments the same native source selected by
+`build-crysta.sh`. The ordinary route retains `build/crysta-src`; an explicit
+`CRYSTA_SDK_DIR` uses its manifest's commit and the caller's `CRYSTA_CONSUMER_SRC`.
+A missing, mismatched or tracked-modified source refuses before configuring or
+replacing the sanitizer tree. The SDK remains read-only. The original instrumented
+build, negative control, probe, report checks and native commit cache remain the
+witness; a successful uninstrumented consumer build cannot substitute for it.
+This source selection change requires independent execution on both routes; it
+does not establish that either witness or the full candidate suite passed.
