@@ -11740,31 +11740,149 @@ def _original_inspection_files_keep_science_and_owned_diagnostic(
     observed = {}
     diagnostic = 'reports/work-report.json'
 
+    def work(document):
+        scope = document['scope_coverage']
+        browser = scope['current_session_browser']
+        # These are original source/work facts. Capture revision, archive
+        # durability, browser presentation and the appended live app-message
+        # projection are diagnostic metadata, not a writer admission.
+        return {
+            'schema': document['schema'],
+            'scope': {key: scope[key] for key in (
+                'scope_id', 'instance_id', 'owner_generation', 'account_epoch',
+                'input_generation', 'lifecycle', 'turns')},
+            'thread': {key: browser[key] for key in ('runtime_thread', 'history_session')},
+            'identity_inputs': document['identity_inputs'],
+            'history_evidence': document['history_evidence'],
+            'agent_assessment': document['agent_assessment'],
+            'science': document['observations']['science'],
+            'ui': [event for event in document['observations']['ui']
+                   if event.get('phase') != 'published_app_messages'],
+            'row_coverage': {key: document['coverage'][key] for key in (
+                'retained_rows', 'included_rows', 'excluded_unbound_rows', 'known_omitted_rows')},
+        }
+
+    def obligations(rows, scope, unavailable=None):
+        finished = {row['receipt']['id']: row['receipt'] for row in rows
+                    if row['source'] == 'finished' and row['original_owner_current']
+                    and row['receipt'].get('phase') == 'terminal'}
+        if unavailable and unavailable.get('phase') == 'terminal' \
+            and unavailable.get('error_code', {}).get('value') == 'completion_dispatch_unavailable':
+            # Native receipt() settles this actual failed-dispatch worker lease;
+            # this is not a manufactured Finished event or writer outcome.
+            finished[unavailable['id']] = unavailable
+        admitted = [(index, row['receipt']) for index, row in enumerate(rows)
+                    if row['original_owner_current'] and row['receipt'].get('phase') == 'accepted']
+        completed = {identity for identity, terminal in finished.items()
+                     if all(terminal.get(key) == admission.get(key)
+                            for _index, admission in admitted if admission['id'] == identity
+                            for key in ('scope_id', 'snapshot_revision'))}
+        outstanding = {receipt['id'] for _index, receipt in admitted} - completed
+
+        def revision(receipt):
+            value = receipt['snapshot_revision']
+            assert value['state'] == 'observed' and isinstance(value['value'], str) \
+                and value['value'].isdecimal(), 'Actual capture obligation has a native observed revision'
+            return int(value['value'])
+
+        pending = []
+        for index, row in enumerate(rows):
+            request = row['receipt']
+            if not row['original_owner_current'] or request.get('disposition') != 'busy' \
+                or request.get('scope_id', {}).get('value') != scope:
+                continue
+            if not any(later > index and receipt['scope_id'] == request['scope_id']
+                       and revision(receipt) >= revision(request)
+                       and receipt['id'] in completed
+                       and not finished[receipt['id']].get('scope_retired', True)
+                       for later, receipt in admitted):
+                pending.append(request['id'])
+        return {'completed': sorted(completed), 'outstanding': sorted(outstanding),
+                'pending_admission': pending}
+
     def producer():
         sample = qml(actor, '(' + _scene_control_expression(marker) + ').snapshot()')
         observed['producer'] = sample
         assert sample['original_owner_current'], (
-            'The original VM/project must still own both the capture request and completion')
+            'The same original VM/project/path owns the capture and its completion')
         receipt = sample['current_receipt']
-        request = sample['requested']
+        assert receipt == json.loads(sample['current_receipt_json']), (
+            'Current receipt is frozen before the diagnostic-document read, not a live QVariantMap reference')
         rows = sample['receipts']
-        if receipt.get('phase') != 'terminal' or receipt.get('scope_retired', True) \
-            or receipt.get('scope_id', {}).get('value') != request['requested_scope_id'] \
-            or receipt.get('snapshot_revision', {}).get('value') != request['requested_snapshot_revision'] \
+        for row in rows:
+            assert row['receipt'] == json.loads(row['original_receipt_json']), (
+                'Every initial/change/Finished receipt retains its exact original phase/ID/fields across later property changes')
+        document = sample['current_document']
+        scope = document['scope_coverage']
+        view = scope['view']
+        if view['state'] != 'current_snapshot' or view['current_capture'] != 'captured' \
+            or scope['scope_id'] != view['requested_scope_id'] \
+            or scope['instance_id'] != instance_id or scope['lifecycle'] != 'settled' \
+            or receipt.get('phase') != 'terminal' or receipt.get('scope_retired', True) \
+            or receipt.get('scope_id', {}).get('value') != scope['scope_id'] \
             or not str(receipt.get('id', '')).startswith('wr/' + instance_id + '/'):
             return None
-        finished = {row['receipt']['id'] for row in rows
-                    if row['source'] == 'finished' and row['original_owner_current']
-                    and row['receipt'].get('phase') == 'terminal'}
-        # The receipt getter's original failed-dispatch fallback settles only
-        # after the actual worker lease is gone; it never fabricates Finished.
-        dispatch_unavailable = receipt.get('error_code', {}).get('value') == 'completion_dispatch_unavailable'
-        completed = finished | ({receipt['id']} if dispatch_unavailable else set())
-        admitted = {row['receipt']['id'] for row in rows
-                    if row['original_owner_current'] and row['receipt'].get('phase') == 'accepted'}
-        if receipt['id'] not in completed or not admitted <= completed:
+        owed = obligations(rows, scope['scope_id'], receipt)
+        observed['capture_obligations'] = owed
+        if receipt['id'] not in owed['completed'] or owed['outstanding'] or owed['pending_admission']:
             return None
+        admissions = [(index, row['receipt']) for index, row in enumerate(rows)
+                      if row['original_owner_current'] and row['receipt'].get('phase') == 'accepted']
+        # Exercise the retained-reference/new-ID escape with genuine event
+        # prefixes only. No phase, ID, completion or worker state is invented.
+        for index, admission in admissions:
+            prefix = obligations(rows[:index + 1], admission['scope_id']['value'])
+            assert admission['id'] in prefix['outstanding'], (
+                'An actual admitted-but-not-yet-completed writer blocks this same observation predicate')
+        if len({admission['id'] for _index, admission in admissions}) < 2:
+            observed['unqualified_boundary'] = 'Actual accepted-to-terminal/new-ID retention entrance not reached'
+            return None
+        observed['current_work'] = work(document)
         return receipt
+
+    def primary_work(receipt):
+        artifact = receipt.get('artifact', {})
+        if artifact.get('state') != 'observed':
+            observed['unqualified_boundary'] = 'Completion settled but neither current mirror nor immutable primary work evidence is available'
+            return None
+        value = artifact['value']
+        # The actual original probe already publishes this run-owned Qt data
+        # root; no guessed application name, external destination or read is used.
+        base = Path(actor.last['test_settings']['app_local_data'])
+        path = base / 'assistant/work-reports' / instance_id / 'reports/work-report.json'
+        assert value['path'] == str(path), 'The optional primary artifact belongs to this exact original run and writer instance'
+        try:
+            descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+        except FileNotFoundError:
+            return None
+        with os.fdopen(descriptor, 'rb') as stream:
+            identity = os.fstat(stream.fileno())
+            assert stat.S_ISREG(identity.st_mode), 'The original primary report is a regular owned artifact'
+            raw = stream.read()
+            final = os.fstat(stream.fileno())
+        try:
+            named = path.lstat()
+        except FileNotFoundError:
+            return None
+        digest = hashlib.sha256(raw).hexdigest()
+        if (identity.st_dev, identity.st_ino, identity.st_size, identity.st_mtime_ns) != (
+            final.st_dev, final.st_ino, final.st_size, final.st_mtime_ns) \
+            or (identity.st_dev, identity.st_ino) != (named.st_dev, named.st_ino) \
+            or value['sha256'] != digest or value['bytes'] != str(len(raw)) \
+            or value['physical_identity'] != str(identity.st_dev) + ':' + str(identity.st_ino):
+            return None
+        document = json.loads(raw)
+        assert document['schema'] == 'edi.assistant.work-report/1' \
+            and document['scope_coverage']['trigger'] == 'automatic' \
+            and document['scope_coverage']['instance_id'] == instance_id, (
+                'Unavailable optional mirror does not authorize a fabricated primary document')
+        if document['artifact']['receipt_id'] != receipt['id'] \
+            or document['scope_coverage']['scope_id'] != receipt['scope_id']['value'] \
+            or document['scope_coverage']['snapshot_revision'] != receipt['snapshot_revision']['value']:
+            return None
+        observed['primary_work_artifact'] = {'path': str(path), 'sha256': digest,
+            'bytes': len(raw), 'receipt_id': receipt['id']}
+        return work(document)
 
     def science():
         for name in original_entries:
@@ -11803,6 +11921,8 @@ def _original_inspection_files_keep_science_and_owned_diagnostic(
             if artifact.get('state') == 'observed':
                 return False
             if mirror.get('disposition') == 'saved':
+                return False
+            if primary_work(receipt) != observed['current_work']:
                 return False
             observed['diagnostic'] = {'state': 'settled_absent', 'owner_receipt': receipt}
         else:
@@ -11858,13 +11978,17 @@ def _original_inspection_files_keep_science_and_owned_diagnostic(
                     break
             if owner is None:
                 return False
+            captured_work = work(document) if owner['id'] == receipt['id'] else primary_work(receipt)
+            if captured_work != observed['current_work']:
+                return False
             files[diagnostic] = digest
             observed.update(diagnostic={'path': str(path), 'sha256': digest, 'bytes': len(raw),
                 'current_terminal': receipt, 'artifact_owner_receipt': owner,
                 'scope_coverage': document['scope_coverage']})
-        # Reading the document is not a flush: require the actual native current
-        # request and terminal completion to remain identical after file proof.
-        if producer() != receipt:
+        # A newer admitted/pending capture or changed original work must still
+        # block; a diagnostic-only archive/browser revision is not an admission.
+        original_work = observed['current_work']
+        if producer() != receipt or observed['current_work'] != original_work:
             return False
         assert science() == original_hashes
         return True
@@ -11889,19 +12013,23 @@ def test_actual_compact_inspection_uses_original_native_cells_keeps_full_raw_and
     assert actor.command('open', path=str(folder))['reply']['opened']
     actor.until(lambda value: not value['ui']['project']['calculating'])
     marker = 'e11.original-inspection-mirror-owner'
-    assert qml(actor, r'''(function(){const vm=Session.assistant,p=Session.project;
+    assert qml(actor, r'''(function(){const vm=Session.assistant,p=Session.project,root=p.path;
         if(!vm.workReportFinished || typeof vm.workReportFinished.connect!=="function" ||
            !vm.workReportReceiptChanged || typeof vm.workReportReceiptChanged.connect!=="function")return false;
         const o=Qt.createQmlObject('import QtQuick; Item {property var receipts:[];property var callback:null;property var changed:null;property var snapshot:null;}',contentItem);o.objectName=MARKER;
-        function record(source,receipt){if(Qt.isQtObject(o))o.receipts=o.receipts.concat([{source:source,receipt:receipt,original_owner_current:Session.assistant===vm && Session.project===p}]);}
+        function current(){return Session.assistant===vm && Session.project===p && p.path===root;}
+        function record(source,receipt){const before=current(),encoding=JSON.stringify(receipt),frozen=JSON.parse(encoding);
+            if(Qt.isQtObject(o))o.receipts=o.receipts.concat([{source:source,receipt:frozen,
+                original_receipt_json:encoding,original_owner_current:before && current()}]);}
         o.callback=function(receipt){record("finished",receipt);};
         o.changed=function(){record("receipt",vm.workReportReceipt);};
-        o.snapshot=function(){const receipt=vm.workReportReceipt,doc=JSON.parse(vm.workReportDocument());
-            return {original_owner_current:Session.assistant===vm && Session.project===p,
-                current_receipt:receipt,requested:doc.scope_coverage.view,receipts:o.receipts};};
+        o.snapshot=function(){const before=current(),encoding=JSON.stringify(vm.workReportReceipt),receipt=JSON.parse(encoding);
+            const doc=JSON.parse(vm.workReportDocument());
+            return {original_owner_current:before && current(),current_receipt:receipt,current_receipt_json:encoding,
+                current_document:doc,receipts:JSON.parse(JSON.stringify(o.receipts))};};
         vm.workReportFinished.connect(o.callback);vm.workReportReceiptChanged.connect(o.changed);
         record("initial",vm.workReportReceipt);return true;})()'''.replace('MARKER', json.dumps(marker))), (
-            'The original public automatic producer admission/completion/current-request observations precede assistant work; no manual capture or fabricated writer state is introduced')
+            'Real public capture facts and original owner/path are frozen at each actual initial/change/Finished boundary; diagnostic reads never create writer requests')
     actor.connect();context = json.loads(actor.last['ui']['context'])
     assert len(context['datasets']) == 1, 'The original fixture has one exact offered native dataset owner'
     dataset = context['datasets'][0];identity = dataset['id'];total = dataset['axis']['count']
