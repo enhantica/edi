@@ -8,5 +8,7 @@
   "source_capture": "Byte-exact original normal reply from peer final_text. No live instruction, fitted seed, scientific input/model or output-generated expected rendering.",
   "expectation_basis": "Owner requires every eligible formula of this ordinary reply natively rendered, including its coefficient table, at DPR1 and2. The 22 explicit formula literals and original Markdown roles come from source, not the observed 13-image partial result or a copied formatter.",
   "prior_result_qualification": "Root observed DPR2 partial rendering and retained raw facts; this is not a new author runtime or an expected passing golden.",
-  "mathematics_qualification": "These source formulas/numeric explanatory text are a display fixture, not validation or a refinement recipe."
+  "mathematics_qualification": "These source formulas/numeric explanatory text are a display fixture, not validation or a refinement recipe.",
+  "original_image_budget_bytes": 2097152,
+  "original_image_budget_provenance": "Literal budget field of the retained original app36-owner-table-dpr2/RESULT.json identified above; independent of future document.image_budget_bytes and renderer output. The acceptance cap remains fixed, not recomputed from reported images or current source."
 }

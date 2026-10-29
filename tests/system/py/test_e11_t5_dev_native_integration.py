@@ -27,6 +27,8 @@ ROOT = Path(__file__).resolve().parents[3]
 SUPPORT = ROOT / 'tests/integration/py/assistant_ui_probe'
 REFERENCE = json.loads((ROOT / 'tests/fixtures/background_estimate/reference.json').read_text())
 FINAL = 'Observed improvement recommendation: expose saved Estimate settings in tool diagnostics.'
+# Retained original app36 DPR2 RESULT1856ce4f budget; fixture provenance binds that source.
+_ORIGINAL_MATH_IMAGE_BUDGET_BYTES = 2_097_152
 
 
 class MainActor:
@@ -10408,7 +10410,8 @@ def test_current_save_retains_original_owner_error_rounded_model_graph_and_indep
         'Current native calculated availability survives ordinary rounding/adoption and agrees with the actual immutable graph source, not just its visible trace')
 
 def _original_streamed_math_capacity_keeps_formatted_prefix_and_source(actor, baseline):
-    budget = baseline['image_budget_bytes']
+    budget = _ORIGINAL_MATH_IMAGE_BUDGET_BYTES
+    assert baseline['image_budget_bytes'] == budget, 'The original independently retained image cap cannot grow with the subject-reported budget'
     original_sizes = [row['resource_bytes'] for row in baseline['images'] if not row['resource_null']]
     assert budget > 0 and original_sizes and all(0 < size <= budget for size in original_sizes), (
         'The original tiny native formula/resources establish actual admissible image bytes before the aggregate escape')
@@ -10455,7 +10458,7 @@ def _original_streamed_math_capacity_keeps_formatted_prefix_and_source(actor, ba
             'All streamed source belongs to the original realized current row, not a replacement synthetic document')
         assert any(fragment['bold'] and 'Retained formatted prefix' in fragment['text'] for fragment in final['formats']), (
             'A later optional image admission failure cannot turn earlier unrelated bold Markdown into literal asterisks')
-        assert final['images'] and len(final['images']) < count and final['generated_image_bytes'] <= budget \
+        assert final['image_budget_bytes'] == budget and final['images'] and len(final['images']) < count and final['generated_image_bytes'] <= budget \
             and all(not picture['resource_null'] and picture['selected_source'] == formula for picture in final['images']), (
                 'Earlier admitted formulas remain genuine resources while later budget-refused spans fall back locally, without raising the resource cap')
         assert final['literal_copy']['found'] and final['literal_copy']['selected_source'] == formula \
@@ -10641,6 +10644,8 @@ def test_original_owner_normal_math_reply_renders_every_formula_and_table_at_act
         'list_qualification': 'This exact original reply has no list or heading. Separate existing real list/heading Markdown cases are retained, not claimed exercised here.'}
     (actor.folder / 'owner-normal-math-dpr-evidence.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2)+'\n')
     assert document['reached'] and document['same_window'] and document['source'] == source
+    assert document['image_budget_bytes'] == provenance['original_image_budget_bytes'] == _ORIGINAL_MATH_IMAGE_BUDGET_BYTES, (
+        'The normal reply retains the independently captured original 2097152-byte cap; subject-reported cap growth is not a rendering repair')
     assert document['images'] and all(image['resource_dpr'] == requested_dpr for image in document['images']), (
         'Actual native resource DPR must reach the requested entrance; environment configuration alone is not DPR proof')
     assert [image['selected_source'] for image in document['images']] == spans, (
@@ -10668,5 +10673,5 @@ def test_original_owner_normal_math_reply_renders_every_formula_and_table_at_act
             'Unrelated original human bold formatting survives every normal-message formula insertion')
     assert any(anchor['href'] == expected['reference_href'] for anchor in document['anchors']), (
         'The original standard-TCH reference remains the actual Markdown link destination')
-    assert document['generated_image_bytes'] <= document['image_budget_bytes'], (
-        'Ordinary all-native rendering must fit the unchanged real resource budget; no cap increase is a test repair')
+    assert document['generated_image_bytes'] <= _ORIGINAL_MATH_IMAGE_BUDGET_BYTES, (
+        'Ordinary all-native rendering must fit the independently retained original resource budget; no cap increase is a test repair')
