@@ -10,6 +10,7 @@
 #include "assistant_markdown.hpp"
 #include "experiment_view_model.hpp"
 #include "parameter_table_model.hpp"
+#include "parameter_item.hpp"
 #include "report_view_model.hpp"
 #include "edi/assistant_limits.hpp"
 #include <vector>
@@ -1289,8 +1290,19 @@ int main(int argc,char** argv) {
                     }
                     banks.append(row);
                 }
+                Array descriptors;
+                for(const auto& entry:edi::model_descriptors(model)) {
+                    descriptors.append(Object{{"path",QString::fromStdString(entry.path)},
+                        {"uid",QString::fromStdString(entry.uid)},{"value",entry.value},
+                        {"block_kind",QString::fromStdString(entry.block_kind)},
+                        {"block_name",QString::fromStdString(entry.block_name)},
+                        {"category",QString::fromStdString(entry.category)},
+                        {"row_label",QString::fromStdString(entry.row_label)},
+                        {"name",QString::fromStdString(entry.name)}});
+                }
                 result={{"path",path},{"session_last_error",observed->lastError()},{"modified",original->modified()},
-                    {"calculating",original->calculating()},{"current_parameters",parameters(model)},{"banks",banks},
+                    {"calculating",original->calculating()},{"current_parameters",parameters(model)},
+                    {"current_descriptors",descriptors},{"banks",banks},
                     {"readback_recalculates_or_adopts",false}};
                 try {
                     Array warnings;
@@ -1304,13 +1316,23 @@ int main(int argc,char** argv) {
                 result["metadata_last_modified"]=QString::fromStdString(model.metadata.last_modified);
                 Array registry;
                 auto* table=original->parameters();
+                const auto nativeEntries=edi::parameter_entries(model);
                 for(int index=0;index<table->count();++index) {
-                    auto* item=table->item(index,QStringLiteral("parameter"));
-                    if(!item)throw std::runtime_error("actual original Registry parameter owner unavailable");
-                    registry.append(Object{{"path",table->text(index,QStringLiteral("path"))},
-                        {"value",QJsonValue::fromVariant(item->property("value"))},
-                        {"uncertainty",QJsonValue::fromVariant(item->property("uncertainty"))},
-                        {"free",QJsonValue::fromVariant(item->property("free"))}});
+                    auto* item=qobject_cast<edi_app::ParameterItem*>(table->item(index,QStringLiteral("parameter")));
+                    if(!item || !item->parameter())throw std::runtime_error("actual original typed Registry parameter owner unavailable");
+                    const auto rowPath=table->text(index,QStringLiteral("path"));
+                    const auto native=std::find_if(nativeEntries.begin(),nativeEntries.end(),[&](const auto& entry){
+                        return QString::fromStdString(entry.path)==rowPath;
+                    });
+                    registry.append(Object{{"path",rowPath},{"item_path",item->path()},
+                        {"value",item->value()},{"uncertainty",item->uncertainty()},
+                        {"has_uncertainty",item->hasUncertainty()},{"free",item->isFree()},
+                        {"dependence",static_cast<int>(item->parameter()->dependence)},
+                        {"descriptor",item->isDescriptorValue()},
+                        {"native_parameter_identity_matches",!item->isDescriptorValue() && native!=nativeEntries.end() && native->parameter==item->parameter()},
+                        {"refinable",item->isRefinable()},{"fittable",item->isFittable()},
+                        {"uid",item->uid()},{"block_kind",item->blockKind()},{"block_name",item->blockName()},
+                        {"category",item->category()},{"row_label",item->rowLabel()},{"name",item->name()}});
                 }
                 result["registry_parameters"]=registry;
                 Array textSemantics;

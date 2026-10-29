@@ -10592,11 +10592,35 @@ def test_original_save_second_replacement_failure_publishes_retained_adopted_sta
     assert after['session_last_error'] == after['project_last_error'] == first_project_error \
         and all(row['current'] for row in errors if row['text']), (
             'Publication repair preserves the first genuine original Save cause instead of clearing it or substituting a successor error')
-    registry = {row['path']: row for row in after['registry_parameters']}
-    assert set(registry) == set(current) and all(
-        registry[path]['value'] == row['value'] and (registry[path]['uncertainty'] or 0) == (row['uncertainty'] or 0)
-        and registry[path]['free'] == row['free'] for path, row in current.items()), (
-            'The original public Registry rows follow the actually retained adopted model, not the old pre-Save values')
+    for snapshot in (before, after):
+        core_rows = snapshot['current_parameters']
+        descriptor_rows = snapshot['current_descriptors']
+        assert descriptor_rows, 'The fixture must actually expose native read-only descriptors; an empty descriptor entrance is UNREACHED'
+        registry_rows = snapshot['registry_parameters']
+        core = {row['path']: row for row in core_rows}
+        descriptors = {row['path']: row for row in descriptor_rows}
+        registry = {row['path']: row for row in registry_rows}
+        assert len(core) == len(core_rows) and len(descriptors) == len(descriptor_rows) \
+            and len(registry) == len(registry_rows) and set(core).isdisjoint(descriptors), (
+                'Every original native parameter/descriptor and Registry identity is unique; scientific and read-only descriptor roles cannot overlap')
+        assert set(registry) == set(core) | set(descriptors), (
+            'The complete original Registry is exactly the independent native parameter-plus-descriptor union, with no missing or unknown rows')
+        assert all(registry[path]['item_path'] == path and registry[path]['descriptor'] is False
+                   and registry[path]['native_parameter_identity_matches']
+                   and registry[path]['value'] == row['value']
+                   and registry[path]['has_uncertainty'] is (row['uncertainty'] is not None)
+                   and registry[path]['uncertainty'] == (row['uncertainty'] if row['uncertainty'] is not None else 0)
+                   and registry[path]['free'] == row['free'] and registry[path]['dependence'] == row['dependence']
+                   for path, row in core.items()), (
+            'Every scientific Registry owner retains its exact native identity, published mean/SU presence/free and actual core dependence, before and after failed adoption publication')
+        assert all(registry[path]['item_path'] == path and registry[path]['descriptor'] is True
+                   and registry[path]['native_parameter_identity_matches'] is False
+                   and registry[path]['value'] == row['value']
+                   and all(registry[path][key] == row[key] for key in ('uid', 'block_kind', 'block_name', 'category', 'row_label', 'name'))
+                   and registry[path]['free'] is False and registry[path]['has_uncertainty'] is True
+                   and registry[path]['uncertainty'] == 0 and registry[path]['refinable'] is False
+                   and registry[path]['fittable'] is False for path, row in descriptors.items()), (
+            'Each legitimate Registry descriptor follows FIRST native model_descriptors value/identity, remains read-only and keeps its original zero-uncertainty display carrier without treating it as a fitted scientific SU')
     assert all(any(event['current'] and event['path'] == path and event['value'] == current[path]['value']
                    for event in values) for path in changed), 'Every changed retained value is genuinely published to its original Qt owner'
     assert after['text_semantics'] and not after.get('text_error') and all(
