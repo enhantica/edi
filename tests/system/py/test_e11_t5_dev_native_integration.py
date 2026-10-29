@@ -5946,6 +5946,12 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
         'The original visible composer really owns B draft text before selection can capture it')
     premise = {'original': original, 'other': current, 'b_files': b_files, 'b_history': b_history,
                'b_draft': b_draft, 'view_steps': []}
+    preparation_marker = 'e11.original.target-association.preparation'
+    _observe_original_session_preparation_cause(actor, preparation_marker)
+    association_facts = []
+    def retain_association(stage):
+        association_facts.append(_capture_original_target_association(actor, original, source, stage, preparation_marker))
+        (actor.folder / 'original-target-association-boundaries.json').write_text(json.dumps(association_facts, indent=2)+'\n')
     def retain_premise():
         (actor.folder / 'per-thread-target-draft-premise.json').write_text(json.dumps(premise, indent=2))
     def select_existing_view(target):
@@ -5984,7 +5990,9 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
     assert actor.last['ui']['connected'] and actor.last['ui']['context_consent_required'] \
         and qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == a_draft, (
             'TARGET A itself now has a genuine unapproved changed-file draft, not B input that selection should discard')
+    retain_association('a_pending_before_leave')
     select_existing_view(current)
+    retain_association('b_current_after_leaving_a')
     assert actor.last['ui']['selected_files'] == b_files \
         and qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == b_draft, (
             'Returning to B restores its own original draft/empty files, without importing A new pending file')
@@ -5993,12 +6001,15 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
         'B retains its own genuine history identities/content during the legitimate view-only switch')
     before = len(_session_wire(actor))
     actor.command('click', name='assistant.sessions');_session_wait(actor)
+    retain_association('before_return_a_preparation')
     clicked = actor.command('session_row_click', thread_id=original)['reply']
+    retain_association('return_a_input_delivered')
     assert clicked['reached'] and clicked['actual_pressed_changes'] > 0, (
         'The consent boundary is exercised by actual original-row selection input, not direct approval or a success signal')
     actor.until(lambda value: value['ui']['connected']
                 and not qml(actor, 'Session.assistant.sessionsLoading')
                 and not qml(actor, control_expression('assistant.sessionsDialog') + '.opened'))
+    retain_association('return_a_settled_before_original_assertions')
     selected_wire = _session_wire(actor)[before:]
     resumes = [row for row in selected_wire if row.get('method') == 'thread/resume']
     assert resumes and resumes[-1]['params']['threadId'] == original, (
@@ -10699,3 +10710,49 @@ def test_original_owner_normal_math_reply_renders_every_formula_and_table_at_act
         'The original standard-TCH reference remains the actual Markdown link destination')
     assert document['generated_image_bytes'] <= _ORIGINAL_MATH_IMAGE_BUDGET_BYTES, (
         'Ordinary all-native rendering must fit the independently retained original resource budget; no cap increase is a test repair')
+
+
+def _observe_original_session_preparation_cause(actor, marker):
+    source = r'''(function(){const vm=Session.assistant;
+        if(!Qt.isQtObject(vm))return false;
+        const o=Qt.createQmlObject('import QtQuick; Item {property var facts:[];}',window.contentItem);o.objectName=MARKER;
+        function fact(event,target){if(!Qt.isQtObject(o))return;const alive=Qt.isQtObject(vm);
+            o.facts.push({event:event,target:typeof target==='string'?target:null,current:alive&&Session.assistant===vm,
+                sessionsError:alive?vm.sessionsError:null,sessionsLoading:alive?vm.sessionsLoading:null,
+                sessionSelection:alive?vm.sessionSelection:null,connected:alive?vm.connected:null,
+                contextConsentRequired:alive?vm.contextConsentRequired:null});}
+        vm.sessionsChanged.connect(function(){fact('sessions_changed',null);});
+        vm.sessionSelectionStarted.connect(function(target){fact('selection_started',target);});
+        fact('bound',null);return true;})()'''.replace('MARKER', json.dumps(marker))
+    assert qml(actor, source), 'Original public browser/preparation signal owner must exist before the diagnostic binds'
+
+
+def _capture_original_target_association(actor, target, source, stage, marker):
+    # Only the genuinely created target and fixture input: no whole settings
+    # dump, global sessions, email/account credentials, store sync or writes.
+    association = actor.command('session_association_snapshot', thread_id=target)['reply']
+    original_settings_path = Path(actor.last['test_settings']['path'])
+    assert Path(association['settings_path']) == original_settings_path, (
+        'The readonly query must use this exact original fresh host settings owner')
+    root = actor.folder.parent.resolve()
+    source_fact = {'path': str(source), 'exists': source.exists(), 'is_symlink': source.is_symlink()}
+    try:
+        canonical = source.resolve(strict=True)
+        source_fact['canonical'] = str(canonical)
+        if not canonical.is_relative_to(root):
+            source_fact['read_status'] = 'REFUSED_OUTSIDE_EXACT_FIXTURE_ROOT'
+        else:
+            status = source.stat()
+            source_fact.update({'read_status': 'READ', 'device': status.st_dev, 'inode': status.st_ino,
+                'identity': str(status.st_dev) + ':' + str(status.st_ino), 'bytes': status.st_size,
+                'sha256': hashlib.sha256(source.read_bytes()).hexdigest()})
+    except OSError as error:
+        source_fact.update({'read_status': 'UNAVAILABLE', 'error_class': type(error).__name__, 'errno': error.errno})
+    report = json.loads(qml(actor, 'Session.assistant.workReportDocument()'))
+    browser = report.get('scope_coverage', {}).get('current_session_browser', {})
+    browser_fact = {key: browser[key] for key in ('operation', 'target', 'loading', 'error', 'history_session',
+        'runtime_thread', 'history_target', 'history_loading', 'history_error', 'preparation') if key in browser}
+    events = qml(actor, '(' + _scene_control_expression(marker) + ').facts')
+    return {'stage': stage, 'target': target, 'association': association, 'original_source': source_fact,
+        'browser': browser_fact, 'public_preparation_events': events,
+        'qualification': 'Missing saved record/restore fields and unavailable-source fallback remain separate facts. Settings read does not invoke remember_current_session, flush or approve; absence of a public unavailable-input event is not proof no fallback occurred.'}
