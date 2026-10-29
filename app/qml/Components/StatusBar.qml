@@ -171,6 +171,7 @@ EaElements.StatusBar {
             anchors.left: parent.left
             anchors.verticalCenter: parent.verticalCenter
             color: rule.color
+            opacity: rule.opacity
         }
         AssistantWorking {
             id: assistantArea
@@ -309,9 +310,10 @@ EaElements.StatusBar {
         Rectangle {
             id: rule
             width: EaStyle.Sizes.borderThickness
-            height: EaStyle.Sizes.fontPixelSize * 1.5
+            height: Math.round(EaStyle.Sizes.fontPixelSize * 6 / 7) // 12 at the original 14-pixel font.
             anchors.verticalCenter: parent.verticalCenter
             color: EaStyle.Colors.appBarBorder
+            opacity: 0.45
         }
         // The last fit's outcome, in its colour, framed as a button that opens its results. Scan results the template
         // has changed since read Outdated, in amber with the history icon, until the next run replaces them (the
