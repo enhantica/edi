@@ -1754,7 +1754,35 @@ struct AssistantViewModel::State {
         bool has_project=false,had_input=false,attempted=false,share_approved=false;
     };
     std::optional<ResumeCheckpoint> resume_checkpoint;
+    // Local draft identity survives retirement of disposable execution context.
+    // Created only from a verified live runtime thread, never from cached rows/last.
+    struct ViewedSession {
+        QString thread,email;
+        QPointer<ProjectViewModel> project;
+        const edi::Project* model=nullptr;
+        edi::assistant::Controller* controller=nullptr;
+        quint64 generation=0,account=0;
+        bool has_project=false,had_input=false;
+    };
+    std::optional<ViewedSession> viewed_session;
     bool generic_durable=false,generic_resuming=false;
+    bool viewed_session_current(const ViewedSession& viewed) const {
+        return viewed_session && viewed_session->thread==viewed.thread && !viewed.thread.isEmpty() &&
+            !viewed.email.isEmpty() && viewed_session->email==viewed.email && viewed.account==usage_epoch &&
+            viewed.generation==generation && viewed.controller==controller.get() && controller &&
+            viewed.has_project==bool(project) && (!viewed.has_project || viewed.project) && viewed.project==project &&
+            viewed.model==(project?project->assistantProject():nullptr) && history_session==viewed.thread &&
+            (generic_thread.isEmpty() || generic_thread==viewed.thread) &&
+            generic_native.value("account").toObject().value("email")==viewed.email && !generic_clear_pending;
+    }
+    void capture_viewed_session() {
+        if(!generic_authenticated || generic_retiring || !generic_durable || generic_thread.isEmpty() ||
+            history_session!=generic_thread || !controller || !owned_session(session_metadata.value(generic_thread)))return;
+        const auto email=generic_native.value("account").toObject().value("email").toString();
+        if(email.isEmpty())return;
+        viewed_session=ViewedSession{generic_thread,email,project,project?project->assistantProject():nullptr,
+            controller.get(),generation,usage_epoch,bool(project),generic_thread_has_input};
+    }
     QString session_selection_target;
     quint64 session_operation=0;
     struct AccountSelectionWait {QString target,thread;quint64 operation=0;FileProjection proof;};
@@ -1826,12 +1854,7 @@ struct AssistantViewModel::State {
         }catch(...) {return {};}
     }
     void remember_session_draft() noexcept {
-        try {
-            const auto id=!generic_thread.isEmpty()?generic_thread:history_session;if(id.isEmpty())return;
-            auto index=session_associations();auto records=index.value("threads").toObject();auto record=records.value(id).toObject();
-            if(record.value("thread")!=id || record.value("originator")!="edi")return;
-            record["draft"]=session_draft;records[id]=record;index["threads"]=records;store_session_associations(index);
-        }catch(...) {}
+        remember_current_session(); // Text/files/disclosure share the same proven viewed owner.
     }
     QJsonArray approved_source_locations() const {
         QJsonArray result;
@@ -1865,7 +1888,7 @@ struct AssistantViewModel::State {
     }
     Object session_file_record(const Object& descriptor) const {
         const auto file=descriptor.value("id").toString();const auto origin=generic_input_origins.value(file);
-        Object saved{{"id",file},{"name",descriptor.value("name")},{"bytes",descriptor.value("bytes")},{"consumed",file_was_sent(file)}};
+        Object saved{{"id",file},{"name",descriptor.value("name")},{"bytes",descriptor.value("bytes")},{"consumed",file_owned_by_issued_input(file)}};
         if(origin && origin->current() && origin->attachment==file && generic_input_hashes.value(file)==origin->digest.toHex()) {
             saved["source"]=origin->selected;saved["canonical"]=origin->physical;
             saved["identity"]=session_object_identity(origin->selected);saved["sha256"]=QString::fromLatin1(origin->digest.toHex());
@@ -1883,10 +1906,11 @@ struct AssistantViewModel::State {
     void remember_current_session() noexcept {
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();
         try {
-            if(!generic_authenticated || generic_retiring || !generic_durable || generic_thread.isEmpty() || !owned_session(session_metadata.value(generic_thread)))return;
-            const auto id=generic_thread;const auto account=generic_native.value("account").toObject();
+            capture_viewed_session();
+            if(!viewed_session || !viewed_session_current(*viewed_session) || generic_retiring)return;
+            const auto viewed=*viewed_session;const auto id=viewed.thread;
             auto index=session_associations();auto records=index.value("threads").toObject();
-            Object record{{"cacheCleared",session_history_explicit_target==id?false:records.value(id).toObject().value("cacheCleared").toBool()},{"thread",id},{"originator","edi"},{"email",account.value("email")},
+            Object record{{"cacheCleared",session_history_explicit_target==id?false:records.value(id).toObject().value("cacheCleared").toBool()},{"thread",id},{"originator","edi"},{"email",viewed.email},
                 {"model",model},{"effort",effort},{"draft",session_draft}};
             const QPointer<Session> session(qobject_cast<Session*>(owner.parent()));
             if(session && session->assistant()==&owner && session->project()==project && project && !session->needsSaveAs()) {
@@ -1894,7 +1918,7 @@ struct AssistantViewModel::State {
                 const auto identity=session_object_identity(location);
                 if(!canonical.isEmpty() && !identity.isEmpty())record["project"]=Object{{"location",location},{"canonical",canonical},{"identity",identity}};
             }
-            const auto scope=current_disclosure();if(!proof.input_current() || generic_thread!=id || !scope)return;
+            const auto scope=current_disclosure();if(!proof.input_current() || !viewed_session_current(viewed) || !scope)return;
             record["approved"]=same_disclosure(approved_scope,scope);
             record["inputs"]=QString::fromLatin1(scope->inputs.toHex());record["metadata"]=QString::fromLatin1(scope->metadata.toHex());
             record["sources"]=approved_source_locations();
@@ -1907,7 +1931,7 @@ struct AssistantViewModel::State {
                 files.append(session_file_record(value.toObject()));
             }
             record["files"]=files;
-            if(!proof.input_current() || !receiver || generic_thread!=id)return;
+            if(!proof.input_current() || !receiver || !viewed_session_current(viewed))return;
             records[id]=record;index["version"]=1;index["threads"]=records;index["last"]=id;
             store_session_associations(index);
         }catch(...) {if(receiver && receiver->state_.get()==this && proof.input_current())
@@ -2151,7 +2175,8 @@ struct AssistantViewModel::State {
         auto record=saved_session(id);
         if(automatic && record.value("archived").toBool())return false;
         if(record.isEmpty() && !owned_session(session_metadata.value(id)))return false;
-        const auto previous=generic_thread;session_selection_target=id;sessions_loading=true;
+        const auto previous=viewed_session && viewed_session_current(*viewed_session)?viewed_session->thread:generic_thread;
+        session_selection_target=id;sessions_loading=true;
         if(session_history_thread!=id)session_history_loading=false;
         if(!previous.isEmpty() && previous!=id)remember_current_session();
         if(history_session!=id)remember_session_draft();
@@ -2455,7 +2480,8 @@ struct AssistantViewModel::State {
         const auto current=[&]{return receiver && receiver->state_.get()==this && proof.retirement_current() && transport && agent.get()==transport && transport->outputGeneration()==output;};
         if(!current())return false;
         const auto record=saved_session(id);
-        if(!owned_session(session_metadata.value(id)) && record.isEmpty() && id!=generic_thread)return true;
+        if(!owned_session(session_metadata.value(id)) && record.isEmpty() && id!=generic_thread &&
+            (!viewed_session || viewed_session->thread!=id))return true;
         if(generic_thread==id) {
             // Mark before callback-capable retirement: every original start AND
             // steer owns a NativeReceipt; generic_rpc_turns owns only steers.
@@ -2465,6 +2491,7 @@ struct AssistantViewModel::State {
         if(restore_last_target==id)retire_startup_restore();
         forget_last_session(id); // Only the matching durable automatic target, not its saved evidence.
         if(!current())return false;
+        if(viewed_session && viewed_session->thread==id)viewed_session.reset();
         session_metadata.remove(id);
         retire_session_history(id);
         if(session_history_explicit_target==id)session_history_explicit_target.clear();
@@ -9127,6 +9154,7 @@ struct AssistantViewModel::State {
         // Account authority/visibility retire without allocating; old JSON is
         // never sufficient evidence that it belongs to a later ready account.
         usage_account_ready = false; usage_snapshot_valid = false; usage_fresh = false; usage_observation_available = false;
+        viewed_session.reset();
         generic_thread_has_input=false;
         usage_update_serial = 0; usage_rpc.clear();
         usage_state=UsageState::Unknown;usage_starting=false;usage_refresh_pending=false;
@@ -12695,6 +12723,7 @@ struct AssistantViewModel::State {
         }
         if (!publish({},false,nullptr,true)) { archive_refused = was_refused; error = storage_error; notify(); return; }
         if (discarded) *discarded = true; // Logical discard; archive revision/commit is tracked independently.
+        viewed_session.reset();
         if (removed) *removed = true;
         work_cancel_failure();work_reports.retireScope();work_scope_bound=work_reports.available() && !work_reports.scope().isEmpty();work_registration={};
         work_terminal.clear();work_first_cause.clear();work_automatic_terminal=false;
@@ -12836,6 +12865,9 @@ struct AssistantViewModel::State {
         if(rpc.isEmpty())throw std::runtime_error("The current managed account identity could not be requested");
     }
     void generic_initialize() {
+        // Browser settlement may release the existing accepted Send while a
+        // same-conversation context waits. No new intent or request is created here.
+        QObject::connect(&owner,&AssistantViewModel::sessionsChanged,&owner,&AssistantViewModel::draftAdmissionReadyChanged,Qt::UniqueConnection);
         agent = std::make_unique<CodexAgent>(&owner,work_reports.releaseOwner());
         QObject::connect(agent.get(), &CodexAgent::started, &owner, [this] {
             account_read_ready=false;account_bootstrap_verified=false;account_read_rpc.clear();
@@ -13080,6 +13112,14 @@ struct AssistantViewModel::State {
     bool generic_prepare_thread() {
         if(startup_restore_pending())return false;
         const auto publication = file_projection();
+        const auto viewed=generic_thread.isEmpty()?viewed_session:std::optional<ViewedSession>{};
+        const QPointer<CodexAgent> originalTransport(agent.get());
+        const auto originalOutput=originalTransport?originalTransport->outputGeneration():0;
+        const auto originalTransportCurrent=[&] {
+            return originalTransport && agent.get()==originalTransport.data() && originalTransport->outputGeneration()==originalOutput;
+        };
+        if(viewed && (!viewed_session_current(*viewed) || !session_switch_idle() || sessions_loading || !originalTransportCurrent() ||
+            originalTransport->outputOwnerState()!=CodexAgent::OutputOwnerState::Live))return false;
         // Internal instruction-stage preparation is a definite pre-RPC refusal;
         // failure is not evidence of an account failure or a missing user grant.
         try {
@@ -13090,6 +13130,28 @@ struct AssistantViewModel::State {
             notify(); return false;
         }
         if (!publication.input_current()) return false;
+        if(viewed) {
+            // Fresh Share/current instructions are prepared before retiring the settled
+            // old process. A loaded stock thread can ignore new workspace overrides.
+            // Keep Controller, input identity and disclosure token; only execution restarts.
+            const auto approval=approved_scope;
+            const auto actual=current_disclosure();
+            if(!publication.input_current() || !originalTransportCurrent() || !viewed_session_current(*viewed) ||
+                !approval || approved_scope!=approval || !same_disclosure(approval,actual))return false;
+            auto login=std::make_shared<DisclosureScope>(*approval);
+            ResumeCheckpoint checkpoint{viewed->thread,generic_workspace,viewed->email,project,approval,
+                generation,bool(project),viewed->had_input,false,true};
+            if(!publication.input_current() || !viewed_session_current(*viewed) || !session_switch_idle() || sessions_loading)return false;
+            resume_checkpoint=std::move(checkpoint);login_scope=std::move(login);generic_resuming=true;resume_metadata_thread.clear();
+            retire_session_history(); // The retired process cannot complete its original history waiter.
+            generic_authenticated=false;usage_account_ready=false;usage_unavailable();
+            if(!publication.input_current() || !originalTransportCurrent() || !viewed_session_current(*viewed) ||
+                !resume_checkpoint || resume_checkpoint->thread!=viewed->thread || resume_checkpoint->disclosure!=approval)return false;
+            originalTransport->retire();
+            if(!publication.input_current() || !originalTransport || agent.get()!=originalTransport.data() ||
+                !resume_checkpoint || resume_checkpoint->thread!=viewed->thread || resume_checkpoint->disclosure!=approval)return false;
+            schedule_resume_connection();notify();return publication.input_current();
+        }
         try {
             generic_connecting = true;
             agent->beginOperation(Limits::sign_in_ms, 0);
@@ -14572,6 +14634,9 @@ struct AssistantViewModel::State {
             if(!projection.current())return {};
             if (still_approved) {
                 if (!generic_prepare_thread() || !projection.current()) return {};
+                if(generic_resuming && resume_checkpoint && viewed_session && resume_checkpoint->thread==viewed_session->thread) {
+                    if(accountWaiting)*accountWaiting=true;return {}; // No turn/input admitted; original draft waits for this exact resume.
+                }
                 error = input_refusal(QObject::tr("A fresh conversation is being prepared for the approved scope. Your draft is retained; send when ready."));
             } else error = input_refusal(QObject::tr("Approve the current project context to prepare a fresh agent conversation."));
             notify(); return {};
@@ -15023,6 +15088,8 @@ struct AssistantViewModel::State {
             // Everything after this point can reenter or delete the receiver; A never cleans up B's staging.
     #ifndef __EMSCRIPTEN__
             if (admitted && generic_mode) {
+                remember_current_session();
+                if(!projection.current())return admitted;
                 (void)generic_context_changed(false, &projection);
                 if (!projection.current()) return admitted;
                 native = generic_native;
@@ -16200,6 +16267,7 @@ struct AssistantViewModel::State {
         const bool has_target = next != nullptr;
 #ifndef __EMSCRIPTEN__
         const auto oldBinding=generation;
+        const auto oldViewed=viewed_session && viewed_session_current(*viewed_session)?viewed_session:std::optional<ViewedSession>{};
         const bool preserveSetup=ordinaryEmptyCreate && !project && target && edi::empty_for_population(*target->assistantProject()) &&
             generic_mode && generic_authenticated && !generic_retiring && !generic_revoke_pending && !generic_clear_pending &&
             !generic_context_pending && !generic_busy && !native_call && !native_creation && !native_save &&
@@ -16255,7 +16323,7 @@ struct AssistantViewModel::State {
             if(oldBinding!=0 && startup_restore_pending())retire_startup_restore();
             if(!startup_restore_pending())forget_last_session();
         }
-        if(!preserveSetup){resume_checkpoint.reset();generic_resuming=false;}
+        if(!preserveSetup){resume_checkpoint.reset();generic_resuming=false;viewed_session.reset();}
 #endif
         const auto reportBinding=generation;
         work_end("retired","project_binding_retired");
@@ -16410,6 +16478,11 @@ struct AssistantViewModel::State {
             approved_scope=setupScope;backend_scope=setupScope;bootstrap_scope=std::move(setupScope);
             consented_context.swap(setupConsent);
             ordinary_empty_setup_target=target;
+            if(oldViewed && oldViewed->thread==generic_thread && oldViewed->account==usage_epoch) {
+                viewed_session=*oldViewed;viewed_session->project=target;viewed_session->has_project=bool(target);
+                viewed_session->model=target?target->assistantProject():nullptr;
+                viewed_session->controller=controller.get();viewed_session->generation=binding;
+            }
             if(genuine_objective_generation==oldBinding && genuine_objective_account==usage_epoch && !genuine_objective_project) {
                 genuine_objective_generation=binding;genuine_objective_project=target;
             }
@@ -17552,7 +17625,9 @@ QString AssistantViewModel::contextConsentIdentity() const {
 }
 bool AssistantViewModel::draftAdmissionReady() const {
 #ifndef __EMSCRIPTEN__
-    return !state_->generic_mode || (!state_->account_confirmation_pending && !state_->startup_restore_pending());
+    return !state_->generic_mode || (!state_->account_confirmation_pending && !state_->startup_restore_pending() &&
+        (!(state_->viewed_session && state_->generic_thread.isEmpty()) ||
+            (state_->session_switch_idle() && !state_->sessions_loading)));
 #else
     return true;
 #endif
@@ -18200,7 +18275,18 @@ QString AssistantViewModel::acceptConnectionOffer(const QString& identity) {
         signIn();
         if(!current())return QStringLiteral("submitted");
         const bool isConnected=receiver->connected();
-        if(!current() || !isConnected)return QStringLiteral("submitted");
+        if(!current())return QStringLiteral("submitted");
+        if(!isConnected) {
+#ifndef __EMSCRIPTEN__
+            // This actual Share accepted the exact known-account viewed scope;
+            // the existing panel still waits for connected/policy before any input.
+            if(original->generic_resuming && original->resume_checkpoint && original->viewed_session &&
+                original->viewed_session_current(*original->viewed_session) &&
+                original->resume_checkpoint->thread==original->viewed_session->thread && original->resume_checkpoint->share_approved &&
+                State::same_disclosure(original->approved_scope,original->resume_checkpoint->disclosure))return QStringLiteral("approved");
+#endif
+            return QStringLiteral("submitted");
+        }
         const bool required=receiver->contextConsentRequired();
         if(!current() || required)return QStringLiteral("submitted");
         const auto approved=receiver->contextConsentIdentity();
@@ -18303,7 +18389,7 @@ void AssistantViewModel::signIn() {
 }
 void AssistantViewModel::signOut() {
 #ifndef __EMSCRIPTEN__
-    state_->remember_current_session();state_->remember_session_draft();state_->retire_startup_restore();state_->forget_last_session();
+    state_->remember_current_session();state_->remember_session_draft();state_->retire_startup_restore();state_->forget_last_session();state_->viewed_session.reset();
     state_->session_restore_target.clear();state_->session_selection_target.clear();state_->session_preparation.reset();state_->account_selection_wait.reset();state_->session_opening_target.clear();state_->session_account_target.clear();state_->session_account_email.clear();state_->session_account_preflight=false;
     state_->resume_checkpoint.reset();state_->generic_resuming=false;
 #endif
@@ -18555,6 +18641,8 @@ bool AssistantViewModel::removeSelectedFile(const QString& id) {
             state_->consented_context.clear(); state_->error.clear();
 #ifndef __EMSCRIPTEN__
             if (state_->generic_mode) {
+                state_->remember_current_session();
+                if(!projection.current())return admitted;
                 (void)state_->generic_context_changed(false, &projection);
                 if (!projection.current()) return admitted;
                 state_->native = state_->generic_native;
