@@ -5,7 +5,7 @@ description: Choose and revise a refinement strategy from actual model, data, na
 
 # Refine from current evidence
 
-Version: 1.6.1. Follow the user's goal, supplied constraints and actually offered
+Version: 1.6.2. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
@@ -32,22 +32,25 @@ planning; native eligibility and ownership still apply.
    calculation availability. Summaries are neither peak assignments, fit metrics,
    total-width validation nor correlation evidence.
 
-3. **Choose and isolate the implicated block.** Resolve observed position mismatch
-   with eligible cell/offset/scale and supplied wavelength anchored before widths
-   or ADPs absorb it. Assess actual baseline bias before interpreting ADPs;
-   Estimate alone is not validation. Establish baseline evidence before early
-   profile trials, keeping accepted background settings/eligible values fixed.
-   Collect the chosen category's intended eligible members across sites BEFORE
-   constructing flags; use one exact eligible uniform group request when justified,
-   then finish that category/subset rather than alternate categories atom by atom.
-   Read the COMPLETE actual free population: set_free changes listed flags only;
-   an isolated chosen block does not imply omitted alignment/scale flags are fixed.
-   For initial coordinate/ADP trials choose ONE block and intentionally fix the
-   other eligible block, preserving unrelated settings. Assess each baseline/
-   profile or structural block before combining; later joint release needs stable
-   identifiable blocks and evidence. No block-first order or all-free background
-   stage is universal; automatic-background ownership remains authoritative.
-   No particular sharing rule, background release or extra fit is mandatory.
+3. **Introduce the implicated group; retain accepted work.** Resolve observed
+   position mismatch with eligible cell/offset/scale and supplied wavelength
+   anchored before widths or ADPs absorb it. Assess baseline bias before ADPs;
+   Estimate alone is not validation. Establish baseline evidence before profile
+   interpretation.
+   Keep accepted useful eligible free groups in the fit by default while adding
+   ONE new unvalidated group. Introduce background/profile and coordinate/ADP
+   blocks separately: assess the first new block before adding the other, with
+   the other UNVALIDATED block fixed. Already accepted groups remain cumulative.
+   Hold an accepted group only for explicit user/calibration/native-dependence
+   requirements or a stated diagnostic based on observed correlation, confounding
+   or instability; keep that comparison restorable. Do not routinely freeze and
+   re-release successful groups, or require a final fixed/free sweep or extra fit.
+   Collect intended eligible members across sites BEFORE constructing flags;
+   finish one category/subset rather than alternate categories atom by atom.
+   Use one exact uniform eligible group request when justified. Read the COMPLETE
+   actual free population: set_free changes listed flags only, not omitted flags.
+   No group-first order, all-free background stage or sharing rule is universal;
+   explicit user groups/subsets/order/flags and automatic-background ownership win.
 
 4. **Assess before spending the next Undo.** Reconcile actual prerequisite replies
    and settle calculation before fitting. Read returned status/adopted FIRST.
