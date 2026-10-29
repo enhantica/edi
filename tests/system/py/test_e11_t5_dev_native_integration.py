@@ -471,19 +471,25 @@ def _original_context_disclosure_ready(actor, value):
             and rows[0].get('fully_exposed') is True and rows[0]['width'] > 0 and rows[0]['height'] > 0
     if not value['ui']['connected'] or not exposed('AssistantConnectionDialog') or not exposed('assistant.contextDisclosureScroll'):
         return False
-    # The original Popup is nonvisual; FIRST native discovery retains it. The
-    # actual ScrollView must be under THAT original content item in THIS window.
+    # Qt names its visual PopupItem with the QML component type. That shell
+    # does not own AssistantConnectionDialog's assistant/offer/opened fields.
+    # Prove the unique declared Popup by its own methods and the exact SAME
+    # content item, retaining the exposed original shell/window/scroll guards.
     return qml(actor, '(function(){const original=Session,vm=original.assistant,project=original.project,'
-        'hadProject=Qt.isQtObject(project),dialog=' + control_expression('AssistantConnectionDialog') + ','
+        'hadProject=Qt.isQtObject(project),visual=' + control_expression('AssistantConnectionDialog') + ','
         'scroll=' + control_expression('assistant.contextDisclosureScroll') + ';'
-        'if(!Qt.isQtObject(vm)||!Qt.isQtObject(dialog)||!Qt.isQtObject(scroll)||dialog.assistant!==vm||'
-        'dialog.visible!==true||dialog.opened!==true||!vm.connected)return false;'
-        'const content=dialog.contentItem;if(!Qt.isQtObject(content)||content.Window.window!==window||scroll.Window.window!==window)return false;'
-        'let owned=false;for(let parent=scroll;parent;parent=parent.parent)if(parent===content){owned=true;break;}'
-        'const identity=vm.contextConsentIdentity;'
-        'return owned&&identity.length>0&&dialog.disclosedContextIdentity===identity&&Qt.isQtObject(original)&&'
-        'Session===original&&original.assistant===vm&&(!hadProject||Qt.isQtObject(project))&&original.project===project&&'
-        'dialog.assistant===vm&&dialog.visible===true&&dialog.opened===true&&content.Window.window===window;})()') is True
+        'if(!Qt.isQtObject(vm)||!Qt.isQtObject(visual)||!Qt.isQtObject(scroll)||!vm.connected)return false;'
+        'const matches=testAppObjects.snapshot().filter(x=>Qt.isQtObject(x)&&typeof x.beginOffer==="function"&&'
+        'typeof x.presentOffer==="function"&&typeof x.opened==="boolean"&&x.assistant===vm&&x.contentItem===visual.contentItem);'
+        'if(matches.length!==1)return false;const dialog=matches[0],content=dialog.contentItem,offer=dialog.approvalOwner;'
+        'const current=()=>Qt.isQtObject(original)&&Session===original&&Qt.isQtObject(vm)&&original.assistant===vm&&'
+        '(!hadProject||Qt.isQtObject(project))&&original.project===project&&Qt.isQtObject(dialog)&&dialog.assistant===vm&&'
+        'dialog.approvalOwner===offer&&dialog.visible===true&&dialog.opened===true&&Qt.isQtObject(visual)&&'
+        'Qt.isQtObject(content)&&dialog.contentItem===content&&visual.contentItem===content&&'
+        'visual.Window.window===window&&content.Window.window===window&&Qt.isQtObject(scroll)&&scroll.Window.window===window;'
+        'if(!current())return false;let owned=false;for(let parent=scroll;parent;parent=parent.parent)if(parent===content){owned=true;break;}'
+        'if(!owned)return false;const identity=vm.contextConsentIdentity;if(!current())return false;'
+        'const disclosed=dialog.disclosedContextIdentity;return current()&&identity.length>0&&disclosed===identity;})()') is True
 
 def tool_call(tool, identity, **arguments):
     return {
