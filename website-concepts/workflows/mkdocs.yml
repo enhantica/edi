@@ -1,0 +1,66 @@
+site_name: EasyDiffraction
+site_description: Diffraction analysis, from the first pattern to the final result.
+site_url: http://127.0.0.1:8873/workflows/
+docs_dir: docs
+site_dir: site
+theme:
+  variant: modern
+  logo: assets/mark.svg
+  favicon: assets/mark.svg
+  font: false
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.path
+    - toc.follow
+    - content.code.copy
+nav:
+  - Home: index.md
+  - Get started:
+      - get-started/index.md
+      - Choose your workspace:
+          - Web application: get-started/web.md
+          - Desktop application: get-started/desktop.md
+          - Python and command line: get-started/python-cli.md
+      - Your first project: get-started/first-project.md
+  - Guides:
+      - guides/index.md
+      - Build your analysis:
+          - Load a project: guides/load.md
+          - Define a structure: guides/structure.md
+          - Calculate a pattern: guides/calculate.md
+          - Refine a model: guides/refine.md
+      - Understand your results:
+          - Interpret a fit: guides/results.md
+          - Save and share: guides/export.md
+  - Tutorials:
+      - tutorials/index.md
+      - A powder refinement: tutorials/powder.md
+      - Working with a scan: tutorials/scan.md
+  - Reference:
+      - reference/index.md
+      - Interfaces:
+          - Application: reference/application.md
+          - Python: reference/python.md
+          - Command line: reference/cli.md
+      - Shared formats:
+          - Projects and files: reference/projects.md
+  - About: about.md
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+extra_css:
+  - assets/concept.css
+extra_javascript:
+  - assets/concept.js
+copyright: EasyDiffraction · Open scientific software

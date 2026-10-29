@@ -1,0 +1,26 @@
+{
+  "concept": "surfaces",
+  "checks": [
+    {
+      "page": "/",
+      "heading": "Diffraction analysis,\nyour way.",
+      "no_horizontal_overflow": true,
+      "images_loaded": true,
+      "left_navigation_visible": false,
+      "page_outline_visible": false
+    },
+    {
+      "page": "application/refine/",
+      "heading": "Refine a diffraction pattern\u00b6",
+      "no_horizontal_overflow": true,
+      "images_loaded": true,
+      "left_navigation_visible": true,
+      "page_outline_visible": true
+    },
+    {
+      "page": "/ mobile",
+      "no_horizontal_overflow": true
+    }
+  ],
+  "browser_errors": []
+}

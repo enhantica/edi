@@ -1,0 +1,7 @@
+_build/
+**/site/
+**/.cache/
+**/__pycache__/
+.venv/
+**/.preview-*.yml
+

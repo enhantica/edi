@@ -75,6 +75,8 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0051](0051-names-and-numbers-from-the-dictionary.md) | Every name and number on screen comes from crysta's dictionary | Accepted | 🟡 | High | one display bridge over crysta's dictionary gives every label, tooltip, selector value and number; input fields, the slider and the Analysis table show a value as the file spells it, read-only surfaces by the item's display format; `display_sources.py` refuses a copied name or a rounding of its own, with reasoned exceptions |
 | [0052](0052-project-folders-archives-and-opening.md) | Project folders, archives and opening | Proposed | 🟡 | High | a project is one folder; every surface opens a folder, its `project.edi` or a `.zip` and writes the same archive through the core; a zip-opened project saves where the user chooses; every save adopts what it wrote and recalculates; pages build in the background after a project opens |
 
+| [0053](0053-unified-public-website-concepts.md) | Unified public website and user-focused documentation | Proposed | 🟡 | High | isolated Zensical alternatives compare surface-oriented and workflow-oriented navigation; EasyDiffraction is the public brand, scientific concepts are shared, and contributor content has a quiet separate entry; production migration remains pending |
+
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.

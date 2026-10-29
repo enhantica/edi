@@ -1,0 +1,69 @@
+site_name: EasyDiffraction
+site_description: Diffraction analysis, your way. Application, Python and command line in one place.
+site_url: http://127.0.0.1:8873/surfaces/
+docs_dir: docs
+site_dir: site
+theme:
+  variant: modern
+  logo: assets/mark.svg
+  favicon: assets/mark.svg
+  font: false
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.path
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+nav:
+  - Home: index.md
+  - Get started:
+      - get-started/index.md
+      - Your first refinement: get-started/first-refinement.md
+      - Choose your interface: get-started/interfaces.md
+  - Application:
+      - application/index.md
+      - Getting comfortable:
+          - The workspace: application/workspace.md
+          - Refine a pattern: application/refine.md
+      - Where you work:
+          - In your browser: application/browser.md
+          - On your desktop: application/desktop.md
+      - Keep your work:
+          - Projects and files: application/projects.md
+          - Reports: application/reports.md
+  - Python:
+      - python/index.md
+      - Load and fit a project: python/fit.md
+  - CLI:
+      - cli/index.md
+      - Run a refinement: cli/fit.md
+  - Learn:
+      - learn/index.md
+      - Shared concepts:
+          - Projects and experiments: learn/projects.md
+          - Examples: learn/examples.md
+  - About:
+      - about/index.md
+      - Get involved: about/community.md
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.details
+extra_css:
+  - assets/concept.css
+extra_javascript:
+  - assets/concept.js
+copyright: 'EasyDiffraction · Open scientific software · <a href="https://enhantica.github.io/edi/dev/">Contributor documentation ↗</a>'
+validation:
+  invalid_links: true
+  invalid_link_anchors: true

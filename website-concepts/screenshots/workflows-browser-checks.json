@@ -1,0 +1,30 @@
+{
+  "concept": "workflows",
+  "checks": [
+    {
+      "page": "/",
+      "heading": "Diffraction analysis.\nMade easy.",
+      "no_horizontal_overflow": true,
+      "images_loaded": true,
+      "left_navigation_visible": false,
+      "page_outline_visible": false
+    },
+    {
+      "page": "guides/refine/",
+      "heading": "Refine a model\u00b6",
+      "no_horizontal_overflow": true,
+      "images_loaded": true,
+      "left_navigation_visible": true,
+      "page_outline_visible": true
+    },
+    {
+      "page": "guides/refine/",
+      "python_interface_tab_works": true
+    },
+    {
+      "page": "/ mobile",
+      "no_horizontal_overflow": true
+    }
+  ],
+  "browser_errors": []
+}
