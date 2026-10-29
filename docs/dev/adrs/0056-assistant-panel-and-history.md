@@ -4324,3 +4324,41 @@ Independent manifest/patch/checker/lock/temp/component/stage/default/dedicated,
 regular-temp/reuse/missing-publication, install and corruption qualification is
 still owed. Source alone is not a bounded fault experiment, cache hit, elapsed
 saving or repaired configure/build claim.
+
+## Current settings readiness observation is diagnostic only
+
+FIRST thread/settings/update retains one fixed-key latest-attempt diagnostic,
+with original receiver/project/controller/account/thread and transport-output
+ownership. Existing workReportDocument exposes current selected preferences,
+requested effort, verified-policy facts and output-owner state separately from
+that attempt and from cached historical report evidence. The observation contains
+no account identity, credentials, user text, paths, raw frames or refusal prose.
+Missing request/ACK/notification/settlement remains not observed, not an invented
+readiness or cause. A local selected preference never proves effective runtime
+settings.
+
+The original settings path records its actual early admission reason, returned
+request ID, seen reply versus validated empty queue ACK/refusal, policy-validated
+current-thread notification and ordinary settlement call/return. A notification
+has no RPC correlation ID: actual thread/policy validation is recorded, not a
+fabricated per-request applied acknowledgment. Provisional empty-ID capture is
+allowed ONLY while that original settings request call is actually in flight.
+Semantic ACK/refusal/validation-stage observations stay private until its actual
+returned ID and original owner bind them. A barrier/already-current/dedicated
+entry that issued no RPC cannot absorb an older reply. Unmatched/conflicting
+provisional receipts remain unknown and are discarded when the call unwinds.
+Diagnostics do not prepare/queue/write another request,
+emit a signal, change clocks/policy/currentness, resume a wait or add a retry.
+
+Each new inactive entry replaces only this bounded diagnostic value; deferred
+reentry preserves the original admitted exchange. A scope-bound diagnostic flag
+covers only its synchronous request call and clears on return/throw under the
+original weak State lifetime check; it is never a readiness or network-drain flag.
+Context,
+account, input or transport replacement makes its original proof stale; it cannot
+recreate execution authority. Existing failure paths may retain a safe closed
+terminal category; unrelated later failures do not rewrite a settled operation.
+Allocation/serialization unavailability is diagnostic absence, never a reason to
+block or authorize work. This is an instrumented discriminator for the observed
+model/effort pending boundary, not a causal repair or qualification. Independent
+request/reply/notification/retirement and real-runtime verification remain owed.
