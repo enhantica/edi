@@ -5931,14 +5931,64 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
     _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
                        observe_context_continuity=True)
     original, current = _two_genuine_session_threads(actor)
+    # New/Clear intentionally retires its current unsent draft. Establish both
+    # real IDs FIRST, then attach only while the TARGET A actually owns input.
     source = _attachment_fixtures(tmp_path, 1)[0]
+    b_files = json.loads(json.dumps(actor.last['ui']['selected_files']))
+    b_history = json.loads(json.dumps(actor.last['ui']['messages']))
+    assert not b_files, 'Genuine conversation B begins with its own empty input context before A receives a file'
+    b_draft = 'Retain this unsent draft only in genuine conversation B.'
+    actor.command('click', name='assistant.composer')
+    actor.command('manual_text', text=b_draft)
+    assert qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == b_draft, (
+        'The original visible composer really owns B draft text before selection can capture it')
+    premise = {'original': original, 'other': current, 'b_files': b_files, 'b_history': b_history,
+               'b_draft': b_draft, 'view_steps': []}
+    def retain_premise():
+        (actor.folder / 'per-thread-target-draft-premise.json').write_text(json.dumps(premise, indent=2))
+    def select_existing_view(target):
+        boundary = len(_session_wire(actor))
+        actor.command('click', name='assistant.sessions');_session_wait(actor)
+        delivered = actor.command('session_row_click', thread_id=target)['reply']
+        assert delivered['reached'] and delivered['actual_pressed_changes'] > 0, (
+            'Every premise switch uses the same original realized exact-ID row and actual input')
+        actor.until(lambda value: value['ui']['connected']
+                    and not qml(actor, 'Session.assistant.sessionsLoading')
+                    and not qml(actor, control_expression('assistant.sessionsDialog') + '.opened'))
+        actual = _session_wire(actor)[boundary:]
+        resumed = [row for row in actual if row.get('method') == 'thread/resume']
+        premise['view_steps'].append({'target': target, 'physical_row': delivered,
+                                      'wire': actual, 'actual_ui': actor.last['ui']})
+        retain_premise()
+        assert resumed and resumed[-1]['params']['threadId'] == target \
+            and not any(row.get('method') in ('thread/start', 'turn/start') for row in actual), (
+                'A same-account view switch accepts its original runtime identity without a new conversation or input')
+        assert not any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in actor.last['ui']['texts']), (
+            'Viewing each existing own conversation never supplies or requests fresh Share approval')
+    select_existing_view(original)
+    assert not actor.last['ui']['selected_files'] \
+        and qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == '', (
+            'A own empty pending input is restored; neither B draft nor an unrelated file is grafted into the target')
     token = actor.begin_current_file_selection()
     assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
-        'A genuinely new admitted file changes the current outgoing disclosure after the earlier approval')
-    manifest = actor.last['ui']['selected_files']
+        'The genuinely new file is admitted while TARGET A owns its draft, before leaving for B')
+    manifest = json.loads(json.dumps(actor.last['ui']['selected_files']))
     pending_file = next(row for row in manifest if row['pending'])
-    assert actor.last['ui']['connected'] and actor.last['ui']['context_consent_required'], (
-        'The consent discriminator actually reaches authenticated idle state with required new context approval')
+    a_draft = 'Retain this unsent changed-file task only in genuine conversation A.'
+    actor.command('click', name='assistant.composer');actor.command('manual_text', text=a_draft)
+    premise.update({'a_files': manifest, 'a_pending_file': pending_file, 'a_draft': a_draft,
+                    'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest()})
+    retain_premise()
+    assert actor.last['ui']['connected'] and actor.last['ui']['context_consent_required'] \
+        and qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == a_draft, (
+            'TARGET A itself now has a genuine unapproved changed-file draft, not B input that selection should discard')
+    select_existing_view(current)
+    assert actor.last['ui']['selected_files'] == b_files \
+        and qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == b_draft, (
+            'Returning to B restores its own original draft/empty files, without importing A new pending file')
+    restored_b = {row['id']: row for row in actor.last['ui']['messages']}
+    assert all(restored_b.get(row['id']) == row for row in b_history), (
+        'B retains its own genuine history identities/content during the legitimate view-only switch')
     before = len(_session_wire(actor))
     actor.command('click', name='assistant.sessions');_session_wait(actor)
     clicked = actor.command('session_row_click', thread_id=original)['reply']
@@ -5959,9 +6009,13 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
     assert any(row['kind'] == 'user' and row['text'] == 'First genuine app-owned conversation for exact selection.'
                for row in actor.last['ui']['messages']), (
         'The genuinely resumed original history is visible rather than a new empty conversation')
+    premise['target_after_return'] = actor.last['ui'];retain_premise()
     assert actor.last['ui']['context_consent_required'] and any(
-        row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']), (
-            'View-only resume does not approve or silently lose the genuinely pending changed-file disclosure')
+        row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']) \
+        and qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == a_draft, (
+            'View-only resume restores A own pending changed-file draft without approval, loss or B-to-A graft')
+    assert len(_session_wire(actor, 'turn/start')) == 2, (
+        'Capturing/restoring both original unsent per-thread drafts never transmits either as a model input')
     history = actor.last['ui']['messages']
     reconnect_facts = None
     if reconnect_after_view:
@@ -9993,9 +10047,21 @@ def _observe_original_question_presentation(actor, marker):
         const field=FIELD;if(!Qt.isQtObject(field)||field.Window.window!==window||pane.assistant!==vm)return false;
         const card=field.parent;if(!Qt.isQtObject(card))return false;
         const o=Qt.createQmlObject('import QtQuick; Item {property var facts:[];}',window.contentItem);o.objectName=MARKER;
-        function fact(event){if(!Qt.isQtObject(o))return;const current=Qt.isQtObject(vm)&&Session.assistant===vm&&Qt.isQtObject(pane)&&pane.assistant===vm&&Qt.isQtObject(field)&&field.Window.window===window;
-            const q=current?vm.pendingQuestion:{};o.facts.push({event:event,current:current,paneVisible:current&&pane.visible,paneShown:current&&pane.shown,paneOpened:current&&pane.opened,
-                questionId:q.question_id||'',questionText:q.text||'',cardVisible:current&&card.visible,fieldVisible:current&&field.visible});}
+        function fact(event){if(!Qt.isQtObject(o))return;
+            const vmAlive=Qt.isQtObject(vm),vmCurrent=vmAlive&&Session.assistant===vm;
+            const paneCurrent=Qt.isQtObject(pane)&&pane.assistant===vm;
+            const fieldAlive=Qt.isQtObject(field),cardAlive=Qt.isQtObject(card);
+            const fieldSameWindow=fieldAlive&&field.Window.window===window;
+            const cardSameWindow=cardAlive&&card.Window.window===window;
+            const current=vmCurrent&&paneCurrent&&fieldSameWindow;
+            // Original model evidence survives detached/hidden presentation and retirement.
+            const q=vmAlive?vm.pendingQuestion:{};
+            o.facts.push({event:event,current:current,vmAlive:vmAlive,vmCurrent:vmCurrent,
+                paneCurrent:paneCurrent,paneVisible:Qt.isQtObject(pane)&&pane.visible,
+                paneShown:Qt.isQtObject(pane)&&pane.shown,paneOpened:Qt.isQtObject(pane)&&pane.opened,
+                fieldAlive:fieldAlive,fieldSameWindow:fieldSameWindow,cardAlive:cardAlive,cardSameWindow:cardSameWindow,
+                questionId:q.question_id||'',questionText:q.text||'',
+                cardVisible:cardAlive&&card.visible,fieldVisible:fieldAlive&&field.visible});}
         vm.pendingQuestionChanged.connect(function(){fact('pending_question_changed');});
         pane.visibleChanged.connect(function(){fact('pane_visible_changed');});
         pane.openedChanged.connect(function(){fact('pane_opened_changed');});
@@ -10021,12 +10087,16 @@ def test_original_question_batch_reveals_hidden_assistant_and_replies_once_only_
     actor.until(lambda _value: any(row.get('method') == 'item/started' and
         row.get('params', {}).get('item', {}).get('id') == 'before-original-question'
         for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
-    actor.command('click', name='assistant.toggle')
-    actor.until(lambda _value: qml(actor, 'assistantPanel.visible') is False)
-    assert qml(actor, 'assistantPanel.visible') is False, 'The original toolbar genuinely hides the Assistant before the question arrives'
     marker = 'e11.original-question-presentation'
-    _observe_original_question_presentation(actor, marker)
+    presentation_bound = False
     try:
+        # The original popup's field is Window-attached while its Assistant is
+        # visible. Closing it may legitimately detach that SAME object.
+        _observe_original_question_presentation(actor, marker)
+        presentation_bound = True
+        actor.command('click', name='assistant.toggle')
+        actor.until(lambda _value: qml(actor, 'assistantPanel.visible') is False)
+        assert qml(actor, 'assistantPanel.visible') is False, 'The original toolbar genuinely hides the Assistant before the question arrives'
         release.touch();actor.command('refresh_usage')
         public_ids = []
         expected = {}
@@ -10039,8 +10109,9 @@ def test_original_question_batch_reveals_hidden_assistant_and_replies_once_only_
             assert qml(actor, 'assistantPanel.visible') is True, 'Every original question is actually presented in Assistant'
             facts = _question_facts(actor, marker)
             assert any(row['event'] == 'pane_visible_changed' and row['paneVisible'] for row in facts), 'The original hidden pane really changes presentation owner'
-            assert all(row['current'] and row['paneVisible'] for row in facts if row['questionId'] or row['cardVisible']), (
-                'A question is never published/displayed while its original Assistant pane is still hidden')
+            assert all(row['vmCurrent'] and row['paneCurrent'] and row['paneVisible']
+                       and row['fieldSameWindow'] for row in facts if row['questionId'] or row['cardVisible']), (
+                'Every original VM question ID remains observed even while detached, and publication/card events require the original visible pane and same-window field')
             assert not _session_state(actor).get('human_answers'), 'No RPC reply leaves the app before the final original answer'
             if index:
                 qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(public_ids[index - 1]) + ',"stale answer")')
@@ -10067,7 +10138,7 @@ def test_original_question_batch_reveals_hidden_assistant_and_replies_once_only_
         assert _session_state(actor)['human_answers'] == actual, 'A settled original waiter cannot be answered twice'
     finally:
         release.touch()
-        if not getattr(actor, '_stream_unusable', None) and actor.process.poll() is None:
+        if presentation_bound and not getattr(actor, '_stream_unusable', None) and actor.process.poll() is None:
             (actor.folder / 'original-question-presentation.json').write_text(json.dumps(_question_facts(actor, marker), indent=2))
 
 
@@ -10431,7 +10502,7 @@ def test_original_save_second_replacement_failure_publishes_retained_adopted_sta
     armed = tmp_path / 'arm-original-second-save-replacement'
     receipt = tmp_path / 'original-second-save-replacement.jsonl'
     monkeypatch.setenv('LD_PRELOAD', str(post_adoption_rename_failure_library))
-    monkeypatch.setenv('TEMPORARY_FAILURE_TARGET', str(structure.resolve()))
+    monkeypatch.setenv('TEMPORARY_FAILURE_TARGET', str(project.resolve()))
     monkeypatch.setenv('TEMPORARY_FAILURE_RECEIPT', str(receipt))
     monkeypatch.setenv('TEMPORARY_FAILURE_AFTER_FIRST', '1')
     monkeypatch.setenv('TEMPORARY_FAILURE_ARMED', str(armed))
@@ -10458,6 +10529,9 @@ def test_original_save_second_replacement_failure_publishes_retained_adopted_sta
         p.lastErrorChanged.connect(function(){if(Qt.isQtObject(o))o.errors.push({owner:'Project',text:p.lastError,current:Session.project===p});});return true;})()'''.replace('MARKER', json.dumps(marker))), (
             'Only readonly original Registry/error signals are observed; no exception is thrown through a Qt slot')
     disk_before = _new_project_file_hashes(_new_project_scientific_bytes(project))
+    assert not project.with_name(project.name + '.edi-save-staging').exists() \
+        and not project.with_name(project.name + '.edi-save-previous').exists(), (
+            'The original transaction begins without a leftover sibling staging/previous tree')
     armed.touch()
     actor.request('Save this current project once and retain any original failure; do not retry.')
     actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=show_actions)
@@ -10475,11 +10549,12 @@ def test_original_save_second_replacement_failure_publishes_retained_adopted_sta
     (actor.folder / 'original-post-adoption-failure.json').write_text(json.dumps(facts, indent=2))
     # Reached proof precedes every publication oracle: an early first-write
     # refusal is explicitly unable to pass this gate.
-    assert [row['phase'] for row in actual] == ['first_commit_succeeded', 'second_replacement_refused'] \
-        and actual[0]['successful_commits'] == actual[1]['successful_commits'] == 1 \
-        and actual[0]['pid'] == actual[1]['pid'] == actor.process.pid and actual[1]['error'] == errno.EACCES \
-        and actual[0]['device'] == actual[1]['device'] and actual[0]['inode'] == actual[1]['inode'] and actual[1]['inode'] > 0, (
-            'The exact owned file first commits successfully, then the original second replacement really receives EACCES')
+    assert [row['phase'] for row in actual] == ['first_tree_moved_aside', 'first_commit_succeeded', 'second_transaction_refused'] \
+        and [row['successful_commits'] for row in actual] == [0, 1, 1] \
+        and [row['operation'] for row in actual] == ['root_to_previous', 'staging_to_root', 'root_to_previous'] \
+        and all(row['pid'] == actor.process.pid for row in actual) and actual[2]['error'] == errno.EACCES \
+        and actual[1]['device'] == actual[2]['device'] and actual[1]['inode'] == actual[2]['inode'] and actual[2]['inode'] > 0, (
+            'The original exact owned project tree really commits once, then its next move-aside gets EACCES before the second transaction can replace it')
     old = {row['path']: row for row in before['current_parameters']}
     current = {row['path']: row for row in after['current_parameters']}
     changed = [path for path in old if current[path]['value'] != old[path]['value']]
