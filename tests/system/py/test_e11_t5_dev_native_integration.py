@@ -5924,7 +5924,8 @@ def _two_genuine_session_threads(actor):
     return original, current
 
 
-def test_session_selection_preserves_required_current_disclosure_until_real_dialog_acceptance(main_actor, tmp_path):
+@pytest.mark.parametrize('reconnect_after_view', [False, True], ids=['selected_view', 'view_transport_reconnect'])
+def test_session_selection_preserves_required_current_disclosure_until_real_dialog_acceptance(main_actor, tmp_path, reconnect_after_view):
     actor = main_actor([[], [], []])
     _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
                        observe_context_continuity=True)
@@ -5961,6 +5962,45 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
         row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']), (
             'View-only resume does not approve or silently lose the genuinely pending changed-file disclosure')
     history = actor.last['ui']['messages']
+    reconnect_facts = None
+    if reconnect_after_view:
+        original_account = qml(actor, 'Session.assistant.account')
+        accepted = [row for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
+                    if row.get('id') == resumes[-1]['id'] and 'result' in row]
+        assert len(accepted) == 1 and accepted[0]['result']['thread']['id'] == original, (
+            'The view-only failure occurs AFTER matching runtime acceptance of the exact genuine selected thread')
+        before_fault = len(_session_wire(actor))
+        fault = actor.command('close_owned_transport_write')['reply']
+        assert fault['original_vm_child'] and fault['public_close_write_channel_invoked'], (
+            'Only the actual current fixture-owned runtime child receives the ordinary transport EOF')
+        actor.until(lambda value: not value['ui']['connected'])
+        assert len(_session_state(actor)['inputs']) == 2, (
+            'The original idle view fails before any fresh user turn or genuine outgoing approval')
+        actor.until(lambda value: _unique_input_control(value, 'assistant.connection') is not None)
+        actor.command('click', name='assistant.connection')
+        actor.until(lambda value: value['ui']['connected'] and not qml(actor, 'Session.assistant.sessionsLoading'))
+        recovered_wire = _session_wire(actor)[before_fault:]
+        recovered_resumes = [row for row in recovered_wire if row.get('method') == 'thread/resume']
+        sent_after = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+        confirmed = [row for row in sent_after if recovered_resumes and row.get('id') == recovered_resumes[-1]['id'] and 'result' in row]
+        reconnect_facts = {'accepted_view_resume': accepted[0], 'physical_fault': fault,
+                          'reconnect_wire': recovered_wire, 'confirmed_resume': confirmed,
+                          'actual_current_ui': actor.last['ui']}
+        (actor.folder / 'view-only-transport-reconnect.json').write_text(json.dumps(reconnect_facts, indent=2))
+        assert recovered_resumes and recovered_resumes[-1]['params']['threadId'] == original \
+            and len(confirmed) == 1 and confirmed[0]['result']['thread']['id'] == original, (
+                'One ordinary visible Connect recovers the exact accepted view-only runtime identity, rather than merely displaying cached rows')
+        assert not any(row.get('method') in ('thread/start', 'turn/start') for row in recovered_wire) \
+            and qml(actor, 'Session.assistant.account') == original_account, (
+                'Transport recovery cannot create a replacement thread, replay prior input or borrow a different account')
+        assert actor.last['ui']['context_consent_required'] and any( \
+            row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']) \
+            and not any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in actor.last['ui']['texts']), (
+                'View-only Connect neither asks for new Share nor retroactively approves or loses the still-unapproved changed input')
+        recovered_rows = {row['id']: row for row in actor.last['ui']['messages']}
+        assert all(recovered_rows.get(row['id']) == row for row in history), (
+            'The same accepted runtime recovery retains every original selected history identity and content')
+        history = actor.last['ui']['messages']
     text = 'Continue this selected conversation with the newly attached original file.'
     turns_before = len(_session_wire(actor, 'turn/start'))
     actor.command('send_text', text=text)
@@ -6001,7 +6041,7 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
         'requests_during_selection': selected_wire, 'confirmed_resume': resumes[-1],
         'original_pending_file': pending_file, 'cancel_button': cancelled, 'share_button': accepted,
         'actual_new_input': record, 'admitted_new_turns': len(turns) - turns_before,
-        'selection_share_actions': 0, 'explicit_send_attempts': 2,
+        'view_only_reconnect': reconnect_facts, 'selection_share_actions': 0, 'explicit_send_attempts': 2,
         'definitely_cancelled_attempts': 1}, indent=2))
 
 
@@ -7192,15 +7232,19 @@ def _review66_hold_original_identity(actor, release):
     return request
 
 
+@pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
+@pytest.mark.parametrize('question_count', [1, 3])
 @pytest.mark.parametrize('answer_kind', ['free_text', 'offered_option'])
-def test_existing_human_question_retains_original_waiter_until_same_account_confirmation(main_actor, answer_kind):
+def test_existing_human_question_retains_original_waiter_until_same_account_confirmation(main_actor, answer_kind, question_count, question_delivery):
     question = {'id': 'original-question', 'header': 'Current task',
         'question': 'Should the current read-only task continue?', 'isOther': True,
         'isSecret': False, 'options': [{'label': 'Keep current', 'description': 'Keep the original task.'}]}
-    actor = main_actor([[{'human_question': question, 'call_id': 'original-question-owner'}]])
+    questions = [question] + _original_question_batch(question_count - 1)
+    actor = main_actor([[{'human_questions': questions, 'human_without_public_item': question_delivery == 'builtin_callback', 'call_id': 'original-question-owner'}]])
     _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
     actor.connect();actor.request('Ask the existing question before continuing this original read-only task.')
     actor.until(lambda value: bool(value['ui']['pending_question']))
+    _assert_original_question_callback_wire(actor, 'original-question-owner', question_delivery)
     original = actor.last['ui']['pending_question'];account = qml(actor, 'Session.assistant.account')
     release = actor.folder / 'release-original-question-identity'
     try:
@@ -7216,10 +7260,21 @@ def test_existing_human_question_retains_original_waiter_until_same_account_conf
         actor.until(lambda _value: any(row.get('id') == held['id'] and 'result' in row
             for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
         qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(original['question_id']) + ',' + json.dumps(answer) + ')')
+        expected = {'original-question': {'answers': [answer]}}
+        for question_index, next_question in enumerate(questions[1:]):
+            actor.until(lambda value: value['ui']['pending_question'].get('text') == next_question['question'])
+            shown = actor.last['ui']['pending_question']
+            assert not _session_state(actor).get('human_answers'), 'Account-confirmed intermediate answers still do not settle the original multiquestion RPC'
+            qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(original['question_id']) + ',"stale earlier answer")')
+            assert actor.last['ui']['pending_question'] == shown, 'The first public question identity cannot consume another original queued question'
+            next_answer = 'Keep ' + str(question_index) if answer_kind == 'offered_option' else 'Retained answer ' + str(question_index)
+            qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(shown['question_id']) + ',' + json.dumps(next_answer) + ')')
+            expected[next_question['id']] = {'answers': [next_answer]}
         _session_completed(actor, 1)
         actual = _session_state(actor)['human_answers']
         assert len(actual) == 1 and actual[0]['result']['answers']['original-question']['answers'] == [answer], (
             'After exact unchanged-account proof, one genuine answer settles the retained original question once without replaying earlier work')
+        assert actual[0].get('result') == {'answers': expected}, 'The same-account continuation sends every exact original answer once in the final response only'
         (actor.folder / 'original-question-account-boundary.json').write_text(json.dumps({
             'held_read': held, 'original_question': original, 'actual_answers': actual}, indent=2))
     finally:
@@ -9917,3 +9972,302 @@ def _assert_original_native_object_discovery(actor):
         'The FIRST native readonly discovery must retain exact popup/nonvisual identities, '
         'deduplicate original QObject and visual membership, prefer one current target and refuse '
         'ambiguous current/hidden duplicates without JavaScript QObject Set comparisons')
+
+
+# Independent source-only gates for the existing original requestUserInput owner.
+# Pinned092d ToolRequestUserInputParams/Response, not an Edi-created tool schema.
+def _original_question_batch(count):
+    return [{'id': 'question-' + str(index), 'header': 'Current task',
+             'question': 'Choose the retained read-only task option ' + str(index) + '.',
+             'isOther': True, 'isSecret': False,
+             'options': [{'label': 'Keep ' + str(index), 'description': 'Keep this original choice.'}]}
+            for index in range(count)]
+
+
+def _observe_original_question_presentation(actor, marker):
+    # Read the real pendingQuestion owner, actual Assistant popup and its original
+    # answer/card. No visibility/focus setter, fake signal, QObject JS Set or timer.
+    source = r'''(function(){const vm=Session.assistant,pane=assistantPanel;
+        const field=FIELD;if(!Qt.isQtObject(field)||field.Window.window!==window||pane.assistant!==vm)return false;
+        const card=field.parent;if(!Qt.isQtObject(card))return false;
+        const o=Qt.createQmlObject('import QtQuick; Item {property var facts:[];}',window.contentItem);o.objectName=MARKER;
+        function fact(event){if(!Qt.isQtObject(o))return;const current=Qt.isQtObject(vm)&&Session.assistant===vm&&Qt.isQtObject(pane)&&pane.assistant===vm&&Qt.isQtObject(field)&&field.Window.window===window;
+            const q=current?vm.pendingQuestion:{};o.facts.push({event:event,current:current,paneVisible:current&&pane.visible,paneShown:current&&pane.shown,paneOpened:current&&pane.opened,
+                questionId:q.question_id||'',questionText:q.text||'',cardVisible:current&&card.visible,fieldVisible:current&&field.visible});}
+        vm.pendingQuestionChanged.connect(function(){fact('pending_question_changed');});
+        pane.visibleChanged.connect(function(){fact('pane_visible_changed');});
+        pane.openedChanged.connect(function(){fact('pane_opened_changed');});
+        card.visibleChanged.connect(function(){fact('question_card_visible_changed');});
+        fact('bound');return true;})()'''.replace('FIELD', control_expression('assistant.question.answer')).replace('MARKER', json.dumps(marker))
+    assert qml(actor, source), 'Original question, pane and same-window card signal owners must actually exist before delivery'
+
+
+def _question_facts(actor, marker):
+    return qml(actor, '(' + _scene_control_expression(marker) + ').facts')
+
+
+@pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
+@pytest.mark.parametrize('question_count', [1, 2, 3])
+def test_original_question_batch_reveals_hidden_assistant_and_replies_once_only_after_final(main_actor, question_count, question_delivery):
+    questions = _original_question_batch(question_count)
+    actor = main_actor([[]])
+    release = actor.folder / 'release-original-question-publication'
+    actor.configure_turns([[_rows_research('before-original-question', held=release),
+        {'human_questions': questions, 'human_without_public_item': question_delivery == 'builtin_callback', 'call_id': 'original-question-array'}]])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();actor.request('Ask the finite original questions before completing this read-only task.')
+    actor.until(lambda _value: any(row.get('method') == 'item/started' and
+        row.get('params', {}).get('item', {}).get('id') == 'before-original-question'
+        for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
+    actor.command('click', name='assistant.toggle')
+    assert qml(actor, 'assistantPanel.visible') is False, 'The original toolbar genuinely hides the Assistant before the question arrives'
+    marker = 'e11.original-question-presentation'
+    _observe_original_question_presentation(actor, marker)
+    try:
+        release.touch();actor.command('refresh_usage')
+        public_ids = []
+        expected = {}
+        for index, question in enumerate(questions):
+            actor.until(lambda value: value['ui']['pending_question'].get('text') == question['question'])
+            shown = actor.last['ui']['pending_question']
+            _assert_original_question_callback_wire(actor, 'original-question-array', question_delivery)
+            assert shown['question_id'] not in public_ids, 'Each displayed question has its own original current answer identity'
+            public_ids.append(shown['question_id'])
+            assert qml(actor, 'assistantPanel.visible') is True, 'Every original question is actually presented in Assistant'
+            facts = _question_facts(actor, marker)
+            assert any(row['event'] == 'pane_visible_changed' and row['paneVisible'] for row in facts), 'The original hidden pane really changes presentation owner'
+            assert all(row['current'] and row['paneVisible'] for row in facts if row['questionId'] or row['cardVisible']), (
+                'A question is never published/displayed while its original Assistant pane is still hidden')
+            assert not _session_state(actor).get('human_answers'), 'No RPC reply leaves the app before the final original answer'
+            if index:
+                qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(public_ids[index - 1]) + ',"stale answer")')
+                assert actor.last['ui']['pending_question'] == shown and not _session_state(actor).get('human_answers'), (
+                    'An answered earlier public identity cannot consume a later original question')
+            answer = 'Retained answer ' + str(index) + ' — λ'
+            expected[question['id']] = {'answers': [answer]}
+            actor.until(lambda value: _unique_input_control(value, 'assistant.question.answer') is not None)
+            actor.command('click', name='assistant.question.answer')
+            actor.command('manual_key', key='select_all')
+            actor.command('manual_text', text=answer)
+            actor.command('manual_key', key='return')
+            if index + 1 < question_count:
+                assert not _session_state(actor).get('human_answers'), 'Intermediate physical answers are retained locally without settling the original RPC'
+        _session_completed(actor, 1)
+        actual = _session_state(actor)['human_answers']
+        original = [row for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
+                    if row.get('method') == 'item/tool/requestUserInput']
+        _assert_original_question_callback_wire(actor, 'original-question-array', question_delivery)
+        assert len(original) == len(actual) == 1 and actual[0]['id'] == original[0]['id'], 'The same one original request settles exactly once'
+        assert actual[0].get('result') == {'answers': expected} and 'error' not in actual[0], (
+            'The one final reply preserves every exact original ID/Unicode answer with no omission, duplication or unsolicited key')
+        qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(public_ids[-1]) + ',"late answer")')
+        assert _session_state(actor)['human_answers'] == actual, 'A settled original waiter cannot be answered twice'
+    finally:
+        release.touch()
+        if not getattr(actor, '_stream_unusable', None) and actor.process.poll() is None:
+            (actor.folder / 'original-question-presentation.json').write_text(json.dumps(_question_facts(actor, marker), indent=2))
+
+
+@pytest.mark.parametrize('malformation', ['empty', 'too_many', 'duplicate_id', 'late_id_type', 'late_id_limit', 'late_text_type', 'late_text_limit',
+    'late_header_type', 'late_boolean_type', 'late_options_type', 'late_option_label', 'late_option_label_limit',
+    'late_option_description', 'late_option_description_limit', 'late_option_count'])
+def test_original_question_batch_validates_all_questions_before_publishing_any(main_actor, malformation):
+    questions = _original_question_batch(3)
+    if malformation == 'empty':
+        questions = []
+    elif malformation == 'too_many':
+        questions = _original_question_batch(4)
+    elif malformation == 'duplicate_id':
+        questions[-1]['id'] = questions[0]['id']
+    elif malformation == 'late_id_type':
+        questions[-1]['id'] = 7
+    elif malformation == 'late_id_limit':
+        questions[-1]['id'] = 'λ' * 129  # Original256 UTF8-byte ID bound.
+    elif malformation == 'late_header_type':
+        questions[-1]['header'] = 7
+    elif malformation == 'late_boolean_type':
+        questions[-1]['isSecret'] = 'false'
+    elif malformation == 'late_text_type':
+        questions[-1]['question'] = 7
+    elif malformation == 'late_text_limit':
+        questions[-1]['question'] = 'λ' * 2049  # Original limit4096 UTF8 bytes; not UTF16/codepoint count.
+    elif malformation == 'late_options_type':
+        questions[-1]['options'] = {'label': 'not an option array'}
+    elif malformation == 'late_option_label':
+        questions[-1]['options'][0]['label'] = ''
+    elif malformation == 'late_option_label_limit':
+        questions[-1]['options'][0]['label'] = 'λ' * 129
+    elif malformation == 'late_option_description_limit':
+        questions[-1]['options'][0]['description'] = 'λ' * 513
+    elif malformation == 'late_option_description':
+        questions[-1]['options'][0]['description'] = 7
+    elif malformation == 'late_option_count':
+        questions[-1]['options'] *= 6  # Original option cap5; no production-derived output oracle.
+    actor = main_actor([[{'human_questions': questions, 'call_id': 'invalid-original-question-array'}]])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();marker = 'e11.invalid-original-question-presentation'
+    _observe_original_question_presentation(actor, marker)
+    try:
+        actor.request('Inspect this explicitly parser-negative question request without answering it.')
+        actor.until(lambda _value: bool(_session_state(actor).get('human_answers')))
+        actual = _session_state(actor)['human_answers']
+        assert len(actual) == 1 and 'error' in actual[0] and 'result' not in actual[0], 'Malformed original metadata receives refusal, never fabricated answer success'
+        assert not actor.last['ui']['pending_question'] and not any(row['questionId'] for row in _question_facts(actor, marker)), (
+            'An invalid late question cannot leak a valid prefix into a partial human wait')
+    finally:
+        if not getattr(actor, '_stream_unusable', None) and actor.process.poll() is None:
+            (actor.folder / 'invalid-original-question-presentation.json').write_text(json.dumps(_question_facts(actor, marker), indent=2))
+
+
+@pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
+@pytest.mark.parametrize('retirement', ['cancel', 'sign_out', 'close_project', 'input_scope', 'account_change', 'destroy_engine'])
+def test_original_question_batch_discards_partial_answers_when_original_owner_retires(main_actor, tmp_path, retirement, question_delivery):
+    questions = _original_question_batch(3)
+    actor = main_actor([[{'human_questions': questions, 'human_without_public_item': question_delivery == 'builtin_callback', 'call_id': 'retired-original-question-array'}]])
+    assert actor.command('open', path=str(copied_estimate_project(tmp_path)))['reply']['opened'], (
+        'Retirement has a genuine original current project, not a manufactured pending-question owner')
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();actor.request('Ask the original questions without performing dependent setup.')
+    actor.until(lambda value: value['ui']['pending_question'].get('text') == questions[0]['question'])
+    first = actor.last['ui']['pending_question']
+    _assert_original_question_callback_wire(actor, 'retired-original-question-array', question_delivery)
+    qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(first['question_id']) + ',"retained partial answer")')
+    actor.until(lambda value: value['ui']['pending_question'].get('text') == questions[1]['question'])
+    second = actor.last['ui']['pending_question']
+    assert not _session_state(actor).get('human_answers'), 'The partial original answer has not been transmitted as a completed RPC'
+    if retirement == 'destroy_engine':
+        assert actor.command('arm_session_notification', signal='usage', action='destroy_engine')['reply']['armed'], (
+            'Only the existing one-shot public usage observer may destroy this actual fixture-owned engine')
+        actor.command('refresh_usage')
+        facts = actor.command('session_fault_facts')['reply']
+        assert facts['notification_hits'] == 1 and facts['action'] == 'destroy_engine', (
+            'Window/engine retirement must actually reach the original public notification boundary')
+    else:
+        if retirement == 'input_scope':
+            file = _attachment_fixtures(tmp_path, 1)[0]
+            token = actor.begin_current_file_selection()
+            assert token and actor.command('selected_add', token=token, paths=[str(file)])['reply']['added'], (
+                'Input retirement must reach a genuine current pending-file admission, never a fake changed scope')
+        elif retirement == 'account_change':
+            _session_configure(actor, fixture_account_read_reply={'account': {'type': 'chatgpt',
+                'email': 'other-original-question-owner@example.invalid', 'planType': 'plus'}, 'requiresOpenaiAuth': False})
+            actor.command('refresh_usage')
+            actor.until(lambda value: not value['ui']['connected'])
+        else:
+            actor.command(retirement)
+        qml(actor, 'Session.assistant.answerQuestion(' + json.dumps(second['question_id']) + ',"stale completion")')
+        assert not actor.last['ui']['pending_question'], 'The retired original question cannot remain answerable in the current UI'
+    wire = _session_wire(actor)
+    replies = _session_state(actor).get('human_answers', [])
+    assert not any('result' in row for row in replies), (
+        'No retired partial answer map is transmitted as a successful response, even after stale public input')
+    assert len([row for row in wire if row.get('method') == 'turn/start']) == 1, (
+        'Question retirement never replays the original prompt or admits a replacement turn')
+    (actor.folder / 'retired-original-question.json').write_text(json.dumps({
+        'retirement': retirement, 'first': first, 'second': second, 'actual_replies': replies,
+        'actual_wire': wire}, indent=2))
+
+
+@pytest.mark.parametrize('question_delivery', ['public_item', 'builtin_callback'])
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_original_question_wait_refuses_actual_same_turn_native_writes_until_every_answer(main_actor, tmp_path, show_actions, question_delivery):
+    actor = main_actor([[]], show_actions=show_actions)
+    assert actor.command('open', path=str(copied_estimate_project(tmp_path)))['reply']['opened'], (
+        'The concurrent native discriminator uses the genuine current original project')
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    before = actor.last['ui']['project']
+    eligible = [row for row in before['parameters'] if row['refinable'] and row['fit_blocker'] == 0
+                and row['dependence'] == 0 and isinstance(row['free'], bool)]
+    assert eligible, 'A real currently eligible parameter is required; no invented path or no-op flag can prove native pause'
+    chosen = eligible[0]
+    flags = [{'path': chosen['path'], 'free': not chosen['free']}]
+    questions = _original_question_batch(3)
+    releases = [actor.folder / ('release-question-native-' + str(index)) for index in range(3)]
+    probes = [{**tool_call('set_free', 'question-native-' + str(index), flags=flags), 'release': str(release)}
+              for index, release in enumerate(releases)]
+    actor.configure_turns([[{'human_questions': questions, 'human_without_public_item': question_delivery == 'builtin_callback', 'call_id': 'original-human-with-concurrent-native',
+                            'human_native_probes': probes},
+                           tool_call('set_free', 'ordinary-write-after-original-answers', flags=flags)]])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True)
+    actor.connect();actor.request('Ask these original questions and wait for all answers before changing the current model.')
+    expected = {}
+    observations = []
+    try:
+        for index, question in enumerate(questions):
+            actor.until(lambda value: value['ui']['pending_question'].get('text') == question['question'])
+            shown = actor.last['ui']['pending_question']
+            assert not _session_state(actor).get('human_answers'), 'The original human RPC remains pending before every concurrent write attempt'
+            _assert_original_question_callback_wire(actor, 'original-human-with-concurrent-native', question_delivery)
+            releases[index].touch();actor.command('refresh_usage')
+            actor.until(lambda _value: len(_session_state(actor).get('human_native_responses', [])) == index + 1)
+            actual = _session_state(actor)['human_native_responses'][-1]
+            sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+            human = [row for row in sent if row.get('method') == 'item/tool/requestUserInput']
+            native = [row for row in sent if row.get('method') == 'item/tool/call'
+                      and row['params']['callId'] == probes[index]['call_id']]
+            assert len(human) == len(native) == 1 and actual['parent_rpc'] == human[0]['id'] \
+                and actual['response']['id'] == native[0]['id'] and native[0]['params']['threadId'] == human[0]['params']['threadId'] \
+                and native[0]['params']['turnId'] == human[0]['params']['turnId'] \
+                and native[0]['params']['arguments'] == probes[index]['arguments'], (
+                    'The real native server request reaches the exact pending original human thread/turn with genuine unchanged current operands')
+            result = json.loads(actual['response']['result']['contentItems'][0]['text'])
+            observations.append({'question': shown, 'human_request': human[0], 'native_request': native[0],
+                                 'native_response': actual['response'], 'current_project': actor.last['ui']['project']})
+            (actor.folder / 'question-concurrent-native-boundary.json').write_text(json.dumps(observations, indent=2))
+            assert not actual['response']['result']['success'] and result['status'] == 'refused' \
+                and result['code'] == 'question_pending', (
+                    'The backend itself refuses the real scientific write because the original human question is pending, not because no native RPC was sent')
+            assert actor.last['ui']['project'] == before and actor.last['ui']['pending_question'] == shown \
+                and not _session_state(actor).get('human_answers'), (
+                    'Every first/intermediate/last pending question retains the whole original model and human waiter without a scientific prefix or early answer reply')
+            answer = 'Retained original answer ' + str(index)
+            expected[question['id']] = {'answers': [answer]}
+            actor.until(lambda value: _unique_input_control(value, 'assistant.question.answer') is not None)
+            actor.command('click', name='assistant.question.answer')
+            actor.command('manual_key', key='select_all')
+            actor.command('manual_text', text=answer)
+            actor.command('manual_key', key='return')
+        actor.until(lambda value: value['ui']['state'] == 'idle' and len(actor.responses()) == 5,
+                    visible_progress=show_actions)
+        _assert_original_question_callback_wire(actor, 'original-human-with-concurrent-native', question_delivery)
+        answers = _session_state(actor)['human_answers']
+        assert len(answers) == 1 and answers[0]['id'] == human[0]['id'] \
+            and answers[0].get('result') == {'answers': expected} and 'error' not in answers[0], (
+                'All real answers settle the same original human RPC exactly once after the final answer only')
+        after_response = next(row for row in actor.responses()
+                              if row['id'].startswith('integration-envelope-'))
+        after_result = native_result(after_response)
+        assert after_response['result']['success'] and after_result.get('complete') is True, (
+            'The same genuine current scientific request is usable after all answers; malformed operands cannot masquerade as the pause property')
+        after = actor.last['ui']['project']
+        expected_parameters = [{**row, 'free': not chosen['free']} if row['path'] == chosen['path'] else row
+                               for row in before['parameters']]
+        assert after['parameters'] == expected_parameters, 'Only the one requested original free flag changes after genuine human completion'
+        actor.command('undo');actor.until(lambda value: not value['ui']['project']['calculating'])
+        assert actor.last['ui']['project']['parameters'] == before['parameters'], (
+            'One ordinary control Undo restores exactly the legitimate final write, without replaying any refused pending-question request')
+    finally:
+        for release in releases:
+            release.touch()
+
+
+def _assert_original_question_callback_wire(actor, call_id, delivery):
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    callbacks = [row for row in sent if row.get('method') == 'item/tool/requestUserInput'
+                 and row.get('params', {}).get('itemId') == call_id]
+    assert len(callbacks) == 1, 'The question uses one actual original server RPC/call identity'
+    original = callbacks[0]
+    inputs = _session_state(actor)['inputs']
+    started = [row for row in sent if row.get('method') == 'turn/started'
+               and row['params']['turn']['id'] == original['params']['turnId']]
+    assert inputs and original['params']['threadId'] == inputs[-1]['threadId'] and len(started) == 1, (
+        'The builtin callback remains bound to the genuinely admitted original thread and turn')
+    lifecycle = [row for row in sent if row.get('method') in ('item/started', 'item/completed')
+                 and row.get('params', {}).get('item', {}).get('id') == call_id]
+    if delivery == 'builtin_callback':
+        assert not lifecycle, 'The pinned builtin witness has NO fabricated prerequisite/completion public item'
+    else:
+        assert any(row['method'] == 'item/started' and row['params']['item']['type'] == 'dynamicToolCall'
+                   and row['params']['item']['tool'] == 'request_user_input' for row in lifecycle), (
+                       'The original public-item control remains explicit and distinct from builtin coverage')
+    return original
