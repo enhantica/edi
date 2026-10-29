@@ -262,9 +262,10 @@ class MainActor:
         self.command('send_text', text=text)
         # Same fixture authorization, through the actual original context
         # disclosure owner. Never accept a file/project chooser as a substitute.
-        if required and any(row['name'] == 'assistant.contextSummary' and row['visible']
-                            for row in self.last['ui']['texts']):
-            assert self.command('accept_dialog')['reply']['accepted'], (
+        if required:
+            self.until(lambda value: _original_context_disclosure_ready(self, value))
+            receipt = self.command('dialog_ok', name='AssistantConnectionDialog', role='ok')['reply']
+            assert receipt['pressed_changes'] > 0 and receipt['actual_dialog_name'] == 'AssistantConnectionDialog', (
                 'The actual current context disclosure must accept its original captured user draft'
             )
 
@@ -455,6 +456,34 @@ def _scene_control_expression(name, *, exposed=False):
                   "for(let i=0;i<children.length;i++){const child=children[i];if(child&&child.parent===x)queue.push(child);}}return out;})()")
     return _unique_named_object_expression(name, candidates, exposed=exposed)
 
+
+def _original_context_disclosure_present(value):
+    # Presence is deliberately broader than input readiness: an unexpected
+    # offscreen/disabled/ambiguous visible disclosure must not pass no-Share.
+    return any(row['name'] in ('AssistantConnectionDialog', 'assistant.contextDisclosureScroll')
+               and row['visible'] for row in value['ui']['controls'])
+
+
+def _original_context_disclosure_ready(actor, value):
+    def exposed(name):
+        rows = [row for row in value['ui']['controls'] if row['name'] == name and row['visible']]
+        return len(rows) == 1 and rows[0]['enabled'] and rows[0].get('same_window') is True \
+            and rows[0].get('fully_exposed') is True and rows[0]['width'] > 0 and rows[0]['height'] > 0
+    if not value['ui']['connected'] or not exposed('AssistantConnectionDialog') or not exposed('assistant.contextDisclosureScroll'):
+        return False
+    # The original Popup is nonvisual; FIRST native discovery retains it. The
+    # actual ScrollView must be under THAT original content item in THIS window.
+    return qml(actor, '(function(){const original=Session,vm=original.assistant,project=original.project,'
+        'hadProject=Qt.isQtObject(project),dialog=' + control_expression('AssistantConnectionDialog') + ','
+        'scroll=' + control_expression('assistant.contextDisclosureScroll') + ';'
+        'if(!Qt.isQtObject(vm)||!Qt.isQtObject(dialog)||!Qt.isQtObject(scroll)||dialog.assistant!==vm||'
+        'dialog.visible!==true||dialog.opened!==true||!vm.connected)return false;'
+        'const content=dialog.contentItem;if(!Qt.isQtObject(content)||content.Window.window!==window||scroll.Window.window!==window)return false;'
+        'let owned=false;for(let parent=scroll;parent;parent=parent.parent)if(parent===content){owned=true;break;}'
+        'const identity=vm.contextConsentIdentity;'
+        'return owned&&identity.length>0&&dialog.disclosedContextIdentity===identity&&Qt.isQtObject(original)&&'
+        'Session===original&&original.assistant===vm&&(!hadProject||Qt.isQtObject(project))&&original.project===project&&'
+        'dialog.assistant===vm&&dialog.visible===true&&dialog.opened===true&&content.Window.window===window;})()') is True
 
 def tool_call(tool, identity, **arguments):
     return {
@@ -5797,8 +5826,7 @@ def test_genuine_session_row_click_restores_original_thread_task_and_input_reade
         'Selecting a session is genuine input on the realized original row-owned MouseArea rather than a direct success slot')
     actor.until(lambda value: value['ui']['connected'] and not qml(actor, control_expression('assistant.sessionsDialog') + '.opened'))
     selection_requires_future_context = actor.last['ui']['context_consent_required']
-    assert not any(row['name'] == 'assistant.contextSummary' and row['visible']
-                   for row in actor.last['ui']['texts']), (
+    assert not _original_context_disclosure_present(actor.last), (
         'Viewing the originally approved saved conversation cannot ask for another Share project information approval')
     assert len(_session_wire(actor, 'turn/start')) == sends_before_selection, (
         'Saved-thread selection is resume/view only, never an automatically approved new user turn')
@@ -5971,7 +5999,7 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
         assert resumed and resumed[-1]['params']['threadId'] == target \
             and not any(row.get('method') in ('thread/start', 'turn/start') for row in actual), (
                 'A same-account view switch accepts its original runtime identity without a new conversation or input')
-        assert not any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in actor.last['ui']['texts']), (
+        assert not _original_context_disclosure_present(actor.last), (
             'Viewing each existing own conversation never supplies or requests fresh Share approval')
     select_existing_view(original)
     assert not actor.last['ui']['selected_files'] \
@@ -6016,8 +6044,7 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
         'View-only selection resumes the exact already approved original thread even while fresh outgoing context is unapproved')
     assert not any(row.get('method') in ('thread/start', 'turn/start') for row in selected_wire), (
         'Viewing an existing thread cannot create a replacement conversation or transmit the fresh unapproved user turn')
-    assert not any(row['name'] == 'assistant.contextSummary' and row['visible']
-                   for row in actor.last['ui']['texts']), (
+    assert not _original_context_disclosure_present(actor.last), (
         'Selection and history viewing alone do not ask for Share project information again')
     assert any(row['kind'] == 'user' and row['text'] == 'First genuine app-owned conversation for exact selection.'
                for row in actor.last['ui']['messages']), (
@@ -6063,7 +6090,7 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
                 'Transport recovery cannot create a replacement thread, replay prior input or borrow a different account')
         assert actor.last['ui']['context_consent_required'] and any( \
             row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']) \
-            and not any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in actor.last['ui']['texts']), (
+            and not _original_context_disclosure_present(actor.last), (
                 'View-only Connect neither asks for new Share nor retroactively approves or loses the still-unapproved changed input')
         recovered_rows = {row['id']: row for row in actor.last['ui']['messages']}
         assert all(recovered_rows.get(row['id']) == row for row in history), (
@@ -6072,15 +6099,13 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
     text = 'Continue this selected conversation with the newly attached original file.'
     turns_before = len(_session_wire(actor, 'turn/start'))
     actor.command('send_text', text=text)
-    actor.until(lambda value: any(row['name'] == 'assistant.contextSummary' and row['visible']
-                                 for row in value['ui']['texts']))
+    actor.until(lambda value: _original_context_disclosure_ready(actor, value))
     assert len(_session_wire(actor, 'turn/start')) == turns_before, (
         'The first actual new Send waits for its own changed-context Share instead of borrowing selection approval')
     cancelled = actor.command('dialog_ok', name='AssistantConnectionDialog', role='cancel')['reply']
     assert cancelled['pressed_changes'] > 0, (
         'Cancel is genuine current-window input on the original Share dialog standard button')
-    actor.until(lambda value: not any(row['name'] == 'assistant.contextSummary' and row['visible']
-                                    for row in value['ui']['texts']))
+    actor.until(lambda value: not _original_context_disclosure_present(value))
     assert qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == text \
         and actor.last['ui']['messages'] == history \
         and any(row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']), (
@@ -6090,8 +6115,7 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
             'A definite Share cancellation discloses no new turn and cannot manufacture approval')
     # A new deliberate user Send after a proven cancellation, never an uncertain replay.
     actor.command('click', name='assistant.send')
-    actor.until(lambda value: any(row['name'] == 'assistant.contextSummary' and row['visible']
-                                 for row in value['ui']['texts']))
+    actor.until(lambda value: _original_context_disclosure_ready(actor, value))
     accepted = actor.command('dialog_ok', name='AssistantConnectionDialog', role='ok')['reply']
     assert accepted['pressed_changes'] > 0, (
         'One actual Share acceptance authorizes only this newly requested unchanged captured input')
@@ -11186,7 +11210,7 @@ def _select_original_pending_draft_view(actor, target):
     assert len(accepted) == 1 and accepted[0]['result']['thread']['id'] == target
     assert not any(row.get('method') in ('thread/start', 'turn/start') for row in wire), (
         'Actual accepted runtime identity, not stale browser/report fields, proves this is view-only exact-thread restoration')
-    assert not any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in actor.last['ui']['texts'])
+    assert not _original_context_disclosure_present(actor.last)
     return {'physical': actual, 'wire': wire, 'accepted_id': accepted[0]['id'], 'accepted_thread': target}
 
 
@@ -11340,7 +11364,7 @@ def test_original_close_restart_keeps_repeated_pending_edits_separate_from_consu
         displayed = {_rows_values(restored, 'messages', index)['id']: _rows_values(restored, 'messages', index)
                      for index in range(_rows_probe(restored)['count'])}
         assert all(displayed.get(row['id']) == row for row in first_rows), 'Full original accepted history remains original; no pending edit is invented as a sent user/native row'
-        assert not any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in restored.last['ui']['texts']), (
+        assert not _original_context_disclosure_present(restored.last), (
             'View restoration of original thread/history is not fresh Share approval for its unsubmitted pending files')
     finally:
         _close_explicit_restart_actor(restored)
