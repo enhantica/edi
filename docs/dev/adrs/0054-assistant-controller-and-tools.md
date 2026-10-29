@@ -2592,3 +2592,25 @@ inspect_data without clearing measured/calculated arrays or triggering a fit.
 Paired owner reports lack the original error and native SDK commit, so their
 exclusive Save failure and its underlying writer/readback repair remain unknown;
 this evidence/currentness correction is not a completed Save-regression claim.
+
+## Actual adopted-fit correlation evidence
+
+FIRST FitJob/FitViewModel completion already owns the immutable FitResultBase
+correlation rows from the actual single/joint fit (ADR-0034). The existing optional
+native_fit_diagnostics projection now includes those numeric pairs in
+fit_correlations, with original fit_attempt/call_id and native parameter unique
+names. The existing original receiver/project/controller/receipt/latest-adopted
+attempt and capture-stamp checks still guard publication. No chart threshold,
+coefficient derivation, fit algorithm, path construction, new tool/query or
+persistent numeric cache is added.
+
+These pairs describe the completed adopted fit. model_currentness is explicitly
+unknown: completion/latest-attempt identity alone does not prove validity after
+ordinary Save rounding or other presentation-time model changes. FitResultBase
+has no covariance_available member; empty pairs can mean unavailable covariance
+or fewer than two fitted parameters, so the projection does not invent that flag
+or claim independence. The original Correlations view and native record remain
+unchanged. Closed outgoing roles admit only the declared facts. Optional capture
+or validation failure leaves the original completed outcome unchanged; it cannot
+refit, veto adoption, consume Undo or replay work. Source alone is not actual
+provider use or runtime qualification of this new evidence.

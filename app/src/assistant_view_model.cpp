@@ -8245,7 +8245,8 @@ struct AssistantViewModel::State {
             }
         }
     }
-    void native_fit_diagnostics(Object& result, const NativeCall& original, const QPointer<FitViewModel>& completed) noexcept {
+    void native_fit_diagnostics(Object& result, const NativeCall& original, const QPointer<FitViewModel>& completed,
+                                const edi::FitResultBase& fitted) noexcept {
         try {
             const QPointer<AssistantViewModel> receiver(&owner);
             const QPointer<ProjectViewModel> target(project);
@@ -8277,6 +8278,21 @@ struct AssistantViewModel::State {
                 if(paths.contains(value.toObject().value("path").toString()))parameters.append(value);
             auto enriched=result;
             enriched["diagnostics"]=diagnostics;enriched["parameters"]=parameters;
+            // The completion owns these actual covariance pairs. They describe
+            // that adopted fit, not a proof about later edits/Save or the current
+            // model. Empty pairs cannot distinguish absent covariance from a
+            // fit with fewer than two free parameters.
+            QJsonArray pairs;
+            for(const auto& pair:fitted.correlations)
+                pairs.append(Object{{"parameter_unique_name_i",QString::fromStdString(pair.parameter_unique_name_i.value())},
+                    {"parameter_unique_name_j",QString::fromStdString(pair.parameter_unique_name_j.value())},
+                    {"correlation",pair.correlation.get()}});
+            enriched["fit_correlations"]=Object{{"source","completed_adopted_fit"},
+                {"fit_attempt",QString::number(original.fit_attempt)},{"call_id",original.record->call},
+                {"model_currentness","unknown"},{"pairs_available",!pairs.isEmpty()},{"pairs",pairs}};
+            // Validate the same closed native projection before optional capture
+            // can replace this local result; failures leave the fit facts intact.
+            (void)outgoing::size(enriched,outgoing::Role::Result);
             if(current() && target->revision()==revision && edi::unchanged_since(*model,stamps))result.swap(enriched);
         } catch(...) {} // Optional inspection cannot replace the completed native fit outcome.
     }
@@ -8312,7 +8328,7 @@ struct AssistantViewModel::State {
                 !report.result && !report.adopted())
                 result["fit_reason"] = QLatin1StringView(outgoing::unanchored_cw_dilation.data(),static_cast<qsizetype>(outgoing::unanchored_cw_dilation.size()));
             if (!report.refusal.empty()) result["message"] = bounded_error(QString::fromStdString(report.refusal));
-            if(presented && report.adopted())native_fit_diagnostics(result,original,completed_fit);
+            if(presented && report.adopted() && report.result)native_fit_diagnostics(result,original,completed_fit,*report.result);
             native_finish(presented && report.adopted() && report.status != edi::FitStatus::CANCELLED, result);
         } catch (...) {
             if (original_call()) native_finish(false, original.record->outcome);
