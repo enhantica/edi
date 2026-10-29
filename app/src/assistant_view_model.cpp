@@ -2619,10 +2619,19 @@ struct AssistantViewModel::State {
     void capture_resume_checkpoint() noexcept {
         try {
             if(resume_checkpoint || !generic_authenticated || !generic_durable || generic_thread.isEmpty() ||
-                generic_clear_pending || generic_context_pending || !same_disclosure(approved_scope,backend_scope) || !disclosure_approved())return;
+                generic_clear_pending || generic_context_pending || !backend_scope)return;
+            const auto publication=file_projection();const auto scope=backend_scope;
+            const auto thread=generic_thread,workspace=generic_workspace;
             const auto email=generic_native.value("account").toObject().value("email").toString();
             if(email.isEmpty())return; // No invented account identity.
-            resume_checkpoint=ResumeCheckpoint{generic_thread,generic_workspace,email,project,approved_scope,generation,bool(project),generic_thread_has_input,false,true};
+            const auto actual=current_disclosure();
+            if(!publication.input_current() || resume_checkpoint || !generic_authenticated || !generic_durable ||
+                generic_clear_pending || generic_context_pending || backend_scope!=scope || generic_thread!=thread ||
+                generic_workspace!=workspace || generic_native.value("account").toObject().value("email")!=email ||
+                !same_disclosure(scope,actual) || !staged_skills_match(scope))return;
+            // Conversation identity is recoverable without permission to send fresh data.
+            const bool shared=same_disclosure(approved_scope,scope);
+            resume_checkpoint=ResumeCheckpoint{thread,workspace,email,project,scope,generation,bool(project),generic_thread_has_input,false,shared};
         }catch(...) {} // Recovery is optional; it cannot change the original actual failure.
     }
     void schedule_resume_connection() noexcept {
@@ -12897,11 +12906,24 @@ struct AssistantViewModel::State {
         if(QString::fromLatin1(digest)!=declaration.value("sha256"))throw std::runtime_error("Captured skill instruction identity changed");
         return *captured;
     }
+    std::shared_ptr<const DisclosureScope> skill_registration_scope() {
+        if(!generic_resuming)return approved_scope;
+        if(!resume_checkpoint || !resume_identity_current())return {};
+        return login_scope; // Local verified resume preparation is not outgoing approval.
+    }
+    bool skill_registration_current(const FileProjection& publication,
+        const std::shared_ptr<const DisclosureScope>& scope,
+        const std::shared_ptr<const AssistantSkillInventory>& inventory) {
+        if(!publication.input_current() || staged_skill_inventory!=inventory || !staged_skills_match(scope))return false;
+        const auto actual=skill_registration_scope();
+        return publication.input_current() && actual==scope && staged_skill_inventory==inventory && staged_skills_match(scope);
+    }
     bool prepare_dedicated_skills() {
         const auto publication=file_projection();const auto inventory=staged_skill_inventory;
         if(!publication.input_current())return false;
-        const bool staged=staged_skills_match(approved_scope);
+        const auto registration_scope=skill_registration_scope();
         if(!publication.input_current())return false;
+        const bool staged=staged_skills_match(registration_scope);
         if(!inventory || !staged || staged_skill_inventory!=inventory)throw std::runtime_error("Captured skill inventory changed");
 
         const QPointer<CodexAgent> transport(agent.get());
@@ -12926,10 +12948,10 @@ struct AssistantViewModel::State {
                 {"content",QString::fromUtf8(bytes)},{"available",true},{"blocked_reason",""},{"references",QJsonArray{}}});
             catalog->encoded_bytes+=row_size+separator;
         }
-        if(!publication.input_current() || staged_skill_inventory!=inventory || !staged_skills_match(approved_scope))return false;
+        if(!skill_registration_current(publication,registration_scope,inventory))return false;
         native_skill_catalog=catalog;skill_catalog_rows=catalog->rows;selected_skill.clear();
         try {skills.assign(skill_catalog_rows);}catch(...){if(!publication.input_current())return false;throw;}
-        return publication.input_current() && staged_skill_inventory==inventory;
+        return skill_registration_current(publication,registration_scope,inventory);
     }
     bool generic_prepare_thread() {
         if(startup_restore_pending())return false;
@@ -13346,7 +13368,9 @@ struct AssistantViewModel::State {
             reason_code = "SKILL_SHAPE";
             if (!result.value("data").isArray()) throw std::runtime_error("Agent skill catalog is unavailable");
             reason_code = "BUNDLED_SKILL_READ";
-            if(!staged_skills_match(approved_scope))throw std::runtime_error("The approved staged skills changed");
+            const auto registration_scope=skill_registration_scope();
+            if(!publication.input_current())return;
+            if(!staged_skills_match(registration_scope))throw std::runtime_error("The original registration skills changed");
             const auto declarations=generic_skill_declarations;
             const auto inventory=staged_skill_inventory;
 
@@ -13442,7 +13466,7 @@ struct AssistantViewModel::State {
             if (found.size() != generic_skill_paths.size()) throw std::runtime_error("Not all bundled skills are registered");
             reason_code = "SKILL_CAPACITY";
             if(catalog->encoded_bytes>Limits::context_bytes)throw std::length_error("Skill catalog exceeds capacity");
-            if(!publication.input_current() || staged_skill_inventory!=inventory || !staged_skills_match(approved_scope))return;
+            if(!skill_registration_current(publication,registration_scope,inventory))return;
             // Admit actual new table-key vectors before Rows constructs them;
             // existing model keys remain counted independently until replaced.
 
@@ -13450,7 +13474,7 @@ struct AssistantViewModel::State {
             selected_skill.clear();
             try { skills.assign(skill_catalog_rows); }
             catch (...) { if (!publication.input_current()) return; throw; }
-            if (!publication.input_current()) return;
+            if(!skill_registration_current(publication,registration_scope,inventory))return;
             reason_code = "REQUEST_ADMISSION";
             generic_start_thread();
         } else if (method == "thread/start" || method == "thread/resume") {
