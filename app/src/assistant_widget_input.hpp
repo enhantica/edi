@@ -73,7 +73,7 @@ class AssistantWidgetInput final : public QObject {
     bool eventFilter(QObject* watched, QEvent* event) override;
  private:
     struct MouseOwnership;
-    enum class Step { Move, Press, Release, Select, Commit, ChoiceReveal, ChoicePress, ChoiceRelease, ChoiceSettle, ChooseCommit };
+    enum class Step { Move, Press, Release, SearchReveal, SearchPress, SearchRelease, Select, Commit, ChoiceReveal, ChoicePress, ChoiceRelease, ChoiceSettle, ChooseCommit };
     void advance() noexcept;
     void settleChoice(const std::shared_ptr<Request>&,std::uint64_t);
     bool watchChoicePopup();
@@ -104,7 +104,7 @@ class AssistantWidgetInput final : public QObject {
     Step step_ = Step::Move;
     QString original_text_;
     QPointer<QObject> choice_popup_;
-    QPointer<QQuickItem> choice_content_, choice_row_;
+    QPointer<QQuickItem> choice_content_, choice_row_, search_header_, search_editor_;
     QString choice_text_;
     QMetaObject::Connection choice_hiding_,choice_closed_connection_,choice_reopening_,choice_destroyed_;
     std::uint64_t choice_observation_=0;
@@ -112,6 +112,8 @@ class AssistantWidgetInput final : public QObject {
     bool choicePopupOwned() const;
     bool choiceRowOwned() const;
     bool revealChoice();
+    bool revealSearchEditor();
+    bool searchEditorOwned() const;
     bool choiceKeyboardOwned() const;
     const QString failed_ = QStringLiteral("The visible action could not be completed; inspect the current project");
     const QString interrupted_ = QStringLiteral("Visible action interrupted");
