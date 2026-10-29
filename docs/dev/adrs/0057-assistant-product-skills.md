@@ -581,3 +581,18 @@ fresh current residual/calculation/physical checks. Full inspection remains
 available without quotas. Source lexical changes do not establish lower latency,
 provider compliance or scientific adequacy; actual model/report behavior remains
 unqualified.
+
+## Profile identifiability and prompt same-family recovery
+
+Refinement-strategy1.5.5 and its indexed digest reuse the existing Evidence →
+Choice → Assessment/Undo owner. Actual completed-fit pairs are evidence about
+that fit, with current-model validity explicitly unknown; large SU is not a
+measured correlation, and empty pairs do not prove independence/covariance.
+Positive coefficients/widths alone do not establish identifiability. After
+rejecting an unacceptable or weakly identified profile trial, assess a restorable
+simpler eligible same-family candidate promptly, trial it only when supported and
+physically justified, or state the limitation. Preserve total native widths,
+ordinary latest-fit Undo, calibration, explicit scope and actual eligibility; no
+universal X/Y exclusion, sign-based zero, specimen seed, mandatory family/stage or
+new scientific admission veto is introduced. Actual model adherence remains to be
+qualified.
