@@ -606,30 +606,35 @@ and avoid atom-major alternation. Native call order, explicit user combined
 requests/subsets/flags and exact actual eligibility remain authoritative; no
 backend reorder, membership widening or universal scientific order is added.
 
-For the initial structural coordinate/ADP assessment under delegated refinement,
-one chosen block is tested with the other eligible block intentionally fixed,
-keeping unrelated settings. Inspect the actual trial before moving to the other
-block; later joint release requires stable identifiable blocks and supporting
-evidence. This replaces the ambiguous early cumulative-release suggestion, not
+For initial structural coordinate/ADP introduction under delegated refinement,
+assess one new unvalidated block with the other unvalidated block fixed before
+adding it. Already accepted useful eligible free groups remain cumulative unless
+explicit user/calibration/native-dependence requirements or a stated observed
+correlation/confounding/instability diagnostic justify holding them. This concerns
+new-group introduction, not a blanket prohibition on cumulative refinement or a
 native science policy. Real latest-fit Undo remains separate and does not restore
 free flags. Source/guidance delivery is not actual model adherence or proof of an
 exclusive cause for the owner's observed atomwise cycling. Existing profile,
 residual, calibration, completion, uncertainty and Save contracts remain intact.
 
-## Initial background/profile trials preserve the accepted other block
+## Initial background/profile introduction distinguishes new and accepted groups
 
-Owner H97cf1e0ca clarifies the FIRST generic refinement planning contract: delegated
-initial baseline/profile assessment establishes actual baseline evidence first,
-then holds accepted background settings/eligible values stable during early
-profile trials. Assess the chosen blocks separately before a later joint release
-supported by stable identifiable evidence. Native automatic-background eligibility
-and explicit user combined groups/subsets/order remain controlling; no mandatory
-all-free background stage, fixed profile family/sequence/count or backend veto.
+Owner H97cf1e0ca requires separate initial background/profile assessment; later
+H91ce9d956 clarifies that this introduces one NEW unvalidated block, rather than
+automatically fixing accepted background throughout early profile work. Establish
+actual baseline evidence first and assess the new block before adding another
+unvalidated block. Accepted useful eligible free groups remain cumulative by
+default; a stated observed correlation/confounding/instability diagnostic or
+explicit user/calibration/native-dependence requirement can justify a restorable
+temporary hold. Native automatic-background eligibility and explicit user combined
+groups/subsets/order remain controlling; no mandatory all-free background stage,
+fixed profile family/sequence/count or backend veto.
 
 Actual latest-fit Undo reverses its whole admitted fit; it does not select only
-a failed parameter category. Keeping unrelated accepted values fixed before an
-isolated trial preserves their accepted baseline instead of inventing selective
-Undo or replaying earlier successful work. Original current residual/total-width/
+a failed parameter category. When temporary isolation is justified, holding an
+accepted group preserves its current values but cannot selectively restore them
+after a joint trial. Use actual latest-adopted Undo and explicitly reconcile flags,
+not replay earlier successful work. Original current residual/total-width/
 uncertainty/correlation/ordinary Undo/Save contracts remain. Global and refinement
 skill delivery are aligned, with source-only/model-adherence qualification still
 open. The compact-inspection feature remains a separate source unit.
@@ -697,8 +702,8 @@ qualification remain required; source alone is not scientific or runtime accepta
 ## One readable refinement workflow with explicit evidence limits
 
 FIRST refinement-strategy now starts with a short ordered decision loop: establish
-essential facts/wait, inspect sufficient current evidence, isolate the implicated
-block, assess before spending Undo, then preserve useful work and state the saved
+essential facts/wait, inspect sufficient current evidence, introduce the implicated
+group cumulatively, assess before spending Undo, then preserve useful work and state the saved
 endpoint honestly. Named reference/exception sections in the SAME delivered skill
 retain engine conventions, SC, mixed-site/sharing, native eligibility, research,
 Save precision/current metrics and diagnostic-feedback contracts. No companion
@@ -748,3 +753,27 @@ new metric, native FitReport change or response reinterpretation is introduced.
 Complete compact/raw capture, currentness, user flags, partial effects and prior
 scientific exceptions remain unchanged. Source-only correction of the retained
 wording contradiction does not establish runtime/model adherence or qualification.
+
+## Cumulative accepted groups versus diagnostic isolation
+
+Owner H91ce9d956 clarifies the FIRST core workflow after actual report12b delivered
+refinement1.6.1. Version1.6.2 replaces unconditional accepted-background freezing
+in both refinement-strategy step3 and the always-delivered global guidance.
+Staged introduction adds and assesses ONE unvalidated group while retaining
+accepted useful eligible free groups by default. Separate first background/profile
+and coordinate/ADP introductions do not require repeated standalone/freeze passes
+for accepted groups. Temporary isolation remains available for explicit scope,
+calibration/native dependence or a stated observed correlation/confounding/
+instability diagnostic. No mandatory final refit or fixed/free sweep is added.
+
+Actual latest-adopted Undo, explicit flag reconciliation, same-family justified
+recovery, current residual/total-width/uncertainty/covariance evidence and native
+eligibility remain unchanged. Weak ADPs can still justify a restorable simpler
+mixed-site comparison; large SUs are not measured correlations. No specimen seed,
+sharing mandate, model-quality threshold, native algorithm or action guard changes.
+Ordinary saved-model truth, raw/compact evidence and hidden developer feedback
+retain their original owners. Project-assistance and existing tool help already
+reference the common contract without unconditional accepted-group freezing;
+they need no duplicate editorial rule. Captured source delivery and actual model
+adherence require the next independently qualified current-guide run; source alone
+is not scientific or runtime acceptance.
