@@ -4691,20 +4691,26 @@ struct AssistantViewModel::State {
         const auto* entry=widget_parameter_entry(run);
         const QPointer<AssistantViewModel> receiver(&owner);
         const QPointer<QQuickItem> target(field);
+        const bool sidebarTab=field && field->objectName().startsWith("sideBar.tab.");
+        const QString sidebar=sidebarTab?QStringLiteral("workflow.")+run->tab.mid(11)+QStringLiteral(".manualSidebar"):QString{};
         QList<QPointer<QQuickItem>> ancestors;
         QPointer<QQuickItem> group;
         for(auto* item=field?field->parentItem():nullptr;item;item=item->parentItem()) {
             ancestors.append(item);
-            if(!group && ((item->property("collapsed").isValid() && item->objectName().startsWith("group.")) ||
-                item->objectName()=="background.rows"))group=item;
-            if(item->objectName().endsWith(".manualSidebar"))break;
+            if(sidebarTab) {
+                if(item->objectName()==sidebar)group=item;
+            } else {
+                if(!group && ((item->property("collapsed").isValid() && item->objectName().startsWith("group.")) ||
+                    item->objectName()=="background.rows"))group=item;
+                if(item->objectName().endsWith(".manualSidebar"))break;
+            }
         }
-        if(!group)return true; // No owning table group: keep the existing reveal path.
+        if(!group)return !sidebarTab; // Other controls keep their original reveal path.
         struct TableLayout {QPointer<QQuickItem> item;QPointer<QObject> model;};
         QList<TableLayout> tables;
         const auto current=[&] {
             if(!receiver || receiver->state_.get()!=this || !target || !group)return false;
-            const bool valid=widget_entry_current(run,entry);
+            const bool valid=widget_entry_current(run,entry) && (!sidebarTab || widget_page_selected(run));
             if(!receiver || receiver->state_.get()!=this || !valid || !target || !group ||
                 target->window()!=run->window || !group->isAncestorOf(target))return false;
             auto* parent=target->parentItem();
@@ -4712,13 +4718,16 @@ struct AssistantViewModel::State {
                 if(!original || parent!=original)return false;
                 parent=parent->parentItem();
             }
+            if(sidebarTab && parent)return false;
             for(const auto& table:tables)
                 if(!table.item || !table.model || !group->isAncestorOf(table.item) || table.item->window()!=run->window ||
                     table.item->property("sourceModel").value<QObject*>()!=table.model)return false;
             return true;
         };
         if(!current())return false;
-        for(auto* item:widget_items())if(group->isAncestorOf(item) && item->inherits("QQuickListView") &&
+        // A navigation header needs its own positioner chain, not layouts of
+        // unrelated Basic/Extra child tables. Ordinary field tables stay as before.
+        if(!sidebarTab)for(auto* item:widget_items())if(group->isAncestorOf(item) && item->inherits("QQuickListView") &&
             item->property("sourceModel").value<QObject*>())
             tables.append({item,item->property("sourceModel").value<QObject*>()});
         // ListView batches model changes until polish. Settle the actual sibling
@@ -4890,11 +4899,22 @@ struct AssistantViewModel::State {
             request.kind = AssistantWidgetInput::Kind::Navigate; request.target = wanted;
             request.current = [this, run, entry] { return widget_entry_current(run, entry) && widget_page_selected(run); };
             request.prepareCommit = [] { return true; }; request.finishCommit = [] {};
-            request.completed = [this, run, entry, group](bool delivered, const QString& message, ControlCause cause) noexcept {
+            request.completed = [this, run, entry, group, originalTitle=QPointer<QQuickItem>(wanted),
+                    originalField=QPointer<QQuickItem>(field)](bool delivered, const QString& message, ControlCause cause) noexcept {
                 if (!widget_entry_owned(run, entry)) return;
             if(run->receiver && run->receiver->state_.get()==this)control_failure(run, delivered ? ControlCause::None : cause);
                 try {
-                    if (!delivered || !group || group->property("collapsed").toBool()) {
+                    // Preserve the original short-circuit decision. Window event
+                    // delivery alone does not prove this original group opened.
+                    const bool missing = !group;
+                    const bool collapsed = delivered && !missing && group->property("collapsed").toBool();
+                    const bool blocked = !delivered || missing || collapsed;
+                    if (!widget_entry_owned(run, entry)) return;
+                    work_latch_ui(run,"group_postcheck",!delivered?"original_header_input_unconfirmed":
+                        missing?"original_group_missing":collapsed?"original_group_collapsed":"original_group_expanded_at_check",
+                        {originalField,originalTitle,group,originalTitle,nullptr,nullptr,nullptr,nullptr});
+                    if (!widget_entry_owned(run, entry)) return;
+                    if (blocked) {
                         if(delivered)control_failure(run,ControlCause::Commit);
                         widget_refuse(run, message.isEmpty() ? QObject::tr("The genuine group click did not expand its controls") : message); return;
                     }
@@ -5876,17 +5896,41 @@ struct AssistantViewModel::State {
     QQuickItem* widget_sidebar_tab(const std::shared_ptr<NativeWidget>& run,const QString& suffix,
                                    const char** cause=nullptr,QPointer<QQuickItem>* named=nullptr) const {
         if(cause)*cause="main_named_absent";
-        if(!run || !run->tab.startsWith("appBar.tab."))return nullptr;
+        if(named)named->clear();
+        if(!run || !run->tab.startsWith("appBar.tab.") || !widget_owned(run))return nullptr;
         const QString sidebar=QStringLiteral("workflow.")+run->tab.mid(11)+QStringLiteral(".manualSidebar");
-        for(auto* item:widget_items()) {
-            if(item->objectName()!=QStringLiteral("sideBar.tab.")+suffix)continue;
-            if(named)*named=item;
-            if(!widget_input || !widget_input->usableTarget(*item)){if(cause)*cause="main_named_unusable";continue;}
+        const QPointer<QQuickItem> workflow(widget_workflow_tab(run->tab));
+        const QPointer<QObject> loader(workflow?workflow->property("page").value<QObject*>():nullptr);
+        const QPointer<QQuickItem> page(loader?qobject_cast<QQuickItem*>(loader->property("item").value<QObject*>()):nullptr);
+        const auto original=[&] {
+            if(!widget_owned(run) || !workflow || !loader || !page || page->window()!=run->window)return false;
+            const auto actualLoader=workflow->property("page").value<QObject*>();
+            if(!widget_owned(run) || !workflow || !loader || !page || actualLoader!=loader)return false;
+            const auto actualPage=loader->property("item").value<QObject*>();
+            if(!widget_owned(run) || !workflow || !loader || !page || actualPage!=page)return false;
+            const auto owner=page->property("project").value<ProjectViewModel*>();
+            return widget_owned(run) && workflow && loader && page && owner==run->project && page->window()==run->window;
+        };
+        if(!original()){if(cause)*cause="main_original_page_unavailable";return nullptr;}
+        QPointer<QQuickItem> found;
+        for(auto* candidate:widget_items()) {
+            const QPointer<QQuickItem> item(candidate);
+            if(item->objectName()!=QStringLiteral("sideBar.tab.")+suffix || item->window()!=run->window)continue;
+            if(!original() || !item)return nullptr;
+            if(!page->isAncestorOf(item))continue;
+            bool scoped=false;
             for(auto* parent=item->parentItem();parent;parent=parent->parentItem())
-                if(parent->objectName()==sidebar){if(cause)*cause="main_usable";return item;}
-            if(cause)*cause="main_expected_sidebar_absent";
+                if(parent->objectName()==sidebar){scoped=true;break;}
+            if(!scoped)continue;
+            if(found){if(cause)*cause="main_ambiguous";return nullptr;}
+            found=item;
         }
-        return nullptr;
+        if(!original() || !found)return nullptr;
+        if(named)*named=found; // Only this original page/sidebar may explain a refusal.
+        if(!widget_input || !widget_input->usableTarget(*found)){if(cause)*cause="main_named_unusable";return nullptr;}
+        if(!original() || !found)return nullptr;
+        if(cause)*cause="main_usable";
+        return found;
     }
     template<class Frame>
     static void widget_end_page_wait(const std::shared_ptr<Frame>& run) noexcept {
@@ -5955,7 +5999,8 @@ struct AssistantViewModel::State {
     void widget_main_ready(const std::shared_ptr<NativeWidget>& run, const QPointer<QQuickItem>& target) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
-        if (!widget_page_selected(run) || !target || widget_sidebar_tab(run, "basic") != target || !target->property("checked").toBool()) {
+        if (!widget_page_selected(run) || !target || !widget_settle_control_layout(run,target) ||
+            widget_sidebar_tab(run, "basic") != target || !target->property("checked").toBool()) {
             control_failure(run,ControlCause::MainSidebar); widget_refuse(run, QObject::tr("The genuine Main sidebar click did not select the expected tab; no parameter input was sent")); return;
         }
         if (run->tool == "edit_background" && run->tab=="appBar.tab.experiment") widget_background_begin(run);
@@ -6100,9 +6145,26 @@ struct AssistantViewModel::State {
     void widget_click_main(const std::shared_ptr<NativeWidget>& run) {
         const auto* entry=widget_parameter_entry(run);
         if (!widget_entry_current(run, entry) || !widget_input) { control_failure(run,ControlCause::Superseded); widget_refuse(run, QObject::tr("The visible action owner changed")); return; }
+        const QPointer<QQuickItem> workflow(widget_workflow_tab(run->tab));
+        const auto refuse=[this,run,entry](const QString& message,ControlCause cause=ControlCause::MainSidebar) {
+            if(widget_entry_owned(run,entry)){control_failure(run,cause);widget_refuse(run,message);}
+        };
+        if(widget_wait_workflow_page(run,workflow,
+            [this,run,entry,workflow]{return workflow && widget_entry_current(run,entry) && widget_workflow_tab(run->tab)==workflow;},
+            [this,run]{widget_click_main(run);},refuse))return;
         if (!widget_page_selected(run)) { control_failure(run,ControlCause::WorkflowPage); widget_refuse(run, QObject::tr("The expected workflow page is not selected")); return; }
         const char* lookupCause="main_named_absent";QPointer<QQuickItem> named;
-        const QPointer<QQuickItem> target(widget_sidebar_tab(run,"basic",&lookupCause,&named));
+        QPointer<QQuickItem> target(widget_sidebar_tab(run,"basic",&lookupCause,&named));
+        if(named && (target || std::string_view(lookupCause)=="main_named_unusable")) {
+            const auto original=named;
+            work_latch_ui(run,"sidebar_layout","original_owner_polish",{nullptr,original,nullptr,workflow,nullptr,nullptr,nullptr,nullptr});
+            if(!widget_entry_current(run,entry) || !original || !widget_settle_control_layout(run,original)) {
+                refuse(QObject::tr("The original Main sidebar layout owner changed"),ControlCause::Superseded);return;
+            }
+            if(!widget_entry_current(run,entry)){refuse(widget_outcome_error,ControlCause::Superseded);return;}
+            target=widget_sidebar_tab(run,"basic",&lookupCause,&named);
+            if(named!=original){refuse(QObject::tr("The original Main sidebar target changed"),ControlCause::Superseded);return;}
+        }
         if (!target) {
             control_failure(run,ControlCause::MainSidebar);
             try {
