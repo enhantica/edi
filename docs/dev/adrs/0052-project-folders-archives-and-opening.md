@@ -217,3 +217,25 @@ Review126 (hub `826f6a232d4689509f3872785d442e509f55cca9`) records successful or
 The FIRST adopt_saved_project additionally checks the final original files after its rewrite, through the same SavedValues reader used by ordinary adoption. Exact parameter identities, numeric values/s.u.s and the separately adopted bank setting must agree with the current model under that original reader's relation semantics before success returns. It is an actual persisted readback, not equality of formatted strings or a scratch export. A project without results and without a rewrite already has its initial readback; changed/incomplete projects retain that original load role, not a new whole-project requirement. Calculated projects retain the original deferred-estimate recalculation/agreement refresh and failure restoration. A final mismatch is an ordinary Save failure with its existing partial-file/unsaved handling; it is never marked saved or silently refitted.
 
 Normal current Save, Save As, folder/ZIP and Save a copy already pass through these original core owners (a copy adopts its own temporary project, not the live original). Native const/adopting writer, Text and optional file-value consumers share the central pair fix. No retry loop, scientific veto, fitted-value seed, extra permission or model-quality conclusion is introduced. The large uncertainty remains unresolved scientific information. Actual disk/current/calculation agreement and ordinary pair/half-boundary/incomplete behavior require independent qualification; this source change alone does not establish it.
+
+### Completed relation semantics in Save-value readback
+
+FIRST private SavedValues readback now completes dependent values through the
+existing complete_relations native applier before adoption or final comparison.
+A cubic independent axis may have an s.u.-rounded token while redundant tied
+axes have ordinary fixed-value precision; recalculation correctly restores those
+tied axes from the saved independent value. Comparing that completed live state
+against uncompleted redundant tokens can falsely fail the exact final check.
+The same reader role now supplies completed values to both stages, without an
+epsilon, retry loop, second formatter, refit or skip of the final check.
+
+Independent values and all written uncertainties retain the exact final-file
+comparison. Declared/symmetry dependents come from the same original native graph;
+invalid relations still refuse. Ordinary construction/strict Open parsing and
+CIF intake remain unchanged; this is only the existing private Save/adoption
+reader role. Uncomputed/incomplete Save still uses its original native supported
+model/relations, not a complete-data requirement. The paired owner reports support
+this candidate with differently spelled tied axes and completed post-failure live
+values; their original error/native SDK identity is absent, so exclusive runtime
+cause and complete Save success still require the named-error discriminator and
+both-mode/current/disk/calculation qualification.

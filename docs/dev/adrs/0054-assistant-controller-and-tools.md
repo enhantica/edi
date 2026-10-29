@@ -2573,3 +2573,22 @@ presented as accepted feedback or a verified defect. Original complete canonical
 history and explicit technical copying remain intact; no regex filtering or past
 message rewrite is introduced. Ordinary scientific limitations and user-needed
 errors remain public. Actual model use and report/UI separation need qualification.
+
+## Original Save failure evidence and native calculation currentness
+
+FIRST native_execute_save retains a thrown local exception or, on the same
+original Session/project/replacement, its current lastError in the existing
+NativeSave failure buffer and original native outcome. The Session message is
+explicitly qualified as current original-Session evidence, not a manufactured
+primary cause or rollback receipt. Reentrant replacement cannot supply a
+successor's error. Complete/committed/uncertain facts and once-only settlement
+remain; capturing text never retries the write or changes ordinary Save policy.
+
+The existing powder calculation summary now marks stale when native
+computed_current is false even if the last PatternModel publication retained
+points. Its point count/availability and old published error remain published
+facts, not current success. This aligns the existing native validity source with
+inspect_data without clearing measured/calculated arrays or triggering a fit.
+Paired owner reports lack the original error and native SDK commit, so their
+exclusive Save failure and its underlying writer/readback repair remain unknown;
+this evidence/currentness correction is not a completed Save-regression claim.
