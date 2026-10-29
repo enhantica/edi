@@ -313,7 +313,7 @@ EaElements.StatusBar {
             height: Math.round(EaStyle.Sizes.fontPixelSize * 6 / 7) // 12 at the original 14-pixel font.
             anchors.verticalCenter: parent.verticalCenter
             color: EaStyle.Colors.appBarBorder
-            opacity: 0.45
+            opacity: 1
         }
         // The last fit's outcome, in its colour, framed as a button that opens its results. Scan results the template
         // has changed since read Outdated, in amber with the history icon, until the next run replaces them (the

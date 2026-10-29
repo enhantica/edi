@@ -4033,7 +4033,7 @@ Owner elects preview C only (hub H287e26350), superseding exploration of rounded
 status surfaces or a taller bar. FIRST StatusBar's Fit rule defines the shared
 short style: six-sevenths of the current theme font size, rounded to logical
 pixels (twelve at the original fourteen-pixel font), with the existing theme-aware
-appBarBorder at45percent opacity. The existing Assistant rule inherits its height,
+appBarBorder at full opacity, matching the status bar's original top border. The existing Assistant rule inherits its height,
 width/color and now opacity; both remain vertically centered.
 
 No bar/group background, height, margin, status item, control receiver, requested/
