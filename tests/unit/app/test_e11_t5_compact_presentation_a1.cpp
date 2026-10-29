@@ -6,6 +6,7 @@
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QList>
+#include <QMetaProperty>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJSValue>
@@ -18,6 +19,7 @@
 #include <QTranslator>
 #include <QtQml/qqml.h>
 #include <QtTest/qtestcase.h>
+#include <QtCore/qtestsupport_core.h>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -114,10 +116,40 @@ class CompactPresentationA1Proof final : public QObject {
             if(child->property("text").toString()==icon)marks.push_back(child);
         check.require(marks.size()==1,"A1 has one truthful current rendered status mark");
         if(marks.size()==1) {
-            const auto expected=key=="running"?expression(header,"String(EaStyle.Colors.themeAccent)"):
-                expression(header,("String(FitOutcomes.color("+QJsonDocument(QJsonArray{key}).toJson(QJsonDocument::Compact).mid(1).chopped(1)+"))").constData());
-            check.require(marks.front()->property("color").value<QColor>()==QColor(expected),
-                          "A1 status mark uses the existing independent semantic outcome colour owner");
+            const auto source=key=="running"?QByteArray("EaStyle.Colors.themeAccent"):
+                "FitOutcomes.color("+QJsonDocument(QJsonArray{key}).toJson(QJsonDocument::Compact).mid(1).chopped(1)+")";
+            QQmlExpression semantic(QQmlEngine::contextForObject(header),header,QString::fromUtf8(source));
+            const auto expectedValue=semantic.evaluate();
+            const bool typedExpected=!semantic.hasError() && expectedValue.metaType()==QMetaType::fromType<QColor>() &&
+                expectedValue.value<QColor>().isValid();
+            check.require(typedExpected,
+                          "A1 semantic colour prerequisite is an actual valid typed QColor; colour suffix UNREACHED otherwise");
+            if(typedExpected) {
+                const auto expected=expectedValue.value<QColor>();
+                QPointer<QObject> mark(marks.front());
+                QPointer<QObject> originalRow(row),originalHeader(header);
+                const auto matches=[&]{
+                    if(!originalRow || !originalHeader || !mark)return false;
+                    const auto actual=mark->property("color");
+                    return actual.metaType()==QMetaType::fromType<QColor>() && actual.value<QColor>()==expected;
+                };
+                // Process original animation events within QtTest's unchanged default
+                // try timeout. Do not serialize colours or alter the inherited Behaviour.
+                const bool settled=QTest::qWaitFor(matches);
+                const auto actual=mark?mark->property("color"):QVariant{};
+                const auto describe=[](const QVariant& value){
+                    const auto color=value.value<QColor>();
+                    return QStringLiteral("type=%1 valid=%2 spec=%3 rgba=(%4,%5,%6,%7)")
+                        .arg(QString::fromLatin1(value.metaType().name()?value.metaType().name():"invalid"))
+                        .arg(color.isValid()).arg(int(color.spec()))
+                        .arg(color.redF(),0,'g',9).arg(color.greenF(),0,'g',9)
+                        .arg(color.blueF(),0,'g',9).arg(color.alphaF(),0,'g',9);
+                };
+                check.require(settled && matches(),
+                              "A1 status mark uses the existing independent semantic outcome colour owner; actual "+
+                              describe(actual)+" expected "+describe(expectedValue));
+                if(!originalRow || !originalHeader)return;
+            }
         }
         const auto details=row->findChildren<QObject*>(QStringLiteral("assistant.activity.details"));
         check.require(details.size()==1,"A1 original lazy human-detail field remains identifiable");
@@ -198,17 +230,45 @@ class CompactPresentationA1Proof final : public QObject {
             checkRow(check,{"live-owner-language","activity","completed","Create a project","Completed","check-circle",
                 {{"type","dynamicToolCall"},{"tool","create_project"}}},[&](QObject* row,QObject* header){
                 const auto original=row->property("assistant");
-                check.require(original.value<QObject*>(),"A1 native label starts with the original actual Session assistant");
-                check.require(row->setProperty("assistant",QVariant::fromValue<QObject*>(nullptr)),
-                              "A1 null owner is the original public component property, not a replacement controller");
+                QPointer<QObject> originalOwner(original.value<QObject*>());
+                const auto ownerIndex=row->metaObject()->indexOfProperty("assistant");
+                const bool typedOwner=originalOwner && ownerIndex>=0 &&
+                    original.metaType().flags().testFlag(QMetaType::PointerToQObject) &&
+                    row->metaObject()->property(ownerIndex).metaType()==original.metaType();
+                check.require(typedOwner,"A1 native label starts with the original actual Session assistant; live-owner suffix UNREACHED if its typed prerequisite fails");
+                if(!typedOwner)return;
+                const auto ownerIs=[&](QObject* expected){
+                    const auto value=row->property("assistant");
+                    return value.isValid() && value.metaType()==original.metaType() &&
+                        value.value<QObject*>()==expected;
+                };
+                bool restored=false;
+                const auto restoreOwner=qScopeGuard([&]{
+                    if(!restored)check.require(originalOwner && row->setProperty("assistant",original) &&
+                        ownerIs(originalOwner.data()),"A1 failed-prerequisite cleanup restores the exact original typed owner");
+                });
+                // QVariant's original captured pointer metatype default-constructs
+                // its null value; QObject* null cannot down-convert to this type.
+                const QVariant typedNull(original.metaType());
+                const bool nullAssigned=typedNull.isValid() && typedNull.isNull() &&
+                    row->setProperty("assistant",typedNull) && ownerIs(nullptr);
+                check.require(nullAssigned,
+                              "A1 null owner is the original public component property, not a replacement controller; null/language suffix UNREACHED without exact typed-null readback");
+                if(!nullAssigned)return;
                 checkOutcome(check,row,header,"Work on the current project","Completed","check-circle","success");
                 ContextTranslator translator;
                 bool installed=QCoreApplication::installTranslator(&translator);
                 const auto cleanup=qScopeGuard([&]{if(installed){QCoreApplication::removeTranslator(&translator);engine_->retranslate();}});
-                check.require(installed,"A1 installs an independent ordinary Qt translator");
+                check.require(installed,"A1 installs an independent ordinary Qt translator; translated suffix UNREACHED if installation fails");
+                if(!installed)return;
                 engine_->retranslate();
+                const bool stillNull=originalOwner && ownerIs(nullptr);
+                check.require(stillNull,"A1 translation preserves the actual null owner; fallback suffix UNREACHED otherwise");
+                if(!stillNull)return;
                 checkOutcome(check,row,header,QString::fromUtf8("Projet sans propriétaire β🧪"),"Completed","check-circle","success");
-                check.require(row->setProperty("assistant",original),"A1 original owner can be rebound through its normal public property");
+                restored=originalOwner && row->setProperty("assistant",original) && ownerIs(originalOwner.data());
+                check.require(restored,"A1 original owner can be rebound through its normal public property with exact pointer readback; native suffix UNREACHED otherwise");
+                if(!restored)return;
                 checkOutcome(check,row,header,QString::fromUtf8("Créer Å\u00a0β 🧪"),"Completed","check-circle","success");
                 check.require(row->setProperty("payload",QJsonObject{{"type","dynamicToolCall"},{"tool","unknown-native-action"}}.toVariantMap()),
                               "A1 unknown native action uses ordinary compact input");
