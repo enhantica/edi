@@ -365,9 +365,8 @@ Popup {
                     }
                     EaElements.Button {
                         id: clearButton
-                        // Explicit recovery remains available when a saved session
-                        // cannot reconnect; it uses the same native New owner.
                         objectName: "assistant.clear"
+                        visible: panel.assistant.connected
                         text: qsTr("New session")
                         leftPadding: AppSizes.unit * 0.75
                         rightPadding: leftPadding
