@@ -4851,6 +4851,40 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
     return back;
 }
 
+// Check the final original files, not a second formatting projection. The
+// SavedValues reader preserves the same construction/relations role as adoption.
+// The lookup borrows parameter identities from this one readback only.
+void require_saved_parameters(const Project& project, const std::string& directory) {
+    const Project saved = read_saved_project(directory);
+    std::map<std::string, const Parameter*> written;
+    for (const auto& slot : parameter_slots(saved)) {
+        if (!written.emplace(slot.unique_name, slot.parameter).second) {
+            throw IoError("saved parameter identity is ambiguous: " + slot.unique_name);
+        }
+    }
+    const auto current = parameter_slots(project);
+    if (current.size() != written.size()) {
+        throw IoError("the final saved parameter list differs from the adopted project");
+    }
+    for (const auto& slot : current) {
+        const auto found = written.find(slot.unique_name);
+        if (found == written.end() || slot.parameter->value.get() != found->second->value.get() ||
+            slot.parameter->uncertainty.get() != found->second->uncertainty.get()) {
+            throw IoError("the final saved value or uncertainty differs from the adopted project: " +
+                          slot.unique_name);
+        }
+    }
+    for (const auto& experiment : project.experiments) {
+        const auto found = std::find_if(saved.experiments.begin(), saved.experiments.end(),
+            [&experiment](const auto& held) { return held->name.value() == experiment->name.value(); });
+        if (found == saved.experiments.end() || experiment->instrument.setup_twotheta_bank.value.get() !=
+            (*found)->instrument.setup_twotheta_bank.value.get()) {
+            throw IoError("the final saved bank angle differs from the adopted project: " +
+                          experiment->name.value());
+        }
+    }
+}
+
 }  // namespace
 
 bool adopt_saved_project(Project& project, const std::string& directory) {
@@ -4873,6 +4907,7 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
         // same bytes.
         if (changed) {
             save_project(project, directory);
+            require_saved_parameters(project, directory);
         }
         return changed;
     }
@@ -4883,6 +4918,7 @@ bool adopt_saved_project(Project& project, const std::string& directory) {
         project.refresh_calculated_pattern(DueEstimates::Defer);
         refresh_agreement_records(project);
         save_project(project, directory);
+        require_saved_parameters(project, directory);
     } catch (...) {
         // The recalculation, the records or the second write refused: the project holds what the first write
         // left, the values it took with the results and records that write carried, and the save fails.

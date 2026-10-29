@@ -209,3 +209,11 @@ Example identity, read-only source, demo path masking and SaveAs behavior keep
 their original presentation and normal adoption owners. The old shared fixed-name
 QTemporaryDir destination is replaced by the same registered temporary owner used
 elsewhere in Session, with no second directory registry, loader or science rule.
+
+### Verify the final adopted value/s.u. state
+
+Review126 (hub `826f6a232d4689509f3872785d442e509f55cca9`) records successful ordinary Save with current La0.5/s.u.83 while the original structure file holds1(83). The native nonzero IUCr fallback had crossed its own half-rounding boundary, so the second serialization changed the first adopted value. The shared native formatter is corrected at that FIRST owner; app file-value/SU and Text still use it, with no number shadow store or assistant formatter.
+
+The FIRST adopt_saved_project additionally checks the final original files after its rewrite, through the same SavedValues reader used by ordinary adoption. Exact parameter identities, numeric values/s.u.s and the separately adopted bank setting must agree with the current model under that original reader's relation semantics before success returns. It is an actual persisted readback, not equality of formatted strings or a scratch export. A project without results and without a rewrite already has its initial readback; changed/incomplete projects retain that original load role, not a new whole-project requirement. Calculated projects retain the original deferred-estimate recalculation/agreement refresh and failure restoration. A final mismatch is an ordinary Save failure with its existing partial-file/unsaved handling; it is never marked saved or silently refitted.
+
+Normal current Save, Save As, folder/ZIP and Save a copy already pass through these original core owners (a copy adopts its own temporary project, not the live original). Native const/adopting writer, Text and optional file-value consumers share the central pair fix. No retry loop, scientific veto, fitted-value seed, extra permission or model-quality conclusion is introduced. The large uncertainty remains unresolved scientific information. Actual disk/current/calculation agreement and ordinary pair/half-boundary/incomplete behavior require independent qualification; this source change alone does not establish it.
