@@ -20,8 +20,8 @@ EaElements.StatusBar {
     readonly property ProjectViewModel project: Session.project
     property bool assistantChatShown: false
     property bool assistantManualTakeover: false
-    readonly property bool assistantStatusNeeded: (assistantArea.presented && assistantArea.working)
-        || Session.assistant.showingActions || assistantManualTakeover || visibleStop.pressed
+    readonly property bool assistantStatusNeeded: assistantArea.working
+        || Session.assistant.showingActions || assistantManualTakeover || visibleStop.pressed || visibleMode.pressed
     // The pages built after a project opened, of those it shows (edi ADR-0052): while they build, the bar shows the
     // opening's progress in the fit area's place.
     property int pagesBuilt: 0
@@ -145,14 +145,15 @@ EaElements.StatusBar {
     Item {
         id: assistantGroup
         parent: bar
-        readonly property bool stopShown: Session.assistant.showingActions || bar.assistantManualTakeover
+        readonly property bool stopShown: assistantArea.working || Session.assistant.showingActions || bar.assistantManualTakeover || visibleMode.pressed
         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
         readonly property real buttonExtent: assistantArea.iconExtent
         // Keep the original Stop receiver and its text slot in place through
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
         implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-            + assistantArea.implicitWidth
+            + (assistantArea.visible ? assistantArea.implicitWidth : 0)
+            + (visibleMode.visible ? gap + visibleMode.implicitWidth : 0)
             + (stopShown || visibleStop.pressed ? gap + visibleStop.implicitWidth : 0)
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
@@ -175,11 +176,47 @@ EaElements.StatusBar {
             assistant: Session.assistant
             presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
             width: Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-                - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0))
+                - (visibleStop.visible ? assistantGroup.gap + visibleStop.width : 0)
+                - (visibleMode.visible ? assistantGroup.gap + visibleMode.width : 0))
             height: Math.max(implicitHeight, iconExtent)
             anchors.left: parent.left
             anchors.leftMargin: assistantRule.visible ? assistantRule.width + fitArea.spacing : 0
             anchors.verticalCenter: parent.verticalCenter
+        }
+        EaElements.ToolButton {
+            id: visibleMode
+            objectName: "assistant.statusShowActions"
+            visible: assistantArea.working || pressed
+            enabled: Session.assistant.connected
+            checkable: true
+            checked: Session.assistant.showActions
+            implicitWidth: assistantGroup.buttonExtent
+            implicitHeight: implicitWidth
+            anchors.right: visibleStop.left
+            anchors.rightMargin: assistantGroup.gap
+            anchors.verticalCenter: parent.verticalCenter
+            fontIcon: "eye"
+            background: Rectangle {
+                implicitWidth: assistantGroup.buttonExtent
+                implicitHeight: implicitWidth
+                radius: height / 2
+                color: visibleMode.hovered || visibleMode.down || visibleMode.visualFocus
+                    ? EaStyle.Colors.themeRowHovered : "transparent"
+                border.width: 0
+            }
+            contentItem: EaElements.Label {
+                text: visibleMode.fontIcon
+                font.family: EaStyle.Fonts.iconsFamily
+                font.pixelSize: assistantGroup.buttonExtent * 0.5
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                color: visibleMode.checked ? EaStyle.Colors.themeAccent : visibleMode.foregroundColor()
+            }
+            ToolTip.text: qsTr("Show actions")
+            Accessible.name: ToolTip.text
+            Accessible.checkable: true
+            Accessible.checked: checked
+            onToggled: Session.assistant.showActions = checked
         }
         EaElements.ToolButton {
             id: visibleStop

@@ -780,7 +780,7 @@ Rectangle {
                     color: showActionsControl.pressed ? EaStyle.Colors.sideBarButtonBackgroundPressed
                         : showActionsControl.visualFocus ? EaStyle.Colors.themeRowHovered : composer.actionBackground
                 }
-                enabled: composer.assistant.connected && !composer.assistant.canCancel
+                enabled: composer.assistant.connected
                 ToolTip.text: qsTr("Show actions")
                 Accessible.name: ToolTip.text
                 Accessible.checkable: showActionsControl.checkable

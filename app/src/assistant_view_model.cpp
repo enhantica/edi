@@ -1628,7 +1628,7 @@ struct AssistantViewModel::State {
     QByteArray consented_context;
     bool archive_refused = false;
     using Limits = edi::assistant::Limits;
-    bool show_actions = false, showing_actions = false;
+    bool requested_show_actions = false, show_actions = false, showing_actions = false;
     QPointer<QQuickWindow> action_window;
     QMetaObject::Connection action_window_activity, action_window_destroyed;
     std::unique_ptr<AssistantWidgetInput> widget_input;
@@ -4128,6 +4128,15 @@ struct AssistantViewModel::State {
         // window/helper or reentrant successor admitted during cancellation.
         return original_owner() && !native_widget && !native_create_widget && native_records.size() == entries && widget_input.get() == helper &&
             (!native_call || native_call->record == record);
+    }
+    bool native_action_mode_pending() const noexcept {
+        return native_call || !native_pending.isEmpty() || native_fit || native_creation || native_save ||
+            native_widget || native_create_widget || (widget_input && widget_input->active());
+    }
+    void reconcile_action_mode() noexcept {
+        // Callback-free: every entered call and all of its original cleanup
+        // owners keep one effective mode until the next admission boundary.
+        if(!native_action_mode_pending())show_actions=requested_show_actions;
     }
     void widget_showing(bool value) {
         const QPointer<AssistantViewModel> receiver(&owner);const auto proof=file_projection();const auto serial=native_serial;
@@ -8786,9 +8795,10 @@ struct AssistantViewModel::State {
             reply(false, {{"status", "refused"}, {"code", QLatin1StringView(outgoing::result_code(reason).data())},
                 {"message",reason==outgoing::ResultCode::RetentionBlocked?native_capacity_error:QStringLiteral("No current settled native request is available.")}}); return;
         }
-        if (!native_pending.isEmpty() || native_call || native_fit || native_creation || native_save) {
+        if (native_action_mode_pending()) {
             reply(false, {{"status", "refused"}, {"code", "pending_operation"}, {"message", "No current settled native request is available."}}); return;
         }
+        reconcile_action_mode(); // Latest user preference, before this call owns routing/allocation.
         const auto name = generic_id(params.value("tool"));
         const auto id = generic_id(params.value("callId"));
         const auto item_lifetime = generic_item_lifetime(); // Original snapshot may be private on refusal.
@@ -15228,6 +15238,7 @@ struct AssistantViewModel::State {
         if (!current()) return;
         try {
 #ifndef __EMSCRIPTEN__
+            reconcile_action_mode();
             if(!generic_question_id.isEmpty() && (!generic_question_proof.input_current() ||
                 (generic_question_had_window && (!generic_question_window || generic_question_window!=action_window)))) {
                 if(!generic_retire_question() || !current())return;
@@ -15237,7 +15248,7 @@ struct AssistantViewModel::State {
                 widget_refuse(run, QObject::tr("The visible action was interrupted by a question; inspect its actual outcome"));
                 if (!current()) return;
             }
-            if (showing_actions && (!generic_busy || generic_revoke_pending || generic_clear_pending ||
+            if (showing_actions && (!show_actions || !generic_busy || generic_revoke_pending || generic_clear_pending ||
                 generic_context_pending || !generic_authenticated || generic_retiring || !question.isEmpty())) {
                 widget_showing(false); // One terminal/question restoration; never per successful tool.
                 if (!current()) return;
@@ -16597,17 +16608,19 @@ QVariantMap AssistantViewModel::captureWorkReport() {
     if(QThread::currentThread()!=thread())throw std::logic_error("Work report capture requires its native owner thread");
     return state_->work_capture();
 }
-bool AssistantViewModel::showActions() const { return state_->show_actions; }
+bool AssistantViewModel::showActions() const { return state_->requested_show_actions; }
 bool AssistantViewModel::showingActions() const { return state_->showing_actions; }
 QQuickWindow* AssistantViewModel::actionWindow() const { return state_->action_window; }
 void AssistantViewModel::setShowActions(bool value) {
-    if (state_->show_actions == value) return;
-    state_->show_actions = value;
+    auto* const original=state_.get();
+    if (original->requested_show_actions == value) return;
+    original->requested_show_actions = value;
     const QPointer<AssistantViewModel> self(this);
-#ifndef __EMSCRIPTEN__
-    if (state_->showing_actions) state_->native_supersede_operation(state_->widget_outcome_error);
+#ifdef __EMSCRIPTEN__
+    original->show_actions=value;
 #endif
-    if (self) emit showActionsChanged();
+    emit showActionsChanged();
+    if(self && self->state_.get()==original)original->notify();
 }
 void AssistantViewModel::setActionWindow(QQuickWindow* window) {
     if (state_->action_window == window) return;
