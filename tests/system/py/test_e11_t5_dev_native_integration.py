@@ -11148,3 +11148,219 @@ def test_original_issued_usage_deadline_disposition_retires_intent_without_repla
             except OSError:
                 pass
         (actor.folder / 'original-usage-issued-deadline.json').write_text(json.dumps(facts, indent=2)+'\n')
+
+
+def _admit_original_pending_file_without_approval(actor, source):
+    assert actor.last['ui']['connected'], 'A real current connected input owner is required before this pending edit'
+    token = qml(actor, 'Session.assistant.beginFileSelection(true)')
+    assert token, 'A genuine current picker owner exists without reconnecting or accepting the changed disclosure'
+    reply = actor.command('selected_add', token=token, paths=[str(source)])['reply']
+    number = getattr(actor, '_pending_admission_diagnostic_sequence', 0) + 1
+    actor._pending_admission_diagnostic_sequence = number
+    (actor.folder / ('original-pending-admission-' + str(number) + '.json')).write_text(json.dumps({
+        'actual_reply': reply, 'actual_selected_files': actor.last['ui']['selected_files'],
+        'source': str(source), 'canonical': str(source.resolve()), 'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+        'actual_consent_required': actor.last['ui']['context_consent_required']}, indent=2)+'\n')
+    assert reply['added'], (
+        'The original public selection operation really admits these unchanged source bytes without an approval setter')
+    matches = [row for row in _attachment_rows(actor) if row['name'] == source.name and row['pending']]
+    assert len(matches) == 1 and matches[0]['bytes'] == source.stat().st_size
+    assert qml(actor, 'Session.assistant.contextConsentRequired'), 'A genuinely changed pending-file scope remains unapproved'
+    return matches[0]
+
+
+def _select_original_pending_draft_view(actor, target):
+    before = len(_session_wire(actor))
+    actor.command('click', name='assistant.sessions');_session_wait(actor)
+    actual = actor.command('session_row_click', thread_id=target)['reply']
+    assert actual['reached'] and actual['actual_pressed_changes'] > 0
+    actor.until(lambda value: value['ui']['connected'] and not qml(actor, 'Session.assistant.sessionsLoading')
+                and not qml(actor, control_expression('assistant.sessionsDialog') + '.opened'))
+    wire = _session_wire(actor)[before:]
+    resumes = [row for row in wire if row.get('method') == 'thread/resume']
+    assert resumes and resumes[-1]['params']['threadId'] == target
+    accepted = [row for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())
+                if row.get('id') == resumes[-1]['id'] and 'result' in row]
+    assert len(accepted) == 1 and accepted[0]['result']['thread']['id'] == target
+    assert not any(row.get('method') in ('thread/start', 'turn/start') for row in wire), (
+        'Actual accepted runtime identity, not stale browser/report fields, proves this is view-only exact-thread restoration')
+    assert not any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in actor.last['ui']['texts'])
+    return {'physical': actual, 'wire': wire, 'accepted_id': accepted[0]['id'], 'accepted_thread': target}
+
+
+def _assert_original_pending_association(record_snapshot, expected_rows, source_by_name, *, unapproved=True, draft=None):
+    assert record_snapshot['record_found'], 'The actual viewed/draft thread has a genuine persisted association'
+    record = record_snapshot['record'];files = record['files']
+    expected = {row['id']: row for row in expected_rows};actual = {row['id']: row for row in files}
+    assert len(expected) == len(expected_rows) and len(actual) == len(files) and set(actual) == set(expected), (
+        'The complete original pending/consumed file membership is serialized, not an arbitrary intersection or first-retirement-only snapshot')
+    assert os.name == 'posix', 'Original stat dev/inode identity comparison is POSIX-qualified; other platforms are an unreached entrance'
+    for identity, descriptor in expected.items():
+        source = source_by_name[descriptor['name']];status = source.stat();saved = actual[identity]
+        assert saved['name'] == source.name and saved['bytes'] == status.st_size \
+            and saved['consumed'] is (not descriptor['pending']) \
+            and saved['source'] == str(source) and saved['canonical'] == str(source.resolve()) \
+            and saved['identity'] == str(status.st_dev) + ':' + str(status.st_ino) \
+            and saved['sha256'] == hashlib.sha256(source.read_bytes()).hexdigest(), (
+                'Every admitted file retains its own real source/canonical/physical identity/hash and true pending-versus-consumed role')
+    if unapproved:
+        assert record['approved'] is False, 'Persisting a fresh pending draft cannot reuse the older approved execution scope'
+    if draft is not None:
+        assert record['draft_sha256'] == hashlib.sha256(draft.encode()).hexdigest()
+
+
+def _cancel_original_pending_send_without_admission(actor, expected_files, expected_text):
+    before = len(_session_wire(actor, 'turn/start'))
+    actor.until(lambda value: _unique_input_control(value, 'assistant.send') is not None)
+    actor.command('click', name='assistant.send')
+    actor.until(lambda value: any(row['name'] == 'AssistantConnectionDialog' and row['fully_exposed']
+        for row in value['ui']['controls']))
+    actual = actor.command('dialog_ok', name='AssistantConnectionDialog', role='cancel')['reply']
+    assert actual['pressed_changes'] > 0 and actual['role'] == 'cancel'
+    assert len(_session_wire(actor, 'turn/start')) == before and _attachment_rows(actor) == expected_files \
+        and _draft_text(actor) == expected_text, (
+            'A real new-Send/Share Cancel leaves the exact genuine pending draft/history unadmitted, not implicitly approved by restoring it')
+    return actual
+
+
+def test_original_viewed_thread_repeated_pending_add_remove_persists_without_execution_thread_or_other_draft_graft(main_actor, tmp_path):
+    actor = main_actor([[], []]);_session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        observe_context_continuity=True, final_text='The original pending-draft observation is complete.')
+    target, other = _two_genuine_session_threads(actor)
+    sources = _attachment_fixtures(tmp_path, 4);by_name = {source.name: source for source in sources}
+    b_file = _admit_original_pending_file_without_approval(actor, sources[0]);b_text = 'B own genuinely pending draft.'
+    _type_original_draft(actor, b_text);b_rows = _attachment_rows(actor)
+    _select_original_pending_draft_view(actor, target)
+    assert not _attachment_rows(actor) and _draft_text(actor) == '', 'B inputs are not silently grafted into A'
+    a_text = 'A repeated original pending-edit draft.';_type_original_draft(actor, a_text)
+    edits = []
+    first = _admit_original_pending_file_without_approval(actor, sources[1]);edits.append({'operation': 'add_first', 'actual': _attachment_rows(actor)})
+    second = _admit_original_pending_file_without_approval(actor, sources[2]);edits.append({'operation': 'add_after_first_retirement', 'actual': _attachment_rows(actor)})
+    assert qml(actor, 'Session.assistant.removeSelectedFile(' + json.dumps(first['id']) + ')') is True
+    edits.append({'operation': 'remove_first_after_retirement', 'actual': _attachment_rows(actor)})
+    third = _admit_original_pending_file_without_approval(actor, sources[3]);edits.append({'operation': 'add_again', 'actual': _attachment_rows(actor)})
+    assert qml(actor, 'Session.assistant.removeSelectedFile(' + json.dumps(second['id']) + ')') is True
+    a_rows = _attachment_rows(actor);edits.append({'operation': 'remove_second_after_retirement', 'actual': a_rows})
+    assert a_rows == [third] and _draft_text(actor) == a_text and qml(actor, 'Session.assistant.contextConsentRequired')
+    prefix = {'target': target, 'other': other, 'edits': edits, 'a_pending': a_rows, 'b_pending': b_rows,
+        'execution_identity_qualification': 'Actual successful selected-file edits reach the source-known nonreused context-retirement entrance; no public generic_thread getter is invented. Wire/accepted resume is runtime identity authority; browser diagnostic fields may be stale.'}
+    (actor.folder / 'original-repeated-pending-draft.json').write_text(json.dumps(prefix, indent=2)+'\n')
+    b_view = _select_original_pending_draft_view(actor, other)
+    stored_a = actor.command('session_association_snapshot', thread_id=target)['reply']
+    prefix.update({'a_record_after_departure': stored_a, 'b_view': b_view, 'b_actual': _attachment_rows(actor)})
+    (actor.folder / 'original-repeated-pending-draft.json').write_text(json.dumps(prefix, indent=2)+'\n')
+    _assert_original_pending_association(stored_a, a_rows, by_name, draft=a_text)
+    assert _attachment_rows(actor) == b_rows and _draft_text(actor) == b_text, 'B keeps its own exact pending file/draft, never A retained context'
+    a_view = _select_original_pending_draft_view(actor, target)
+    stored_b = actor.command('session_association_snapshot', thread_id=other)['reply']
+    prefix.update({'a_view': a_view, 'b_record_after_departure': stored_b, 'a_returned': _attachment_rows(actor)})
+    (actor.folder / 'original-repeated-pending-draft.json').write_text(json.dumps(prefix, indent=2)+'\n')
+    _assert_original_pending_association(stored_b, b_rows, by_name, draft=b_text)
+    assert _attachment_rows(actor) == a_rows and _draft_text(actor) == a_text \
+        and qml(actor, 'Session.assistant.contextConsentRequired')
+    assert len(_session_wire(actor, 'turn/start')) == 2, 'All repeated pending edits and exact-thread views remain unsent'
+    prefix['real_share_cancel'] = _cancel_original_pending_send_without_admission(actor, a_rows, a_text)
+    (actor.folder / 'original-repeated-pending-draft.json').write_text(json.dumps(prefix, indent=2)+'\n')
+
+
+def test_original_close_restart_keeps_repeated_pending_edits_separate_from_consumed_inputs_and_unapproved_scope(main_actor, tmp_path, monkeypatch):
+    actor = main_actor([[]]);_session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        observe_context_continuity=True, final_text='The original consumed-input observation is complete.')
+    actor.connect();sources = _attachment_fixtures(tmp_path, 3);by_name = {source.name: source for source in sources}
+    consumed = _admit_original_pending_file_without_approval(actor, sources[0])
+    actor.configure_turns([[tool_call('read_selected_file', 'actual-consumed-input-before-pending-restart',
+        file_id=consumed['id'], offset=0, max_bytes=sources[0].stat().st_size)]])
+    task = 'Retain this genuine consumed source before separate pending-draft edits.'
+    _session_request_with_original_disclosure(actor, task);_session_completed(actor, 1);native_result(actor.responses()[0])
+    thread = _session_state(actor)['inputs'][0]['threadId']
+    assert not next(row for row in _attachment_rows(actor) if row['id'] == consumed['id'])['pending']
+    first = _admit_original_pending_file_without_approval(actor, sources[1])
+    last = _admit_original_pending_file_without_approval(actor, sources[2])
+    assert qml(actor, 'Session.assistant.removeSelectedFile(' + json.dumps(first['id']) + ')') is True
+    text = 'Keep only this actual later pending file through ordinary close.';_type_original_draft(actor, text)
+    manifest = _attachment_rows(actor)
+    assert [row for row in manifest if row['pending']] == [last]
+    first_rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
+    _capture_genuine_archive(actor, 'pending-context-retired-before-close')
+    cache = _capture_exact_cache_manifest(actor, 'pending-context-retired-before-close')
+    restart_sources = _finish_genuine_restart_sources(actor, cache)
+    restored = _start_exact_original_fixture_restart(tmp_path, monkeypatch, restart_sources, [])
+    try:
+        _ordinary_expose_automatically_restored_composer(restored, task)
+        restored.until(lambda value: value['ui']['connected'] and _unique_input_control(value, 'assistant.composer') is not None)
+        actual = _attachment_rows(restored)
+        record = restored.command('session_association_snapshot', thread_id=thread)['reply']
+        resumes = _session_wire(restored, 'thread/resume')
+        facts = {'thread': thread, 'original_files': manifest, 'restored_files': actual, 'record': record,
+            'original_restart_sources': restart_sources, 'actual_wire': _session_wire(restored),
+            'scope': 'Byte-exact actual first settings/cache/backend only; original physical inputs unchanged; no manual Connect/Select/Open or input re-admission.'}
+        (restored.folder / 'original-close-pending-draft-restart.json').write_text(json.dumps(facts, indent=2)+'\n')
+        assert resumes and resumes[-1]['params']['threadId'] == thread and not _session_wire(restored, 'thread/start') \
+            and not _session_wire(restored, 'turn/start'), 'Actual automatic restart resumes original thread without transmitting or replaying pending input'
+        assert actual == manifest and [row for row in actual if row['pending']] == [last] \
+            and not next(row for row in actual if row['id'] == consumed['id'])['pending']
+        assert _draft_text(restored) == text and qml(restored, 'Session.assistant.contextConsentRequired')
+        _assert_original_pending_association(record, manifest, by_name, draft=text)
+        displayed = {_rows_values(restored, 'messages', index)['id']: _rows_values(restored, 'messages', index)
+                     for index in range(_rows_probe(restored)['count'])}
+        assert all(displayed.get(row['id']) == row for row in first_rows), 'Full original accepted history remains original; no pending edit is invented as a sent user/native row'
+        assert not any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in restored.last['ui']['texts']), (
+            'View restoration of original thread/history is not fresh Share approval for its unsubmitted pending files')
+    finally:
+        _close_explicit_restart_actor(restored)
+
+
+@pytest.mark.parametrize('retirement', ['new_clear', 'different_account', 'project_replacement'])
+def test_original_pending_draft_invalidation_keeps_chooser_and_disclosure_ownership_fences(main_actor, tmp_path, retirement):
+    actor = main_actor([[]]);_session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+        observe_context_continuity=True, final_text='The original ownership-fence observation is complete.')
+    project = copied_estimate_project(tmp_path)
+    assert actor.command('open', path=str(project))['reply']['opened']
+    actor.connect();_session_request_with_original_disclosure(actor, 'Retain this actual original project/thread before pending input changes.');_session_completed(actor, 1)
+    thread = _session_state(actor)['inputs'][0]['threadId'];account = qml(actor, 'Session.assistant.account')
+    sources = _attachment_fixtures(tmp_path, 3)
+    pending = _admit_original_pending_file_without_approval(actor, sources[0]);text = 'Original captured pending draft before deliberate retirement.'
+    _type_original_draft(actor, text)
+    late = qml(actor, 'Session.assistant.beginFileSelection(true)');assert late
+    original_bytes = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in sources}
+    before_turns = len(_session_wire(actor, 'turn/start'))
+    if retirement == 'new_clear':
+        actor.command('click', name='assistant.clear');actor.until(lambda value: not value['ui']['messages'])
+        assert not any(row['pending'] for row in _attachment_rows(actor)) and _draft_text(actor) == '', (
+            'The one original New session/Clear owner deliberately clears its captured unsent draft rather than preserving it under an obsolete association')
+        assert qml(actor, 'Session.assistant.account') == account and actor.last['ui']['project']['path'] == str(project)
+    elif retirement == 'different_account':
+        actor.command('sign_out');_session_configure(actor, account_email='new-owned-draft-account@example.invalid')
+        actor.until(lambda value: _unique_input_control(value, 'assistant.connection') is not None)
+        actor.command('sign_in');actor.until(lambda value: value['ui']['connected'])
+        assert qml(actor, 'Session.assistant.contextConsentRequired'), 'The changed account is not granted old draft/project approval by the connection fixture'
+        assert qml(actor, 'Session.assistant.account') != account, 'The account fence reaches an actual distinct correlated account/read identity'
+        before_resume = len(_session_wire(actor, 'thread/resume'))
+        actor.command('click', name='assistant.sessions');rows = _session_wait(actor)
+        assert thread in {row['id'] for row in rows}, 'Actual native metadata still lists the original own thread; visibility is distinct from resume authority'
+        chosen = actor.command('session_row_click', thread_id=thread)['reply'];assert chosen['reached'] and chosen['actual_pressed_changes'] > 0
+        actor.until(lambda _value: not qml(actor, 'Session.assistant.sessionsLoading'))
+        assert qml(actor, 'Session.assistant.sessionsError') and len(_session_wire(actor, 'thread/resume')) == before_resume
+        actor.command('manual_key', key='escape')
+    else:
+        replacement = tmp_path / 'different-original-project';shutil.copytree(ROOT / 'tests/fixtures/background_estimate/projects/hrpt', replacement)
+        assert actor.command('open', path=str(replacement))['reply']['opened']
+        actor.until(lambda value: value['ui']['project']['path'] == str(replacement))
+        assert _draft_text(actor) == text, 'Unrelated actual project retirement is not explicit New/Clear'
+        assert qml(actor, 'Session.assistant.contextConsentRequired'), 'The new project cannot inherit original A disclosure authority'
+    before_late = _attachment_rows(actor)
+    rejected = actor.command('selected_add', token=late, paths=[str(sources[1])])['reply']
+    facts = {'retirement': retirement, 'original_thread': thread, 'original_pending': pending,
+        'actual_current_files': before_late, 'old_picker_reply': rejected, 'actual_wire': _session_wire(actor)}
+    (actor.folder / 'original-pending-ownership-fences.json').write_text(json.dumps(facts, indent=2)+'\n')
+    assert rejected['added'] is False and _attachment_rows(actor) == before_late, (
+        'An original chooser callback retired by New/account/project cannot add under the replacement scope or erase its current input')
+    assert len(_session_wire(actor, 'turn/start')) == before_turns
+    # A new deliberate local input may be attached under the replacement owner;
+    # retained local user draft is not treated as old execution approval.
+    fresh = _admit_original_pending_file_without_approval(actor, sources[2]);fresh_text = 'A fresh replacement-owner draft requires its own genuine disclosure.'
+    _type_original_draft(actor, fresh_text)
+    facts['new_pending'] = _attachment_rows(actor);facts['fresh_descriptor'] = fresh
+    facts['real_cancel'] = _cancel_original_pending_send_without_admission(actor, facts['new_pending'], fresh_text)
+    assert all(hashlib.sha256(Path(path).read_bytes()).hexdigest() == digest for path, digest in original_bytes.items())
+    (actor.folder / 'original-pending-ownership-fences.json').write_text(json.dumps(facts, indent=2)+'\n')
