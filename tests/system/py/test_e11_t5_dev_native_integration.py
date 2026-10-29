@@ -7,6 +7,7 @@ Undo and filesystem conservation compare pre-action native state and planted dat
 
 from __future__ import annotations
 
+import errno
 import hashlib
 import json
 import os
@@ -10021,6 +10022,7 @@ def test_original_question_batch_reveals_hidden_assistant_and_replies_once_only_
         row.get('params', {}).get('item', {}).get('id') == 'before-original-question'
         for row in map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines())))
     actor.command('click', name='assistant.toggle')
+    actor.until(lambda _value: qml(actor, 'assistantPanel.visible') is False)
     assert qml(actor, 'assistantPanel.visible') is False, 'The original toolbar genuinely hides the Assistant before the question arrives'
     marker = 'e11.original-question-presentation'
     _observe_original_question_presentation(actor, marker)
@@ -10238,7 +10240,8 @@ def test_original_question_wait_refuses_actual_same_turn_native_writes_until_eve
         after_response = next(row for row in actor.responses()
                               if row['id'].startswith('integration-envelope-'))
         after_result = native_result(after_response)
-        assert after_response['result']['success'] and after_result.get('complete') is True, (
+        assert after_response['result']['success'] and after_result.get('status') == 'edited' \
+            and after_result.get('complete', True) is True, (
             'The same genuine current scientific request is usable after all answers; malformed operands cannot masquerade as the pause property')
         after = actor.last['ui']['project']
         expected_parameters = [{**row, 'free': not chosen['free']} if row['path'] == chosen['path'] else row
@@ -10393,3 +10396,146 @@ def _original_streamed_math_capacity_keeps_formatted_prefix_and_source(actor, ba
         assert actor.command('capture_frame', path=str(frame))['reply']['saved'], 'The actual mixed native/literal current document frame is retained'
     finally:
         release.touch()
+
+
+@pytest.fixture(scope='module')
+def post_adoption_rename_failure_library(tmp_path_factory):
+    folder = tmp_path_factory.mktemp('original-save-second-replacement')
+    library = folder / 'failure.so'
+    command = ['cc', '-shared', '-fPIC', '-std=c11', '-Wall', '-Wextra', '-Werror',
+               str(ROOT / 'tests/fixtures/report_storage/temporary_failure.c'), '-o', str(library),
+               *([] if sys.platform == 'darwin' else ['-ldl'])]
+    result = subprocess.run(command, capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    (folder / 'compile-command.json').write_text(json.dumps(command) + '\n')
+    return library
+
+
+@pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
+def test_original_save_second_replacement_failure_publishes_retained_adopted_state_without_retry(
+    main_actor, tmp_path, monkeypatch, post_adoption_rename_failure_library, show_actions
+):
+    assert sys.platform.startswith('linux'), 'This exact original rename-after-first-success carrier is Linux-qualified only; other platforms are an unreached entrance, never a passing post-adoption witness'
+    project = copied_estimate_project(tmp_path)
+    structure = project / 'structures/phase.edi'
+    source = structure.read_text()
+    for field in ('a', 'b', 'c'):
+        old = '_cell.length_' + field + ' 4.1\n'
+        assert source.count(old) == 1, 'The original cubic fixture retains its independent literal input field'
+        token = '3.88037571780333600000(3665222790021926)' if field == 'a' else '3.880375717803336'
+        source = source.replace(old, '_cell.length_' + field + ' ' + token + '\n')
+    structure.write_text(source)
+    record = project / 'project.edi'
+    assert '_metadata.last_modified' not in record.read_text(), 'The original fixture has no duplicate metadata timestamp'
+    record.write_text(record.read_text() + '\n_metadata.last_modified "22 Oct 2026 18:00:00"\n')
+    armed = tmp_path / 'arm-original-second-save-replacement'
+    receipt = tmp_path / 'original-second-save-replacement.jsonl'
+    monkeypatch.setenv('LD_PRELOAD', str(post_adoption_rename_failure_library))
+    monkeypatch.setenv('TEMPORARY_FAILURE_TARGET', str(structure.resolve()))
+    monkeypatch.setenv('TEMPORARY_FAILURE_RECEIPT', str(receipt))
+    monkeypatch.setenv('TEMPORARY_FAILURE_AFTER_FIRST', '1')
+    monkeypatch.setenv('TEMPORARY_FAILURE_ARMED', str(armed))
+    actor = main_actor([[tool_call('save_project', 'original-post-adoption-save-once', destination='current')]],
+                       show_actions=show_actions)
+    assert actor.command('open', path=str(project))['reply']['opened'], 'A real ordinary Open establishes the original complete measured cubic project'
+    actor.until(lambda value: not value['ui']['project']['calculating'])
+    qml(actor, 'Session.project.title="Original post-adoption failure"')
+    actor.connect()
+    # Warm actual Registry/Text/report/graph owners before adoption. A cached
+    # stale projection must not pass merely because nobody read it before Save.
+    before = actor.command('save_readback_snapshot')['reply']
+    assert before['original_owner_current'] and before['modified'] and all(
+        row['native_current'] and row['graph_current'] and row['graph_equals_native_calc'] for row in before['banks']), (
+            'The genuine pre-Save current calculation and immutable chart are available before the scoped fault is armed')
+    assert before['text_semantics'] and not before.get('text_error') and before['report_parameters'], (
+        'Original cached Text and Report numeric projections are actually warmed before the failure, not merely absent lazy owners')
+    marker = 'e11.original-post-adoption-publication'
+    assert qml(actor, r'''(function(){const p=Session.project,t=p.parameters,session=Session;
+        const o=Qt.createQmlObject('import QtQuick; Item {property var values:[];property var errors:[];}',window.contentItem);o.objectName=MARKER;
+        for(let i=0;i<t.count;i++){const item=t.item(i,'parameter');if(!Qt.isQtObject(item)||!item.valueChanged||typeof item.valueChanged.connect!=='function')return false;
+            const original=item;original.valueChanged.connect(function(){if(Qt.isQtObject(o))o.values.push({path:original.path,value:original.value,current:Session.project===p});});}
+        session.lastErrorChanged.connect(function(){if(Qt.isQtObject(o))o.errors.push({owner:'Session',text:session.lastError,current:Session.project===p});});
+        p.lastErrorChanged.connect(function(){if(Qt.isQtObject(o))o.errors.push({owner:'Project',text:p.lastError,current:Session.project===p});});return true;})()'''.replace('MARKER', json.dumps(marker))), (
+            'Only readonly original Registry/error signals are observed; no exception is thrown through a Qt slot')
+    disk_before = _new_project_file_hashes(_new_project_scientific_bytes(project))
+    armed.touch()
+    actor.request('Save this current project once and retain any original failure; do not retry.')
+    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] == 'idle', visible_progress=show_actions)
+    response = actor.responses()[0]
+    after = actor.command('save_readback_snapshot')['reply']
+    canonical_report = json.loads(qml(actor, 'Session.assistant.workReportDocument()'))
+    (actor.folder / 'original-post-adoption-native-report.json').write_text(json.dumps(canonical_report, indent=2))
+    values = qml(actor, '(' + _scene_control_expression(marker) + ').values')
+    errors = qml(actor, '(' + _scene_control_expression(marker) + ').errors')
+    actual = [json.loads(line) for line in receipt.read_text().splitlines()] if receipt.exists() else []
+    facts = {'before': before, 'after': after, 'response': response, 'filesystem_receipt': actual,
+             'registry_events': values, 'original_errors': errors, 'write_requests': 1,
+             'no_retry_refit_or_recalculation': True, 'disk_before': disk_before,
+             'disk_after': _new_project_file_hashes(_new_project_scientific_bytes(project))}
+    (actor.folder / 'original-post-adoption-failure.json').write_text(json.dumps(facts, indent=2))
+    # Reached proof precedes every publication oracle: an early first-write
+    # refusal is explicitly unable to pass this gate.
+    assert [row['phase'] for row in actual] == ['first_commit_succeeded', 'second_replacement_refused'] \
+        and actual[0]['successful_commits'] == actual[1]['successful_commits'] == 1 \
+        and actual[0]['pid'] == actual[1]['pid'] == actor.process.pid and actual[1]['error'] == errno.EACCES \
+        and actual[0]['device'] == actual[1]['device'] and actual[0]['inode'] == actual[1]['inode'] and actual[1]['inode'] > 0, (
+            'The exact owned file first commits successfully, then the original second replacement really receives EACCES')
+    old = {row['path']: row for row in before['current_parameters']}
+    current = {row['path']: row for row in after['current_parameters']}
+    changed = [path for path in old if current[path]['value'] != old[path]['value']]
+    assert before['metadata_last_modified'] != after['metadata_last_modified'], (
+        'The original old valid metadata timestamp really changes during this Save, so prewarmed Text cache freshness is a reached channel without sleeping')
+    assert 'structure.cell.length_a' in changed, 'Real native adoption changes the original precise mean before the genuine failure; otherwise this post-adoption channel is unreached'
+    assert len(actor.responses()) == 1 and not response['result']['success'] and after['original_owner_current'] \
+        and after['path'] == before['path'] and after['modified'] and after['session_last_error'], (
+            'The original Save remains failed/dirty with its actual retained owner/error, never a false clean success, replacement or automatic retry')
+    first_project_error = next(row['text'] for row in errors if row['owner'] == 'Project' and row['text'])
+    native_outcome = json.loads(response['result']['contentItems'][0]['text'])
+    sent = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
+    requests = [row for row in sent if row.get('method') == 'item/tool/call' and row.get('id') == response['id']]
+    assert len(requests) == 1 and requests[0]['params']['callId'] == 'original-post-adoption-save-once', (
+        'The decoded native failure belongs to the one original actual Save RPC, not an unrelated reported error')
+    message = native_outcome.get('message')
+    assert isinstance(message, str) and message.endswith(first_project_error) and message != first_project_error \
+        and 'Session' in message[:-len(first_project_error)] \
+        and native_outcome.get('status') == 'unconfirmed' and native_outcome.get('code') == 'uncertain' \
+        and native_outcome.get('uncertain') is True and native_outcome.get('saved') is False \
+        and native_outcome.get('committed') is False, (
+            'This returned-false original Session failure is retained as a qualified current-Session reason in the actual uncertain native reply, never replaced by the old generic Save message or described as a caught exception')
+    retained = [entry for entry in canonical_report['history_evidence']
+                if entry.get('row', {}).get('payload', {}).get('tool') == 'save_project'
+                and entry['row']['payload'].get('id') == requests[0]['params']['callId']]
+    assert len(retained) == 1, 'The same original native Save has one retained canonical outcome owner'
+    payload = retained[0]['row']['payload']
+    assert json.loads(payload['contentItems'][0]['text']) == native_outcome \
+        and payload['nativeOutcome']['message'] == message and payload['nativeOutcome']['uncertain'] is True \
+        and payload['nativeOutcome']['saved'] is False and payload['nativeOutcome']['committed'] is False, (
+            'The exact original qualified cause and uncertainty survive canonical nativeOutcome/history as well as outgoing wire; compact presentation alone is not evidence')
+    assert after['session_last_error'] == after['project_last_error'] == first_project_error \
+        and all(row['current'] for row in errors if row['text']), (
+            'Publication repair preserves the first genuine original Save cause instead of clearing it or substituting a successor error')
+    registry = {row['path']: row for row in after['registry_parameters']}
+    assert set(registry) == set(current) and all(
+        registry[path]['value'] == row['value'] and (registry[path]['uncertainty'] or 0) == (row['uncertainty'] or 0)
+        and registry[path]['free'] == row['free'] for path, row in current.items()), (
+            'The original public Registry rows follow the actually retained adopted model, not the old pre-Save values')
+    assert all(any(event['current'] and event['path'] == path and event['value'] == current[path]['value']
+                   for event in values) for path in changed), 'Every changed retained value is genuinely published to its original Qt owner'
+    assert after['text_semantics'] and not after.get('text_error') and all(
+        row['parameters'] == after['current_parameters'] and row['matches_fresh_projection'] for row in after['text_semantics']), (
+            'Prewarmed Text projections are invalidated and FIRST-parsed input semantics match the retained model without writing or recalculating it')
+    old_text = {row['file']: row for row in before['text_semantics']}
+    assert any(row['fresh_sha256'] != old_text[row['file']]['sha256'] for row in after['text_semantics']), (
+        'The retained state has a genuinely changed FIRST Text projection; unchanged prewarmed bytes cannot accidentally pass invalidation coverage')
+    assert len({row['id'] for row in after['report_parameters']}) == len(after['report_parameters']), 'Original report identities remain unique'
+    if after.get('native_report_error'):
+        assert not after['report_parameters'], 'If the original current native report is unavailable, an older successful report cannot remain presented as current'
+    else:
+        assert len({row['id'] for row in after['native_report_parameters']}) == len(after['native_report_parameters']), 'The independent native report has unique original identities'
+        assert {row['id']: row for row in after['report_parameters']} == {
+            row['id']: row for row in after['native_report_parameters']}, (
+                'Original cached Report numeric states follow the actually retained model using the FIRST native builder, not a stale successful projection')
+    assert not after['calculating'] and all(
+        (row['native_current'] and row['graph_current'] and row['graph_equals_native_calc'])
+        or (not row['native_current'] and not row['graph_current']) for row in after['banks']), (
+            'Failure does not refit/recalculate to hide stale columns: actual chart currentness agrees with the retained native calculation authority')
