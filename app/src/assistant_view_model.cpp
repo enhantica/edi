@@ -17865,7 +17865,7 @@ void AssistantViewModel::answerQuestion(const QString& id, const QString& answer
             const QPointer<AssistantViewModel> receiver(this);auto* const original=state_.get();bool admitted=false;
             auto answers=original->generic_question_answers;
             answers[key]=Object{{"answers",QJsonArray{answer}}};State::generic_measured_size(answers);
-            auto answerRow=State::public_row("activity",tr("Answer: %1").arg(answer),{},"completed");
+            auto answerRow=State::public_row("user",answer,{},"completed");
             answerRow["id"]=id+QStringLiteral("/answer");answerRow["sessionTurn"]=original->generic_question_turn;
             if(!original->generic_present(std::move(answerRow))) {if(publication.input_current())original->generic_fail(original->storage_error);return;}
             if(!receiver || receiver->state_.get()!=original || !publication.input_current() ||

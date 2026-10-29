@@ -239,3 +239,21 @@ this candidate with differently spelled tied axes and completed post-failure liv
 values; their original error/native SDK identity is absent, so exclusive runtime
 cause and complete Save success still require the named-error discriminator and
 both-mode/current/disk/calculation qualification.
+
+### A partially adopted failed Save publishes retained state
+
+FIRST ProjectViewModel::adoptSave owns a PublicationScope through both success
+and failure. Its failure retains the original error/partial-write/dirty facts,
+then uses ordinary parameter/Text/cache/report publication for the actual retained
+values. Existing experiment/structure stale-frame owners invalidate only native
+calculations/geometry whose original input proof no longer matches; the last
+frames may remain visible as noncurrent. No calculation, fit, write, Undo or
+fictitious rollback is triggered by this settlement.
+
+Retirement is checked after each callback-capable publication and prevents old
+work from touching a successor. If that presentation itself fails, original cached
+Text exports are invalidated and the existing publication-failure fence retains
+the first Save error. Normal current/direct/fresh/archive/copy staging paths retain
+their original owners: failed staging copies do not mutate the original live model;
+any live partial adoption through adoptSave receives this same settlement. Actual
+fault/copy/currentness/publication qualification remains required.
