@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-3-Clause
 // A1 only: the original public rendered compact row, not a replacement formatter.
 #include <QCoreApplication>
+#include <QQmlError>
+#include <algorithm>
 #include <QColor>
 #include <QJsonArray>
 #include <QScopeGuard>
@@ -160,6 +162,180 @@ class CompactPresentationA1Proof final : public QObject {
                       !header->property("checked").toBool() && !row->property("technicalCopied").toBool(),
                       "A1 compact observation stays collapsed with no human snapshot or copy feedback");
     }
+    void guardedOriginalReads(Checks& check) const {
+        // Presentation-value accessors only. These rows are not inserted into
+        // canonical history and never authorize a lazy full-detail/copy read.
+        struct GuardCase {
+            QString name,kind,payload,caption;
+            QStringList unused,required;
+        };
+        const QString native = QStringLiteral("Create a project");
+        const std::vector<GuardCase> cases{
+            {"web-skips-command-fields","activity","({type:'webSearch'})","Search the web",
+                {"commandCategory","status","item_id","tool","query","action","purpose","description","arguments","error"},{}},
+            {"file-change-skips-command-fields","activity","({type:'fileChange'})","Update files",
+                {"commandCategory","status","item_id","tool"},{}},
+            {"missing-decision-skips-item","activity","({type:'dynamicToolCall',"
+                "get tool(){a1GuardTrace.reads.push('tool');return 'create_project';}})",native,
+                {"item_id","commandCategory","status"},{"tool"}},
+            {"null-decision-skips-item","activity","({type:'dynamicToolCall',decision:null,"
+                "get tool(){a1GuardTrace.reads.push('tool');return 'create_project';}})",native,
+                {"item_id","commandCategory","status"},{"tool"}},
+            {"boolean-decision-skips-item","activity","({type:'dynamicToolCall',decision:false,"
+                "get tool(){a1GuardTrace.reads.push('tool');return 'create_project';}})",native,
+                {"item_id","commandCategory","status"},{"tool"}},
+            {"number-decision-skips-item","activity","({type:'dynamicToolCall',decision:7,"
+                "get tool(){a1GuardTrace.reads.push('tool');return 'create_project';}})",native,
+                {"item_id","commandCategory","status"},{"tool"}},
+            {"array-decision-skips-item","activity","({type:'dynamicToolCall',decision:[],"
+                "get tool(){a1GuardTrace.reads.push('tool');return 'create_project';}})",native,
+                {"item_id","commandCategory","status"},{"tool"}},
+            {"object-decision-skips-item","activity","({type:'dynamicToolCall',decision:{},"
+                "get tool(){a1GuardTrace.reads.push('tool');return 'create_project';}})",native,
+                {"item_id","commandCategory","status"},{"tool"}},
+            {"decision-shadows-native-label","activity",
+                "({type:'dynamicToolCall',decision:'deny',item_id:'original-presentation-id'})",
+                "Review requested action",{"tool","commandCategory","status"},{}},
+            {"empty-string-decision-and-item-are-strings","activity",
+                "({type:'dynamicToolCall',decision:'',item_id:''})",
+                "Review requested action",{"tool","commandCategory","status"},{}},
+            {"decision-shadows-command-category","activity",
+                "({type:'commandExecution',decision:'deny',item_id:'original-presentation-id',"
+                "get status(){a1GuardTrace.reads.push('status');return 'completed';}})",
+                "Review requested action",{"commandCategory","tool"},{"status"}},
+            {"command-reads-category-and-status","activity",
+                "({type:'commandExecution',get commandCategory(){a1GuardTrace.reads.push('commandCategory');return 'read';},"
+                "get status(){a1GuardTrace.reads.push('status');return 'completed';}})",
+                "Read files",{"item_id","tool"},{"commandCategory","status"}},
+        };
+        auto all = cases;
+        // Each fixed human kind wins before decision/native caption work.
+        for(const auto& pair:std::vector<std::pair<QString,QString>>{
+                {"error","Assistant error"},{"plan","Review work plan"},
+                {"question","Assistant question"},{"tool","Project action"},
+                {"trial","Review refinement trial"}})
+            all.push_back({"fixed-kind-"+pair.first,pair.first,"({})",pair.second,
+                {"type","decision","item_id","tool","commandCategory","status"},{}});
+        // A string decision requires reading item_id, but only string item IDs
+        // select the decision caption. These typed controls retain native work.
+        for(const auto& pair:std::vector<std::pair<QString,QString>>{
+                {"null","null"},{"boolean","false"},{"number","7"},
+                {"array","[]"},{"object","{}"}})
+            all.push_back({"typed-item-"+pair.first,"activity",
+                "({type:'dynamicToolCall',decision:'deny',get item_id(){a1GuardTrace.reads.push('item_id');return "+pair.second+";},"
+                "get tool(){a1GuardTrace.reads.push('tool');return 'create_project';}})",native,
+                {"commandCategory","status"},{"item_id","tool"}});
+
+        struct ThrowCase {QString name,kind,payload,field;};
+        const std::vector<ThrowCase> throws{
+            {"required-command-category","activity","({type:'commandExecution',status:'completed'})","commandCategory"},
+            {"required-command-status","activity","({type:'commandExecution',commandCategory:'read'})","status"},
+            {"required-decision","activity","({type:'webSearch'})","decision"},
+            {"required-string-decision-item","activity","({type:'webSearch',decision:'deny'})","item_id"},
+            {"required-native-label","activity","({type:'dynamicToolCall'})","tool"},
+            {"required-native-outcome","activity","({type:'webSearch'})","nativeOutcome"},
+            {"required-fixed-kind-outcome","error","({})","nativeOutcome"},
+            {"required-native-outcome-status","activity","({type:'webSearch',nativeOutcome:{}})","nativeOutcome.status"}
+        };
+        auto exercise=[&](const GuardCase& item,const QString& throwingField,bool stringThrow) {
+            const auto prefix=QStringLiteral("A1 guarded read ")+item.name+": ";
+            QJSValue trace=engine_->newObject();
+            trace.setProperty("reads",engine_->newArray());
+            QQmlContext context(engine_->rootContext());
+            context.setContextProperty("a1GuardTrace",QVariant::fromValue(trace));
+            QQmlComponent component(engine_);
+            component.setData("import QtQuick\nimport edi.app\nAssistantMessage { assistant: Session.assistant }\n",
+                              QUrl("qrc:/tests/A1OriginalGuardedReads.qml"));
+            if(component.isError())throw std::runtime_error(component.errorString().toStdString());
+            std::unique_ptr<QObject> row(component.createWithInitialProperties({
+                {"kind",item.kind},{"status",QStringLiteral("completed")},
+                {"text",QStringLiteral("RAW_ONLY_GUARDED_BODY")},
+                {"rowId",QStringLiteral("A1-absent-guarded-presentation-row")},
+                {"payload",QVariantMap{}},{"width",600}},&context));
+            if(!row)throw std::runtime_error(component.errorString().toStdString());
+            QSignalSpy warnings(engine_,&QQmlEngine::warnings);
+            const auto quote=[](const QString& value) {
+                return QString::fromUtf8(QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact).mid(1).chopped(1));
+            };
+            QString setup="(function(){const p="+item.payload+";";
+            const auto poison=[&](const QString& field,const QString& tag) {
+                const auto target=field=="nativeOutcome.status"?QStringLiteral("p.nativeOutcome"):QStringLiteral("p");
+                const auto key=field=="nativeOutcome.status"?QStringLiteral("status"):field;
+                setup+="Object.defineProperty("+target+","+quote(key)+",{enumerable:true,configurable:true,get:function(){"
+                    "a1GuardTrace.reads.push("+quote(field)+");throw "+
+                    (stringThrow?quote("[\""+tag+field+"\"]"):"new Error("+quote(tag+field)+")")+";}});";
+            };
+            for(const auto& field:item.unused)poison(field,"A1_UNUSED_");
+            if(!throwingField.isEmpty())poison(throwingField,"A1_REQUIRED_");
+            setup+="a1GuardTrace.payload=p;payload=p;return true;})()";
+            QQmlExpression assign(&context,row.get(),setup);
+            const auto assigned=assign.evaluate();
+            const auto assignmentError=assign.hasError()?assign.error().toString():QString();
+            const bool normalAssignment=!assign.hasError() && assigned.metaType()==QMetaType::fromType<bool>() && assigned.toBool();
+            const bool requiredAssignmentError=!throwingField.isEmpty() && assign.hasError() &&
+                assignmentError.contains("A1_REQUIRED_"+throwingField);
+            check.require(normalAssignment || requiredAssignmentError,
+                          prefix+"the public assignment either completes normally or propagates its actually required marked getter; dependent suffix UNREACHED otherwise");
+            if(!normalAssignment && !requiredAssignmentError)return;
+            check.require(expression(row.get(),"payload === a1GuardTrace.payload")=="true",
+                          prefix+"the original var input preserves exact JavaScript payload identity/getters, not a converted map");
+            if(expression(row.get(),"payload === a1GuardTrace.payload")!="true")return;
+            const QString name=row->property("commandActivity").toBool()?"assistant.command.toggle":"assistant.activity.toggle";
+            const auto headers=row->findChildren<QObject*>(name);
+            check.require(headers.size()==1,prefix+"one original rendered disclosure is present");
+            if(headers.size()!=1)return;
+            auto* header=headers.front();
+            if(throwingField.isEmpty()) {
+                // Same actual stable rendered caption/tooltip/status seam as
+                // baseline A1; no retired procedure or test-only wrapper call.
+                checkOutcome(check,row.get(),header,item.caption,"Completed","check-circle","success");
+                check.require(warnings.isValid() && warnings.isEmpty(),
+                              prefix+"unused throwing fields cause no original QML binding exception");
+            } else {
+                // Force the actual consumed header and explanation bindings,
+                // not a speculative extra read of a private formatter field.
+                (void)header->property("text");
+                (void)expression(header,"ToolTip.text");
+                (void)expression(header,"Accessible.name");
+                QStringList messages;
+                for(const auto& notification:warnings)
+                    for(const auto& error:qvariant_cast<QList<QQmlError>>(notification.at(0)))
+                        messages.push_back(error.toString());
+                const auto marker="A1_REQUIRED_"+throwingField;
+                check.require(requiredAssignmentError || (warnings.isValid() && std::any_of(messages.cbegin(),messages.cend(),
+                    [&](const QString& message){return message.contains(marker);})),
+                    prefix+"the required getter's original Error reaches the actual consumed binding/assignment exception boundary; no swallowed-success substitute");
+                check.require(std::none_of(messages.cbegin(),messages.cend(),
+                    [](const QString& message){return message.contains("A1_UNUSED_");}),
+                    prefix+"required-read failure does not justify reading unrelated poisoned fields");
+                check.require(!header->property("checked").toBool() &&
+                    expression(row.get(),"humanDetailsSnapshot === null")=="true",
+                    prefix+"required compact failure does not authorize lazy full-detail access");
+            }
+            const auto reads=trace.property("reads");
+            check.require(reads.isArray(),prefix+"the test-owned accessor trace is an actual original JavaScript array");
+            QStringList names;
+            for(quint32 i=0;i<reads.property("length").toUInt();++i)names.push_back(reads.property(i).toString());
+            for(const auto& field:item.unused)
+                check.require(!names.contains(field),prefix+"unused original field is never read: "+field);
+            for(const auto& field:item.required)
+                check.require(names.contains(field),prefix+"the original consumed branch actually reads: "+field);
+            if(!throwingField.isEmpty())check.require(names.contains(throwingField),
+                prefix+"the actual required accessor is reached before its warning disposition");
+        };
+        // Isolate each unused poison. One newly eager failing getter must not
+        // hide another field's independent escape behind its first exception.
+        for(const auto& item:all)for(const auto& field:item.unused)try {
+            auto isolated=item;
+            isolated.name+="/unused-"+field;
+            isolated.unused=QStringList{field};
+            exercise(isolated,{},false);
+        }catch(const std::exception& error){check.require(false,item.name+"/"+field+": "+QString::fromUtf8(error.what()));}
+        for(const auto& item:throws)for(const bool stringThrow:{false,true})try {
+            exercise({item.name+(stringThrow?"/thrown-JSON-string":"/thrown-Error"),
+                      item.kind,item.payload,{}, {},{}},item.field,stringThrow);
+        }catch(const std::exception& error){check.require(false,item.name+": "+QString::fromUtf8(error.what()));}
+    }
     void malformedFieldsAndColdBoundary(Checks& check) const {
         const QString unknown=QStringLiteral("The result could not be confirmed. Inspect the project before continuing.");
         const std::vector<Expected> rows{
@@ -311,6 +487,7 @@ public:
     }
     Q_INVOKABLE QVariantMap statusAndCommandPrecedence() const {
         Checks check;
+        guardedOriginalReads(check);
         malformedFieldsAndColdBoundary(check);
         const std::vector<Expected> rows{
             {"complete","activity","completed","Perform assistant action","Completed","check-circle",{}},
