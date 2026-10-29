@@ -5925,13 +5925,16 @@ def _two_genuine_session_threads(actor):
 
 
 def test_session_selection_preserves_required_current_disclosure_until_real_dialog_acceptance(main_actor, tmp_path):
-    actor = main_actor([[], []])
-    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12})
+    actor = main_actor([[], [], []])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12},
+                       observe_context_continuity=True)
     original, current = _two_genuine_session_threads(actor)
     source = _attachment_fixtures(tmp_path, 1)[0]
     token = actor.begin_current_file_selection()
     assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
         'A genuinely new admitted file changes the current outgoing disclosure after the earlier approval')
+    manifest = actor.last['ui']['selected_files']
+    pending_file = next(row for row in manifest if row['pending'])
     assert actor.last['ui']['connected'] and actor.last['ui']['context_consent_required'], (
         'The consent discriminator actually reaches authenticated idle state with required new context approval')
     before = len(_session_wire(actor))
@@ -5939,20 +5942,67 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
     clicked = actor.command('session_row_click', thread_id=original)['reply']
     assert clicked['reached'] and clicked['actual_pressed_changes'] > 0, (
         'The consent boundary is exercised by actual original-row selection input, not direct approval or a success signal')
-    actor.until(lambda value: any(row['name'] == 'assistant.contextSummary' and row['visible'] for row in value['ui']['texts']))
-    pending = _session_wire(actor)[before:]
-    assert not any(row.get('method') in ('thread/resume', 'thread/start', 'turn/start') for row in pending), (
-        'Discovering/selecting an owned runtime ID cannot stage or transmit newly unapproved context before its original disclosure owner accepts')
-    assert actor.last['ui']['context_consent_required'], 'Selection intent itself cannot manufacture approval of the changed captured disclosure'
-    assert actor.command('accept_dialog')['reply']['accepted'], (
-        'Only genuine acceptance through the original displayed context dialog grants the required current approval')
-    actor.until(lambda value: value['ui']['connected'] and not value['ui']['context_consent_required'])
-    resumes = _session_wire(actor, 'thread/resume')
+    actor.until(lambda value: value['ui']['connected']
+                and not qml(actor, 'Session.assistant.sessionsLoading')
+                and not qml(actor, control_expression('assistant.sessionsDialog') + '.opened'))
+    selected_wire = _session_wire(actor)[before:]
+    resumes = [row for row in selected_wire if row.get('method') == 'thread/resume']
     assert resumes and resumes[-1]['params']['threadId'] == original, (
-        'After actual disclosure acceptance the pending original selector resumes its exact target rather than the prior or a new thread')
+        'View-only selection resumes the exact already approved original thread even while fresh outgoing context is unapproved')
+    assert not any(row.get('method') in ('thread/start', 'turn/start') for row in selected_wire), (
+        'Viewing an existing thread cannot create a replacement conversation or transmit the fresh unapproved user turn')
+    assert not any(row['name'] == 'assistant.contextSummary' and row['visible']
+                   for row in actor.last['ui']['texts']), (
+        'Selection and history viewing alone do not ask for Share project information again')
+    assert any(row['kind'] == 'user' and row['text'] == 'First genuine app-owned conversation for exact selection.'
+               for row in actor.last['ui']['messages']), (
+        'The genuinely resumed original history is visible rather than a new empty conversation')
+    assert actor.last['ui']['context_consent_required'] and any(
+        row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']), (
+            'View-only resume does not approve or silently lose the genuinely pending changed-file disclosure')
+    history = actor.last['ui']['messages']
+    text = 'Continue this selected conversation with the newly attached original file.'
+    turns_before = len(_session_wire(actor, 'turn/start'))
+    actor.command('send_text', text=text)
+    actor.until(lambda value: any(row['name'] == 'assistant.contextSummary' and row['visible']
+                                 for row in value['ui']['texts']))
+    assert len(_session_wire(actor, 'turn/start')) == turns_before, (
+        'The first actual new Send waits for its own changed-context Share instead of borrowing selection approval')
+    cancelled = actor.command('dialog_ok', name='AssistantConnectionDialog', role='cancel')['reply']
+    assert cancelled['pressed_changes'] > 0, (
+        'Cancel is genuine current-window input on the original Share dialog standard button')
+    actor.until(lambda value: not any(row['name'] == 'assistant.contextSummary' and row['visible']
+                                    for row in value['ui']['texts']))
+    assert qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text') == text \
+        and actor.last['ui']['messages'] == history \
+        and any(row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']), (
+            'Cancelling the unadmitted Send retains its exact draft, original history and genuine pending file identity')
+    assert len(_session_wire(actor, 'turn/start')) == turns_before \
+        and actor.last['ui']['context_consent_required'], (
+            'A definite Share cancellation discloses no new turn and cannot manufacture approval')
+    # A new deliberate user Send after a proven cancellation, never an uncertain replay.
+    actor.command('click', name='assistant.send')
+    actor.until(lambda value: any(row['name'] == 'assistant.contextSummary' and row['visible']
+                                 for row in value['ui']['texts']))
+    accepted = actor.command('dialog_ok', name='AssistantConnectionDialog', role='ok')['reply']
+    assert accepted['pressed_changes'] > 0, (
+        'One actual Share acceptance authorizes only this newly requested unchanged captured input')
+    _session_completed(actor, 3)
+    turns = _session_wire(actor, 'turn/start')
+    assert len(turns) == turns_before + 1 and turns[-1]['params']['threadId'] == original, (
+        'The accepted new user Send is admitted once on the selected original thread, without another Send or new thread')
+    record = _session_state(actor)['inputs'][-1]
+    _assert_exact_original_admitted_user_input(actor, record, text, expected_thread_prior_inputs=1)
+    after = {row['id']: row for row in actor.last['ui']['messages']}
+    assert all(after.get(row['id']) == row for row in history), (
+        'The real new request preserves all previously selected original history identities and content')
     (actor.folder / 'selection-consent-boundary.json').write_text(json.dumps({
         'original': original, 'previous_current': current, 'physical_click': clicked,
-        'requests_before_acceptance': pending, 'confirmed_resume': resumes[-1]}, indent=2))
+        'requests_during_selection': selected_wire, 'confirmed_resume': resumes[-1],
+        'original_pending_file': pending_file, 'cancel_button': cancelled, 'share_button': accepted,
+        'actual_new_input': record, 'admitted_new_turns': len(turns) - turns_before,
+        'selection_share_actions': 0, 'explicit_send_attempts': 2,
+        'definitely_cancelled_attempts': 1}, indent=2))
 
 
 @pytest.mark.parametrize('operation', ['list', 'select_read', 'archive_read'])
