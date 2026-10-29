@@ -596,3 +596,22 @@ ordinary latest-fit Undo, calibration, explicit scope and actual eligibility; no
 universal X/Y exclusion, sign-based zero, specimen seed, mandatory family/stage or
 new scientific admission veto is introduced. Actual model adherence remains to be
 qualified.
+
+## Delegated category planning before flag construction
+
+FIRST global developer guidance, existing set_free help and refinement-strategy
+share one planning convention: gather intended eligible members across sites
+before constructing flags, complete the chosen category/subset before another,
+and avoid atom-major alternation. Native call order, explicit user combined
+requests/subsets/flags and exact actual eligibility remain authoritative; no
+backend reorder, membership widening or universal scientific order is added.
+
+For the initial structural coordinate/ADP assessment under delegated refinement,
+one chosen block is tested with the other eligible block intentionally fixed,
+keeping unrelated settings. Inspect the actual trial before moving to the other
+block; later joint release requires stable identifiable blocks and supporting
+evidence. This replaces the ambiguous early cumulative-release suggestion, not
+native science policy. Real latest-fit Undo remains separate and does not restore
+free flags. Source/guidance delivery is not actual model adherence or proof of an
+exclusive cause for the owner's observed atomwise cycling. Existing profile,
+residual, calibration, completion, uncertainty and Save contracts remain intact.
