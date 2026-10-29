@@ -4155,3 +4155,37 @@ paint/diameter, hit/layout target, color/contrast, border, margins, centering an
 Stop/working/mode semantics remain unchanged. No per-instance override or new
 procedural QML logic is added. Actual theme/native appearance remains subject to
 ordinary visual qualification, not inferred from these source dimensions.
+
+## Native math image placement uses measured font descent
+
+FIRST AssistantMarkdown image placement resolves the original format font's em
+size through its actual pixel size or QFontInfo's resolved pixel size. A point
+font's line height is not its em size. Only the image format font is normalized;
+the surrounding body font and unchanged native formula image remain original.
+
+Qt Quick ImageObject positions the baseline using the format font's descent.
+The placement owner therefore retains an actually measured covering font rather
+than assuming a proportional size estimate plus one pixel covers formula descent.
+Checked doubling brackets a covering font, then measured bracket tightening keeps
+that proof. Initial requests/resolved em and every probe stay inside Qt6.11.2's
+documented unsigned-sixteen-bit pixel-size domain before native resolution or
+setPixelSize. The original stretch further bounds probes to representable signed
+integer arithmetic in Qt's FreeType pixel-size-times-sixty-four-times-stretch path;
+stretch is not changed. Point requests are preflighted using their own font DPI
+metadata and Qt's point-to-pixel rounding before QFontInfo resolves the native
+font. Both finite searches are bounded by this supported representation, not a
+formula/message quota; no font-metric monotonicity is needed for the retained
+covering candidate. Exhaustion, invalid requests or unrepresentable metrics retain
+the complete literal source through the original local fallback, without clamping
+the formula or sending an unsupported probe to Qt. Original currentness is
+rechecked before document mutation after font measurement.
+
+Padding uses the chosen font's measured descent, unchanged formula baseline,
+width scale and DPR. Native parsing, source/copy mapping, semantic blocks, lists,
+tables, centering, resource cap/cache, native families and ordinary Markdown retain
+their FIRST owners. No guessed default font, cap increase, renderer replay, new
+font asset or procedural QML is introduced. The source counterexample explains
+unit-dependent placement and an insufficient-descent escape; it does not establish
+the exclusive cause of the targeted missing sum. Equivalent-unit geometry,
+scaled symbols, formula completeness, real fallback and native/Mac qualification
+remain required before any runtime repair claim.

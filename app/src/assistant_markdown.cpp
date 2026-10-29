@@ -26,6 +26,9 @@
 #include <cmath>
 #include <stdexcept>
 #include <QFontMetricsF>
+#include <QFontInfo>
+#include <optional>
+#include <utility>
 #include <QTextBlock>
 #include <QTextList>
 #include <QTextTable>
@@ -39,6 +42,62 @@
 namespace edi_app {
 namespace {
 constexpr int mathSourceProperty=QTextFormat::UserProperty+4056;
+// Only the image format font changes. The native formula image and body font
+// retain their original sizes; Qt Quick uses this format font's actual descent.
+struct MathPlacementFont { QFont font; qreal descent=0; };
+std::optional<MathPlacementFont> mathPlacementFont(const QFont& original,qreal requiredDescent) {
+    if(!std::isfinite(requiredDescent) || requiredDescent<0)return std::nullopt;
+    // Qt 6.11.2 documents an unsigned-16-bit pixel-size domain. Its
+    // FreeType path also computes pixelSize * 64 * stretch in signed int.
+    constexpr int qtPixelLimit=std::numeric_limits<quint16>::max();
+    const auto pixelLimit=std::min(qtPixelLimit,std::numeric_limits<int>::max()/64/std::max(100,original.stretch()));
+    if(pixelLimit<=0)return std::nullopt;
+    auto pixels=original.pixelSize();
+    if(pixels==-1) {
+        // fontDpi reads metadata without resolving an engine. Bound Qt's own
+        // point-size conversion BEFORE QFontInfo can request native metrics.
+        const auto points=original.pointSizeF(),dpi=QFontMetricsF(original).fontDpi();
+        if(!std::isfinite(points) || points<=0 || !std::isfinite(dpi) || dpi<=0)return std::nullopt;
+        const auto requested=points*dpi/72;
+        if(!std::isfinite(requested) || requested<0 || requested>pixelLimit+1)return std::nullopt;
+        const auto rounded=std::floor(requested*100+0.5)/100;
+        if(rounded<0.5 || rounded>=pixelLimit+0.5)return std::nullopt;
+        pixels=QFontInfo(original).pixelSize();
+    }
+    if(pixels<=0 || pixels>pixelLimit)return std::nullopt;
+    auto measure=[&](int size)->std::optional<MathPlacementFont> {
+        if(size<=0 || size>pixelLimit)return std::nullopt;
+        auto font=original;font.setPixelSize(size);
+        const auto descent=QFontMetricsF(font).descent();
+        if(!std::isfinite(descent) || descent<=0)return std::nullopt;
+        return MathPlacementFont{font,descent};
+    };
+    auto candidate=measure(pixels);
+    if(!candidate)return std::nullopt;
+    if(candidate->descent>=requiredDescent)return candidate;
+    int lower=pixels,upper=pixels;
+    std::optional<MathPlacementFont> covering;
+    // Bracket within the supported API/engine domain, before native metric
+    // calls. No proportional metric estimate or out-of-domain clamp is a proof.
+    for(int step=0;step<std::numeric_limits<quint16>::digits;++step) {
+        const auto next=upper>pixelLimit/2?pixelLimit:upper*2;
+        if(next<=upper)break;
+        upper=next;candidate=measure(upper);
+        if(!candidate)return std::nullopt;
+        if(candidate->descent>=requiredDescent){covering=std::move(candidate);break;}
+        lower=upper;
+    }
+    if(!covering)return std::nullopt;
+    // Keep an actually measured covering candidate at every step. Correctness
+    // does not assume font metrics are proportional or globally monotonic.
+    for(int step=0;step<std::numeric_limits<quint16>::digits && upper-lower>1;++step) {
+        const auto middle=lower+(upper-lower)/2;
+        candidate=measure(middle);
+        if(candidate && candidate->descent>=requiredDescent){upper=middle;covering=std::move(candidate);}
+        else lower=middle;
+    }
+    return covering;
+}
 struct MathSpan { QString token,literal,formula;bool display=false; };
 struct MathSource { QString markdown;std::vector<MathSpan> spans; };
 bool escapedAt(QStringView text,qsizetype at) {
@@ -744,14 +803,11 @@ void AssistantMarkdown::render() noexcept {
                 }
                 const auto scale=logical.width()>available?available/logical.width():qreal(1);
                 const auto descent=picture.descent*scale;
-                auto placementFont=document->defaultFont();const auto base=QFontMetricsF(placementFont);
-                if(base.descent()<=0 || !std::isfinite(descent)){slot.insertText(span.literal,originalFormat);continue;}
-                if(base.descent()<descent) {
-                    const auto pixels=placementFont.pixelSize()>0?placementFont.pixelSize():base.height();
-                    placementFont.setPixelSize(static_cast<int>(std::ceil(pixels*descent/base.descent()))+1);
-                }
-                const auto fontDescent=QFontMetricsF(placementFont).descent();
-                if(fontDescent<descent){slot.insertText(span.literal,originalFormat);continue;}
+                const auto placement=mathPlacementFont(document->defaultFont(),descent);
+                if(!current())return;
+                if(!placement){slot.insertText(span.literal,originalFormat);if(!current())return;continue;}
+                const auto& placementFont=placement->font;
+                const auto fontDescent=placement->descent;
                 // Qt Quick ImageObject uses imageHeight - FORMAT font descent.
                 // Pad/paint the image so that this supported baseline is the actual
                 // measured formula baseline, including width scaling and DPR rounding.
