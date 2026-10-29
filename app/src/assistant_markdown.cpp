@@ -693,7 +693,6 @@ void AssistantMarkdown::render() noexcept {
         captured=captureMath(source_);
         document->setMarkdown(captured.markdown, QTextDocument::MarkdownFeatures(QTextDocument::MarkdownDialectGitHub) | QTextDocument::MarkdownNoHTML);
         if (!current()) return;
-        parsed=true;
         // Qt owns Markdown semantics. Tokens in href/title/reference metadata
         // are restored there, never installed as formulas or changed destinations.
         restoreMetadata();if(!current())return;
@@ -710,6 +709,9 @@ void AssistantMarkdown::render() noexcept {
             if (!current()) return;
             cursor = image;
         }
+        // Optional recovery may preserve this document only after all authored
+        // image objects have been stripped under the original passive policy.
+        parsed=true;
         const auto dpr=window()?window()->effectiveDevicePixelRatio():qreal(1);
         for(const auto& span:captured.spans) {
             auto slot=document->find(span.token);if(slot.isNull())continue;
