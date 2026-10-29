@@ -4252,3 +4252,75 @@ Save/Save As, multiple outputs/rows, old rows after a later turn, malformed or f
 paths, changed directory identity, cancelled/partial/refused Save and ordinary
 native folder handling require independent qualification. Source alone is not a
 runtime fix or a scientific acceptance claim.
+
+## Verified runtime publication reuse without a duplicate payload
+
+FIRST cmake/assistant_runtime.cmake still acquires its same target-scoped staging
+lock and freshly verifies the complete installed input manifest, membership,
+regular files, bytes, package/flavour/policy metadata and required executable modes
+on every configure. Default notices remain package-owned. Explicit dedicated
+inputs retain their original patch/source metadata and the same app-owned legal
+overlay; its complete regular no-link tree is freshly hashed, including overrides
+at the original destination paths. No receipt or timestamp is an authority.
+
+The final sorted closure and original content-address string are derived from
+these verified source hashes before a copy. An existing publication is verified
+in place for complete membership, no links, regular files, hashes and required
+executable modes. A corrupt published identity refuses and is never replaced.
+Only an absent publication creates the original stage and copies the same payload
+and dedicated legal overlay with original permissions. That candidate must match
+the captured closure before the original atomic rename; copy failure or changed
+source cannot silently publish a different identity. Existing readers stay intact.
+
+The publication digest, immutable generated verifier contents/name, build target,
+install/QtIFW/resource paths, signed bytes, versions and global-CLI exclusion stay
+under their original owners. Old generated verifiers are not overwritten. Reuse
+needs no transient duplicate complete tree, while verification remains mandatory.
+No acquisition path, cleanup service, persistent authority, user-data deletion or
+runtime Python is added. Actual default/dedicated unchanged-configure reuse,
+missing publication, corruption/link/membership/mode/metadata failures, concurrent
+lock and copy/space failure qualification remain required. Source alone is not a
+cache-hit, reduced elapsed-time or repaired native build claim.
+
+## Runtime sidecars refuse unsafe kinds before direct I/O
+
+The explicit selected manifest keeps its filesystem spelling. Absolute caller
+paths remain literal; relative caller paths receive only the original current
+source-directory prefix. No lexical collapse or realpath resolves symlink/..
+components or erases an absent component before the regular/nonlink check and
+READ. Both operations inspect the same selected path; default find_file remains
+unchanged. An unsafe terminal link or missing path still refuses rather than
+falling back to a different valid manifest.
+
+FIRST runtime staging verifies manifest and dedicated patch inputs as regular
+nonlink files before READ/hash. Module-owned cache components are checked one at
+a time before creation/use, and an existing stage.lock must be regular/nonlink
+before CMake opens it with the unchanged function-scope zero-timeout lock. That
+timeout alone cannot bound a FIFO open. Existing generated checker contents are
+still immutable; kind validation precedes both reading and including them.
+
+Before a missing-publication branch removes its original stage, the entire
+existing owned tree must consist of ordinary directories/regular files with no
+links. Unsafe roots/descendants refuse untouched. Fixed verifier.stage and native
+header.tmp slots likewise refuse unsafe objects before writes; ordinary regular
+stale temporaries may be unlinked then rewritten, avoiding truncation through a
+regular temporary hard link. The header template and existing generated header
+must be regular/nonlink before original configure_file; unchanged normal headers
+keep its original content/mtime behavior. No arbitrary cache cleanup is introduced.
+
+Build and install loaders validate the original cache/publication directories and
+regular nonlink checker before asking CMake to read it. The original verifier
+bytes/name, publication identity/contents, required executable-mode checks,
+install directory/resource layout, signed bytes, lock scope and no-copy verified
+reuse remain. Install's original checker include is guarded in the install driver
+rather than directly opening an unchecked SCRIPT. No other runtime acquisition,
+service, global CLI, package/version or scientific permission is added.
+
+These deterministic preexisting-kind checks are not an atomic filesystem snapshot
+against a noncooperating concurrent actor. Existing unsafe paths are refused,
+never followed/deleted/repaired into valid cache authority. Ordinary source/notice
+closure verification remains mandatory; no receipt/mtime shortcut replaces it.
+Independent manifest/patch/checker/lock/temp/component/stage/default/dedicated,
+regular-temp/reuse/missing-publication, install and corruption qualification is
+still owed. Source alone is not a bounded fault experiment, cache hit, elapsed
+saving or repaired configure/build claim.
