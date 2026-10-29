@@ -3100,6 +3100,7 @@ struct AssistantViewModel::State {
         Object native_state{{"creation_timestamp_utc",QDateTime::currentDateTimeUtc().toString(QStringLiteral("yyyyMMdd-HHmmss"))},
             {"calculating",target && target->calculating()},
             {"fitting",target && target->fit()->nativeRunning()},{"fit_undo_available",target && target->fitUndoAvailable()},{"show_actions",show_actions},{"calculations",calculations},{"interface_groups",interface_groups}};
+        if(target)native_state["project_modified"]=target->modified();
         if(!selected_structure_id.isEmpty())native_state["selected_structure_id"]=selected_structure_id;
         if(!selected_experiment_id.isEmpty())native_state["selected_experiment_id"]=selected_experiment_id;
         context["native_state"]=native_state;
