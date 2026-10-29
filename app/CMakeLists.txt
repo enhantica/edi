@@ -441,6 +441,8 @@ install(FILES ${EDI_APP_LICENCE_FILES} DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
 if(TARGET edi_assistant_native)
     target_link_libraries(edi_app_module PRIVATE edi_assistant_native)
+    # C++ observers include Session's native interface, as the real Main probe does.
+    target_link_libraries(edi_app_tests PRIVATE edi_assistant_native)
 endif()
 if(NOT EMSCRIPTEN)
     target_sources(edi_app_module PRIVATE src/codex_agent.hpp src/codex_agent.cpp
