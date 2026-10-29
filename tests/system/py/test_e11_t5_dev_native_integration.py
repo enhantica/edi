@@ -363,8 +363,7 @@ def wait_positive_tab(actor, name):
     """Normal setup only: wait for the actual loader-backed enabled tab, without revealing controls."""
     if any(c['name'] == 'home.start' and c['visible'] and c['enabled'] for c in actor.last['ui']['controls']):
         actor.command('click', name='home.start')
-    actor.until(lambda row: any(c['name'] == name and c['visible'] and c['enabled'] and c['exposed']
-                              for c in row['ui']['controls']))
+    actor.until(lambda row: _unique_input_control(row, name) is not None)
 
 def copied_estimate_project(tmp_path, *, overrides=True):
     destination = tmp_path / 'native-project'
@@ -418,22 +417,47 @@ def _whole_window_objects_expression():
             "return out;})()")
 
 
-def control_expression(name):
-    return '(' + _whole_window_objects_expression() + '.find(x=>x.objectName===' + json.dumps(name) + ')||null)'
+def _unique_named_object_expression(name, candidates, *, exposed=False):
+    # Readonly raw observers may be zero-size/nonvisual or intentionally hidden.
+    # Input mode is explicit and uses the FIRST probe's original center/clip
+    # condition, never a guessed point or implicit scroll/focus/page operation.
+    return ("(function(){const matches=(" + candidates + ").filter(x=>x.objectName===" + json.dumps(name) + ");"
+            "function current(x){return Qt.isQtObject(x)&&typeof x.mapToItem==='function'&&"
+            "x.Window.window===window&&x.visible===true&&x.enabled===true;}"
+            "function reachable(x){if(!current(x)||!(x.width>0)||!(x.height>0))return false;"
+            "const cx=x.width/2,cy=x.height/2,scene=x.mapToItem(null,cx,cy);"
+            "if(!Number.isFinite(scene.x)||!Number.isFinite(scene.y)||scene.x<0||scene.y<0||scene.x>window.width||scene.y>window.height)return false;"
+            "for(let p=x.parent;p;p=p.parent){if(!p.clip)continue;const point=x.mapToItem(p,cx,cy);"
+            "if(point.x<0||point.y<0||point.x>p.width||point.y>p.height)return false;}return true;}"
+            "const eligible=matches.filter(" + ("reachable" if exposed else "current") + ");"
+            "if(eligible.length===1)return eligible[0];if(eligible.length>1)return null;"
+            + ("return null;" if exposed else "return matches.length===1?matches[0]:null;") + "})()")
 
 
-def _scene_control_expression(name):
-    # Normal original controls and this test's observer Item belong to the
-    # current Main visual tree. Follow each actual visual child only: no QObject
-    # data graph, aliases or Set identity traversal. The finite acyclic parent
-    # tree bounds the read, and absence still returns null without creating UI.
-    return ("(function(){const root=window.contentItem,queue=root?[root]:[];"
-            "const panel=typeof assistantPanel==='undefined'?null:assistantPanel;"
-            "if(panel&&panel.assistant===Session.assistant&&panel.parent&&panel.parent.Window.window===window){"
-            "const content=panel.contentItem;if(content&&content!==root)queue.push(content);}"
-            "while(queue.length){const x=queue.shift();if(x.objectName===" + json.dumps(name) + ")return x;"
-            "const children=x.children;for(let i=0;i<children.length;i++){const child=children[i];"
-            "if(child&&child.parent===x)queue.push(child);}}return null;})()")
+def _unique_input_control(value, name, *, fully=False):
+    # Actual C++ observations, not a second Python geometry computation.
+    rows = [row for row in value['ui']['controls'] if row['name'] == name
+            and row.get('same_window') is True and row.get('input_reachable') is True
+            and (not fully or row['fully_exposed'])]
+    return rows[0] if len(rows) == 1 else None
+
+
+def control_expression(name, *, exposed=False):
+    return _unique_named_object_expression(name, _whole_window_objects_expression(), exposed=exposed)
+
+
+def _scene_control_expression(name, *, exposed=False):
+    # Original finite visual-parent trees only. An alternate Popup content root
+    # is added only when it is outside the first tree; one QObject is never
+    # counted twice merely because two traversal roots mention it.
+    candidates = ("(function(){const root=window.contentItem,queue=root?[root]:[],out=[];"
+                  "const panel=typeof assistantPanel==='undefined'?null:assistantPanel;"
+                  "if(panel&&panel.assistant===Session.assistant&&panel.parent&&panel.parent.Window.window===window){"
+                  "const content=panel.contentItem;let covered=false;for(let p=content;p;p=p.parent)if(p===root){covered=true;break;}"
+                  "if(content&&!covered)queue.push(content);}"
+                  "while(queue.length){const x=queue.shift();out.push(x);const children=x.children;"
+                  "for(let i=0;i<children.length;i++){const child=children[i];if(child&&child.parent===x)queue.push(child);}}return out;})()")
+    return _unique_named_object_expression(name, candidates, exposed=exposed)
 
 
 def tool_call(tool, identity, **arguments):
@@ -9408,11 +9432,81 @@ def _assert_exact_original_admitted_user_input(actor, record, original_text, *, 
 # scroll forcing. Native search draft and physical option input remain original.
 def _watch_original_alias_search_focus(actor, marker):
     source = r'''(function(){const project=Session.project,vm=Session.assistant;
-        const probe=Qt.createQmlObject('import QtQuick; Item {id:focusProbe;property var facts:[];property var boxes:[];property var fields:[];property bool finished:false;property var scan:null;property var ready:null;Timer {interval:16;repeat:true;running:!focusProbe.finished;onTriggered:if(focusProbe.scan)focusProbe.scan();}}',window.contentItem);probe.objectName=MARKER;
+        const probe=Qt.createQmlObject('import QtQuick; Item {id:focusProbe;property var facts:[];property var boxes:[];property var fields:[];property var groups:[];property var groupFacts:[];property var groupGaps:[];property bool finished:false;property var scan:null;property var ready:null;Timer {interval:16;repeat:true;running:!focusProbe.finished;onTriggered:if(focusProbe.scan)focusProbe.scan();}}',window.contentItem);probe.objectName=MARKER;
         function current(){return Qt.isQtObject(project)&&Qt.isQtObject(vm)&&Session.project===project&&Session.assistant===vm;}
         function rect(x){if(!Qt.isQtObject(x))return null;const p=x.mapToItem(null,0,0);return {x:p.x,y:p.y,width:x.width,height:x.height};}
         function inside(x,owner){for(let p=x;p;p=p.parent)if(p===owner)return true;return false;}
         function descendants(root){const out=[],todo=root?[root]:[];while(todo.length){const x=todo.pop();out.push(x);const children=x.children||[];for(let i=0;i<children.length;i++)if(children[i].parent===x)todo.push(children[i]);}return out;}
+        function observing(){return Qt.isQtObject(probe)&&typeof probe.finished==='boolean'&&!probe.finished&&Array.isArray(probe.groupFacts)&&Array.isArray(probe.groupGaps);}
+        const analysis=project.analysis;
+        function identity(x){return Qt.isQtObject(x)?String(x):null;}
+        function gap(rec,code,detail){if(!observing())return;const key=rec.groupIdentity+'|'+code+'|'+detail;
+            for(const old of probe.groupGaps)if(old.key===key)return;
+            probe.groupGaps.push({key:key,group:rec.groupIdentity,name:rec.name,code:code,detail:detail});}
+        function eventPoint(receiver,event){if(!event||typeof event.x!=='number'||typeof event.y!=='number'||!Qt.isQtObject(receiver))return null;
+            const p=receiver.mapToItem(null,event.x,event.y);return {localX:event.x,localY:event.y,sceneX:p.x,sceneY:p.y,
+                button:event.button,buttons:event.buttons,accepted:event.accepted,wasHeld:event.wasHeld};}
+        function groupSnap(rec,kind,receiver,event){const g=rec.group,t=rec.title,groupAlive=Qt.isQtObject(g),titleAlive=Qt.isQtObject(t);
+            const parents=[];if(groupAlive)for(let p=g;p;p=p.parent)parents.push({object:identity(p),name:p.objectName,
+                current:typeof p.current==='boolean'?p.current:null,enabled:p.enabled,visible:p.visible,clip:p.clip,bounds:rect(p)});
+            const models=[];if(groupAlive&&g.contentItem)for(const x of descendants(g.contentItem))
+                if(x.objectName==='relations.aliases'||x.objectName==='relations.constraints')models.push({object:identity(x),name:x.objectName,analysisSame:x.analysis===analysis});
+            return {ordinal:probe.groupFacts.length,kind:kind,groupName:rec.name,originalGroup:rec.groupIdentity,originalTitle:rec.titleIdentity,
+                ownerCurrent:current(),analysisSame:current()&&project.analysis===analysis,groupAlive:groupAlive,titleAlive:titleAlive,
+                originalTitleStillDeclared:groupAlive&&titleAlive&&g.titleArea===t,
+                groupSameWindow:groupAlive&&g.Window.window===window,titleSameWindow:titleAlive&&t.Window.window===window,
+                groupVisible:groupAlive?g.visible:null,groupEnabled:groupAlive?g.enabled:null,collapsed:groupAlive?g.collapsed:null,
+                groupBounds:rect(g),titleBounds:rect(t),titleVisible:titleAlive?t.visible:null,titleEnabled:titleAlive?t.enabled:null,
+                titlePressed:titleAlive?t.pressed:null,receiver:identity(receiver),receiverName:Qt.isQtObject(receiver)?receiver.objectName:null,
+                receiverSameWindow:Qt.isQtObject(receiver)&&receiver.Window.window===window,receiverBounds:rect(receiver),
+                receiverPressed:Qt.isQtObject(receiver)&&typeof receiver.pressed==='boolean'?receiver.pressed:null,
+                pressedButtons:Qt.isQtObject(receiver)&&typeof receiver.pressedButtons==='number'?receiver.pressedButtons:null,
+                acceptedButtons:Qt.isQtObject(receiver)&&typeof receiver.acceptedButtons==='number'?receiver.acceptedButtons:null,
+                lastMouseX:Qt.isQtObject(receiver)&&typeof receiver.mouseX==='number'?receiver.mouseX:null,
+                lastMouseY:Qt.isQtObject(receiver)&&typeof receiver.mouseY==='number'?receiver.mouseY:null,
+                eventPoint:eventPoint(receiver,event),viewportAncestors:groupAlive?viewports(g):[],ancestorOwners:parents,contentAnalysisOwners:models,
+                mainActive:window.active,activeFocus:identity(window.activeFocusItem),
+                exclusiveMouseGrabber:'UNEXPOSED_TO_ORIGINAL_PUBLIC_QML'};}
+        function recordGroup(rec,kind,receiver,event){if(!observing())return;try{probe.groupFacts.push(groupSnap(rec,kind,receiver,event));}catch(error){if(observing())gap(rec,'snapshot_unavailable',kind+':'+String(error));}}
+        function connectGroup(rec,object,signal,kind){if(!Qt.isQtObject(object)){gap(rec,'original_object_unavailable',kind);return;}
+            let source=null;try{source=object[signal];}catch(error){gap(rec,'signal_read_unavailable',signal);return;}
+            if(!source||typeof source.connect!=='function'){gap(rec,'signal_not_exposed',signal+':'+kind);return;}
+            const originalReceiver=identity(object);
+            source.connect(function(event){if(!observing())return;
+                if(signal==='destroyed') {
+                    // Destruction notification is observed without invoking any
+                    // method/property on the object whose destructor is active.
+                    probe.groupFacts.push({ordinal:probe.groupFacts.length,kind:kind,groupName:rec.name,
+                        originalGroup:rec.groupIdentity,originalTitle:rec.titleIdentity,destroyedReceiver:originalReceiver,
+                        ownerCurrent:current(),qualification:'original destruction signal; no destroying-object getter was read'});
+                } else recordGroup(rec,kind,object,event);
+            });}
+        function bindGroup(g){for(const rec of probe.groups)if(rec.group===g)return;
+            const t=g.titleArea,rec={group:g,title:t,name:g.objectName,groupIdentity:identity(g),titleIdentity:identity(t),groupInvalid:false,titleInvalid:false,declaredTitle:t};
+            probe.groups.push(rec);recordGroup(rec,'original_group_bound',g,null);
+            connectGroup(rec,g,'collapsedChanged','original_group_collapsed_changed');
+            connectGroup(rec,g,'destroyed','original_group_destroyed_signal');
+            connectGroup(rec,t,'clicked','original_title_clicked');
+            connectGroup(rec,t,'pressedChanged','original_title_pressed_changed');
+            connectGroup(rec,t,'released','original_title_released');
+            connectGroup(rec,t,'canceled','original_title_canceled');
+            connectGroup(rec,t,'destroyed','original_title_destroyed_signal');
+            let count=0;if(Qt.isQtObject(t))for(const x of t.children||[]) {
+                if(x.parent!==t||typeof x.acceptedButtons!=='number'||typeof x.pressedButtons!=='number'||typeof x.mouseX!=='number'||typeof x.mouseY!=='number')continue;
+                ++count;recordGroup(rec,'original_title_mousearea_candidate',x,null);
+                connectGroup(rec,x,'pressedChanged','original_title_mousearea_pressed_changed');
+                connectGroup(rec,x,'released','original_title_mousearea_released');
+                connectGroup(rec,x,'clicked','original_title_mousearea_clicked');
+                connectGroup(rec,x,'canceled','original_title_mousearea_canceled');
+                connectGroup(rec,x,'destroyed','original_title_mousearea_destroyed_signal');
+            }
+            if(count===0)gap(rec,'no_original_mousearea_candidate','declared title children expose no original mouse coordinates/buttons');
+            gap(rec,'exclusive_mouse_grabber_unexposed','QQuickWindow::mouseGrabberItem is C++ public only, not an original QML property/invokable; no guessed getter/filter/handler added');}
+        function observeGroupLifetimes(){for(const rec of probe.groups) {
+            if(!Qt.isQtObject(rec.group)&&!rec.groupInvalid){rec.groupInvalid=true;recordGroup(rec,'original_group_observed_invalid',null,null);}
+            if(!Qt.isQtObject(rec.title)&&!rec.titleInvalid){rec.titleInvalid=true;recordGroup(rec,'original_title_observed_invalid',null,null);}
+            if(Qt.isQtObject(rec.group)){const title=rec.group.titleArea;if(title!==rec.declaredTitle){rec.declaredTitle=title;recordGroup(rec,'declared_title_owner_changed',null,null);}}
+        }}
         function groupFor(box){for(let p=box;p;p=p.parent)if(p.objectName==='group.alias')return p;return null;}
         function viewFor(box){for(let p=box;p;p=p.parent)if(typeof p.contentY==='number'&&typeof p.contentHeight==='number')return p;return null;}
         function viewports(box){const out=[];for(let p=box;p;p=p.parent)if(typeof p.contentY==='number'&&typeof p.contentHeight==='number')out.push({object:String(p),name:p.objectName,contentY:p.contentY,originY:p.originY,contentHeight:p.contentHeight,height:p.height,interactive:p.interactive,atYBeginning:p.atYBeginning,atYEnd:p.atYEnd,clip:p.clip,bounds:rect(p)});return out;}
@@ -9427,15 +9521,15 @@ def _watch_original_alias_search_focus(actor, marker):
         function search(box){const popup=box.popup,header=popup&&popup.contentItem?popup.contentItem.headerItem:null;
             return descendants(header).find(function(x){return x.objectName==='comboBox.search';})||null;}
         function bindField(box){const field=search(box);if(!field||probe.fields.indexOf(field)>=0)return;
-            probe.fields.push(field);field.activeFocusChanged.connect(function(){if(!probe.finished&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_focus_changed',box,field));});
-            field.textChanged.connect(function(){if(!probe.finished&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_text_changed',box,field));});
+            probe.fields.push(field);field.activeFocusChanged.connect(function(){if(observing()&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_focus_changed',box,field));});
+            field.textChanged.connect(function(){if(observing()&&Qt.isQtObject(box)&&Qt.isQtObject(field))probe.facts.push(snap('search_text_changed',box,field));});
             probe.facts.push(snap('original_search_header_observed',box,field));}
         function bind(box){if(probe.boxes.indexOf(box)>=0)return;probe.boxes.push(box);
-            box.popup.aboutToShow.connect(function(){if(!probe.finished&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_about_to_show',box,search(box)));}});
-            box.popup.opened.connect(function(){if(!probe.finished&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_opened',box,search(box)));}});
-            box.popup.closed.connect(function(){if(!probe.finished&&Qt.isQtObject(box))probe.facts.push(snap('popup_closed',box,search(box)));});
-            box.activated.connect(function(){if(!probe.finished&&Qt.isQtObject(box))probe.facts.push(snap('choice_activated',box,search(box)));});bindField(box);}
-        probe.scan=function(){if(!current()||probe.finished)return;for(const x of descendants(window.contentItem))if(String(x.objectName).startsWith('alias.parameter.'))bind(x);for(const box of probe.boxes)if(Qt.isQtObject(box))bindField(box);};
+            box.popup.aboutToShow.connect(function(){if(observing()&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_about_to_show',box,search(box)));}});
+            box.popup.opened.connect(function(){if(observing()&&Qt.isQtObject(box)){bindField(box);probe.facts.push(snap('popup_opened',box,search(box)));}});
+            box.popup.closed.connect(function(){if(observing()&&Qt.isQtObject(box))probe.facts.push(snap('popup_closed',box,search(box)));});
+            box.activated.connect(function(){if(observing()&&Qt.isQtObject(box))probe.facts.push(snap('choice_activated',box,search(box)));});bindField(box);}
+        probe.scan=function(){if(!observing())return;observeGroupLifetimes();if(!current())return;for(const x of descendants(window.contentItem)){if(String(x.objectName).startsWith('alias.parameter.'))bind(x);if(x.objectName==='group.alias'||x.objectName==='group.constraint')bindGroup(x);}for(const box of probe.boxes)if(Qt.isQtObject(box))bindField(box);};
         probe.ready=function(control){if(!current())return null;probe.scan();for(const box of probe.boxes)if(Qt.isQtObject(box)&&box.objectName===control){const field=search(box);return snap('current_search_readiness',box,field);}return null;};
         probe.scan();return true;})()'''.replace('MARKER', json.dumps(marker))
     assert qml(actor, source), (
@@ -9480,10 +9574,10 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
         actor.command('click', name='assistant.toggle')
     actor.until(lambda _value: not _original_toolbar_pane_state(actor)['visible'])
     before, expected_aliases, parameters, names, first_undos, second_undos = _reference_original_two_alias_prefix(actor)
-    actor.until(lambda value: any(row['name']=='sideBar.tab.basic' and row['fully_exposed'] and row['enabled'] for row in value['ui']['controls']))
+    actor.until(lambda value: _unique_input_control(value, 'sideBar.tab.basic', fully=True) is not None)
     actor.command('click', name='sideBar.tab.basic')
-    actor.until(lambda value: any(row['name']=='parameters.category' and row['fully_exposed'] and row['enabled'] for row in value['ui']['controls']))
-    category = _scene_control_expression('parameters.category')
+    actor.until(lambda value: _unique_input_control(value, 'parameters.category', fully=True) is not None)
+    category = _scene_control_expression('parameters.category', exposed=True)
     actor.command('click', name='parameters.category')
     actor.until(lambda _value: qml(actor, '(function(){const box=' + category + ';return box&&box.popup.visible&&box.popup.opened;})()'))
     prior_filter = qml(actor, '(function(){const box=' + category + ';return {control:String(box),popup:String(box.popup),opened:box.popup.opened,visible:box.popup.visible,selectedIndex:box.currentIndex,selectedText:box.displayText,focus:String(window.activeFocusItem)};})()')
@@ -9511,22 +9605,45 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
     actor.configure_turns([[call]]);actor.connect();_session_request_with_original_disclosure(actor,
         'Create these two explicit actual offered aliases and the disabled relation once through the original visible controls.')
     witness = _scene_control_expression(marker);interruption = None
-    if interference != 'none':
-        def first_search_is_pending(value):
-            facts = qml(actor, '(' + witness + ').ready("alias.parameter.0")')
-            aliases = value['ui']['project']['aliases']
-            return facts and facts['ownerCurrent'] and facts['popupVisible'] and facts['popupOpened'] \
-                and facts['fieldInOriginalPopup'] and facts['fieldActiveFocus'] and facts['actualFocusIsField'] \
-                and value['ui']['can_cancel'] and len(aliases)==1 and aliases[0]['id']=='e11_focus_first' \
-                and aliases[0]['parameter'] != names[0]
-        actor.until(first_search_is_pending, visible_progress=True)
-        interruption = qml(actor, '(' + witness + ').ready("alias.parameter.0")')
-        if interference == 'user_search':
-            actor.command('manual_text', text='e11 genuine user search')
+    observation = None
+    try:
+        if interference != 'none':
+            def first_search_is_pending(value):
+                facts = qml(actor, '(' + witness + ').ready("alias.parameter.0")')
+                aliases = value['ui']['project']['aliases']
+                return facts and facts['ownerCurrent'] and facts['popupVisible'] and facts['popupOpened'] \
+                    and facts['fieldInOriginalPopup'] and facts['fieldActiveFocus'] and facts['actualFocusIsField'] \
+                    and value['ui']['can_cancel'] and len(aliases)==1 and aliases[0]['id']=='e11_focus_first' \
+                    and aliases[0]['parameter'] != names[0]
+            actor.until(first_search_is_pending, visible_progress=True)
+            interruption = qml(actor, '(' + witness + ').ready("alias.parameter.0")')
+            if interference == 'user_search':
+                actor.command('manual_text', text='e11 genuine user search')
+            else:
+                actor.command('cancel')
+        actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] in ['idle','interrupted'], visible_progress=True)
+    finally:
+        primary_failure = sys.exc_info()[0] is not None
+        observation_error = None
+        group_diagnostic = {'status':'UNOBSERVED','exclusive_mouse_grabber':'UNEXPOSED_TO_ORIGINAL_PUBLIC_QML',
+            'qualification':'Public original GroupBox/title/MouseArea observations only; callback order is not handler-entry order, and pressed/canceled does not identify the exclusive grab owner.'}
+        if not getattr(actor, '_stream_unusable', None) and actor.process.poll() is None:
+            try:
+                observation = qml(actor, '(function(){const o=' + witness
+                    + ';if(!o)return null;o.finished=true;return {focus:o.facts,groups:o.groupFacts,gaps:o.groupGaps};})()')
+                if observation is not None:
+                    group_diagnostic.update(status='OBSERVED',facts=observation.get('groups',[]),gaps=observation.get('gaps',[]))
+                else:
+                    group_diagnostic['gap']='original test-owned focus witness unavailable'
+            except Exception as error:
+                observation_error=error
+                group_diagnostic.update(gap='original passive observation failed',error_class=type(error).__name__,error=str(error)[:1000])
         else:
-            actor.command('cancel')
-    actor.until(lambda value: bool(actor.responses()) and value['ui']['state'] in ['idle','interrupted'], visible_progress=True)
-    qml(actor, '(' + witness + ').finished=true');facts=qml(actor, '(' + witness + ').facts')
+            group_diagnostic['gap']='original command stream unusable or actual child already exited; no successor observation command sent'
+        (actor.folder/'original-group-title-observations.json').write_text(json.dumps(group_diagnostic,indent=2)+'\n')
+        if observation_error is not None and not primary_failure:
+            raise observation_error
+    facts = observation['focus'] if observation is not None else None
     choices = _scene_control_expression(marker + '.choices');qml(actor, '(' + choices + ').finished=true')
     row_facts = qml(actor, '(' + choices + ').facts')
     response=actor.responses()[0];value=json.loads(response['result']['contentItems'][0]['text'])
@@ -9534,6 +9651,7 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
     (actor.folder/'original-alias-popup-focus.json').write_text(json.dumps({
         'original_call':call,'actual_reply':response,'prior_filter_popup':prior_filter,'initial_original_alias_group':initial_group,
         'actual_search_focus_facts':facts,'actual_original_choice_facts':row_facts,
+        'original_group_title_observations':group_diagnostic,
         'actual_interference_boundary':interruption,'original_project':before,'after_project':after,
         'scope':'Existing real search-header focus/choice owners only. Prior filter was visited/closed; changed filter or overflow is not claimed unless actual facts show it.'},indent=2))
     if interference == 'none':

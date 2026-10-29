@@ -356,13 +356,43 @@ int main(int argc,char** argv) {
     bool publication_undo_seen=false;
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::showingActionsChanged,
         [&] {action_transitions.push_back(observed->assistant()->showingActions());});
+    // The same original full-center predicate owns named input selection,
+    // its readonly readiness observation, and the final pre-delivery check.
+    // Never choose a hidden first match or retarget the point into a viewport.
+    auto input_reachable=[&](QObject* object)->bool {
+        auto* item=qobject_cast<QQuickItem*>(object);
+        return window && item && item->window()==window && item->isVisible() && item->isEnabled() &&
+            item->width()>0 && item->height()>0 &&
+            exposed_rect(item).contains(QPointF(item->width()/2,item->height()/2));
+    };
+    auto find_control=[&](const QString& name)->QObject* {
+        QObject* match=nullptr;
+        for(auto* object:objects(window)) {
+            if(object->objectName()!=name || !input_reachable(object))continue;
+            if(match)return nullptr; // Ambiguity refuses before any input.
+            match=object;
+        }
+        return match;
+    };
     auto find=[&](const QString& name)->QObject* {
-        for(auto* object:objects(window)) if(object->objectName()==name) return object;
-        return nullptr;
+        // Readonly observers include nonvisual/zero-size objects and deliberate
+        // hidden-state checks. They are NOT physical-input readiness proofs.
+        QObject* sole=nullptr;QObject* current=nullptr;int count=0,current_count=0;
+        for(auto* object:objects(window)) {
+            if(object->objectName()!=name)continue;
+            sole=object;++count;
+            auto* item=qobject_cast<QQuickItem*>(object);
+            if(item && item->window()==window && item->isVisible() && item->isEnabled()) {
+                current=object;++current_count;
+            }
+        }
+        if(current_count==1)return current;
+        if(current_count>1)return nullptr;
+        return count==1?sole:nullptr; // Exact unique observation only; never first-of-many.
     };
     auto click=[&](QObject* object) {
         auto* item=qobject_cast<QQuickItem*>(object);
-        if(!item || !item->isVisible() || !item->isEnabled()) throw std::runtime_error("requested real UI control is not reachable");
+        if(!input_reachable(item)) throw std::runtime_error("requested real UI control is not reachable");
         const auto center=item->mapToScene(QPointF(item->width()/2,item->height()/2)).toPoint();
         QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,center);drain();
     };
@@ -443,7 +473,8 @@ int main(int argc,char** argv) {
                 texts.push_back(text_observation(object));
             if(auto* item=qobject_cast<QQuickItem*>(object);item&&!object->objectName().isEmpty())
                 controls.push_back(Object{{"name",object->objectName()},{"visible",item->isVisible()},
-                    {"enabled",item->isEnabled()},{"width",item->width()},{"height",item->height()},
+                    {"enabled",item->isEnabled()},{"same_window",item->window()==window},{"input_reachable",input_reachable(item)},
+                    {"width",item->width()},{"height",item->height()},
                     {"x",item->mapToScene(QPointF()).x()},{"y",item->mapToScene(QPointF()).y()},
                     {"exposed",!exposed_rect(item).isEmpty()},
                     {"fully_exposed",exposed_rect(item).contains(item->boundingRect())},
@@ -735,7 +766,7 @@ int main(int argc,char** argv) {
                 try {edi_app::configure_engine(*engine,std::move(candidate));}
                 catch(const std::invalid_argument&) {rejected=true;}
                 result={{"rejected",rejected},{"original_preserved",engine->singletonInstance<edi_app::Session*>("edi.app","Session")==observed}};
-            } else if(op=="sign_in") {click(find("assistant.connection"));if(!accept_dialog()) throw std::runtime_error("real connection disclosure dialog not available");}
+            } else if(op=="sign_in") {click(find_control("assistant.connection"));if(!accept_dialog()) throw std::runtime_error("real connection disclosure dialog not available");}
             else if(op=="accept_context") observed->assistant()->signIn();
             else if(op=="refresh_usage") observed->assistant()->refreshUsage();
             else if(op=="tool_specs") result={{"tools",edi_app::assistant_native_tool_specs()}};
@@ -846,7 +877,7 @@ int main(int argc,char** argv) {
                 if(expression.hasError())throw std::runtime_error(expression.error().toString().toStdString());
                 result={{"value",QJsonValue::fromVariant(value)}};
             } else if(op=="session_wheel") {
-                QPointer<QQuickItem> target=qobject_cast<QQuickItem*>(find("assistant.sessions.list"));
+                QPointer<QQuickItem> target=qobject_cast<QQuickItem*>(find_control("assistant.sessions.list"));
                 const int delta=input["angle_y"].toInt(-120);
                 if(!target || target->window()!=window || !target->isVisible() || !target->isEnabled()
                     || target->width()<=0 || target->height()<=0 || (delta!=-120 && delta!=120))
@@ -955,9 +986,13 @@ int main(int argc,char** argv) {
                 result={{"added",observed->assistant()->addSelectedFiles(input["token"].toString(),files)}};
             }
             else if(op=="send_text") {
-                auto* composer=find("assistant.composer");
+                QPointer<QObject> composer=find_control("assistant.composer");
+                const QPointer<edi_app::Session> original_session=observed;
+                const QPointer<edi_app::ProjectViewModel> original_project=observed?observed->project():nullptr;
                 if(!composer || !composer->setProperty("text",input["text"].toString())) throw std::runtime_error("actual composer text property unavailable");
-                click(find("assistant.send"));
+                if(!composer || observed!=original_session || !observed || observed->project()!=original_project ||
+                    find_control("assistant.composer")!=composer)throw std::runtime_error("original composer owner retired before Send; no input was sent");
+                click(find_control("assistant.send"));
             } else if(op=="accept_dialog") result={{"accepted",accept_dialog()}};
             else if(op=="sc_input") {
                 if(!observed->project())throw std::runtime_error("SC input witness requires actual current native project");
@@ -1076,7 +1111,7 @@ int main(int argc,char** argv) {
             else if(op=="clear_ui_sequence") ui_sequence=Array{};
             else if(op=="dialog_ok") {
                 auto* dialog=find(input["name"].toString());
-                if(!dialog)throw std::runtime_error("actual original dialog is absent");
+                if(!dialog || !dialog->property("visible").toBool())throw std::runtime_error("actual original visible dialog is absent");
                 const auto role=input["role"].toString("ok");
                 const QMap<QString,QString> expressions{{"ok","standardButton(Dialog.Ok)"},{"save","standardButton(Dialog.Save)"},
                     {"discard","standardButton(Dialog.Discard)"},{"cancel","standardButton(Dialog.Cancel)"}};
@@ -1093,7 +1128,7 @@ int main(int argc,char** argv) {
                     {"pressed_changes",pressed?pressed->count():0},{"original_dialog_after",bool(original_dialog)},
                     {"original_button_after",bool(original_button)}};
             }
-            else if(op=="click") click(find(input["name"].toString()));
+            else if(op=="click") click(find_control(input["name"].toString()));
             else if(op=="open") result={{"opened",observed->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
             else if(op=="create") result={{"created",observed->createProject(input["name"].toString(),"independent fixture")}};
             else if(op=="close_project") observed->closeProject();
@@ -1470,7 +1505,7 @@ int main(int argc,char** argv) {
                 observed->assistant()->send(input["text"].toString());
                 bool accepted=false;
                 if(observed->assistant()->contextConsentRequired()) {
-                    auto* button=find("assistant.connection");
+                    auto* button=find_control("assistant.connection");
                     auto* item=qobject_cast<QQuickItem*>(button);
                     if(!item || !item->isVisible() || !item->isEnabled() ||
                        !QMetaObject::invokeMethod(button,"clicked",Qt::DirectConnection))
@@ -1521,7 +1556,7 @@ int main(int argc,char** argv) {
                 result={{"opened",observed->openProject(QUrl::fromLocalFile(input["path"].toString()))}};
             } else if(op=="resize") {window->setMinimumWidth(400);window->resize(input["width"].toInt(),768);}
             else if(op=="popup") {
-                auto* control=find(input["name"].toString());
+                auto* control=find_control(input["name"].toString());
                 auto* popup=control?control->property("popup").value<QObject*>():nullptr;
                 if(!popup || !QMetaObject::invokeMethod(popup,"open")) throw std::runtime_error("real combo popup unavailable");
             } else if(op=="click_link") {
