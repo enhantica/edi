@@ -25,8 +25,8 @@ EaElements.Label {
     property double rotationStartedAt: 0
     property double variantSwitchDeadline: 0
     readonly property bool animating: working && EaStyle.Times.translationChange > 0
-    readonly property real iconExtent: AppSizes.assistantIconExtent
-    readonly property real rotationExtent: variant === 2 ? iconExtent * Math.SQRT2 : iconExtent
+    readonly property real iconExtent: AppSizes.assistantIndicatorExtent
+    readonly property real rotationExtent: iconExtent
     leftPadding: rotationExtent + AppSizes.unit * 0.5
     // Use the rendered Label baseline, including its actual padding/alignment.
     readonly property real textInkCenter: baselineOffset + textInk.tightBoundingRect.y + textInk.tightBoundingRect.height / 2
@@ -134,9 +134,9 @@ EaElements.Label {
                 visible: workStatus.variant === 2
                 width: robotMetrics.tightBoundingRect.width
                 height: robotMetrics.tightBoundingRect.height
-                // Keep accepted upright ink size; reserve its safe rotation
-                // envelope outside the actual icon circle instead of shrinking it.
-                scale: Math.max(width, height) > 0 ? workStatus.iconExtent / Math.max(width, height) : 1
+                // The ink rectangle's diagonal bounds every rotated extent,
+                // so the whole cycle stays inside the same borderless circle.
+                scale: width > 0 || height > 0 ? workStatus.iconExtent / Math.sqrt(width * width + height * height) : 1
                 EaElements.Label {
                     id: robotGlyph
                     x: -robotMetrics.tightBoundingRect.x

@@ -3957,3 +3957,38 @@ original composer colors/hover/disabled style and no border. Existing requested/
 effective mode, Stop dispatch, press retention, accessibility and status placement
 are untouched. This is declarative source styling only; actual light/dark layout,
 rotating-glyph bounds and both controls still require rendered qualification.
+
+## Status boundary rhythm and borderless indicator size
+
+FIRST assistantGroup counts spacing only between actually visible working/mode/
+Stop items. A hidden AssistantWorking has zero allocated width and no leading
+mode gap. The group's boundary before Fit uses the existing Fit spacing on both
+sides of that separator; its ordinary outer bar margin remains unchanged when
+Fit is absent. Existing separators, requested/effective mode, Stop receiver,
+press retention and narrow-width item fitting are preserved; alternative grouping
+designs remain previews, not an elected style replacement.
+
+FIRST AppSizes retains the Stop/eye outer diameter and original glyph sizes. Its
+existing one-pixel eye/Success border is named once; the borderless indicator
+uses the resulting inner diameter. Both AssistantWorking consumers share it,
+including a full-cycle robot bound: the measured ink rectangle is scaled by
+inner diameter divided by its diagonal, so every rotation stays within that same
+circle. No larger square-root-of-two envelope remains. Their variants, centering,
+animation timing and colors do not change. Stop's explicit
+border is already zero and FIRST ToolButton adds no inherited outline, so neither
+its fill nor contrast/size is changed to simulate border removal. These source
+bounds do not establish optical equality or actual rendered layout; light/dark,
+chat-visible/hidden, Fit-visible/absent, narrow width, press retention and rotating
+variant bounds still require genuine app qualification.
+
+## Idle manual-takeover status presentation
+
+FIRST Main retains its project/empty manual-takeover latch to preserve the user's
+chosen project sidebar until explicit Assistant reopening. FIRST StatusBar no
+longer treats that latch alone as an idle action: its group and Stop presentation
+require genuine canCancel when manual takeover is the only reason to show them.
+Working/showing-actions and original pressed-mode/Stop ownership keep their
+existing visibility. No lifecycle latch, cancellation, reply, scientific effect
+or restoration policy is cleared merely to hide a control. The source explains
+an idle disabled Stop retained by this path; actual owner screenshot identity and
+full rendered idle/active/press qualification remain separate evidence.
