@@ -58,6 +58,7 @@
 #include <QFile>
 #include <QDir>
 #include <QJsonValue>
+#include <QVariant>
 #include <QMetaMethod>
 #include <QMetaProperty>
 #include <QPointer>
@@ -146,6 +147,20 @@ std::vector<QObject*> objects(QObject* root) {
     };
     visit(root);return result;
 }
+// Tests-only readonly view of the FIRST native QObject/visual traversal above.
+// No app registry, state setter, retention cache or JavaScript equality set.
+class ReadOnlyAppObjects final:public QObject {
+    Q_OBJECT
+    const QPointer<QQuickWindow> window_;
+public:
+    explicit ReadOnlyAppObjects(QQuickWindow* window,QObject* parent):QObject(parent),window_(window) {}
+    Q_INVOKABLE QVariantList snapshot() const {
+        QVariantList result;
+        if(!window_)return result;
+        for(auto* object:objects(window_))result.push_back(QVariant::fromValue(object));
+        return result;
+    }
+};
 Object text_observation(QObject* object) {
     auto* item=qobject_cast<QQuickItem*>(object);
     const auto text=object->property("text").toString();
@@ -308,6 +323,7 @@ int main(int argc,char** argv) {
     if(engine->rootObjects().isEmpty()) return 96;
     QPointer<QQuickWindow> window=qobject_cast<QQuickWindow*>(engine->rootObjects().front());
     if(!window) return 95;
+    engine->rootContext()->setContextProperty("testAppObjects",new ReadOnlyAppObjects(window,engine.get()));
     QQmlExpression initial_owner(qmlContext(window),window,"Session.assistant");
     auto* actual_main_assistant=initial_owner.evaluate().value<QObject*>();
     if(initial_owner.hasError() || singleton!=observed || actual_main_assistant!=observed->assistant()

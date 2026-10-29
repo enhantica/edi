@@ -404,15 +404,10 @@ def qml(actor, expression):
 
 
 def _whole_window_objects_expression():
-    # FIRST actual-Main compact UI observer: Popup visual/data children may
-    # be outside ApplicationWindow.contentItem. Read only; never reveal/focus.
-    return ("(function(){const out=[],seen=new Set(),queue=[window];"
-            "while(queue.length){const x=queue.shift();if(!x||seen.has(x))continue;"
-            "seen.add(x);out.push(x);for(const key of ['children','data']){"
-            "let values=null;try{values=x[key];}catch(error){}"
-            "if(!values||typeof values.length!=='number')continue;"
-            "for(let i=0;i<values.length;i++)if(Qt.isQtObject(values[i]))queue.push(values[i]);}}"
-            "return out;})()")
+    # FIRST probe owns QObject/visual traversal and native pointer deduplication.
+    # The readonly list includes popup/nonvisual owners; missing bridge refuses,
+    # never falls back to JavaScript QObject equality/Set discovery.
+    return 'testAppObjects.snapshot()'
 
 
 def _unique_named_object_expression(name, candidates, *, exposed=False):
@@ -5078,10 +5073,26 @@ def test_archive_preserves_original_row_until_actual_ack_without_science_or_acco
         'Metadata browsing and archive do not invent provider work or scientific actions')
 
 
+def _assert_original_session_header_visibility(actor):
+    names = ('assistant.clear', 'assistant.sessions')
+    actual = {name: [row for row in actor.last['ui']['controls']
+                     if row['name'] == name and row.get('same_window') is True]
+              for name in names}
+    connected = actor.last['ui']['connected']
+    assert all(len(rows) == 1 for rows in actual.values()), (
+        'The original current-window New session and Sessions header controls are uniquely observed')
+    assert all(rows[0]['visible'] == connected for rows in actual.values()), (
+        'New session follows actual connected visibility exactly like Sessions, before and after genuine login')
+    (actor.folder / ('session-header-' + ('connected' if connected else 'disconnected') + '.json')).write_text(
+        json.dumps({'connected': connected, 'original_controls': actual}, indent=2) + '\n')
+
+
 def test_healthy_live_session_transport_lists_but_active_and_unsettled_input_stay_guarded(main_actor):
     actor = main_actor([[_rows_research('live-session-metadata-reference')]], hold_final=True)
+    _assert_original_session_header_visibility(actor)
     _session_fixture(actor)
     actor.connect()
+    _assert_original_session_header_visibility(actor)
     requests = lambda: [row for row in map(json.loads, actor.trace.read_text().splitlines()) if row.get('method')]
     records = list(map(json.loads, actor.trace.read_text().splitlines()))
     runtimes = [row['fixture_runtime_started'] for row in records if 'fixture_runtime_started' in row]
@@ -5775,12 +5786,19 @@ def test_genuine_session_row_click_restores_original_thread_task_and_input_reade
     second_id = _session_state(actor)['inputs'][1]['threadId']
     assert first_id != second_id, 'Ordinary explicit Clear actually creates a distinct second provider conversation'
     starts_before = len(_session_wire(actor, 'thread/start'))
+    sends_before_selection = len(_session_wire(actor, 'turn/start'))
     actor.command('click', name='assistant.sessions');rows = _session_wait(actor)
     assert first_id in {row['id'] for row in rows}, 'The real first app-created conversation is present in the original session browser'
     click = actor.command('session_row_click', thread_id=first_id)['reply']
     assert click['reached'] and click['actual_pressed_changes'] > 0, (
         'Selecting a session is genuine input on the realized original row-owned MouseArea rather than a direct success slot')
     actor.until(lambda value: value['ui']['connected'] and not qml(actor, control_expression('assistant.sessionsDialog') + '.opened'))
+    selection_requires_future_context = actor.last['ui']['context_consent_required']
+    assert not any(row['name'] == 'assistant.contextSummary' and row['visible']
+                   for row in actor.last['ui']['texts']), (
+        'Viewing the originally approved saved conversation cannot ask for another Share project information approval')
+    assert len(_session_wire(actor, 'turn/start')) == sends_before_selection, (
+        'Saved-thread selection is resume/view only, never an automatically approved new user turn')
     resumes = _session_wire(actor, 'thread/resume')
     assert resumes and resumes[-1]['params']['threadId'] == first_id and len(_session_wire(actor, 'thread/start')) == starts_before, (
         'Confirmed row selection cold-resumes the exact original runtime ID without substituting a new thread')
@@ -5827,7 +5845,9 @@ def test_genuine_session_row_click_restores_original_thread_task_and_input_reade
     (actor.folder / 'selected-thread-continuity.json').write_text(json.dumps({
         'first_thread': first_id, 'second_thread': second_id, 'click': click,
         'first_actual_input_sha256': first_hash, 'followup': followup,
-        'original_manifest': manifest, 'resume_requests': [row['params'] for row in resumes]}, indent=2))
+        'original_manifest': manifest, 'resume_requests': [row['params'] for row in resumes],
+        'selection_context_for_future_send_required': selection_requires_future_context,
+        'selection_share_dialog_observed': False, 'selection_automatic_turns': 0}, indent=2))
 
 
 def test_preferences_cached_history_clear_keeps_runtime_task_inputs_project_and_reports(main_actor, tmp_path):
@@ -9696,6 +9716,7 @@ def test_original_alias_search_focus_after_prior_filter_to_collapsed_extras_pres
 
 def test_on_cell_flags_follow_experiment_transition_into_original_analysis_main(main_actor, tmp_path):
     actor = main_actor([[]], show_actions=True)
+    _assert_original_native_object_discovery(actor)
     project = copied_estimate_project(tmp_path)
     assert actor.command('open', path=str(project))['reply']['opened'], (
         'The original measured fixture opens through the current real Main owner')
@@ -9804,3 +9825,45 @@ def test_on_cell_flags_follow_experiment_transition_into_original_analysis_main(
             except Exception as error:
                 evidence['passive_gap'] = type(error).__name__ + ': ' + str(error)[:400]
         artifact.write_text(json.dumps(evidence, indent=2) + '\n')
+
+
+def _assert_original_native_object_discovery(actor):
+    marker = 'e11.native.discovery.fixture'
+    duplicate = marker + '.duplicate'
+    setup = r"""(function(){
+        const root=Qt.createQmlObject('import QtQuick; Item {}',window.contentItem);
+        root.objectName=ROOT;
+        const nonvisual=Qt.createQmlObject('import QtQml; QtObject {}',root);
+        nonvisual.objectName=ROOT+'.nonvisual';
+        const first=Qt.createQmlObject('import QtQuick; Item {}',root);
+        const second=Qt.createQmlObject('import QtQuick; Item {}',root);
+        first.objectName=DUPLICATE;second.objectName=DUPLICATE;second.visible=false;
+        const popup=Qt.createQmlObject('import QtQuick; import QtQuick.Controls; Popup {width:80;height:80;contentItem:Item {}}',root);
+        popup.objectName=ROOT+'.popup';popup.contentItem.objectName=ROOT+'.popup.content';popup.open();
+        try {
+            const found=testAppObjects.snapshot();
+            function count(object){return found.filter(x=>x===object).length;}
+            const uniqueCurrent=(CURRENT)===first;
+            second.visible=true;
+            const ambiguousCurrent=(CURRENT)===null;
+            first.visible=false;second.visible=false;
+            const ambiguousHidden=(CURRENT)===null;
+            const actual={rootOnce:count(root)===1,nonvisualOnce:count(nonvisual)===1,
+                firstOnce:count(first)===1,secondOnce:count(second)===1,popupOnce:count(popup)===1,
+                popupContentOnce:count(popup.contentItem)===1,
+                popupSameWindow:popup.contentItem.Window.window===window,
+                uniqueCurrent:uniqueCurrent,ambiguousCurrent:ambiguousCurrent,ambiguousHidden:ambiguousHidden,
+                readonlyNonvisual:(NONVISUAL)===nonvisual,readonlyPopup:(POPUP)===popup};
+            return actual;
+        }finally {popup.close();root.destroy();}
+    })()""".replace('ROOT', json.dumps(marker)).replace('DUPLICATE', json.dumps(duplicate))
+    setup = setup.replace('CURRENT', control_expression(duplicate))
+    setup = setup.replace('NONVISUAL', control_expression(marker + '.nonvisual'))
+    setup = setup.replace('POPUP', control_expression(marker + '.popup'))
+    facts = qml(actor, setup)
+    (actor.folder / 'original-native-object-discovery.json').write_text(
+        json.dumps(facts, indent=2) + '\n')
+    assert facts and all(facts.values()), (
+        'The FIRST native readonly discovery must retain exact popup/nonvisual identities, '
+        'deduplicate original QObject and visual membership, prefer one current target and refuse '
+        'ambiguous current/hidden duplicates without JavaScript QObject Set comparisons')
