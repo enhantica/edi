@@ -20,7 +20,7 @@ set(EDI_GUI_COMPONENTS_ARCHIVE_SHA256 89cfb0443e84a9d4a0cf0a07994f8ac7aa5b0bc296
 set(EDI_GUI_COMPONENTS_SRC_SHA256 65b857b24fdd782e7068d422fc11667e6aca84377d88f757efeed082be16d030)
 
 if(NOT FETCHCONTENT_SOURCE_DIR_GUI_COMPONENTS)
-    message(STATUS "gui-components: fetching the pinned archive ${EDI_GUI_COMPONENTS_SHA} (8 MB, once per build tree)")
+    message(STATUS "gui-components: using the pinned source archive ${EDI_GUI_COMPONENTS_SHA}")
 endif()
 FetchContent_Declare(gui_components
     URL https://github.com/easyscience/gui-components/archive/${EDI_GUI_COMPONENTS_SHA}.tar.gz
