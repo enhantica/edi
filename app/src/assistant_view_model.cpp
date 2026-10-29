@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "assistant_view_model.hpp"
 #include "assistant_history.hpp"
+#include "assistant_history_lookup.hpp"
 #include "assistant_data.hpp"
 #include "assistant_recipe_refusal.hpp"
 #include "assistant_action_refusal.hpp"
@@ -15323,6 +15324,7 @@ struct AssistantViewModel::State {
         const auto publication=file_projection();
         const auto current=[&]{return publication.input_current();};
 #ifndef __EMSCRIPTEN__
+        const detail::FirstHistoryRowLookup previousRows(history,!next.isEmpty());
         try {
             const auto needs=[&](const Object& row,const Object& old) {
                 const auto before=old.value("payload").toObject(),after=row.value("payload").toObject();
@@ -15337,15 +15339,16 @@ struct AssistantViewModel::State {
                 return (before.contains("purpose") && before.value("purpose")!=after.value("purpose")) ||
                     (before.contains("nativeOutcome") && before.value("nativeOutcome")!=after.value("nativeOutcome"));
             };
-                for(qsizetype i=0;i<next.size();++i)for(const auto& old:history) {
-                    auto row=next[i].toObject();if(old.toObject().value("id")!=row.value("id"))continue;
-                    if(needs(row,old.toObject())) {
-                        auto payload=row.value("payload").toObject();const auto before=old.toObject().value("payload").toObject();
+                for(qsizetype i=0;i<next.size();++i) {
+                    auto row=next[i].toObject();const auto previous=previousRows.first(row.value("id"));
+                    if(previous<0)continue;
+                    const auto old=history.at(previous).toObject();
+                    if(needs(row,old)) {
+                        auto payload=row.value("payload").toObject();const auto before=old.value("payload").toObject();
                         for(const char* key:{"purpose","nativeOutcome"})if(before.contains(key))payload[key]=before.value(key);
                         row["payload"]=payload;
                         (void)generic_measured_size(row);next[i]=row;
                     }
-                    break;
                 }
         }catch(...){if(current())error=originalError;return false;}
 #endif
@@ -15354,12 +15357,12 @@ struct AssistantViewModel::State {
         try {
             for(qsizetype i=0;i<next.size();++i) {
                 auto row=next[i].toObject();bool existing=false,changed=false;
-                for(const auto& oldValue:history) {
-                    const auto old=oldValue.toObject();if(old.value("id")!=row.value("id"))continue;
+                const auto previous=previousRows.first(row.value("id"));
+                if(previous>=0) {
+                    const auto old=history.at(previous).toObject();
                     existing=true;
                     for(const char* field:{"sessionThread","sessionItem","sessionTurn","historyOrigin","workScope","workEvidence","workUI","workScience","workSkills","workSkillRefs","workSchema","workInputs","workRuntime","workTurn","workDiagnostic"})
                         if(old.contains(field) && !row.contains(field)){row[field]=old.value(field);changed=true;}
-                    break;
                 }
                 if(!existing && !generic_thread.isEmpty()){row["sessionThread"]=generic_thread;changed=true;
                     if(!row.contains("sessionTurn") && !generic_turn.isEmpty())row["sessionTurn"]=generic_turn;}
