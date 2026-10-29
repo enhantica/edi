@@ -1018,9 +1018,10 @@ int main(int argc,char** argv) {
                 QPointer<QObject> composer=find_property_owner("assistant.composer","text");
                 const QPointer<edi_app::Session> original_session=observed;
                 const QPointer<edi_app::ProjectViewModel> original_project=observed?observed->project():nullptr;
+                const bool original_project_present=original_project!=nullptr;
                 if(!composer)throw std::runtime_error("original current composer text property owner is absent or ambiguous");
                 if(!composer->setProperty("text",input["text"].toString()))throw std::runtime_error("original composer text property write was refused");
-                if(!composer || observed!=original_session || !observed || observed->project()!=original_project ||
+                if(!composer || observed!=original_session || !observed || (original_project_present && !original_project) || observed->project()!=original_project ||
                     find_property_owner("assistant.composer","text")!=composer)throw std::runtime_error("original composer owner retired before Send; no input was sent");
                 click(find_control("assistant.send"));
             } else if(op=="accept_dialog") result={{"accepted",accept_dialog()}};
