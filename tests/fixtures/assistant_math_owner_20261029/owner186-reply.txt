@@ -1,0 +1,57 @@
+I used the **Thompson–Cox–Hastings (TCH) pseudo-Voigt**, Edi’s `cwl-tch-pseudo-voigt`, without the FCJ axial-divergence correction.
+
+For displacement \(x=2\theta-2\theta_{\text{peak}}\), the normalized peak shape is
+
+\[
+p(x)=(1-\eta)\,G(x;H)+\eta\,L(x;H),
+\]
+
+where both components have the same FWHM \(H\):
+
+\[
+G(x;H)=\frac{2\sqrt{\ln2}}{H\sqrt{\pi}}
+\exp\!\left[-4\ln2\left(\frac{x}{H}\right)^2\right],
+\]
+
+\[
+L(x;H)=\frac{2}{\pi H}
+\frac{1}{1+4(x/H)^2}.
+\]
+
+The Gaussian and Lorentzian component widths depend on the **Bragg angle** \(\theta\):
+
+\[
+H_G^2=U\tan^2\theta+V\tan\theta+W,
+\qquad
+H_L=X\tan\theta+\frac{Y}{\cos\theta}.
+\]
+
+TCH combines these widths through
+
+\[
+\begin{aligned}
+H^5={}&H_G^5+2.69269H_G^4H_L
++2.42843H_G^3H_L^2\\
+&+4.47163H_G^2H_L^3
++0.07842H_GH_L^4+H_L^5,
+\end{aligned}
+\]
+
+\[
+\eta=1.36603r-0.47719r^2+0.11116r^3,
+\qquad r=\frac{H_L}{H}.
+\]
+
+Thus, \(\eta\) is calculated from the widths rather than refined independently. These are the [standard TCH equations](https://www.osti.gov/servlets/purl/1222688).
+
+Your saved coefficients are:
+
+| Coefficient | Value ± uncertainty |
+|---|---:|
+| \(U\) | \(0.0837 \pm 0.0035\) °² |
+| \(V\) | \(-0.1365 \pm 0.0074\) °² |
+| \(W\) | \(0.1454 \pm 0.0048\) °² |
+| \(X\) | \(0.067 \pm 0.015\) ° |
+| \(Y\) | \(0.0254 \pm 0.0095\) ° |
+
+The widths \(H_G,H_L,H\) are expressed in degrees of \(2\theta\).

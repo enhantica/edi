@@ -233,7 +233,7 @@ EaElements.StatusBar {
             background: Rectangle {
                 implicitWidth: assistantGroup.buttonExtent
                 implicitHeight: implicitWidth
-                width: assistantGroup.buttonExtent
+                width: AppSizes.assistantIndicatorExtent
                 height: width
                 anchors.centerIn: parent
                 radius: width / 2
