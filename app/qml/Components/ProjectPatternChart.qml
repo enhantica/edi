@@ -23,14 +23,7 @@ Item {
     readonly property bool singleCrystal: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal
     readonly property real toolbarRightInset: holder.chart ? holder.chart.toolbarRightInset : AppSizes.mainAreaMargin
 
-    function renew() {
-        const old = holder.chart;
-        holder.chart = chartComponent.createObject(holder) as PatternChart;
-        if (old) {
-            old.visible = false;
-            old.destroy();
-        }
-    }
+    function renew() { ApplicationInfo.renewPatternChart(); }
 
     Component.onCompleted: holder.renew()
 

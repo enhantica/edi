@@ -40,14 +40,14 @@ Row {
         fontIcon: "align-left"
         toolTip: toolbar.legendShown ? qsTr("Hide legend") : qsTr("Show legend")
         checked: toolbar.legendShown
-        onClicked: toolbar.legendShown = !toolbar.legendShown
+        onClicked: ApplicationInfo.chartToolbarAction(0)
     }
     ChartToolButton {
         objectName: "chart.toolbar.hover"
         fontIcon: "comment-alt"
         toolTip: qsTr("Show coordinates tooltip on hover")
         checked: toolbar.hoverShown
-        onClicked: toolbar.hoverShown = !toolbar.hoverShown
+        onClicked: ApplicationInfo.chartToolbarAction(1)
     }
     ChartToolButton {
         objectName: "chart.toolbar.structureCurves"
@@ -55,7 +55,7 @@ Row {
         fontIcon: "layer-group"
         toolTip: qsTr("Show each structure's curve")
         checked: Preferences.structureCurves
-        onClicked: Preferences.structureCurves = !Preferences.structureCurves
+        onClicked: ApplicationInfo.chartToolbarAction(2)
     }
     ChartToolButton {
         objectName: "chart.toolbar.includedRange"
@@ -83,14 +83,14 @@ Row {
         fontIcon: "arrows-alt"
         toolTip: qsTr("Enable pan")
         checked: toolbar.pointerMode === "pan"
-        onClicked: toolbar.pointerMode = "pan"
+        onClicked: ApplicationInfo.chartToolbarAction(3)
     }
     ChartToolButton {
         objectName: "chart.toolbar.zoom"
         fontIcon: "expand"
         toolTip: qsTr("Enable box zoom")
         checked: toolbar.pointerMode === "zoom"
-        onClicked: toolbar.pointerMode = "zoom"
+        onClicked: ApplicationInfo.chartToolbarAction(4)
     }
     ChartToolButton {
         objectName: "chart.toolbar.reset"
