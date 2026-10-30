@@ -113,12 +113,13 @@ EaElements.TextInput {
             id: contextMenuComponent
 
             EaElements.Menu {
-                objectName: "parameter.contextMenu"
+                objectName: "parameter.contextPopup"
                 width: layout.implicitWidth
 
                 // Layout
                 Grid {
                     id: layout
+                    objectName: "parameter.contextMenu"
 
                     leftPadding: 1.25 * EaStyle.Sizes.fontPixelSize
                     rightPadding: 1.25 * EaStyle.Sizes.fontPixelSize
