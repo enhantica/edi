@@ -172,6 +172,10 @@ class MainActor:
             if not isinstance(value, dict) or ('host_error' not in value and not {'ui','reply'} <= value.keys()):
                 unsettled('unrecognized original reply envelope', raw + b'\n' + buffered)
                 raise AssertionError('The Main reply must retain its actual ui/reply envelope')
+            if op in ('message_input', 'message_snapshot'):
+                with (self.folder / 'message-observations.jsonl').open('a') as output:
+                    output.write(json.dumps({'sequence': sequence, 'op': op, 'pid': self.process.pid,
+                        'request': arguments, 'reply_envelope': value}) + '\n')
             assert 'host_error' not in value, value
             self.last = value
             ui = value.get('ui', {})
@@ -5006,6 +5010,8 @@ def test_actual_long_history_virtualizes_lazy_details_and_restores_exact_origina
             restored.command('evaluate', expression='(function(){const v=' + view
                              + ';v.positionViewAtIndex(' + str(position) + ',ListView.Center);})()')
             metrics = _rows_view_metrics(restored)
+            with (restored.folder / 'long-history-viewport-samples.jsonl').open('a') as output:
+                output.write(json.dumps({'target': position, 'metrics': metrics}) + '\n')
             assert metrics and metrics['rows'], 'Ordinary actual ListView realizes reached rows for its current viewport'
             heights = [row['height'] for row in metrics['rows'] if row['height'] > 0]
             assert heights, 'Virtualization witness has real nonempty row geometry'
@@ -5032,14 +5038,22 @@ def test_actual_long_history_virtualizes_lazy_details_and_restores_exact_origina
         chosen = next(row for row in candidates if row['index'] == 48)
         click = restored.command('message_input', row_id=chosen['id'],
                                  name='assistant.activity.toggle', action='click')['reply']
+        input_facts = {'selected': chosen, 'selection_metrics': metrics, 'prior_viewports': observed,
+                       'expansion_reply': click}
+        input_facts_path = restored.folder / 'long-history-physical-input-facts.json'
+        input_facts_path.write_text(json.dumps(input_facts, indent=2))
         assert click['reached'] and click['same_row_after'] and click['same_window_after'], (
             'Expansion input is delivered to the exact original realized activity in the current Main window')
         expanded = _rows_view_metrics(restored)
+        input_facts['expanded_metrics'] = expanded
+        input_facts_path.write_text(json.dumps(input_facts, indent=2))
         assert any(d['id'] == chosen['id'] and d['loaded'] for row in expanded['rows'] for d in row['details']), (
             'Only explicit original-row expansion resolves its full human description')
         restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='hover')
         default_copy = restored.command('message_input', row_id=chosen['id'],
                                         name='assistant.activity.copy', action='click')['reply']
+        input_facts['default_copy_reply'] = default_copy
+        input_facts_path.write_text(json.dumps(input_facts, indent=2))
         assert qml(restored, 'Preferences.assistantCopyTechnicalDetails') is False, (
             'Technical Copy remains opt-in with the original preference default false')
         assert default_copy['reached'] and default_copy['clipboard'] and marker not in default_copy['clipboard'], (
@@ -5053,10 +5067,14 @@ def test_actual_long_history_virtualizes_lazy_details_and_restores_exact_origina
         restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='hover')
         technical = restored.command('message_input', row_id=chosen['id'],
                                      name='assistant.activity.copy', action='click')['reply']
+        input_facts['technical_reply'] = technical
+        input_facts_path.write_text(json.dumps(input_facts, indent=2))
         assert technical['reached'] and technical['clipboard'].startswith(default_copy['clipboard'] + '\n\n') and opaque in technical['clipboard'], (
             'Explicit opted-in original-row Copy includes unchanged full technical evidence and human descriptions')
         restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='click')
         collapsed = _rows_view_metrics(restored)
+        input_facts['collapsed_metrics'] = collapsed
+        input_facts_path.write_text(json.dumps(input_facts, indent=2))
         assert all(not d['loaded'] for row in collapsed['rows'] for d in row['details']), (
             'Collapsing releases the original lazy detail snapshot before later reuse')
         assert _rows_history_file(restored).read_bytes() == original, (
