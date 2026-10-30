@@ -44,3 +44,5 @@ Named `guide-*` scenes cover project file choices, structural symmetry/cell/site
 Selector metadata also retains the current native option tokens, display labels and selection from `OptionListModel`. This supplies the documentation's short option lists from the same source used by the app. A corrected deterministic timestamp uses the existing STAR timestamp format, so saving/export can be exercised rather than refused by the core.
 
 GUI icon names are captured from the visible control's `fontIcon`, `keyIcon` or string `icon` property. Documentation uses those actual Font Awesome 5 names alongside the native labels; controls without a GUI icon do not gain an invented one.
+
+Detail scenes expand the remaining project/experiment/analysis settings groups: uncertainty formatting, measured points and ranges, peak cutoff, pre-fit start values, parameter visibility and pattern-update policy during scans. They use the existing `panel` helper and do not add a second capture path.

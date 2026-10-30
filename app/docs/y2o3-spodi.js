@@ -93,6 +93,12 @@
     panel("guide-analysis-aliases", "analysis", "extras", "group.alias", "Inspect parameter aliases", ["group.alias"]);
     shot("guide-analysis-correlations", "analysis", "Inspect correlations after fitting",
         ["appBar.tab.analysis", "sideBar.tab.basic", "mainArea.analysis.tab.correlations"], ["workflow.analysis.mainContent"]);
+    panel("guide-project-uncertainties", "project", "extras", "group.su_format", "Choose how values and standard uncertainties are displayed", ["group.su_format"]);
+    panel("guide-experiment-data-settings", "experiment", "extras", "group.data", "Inspect the measured range and point data", ["group.data"]);
+    panel("guide-experiment-cutoff", "experiment", "extras", "group.peak", "Choose the peak calculation window", ["peak.cutoff_fwhm"]);
+    panel("guide-analysis-start-values", "analysis", "extras", "group.fit_parameter", "Inspect the values before the last fit", ["fitStart.list"]);
+    panel("guide-analysis-shown-parameters", "analysis", "settings", "group.shownParameters", "Choose which parameter groups appear in the table", ["group.shownParameters"]);
+    panel("guide-analysis-pattern-updates", "analysis", "settings", "group.patternUpdates", "Choose how the displayed pattern updates during a scan", ["group.patternUpdates"]);
     return steps;
     }};
 })();
