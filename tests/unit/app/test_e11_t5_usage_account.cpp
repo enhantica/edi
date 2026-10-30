@@ -9,12 +9,16 @@
 #include <QCryptographicHash>
 #include <QFile>
 #include <QMetaProperty>
+#include <QPointer>
 #include <QQmlComponent>
 #include <QQmlContext>
 #include <QQmlEngine>
 #include <QQmlExpression>
+#include <QQuickItem>
+#include <QQuickWindow>
 #include <QScopeGuard>
 #include <QSignalSpy>
+#include <QSizeF>
 #include <QStringList>
 #include <QTranslator>
 #include <QUrl>
@@ -41,6 +45,22 @@ struct UsageChecks {
                 {"error", QStringLiteral("%1 usage relation failures").arg(failures)}};
     }
 };
+// Members are destroyed in reverse: Popup/queued context, then toggle, then host.
+struct UsagePopupDelete {
+    QPointer<QObject> guarded;
+    void operator()(QObject*) const { delete guarded.data(); }
+};
+struct UsagePanelLease {
+    std::unique_ptr<QQuickItem> host;
+    std::unique_ptr<QQuickItem> toggle;
+    std::unique_ptr<QObject, UsagePopupDelete> component;
+    QObject* get() const {
+        auto* value = component.get_deleter().guarded.data();
+        if (!value) throw std::runtime_error("the actual unit Panel was destroyed");
+        return value;
+    }
+    QObject* operator->() const { return get(); }
+};
 class UsageTranslator final : public QTranslator {
    public:
     bool isEmpty() const override { return false; }
@@ -63,6 +83,7 @@ void prerequisite(bool condition, const char* name) {
 class UsageAccountProof final : public QObject {
     Q_OBJECT
     QQmlEngine* engine_;
+    QPointer<QQuickItem> host_;
 
     static QVariant evaluate(QObject* owner, const QString& source) {
         QQmlExpression expression(QQmlEngine::contextForObject(owner), owner, source);
@@ -71,7 +92,7 @@ class UsageAccountProof final : public QObject {
             throw std::runtime_error(expression.error().toString().toStdString());
         return result;
     }
-    std::unique_ptr<QObject> panel(QObject* applicationInfo) const {
+    UsagePanelLease panel(QObject* applicationInfo) const {
         prerequisite(qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
                      "explicit selected usage phase is mandatory");
         const auto root = qgetenv("EDI_E11_USAGE_ACCOUNT_SOURCE_ROOT");
@@ -85,8 +106,38 @@ class UsageAccountProof final : public QObject {
         prerequisite(
             applicationInfo && qjsEngine(applicationInfo) == engine_ && !engine_->hasError(),
             "actual imported singleton and clean proof engine must be identical");
+        prerequisite(host_ && host_->window() && host_->window()->isVisible() &&
+                         QQmlEngine::contextForObject(host_) &&
+                         QQmlEngine::contextForObject(host_)->engine() == engine_,
+                     "genuine current QuickTest Item/window/context is required");
+        UsagePanelLease owner;
+        owner.host = std::make_unique<QQuickItem>();
+        owner.host->setParentItem(host_);
+        owner.host->setSize(QSizeF(640, 600));
+        QQmlComponent toggleComponent(engine_);
+        toggleComponent.setData(
+            "import QtQuick\nimport EasyApplication.Gui.Elements as EaElements\n"
+            "EaElements.ToolButton { objectName: 'e11.usage.unit.toggle'; fontIcon: 'robot' }",
+            QUrl("qrc:/tests/UsageAccountToggle.qml"));
+        if (toggleComponent.isError())
+            throw std::runtime_error(toggleComponent.errorString().toStdString());
+        std::unique_ptr<QObject> toggleObject(toggleComponent.createWithInitialProperties({
+            {"parent", QVariant::fromValue(owner.host.get())},
+        }));
+        if (!toggleObject) throw std::runtime_error(toggleComponent.errorString().toStdString());
+        auto* toggle = qobject_cast<QQuickItem*>(toggleObject.get());
+        prerequisite(toggle && toggle->width() > 0 && toggle->height() > 0 &&
+                         QQmlEngine::contextForObject(toggle) &&
+                         QQmlEngine::contextForObject(toggle)->engine() == engine_,
+                     "genuine original ToolButton Item/context/geometry required");
+        toggleObject.release();
+        owner.toggle.reset(toggle);
+        prerequisite(
+            owner.host->window() == host_->window() && owner.toggle->window() == host_->window(),
+            "supplied Item host and toggle must already belong to the genuine window");
         const QString code =
-            "import QtQuick\nimport edi.app\nimport EasyApplication.Gui.Style as EaStyle\n"
+            "import QtQuick\nimport QtQuick.Window\nimport QtQuick.Controls\n"
+            "import edi.app\nimport EasyApplication.Gui.Style as EaStyle\n"
             "AssistantPanel { assistant: Session.assistant; width: 640; height: 600;"
             "property var unitResetValue: 60; property real unitNow: 0;"
             "readonly property string unitResetText: " +
@@ -96,13 +147,30 @@ class UsageAccountProof final : public QObject {
         QQmlComponent component(engine_);
         component.setData(code.toUtf8(), QUrl("qrc:/tests/UsageAccountOriginalOwner.qml"));
         if (component.isError()) throw std::runtime_error(component.errorString().toStdString());
-        std::unique_ptr<QObject> owner(component.create());
-        if (!owner) throw std::runtime_error(component.errorString().toStdString());
+        std::unique_ptr<QObject> created(component.createWithInitialProperties({
+            {"parent", QVariant::fromValue(owner.host.get())},
+            {"toggleControl", QVariant::fromValue(owner.toggle.get())},
+        }));
+        if (!created) throw std::runtime_error(component.errorString().toStdString());
+        const QPointer<QObject> guarded(created.get());
+        owner.component = std::unique_ptr<QObject, UsagePopupDelete>(created.release(),
+                                                                     UsagePopupDelete{guarded});
+        prerequisite(
+            owner->property("parent").value<QQuickItem*>() == owner.host.get() &&
+                owner->property("toggleControl").value<QQuickItem*>() == owner.toggle.get(),
+            "actual required toggle and visual parent are read back, never null substitutes");
+        prerequisite(evaluate(owner.get(),
+                              "Overlay.overlay !== null && "
+                              "Overlay.overlay.Window.window === parent.Window.window")
+                         .toBool(),
+                     "actual Popup overlay must belong to the same genuine window");
         prerequisite(QQmlEngine::contextForObject(owner.get()) &&
                          QQmlEngine::contextForObject(owner.get())->engine() == engine_,
                      "actual Panel component context must use the same engine");
-        prerequisite(evaluate(owner.get(), "assistant === Session.assistant").toBool(),
-                     "actual typed Session assistant is retained, never replaced with a fixture");
+        prerequisite(
+            evaluate(owner.get(), "Qt.isQtObject(assistant) && assistant === Session.assistant")
+                .toBool(),
+            "actual typed Session assistant is retained, never replaced with a fixture");
         return owner;
     }
     static void text(UsageChecks& check, QObject* owner, const QString& call,
@@ -120,6 +188,15 @@ class UsageAccountProof final : public QObject {
 
    public:
     explicit UsageAccountProof(QQmlEngine* engine) : QObject(engine), engine_(engine) {}
+    Q_INVOKABLE bool bindHost(QObject* candidate) {
+        auto* item = qobject_cast<QQuickItem*>(candidate);
+        auto* context = item ? QQmlEngine::contextForObject(item) : nullptr;
+        if (!item || !item->window() || !item->window()->isVisible() || !context ||
+            context->engine() != engine_)
+            return false;
+        host_ = item;
+        return true;
+    }
 
     Q_INVOKABLE QVariantMap resetLiterals(QObject* applicationInfo) const {
         UsageChecks check;
