@@ -4763,3 +4763,39 @@ reset, focus-epoch/capture ordering and final manual-pane/preferences publicatio
 store, cache, timer or permission authority is introduced. Existing file presentation, activity,
 copy/disclosure/account/scientific/Undo behavior remains additive. This source change implements the
 platform requirement; actual desktop/browser builds, UI/runtime and remaining full checks follow.
+
+
+### Native usage and account presentation
+
+Prior art is AssistantPanel's JSON projection, maximum/allowance scans, labels, account plan/initial,
+plan-word map, allowance descriptor filter, reset clock and account-disconnect close branch. The
+existing AssistantViewModel remains canonical usage/account owner. ApplicationInfo now executes the
+view procedures; QML retains bindings, layout, its existing Timer and a one-call allowanceWindow
+forwarder used by the actual filter callback. No second data store, controller, timer or refresh/
+identity/admission policy is introduced. Translations retain AssistantPanel context and the original
+branch/read ordering, with existing native translation-binding capture.
+
+Script values retain identity in the same engine. Desktop code uses the declared Qt QML private
+interface for rooted VM values, default-hint addition, relational comparison and intrinsic for-of
+acquisition/next/close. Nested unwind closes inner then outer on body failure; iterator protocol
+failure skips that iterator's close and propagates through an active outer body. Named/member calls
+retain primitive accessor receivers and the pinned VM's late getter/call order. Pending exceptions
+remain pending except the original JSON projection catch. Interruption completion is local to the
+synchronous operation frame, never persisted application state. There is no evaluated JavaScript
+shim or mutable-global Symbol/Reflect shortcut.
+
+Actual Array.from, split/map/filter, casing/slice/join, Date, Math and String.arg calls are retained.
+Map/filter consume native callable values holding the original QML context; the filter's Panel is
+held with Qt's guarded-pointer mechanism, so retaining a callback does not retain the widget or a
+C++ stack frame. Its existing allowanceWindow forwarder preserves the actual method call and scope.
+Primitive string indexes use the VM numeric operation: pinned primitive Array.from still uses UTF16
+indexed fallback, while for-of uses its actual string iterator. Uppercase expansions are not cut.
+The history attachment reader's prior primitive-string numeric index uses the existing numeric
+bridge only for primitive strings; object/array-like reads and all original metadata/limit/reference
+rules remain unchanged.
+
+Qt6::QmlPrivate is a normal explicit desktop dependency. Browser availability is already disabled;
+its public presentation invokables supply valid empty/unavailable bindings without Qt private WASM
+headers or backend queries. This does not remove other browser file, transport or rendering code.
+The source migration is implemented before full verification; desktop/WASM builds, actual UI,
+callback/reentry/lifetime, locale/clock and final app/native/scientific/platform/CI checks still follow.
