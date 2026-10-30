@@ -47,7 +47,9 @@ QtObject {
     // choices stay.
     property Connections patternViewReset: Connections {
         target: Session
-        function onProjectChanged() { ApplicationInfo.resetPatternProjectView(); }
+        function onProjectChanged() {
+            ApplicationInfo.resetPatternProjectView();
+        }
     }
 
     // The furthest page the user has opened with Start or Continue; an open project opens every page
@@ -76,15 +78,21 @@ QtObject {
     signal changesQuestion(var action, var abandoned)
     // An action that replaces the project runs on the next turn of the event loop, never inside the handler that asked
     // for it: replacing the project rebuilds the pages, and the page holding that handler with them.
-    function afterChanges(action, abandoned) { ApplicationInfo.afterProjectChanges(action, abandoned); }
+    function afterChanges(action, abandoned) {
+        ApplicationInfo.afterProjectChanges(action, abandoned);
+    }
     // A created project that could not be saved at its location stays open, unsaved: the window says why.
     signal createFailed
     // The Analysis page's Evolution tab, asked for from the results window after a scan (edi ADR-0017 §19).
     signal evolutionRequested
 
-    function open(page) { ApplicationInfo.openWorkflowPage(page); }
+    function open(page) {
+        ApplicationInfo.openWorkflowPage(page);
+    }
 
     // The app bar's reset: close the project and open the Project page, where a new project starts (the owner,
     // 2026-10-11).
-    function reset() { ApplicationInfo.resetWorkflow(); }
+    function reset() {
+        ApplicationInfo.resetWorkflow();
+    }
 }

@@ -19,7 +19,9 @@ Rectangle {
     property int stepNumber: 0
     property AssistantViewModel assistant: null
     property color chatBackgroundColor: EaStyle.Colors.appBarBackground
-    function tableTone(lift) { return ApplicationInfo.assistantMessageTableTone(lift); }
+    function tableTone(lift) {
+        return ApplicationInfo.assistantMessageTableTone(lift);
+    }
     property bool highlighted: false
     readonly property var compactPresentation: ApplicationInfo.assistantActivityPresentation(kind, status, payload, assistant)
     readonly property bool commandActivity: compactPresentation.commandActivity
@@ -40,7 +42,7 @@ Rectangle {
         interval: EaStyle.Times.introAnimation
         onTriggered: ApplicationInfo.assistantMessageClearFeedback(row, false)
     }
-    signal detailsChanging()
+    signal detailsChanging
     signal reportRequested(string sourceRowId, string link)
     onDisclosureIdentityChanged: ApplicationInfo.assistantMessageReset(row)
     onCommandActivityChanged: ApplicationInfo.assistantMessageReset(row)
@@ -48,12 +50,13 @@ Rectangle {
     ListView.onPooled: ApplicationInfo.assistantMessageReset(row)
     ListView.onReused: ApplicationInfo.assistantMessageReset(row)
     color: "transparent"
-    function sentFileLabel(file) { return ApplicationInfo.assistantSentFileLabel(file); }
+    function sentFileLabel(file) {
+        return ApplicationInfo.assistantSentFileLabel(file);
+    }
     readonly property real widestSentFile: ApplicationInfo.assistantWidestSentFile()
     readonly property real historyCopyExtent: Math.ceil(historyCopyMetrics.height)
     readonly property real historyCopyGutter: kind === "user" ? historyCopyExtent + AppSizes.unit : 0
-    implicitHeight: Math.max(content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5),
-        kind === "user" ? historyCopyExtent + AppSizes.unit * 1.5 : 0)
+    implicitHeight: Math.max(content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5), kind === "user" ? historyCopyExtent + AppSizes.unit * 1.5 : 0)
     FontMetrics {
         id: historyCopyMetrics
         font.family: EaStyle.Fonts.fontFamily
@@ -80,9 +83,7 @@ Rectangle {
         enabled: row.kind === "user"
         acceptedDevices: PointerDevice.AllDevices
         blocking: false
-        readonly property bool overHistory: hovered
-            && point.position.x >= bubble.x && point.position.x <= row.width
-            && point.position.y >= 0 && point.position.y <= row.height
+        readonly property bool overHistory: hovered && point.position.x >= bubble.x && point.position.x <= row.width && point.position.y >= 0 && point.position.y <= row.height
     }
     EaElements.ToolButton {
         id: userCopy
@@ -100,9 +101,7 @@ Rectangle {
             text: userCopy.fontIcon
             font.family: EaStyle.Fonts.iconsFamily
             font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-            color: !userCopy.enabled ? EaStyle.Colors.themeForegroundDisabled
-                : userCopy.hovered || userCopy.down ? EaStyle.Colors.themeForegroundHovered
-                : EaStyle.Colors.themeForegroundMinor
+            color: !userCopy.enabled ? EaStyle.Colors.themeForegroundDisabled : userCopy.hovered || userCopy.down ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForegroundMinor
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             Accessible.ignored: true
@@ -160,7 +159,9 @@ Rectangle {
             textFormat: TextEdit.PlainText
             Keys.onPressed: event => ApplicationInfo.assistantMessageCopyKey(event)
             onLinkActivated: link => row.reportRequested(row.rowId, link)
-            HoverHandler { cursorShape: body.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.IBeamCursor }
+            HoverHandler {
+                cursorShape: body.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.IBeamCursor
+            }
             wrapMode: TextEdit.Wrap
             color: EaStyle.Colors.themeForeground
             font.family: EaStyle.Fonts.fontFamily
@@ -267,9 +268,7 @@ Rectangle {
                     text: activityCopy.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-                    color: !activityCopy.enabled ? EaStyle.Colors.themeForegroundDisabled
-                        : activityCopy.hovered || activityCopy.down ? EaStyle.Colors.themeForegroundHovered
-                        : EaStyle.Colors.themeForegroundMinor
+                    color: !activityCopy.enabled ? EaStyle.Colors.themeForegroundDisabled : activityCopy.hovered || activityCopy.down ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForegroundMinor
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     Accessible.ignored: true
@@ -291,8 +290,7 @@ Rectangle {
                 x: AppSizes.unit
                 y: AppSizes.unit * 0.75
                 width: Math.max(0, parent.width - AppSizes.unit * 2)
-                text: visible ? ApplicationInfo.assistantActivityDescription(row.humanDetailsSnapshot,
-                    row.kind, row.compactPresentation, row.payload, row.assistant) : ""
+                text: visible ? ApplicationInfo.assistantActivityDescription(row.humanDetailsSnapshot, row.kind, row.compactPresentation, row.payload, row.assistant) : ""
                 textFormat: TextEdit.PlainText
                 readOnly: true
                 selectByMouse: true

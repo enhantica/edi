@@ -20,8 +20,7 @@ EaElements.StatusBar {
     readonly property ProjectViewModel project: Session.project
     property bool assistantChatShown: false
     property bool assistantManualTakeover: false
-    readonly property bool assistantStatusNeeded: assistantArea.working
-        || Session.assistant.showingActions || assistantManualTakeover && Session.assistant.canCancel || visibleStop.pressed || visibleMode.pressed
+    readonly property bool assistantStatusNeeded: assistantArea.working || Session.assistant.showingActions || assistantManualTakeover && Session.assistant.canCancel || visibleStop.pressed || visibleMode.pressed
     // The pages built after a project opened, of those it shows (edi ADR-0052): while they build, the bar shows the
     // opening's progress in the fit area's place.
     property int pagesBuilt: 0
@@ -124,15 +123,11 @@ EaElements.StatusBar {
         readonly property bool stopShown: assistantArea.working || Session.assistant.showingActions || bar.assistantManualTakeover && Session.assistant.canCancel || visibleMode.pressed
         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
         readonly property real buttonExtent: AppSizes.assistantIconExtent
-        readonly property real contentSpacing: Math.max(0,
-            (assistantArea.visible ? 1 : 0) + (visibleMode.visible ? 1 : 0) + (visibleStop.visible ? 1 : 0) - 1) * gap
+        readonly property real contentSpacing: Math.max(0, (assistantArea.visible ? 1 : 0) + (visibleMode.visible ? 1 : 0) + (visibleStop.visible ? 1 : 0) - 1) * gap
         // Keep the original Stop receiver and its text slot in place through
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
-        implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-            + (assistantArea.visible ? assistantArea.implicitWidth : 0)
-            + (visibleMode.visible ? visibleMode.implicitWidth : 0)
-            + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
+        implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) + (assistantArea.visible ? assistantArea.implicitWidth : 0) + (visibleMode.visible ? visibleMode.implicitWidth : 0) + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
         anchors.right: fitArea.visible ? fitArea.left : openingProgress.visible ? openingProgress.left : parent.right
@@ -154,9 +149,7 @@ EaElements.StatusBar {
             objectName: "statusBar.assistant.working"
             assistant: Session.assistant
             presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
-            width: visible ? Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-                - (visibleStop.visible ? visibleStop.width : 0)
-                - (visibleMode.visible ? visibleMode.width : 0) - assistantGroup.contentSpacing) : 0
+            width: visible ? Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) - (visibleStop.visible ? visibleStop.width : 0) - (visibleMode.visible ? visibleMode.width : 0) - assistantGroup.contentSpacing) : 0
             height: Math.max(implicitHeight, iconExtent)
             anchors.left: parent.left
             anchors.leftMargin: assistantRule.visible ? assistantRule.width + fitArea.spacing : 0
@@ -214,9 +207,7 @@ EaElements.StatusBar {
                 height: width
                 anchors.centerIn: parent
                 radius: width / 2
-                color: !visibleStop.enabled ? EaStyle.Colors.sideBarButtonBackgroundHovered
-                    : visibleStop.hovered || visibleStop.down || visibleStop.visualFocus ? EaStyle.Colors.themeAccent
-                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                color: !visibleStop.enabled ? EaStyle.Colors.sideBarButtonBackgroundHovered : visibleStop.hovered || visibleStop.down || visibleStop.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                 border.width: 0
             }
             contentItem: EaElements.Label {
@@ -261,7 +252,9 @@ EaElements.StatusBar {
         readonly property real labelledWidth: ApplicationInfo.statusMeasuredWidth(false)
         readonly property real compactWidth: ApplicationInfo.statusMeasuredWidth(true)
 
-        function widthWith(itemWidth) { return ApplicationInfo.statusWidthWith(itemWidth, false); }
+        function widthWith(itemWidth) {
+            return ApplicationInfo.statusWidthWith(itemWidth, false);
+        }
 
         Rectangle {
             id: rule
@@ -404,7 +397,9 @@ EaElements.StatusBar {
             readonly property bool scanMode: bar.fit !== null && bar.fit.scanMode
             readonly property list<FitStatusItem> buttons: [resetButton, followButton, fitButton]
 
-            function widthWith(itemWidth) { return ApplicationInfo.statusWidthWith(itemWidth, true); }
+            function widthWith(itemWidth) {
+                return ApplicationInfo.statusWidthWith(itemWidth, true);
+            }
 
             objectName: "statusBar.fit.buttons"
             visible: AppState.analysisPageEnabled

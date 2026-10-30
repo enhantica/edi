@@ -22,8 +22,12 @@ EaElements.Dialog {
     property alias projectAuthors: projectAuthorsField.text
     property alias projectDescription: projectDescriptionField.text
 
-    function acceptsProjectName(value) { return ApplicationInfo.projectDescriptionAdmitted(value, false); }
-    function acceptsProjectTitle(value) { return ApplicationInfo.projectDescriptionAdmitted(value, true); }
+    function acceptsProjectName(value) {
+        return ApplicationInfo.projectDescriptionAdmitted(value, false);
+    }
+    function acceptsProjectTitle(value) {
+        return ApplicationInfo.projectDescriptionAdmitted(value, true);
+    }
     readonly property int projectTitleMaximumLength: projectTitleField.maximumLength
 
     property string projectLocation: ""
@@ -32,7 +36,9 @@ EaElements.Dialog {
 
     // A folder and a name joined by one separator, whatever separators the folder ends with (a folder chosen in
     // the dialog arrives as a URL that may end in one).
-    function joinedPath(folder, name) { return ApplicationInfo.projectJoinedPath(folder, name); }
+    function joinedPath(folder, name) {
+        return ApplicationInfo.projectJoinedPath(folder, name);
+    }
 
     property int inputFieldWidth: EaStyle.Sizes.fontPixelSize * 35
 

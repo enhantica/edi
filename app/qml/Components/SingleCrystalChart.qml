@@ -75,9 +75,13 @@ Item {
     // The legend: the Stacked chart's experiments, or the one experiment, each name in its points' colour.
     // Sets the legend: the experiments shown, each in its colour, and the selected one marked when the chart does not
     // highlight it.
-    function updateLegend() { ApplicationInfo.singleUpdateLegend(); }
+    function updateLegend() {
+        ApplicationInfo.singleUpdateLegend();
+    }
     // Hides an experiment's reflections, or shows them again; with the range fitted to the visible ones, fits it once.
-    function toggleRow(key) { ApplicationInfo.singleToggleRow(key); }
+    function toggleRow(key) {
+        ApplicationInfo.singleToggleRow(key);
+    }
     ListedLegendModel {
         id: legendRows
     }
@@ -86,21 +90,31 @@ Item {
     readonly property real yLow: zoom.length === 4 ? zoom[2] : fullLow
     readonly property real yHigh: zoom.length === 4 ? zoom[3] : fullHigh
 
-    function niceStep(span, count) { return ApplicationInfo.chartNiceStep(span, count); }
+    function niceStep(span, count) {
+        return ApplicationInfo.chartNiceStep(span, count);
+    }
 
     // The points the fit uses (`want` true) or leaves out (false) of three parallel lists, by the model's `used`;
     // a report's points are all used.
-    function part(x, y, su, used, want) { return ApplicationInfo.singlePart(x, y, su, used, want); }
+    function part(x, y, su, used, want) {
+        return ApplicationInfo.singlePart(x, y, su, used, want);
+    }
     // Draws a model's points on `usedLayer` and the ones its fit leaves out, dimmed, on `leftOutLayer`.
-    function drawModel(model, usedLayer, leftOutLayer) { ApplicationInfo.singleDrawModel(model, usedLayer, leftOutLayer); }
+    function drawModel(model, usedLayer, leftOutLayer) {
+        ApplicationInfo.singleDrawModel(model, usedLayer, leftOutLayer);
+    }
 
     // Each Stacked layer draws its experiment again.
     signal redrawStacked
 
-    function redraw() { ApplicationInfo.singleRedraw(); }
+    function redraw() {
+        ApplicationInfo.singleRedraw();
+    }
 
     // The y = x line across whatever both axes show.
-    function drawDiagonal() { ApplicationInfo.singleDrawDiagonal(); }
+    function drawDiagonal() {
+        ApplicationInfo.singleDrawDiagonal();
+    }
 
     onXLowChanged: drawDiagonal()
     onXHighChanged: drawDiagonal()
@@ -122,7 +136,9 @@ Item {
     }
     Connections {
         target: chart.reflections
-        function onPointsChanged() { ApplicationInfo.singleModelChanged(false); }
+        function onPointsChanged() {
+            ApplicationInfo.singleModelChanged(false);
+        }
     }
 
     Rectangle {
@@ -253,8 +269,12 @@ Item {
             hoverText.text = "";
         }
         // The reflection nearest the pointer, within about an em: its model's place and its row; null when none.
-        function nearest(px, py) { return ApplicationInfo.singleNearest(px, py); }
-        function read(px, py) { ApplicationInfo.singleHoverRead(px, py); }
+        function nearest(px, py) {
+            return ApplicationInfo.singleNearest(px, py);
+        }
+        function read(px, py) {
+            ApplicationInfo.singleHoverRead(px, py);
+        }
 
         objectName: "singleCrystal.hover"
         z: 2
@@ -316,7 +336,9 @@ Item {
         height: view.plotArea.height
         clip: true
 
-        function ticks(axis: ValueAxis): list<real> { return ApplicationInfo.chartGridShares(axis); }
+        function ticks(axis: ValueAxis): list<real> {
+            return ApplicationInfo.chartGridShares(axis);
+        }
 
         Repeater {
             model: plot.ticks(axisX)
@@ -369,7 +391,9 @@ Item {
                 Component.onCompleted: redraw()
                 Connections {
                     target: stackedLayer.model
-                    function onPointsChanged() { ApplicationInfo.singleModelChanged(true); }
+                    function onPointsChanged() {
+                        ApplicationInfo.singleModelChanged(true);
+                    }
                 }
                 Connections {
                     target: chart
@@ -438,8 +462,12 @@ Item {
             property real lastY: 0
             readonly property bool zooming: pressed && (pressedButtons & Qt.LeftButton) && Preferences.patternPointerMode === "zoom"
 
-            function xAt(px: real): real { return ApplicationInfo.chartCoordinate(px, false); }
-            function yAt(py: real): real { return ApplicationInfo.chartCoordinate(py, true); }
+            function xAt(px: real): real {
+                return ApplicationInfo.chartCoordinate(px, false);
+            }
+            function yAt(py: real): real {
+                return ApplicationInfo.chartCoordinate(py, true);
+            }
 
             objectName: "singleCrystal.pointer"
             anchors.fill: parent

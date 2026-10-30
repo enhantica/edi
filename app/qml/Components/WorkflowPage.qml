@@ -57,24 +57,34 @@ EaComponents.ContentPage {
     property bool blockCurrentTemplate: false
     signal blockActivated(int index)
 
-    function showSidebarTab(extra) { ApplicationInfo.showWorkflowSidebarTab(extra); }
+    function showSidebarTab(extra) {
+        ApplicationInfo.showWorkflowSidebarTab(extra);
+    }
 
     // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
     // The main area's shown tab.
     readonly property int mainTabIndex: mainContent.children.length > 0 ? mainContent.children[0].currentIndex : 0
 
-    function showMainTab(index) { ApplicationInfo.showWorkflowMainTab(index); }
+    function showMainTab(index) {
+        ApplicationInfo.showWorkflowMainTab(index);
+    }
 
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
     // names it nowhere, so it is found as the SideBar's child with a gradient.
-    Component.onCompleted: ApplicationInfo.workflowCompleted(child => { child.visible = Qt.binding(() => page.continueShown && !textLoader.SwipeView.isCurrentItem); }, () => { sideBar.continueButton.anchors.bottomMargin = Qt.binding(() => EaStyle.Sizes.fontPixelSize); })
+    Component.onCompleted: ApplicationInfo.workflowCompleted(child => {
+        child.visible = Qt.binding(() => page.continueShown && !textLoader.SwipeView.isCurrentItem);
+    }, () => {
+        sideBar.continueButton.anchors.bottomMargin = Qt.binding(() => EaStyle.Sizes.fontPixelSize);
+    })
 
     // The sidebar on the side the preferences set (Preferences.sideBarSide; edi ADR-0017 §12), live. The base's
     // ContentPage anchors its sidebar container to the right and the main area to its left, with the sidebar's
     // border on its left edge, and names none of them; they are reached as the parents of the main content and
     // the sidebar, and only their anchors change — nothing is mirrored, so text, icons and number order stay.
-    function placeSideBar() { ApplicationInfo.placeWorkflowSidebar(); }
+    function placeSideBar() {
+        ApplicationInfo.placeWorkflowSidebar();
+    }
 
     Connections {
         target: Preferences
@@ -105,8 +115,12 @@ EaComponents.ContentPage {
     Connections {
         target: textLoader.item
         ignoreUnknownSignals: true
-        function onDirtyChanged() { ApplicationInfo.workflowDirtyChanged(); }
-        function onStayRequested() { ApplicationInfo.workflowStayRequested(); }
+        function onDirtyChanged() {
+            ApplicationInfo.workflowDirtyChanged();
+        }
+        function onStayRequested() {
+            ApplicationInfo.workflowStayRequested();
+        }
         function onBlockRequested(index) {
             page.blockActivated(index);
         }

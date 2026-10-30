@@ -36,9 +36,13 @@ Item {
     readonly property int elidedIndex: ApplicationInfo.iconElidedIndex()
     // A piece's width uncut. otherWidth sums these, never the pieces' `width`, so the elided piece's cut cannot feed
     // back into the room it is given while the segments change.
-    function naturalWidth(segment, piece) { return ApplicationInfo.iconNaturalWidth(segment, piece); }
+    function naturalWidth(segment, piece) {
+        return ApplicationInfo.iconNaturalWidth(segment, piece);
+    }
     // A slot's or a mark's set width; undefined for a text, which takes its own.
-    function fixedWidth(segment) { return ApplicationInfo.iconFixedWidth(segment); }
+    function fixedWidth(segment) {
+        return ApplicationInfo.iconFixedWidth(segment);
+    }
     // The width of every other piece, with their spacing: what the elided piece leaves room for.
     readonly property real otherWidth: ApplicationInfo.iconOtherWidth()
 

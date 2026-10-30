@@ -33,7 +33,9 @@ EaElements.GroupBox {
 
     // Writes the ticked formats; with the PDF ticked, once the preview's figures are grabbed. While the project
     // calculates, the report is not yet its outcome, so the save waits for it.
-    function saveReport() { ApplicationInfo.saveReportPreview(); }
+    function saveReport() {
+        ApplicationInfo.saveReportPreview();
+    }
 
     // In the browser Save report also downloads the files, and a saved file lasts until the page is reloaded.
     readonly property bool inBrowser: WebFiles.available
@@ -46,7 +48,9 @@ EaElements.GroupBox {
     // The row of savedReports for the file Save report would write in a format now, by its name, or null when that
     // file has not been saved (before the first save, or after the project is renamed). Rows of other names keep
     // their files.
-    function savedRow(format) { return ApplicationInfo.savedReportRow(format); }
+    function savedRow(format) {
+        return ApplicationInfo.savedReportRow(format);
+    }
 
     // A format's report path, read-only: normal when the saved file is current, red when the project changed since
     // or the file is gone, "not saved yet" before the first save; the saved time as its tooltip; dimmed while its
@@ -183,13 +187,21 @@ EaElements.GroupBox {
     // A report that could not be saved says why, as a project that could not.
     Connections {
         target: Session
-        function onNeedsSaveAsChanged() { ApplicationInfo.reportExportChanged(0); }
-        function onProjectChanged() { ApplicationInfo.reportExportChanged(1); }
+        function onNeedsSaveAsChanged() {
+            ApplicationInfo.reportExportChanged(0);
+        }
+        function onProjectChanged() {
+            ApplicationInfo.reportExportChanged(1);
+        }
     }
     Connections {
         target: group.report
-        function onCalculatingChanged() { ApplicationInfo.reportExportChanged(2); }
-        function onSaveFailed(message) { ApplicationInfo.reportExportFailure(message); }
+        function onCalculatingChanged() {
+            ApplicationInfo.reportExportChanged(2);
+        }
+        function onSaveFailed(message) {
+            ApplicationInfo.reportExportFailure(message);
+        }
     }
     AppDialog {
         id: saveError

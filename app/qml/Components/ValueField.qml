@@ -66,5 +66,9 @@ EaElements.ParamTextField {
     onEditingFinished: commit()
 
     // Return and leaving the field both commit; the second of the two finds nothing new.
-    function commit() { ApplicationInfo.commitValueField(() => { text = Qt.binding(() => field.value); }); }
+    function commit() {
+        ApplicationInfo.commitValueField(() => {
+            text = Qt.binding(() => field.value);
+        });
+    }
 }

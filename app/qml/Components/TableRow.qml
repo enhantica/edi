@@ -20,7 +20,11 @@ EaComponents.ListViewDelegate {
     onEditingChanged: ApplicationInfo.tableRowEditing()
     // A row's own click handler (one that opens what the row names) calls this too, so its click makes the row current
     // as any other does: selected in a selectable table, and reported to a page that holds its current row.
-    function activated() { ApplicationInfo.tableRowActivated(); }
+    function activated() {
+        ApplicationInfo.tableRowActivated();
+    }
 
-    Component.onCompleted: ApplicationInfo.tableRowCompleted((child, hover) => { child.opacity = Qt.binding(() => hover !== null && hover.enabled && hover.hovered ? 1 : 0); })
+    Component.onCompleted: ApplicationInfo.tableRowCompleted((child, hover) => {
+        child.opacity = Qt.binding(() => hover !== null && hover.enabled && hover.hovered ? 1 : 0);
+    })
 }

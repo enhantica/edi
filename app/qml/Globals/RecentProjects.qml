@@ -34,15 +34,29 @@ QtObject {
             recentProjects.refresh();
         }
     }
-    function webRows(): list<var> { return ApplicationInfo.recentWebRows(); }
+    function webRows(): list<var> {
+        return ApplicationInfo.recentWebRows();
+    }
     // A web row's place and whether it is the unsaved state kept for it.
-    function webKey(path: string): string { return ApplicationInfo.recentWebKey(path); }
-    function open(path: string) { ApplicationInfo.recentOpen(path); }
+    function webKey(path: string): string {
+        return ApplicationInfo.recentWebKey(path);
+    }
+    function open(path: string) {
+        ApplicationInfo.recentOpen(path);
+    }
 
-    function paths(): list<string> { return ApplicationInfo.recentPaths(); }
+    function paths(): list<string> {
+        return ApplicationInfo.recentPaths();
+    }
     // Rows are updated in place, so a project that goes missing or comes back changes the cell already shown.
-    function refresh() { ApplicationInfo.recentRefresh(); }
-    function remember(path: string) { ApplicationInfo.recentRemember(path); }
-    function forget(index: int) { ApplicationInfo.recentForget(index); }
+    function refresh() {
+        ApplicationInfo.recentRefresh();
+    }
+    function remember(path: string) {
+        ApplicationInfo.recentRemember(path);
+    }
+    function forget(index: int) {
+        ApplicationInfo.recentForget(index);
+    }
     Component.onCompleted: ApplicationInfo.recentCompleted()
 }

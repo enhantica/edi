@@ -10,5 +10,7 @@ import edi.app
 QtObject {
     // Why `text` is refused as a value of the kind `accepts` ("text", "number" or "integer"), or ""
     // when it is one. Text is never refused here; the core's rules refuse it once committed.
-    function refusal(text: string, accepts: string): string { return ApplicationInfo.typedInputRefusal(text, accepts); }
+    function refusal(text: string, accepts: string): string {
+        return ApplicationInfo.typedInputRefusal(text, accepts);
+    }
 }

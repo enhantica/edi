@@ -20,16 +20,26 @@ Popup {
     readonly property var accountData: panel.assistant.account
     readonly property string accountPlan: ApplicationInfo.assistantAccountPlan(panel)
     readonly property string accountInitial: ApplicationInfo.assistantAccountInitial(panel)
-    function usageResetLabel(value, now) { return ApplicationInfo.assistantUsageResetLabel(value, now); }
-    function usageCaption() { return ApplicationInfo.assistantUsageCaption(panel); }
-    function allowanceColor(remaining) { return ApplicationInfo.assistantAllowanceColor(remaining, EaStyle.Colors); }
-    function allowanceWindow(minutes) { return ApplicationInfo.assistantAllowanceWindow(panel, minutes); }
+    function usageResetLabel(value, now) {
+        return ApplicationInfo.assistantUsageResetLabel(value, now);
+    }
+    function usageCaption() {
+        return ApplicationInfo.assistantUsageCaption(panel);
+    }
+    function allowanceColor(remaining) {
+        return ApplicationInfo.assistantAllowanceColor(remaining, EaStyle.Colors);
+    }
+    function allowanceWindow(minutes) {
+        return ApplicationInfo.assistantAllowanceWindow(panel, minutes);
+    }
     readonly property string accountPlanLabel: ApplicationInfo.assistantAccountPlanLabel(panel)
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
     readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
     property var noticeState: null
     property var noticeProjection: ({})
-    function captureNotice() { ApplicationInfo.panelCaptureNotice(); }
+    function captureNotice() {
+        ApplicationInfo.panelCaptureNotice();
+    }
     readonly property bool noticeAnchorPresent: ApplicationInfo.panelNoticeAnchorPresent()
     onAssistantChanged: ApplicationInfo.panelNoticeOwnerChanged(0)
     Component.onCompleted: ApplicationInfo.panelCompleted()
@@ -64,46 +74,90 @@ Popup {
         }
     }
     property var consentSend: null
-    function retireConsentSend() { ApplicationInfo.panelRetireConsentSend(); }
-    function ownsConsentSend(intent) { return ApplicationInfo.panelOwnsConsentSend(intent); }
-    function resumeConsentSend() { ApplicationInfo.panelResumeConsentSend(); }
-    function scheduleConsentSend() { ApplicationInfo.panelScheduleConsentSend(); }
+    function retireConsentSend() {
+        ApplicationInfo.panelRetireConsentSend();
+    }
+    function ownsConsentSend(intent) {
+        return ApplicationInfo.panelOwnsConsentSend(intent);
+    }
+    function resumeConsentSend() {
+        ApplicationInfo.panelResumeConsentSend();
+    }
+    function scheduleConsentSend() {
+        ApplicationInfo.panelScheduleConsentSend();
+    }
     Connections {
         target: panel.assistant
-        function onConversationRetired() { ApplicationInfo.panelNoticeOwnerChanged(1); }
-        function onConnectedChanged() { panel.scheduleConsentSend(); }
-        function onAccountChanged() { ApplicationInfo.panelNoticeOwnerChanged(2); }
-        function onSelectedModelChanged() { panel.retireConsentSend(); }
-        function onSelectedEffortChanged() { panel.retireConsentSend(); }
-        function onStateChanged() { panel.scheduleConsentSend(); }
-        function onCanCancelChanged() { panel.scheduleConsentSend(); }
-        function onDraftAdmissionReadyChanged() { panel.scheduleConsentSend(); }
-        function onLastErrorChanged() { panel.captureNotice(); }
-        function onContextPreviewChanged() { ApplicationInfo.panelConsentContextChanged(); }
+        function onConversationRetired() {
+            ApplicationInfo.panelNoticeOwnerChanged(1);
+        }
+        function onConnectedChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onAccountChanged() {
+            ApplicationInfo.panelNoticeOwnerChanged(2);
+        }
+        function onSelectedModelChanged() {
+            panel.retireConsentSend();
+        }
+        function onSelectedEffortChanged() {
+            panel.retireConsentSend();
+        }
+        function onStateChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onCanCancelChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onDraftAdmissionReadyChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onLastErrorChanged() {
+            panel.captureNotice();
+        }
+        function onContextPreviewChanged() {
+            ApplicationInfo.panelConsentContextChanged();
+        }
     }
     Connections {
         target: Session
-        function onProjectChanged() { panel.retireConsentSend(); }
+        function onProjectChanged() {
+            panel.retireConsentSend();
+        }
     }
     Connections {
         target: composer
-        function onTextRevisionChanged() { panel.retireConsentSend(); }
-        function onDraftOwnerRevisionChanged() { panel.retireConsentSend(); }
+        function onTextRevisionChanged() {
+            panel.retireConsentSend();
+        }
+        function onDraftOwnerRevisionChanged() {
+            panel.retireConsentSend();
+        }
     }
     Connections {
         target: panel.assistant.selectedFiles
-        function onCountChanged() { panel.retireConsentSend(); }
-        function onDataChanged() { panel.retireConsentSend(); }
+        function onCountChanged() {
+            panel.retireConsentSend();
+        }
+        function onDataChanged() {
+            panel.retireConsentSend();
+        }
     }
     Connections {
         target: panel.assistant
-        function onSessionProjectRequested(threadId,location,intent) { ApplicationInfo.restoreSessionProject(threadId, location, intent); }
-        function onSessionConsentRequested(threadId) { ApplicationInfo.panelSessionConsentRequested(); }
+        function onSessionProjectRequested(threadId, location, intent) {
+            ApplicationInfo.restoreSessionProject(threadId, location, intent);
+        }
+        function onSessionConsentRequested(threadId) {
+            ApplicationInfo.panelSessionConsentRequested();
+        }
     }
     Component.onDestruction: retireConsentSend()
     // A user navigation link always refers to the current project's normal
     // Report page. Other links retain their completed-row/file ownership checks.
-    function openReportLink(sourceRowId, link) { return ApplicationInfo.panelOpenReportLink(sourceRowId, link); }
+    function openReportLink(sourceRowId, link) {
+        return ApplicationInfo.panelOpenReportLink(sourceRowId, link);
+    }
     required property Item toggleControl
     readonly property Item firstFocusItem: connectionButton
     property bool shown: Preferences.assistantShown
@@ -142,7 +196,9 @@ Popup {
             easing.type: Easing.InCirc
         }
     }
-    function focusComposer() { ApplicationInfo.panelFocusComposer(); }
+    function focusComposer() {
+        ApplicationInfo.panelFocusComposer();
+    }
 
     contentItem: Item {
         objectName: "assistant.panel"
@@ -183,7 +239,7 @@ Popup {
                     anchors.left: parent.left
                     anchors.leftMargin: EaStyle.Sizes.fontPixelSize * 0.5
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(0,parent.width-headerActions.implicitWidth-AppSizes.unit*2)
+                    width: Math.max(0, parent.width - headerActions.implicitWidth - AppSizes.unit * 2)
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
                     text: qsTr("Assistant")
@@ -206,8 +262,16 @@ Popup {
                         enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
                         contentItem: RowLayout {
                             spacing: AppSizes.unit * 0.4
-                            EaElements.Label { text: "history"; font.family: EaStyle.Fonts.iconsFamily; color: sessionsButton.foregroundColor(); Accessible.ignored: true }
-                            EaElements.Label { text: sessionsButton.text; color: sessionsButton.foregroundColor() }
+                            EaElements.Label {
+                                text: "history"
+                                font.family: EaStyle.Fonts.iconsFamily
+                                color: sessionsButton.foregroundColor()
+                                Accessible.ignored: true
+                            }
+                            EaElements.Label {
+                                text: sessionsButton.text
+                                color: sessionsButton.foregroundColor()
+                            }
                         }
                         background: Rectangle {
                             border.width: 0
@@ -236,7 +300,10 @@ Popup {
                                 color: clearButton.foregroundColor()
                                 Accessible.ignored: true
                             }
-                            EaElements.Label { text: clearButton.text; color: clearButton.foregroundColor() }
+                            EaElements.Label {
+                                text: clearButton.text
+                                color: clearButton.foregroundColor()
+                            }
                         }
                         background: Rectangle {
                             border.width: 0
@@ -268,9 +335,7 @@ Popup {
                         contentItem: EaElements.Label {
                             text: usageButton.text
                             font: usageButton.font
-                            color: !usageButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                : usageButton.hovered || usageButton.down || usageButton.visualFocus
-                                    ? EaStyle.Colors.themeAccent : panel.allowanceColor(panel.remainingPercent)
+                            color: !usageButton.enabled ? EaStyle.Colors.themeForegroundDisabled : usageButton.hovered || usageButton.down || usageButton.visualFocus ? EaStyle.Colors.themeAccent : panel.allowanceColor(panel.remainingPercent)
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
@@ -286,8 +351,7 @@ Popup {
                         objectName: "assistant.connection"
                         readonly property bool pendingConnection: panel.assistant.state === "connecting"
                         readonly property bool accountView: !pendingConnection && panel.assistant.connected
-                        text: pendingConnection ? qsTr("Cancel connection")
-                            : accountView ? panel.accountInitial : qsTr("Connect ChatGPT")
+                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? panel.accountInitial : qsTr("Connect ChatGPT")
                         enabled: !pendingConnection || panel.assistant.canCancel
                         leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
                         rightPadding: leftPadding
@@ -303,8 +367,7 @@ Popup {
                                 font.pixelSize: EaStyle.Sizes.fontPixelSize
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
-                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                    : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
                             }
                             RowLayout {
                                 id: connectionText
@@ -314,15 +377,13 @@ Popup {
                                 EaElements.Label {
                                     text: connectionButton.pendingConnection ? "times" : "comment-dots"
                                     font.family: EaStyle.Fonts.iconsFamily
-                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                        : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
                                     Accessible.ignored: true
                                 }
                                 EaElements.Label {
                                     text: connectionButton.text
                                     font: connectionButton.font
-                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                        : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
                                 }
                             }
                         }
@@ -342,9 +403,7 @@ Popup {
                                 width: connectionButton.accountView ? EaStyle.Sizes.toolButtonHeight * 0.75 : parent.width
                                 height: EaStyle.Sizes.toolButtonHeight * 0.75
                                 radius: height * 0.5
-                                color: !connectionButton.enabled ? panel.actionBackground
-                                    : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent
-                                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                                color: !connectionButton.enabled ? panel.actionBackground : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                         }
                         ToolTip.text: connectionButton.accountView ? qsTr("Account") : text
@@ -416,8 +475,7 @@ Popup {
                     }
                     header: EdiNotice {
                         width: conversation.width
-                        noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && !panel.noticeAnchorPresent
-                            ? panel.noticeState.text : ""
+                        noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && !panel.noticeAnchorPresent ? panel.noticeState.text : ""
                     }
                     delegate: Column {
                         id: messageDelegate
@@ -450,22 +508,32 @@ Popup {
                         }
                         EdiNotice {
                             width: parent.width
-                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant
-                                && panel.noticeAnchorPresent && panel.noticeState.anchor === messageDelegate.rowId
-                                ? panel.noticeState.text : ""
+                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && panel.noticeAnchorPresent && panel.noticeState.anchor === messageDelegate.rowId ? panel.noticeState.text : ""
                         }
                     }
                     property bool followsTail: true
                     property string jumpedUserId: ""
                     readonly property int previousUserIndex: userTarget(-1)
                     readonly property int nextUserIndex: userTarget(1)
-                    function userTarget(direction) { return ApplicationInfo.conversationUserTarget(direction); }
-                    function jumpToUser(direction) { ApplicationInfo.conversationJumpToUser(direction); }
+                    function userTarget(direction) {
+                        return ApplicationInfo.conversationUserTarget(direction);
+                    }
+                    function jumpToUser(direction) {
+                        ApplicationInfo.conversationJumpToUser(direction);
+                    }
                     property string lastUserId: ""
-                    function observeUserAdmission() { ApplicationInfo.conversationObserveAdmission(); }
-                    function revealCurrentNotice() { ApplicationInfo.conversationRevealNotice(); }
-                    function positionAtTail() { ApplicationInfo.conversationPositionAtTail(); }
-                    function followOutput() { ApplicationInfo.conversationFollowOutput(); }
+                    function observeUserAdmission() {
+                        ApplicationInfo.conversationObserveAdmission();
+                    }
+                    function revealCurrentNotice() {
+                        ApplicationInfo.conversationRevealNotice();
+                    }
+                    function positionAtTail() {
+                        ApplicationInfo.conversationPositionAtTail();
+                    }
+                    function followOutput() {
+                        ApplicationInfo.conversationFollowOutput();
+                    }
                     onCountChanged: ApplicationInfo.conversationUpdated(false)
                     onContentHeightChanged: followOutput()
                     onHeightChanged: followOutput()
@@ -475,7 +543,9 @@ Popup {
                     Component.onCompleted: ApplicationInfo.conversationUpdated(false)
                     Connections {
                         target: panel.assistant.messages
-                        function onDataChanged() { ApplicationInfo.conversationUpdated(true); }
+                        function onDataChanged() {
+                            ApplicationInfo.conversationUpdated(true);
+                        }
                     }
                     ScrollBar.vertical: EaElements.ScrollBar {
                         id: historyScrollBar
@@ -533,8 +603,7 @@ Popup {
                     flickableDirection: Flickable.VerticalFlick
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
-                    visible: signedOutNotice.noticeText.length > 0
-                        || (panel.assistant.canCancel && panel.assistant.state !== "connecting")
+                    visible: signedOutNotice.noticeText.length > 0 || (panel.assistant.canCancel && panel.assistant.state !== "connecting")
                     Column {
                         id: signedOutControls
                         width: parent.width
@@ -543,8 +612,7 @@ Popup {
                             id: signedOutNotice
                             width: parent.width
                             visible: noticeText.length > 0
-                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant
-                                ? panel.noticeState.text : ""
+                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant ? panel.noticeState.text : ""
                         }
                         EaElements.Button {
                             id: authCancel
@@ -559,15 +627,12 @@ Popup {
                                 implicitHeight: panel.assistant.state === "connecting" ? EaStyle.Sizes.toolButtonHeight * 0.75 : 0
                                 radius: height * 0.5
                                 border.width: 0
-                                color: !authCancel.enabled ? panel.actionBackground
-                                    : authCancel.hovered || authCancel.down || authCancel.visualFocus ? EaStyle.Colors.themeAccent
-                                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                                color: !authCancel.enabled ? panel.actionBackground : authCancel.hovered || authCancel.down || authCancel.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                             contentItem: EaElements.Label {
                                 text: authCancel.text
                                 font: authCancel.font
-                                color: panel.assistant.state === "connecting" && authCancel.enabled
-                                    ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : authCancel.foregroundColor()
+                                color: panel.assistant.state === "connecting" && authCancel.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : authCancel.foregroundColor()
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
@@ -580,7 +645,7 @@ Popup {
                     id: signInPrompt
                     objectName: "assistant.signInPrompt"
                     anchors.centerIn: parent
-                    width: Math.max(0,parent.width-AppSizes.unit*2)
+                    width: Math.max(0, parent.width - AppSizes.unit * 2)
                     text: qsTr("No ChatGPT connection")
                 }
             }
@@ -603,9 +668,8 @@ Popup {
             readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
             width: Math.min(AppSizes.unit * 30, Math.max(0, parent.width - AppSizes.unit * 2))
             height: Math.min(implicitHeight, viewportHeight)
-            contentWidth: Math.max(0, width-leftPadding-rightPadding)
-            contentHeight: Math.min(Math.max(usageContent.implicitHeight, usageStatus.implicitHeight), Math.max(0, viewportHeight-topPadding-bottomPadding
-                -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: Math.min(Math.max(usageContent.implicitHeight, usageStatus.implicitHeight), Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
             onAboutToShow: panel.assistant.refreshUsage()
             onOpened: ApplicationInfo.refreshAssistantUsageClock(usageDialog)
             Timer {
@@ -619,18 +683,20 @@ Popup {
                 width: usageDialog.contentWidth
                 height: usageDialog.contentHeight
                 clip: true
-                ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
+                ScrollBar.vertical: EaElements.ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                    interactive: false
+                }
                 Column {
                     id: usageContent
-                    width: Math.max(0, usageDialog.contentWidth-AppSizes.unit)
+                    width: Math.max(0, usageDialog.contentWidth - AppSizes.unit)
                     spacing: AppSizes.unit * 1.5
                     EaElements.Label {
                         id: usageStatus
                         objectName: "assistant.usageUnavailable"
                         visible: panel.usageData.loading || panel.usageData.stale || panel.usageData.state !== "ready" || usageAllowances.count === 0
                         width: parent.width
-                        text: panel.usageData.state === "ready" && usageAllowances.count === 0
-                            ? qsTr("Session and weekly usage were not reported.") : panel.usageData.statusText || qsTr("Usage unavailable")
+                        text: panel.usageData.state === "ready" && usageAllowances.count === 0 ? qsTr("Session and weekly usage were not reported.") : panel.usageData.statusText || qsTr("Usage unavailable")
                         wrapMode: Text.WordWrap
                     }
                     Repeater {
@@ -640,19 +706,22 @@ Popup {
                             id: allowance
                             required property var modelData
                             readonly property var window: ApplicationInfo.assistantAllowanceWindow(panel, modelData.minutes)
-                            objectName: "assistant.usage."+modelData.key
+                            objectName: "assistant.usage." + modelData.key
                             width: usageContent.width
                             spacing: AppSizes.unit * 0.35
                             RowLayout {
                                 width: parent.width
-                                EaElements.Label { text: allowance.modelData.title; Layout.fillWidth: true }
                                 EaElements.Label {
-                                    objectName: allowance.objectName+".percent"
+                                    text: allowance.modelData.title
+                                    Layout.fillWidth: true
+                                }
+                                EaElements.Label {
+                                    objectName: allowance.objectName + ".percent"
                                     text: allowance.window ? qsTr("%1% used").arg(allowance.window.usedPercent) : qsTr("Unavailable")
                                 }
                             }
                             Rectangle {
-                                objectName: allowance.objectName+".bar"
+                                objectName: allowance.objectName + ".bar"
                                 width: parent.width
                                 height: AppSizes.unit * 0.5
                                 radius: height * 0.5
@@ -660,20 +729,19 @@ Popup {
                                 border.width: EaStyle.Sizes.borderThickness
                                 border.color: EaStyle.Colors.appBorder
                                 Rectangle {
-                                    objectName: allowance.objectName+".fill"
+                                    objectName: allowance.objectName + ".fill"
                                     x: parent.border.width
                                     y: parent.border.width
-                                    width: allowance.window ? Math.max(0,parent.width-parent.border.width*2) * Math.max(0,Math.min(1,allowance.window.usedPercent/100)) : 0
-                                    height: Math.max(0,parent.height-parent.border.width*2)
+                                    width: allowance.window ? Math.max(0, parent.width - parent.border.width * 2) * Math.max(0, Math.min(1, allowance.window.usedPercent / 100)) : 0
+                                    height: Math.max(0, parent.height - parent.border.width * 2)
                                     radius: height * 0.5
-                                    color: allowance.window && 100-allowance.window.usedPercent < 5 ? EaStyle.Colors.red
-                                         : allowance.window && 100-allowance.window.usedPercent < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent
+                                    color: allowance.window && 100 - allowance.window.usedPercent < 5 ? EaStyle.Colors.red : allowance.window && 100 - allowance.window.usedPercent < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent
                                 }
                             }
                             EaElements.Label {
-                                objectName: allowance.objectName+".reset"
+                                objectName: allowance.objectName + ".reset"
                                 visible: allowance.window !== null
-                                text: allowance.window ? panel.usageResetLabel(allowance.window.resetsAt,usageDialog.resetClock) : ""
+                                text: allowance.window ? panel.usageResetLabel(allowance.window.resetsAt, usageDialog.resetClock) : ""
                                 color: EaStyle.Colors.themeForegroundMinor
                                 textFormat: Text.PlainText
                                 wrapMode: Text.WordWrap
@@ -708,11 +776,12 @@ Popup {
             width: Math.min(AppSizes.unit * 24, Math.max(0, parent.width - AppSizes.unit * 2))
             height: Math.min(implicitHeight, viewportHeight)
             contentWidth: Math.max(0, width - leftPadding - rightPadding)
-            contentHeight: Math.min(accountContent.implicitHeight, Math.max(0, viewportHeight-topPadding-bottomPadding
-                -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+            contentHeight: Math.min(accountContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
             Connections {
                 target: panel.assistant
-                function onConnectedChanged() { ApplicationInfo.assistantAccountConnectionChanged(panel, accountDialog); }
+                function onConnectedChanged() {
+                    ApplicationInfo.assistantAccountConnectionChanged(panel, accountDialog);
+                }
             }
             ScrollView {
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -721,7 +790,7 @@ Popup {
                 clip: true
                 Column {
                     id: accountContent
-                    width: Math.max(0, accountDialog.contentWidth-AppSizes.unit)
+                    width: Math.max(0, accountDialog.contentWidth - AppSizes.unit)
                     spacing: 0
                     Column {
                         width: parent.width
@@ -743,7 +812,10 @@ Popup {
                             wrapMode: Text.WrapAnywhere
                         }
                     }
-                    Item { width: 1; height: AppSizes.unit * 1.5 }
+                    Item {
+                        width: 1
+                        height: AppSizes.unit * 1.5
+                    }
                     EaElements.Button {
                         id: signOutButton
                         objectName: "assistant.signOut"
@@ -756,9 +828,13 @@ Popup {
                                 font.family: EaStyle.Fonts.iconsFamily
                                 color: signOutButton.foregroundColor()
                             }
-                            EaElements.Label { anchors.verticalCenter: parent.verticalCenter; text: signOutButton.text; color: signOutButton.foregroundColor() }
+                            EaElements.Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: signOutButton.text
+                                color: signOutButton.foregroundColor()
+                            }
                         }
-                        width: Math.min(implicitWidth,parent.width)
+                        width: Math.min(implicitWidth, parent.width)
                         enabled: panel.assistant.connected
                         Accessible.name: text
                         onClicked: panel.assistant.signOut()
@@ -771,12 +847,10 @@ Popup {
             objectName: "assistant.sessionsDialog"
             parent: Overlay.overlay
             title: qsTr("Assistant sessions")
-            width: Math.min(AppSizes.unit * 64, Math.max(0, parent.width-AppSizes.unit*2))
-            readonly property real viewportHeight: Math.max(0, parent.height-AppSizes.unit*2)
-            contentWidth: Math.max(0, width-leftPadding-rightPadding)
-            contentHeight: Math.min(sessionsContent.implicitHeight, Math.max(0, viewportHeight-topPadding-bottomPadding
-                - (implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)
-                - (implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+            width: Math.min(AppSizes.unit * 64, Math.max(0, parent.width - AppSizes.unit * 2))
+            readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: Math.min(sessionsContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
             standardButtons: Dialog.Close
             Column {
                 id: sessionsContent
@@ -792,11 +866,17 @@ Popup {
                     onHeightChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
                     sourceModel: panel.assistant.sessions
                     defaultInfoText: panel.assistant.sessionsLoading ? qsTr("Loading sessions…") : qsTr("No app-created sessions")
-                    columns: [numberColumnWidth, -1, AppSizes.unit*14, AppSizes.iconColumnWidth]
+                    columns: [numberColumnWidth, -1, AppSizes.unit * 14, AppSizes.iconColumnWidth]
                     header: EaComponents.ListViewHeader {
                         EaComponents.ListViewLabel {}
-                        EaComponents.ListViewLabel { text: qsTr("Session"); horizontalAlignment: Text.AlignLeft }
-                        EaComponents.ListViewLabel { text: qsTr("Last modified"); horizontalAlignment: Text.AlignLeft }
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Session")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Last modified")
+                            horizontalAlignment: Text.AlignLeft
+                        }
                         EaComponents.ListViewLabel {}
                     }
                     delegate: TableRow {
@@ -809,21 +889,27 @@ Popup {
                         MouseArea {
                             parent: sessionRow
                             height: sessionRow.height
-                            width: Math.max(0,sessionRow.width-AppSizes.iconColumnWidth-sessionsTable.rowPadding-EaStyle.Sizes.tableColumnSpacing)
+                            width: Math.max(0, sessionRow.width - AppSizes.iconColumnWidth - sessionsTable.rowPadding - EaStyle.Sizes.tableColumnSpacing)
                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                             enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
                             onClicked: ApplicationInfo.activateSessionBrowserRow(panel, sessionRow)
                         }
-                        EaComponents.ListViewLabel { text: sessionRow.index+1; horizontalAlignment: Text.AlignHCenter }
+                        EaComponents.ListViewLabel {
+                            text: sessionRow.index + 1
+                            horizontalAlignment: Text.AlignHCenter
+                        }
                         EaComponents.ListViewLabel {
                             text: sessionRow.name
                             horizontalAlignment: Text.AlignLeft
                             ToolTip.text: text
                         }
-                        EaComponents.ListViewLabel { text: sessionRow.modified; horizontalAlignment: Text.AlignLeft }
+                        EaComponents.ListViewLabel {
+                            text: sessionRow.modified
+                            horizontalAlignment: Text.AlignLeft
+                        }
                         EaComponents.ListViewButton {
                             id: archiveSessionButton
-                            objectName: "assistant.session.archive."+sessionRow.index
+                            objectName: "assistant.session.archive." + sessionRow.index
                             fontIcon: "archive"
                             horizontalAlignment: Text.AlignHCenter
                             contentItem: EaElements.Label {
@@ -848,7 +934,12 @@ Popup {
                     color: EaStyle.Colors.red
                 }
             }
-            Connections {target: panel.assistant;function onSessionSelected(threadId) {sessionsDialog.accept();}}
+            Connections {
+                target: panel.assistant
+                function onSessionSelected(threadId) {
+                    sessionsDialog.accept();
+                }
+            }
             footer: EaElements.DialogButtonBox {
                 id: sessionButtons
                 EaElements.Button {

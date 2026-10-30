@@ -46,7 +46,9 @@ EaElements.GroupRow {
         currentIndex: row.spaceGroup ? row.spaceGroup.names.indexOf(row.spaceGroup.nameHM) : -1
         displayText: row.spaceGroup ? row.spaceGroup.nameHM : ""
         // The choice goes to the model; the box then follows the model's name again.
-        onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 2, () => { currentIndex = Qt.binding(() => row.spaceGroup ? row.spaceGroup.names.indexOf(row.spaceGroup.nameHM) : -1); })
+        onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 2, () => {
+                currentIndex = Qt.binding(() => row.spaceGroup ? row.spaceGroup.names.indexOf(row.spaceGroup.nameHM) : -1);
+            })
     }
     SearchableComboBox {
         objectName: "spaceGroup.coordSystemCode"
@@ -57,6 +59,8 @@ EaElements.GroupRow {
         model: row.spaceGroup ? row.spaceGroup.codes : []
         currentIndex: row.spaceGroup ? row.spaceGroup.codes.indexOf(row.spaceGroup.coordSystemCode) : -1
         displayText: row.spaceGroup ? row.spaceGroup.coordSystemCode : ""
-        onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 3, () => { currentIndex = Qt.binding(() => row.spaceGroup ? row.spaceGroup.codes.indexOf(row.spaceGroup.coordSystemCode) : -1); })
+        onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 3, () => {
+                currentIndex = Qt.binding(() => row.spaceGroup ? row.spaceGroup.codes.indexOf(row.spaceGroup.coordSystemCode) : -1);
+            })
     }
 }

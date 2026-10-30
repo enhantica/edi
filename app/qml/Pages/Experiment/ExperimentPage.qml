@@ -197,7 +197,9 @@ WorkflowPage {
                 // From the column's height and where the table starts in it, never from the table's own height, so a
                 // new row count cannot move the room it was taken from (a half-pixel rounding made it flicker).
                 // Set after the column has laid out: the table's place is read, not bound.
-                function place() { ApplicationInfo.placeReflectionTable(); }
+                function place() {
+                    ApplicationInfo.placeReflectionTable();
+                }
 
                 experiment: page.experiment
                 Component.onCompleted: Qt.callLater(place)

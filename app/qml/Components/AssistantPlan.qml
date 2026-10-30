@@ -11,13 +11,13 @@ Column {
     visible: Object.keys(assistant.pendingPlan).length > 0
     spacing: AppSizes.unit * 0.5
     EaElements.Label {
-            textFormat: Text.PlainText
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: card.assistant.pendingPlan.summary || ""
     }
     EaElements.Label {
-            textFormat: Text.PlainText
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: qsTr("Approve the listed parameter groups and budget. Each isolated trial fixes all other parameters; only the chosen group is free. The accepted project changes only after a converged comparable improvement.")

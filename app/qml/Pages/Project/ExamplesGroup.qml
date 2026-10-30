@@ -16,7 +16,9 @@ EaElements.GroupBox {
     title: qsTr("Examples")
     icon: "database"
 
-    function choiceIndex(model, value) { return ApplicationInfo.exampleChoiceIndex(model, value); }
+    function choiceIndex(model, value) {
+        return ApplicationInfo.exampleChoiceIndex(model, value);
+    }
 
     Column {
         // Hidden while collapsed, so each row's accessible box is placed when it shows: the web platform does

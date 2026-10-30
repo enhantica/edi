@@ -52,12 +52,20 @@ AppDialog {
     property int resultsRevision: 0
     Connections {
         target: dialog.results
-        function onDataChanged() { ApplicationInfo.fitResultsRevisionChanged(); }
-        function onCountChanged() { ApplicationInfo.fitResultsRevisionChanged(); }
+        function onDataChanged() {
+            ApplicationInfo.fitResultsRevisionChanged();
+        }
+        function onCountChanged() {
+            ApplicationInfo.fitResultsRevisionChanged();
+        }
     }
     // A read-only row takes no hover: the base row tints itself from its own hover handler, which a disabled row keeps.
-    function passive(row) { ApplicationInfo.fitResultsPassive(row); }
-    function widestSummaryText(title, cell) { return ApplicationInfo.fitResultsSummaryWidth(title, cell); }
+    function passive(row) {
+        ApplicationInfo.fitResultsPassive(row);
+    }
+    function widestSummaryText(title, cell) {
+        return ApplicationInfo.fitResultsSummaryWidth(title, cell);
+    }
     readonly property real metricColumnWidth: ApplicationInfo.fitResultsColumnWidth(false)
     readonly property real valueColumnWidth: ApplicationInfo.fitResultsColumnWidth(true)
 

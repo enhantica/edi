@@ -24,10 +24,14 @@ EaElements.Menu {
     property int membership: 0
 
     // The shown rows that can be fitted, as the filter model has them now.
-    function fittableRows() { return ApplicationInfo.parameterFreeRows(true); }
+    function fittableRows() {
+        return ApplicationInfo.parameterFreeRows(true);
+    }
 
     // The shown rows that are free, fittable or not: Fixed clears a flag set before a change that blocked it too.
-    function freeRows() { return ApplicationInfo.parameterFreeRows(false); }
+    function freeRows() {
+        return ApplicationInfo.parameterFreeRows(false);
+    }
 
     // The shown rows that can be fitted, and how many of them are free. Reading each row's `free` keeps it live. The
     // count is used, not only read: the compiled binding drops a read whose value is unused (`void x`), and with it
@@ -37,18 +41,30 @@ EaElements.Menu {
     readonly property int fixedCount: shown.length - freeCount
 
     // Free or Fixed acts on the rows shown when it is chosen.
-    function apply(free) { ApplicationInfo.applyParametersFree(free); }
+    function apply(free) {
+        ApplicationInfo.applyParametersFree(free);
+    }
 
     Connections {
         target: menu.filter
-        function onRowsInserted() { ApplicationInfo.parameterMenuMembershipChanged(); }
-        function onRowsRemoved() { ApplicationInfo.parameterMenuMembershipChanged(); }
-        function onModelReset() { ApplicationInfo.parameterMenuMembershipChanged(); }
-        function onLayoutChanged() { ApplicationInfo.parameterMenuMembershipChanged(); }
+        function onRowsInserted() {
+            ApplicationInfo.parameterMenuMembershipChanged();
+        }
+        function onRowsRemoved() {
+            ApplicationInfo.parameterMenuMembershipChanged();
+        }
+        function onModelReset() {
+            ApplicationInfo.parameterMenuMembershipChanged();
+        }
+        function onLayoutChanged() {
+            ApplicationInfo.parameterMenuMembershipChanged();
+        }
     }
     Connections {
         target: menu.project
-        function onCurrentExperimentIndexChanged() { ApplicationInfo.parameterMenuMembershipChanged(); }
+        function onCurrentExperimentIndexChanged() {
+            ApplicationInfo.parameterMenuMembershipChanged();
+        }
     }
 
     // Centred in the app window, as the app's dialogs are, not at the click (the owner, 2026-10-27).

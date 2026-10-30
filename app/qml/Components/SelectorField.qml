@@ -28,7 +28,9 @@ EaElements.ParamComboBox {
     // A help text set as `ToolTip.text` shows in the app's tooltip on hover, unless a refusal is shown.
     property bool helpToolTip: false
     signal selected(string token)
-    property var editorLife: ({ alive: true })
+    property var editorLife: ({
+            alive: true
+        })
     property var activation: null
     Component.onDestruction: ApplicationInfo.editorDestroyed()
 
@@ -61,5 +63,7 @@ EaElements.ParamComboBox {
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(selector)
 
-    onActivated: index => ApplicationInfo.activateSelector(index, () => { currentIndex = Qt.binding(() => options ? options.indexOf(selector.token) : -1); })
+    onActivated: index => ApplicationInfo.activateSelector(index, () => {
+            currentIndex = Qt.binding(() => options ? options.indexOf(selector.token) : -1);
+        })
 }

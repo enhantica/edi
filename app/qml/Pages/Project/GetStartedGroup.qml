@@ -59,19 +59,33 @@ EaElements.GroupBox {
         }
     }
 
-    property var createLife: ({ alive: true })
+    property var createLife: ({
+            alive: true
+        })
     property var createIntent: null
     property var createOperation: null
     property var assistantCreate: null
     Component.onDestruction: createLife.alive = false
-    function prepareAssistantCreate(id) { return ApplicationInfo.prepareAssistantCreate(id); }
-    function assistantCreateDialog(id) { return ApplicationInfo.assistantCreateDialog(id); }
-    function retireAssistantCreate(id, manual) { ApplicationInfo.retireAssistantCreate(id, manual); }
+    function prepareAssistantCreate(id) {
+        return ApplicationInfo.prepareAssistantCreate(id);
+    }
+    function assistantCreateDialog(id) {
+        return ApplicationInfo.assistantCreateDialog(id);
+    }
+    function retireAssistantCreate(id, manual) {
+        ApplicationInfo.retireAssistantCreate(id, manual);
+    }
     // Native Create reuses this actual form's remembered parent/defaults. It does
     // not accept a dialog or synthesize a chooser selection.
-    function nativeProjectNameError(name) { return ApplicationInfo.createProjectNameError(name); }
-    function nativeCreateDefaults(name, description, title) { return ApplicationInfo.createProjectDefaults(name, description, title); }
-    function chooseCreate() { ApplicationInfo.chooseCreateProject(); }
+    function nativeProjectNameError(name) {
+        return ApplicationInfo.createProjectNameError(name);
+    }
+    function nativeCreateDefaults(name, description, title) {
+        return ApplicationInfo.createProjectDefaults(name, description, title);
+    }
+    function chooseCreate() {
+        ApplicationInfo.chooseCreateProject();
+    }
 
     EaComponents.ProjectDescriptionDialog {
         id: createDialog

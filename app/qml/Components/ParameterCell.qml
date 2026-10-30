@@ -71,7 +71,9 @@ EaComponents.ListViewParameter {
     // Set from the changes it follows rather than bound, and only once the table has given the cell its column's width:
     // until then the cell is as wide as its own text, which fits, and following that width back to the text would loop.
     property string shownValue: valueText
-    function refit() { ApplicationInfo.parameterCellRefit(); }
+    function refit() {
+        ApplicationInfo.parameterCellRefit();
+    }
     onRoomChanged: refit()
     onValueTextChanged: refit()
     onNarrowTextChanged: refit()
@@ -144,14 +146,15 @@ EaComponents.ListViewParameter {
     property var ownerToken: ({})
     property var draft: null
     property var commitInProgress: null
-    property var editorLife: ({ alive: true })
+    property var editorLife: ({
+            alive: true
+        })
     property bool assistantEditing: false
     property bool assistantCommitReady: false
     readonly property bool manualEditing: draft !== null && draft.kind === "manual"
     readonly property ParameterItem manualItem: manualEditing ? draft.item : null
     readonly property ParameterItem manualDraftParameter: manualItem
-    readonly property bool assistantManualDraft: inputMethodComposing ||
-        (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
+    readonly property bool assistantManualDraft: inputMethodComposing || (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
     onEditOwnerChanged: ApplicationInfo.editorRetireOwner()
     onObjectNameChanged: ApplicationInfo.editorRetireOwner()
     Component.onDestruction: ApplicationInfo.editorDestroyed()
@@ -160,24 +163,37 @@ EaComponents.ListViewParameter {
         target: cell
         property: "text"
         value: cell.activeFocus ? cell.editText : cell.value
-        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady &&
-              cell.commitInProgress === null && !cell.inputMethodComposing
+        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady && cell.commitInProgress === null && !cell.inputMethodComposing
         restoreMode: Binding.RestoreNone
     }
-    function refreshCleanText() { ApplicationInfo.editorRefreshCleanText(); }
-    function rememberManualDraft() { ApplicationInfo.editorRememberDraft(ApplicationInfo.ParameterCellEditor); }
+    function refreshCleanText() {
+        ApplicationInfo.editorRefreshCleanText();
+    }
+    function rememberManualDraft() {
+        ApplicationInfo.editorRememberDraft(ApplicationInfo.ParameterCellEditor);
+    }
     onTextEdited: rememberManualDraft()
     onInputMethodComposingChanged: ApplicationInfo.editorCompositionChanged(ApplicationInfo.ParameterCellEditor)
     onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.ParameterCellEditor)
     onEditTextChanged: refreshCleanText()
-    function beginAssistantEdit() { ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterCellEditor); }
-    function allowAssistantCommit() { ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterCellEditor); }
-    function resetEditorText() { ApplicationInfo.parameterEditorReset(); }
-    function cancelAssistantEdit() { ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterCellEditor); }
+    function beginAssistantEdit() {
+        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterCellEditor);
+    }
+    function allowAssistantCommit() {
+        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterCellEditor);
+    }
+    function resetEditorText() {
+        ApplicationInfo.parameterEditorReset();
+    }
+    function cancelAssistantEdit() {
+        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterCellEditor);
+    }
     Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.ParameterCellEditor, event)
     // editingFinished owns Return as well as focus loss; accepted is the same
     // Return's second signal and cannot acquire a successor draft.
     onEditingFinished: commit()
-    function commit() { ApplicationInfo.editorCommit(ApplicationInfo.ParameterCellEditor); }
+    function commit() {
+        ApplicationInfo.editorCommit(ApplicationInfo.ParameterCellEditor);
+    }
     onFitToggled: checked => ApplicationInfo.parameterEditorFitToggled(checked)
 }

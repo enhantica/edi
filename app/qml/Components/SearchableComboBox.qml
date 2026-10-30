@@ -30,7 +30,9 @@ EaElements.ComboBox {
     property int horizontalAlignment: Text.AlignHCenter
     property int searchThreshold: 10
     // Filters start with their current selection; a fully visible list starts at its first option.
-    function positionPopup(opening) { ApplicationInfo.searchPositionPopup(opening); }
+    function positionPopup(opening) {
+        ApplicationInfo.searchPositionPopup(opening);
+    }
     // In a table, as wide as its widest option (or what it shows), a small gap and the arrow, the arrow right after
     // the text (the owner, 2026-10-27); a wider column keeps the space after it.
     readonly property real fittedWidth: ApplicationInfo.searchMeasuredWidth(false)
@@ -51,16 +53,24 @@ EaElements.ComboBox {
     readonly property bool anyMatch: ApplicationInfo.searchAnyMatch()
 
     // The form a search compares: lower case, without spaces ("P 1 21/c 1" and "p121/c1" are one).
-    function folded(text) { return ApplicationInfo.searchFolded(text); }
+    function folded(text) {
+        return ApplicationInfo.searchFolded(text);
+    }
     // The list opens below the box, or above it where there is more room, never over it, so the box keeps
     // showing its value while one searches; it is as tall as its entries or the room allows, and keeps that
     // height while a search shortens it. A list wider than the box is moved left where it would pass the
     // window's right edge.
-    function placePopup(opening) { ApplicationInfo.searchPlacePopup(opening); }
+    function placePopup(opening) {
+        ApplicationInfo.searchPlacePopup(opening);
+    }
     // Whether an entry's text matches the search.
-    function matches(text) { return ApplicationInfo.searchMatches(text); }
+    function matches(text) {
+        return ApplicationInfo.searchMatches(text);
+    }
     // The entry Enter picks: the one spelled as typed, else the first that matches; -1 when none does.
-    function pickedIndex() { return ApplicationInfo.searchPickedIndex(); }
+    function pickedIndex() {
+        return ApplicationInfo.searchPickedIndex();
+    }
 
     borderColor: inTable ? "transparent" : _borderColor()
     backgroundColor: inTable ? "transparent" : _backgroundColor()
@@ -131,23 +141,34 @@ EaElements.ComboBox {
         }
     }
 
-    Component.onCompleted: ApplicationInfo.searchCompleted(
-        () => { control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft); },
-        () => { control.popup.contentItem.model = Qt.binding(() => control.popup.visible ? control.delegateModel : null); },
-        () => { control.popup.focus = Qt.binding(() => control.searchable); })
+    Component.onCompleted: ApplicationInfo.searchCompleted(() => {
+        control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
+    }, () => {
+        control.popup.contentItem.model = Qt.binding(() => control.popup.visible ? control.delegateModel : null);
+    }, () => {
+        control.popup.focus = Qt.binding(() => control.searchable);
+    })
 
     Timer {
         id: popupLayout
         interval: 0
         property var opening: null
         property var request: null
-        function schedule(original) { ApplicationInfo.searchSchedule(original); }
+        function schedule(original) {
+            ApplicationInfo.searchSchedule(original);
+        }
         onTriggered: ApplicationInfo.searchTriggered()
     }
     Connections {
         target: control.popup
-        function onAboutToShow() { ApplicationInfo.searchAboutToShow(); }
-        function onAboutToHide() { ApplicationInfo.searchAboutToHide(); }
-        function onOpened() { ApplicationInfo.searchOpened(); }
+        function onAboutToShow() {
+            ApplicationInfo.searchAboutToShow();
+        }
+        function onAboutToHide() {
+            ApplicationInfo.searchAboutToHide();
+        }
+        function onOpened() {
+            ApplicationInfo.searchOpened();
+        }
     }
 }

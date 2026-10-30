@@ -49,7 +49,9 @@ EaElements.TextField {
     property EaElements.CheckBox fitCheckBox: null
     signal fitToggled(bool checked)
 
-    function openContextMenu(parentItem) { ApplicationInfo.parameterFieldMenu(parentItem); }
+    function openContextMenu(parentItem) {
+        ApplicationInfo.parameterFieldMenu(parentItem);
+    }
 
     readOnly: !parameter.enabled ?? false
 

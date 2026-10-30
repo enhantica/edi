@@ -13,20 +13,34 @@ AppDialog {
     property bool connectionAttempt: false
     property var approvalOwner: ({})
     property var acceptedOffer: null
-    function beginOffer() { return ApplicationInfo.connectionBeginOffer(); }
-    function presentOffer(offer) { ApplicationInfo.connectionPresentOffer(offer); }
+    function beginOffer() {
+        return ApplicationInfo.connectionBeginOffer();
+    }
+    function presentOffer(offer) {
+        ApplicationInfo.connectionPresentOffer(offer);
+    }
     onAssistantChanged: ApplicationInfo.connectionResetOffer(true, false)
     Connections {
         target: dialog
-        function onRejected() { ApplicationInfo.connectionResetOffer(false, false); }
+        function onRejected() {
+            ApplicationInfo.connectionResetOffer(false, false);
+        }
     }
-    function resumeAcceptedOffer() { ApplicationInfo.connectionResumeAcceptedOffer(); }
-    function scheduleAcceptedOffer() { ApplicationInfo.connectionScheduleAcceptedOffer(); }
-    function showConnectionFailureIfFinished() { ApplicationInfo.connectionShowFailure(); }
+    function resumeAcceptedOffer() {
+        ApplicationInfo.connectionResumeAcceptedOffer();
+    }
+    function scheduleAcceptedOffer() {
+        ApplicationInfo.connectionScheduleAcceptedOffer();
+    }
+    function showConnectionFailureIfFinished() {
+        ApplicationInfo.connectionShowFailure();
+    }
     property string disclosedContextText: ""
     property string disclosedContextIdentity: ""
     property var contextPresentation: ({})
-    function refreshDisclosedContext() { ApplicationInfo.connectionRefreshContext(); }
+    function refreshDisclosedContext() {
+        ApplicationInfo.connectionRefreshContext();
+    }
     Component.onCompleted: refreshDisclosedContext()
     readonly property var disclosedContext: ApplicationInfo.connectionDisclosedContext()
     title: assistant.connected ? qsTr("Approve project information") : qsTr("Connect ChatGPT")
@@ -34,9 +48,7 @@ AppDialog {
     width: Math.min(AppSizes.unit * 40 + leftPadding + rightPadding, Math.max(0, parent.width - AppSizes.unit * 2))
     height: Math.min(implicitHeight, viewportHeight)
     contentWidth: Math.max(0, width - leftPadding - rightPadding)
-    contentHeight: Math.min(content.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding
-        - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0)
-        - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+    contentHeight: Math.min(content.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
     standardButtons: Dialog.Ok | Dialog.Cancel
     footer: EaElements.DialogButtonBox {
         id: connectionButtons
@@ -75,17 +87,31 @@ AppDialog {
             snapMode: ListView.SnapToItem
         }
     }
-    function updateAcceptButton() { ApplicationInfo.connectionUpdateAcceptButton(); }
+    function updateAcceptButton() {
+        ApplicationInfo.connectionUpdateAcceptButton();
+    }
     onAboutToShow: updateAcceptButton()
     onOpened: ApplicationInfo.connectionPresentationChanged(0)
     Connections {
         target: dialog.assistant
-        function onConnectedChanged() { ApplicationInfo.connectionPresentationChanged(1); }
-        function onStateChanged() { ApplicationInfo.connectionPresentationChanged(3); }
-        function onDraftAdmissionReadyChanged() { dialog.scheduleAcceptedOffer(); }
-        function onContextPreviewChanged() { ApplicationInfo.connectionPresentationChanged(2); }
-        function onLastErrorChanged() { dialog.showConnectionFailureIfFinished(); }
-        function onConversationRetired() { ApplicationInfo.connectionResetOffer(false, true); }
+        function onConnectedChanged() {
+            ApplicationInfo.connectionPresentationChanged(1);
+        }
+        function onStateChanged() {
+            ApplicationInfo.connectionPresentationChanged(3);
+        }
+        function onDraftAdmissionReadyChanged() {
+            dialog.scheduleAcceptedOffer();
+        }
+        function onContextPreviewChanged() {
+            ApplicationInfo.connectionPresentationChanged(2);
+        }
+        function onLastErrorChanged() {
+            dialog.showConnectionFailureIfFinished();
+        }
+        function onConversationRetired() {
+            ApplicationInfo.connectionResetOffer(false, true);
+        }
     }
     onAccepted: ApplicationInfo.connectionAccepted()
     AppDialog {
@@ -96,9 +122,7 @@ AppDialog {
         width: dialog.width
         height: Math.min(implicitHeight, dialog.viewportHeight)
         contentWidth: Math.max(0, width - leftPadding - rightPadding)
-        contentHeight: Math.min(failureText.implicitHeight, Math.max(0, dialog.viewportHeight - topPadding - bottomPadding
-            - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0)
-            - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+        contentHeight: Math.min(failureText.implicitHeight, Math.max(0, dialog.viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
         standardButtons: Dialog.Ok
         footer: EaElements.DialogButtonBox {
             visible: count > 0
@@ -108,13 +132,16 @@ AppDialog {
             }
         }
         ScrollView {
-            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             id: failureScroll
+            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
             width: connectionFailure.contentWidth
             height: connectionFailure.contentHeight
             contentWidth: Math.max(0, width - leftPadding - rightPadding)
             clip: true
-            ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
+            ScrollBar.vertical: EaElements.ScrollBar {
+                policy: ScrollBar.AsNeeded
+                interactive: false
+            }
             EaElements.Label {
                 id: failureText
                 width: failureScroll.contentWidth
@@ -125,12 +152,12 @@ AppDialog {
         }
     }
     ScrollView {
+        id: disclosure
         ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
         ScrollBar.vertical: EaElements.ScrollBar {
             policy: ScrollBar.AsNeeded
             interactive: false
         }
-        id: disclosure
         objectName: "assistant.contextDisclosureScroll"
         width: dialog.contentWidth
         height: dialog.contentHeight
@@ -144,9 +171,7 @@ AppDialog {
                 width: parent.width
                 wrapMode: Text.WordWrap
                 textFormat: Text.PlainText
-                text: dialog.assistant.connected
-                    ? qsTr("Allow the assistant to use current project information and attached files for your message.")
-                    : qsTr("Sign in with your ChatGPT account. Your existing sign-in is reused when available; otherwise OpenAI opens to sign in.")
+                text: dialog.assistant.connected ? qsTr("Allow the assistant to use current project information and attached files for your message.") : qsTr("Sign in with your ChatGPT account. Your existing sign-in is reused when available; otherwise OpenAI opens to sign in.")
             }
             EaElements.Label {
                 width: parent.width

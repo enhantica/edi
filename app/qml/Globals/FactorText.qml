@@ -12,8 +12,12 @@ QtObject {
     readonly property var pattern: /\b(c?)R_?(wp|p|exp|Bragg|F)\b/g
 
     // Whether `text` names an agreement factor.
-    function has(text) { return ApplicationInfo.factorPresentation(text, false); }
+    function has(text) {
+        return ApplicationInfo.factorPresentation(text, false);
+    }
 
     // `text` as rich text with every factor subscripted.
-    function rich(text) { return ApplicationInfo.factorPresentation(text, true); }
+    function rich(text) {
+        return ApplicationInfo.factorPresentation(text, true);
+    }
 }

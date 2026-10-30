@@ -81,7 +81,11 @@ Rectangle {
 
                 // Return and leaving the field both commit; the second of the two finds nothing new. A
                 // refused name returns the field to the project's name and shows why, as ParameterField does.
-                function commit() { ApplicationInfo.descriptionCommit(0, () => { text = Qt.binding(() => tab.project ? tab.project.name : ""); }); }
+                function commit() {
+                    ApplicationInfo.descriptionCommit(0, () => {
+                        text = Qt.binding(() => tab.project ? tab.project.name : "");
+                    });
+                }
             }
 
             Item {
@@ -100,7 +104,9 @@ Rectangle {
                     onEditingFinished: commit()
 
                     // Return and leaving the field both commit; the second of the two finds nothing new.
-                    function commit() { ApplicationInfo.descriptionCommit(1, undefined); }
+                    function commit() {
+                        ApplicationInfo.descriptionCommit(1, undefined);
+                    }
                 }
             }
             // The report's authors (`_metadata.authors`), separated by "; ".
@@ -115,7 +121,9 @@ Rectangle {
                     onEditingFinished: commit()
 
                     // Return and leaving the field both commit; the second of the two finds nothing new.
-                    function commit() { ApplicationInfo.descriptionCommit(2, undefined); }
+                    function commit() {
+                        ApplicationInfo.descriptionCommit(2, undefined);
+                    }
                 }
             }
             DescriptionRow {
@@ -129,7 +137,9 @@ Rectangle {
                     onEditingFinished: commit()
 
                     // Return and leaving the field both commit; the second of the two finds nothing new.
-                    function commit() { ApplicationInfo.descriptionCommit(3, undefined); }
+                    function commit() {
+                        ApplicationInfo.descriptionCommit(3, undefined);
+                    }
                 }
             }
 

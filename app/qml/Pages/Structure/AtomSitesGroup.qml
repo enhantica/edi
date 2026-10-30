@@ -146,7 +146,9 @@ Column {
                             ]
                         }
                     }
-                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 0, () => { currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)); })
+                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 0, () => {
+                            currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
+                        })
                 }
             }
             ParameterCell {
@@ -181,7 +183,9 @@ Column {
                     listFontFamily: "Noto Sans"
                     currentIndex: letterIndex
                     displayText: letterIndex >= 0 ? group.sites.wyckoffNames[letterIndex] : row.wyckoffLetter
-                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 1, () => { currentIndex = Qt.binding(() => letterIndex); })
+                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 1, () => {
+                            currentIndex = Qt.binding(() => letterIndex);
+                        })
                 }
             }
             ParameterCell {

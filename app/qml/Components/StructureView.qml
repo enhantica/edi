@@ -208,7 +208,9 @@ Rectangle {
 
         property alias text: hoverLabel.text
 
-        function show(x, y) { ApplicationInfo.structureHoverShow(x, y); }
+        function show(x, y) {
+            ApplicationInfo.structureHoverShow(x, y);
+        }
 
         objectName: "structure.view.hover"
         visible: text !== ""

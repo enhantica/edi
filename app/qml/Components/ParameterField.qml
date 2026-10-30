@@ -84,14 +84,15 @@ EaElements.ParamTextField {
     property var ownerToken: ({})
     property var draft: null
     property var commitInProgress: null
-    property var editorLife: ({ alive: true })
+    property var editorLife: ({
+            alive: true
+        })
     property bool assistantEditing: false
     property bool assistantCommitReady: false
     readonly property bool manualEditing: draft !== null && draft.kind === "manual"
     readonly property ParameterItem manualItem: manualEditing ? draft.item : null
     readonly property ParameterItem manualDraftParameter: manualItem
-    readonly property bool assistantManualDraft: inputMethodComposing ||
-        (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
+    readonly property bool assistantManualDraft: inputMethodComposing || (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
     onEditOwnerChanged: ApplicationInfo.editorRetireOwner()
     onObjectNameChanged: ApplicationInfo.editorRetireOwner()
     Component.onDestruction: ApplicationInfo.editorDestroyed()
@@ -100,24 +101,37 @@ EaElements.ParamTextField {
         target: field
         property: "text"
         value: field.activeFocus ? field.editText : field.value
-        when: field.draft === null && !field.assistantEditing && !field.assistantCommitReady &&
-              field.commitInProgress === null && !field.inputMethodComposing
+        when: field.draft === null && !field.assistantEditing && !field.assistantCommitReady && field.commitInProgress === null && !field.inputMethodComposing
         restoreMode: Binding.RestoreNone
     }
-    function refreshCleanText() { ApplicationInfo.editorRefreshCleanText(); }
-    function rememberManualDraft() { ApplicationInfo.editorRememberDraft(ApplicationInfo.ParameterFieldEditor); }
+    function refreshCleanText() {
+        ApplicationInfo.editorRefreshCleanText();
+    }
+    function rememberManualDraft() {
+        ApplicationInfo.editorRememberDraft(ApplicationInfo.ParameterFieldEditor);
+    }
     onTextEdited: rememberManualDraft()
     onInputMethodComposingChanged: ApplicationInfo.editorCompositionChanged(ApplicationInfo.ParameterFieldEditor)
     onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.ParameterFieldEditor)
     onEditTextChanged: refreshCleanText()
-    function beginAssistantEdit() { ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterFieldEditor); }
-    function allowAssistantCommit() { ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterFieldEditor); }
-    function resetEditorText() { ApplicationInfo.parameterEditorReset(); }
-    function cancelAssistantEdit() { ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterFieldEditor); }
+    function beginAssistantEdit() {
+        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterFieldEditor);
+    }
+    function allowAssistantCommit() {
+        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterFieldEditor);
+    }
+    function resetEditorText() {
+        ApplicationInfo.parameterEditorReset();
+    }
+    function cancelAssistantEdit() {
+        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterFieldEditor);
+    }
     Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.ParameterFieldEditor, event)
     // editingFinished owns Return as well as focus loss; accepted is the same
     // Return's second signal and cannot acquire a successor draft.
     onEditingFinished: commit()
-    function commit() { ApplicationInfo.editorCommit(ApplicationInfo.ParameterFieldEditor); }
+    function commit() {
+        ApplicationInfo.editorCommit(ApplicationInfo.ParameterFieldEditor);
+    }
     onFitToggled: checked => ApplicationInfo.parameterEditorFitToggled(checked)
 }
