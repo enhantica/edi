@@ -1,6 +1,7 @@
 // Tests-owned real edi.app owner host. Services never replace the VM/controller/editor.
 #include "fixture_services.hpp"
 #include "session.hpp"
+#include "../../../unit/app/e11_t5_a2a_phase_adapter.hpp"
 #include "assistant_view_model.hpp"
 #include "assistant_history.hpp"
 #include <map>
@@ -775,10 +776,30 @@ int main(int argc,char** argv) {
             auto input=decode(line).toObject();
             auto op=input["op"].toString();Object result;
             if((!observed || !window) && op!="inspect" && op!="destroy" && op!="session_fault_facts")throw std::runtime_error("the original Main owner has retired");
+            if(op=="message_snapshot") {
+                e11_a2a_phase::requireDeclaredPhase();
+                const auto identity=input["row_id"].toString();
+                if(identity.isEmpty())throw std::invalid_argument("An exact current snapshot row identity is required");
+                QPointer<QObject> original;
+                for(auto* object:objects(window)) {
+                    auto* item=qobject_cast<QQuickItem*>(object);
+                    if(!item || item->window()!=window || object->property("rowId").toString()!=identity ||
+                        object->metaObject()->indexOfProperty("humanDetailsSnapshot")<0)continue;
+                    if(original && original!=object)throw std::runtime_error("The actual snapshot row is ambiguous");
+                    original=object;
+                }
+                if(!original)throw std::runtime_error("The actual snapshot row is not realized");
+                e11_a2a_phase::requirePhaseConsumer(original);
+                result=QJsonObject::fromVariantMap(e11_a2a_phase::snapshot(original));
+                result["row_id"]=original->property("rowId").toString();
+                result["kind"]=original->property("kind").toString();
+                result["status"]=original->property("status").toString();
+                result["current_owner"]=original->property("assistant").value<QObject*>()==observed->assistant();
+            } else
             if(op=="message_input") {
                 const auto identity=input["row_id"].toString(),name=input["name"].toString();
                 const auto action=input["action"].toString("click");
-                if(identity.isEmpty() || (name!="assistant.activity.toggle" && name!="assistant.activity.copy"))
+                if(identity.isEmpty() || (name!="assistant.activity.toggle" && name!="assistant.command.toggle" && name!="assistant.activity.copy"))
                     throw std::invalid_argument("exact original row identity and declared activity control required");
                 QPointer<QQuickItem> target,original_row;
                 for(auto* object:objects(window)) {

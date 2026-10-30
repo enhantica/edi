@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include "e11_t5_a2a_phase_adapter.hpp"
 
 namespace {
 struct A2aChecks {
@@ -82,6 +83,9 @@ class WebHumanA2aProof final : public QObject {
                           "; actual=" + literal(result.toString()));
     }
     std::unique_ptr<QObject> row() const {
+        e11_a2a_phase::requireDeclaredPhase();
+        auto* context=new QQmlContext(engine_->rootContext(),engine_);
+        context->setContextProperty("a2aTestValues",const_cast<WebHumanA2aProof*>(this));
         QQmlComponent component(engine_);
         component.setData("import QtQuick\nimport edi.app\n"
                           "AssistantMessage { assistant: Session.assistant }\n",
@@ -92,8 +96,10 @@ class WebHumanA2aProof final : public QObject {
             {"text", QString::fromUtf8("RAW_ONLY_shell_json_β🧪\n{private:true}")},
             {"rowId", QStringLiteral("A2a-absent-public-presentation-row")},
             {"payload", QVariantMap{{"type", "webSearch"}, {"query", "original fallback"}}},
-            {"width", 640}}));
+            {"width", 640}},context));
         if (!value) throw std::runtime_error(component.errorString().toStdString());
+        context->setContextProperty("a2aOriginalRow",value.get());
+        e11_a2a_phase::requirePhaseConsumer(value.get());
         return value;
     }
     static QObject* only(A2aChecks& check, QObject* owner, const QString& name) {
@@ -118,6 +124,22 @@ class WebHumanA2aProof final : public QObject {
     }
 public:
     explicit WebHumanA2aProof(QQmlEngine* engine) : QObject(engine), engine_(engine) {}
+    Q_INVOKABLE QString description(QObject* owner,bool full,const QVariantMap& source) const {
+        try {return e11_a2a_phase::description(owner,full,source);}
+        catch(const std::exception& error) {engine_->throwError(QString::fromUtf8(error.what()));return {};}
+    }
+    Q_INVOKABLE QString body(QObject* owner,const QVariantMap& detail) const {
+        try {return e11_a2a_phase::body(owner,detail);}
+        catch(const std::exception& error) {engine_->throwError(QString::fromUtf8(error.what()));return {};}
+    }
+    Q_INVOKABLE QString copy(QObject* owner,const QVariantMap& detail) const {
+        try {return e11_a2a_phase::copy(owner,detail);}
+        catch(const std::exception& error) {engine_->throwError(QString::fromUtf8(error.what()));return {};}
+    }
+    Q_INVOKABLE QVariantMap snapshot(QObject* owner) const {
+        try {return e11_a2a_phase::snapshot(owner);}
+        catch(const std::exception& error) {engine_->throwError(QString::fromUtf8(error.what()));return {};}
+    }
     Q_INVOKABLE QVariantMap normalizationLiteralSemantics() const {
         A2aChecks check;
         try {
@@ -135,15 +157,20 @@ public:
                 {"boxed-string", "new String(' alpha ')", ""},
                 {"no-implicit-coercion", "({toString:function(){throw new Error('must not coerce');}})", ""}
             };
-            // Stable ORIGINAL consumed producer carriers, not dead private
-            // formatting procedures. The same seam exists before/after A2a.
+            // Keep source carriers while the explicit phase changes observation.
             const std::vector<std::pair<QString, QString>> carriers{
                 {"purpose:", "}"}, {"description:", "}"}, {"arguments:{purpose:", "}}"}};
             for (const auto& item : typed)
-                for (const auto& carrier : carriers)
-                    exact(check, owner.get(), "activityDescription(false,{" + carrier.first +
-                              item.expression + carrier.second + ")",
+                for (const auto& carrier : carriers) {
+                    exact(check, owner.get(), e11_a2a_phase::isOriginal()
+                              ? "activityDescription(false,{" + carrier.first + item.expression + carrier.second + ")"
+                              : "ApplicationInfo.assistantSingleLineText(" + item.expression + ")",
                           item.expected, item.name + "/" + carrier.first);
+                    if(!e11_a2a_phase::isOriginal() && item.name!="boxed-string" && item.name!="no-implicit-coercion")
+                        exact(check,owner.get(),e11_a2a_phase::descriptionExpression(false,
+                            "{"+carrier.first+item.expression+carrier.second),item.expected,
+                            item.name+"/supported-typed-carrier/"+carrier.first);
+                }
             struct Text { QString name, source, expected; };
             const std::vector<Text> strings{
                 {"empty", "", ""},
@@ -166,8 +193,8 @@ public:
             };
             for (const auto& item : strings)
                 for (const auto& carrier : carriers)
-                    exact(check, owner.get(), "activityDescription(false,{" + carrier.first +
-                              literal(item.source) + carrier.second + ")",
+                    exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false,
+                              "{" + carrier.first + literal(item.source) + carrier.second),
                           item.expected, item.name + "/" + carrier.first);
             struct TwoPhaseText { QString name, source, compact, full; };
             const std::vector<TwoPhaseText> qtNel{
@@ -187,9 +214,9 @@ public:
             for (const auto& item : qtNel)
                 for (const auto& carrier : carriers) {
                     const auto input = "{" + carrier.first + literal(item.source) + carrier.second;
-                    exact(check, owner.get(), "activityDescription(false," + input + ")",
+                    exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false,input),
                           item.compact, item.name + "/compact/" + carrier.first);
-                    exact(check, owner.get(), "activityDescription(true," + input + ")",
+                    exact(check, owner.get(), e11_a2a_phase::descriptionExpression(true,input),
                           item.full, item.name + "/full/" + carrier.first);
                 }
             cold(check, owner.get(), header, field);
@@ -289,17 +316,17 @@ public:
             cold(check, owner.get(), header, field);
             check.require(header->property("text").toString() == "Search the web",
                           item.name + ": the actual compact header stays human-short, never a query or technical body");
-            exact(check, owner.get(), "activityDescription(false)", item.caption, item.name + "/Qt-variant-owner");
-            exact(check, owner.get(), "activityDescription(false," + literal(item.payload) + ")",
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false), item.caption, item.name + "/Qt-variant-owner");
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false,literal(item.payload)),
                   item.caption, item.name + "/ordinary-JS-source");
-            exact(check, owner.get(), "activityDescription(true," + literal(item.payload) + ")",
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(true,literal(item.payload)),
                   item.caption, item.name + "/explicit-full-description");
-            exact(check, owner.get(), "activityDescription(true)", item.caption, item.name + "/full-description");
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(true), item.caption, item.name + "/full-description");
             const QString body = item.caption.isEmpty() ? webFallback : item.caption;
             const QString detail = "({payload:payload,text:text,provenance:''})";
-            exact(check, owner.get(), "fullHumanDescription(" + detail + ")", body,
+            exact(check, owner.get(), e11_a2a_phase::bodyExpression(detail), body,
                   item.name + "/expanded-composition-caller");
-            exact(check, owner.get(), "humanActivityText(" + detail + ")", "Search the web\n" + body,
+            exact(check, owner.get(), e11_a2a_phase::copyExpression(detail), "Search the web\n" + body,
                   item.name + "/default-copy-composition-caller");
             check.require(evaluate(owner.get(), "JSON.stringify(payload)").toString() == before &&
                               QJsonDocument::fromJson(before.toUtf8()).object() == item.payload,
@@ -315,25 +342,25 @@ public:
         }
         try {
             auto owner = row();
-            exact(check, owner.get(), "activityDescription(false,null)", "Search the web for original fallback", "null-source-falls-back");
-            exact(check, owner.get(), "activityDescription(false,false)", "Search the web for original fallback", "false-source-falls-back");
-            exact(check, owner.get(), "activityDescription(false,{type:'webSearch',query:17})", "", "typed-top-query");
+            exact(check, owner.get(), (e11_a2a_phase::isOriginal()?QStringLiteral("activityDescription(false,null)"):e11_a2a_phase::descriptionExpression(false)), "Search the web for original fallback", "null-source-falls-back");
+            exact(check, owner.get(), (e11_a2a_phase::isOriginal()?QStringLiteral("activityDescription(false,false)"):e11_a2a_phase::descriptionExpression(false)), "Search the web for original fallback", "false-source-falls-back");
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false,QStringLiteral("{type:'webSearch',query:17}")), "", "typed-top-query");
             const QVariantMap wrapped{{"type", "webSearch"}, {"action", QVariantMap{{"type", "search"},
                 {"queries", QStringList{QString::fromUtf8(" α\nβ "), QString::fromUtf8("γ 🧪")}}}}};
             const bool assigned = owner->setProperty("payload", wrapped);
             check.require(assigned, "Actual original public Qt QStringList projection is accepted; suffix UNREACHED otherwise");
             if (assigned)
-                exact(check, owner.get(), "activityDescription(false)", QString::fromUtf8("Search the web for α β · γ 🧪"),
+                exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false), QString::fromUtf8("Search the web for α β · γ 🧪"),
                       "actual-QStringList-JSON-projection");
             const QString full = QString::fromUtf8("  Compare the original α\nβ source rows  ");
             const auto supplied = payload({{"purpose", full}, {"action", QJsonObject{{"type", "search"}, {"query", "ignored purpose fallback"}}}});
             const bool purposeAssigned = owner->setProperty("payload", supplied.toVariantMap());
             check.require(purposeAssigned, "Original supplied human-purpose carrier remains a public row input");
             if (purposeAssigned) {
-                exact(check, owner.get(), "activityDescription(false)", QString::fromUtf8("Compare the original α β source rows"), "short-purpose-normalized");
-                exact(check, owner.get(), "activityDescription(true)", full, "full-purpose-literal");
-                exact(check, owner.get(), "fullHumanDescription({payload:payload})", full, "expanded-purpose-literal");
-                exact(check, owner.get(), "humanActivityText({payload:payload})", "Search the web\n" + full, "default-copy-purpose-literal");
+                exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false), QString::fromUtf8("Compare the original α β source rows"), "short-purpose-normalized");
+                exact(check, owner.get(), e11_a2a_phase::descriptionExpression(true), full, "full-purpose-literal");
+                exact(check, owner.get(), e11_a2a_phase::bodyExpression(QStringLiteral("{payload:payload}")), full, "expanded-purpose-literal");
+                exact(check, owner.get(), e11_a2a_phase::copyExpression(QStringLiteral("{payload:payload}")), "Search the web\n" + full, "default-copy-purpose-literal");
             }
         } catch (const std::exception& error) {
             check.require(false, "A2a wrappers/retained-purpose: " + QString::fromUtf8(error.what()));
@@ -348,10 +375,7 @@ public:
             auto* field = only(check, owner.get(), "assistant.activity.details");
             if (!header || !field) return check.result();
             cold(check, owner.get(), header, field);
-            for (const auto& call : {QStringLiteral("activityDescription(false,p)"),
-                                    QStringLiteral("activityDescription(true,p)"),
-                                    QStringLiteral("fullHumanDescription({payload:p})"),
-                                    QStringLiteral("humanActivityText({payload:p})")}) {
+            for (const auto& call : e11_a2a_phase::mechanismCalls()) {
                 const auto probe = [&](const QString& setup) {
                     return "(() => {" + setup + ";const p={type:'webSearch',action:{type:'search',queries:q}};"
                         "try {" + call + ";return JSON.stringify({threw:false});}"
@@ -486,14 +510,14 @@ public:
             }
             exact(check, owner.get(),
                   "(() => {let reads=0;const q={toJSON:function(){++reads;return [' alpha ','beta'];}};"
-                  "const caption=activityDescription(false,{type:'webSearch',action:{type:'search',queries:q}});"
+                  "const caption=" + e11_a2a_phase::webExpression(QStringLiteral("{type:'webSearch',action:{type:'search',queries:q}}")) + ";"
                   "return JSON.stringify({caption:caption,reads:reads});})()",
                   QStringLiteral("{\"caption\":\"Search the web for alpha · beta\",\"reads\":1}"),
                   "ordinary-toJSON-projection-once");
             exact(check, owner.get(),
-                  "activityDescription(false,{type:'webSearch',action:{type:'search',query:'priority',queries:{toJSON:function(){throw new Error('unused');}}}})",
+                  e11_a2a_phase::webExpression(QStringLiteral("{type:'webSearch',action:{type:'search',query:'priority',queries:{toJSON:function(){throw new Error('unused');}}}}")),
                   "Search the web for priority", "unused-serializer-is-not-read");
-            QQmlExpression dependency(QQmlEngine::contextForObject(owner.get()), owner.get(), "activityDescription(false)");
+            QQmlExpression dependency(QQmlEngine::contextForObject(owner.get()), owner.get(), e11_a2a_phase::descriptionExpression(false));
             dependency.setNotifyOnValueChanged(true);
             QSignalSpy changes(&dependency, &QQmlExpression::valueChanged);
             const auto initial = dependency.evaluate();
@@ -535,7 +559,7 @@ public:
                 owner->setProperty("assistant", typedNull) && ownerIs(nullptr);
             check.require(nullSet, "A2a actual typed-null owner is read back before language suffix; otherwise UNREACHED");
             if (!nullSet) return check.result();
-            exact(check, owner.get(), "activityDescription(false)", "Open web page https://example.invalid/current", "null-owner-pure-caption");
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false), "Open web page https://example.invalid/current", "null-owner-pure-caption");
             A2aTranslator translator;
             const bool installed = QCoreApplication::installTranslator(&translator);
             const auto cleanupTranslator = qScopeGuard([&] {
@@ -546,17 +570,17 @@ public:
             engine_->retranslate();
             check.require(header->property("text").toString() == QString::fromUtf8("Sources β"),
                           "A2a original compact binding retranslates in its existing AssistantMessage context");
-            exact(check, owner.get(), "activityDescription(false)", QString::fromUtf8("Ouvrir https://example.invalid/current β"),
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false), QString::fromUtf8("Ouvrir https://example.invalid/current β"),
                   "original-AssistantMessage-open-translation-context");
-            exact(check, owner.get(), "activityDescription(false,{type:'webSearch',action:{type:'search',query:'α'}})",
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false,QStringLiteral("{type:'webSearch',action:{type:'search',query:'α'}}")),
                   QString::fromUtf8("Chercher α β"), "original-search-translation-context");
-            exact(check, owner.get(), "activityDescription(false,{type:'webSearch',action:{type:'findInPage',pattern:'α',url:'page'}})",
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false,QStringLiteral("{type:'webSearch',action:{type:'findInPage',pattern:'α',url:'page'}}")),
                   QString::fromUtf8("Trouver α dans page β"), "original-find-both-translation-context");
-            exact(check, owner.get(), "activityDescription(false,{type:'webSearch',action:{type:'findInPage',pattern:'α'}})",
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false,QStringLiteral("{type:'webSearch',action:{type:'findInPage',pattern:'α'}}")),
                   QString::fromUtf8("Trouver α sur une page β"), "original-find-pattern-translation-context");
-            exact(check, owner.get(), "activityDescription(false,{type:'webSearch',action:{type:'findInPage',url:'page'}})",
+            exact(check, owner.get(), e11_a2a_phase::descriptionExpression(false,QStringLiteral("{type:'webSearch',action:{type:'findInPage',url:'page'}}")),
                   QString::fromUtf8("Texte dans page β"), "original-find-url-translation-context");
-            exact(check, owner.get(), "humanActivityText({payload:payload})",
+            exact(check, owner.get(), e11_a2a_phase::copyExpression(QStringLiteral("{payload:payload}")),
                   QString::fromUtf8("Sources β\nOuvrir https://example.invalid/current β"),
                   "same-original-default-copy-caller-live-language");
             restored = original && owner->setProperty("assistant", originalOwner) && ownerIs(original.data());
@@ -564,7 +588,7 @@ public:
             if (!restored) return check.result();
             cold(check, owner.get(), header, field);
             check.require(evaluate(owner.get(), "JSON.stringify(assistant.activityHumanDetails(rowId,kind,status))").toString() == "{}" &&
-                              evaluate(owner.get(), "readHumanDetails() === null").toBool(),
+                              evaluate(owner.get(), e11_a2a_phase::noAdmittedSnapshotExpression()).toBool(),
                           "A2a real original VM has no invented admitted row; collapsed canonical/copy membership is not fabricated");
         } catch (const std::exception& error) {
             check.require(false, "A2a serialization/dependency/ownership prerequisite: " + QString::fromUtf8(error.what()));
