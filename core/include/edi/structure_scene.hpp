@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -14,7 +15,8 @@
 
 // ADR-0022: the structure scene — the one description every structure renderer draws (the app's Qt
 // Quick 3D view now). crysta computes every position, bond and distance; this file groups the rows
-// into atoms, looks up colours and radii, and describes the view, and computes no geometry.
+// into atoms, looks up colours and radii, describes the view and builds renderer meshes; scientific positions,
+// bonds and distances remain the native engine values.
 // `present_structure` is a pure function of its two arguments. Qt-free, and no crysta type.
 
 namespace edi {
@@ -217,6 +219,24 @@ struct SceneDrawing {  // everything a renderer places, in scene units
 };
 // The unit sphere has radius 1; the unit cylinder has radius 1 and length 1 along +y, centred.
 SceneDrawing scene_drawing(const StructureScene& scene, const Viewport& viewport);
+// Shared-site sphere wedges, first implemented by the Qt SharedSiteGeometry renderer. Both Qt and offline HTML
+// consume this one tessellation policy; only their original arithmetic/storage conventions differ.
+enum class SharedSiteMeshProfile : std::uint8_t { QtFloat, Three160 };
+struct SharedSiteBasis { Vec3 axis, up, right; };
+struct SharedSiteVertex {
+    Vec3 position, normal, color;  // linear RGB; renderer casts only at its original vertex-buffer boundary
+    double site = 0.0;            // original Qt pick coordinate: mesh ordinal + 0.5
+};
+struct SharedSiteMesh {
+    std::vector<SharedSiteVertex> vertices;
+    std::vector<std::uint32_t> indices;
+    Vec3 low, high;
+};
+// THREE's original double normalization; Qt supplies its actual QVector3D-normalized float basis instead.
+SharedSiteBasis shared_site_browser_basis(const StructureScene& scene);
+SharedSiteMesh shared_site_mesh(const StructureScene& scene, std::span<const std::size_t> sites, int segments,
+                               int rings, SharedSiteMeshProfile profile, const SharedSiteBasis& basis);
+
 // The atom's label; per part its element and occupancy; its fractional coordinates and symmetry code as
 // crysta gave them. Empty for an atom the scene does not have.
 std::string hover_text(const SceneSource& source, const StructureScene& scene, std::size_t atom);

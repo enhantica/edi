@@ -109,3 +109,10 @@ carries; no distance to a centre is used. `hover_text` describes the atom as cry
 | One atom per expanded row | Rejected: a shared site would draw two coincident spheres and misreport the structure. |
 | Keep the app's QML dictionary of element colours beside the new table | Rejected: two copies of one table agree only until one is edited (AGENTS.md principle 3). |
 | The camera and pointer rules in QML | Rejected: the core tier runs on CI while the app tests are off, and the terminal renderer needs the same projection. |
+
+
+## One shared-site mesh policy across renderers
+
+The first native wedge implementation, app SharedSiteGeometry::setSites, now delegates its tessellation to structure_scene's shared_site_mesh. That existing scene owner also supplies offline report meshes, replacing the report's separate wedge loop. One function owns fraction finiteness/clamping, segment/ring minima, angular coverage, skipped zero parts, vertex/triangle order, cumulative start angle, native pick ordinal, and bounds. No second geometry controller or scientific calculation is introduced.
+
+Renderer precision remains explicit. Qt supplies the same actual QVector3D float-normalized/cross-product basis and receives the same float intermediates, positions/normals, pick UVs, linear RGB, index layout and bounds. Its QQuick3DGeometry buffer/attributes/update/site-count signal remain the adapter. The report profile preserves the pinned THREE 0.160.0 double normalization, normal accumulation order and SRGBToLinear constants, then its renderer casts through the original Float32BufferAttribute boundary. Original raw report null-to-number conversion is applied before browser-profile arithmetic; derived non-finite values use the report renderer-number codec. These profile choices are fixed representation contracts of the two existing renderers, not user policies or feature fallbacks. The shared kernel refuses an out-of-range site before dereferencing any site, across both public renderer callers. Native/platform/render equivalence checks follow source completion.

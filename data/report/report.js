@@ -5,13 +5,15 @@
 
 // Decode only the native renderer-number transport; original raw model nulls remain null.
 const model = JSON.parse(document.getElementById('edi-report-model').textContent, (_key, value) =>
-  value !== null && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'edi_renderer_number')
+  value !== null && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 1
+    && Object.prototype.hasOwnProperty.call(value, 'edi_renderer_number')
+    && typeof value.edi_renderer_number === 'string'
+    && (value.edi_renderer_number === 'NaN' || value.edi_renderer_number === 'Infinity' || value.edi_renderer_number === '-Infinity')
     ? Number(value.edi_renderer_number) : value);
 // A value of the page's stylesheet; empty where no stylesheet is computed, and the chart keeps plotly's own.
 const pageStyle = name =>
   typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '';
 
-const sceneStyle = key => (model.structure_styles ?? []).find(row => row.key === key) ?? {};
 
 // The Structure page's toolbar icons: Font Awesome Free 5 solid glyphs as SVG paths, [width, height, path] (icons CC
 // BY 4.0, https://fontawesome.com/license/free).
@@ -349,10 +351,11 @@ async function drawStructure(figure, structure) {
     return;
   }
   const { scene, view, drawing } = structure;
-  if (!scene.current || drawing.spheres.length + drawing.shared.length === 0) {
+  if (structure.browser.empty) {
     notice(figure, 'No structure to show');
     return;
   }
+  const sceneStyle = key => structure.browser.styles[key] ?? {};
   const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
   renderer.setPixelRatio(window.devicePixelRatio);
   renderer.setClearColor(sceneStyle('background').light);
@@ -369,7 +372,7 @@ async function drawStructure(figure, structure) {
   // What the toolbar shows, as the Structure page's features: the atoms (all, the asymmetric unit or none), the labels,
   // the bonds, the cell and the axes.
   const shown = { atoms: 'all', labels: false, bonds: true, cell: true, axes: true };
-  const atomShown = index => shown.atoms === 'all' || (shown.atoms === 'asymmetric' && scene.atoms[index].asymmetric);
+  const currentSubset = () => structure.browser.subsets[shown.atoms];
 
   // The drawing's instances on unit meshes: a sphere of radius 1, a cylinder of radius 1 and length 1 along +y. The
   // model's quaternions are w, x, y, z; three.js takes x, y, z, w.
@@ -394,77 +397,25 @@ async function drawStructure(figure, structure) {
   // that direction and the home view's up. A part of fraction 0 has no wedge.
   const wedgeMaterial = material.clone();
   wedgeMaterial.vertexColors = true;
-  const sharedSites = sites => {
-    const segments = 32;
-    const rings = 16;
-    const axis = new THREE.Vector3().fromArray(scene.frame.view_direction).normalize();
-    const up = new THREE.Vector3().fromArray(scene.frame.view_up).normalize();
-    const right = new THREE.Vector3().crossVectors(up, axis).normalize();
-    const positions = [];
-    const normals = [];
-    const colours = [];
-    const indices = [];
-    const normal = new THREE.Vector3();
-    const colour = new THREE.Color();
-    for (const site of sites) {
-      const atom = scene.atoms[site];
-      const centre = new THREE.Vector3().fromArray(atom.centre);
-      let start = 0;
-      for (const part of atom.parts) {
-        const fraction = Number.isFinite(part.fraction) ? Math.min(Math.max(part.fraction, 0), 1) : 0;
-        if (fraction <= 0) {
-          continue;
-        }
-        const span = fraction * 2 * Math.PI;
-        const steps = Math.max(1, Math.ceil(fraction * segments));
-        colour.set(part.color);
-        const base = positions.length / 3;
-        for (let i = 0; i <= rings; ++i) {
-          const theta = (Math.PI * i) / rings; // from the axis, towards the viewer at 0
-          for (let j = 0; j <= steps; ++j) {
-            const phi = start + (span * j) / steps; // from up, towards right
-            normal
-              .copy(axis)
-              .multiplyScalar(Math.cos(theta))
-              .addScaledVector(up, Math.sin(theta) * Math.cos(phi))
-              .addScaledVector(right, Math.sin(theta) * Math.sin(phi));
-            normals.push(normal.x, normal.y, normal.z);
-            positions.push(...normal.clone().multiplyScalar(atom.radius).add(centre).toArray());
-            colours.push(colour.r, colour.g, colour.b);
-          }
-        }
-        const row = steps + 1;
-        for (let i = 0; i < rings; ++i) {
-          for (let j = 0; j < steps; ++j) {
-            const a = base + i * row + j;
-            const b = a + row;
-            indices.push(a, a + 1, b, a + 1, b + 1, b);
-          }
-        }
-        start += span;
-      }
-    }
+  const sharedSites = mesh => {
     const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
-    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(mesh.positions, 3));
+    geometry.setAttribute('normal', new THREE.Float32BufferAttribute(mesh.normals, 3));
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(mesh.colours, 3));
+    geometry.setIndex(mesh.indices);
     return new THREE.Mesh(geometry, wedgeMaterial);
   };
   // The cylinders are the half-bonds, two per bond in the scene's order, then the cell edges.
-  const halves = 2 * scene.bonds.length;
   let meshes = new THREE.Group();
   const place = () => {
     world.remove(meshes);
     meshes = new THREE.Group();
-    meshes.add(instanced(sphere, drawing.spheres.filter(item => atomShown(item.atom))));
-    meshes.add(sharedSites(drawing.shared.filter(atomShown)));
-    const bonds = shown.bonds ? drawing.cylinders.slice(0, halves).filter((_, i) => {
-      const bond = scene.bonds[Math.floor(i / 2)];
-      return atomShown(bond.atom_1) && atomShown(bond.atom_2);
-    }) : [];
+    const subset = currentSubset();
+    meshes.add(instanced(sphere, subset.spheres));
+    meshes.add(sharedSites(subset.shared));
+    const bonds = shown.bonds ? subset.bonds : [];
     meshes.add(instanced(cylinder, bonds));
-    meshes.add(instanced(cylinder, shown.cell ? drawing.cylinders.slice(halves) : []));
+    meshes.add(instanced(cylinder, shown.cell ? structure.browser.cell : []));
     triad.visible = shown.axes;
     world.add(meshes);
   };
@@ -496,14 +447,14 @@ async function drawStructure(figure, structure) {
   }
   world.add(triad);
   // The atom labels, shown when asked for.
-  for (const label of structure.labels) {
+  for (const [labelIndex, label] of structure.labels.entries()) {
     const element = document.createElement('div');
     element.className = 'atom-label';
     element.style.color = sceneStyle('label').light;
     element.textContent = label.text;
     figure.appendChild(element);
     const at = new THREE.Vector3().fromArray(label.anchor);
-    overlay.push({ element, at, show: () => shown.labels && atomShown(label.atom) });
+    overlay.push({ element, at, show: () => shown.labels && currentSubset().labels[labelIndex] });
   }
 
   // The element legend.
@@ -572,27 +523,26 @@ async function drawStructure(figure, structure) {
   const toolbar = document.createElement('div');
   toolbar.className = 'viewer-toolbar';
   const toggles = [];
-  const toggle = (icon, title, key, next) => {
+  const toggle = (icon, title, key) => {
     const element = button(icon, title, () => {
-      shown[key] = next(shown[key]);
+      shown[key] = structure.browser.next[key][shown[key]];
       refresh();
     });
-    toggles.push({ element, on: () => (key === 'atoms' ? shown.atoms !== 'none' : shown[key]) });
+    toggles.push({ element, on: () => structure.browser.pressed[key][shown[key]] });
     toolbar.appendChild(element);
   };
-  const hasSites = scene.atoms.length > 0;
+  const hasSites = structure.browser.controls.atoms;
   if (hasSites) {
-    toggle('atom', scene.has_copies ? 'Atoms: all / asymmetric unit / none' : 'Atoms: show / hide', 'atoms',
-      now => (now === 'all' ? (scene.has_copies ? 'asymmetric' : 'none') : now === 'asymmetric' ? 'none' : 'all'));
-    if (structure.labels.length > 0) {
-      toggle('tag', 'Labels', 'labels', now => !now);
+    toggle('atom', structure.browser.controls.atom_title, 'atoms');
+    if (structure.browser.controls.labels) {
+      toggle('tag', 'Labels', 'labels');
     }
-    if (scene.bonds.length > 0) {
-      toggle('link', 'Bonds', 'bonds', now => !now);
+    if (structure.browser.controls.bonds) {
+      toggle('link', 'Bonds', 'bonds');
     }
   }
-  toggle('vector-square', 'Cell', 'cell', now => !now);
-  toggle('location-arrow', 'Axes', 'axes', now => !now);
+  toggle('vector-square', 'Cell', 'cell');
+  toggle('location-arrow', 'Axes', 'axes');
   const gap = document.createElement('span');
   gap.className = 'gap';
   toolbar.appendChild(gap);
