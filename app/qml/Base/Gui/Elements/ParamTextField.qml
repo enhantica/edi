@@ -2,6 +2,7 @@
 // Pinned gui-components copy; edi terminology and units in the parameter menu (ADR-0029).
 pragma ComponentBehavior: Bound
 import QtQuick
+import edi.app
 import QtQuick.Templates as T
 import QtQuick.Controls
 import QtQuick.Controls.impl
@@ -28,24 +29,8 @@ EaElements.TextField {
         'cifDict': ''
     }
 
-    property var value: {
-        if (typeof parameter.value === 'undefined') {
-            return '';
-        } else if (typeof parameter.value === 'number') {
-            return EaLogic.Utils.toErrSinglePrecision(parameter.value, parameter.error);
-        } else {
-            return parameter.value;
-        }
-    }
-    property var error: {
-        if (typeof parameter.error === 'undefined') {
-            return '';
-        } else if (typeof parameter.value === 'number') {
-            return EaLogic.Utils.toSinglePrecision(parameter.error);
-        } else {
-            return parameter.error;
-        }
-    }
+    property var value: ApplicationInfo.parameterFieldValue(false)
+    property var error: ApplicationInfo.parameterFieldValue(true)
 
     property bool fittable: parameter.fittable ?? false
     property bool fit: parameter.fit ?? false
@@ -64,11 +49,7 @@ EaElements.TextField {
     property EaElements.CheckBox fitCheckBox: null
     signal fitToggled(bool checked)
 
-    function openContextMenu(parentItem) {
-        if (contextMenu === null)
-            contextMenu = contextMenuComponent.createObject(parentItem);
-        contextMenu.popup();
-    }
+    function openContextMenu(parentItem) { ApplicationInfo.parameterFieldMenu(parentItem); }
 
     readOnly: !parameter.enabled ?? false
 
@@ -122,16 +103,8 @@ EaElements.TextField {
         acceptedButtons: Qt.RightButton
         cursorShape: undefined  // prevents changing the cursor
         hoverEnabled: false
-        onClicked: mouse => {
-            if (mouse.button === Qt.RightButton) {
-                control.openContextMenu(menuArea);
-            }
-        }
-        onPressAndHold: mouse => {
-            if (mouse.source === Qt.MouseEventNotSynthesized) {
-                control.openContextMenu(menuArea);
-            }
-        }
+        onClicked: mouse => ApplicationInfo.parameterFieldMouse(mouse, false)
+        onPressAndHold: mouse => ApplicationInfo.parameterFieldMouse(mouse, true)
         // Menu
         Component {
             id: contextMenuComponent

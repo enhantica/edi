@@ -30,7 +30,7 @@ EaElements.GroupBox {
         width: EaStyle.Sizes.sideBarContentWidth
         enabled: group.project !== null
         // The order is `rules`, each by its dictionary name.
-        model: group.rules.map(rule => Session.optionLabel("su_format.rule", rule))
+        model: ApplicationInfo.nativeListProjection(3)
         currentIndex: group.project ? group.rules.indexOf(group.project.suRule) : 0
         onActivated: index => group.project.suRule = group.rules[index]
     }

@@ -10,11 +10,7 @@ import edi.app
 AppDialog {
     id: dialog
     required property AssistantViewModel assistant
-    readonly property int selectedIndex: {
-        for (let i = 0; i < assistant.skills.count; ++i)
-            if (assistant.skills.text(i, "id") === assistant.selectedSkill) return i;
-        return assistant.selectedSkill.length === 0 && assistant.skills.count > 0 ? Math.min(inspectedIndex, assistant.skills.count - 1) : -1;
-    }
+    readonly property int selectedIndex: ApplicationInfo.assistantSkillsIndex()
     readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
     title: qsTr("Edi skills")
     property int inspectedIndex: 0
@@ -58,7 +54,7 @@ AppDialog {
                         Accessible.name: text + (checked ? qsTr(" · selected") : "")
                         Accessible.checkable: checkable
                         Accessible.checked: checked
-                        onClicked: { if (dialog.assistant.selectedSkill.length === 0) dialog.inspectedIndex = index; else dialog.assistant.selectSkill(model.id); }
+                        onClicked: ApplicationInfo.assistantSkillClicked()
                     }
                     EaElements.Label {
                         width: parent.width

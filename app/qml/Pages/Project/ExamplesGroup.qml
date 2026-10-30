@@ -176,7 +176,7 @@ EaElements.GroupBox {
                     }
                     EaElements.ToolTip {
                         visible: hover.hovered && EaGlobals.Vars.showToolTips && text !== ""
-                        text: [identityLabel.truncated ? identityLabel.text : "", tagRow.width > descriptionCell.width ? row.tagLabels.join(" · ") : "", detailLabel.truncated ? row.detail : ""].filter(line => line !== "").join("\n")
+                        text: ApplicationInfo.nativeListProjection(4)
                     }
                 }
             }

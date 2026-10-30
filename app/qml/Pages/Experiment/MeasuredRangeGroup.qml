@@ -80,7 +80,7 @@ Column {
         // Each structure's curve, one column per structure at the end of the row. A Repeater places its cells before
         // itself, so the Repeater, declared last, takes the last width, kept narrow.
         readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
-        columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
+        columns: ApplicationInfo.nativeListProjection(1)
         // A layout of its own (the owner, 2026-10-27): the count, the status and the structures' columns fit their
         // content, and the other numeric columns share the rest equally after their own widths.
         spreadColumns: [1, 2, 3, 4, 5, 6, 7]
@@ -189,7 +189,7 @@ Column {
             // before a calculation): the base centres a row's cells, so a row with fewer would sit apart from the
             // header.
             Repeater {
-                model: table.componentNames.map((name, i) => (row.model.componentIntensities ?? [])[i] ?? NaN)
+                model: ApplicationInfo.nativeListProjection(2)
                 delegate: EaComponents.ListViewLabel {
                     required property var modelData
                     horizontalAlignment: Text.AlignHCenter
