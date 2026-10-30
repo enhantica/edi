@@ -195,7 +195,7 @@ EaComponents.ContentPage {
             Loader {
                 id: textLoader
                 active: SwipeView.isCurrentItem || page.textDirty
-                onItemChanged: page.textDirty = item !== null && item.dirty === true
+                onItemChanged: ApplicationInfo.workflowTextItemChanged()
             },
             Loader {
                 id: settingsLoader

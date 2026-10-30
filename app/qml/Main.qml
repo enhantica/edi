@@ -43,7 +43,7 @@ EaComponents.ApplicationWindow {
         return ApplicationInfo.showProjectReport(project);
     }
 
-    readonly property Item assistantWorkflowPage: ApplicationInfo.assistantWorkflowPage()
+    readonly property WorkflowPage assistantWorkflowPage: ApplicationInfo.assistantWorkflowPage()
     readonly property Item activeAssistantHost: assistantWorkflowPage ? assistantWorkflowPage.assistantOverlayHost : assistantFallbackHost
     readonly property Item assistantCurrentPage: assistantWorkflowPage || homePage
     property Item assistantPreviousFocus: null
@@ -480,7 +480,7 @@ EaComponents.ApplicationWindow {
             visible: assistantPanel.visible && window.assistantWorkflowPage !== null
             x: Preferences.sideBarOnLeft ? 0 : window.contentItem.width - width
             y: modelData ? window.contentItem.height - EaStyle.Sizes.statusBarHeight : EaStyle.Sizes.appBarHeight - height
-            width: activeAssistantHost ? activeAssistantHost.width : 0
+            width: window.activeAssistantHost ? window.activeAssistantHost.width : 0
             height: EaStyle.Sizes.borderThickness
             z: 100
             color: EaStyle.Colors.appBorder

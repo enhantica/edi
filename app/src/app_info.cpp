@@ -856,7 +856,7 @@ QV4::ReturnedValue panelUsageGet(const PanelUsageFrame& frame, const QV4::Value&
             return wrapper->getQmlProperty(frame.context, name, flags, nullptr);
         }
         if (!object->as<QV4::ProxyObject>()
-            && object->vtable()->resolveLookupGetter == QV4::Object::virtualResolveLookupGetter) {
+            && object->vtable()->resolveLookupGetter == QV4::Object::staticVTable()->resolveLookupGetter) {
             const auto index = object->internalClass()->findValueOrGetter(name->toPropertyKey());
             if (index.isValid()) return QV4::Object::getValue(&value, *object->d()->propertyData(index.index), index.attrs);
             QV4::Lookup lookup{};
@@ -938,7 +938,7 @@ QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::S
     const bool isJSContext = context->isJSContext();
     bool hasProperty = false;
     if (isJSContext) {
-        QV4::ScopedValue value(scope, QV4::Object::virtualGet(resource, name->toPropertyKey(), nullptr, &hasProperty));
+        QV4::ScopedValue value(scope, QV4::Object::staticVTable()->get(resource, name->toPropertyKey(), nullptr, &hasProperty));
         if (hasProperty) return value->asReturnedValue();
     }
     auto* ep = QQmlEnginePrivate::get(vm->qmlEngine());
@@ -1014,7 +1014,7 @@ QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::S
         calling = false;
     }
     if (!isJSContext) {
-        QV4::ScopedValue value(scope, QV4::Object::virtualGet(resource, name->toPropertyKey(), nullptr, &hasProperty));
+        QV4::ScopedValue value(scope, QV4::Object::staticVTable()->get(resource, name->toPropertyKey(), nullptr, &hasProperty));
         if (hasProperty) return value->asReturnedValue();
     }
     bool found = false;
@@ -1060,7 +1060,7 @@ void panelUsageCallLater(const PanelUsageFrame& frame, const QJSValue& callback)
     panelUsageMemberCall(frame, qt, "callLater", {callback});
 }
 
-QJSValue panelUsageGlobalCall(const PanelUsageFrame& frame, const char* name, const QJSValueList& arguments) {
+QJSValue panelUsageGlobalCall(const PanelUsageFrame& frame, const char* name, const QJSValueList& arguments = {}) {
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
     QV4::JSCallArguments call(scope, static_cast<int>(arguments.size()));
@@ -3574,7 +3574,7 @@ void ApplicationInfo::applyGeneratedCategory(int row, const QString& name, const
         const auto project = assistantContextField(f, "Session", "project");
         const auto source = assistantContextField(f, "group", "source");
         const auto file = panelUsageRead(f, source, "file");
-        const auto edited = projectInvoke(f, "data", "editedText", {QJSValue(row), QJSValue(name), QJSValue(value)});
+        const auto edited = projectInvoke(f, "categoryData", "editedText", {QJSValue(row), QJSValue(name), QJSValue(value)});
         refusal = panelUsageMemberCall(f, project, "applyText", {file, edited});
     }
     assistantMemberWrite(f, group, "refusal", refusal);
@@ -7459,10 +7459,10 @@ void ApplicationInfo::patternViewChanged(int event) const {
             const auto next = panelUsageContextRead(f, "AppState"); assistantMemberWrite(f, next, "patternViewRanges", assistantContextField(f, "controller", "viewRanges"));
         }
     } else if (event == 4) {
-        const auto chart = panelUsageContextRead(f, "chart"); const auto slots = numberMath(f, "max", [&] {
+        const auto chart = panelUsageContextRead(f, "chart"); const auto curveSlots = numberMath(f, "max", [&] {
             const auto previous = assistantContextField(f, "chart", "structureCurveSlots");
             return QJSValueList{previous, panelUsageRead(f, assistantContextField(f, "controller", "structureCurveColors"), "length")};
-        }); assistantMemberWrite(f, chart, "structureCurveSlots", slots);
+        }); assistantMemberWrite(f, chart, "structureCurveSlots", curveSlots);
     } else {
         const char* source = event == 1 ? "legendShown" : event == 2 ? "hoverShown" : "pointerMode";
         const char* destination = event == 1 ? "patternLegendShown" : event == 2 ? "patternHoverShown" : "patternPointerMode";
@@ -9043,7 +9043,7 @@ void ApplicationInfo::assistantSkillClicked() const {
 }
 QJSValue ApplicationInfo::nativeListProjection(int kind) const {
     const auto f = panelUsageEngine(this);
-    if (kind == 0) { const auto initial = assistantGeometryArray(f, {panelUsageContextRead(f, "numberColumnWidth")}); const auto names = assistantContextField(f, "data", "names"); return presentationColumns(f, initial, names); }
+    if (kind == 0) { const auto initial = assistantGeometryArray(f, {panelUsageContextRead(f, "numberColumnWidth")}); const auto names = assistantContextField(f, "categoryData", "names"); return presentationColumns(f, initial, names); }
     if (kind == 1) { const auto initial = assistantGeometryArray(f, {panelUsageContextRead(f, "numberColumnWidth"), QJSValue(-1), QJSValue(-1), QJSValue(-1), QJSValue(-1), QJSValue(-1), QJSValue(-1), QJSValue(-1), QJSValue(-1)}); const auto names = panelUsageContextRead(f, "componentNames"); return presentationColumns(f, initial, names); }
     if (kind == 2) return panelUsageMemberCall(f, assistantContextField(f, "table", "componentNames"), "map", {panelUsageClosure(f, 368, {}, 2)});
     if (kind == 3) return panelUsageMemberCall(f, assistantContextField(f, "group", "rules"), "map", {panelUsageClosure(f, 369, {}, 1)});
@@ -9301,6 +9301,12 @@ void ApplicationInfo::finishUiEvent(int kind, const QJSValue& value) const {
     if (kind == 15) {
         const bool pattern = panelUsageTruth(assistantContextField(f, "page", "patternShown")); const auto project = assistantContextField(f, "page", "project"); assistantMemberWrite(f, project, pattern ? "currentExperimentIndex" : "currentStructureIndex", value);
     }
+}
+
+void ApplicationInfo::workflowTextItemChanged() const {
+    const auto f = panelUsageEngine(this); const auto page = panelUsageContextRead(f, "page");
+    const bool dirty = !panelUsageContextRead(f, "item").isNull() && panelUsageRead(f, panelUsageContextRead(f, "item"), "dirty").strictlyEquals(QJSValue(true));
+    assistantMemberWrite(f, page, "textDirty", QJSValue(dirty));
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
