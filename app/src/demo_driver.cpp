@@ -1727,12 +1727,12 @@ bool DemoDriver::on_screen(QQuickItem* item) const {
     // What is left of the item inside the window and inside every clipping ancestor: a sidebar tab not
     // shown lies within the window, beside the shown one, but its view clips it away (the Extras
     // `group.peak` beside the Basic one).
-    QRectF shown = item->mapRectToScene(item->boundingRect())
+    QRectF shown = item->mapRectToScene(QRectF(0, 0, item->width(), item->height()))
                        .intersected(QRectF(QPointF(0, 0), QSizeF(window_.width(), window_.height())));
     for (QQuickItem* ancestor = item->parentItem(); ancestor != nullptr && !shown.isEmpty();
          ancestor = ancestor->parentItem()) {
         if (ancestor->clip()) {
-            shown = shown.intersected(ancestor->mapRectToScene(ancestor->boundingRect()));
+            shown = shown.intersected(ancestor->mapRectToScene(ancestor->clipRect()));
         }
     }
     return !shown.isEmpty();
