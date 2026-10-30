@@ -135,7 +135,7 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
             auto model = edi::empty_project("documentation-inputs", "");
             model.structures.push_back(edi::load_structure_file(structure_path.toStdString()));
             model.experiments.push_back(edi::load_experiment_file(experiment_path.toStdString()));
-            const auto& experiment = *model.experiments.front();
+            auto& experiment = *model.experiments.front();
             if (!experiment.data || !experiment.data->two_theta.get() ||
                 !experiment.instrument.setup_wavelength)
                 return refuse("CIF/data teaching currently requires a constant-wavelength powder example");
@@ -172,16 +172,16 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
             documentation_inputs_["data"] = QJsonObject{{"file", data_name}, {"sha256", digest(data_output.fileName())}};
             context.setProperty("dataFile", data_output.fileName());
             context.setProperty("dataFileName", QFileInfo(data_name).fileName());
-            context.setProperty("wavelength", experiment.instrument.setup_wavelength->value);
+            context.setProperty("wavelength", experiment.instrument.setup_wavelength->value.get());
             context.setProperty("profileType", QString::fromStdString(experiment.peak.type.value_or("cwl-tch-pseudo-voigt")));
             QJsonObject profile;
             for (const auto* parameter : experiment.peak.parameters())
                 if (parameter->spec && parameter->spec->name && std::string(parameter->spec->name).starts_with("broad_gauss_"))
-                    profile[parameter->spec->name] = parameter->value;
+                    profile[parameter->spec->name] = parameter->value.get();
             context.setProperty("profileStart", engine.toScriptValue(profile.toVariantMap()));
             QJsonArray excluded;
             for (const auto& region : experiment.excluded_regions)
-                excluded.append(QJsonObject{{"start", region.first.get()}, {"end", region.second.get()}});
+                excluded.append(QJsonObject{{"start", region->first.get()}, {"end", region->second.get()}});
             context.setProperty("excludedRegions", engine.toScriptValue(excluded.toVariantList()));
         } catch (const std::exception& problem) {
             return refuse("cannot prepare CIF/data teaching inputs: " + QString::fromUtf8(problem.what()));
