@@ -17,74 +17,10 @@ EaComponents.ListViewDelegate {
     property bool highlightsHover: true
 
     // The row becomes current as soon as one of its editors takes focus, by a click or by Tab.
-    onEditingChanged: {
-        if (row.editing)
-            row.activated();
-    }
+    onEditingChanged: ApplicationInfo.tableRowEditing()
     // A row's own click handler (one that opens what the row names) calls this too, so its click makes the row current
     // as any other does: selected in a selectable table, and reported to a page that holds its current row.
-    function activated() {
-        const table = row.listView as DataTable;
-        if (table === null || row.index < 0)
-            return;
-        if (table.selectable && !row.inSelection)
-            table.selectWithModifiers(row.index, Qt.NoModifier);
-        table.rowActivated(row.index);
-    }
+    function activated() { ApplicationInfo.tableRowActivated(); }
 
-    Component.onCompleted: {
-        // A control that takes focus from the keyboard only (a button or check box on some platforms) takes it from a
-        // click too, so the click makes the row current as an editor's does. Every item has a focus policy, labels and
-        // mouse areas too (NoFocus), and they keep theirs: one that took focus would take it from the editor under it.
-        const focusOnClick = item => {
-            if (item.focusPolicy === Qt.TabFocus)
-                item.focusPolicy = Qt.StrongFocus;
-            for (const child of item.children ?? [])
-                focusOnClick(child);
-        };
-        for (const cell of row.contentRowData)
-            focusOnClick(cell);
-        // A cell whose text changes after the row is made (a value the calculation publishes later) can widen its
-        // column, so the table fits its columns again (DataTable.fitColumns).
-        const table = row.listView as DataTable;
-        if (table !== null) {
-            // Cells a Repeater makes later (a column per structure, once calculated) are sized as the others: the
-            // base sizes a row's cells only when the row is made or the widths change.
-            const first = Array.from(row.contentRowData).find(cell => cell instanceof Item);
-            const cells = first ? first.parent : null;
-            if (cells !== null)
-                cells.childrenChanged.connect(() => {
-                    table.applyWidths(cells);
-                    Qt.callLater(table.fitColumns);
-                });
-            for (const cell of row.contentRowData) {
-                if (!(cell instanceof Item))
-                    continue;
-                cell.implicitWidthChanged.connect(() => Qt.callLater(table.fitColumns));
-                if ("numberChanged" in cell)
-                    cell.numberChanged.connect(() => Qt.callLater(table.fitColumns));
-            }
-        }
-        // The light row tint shows only under the mouse (the owner, 2026-10-22): the base also keeps it on a row whose
-        // cell is being edited, which read as a second current-row mark. Its tint is the full-row rectangle with the
-        // row's background click area; it follows the row's hover handler alone.
-        let hover = null;
-        for (const child of row.data) {
-            if (child instanceof HoverHandler)
-                hover = child;
-        }
-        for (const child of row.data) {
-            if (child instanceof Rectangle && child.anchors.fill === row && child.children.length > 0) {
-                child.opacity = Qt.binding(() => hover !== null && hover.enabled && hover.hovered ? 1 : 0);
-                // The same rectangle holds the click area of the row's background: a click on a cell that is not an
-                // editor lands there.
-                for (const area of child.children) {
-                    if (area instanceof MouseArea)
-                        area.clicked.connect(row.activated);
-                }
-            }
-        }
-        if (!row.highlightsHover && hover !== null)
-            hover.enabled = false;
-    }
+    Component.onCompleted: ApplicationInfo.tableRowCompleted((child, hover) => { child.opacity = Qt.binding(() => hover !== null && hover.enabled && hover.hovered ? 1 : 0); })
 }
