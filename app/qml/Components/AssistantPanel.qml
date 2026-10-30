@@ -14,59 +14,14 @@ Popup {
     id: panel
     objectName: "assistant.popup"
     required property AssistantViewModel assistant
-    // One bounded JSON-domain presentation copy handles Qt QVariant lists.
-    readonly property var usageData: {
-        try { return JSON.parse(JSON.stringify(assistant.usage)); }
-        catch (error) { return { available: false, stale: false, buckets: [] }; }
-    }
-    readonly property var usageWindow: {
-        let selected = null;
-        const buckets = usageData.buckets || [];
-        for (const bucket of buckets) for (const window of bucket.windows || [])
-            if (!selected || window.usedPercent > selected.usedPercent)
-                selected = { usedPercent: window.usedPercent, label: usageWindowLabel(bucket, window) };
-        return selected;
-    }
+    readonly property var usageData: ApplicationInfo.assistantUsageData(panel)
+    readonly property var usageWindow: ApplicationInfo.assistantUsageWindow(panel)
     readonly property real remainingPercent: usageWindow ? Math.max(0, Math.min(100, 100 - usageWindow.usedPercent)) : -1
-    function allowanceColor(remaining) {
-        return remaining >= 0 && remaining < 5 ? EaStyle.Colors.red
-             : remaining >= 0 && remaining < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeForeground;
-    }
     readonly property var accountData: panel.assistant.account
-    readonly property string accountPlan: {
-        if (accountData.planType) return accountData.planType;
-        const known=[];
-        for (const bucket of usageData.buckets || []) if (bucket.planType && known.indexOf(bucket.planType)<0) known.push(bucket.planType);
-        return known.join(", ");
-    }
-    readonly property string accountInitial: accountData.email ? Array.from(accountData.email)[0].toUpperCase() : ""
-    function usageWindowLabel(bucket, window) {
-        const label = window.windowDurationMins === 300 ? qsTr("Session limit")
-                    : window.windowDurationMins === 10080 ? qsTr("Weekly") : qsTr("Other allowance");
-        const name = bucket.limitName || bucket.limitId || bucket.id || "";
-        return name.length ? name + " · " + label : label;
-    }
-    function usageCaption() {
-        if (usageWindow) return qsTr("%1 · %2% used").arg(usageWindow.label).arg(usageWindow.usedPercent);
-        return usageData.statusText || qsTr("Usage unavailable");
-    }
-    function allowanceWindow(minutes) {
-        let selected = null;
-        for (const bucket of usageData.buckets || []) for (const window of bucket.windows || [])
-            if (window.windowDurationMins === minutes && (!selected || window.usedPercent > selected.usedPercent)) selected = window;
-        return selected;
-    }
-    function usageResetLabel(value, now) {
-        if (typeof value !== "number" || !isFinite(new Date(value * 1000).getTime())) return qsTr("Reset unavailable");
-        const minutes = Math.ceil((value * 1000 - now) / 60000);
-        if (minutes <= 0) return qsTr("Reset time reached");
-        const days = Math.floor(minutes / 1440);
-        const hours = Math.floor((minutes % 1440) / 60);
-        if (days > 0) return qsTr("Resets in %1d %2h").arg(days).arg(hours);
-        if (hours > 0) return qsTr("Resets in %1h %2 min").arg(hours).arg(minutes % 60);
-        return qsTr("Resets in %1 min").arg(minutes);
-    }
-    readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
+    readonly property string accountPlan: ApplicationInfo.assistantAccountPlan(panel)
+    readonly property string accountInitial: ApplicationInfo.assistantAccountInitial(panel)
+    function allowanceWindow(minutes) { return ApplicationInfo.assistantAllowanceWindow(panel, minutes); }
+    readonly property string accountPlanLabel: ApplicationInfo.assistantAccountPlanLabel(panel)
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
     readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
     property var noticeState: null
@@ -414,11 +369,11 @@ Popup {
                             font: usageButton.font
                             color: !usageButton.enabled ? EaStyle.Colors.themeForegroundDisabled
                                 : usageButton.hovered || usageButton.down || usageButton.visualFocus
-                                    ? EaStyle.Colors.themeAccent : panel.allowanceColor(panel.remainingPercent)
+                                    ? EaStyle.Colors.themeAccent : ApplicationInfo.assistantAllowanceColor(panel.remainingPercent, EaStyle.Colors)
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
-                        ToolTip.text: panel.usageCaption()
+                        ToolTip.text: ApplicationInfo.assistantUsageCaption(panel)
                         Accessible.name: ToolTip.text
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: clearButton
@@ -907,7 +862,7 @@ Popup {
             objectName: "assistant.usageDialog"
             title: qsTr("Usage")
             standardButtons: Dialog.Close
-            property real resetClock: Date.now()
+            property real resetClock: ApplicationInfo.assistantUsageNow()
             readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
             width: Math.min(AppSizes.unit * 30, Math.max(0, parent.width - AppSizes.unit * 2))
             height: Math.min(implicitHeight, viewportHeight)
@@ -915,12 +870,12 @@ Popup {
             contentHeight: Math.min(Math.max(usageContent.implicitHeight, usageStatus.implicitHeight), Math.max(0, viewportHeight-topPadding-bottomPadding
                 -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
             onAboutToShow: panel.assistant.refreshUsage()
-            onOpened: resetClock = Date.now()
+            onOpened: ApplicationInfo.refreshAssistantUsageClock(usageDialog)
             Timer {
                 interval: 60000
                 repeat: true
                 running: usageDialog.visible && panel.assistant.connected
-                onTriggered: usageDialog.resetClock = Date.now()
+                onTriggered: ApplicationInfo.refreshAssistantUsageClock(usageDialog)
             }
             ScrollView {
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -943,12 +898,11 @@ Popup {
                     }
                     Repeater {
                         id: usageAllowances
-                        model: [{title: qsTr("Session limit"), minutes: 300, key: "session"}, {title: qsTr("Weekly"), minutes: 10080, key: "weekly"}]
-                            .filter(row => panel.allowanceWindow(row.minutes) !== null)
+                        model: ApplicationInfo.assistantUsageAllowances(panel)
                         Column {
                             id: allowance
                             required property var modelData
-                            readonly property var window: panel.allowanceWindow(modelData.minutes)
+                            readonly property var window: ApplicationInfo.assistantAllowanceWindow(panel, modelData.minutes)
                             objectName: "assistant.usage."+modelData.key
                             width: usageContent.width
                             spacing: AppSizes.unit * 0.35
@@ -982,7 +936,7 @@ Popup {
                             EaElements.Label {
                                 objectName: allowance.objectName+".reset"
                                 visible: allowance.window !== null
-                                text: allowance.window ? panel.usageResetLabel(allowance.window.resetsAt,usageDialog.resetClock) : ""
+                                text: allowance.window ? ApplicationInfo.assistantUsageResetLabel(allowance.window.resetsAt,usageDialog.resetClock) : ""
                                 color: EaStyle.Colors.themeForegroundMinor
                                 textFormat: Text.PlainText
                                 wrapMode: Text.WordWrap
@@ -1021,7 +975,7 @@ Popup {
                 -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
             Connections {
                 target: panel.assistant
-                function onConnectedChanged() { if (!panel.assistant.connected) accountDialog.close(); }
+                function onConnectedChanged() { ApplicationInfo.assistantAccountConnectionChanged(panel, accountDialog); }
             }
             ScrollView {
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff

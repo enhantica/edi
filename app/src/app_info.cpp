@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "app_info.hpp"
 #include "assistant_message_presentation.hpp"
+#include "assistant_panel_presentation.hpp"
 #include "assistant_view_model.hpp"
 #include "web_files.hpp"
 
@@ -36,14 +37,63 @@
 #include <QtGlobal>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 #include <optional>
 #include <string_view>
+
+#ifndef Q_OS_WASM
+#include <private/qjsengine_p.h>
+#include <private/qjsvalue_p.h>
+#include <private/qqmlcontextdata_p.h>
+#include <private/qqmlengine_p.h>
+#include <private/qqmljavascriptexpression_p.h>
+#include <private/qv4functionobject_p.h>
+#include <private/qv4jscall_p.h>
+#include <private/qv4lookup_p.h>
+#include <private/qv4mm_p.h>
+#include <private/qv4proxy_p.h>
+#include <private/qv4qmlcontext_p.h>
+#include <private/qv4qobjectwrapper_p.h>
+#include <private/qv4runtime_p.h>
+#include <private/qv4runtimeapi_p.h>
+#include <private/qv4scopedvalue_p.h>
+#include <private/qv4stackframe_p.h>
+#include <private/qv4string_p.h>
+#include <private/qqmljsast_p.h>
+#endif
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
 #ifdef Q_OS_WASM
 #include <emscripten/val.h>
+#endif
+
+#ifndef Q_OS_WASM
+namespace QV4 {
+namespace Heap {
+#define AssistantPanelCallbackMembers(class, Member) \
+    Member(class, Pointer, QmlContext*, context) \
+    Member(class, NoMark, uint, operation)
+DECLARE_HEAP_OBJECT(AssistantPanelCallback, FunctionObject) {
+    DECLARE_MARKOBJECTS(AssistantPanelCallback)
+    QV4QPointer<QObject> panel;
+    void init(QV4::ExecutionEngine* engine, QV4::QmlContext* captured, uint kind, QObject* owner) {
+        FunctionObject::init(engine, QString());
+        context.set(engine, captured ? captured->d() : nullptr);
+        panel.init(owner);
+        operation = kind;
+    }
+    void destroy() { panel.destroy(); Object::destroy(); }
+};
+}
+struct AssistantPanelCallback : FunctionObject {
+    V4_OBJECT2(AssistantPanelCallback, FunctionObject)
+    V4_NEEDS_DESTROY
+    static ReturnedValue virtualCall(const FunctionObject*, const Value*, const Value*, int);
+};
+DEFINE_OBJECT_VTABLE(AssistantPanelCallback);
+}
 #endif
 
 namespace {
@@ -577,7 +627,8 @@ QJSValue ApplicationInfo::assistantHistoryInputFiles(const QString& kind, const 
         extent = number(read(files, "length"));
         if (!extent) return {};
         if (!(index < *extent)) break;
-        const auto file = messageScriptProperty(engine, files, QJSPrimitiveValue(index).toString());
+        const auto file = files.isString() ? messageScriptIndex(engine, files, static_cast<quint32>(index))
+                                           : messageScriptProperty(engine, files, QJSPrimitiveValue(index).toString());
         if (!messageScriptReady(engine)) return {};
         if (!file.toBool()) return empty();
         auto field = read(file, "id");
@@ -700,6 +751,630 @@ QString ApplicationInfo::assistantNativeActivityCaption(const QJSValue& payload,
     const auto caption = messageNativeCaption(engine, payload, original);
     return messageScriptReady(engine) && caption ? *caption : QString();
 }
+
+#ifndef Q_OS_WASM
+namespace {
+struct PanelUsageFrame {
+    QPointer<QJSEngine> pointer;
+    QQmlRefPointer<QQmlContextData> context;
+    mutable bool interrupted = false;
+    explicit PanelUsageFrame(QJSEngine* engine = nullptr,
+                             QQmlRefPointer<QQmlContextData> captured = {}) : pointer(engine), context(std::move(captured)) {
+        if (pointer) {
+            auto* vm = QJSEnginePrivate::get(pointer.data())->v4Engine.get();
+            if (!context) context = vm->callingQmlContext();
+            interrupted = vm->isInterrupted.loadRelaxed();
+        }
+    }
+    QJSEngine* data() const { return pointer.data(); }
+    QJSEngine* operator->() const { return pointer.data(); }
+    operator const QPointer<QJSEngine>&() const { return pointer; }
+    explicit operator bool() const { return !pointer.isNull(); }
+    QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
+    void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
+};
+bool panelUsageReady(const PanelUsageFrame& frame) {
+    return messageScriptReady(frame.pointer) && !frame.interrupted;
+}
+PanelUsageFrame panelUsageEngine(const ApplicationInfo* actor) {
+    QJSEngine* engine = qjsEngine(actor);
+    return PanelUsageFrame(engine && engine->thread() == QThread::currentThread() ? engine : nullptr);
+}
+QV4::ReturnedValue panelUsageGet(const PanelUsageFrame& frame, const QV4::Value& value,
+                               QV4::String* name, bool forCall = false) {
+    auto* vm = frame.vm();
+    QV4::Scope scope(vm);
+    if (value.isNullOrUndefined())
+        return vm->throwTypeError(QStringLiteral("Cannot read property '%1' of %2")
+            .arg(name->toQString(), value.toQStringNoThrow()));
+    if (const auto* object = value.as<QV4::Object>()) {
+        if (const auto* wrapper = object->as<QV4::QObjectWrapper>()) {
+            const auto flags = QV4::QObjectWrapper::Flags(QV4::QObjectWrapper::IncludeImports
+                | (forCall ? QV4::QObjectWrapper::NoFlag : QV4::QObjectWrapper::AttachMethods));
+            return wrapper->getQmlProperty(frame.context, name, flags, nullptr);
+        }
+        if (!object->as<QV4::ProxyObject>()
+            && object->vtable()->resolveLookupGetter == QV4::Object::virtualResolveLookupGetter) {
+            const auto index = object->internalClass()->findValueOrGetter(name->toPropertyKey());
+            if (index.isValid()) return QV4::Object::getValue(&value, *object->d()->propertyData(index.index), index.attrs);
+            QV4::Lookup lookup{};
+            lookup.resolveProtoGetter(name->toPropertyKey(), object->d()->prototype());
+            if (lookup.call == QV4::Lookup::Call::GetterProto) return lookup.protoLookup.data->asReturnedValue();
+            if (lookup.call == QV4::Lookup::Call::GetterProtoAccessor) {
+                QV4::ScopedValue getter(scope, *lookup.protoLookup.data);
+                const auto* function = getter->as<QV4::FunctionObject>();
+                return function ? function->call(&value, nullptr, 0) : QV4::Encode::undefined();
+            }
+        }
+        return object->get(name, nullptr, &value);
+    }
+    if (value.isString() && name->toQString() == QStringLiteral("length"))
+        return QV4::Encode(int(value.toQStringNoThrow().size()));
+    QV4::ScopedObject prototype(scope);
+    if (value.isBoolean()) prototype = vm->booleanPrototype();
+    else if (value.isNumber()) prototype = vm->numberPrototype();
+    else prototype = static_cast<const QV4::Managed&>(value).internalClass()->prototype;
+    QV4::Lookup lookup{};
+    lookup.resolveProtoGetter(name->toPropertyKey(), prototype->d());
+    if (lookup.call == QV4::Lookup::Call::GetterProto)
+        return lookup.protoLookup.data->asReturnedValue();
+    if (lookup.call == QV4::Lookup::Call::GetterProtoAccessor) {
+        QV4::ScopedValue getter(scope, *lookup.protoLookup.data);
+        const auto* function = getter->as<QV4::FunctionObject>();
+        return function ? function->call(&value, nullptr, 0) : QV4::Encode::undefined();
+    }
+    QV4::ScopedObject boxed(scope, value.toObject(vm));
+    return boxed ? boxed->get(name) : QV4::Encode::undefined();
+}
+QJSValue panelUsageRead(const PanelUsageFrame& frame, const QJSValue& source, const char* name) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), source));
+    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedValue result(scope, panelUsageGet(frame, *value, key));
+    frame.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+QJSValue panelUsageIndex(const PanelUsageFrame& frame, const QJSValue& source, quint32 index) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), source));
+    QV4::ScopedValue key(scope, QV4::Encode(index));
+    QV4::ScopedValue result(scope, QV4::Runtime::LoadElement::call(frame.vm(), *value, *key));
+    frame.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+
+QJSValue panelUsageConstruct(const PanelUsageFrame& frame, const QJSValue& constructor,
+                            const QJSValueList& arguments) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedValue function(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), constructor));
+    QV4::JSCallArguments call(scope, static_cast<int>(arguments.size()));
+    for (qsizetype i = 0; i < arguments.size(); ++i)
+        call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
+    QV4::ScopedValue result(scope, QV4::Runtime::Construct::call(frame.vm(), *function, *function,
+        call.args, static_cast<int>(arguments.size())));
+    frame.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+QJSValue panelUsageGlobalCall(const PanelUsageFrame& frame, const char* name, const QJSValueList& arguments) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::JSCallArguments call(scope, static_cast<int>(arguments.size()));
+    *call.thisObject = QV4::Encode::undefined();
+    for (qsizetype i = 0; i < arguments.size(); ++i)
+        call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
+    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedObject global(scope, frame.vm()->globalObject);
+    QV4::ScopedValue callable(scope, panelUsageGet(frame, *global, key, true));
+    QV4::ScopedValue result(scope);
+    if (const auto* function = callable->as<QV4::FunctionObject>()) result = function->call(call);
+    else result = frame.vm()->throwTypeError(QStringLiteral("Property '%1' of object undefined is not a function").arg(key->toQString()));
+    frame.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+QJSValue panelUsageMemberCall(const PanelUsageFrame& frame, const QJSValue& receiver,
+                             const char* name, const QJSValueList& arguments = {}) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::JSCallArguments call(scope, static_cast<int>(arguments.size()));
+    *call.thisObject = QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver);
+    for (qsizetype i = 0; i < arguments.size(); ++i)
+        call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
+    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedValue result(scope);
+    if (call.thisObject->isNullOrUndefined()) {
+        result = frame.vm()->throwTypeError(QStringLiteral("Cannot call method '%1' of %2")
+            .arg(key->toQString(), call.thisObject->toQStringNoThrow()));
+    } else {
+        QV4::ScopedValue callable(scope, panelUsageGet(frame, *call.thisObject, key, true));
+        if (const auto* function = callable->as<QV4::FunctionObject>()) result = function->call(call);
+        else if (const auto* handler = callable->as<QV4::QmlSignalHandler>())
+            result = handler->call(call.thisObject, call.args, static_cast<int>(arguments.size()));
+        else result = frame.vm()->throwTypeError(QStringLiteral("Property '%1' of object %2 is not a function")
+            .arg(key->toQString(), call.thisObject->toQStringNoThrow()));
+    }
+    frame.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+
+QJSValue panelUsageView(const PanelUsageFrame& engine, QObject* panel) {
+    return panelUsageReady(engine) ? engine->newQObject(panel) : QJSValue();
+}
+QJSValue panelUsageField(const PanelUsageFrame& engine, const QJSValue& panel, const char* property, const char* field) {
+    const auto source = panelUsageRead(engine, panel, property);
+    return panelUsageReady(engine) ? panelUsageRead(engine, source, field) : QJSValue();
+}
+QJSValue panelUsageText(const PanelUsageFrame& engine, const char* text) {
+    if (!panelUsageReady(engine)) return {};
+    if (auto* qml = qobject_cast<QQmlEngine*>(engine.data())) qml->markCurrentFunctionAsTranslationBinding();
+    const auto result = QJSValue(QCoreApplication::translate("AssistantPanel", text));
+    engine.checked();
+    return result;
+}
+std::optional<double> panelUsageNumber(const PanelUsageFrame& engine, const QJSValue& value) {
+    if (!panelUsageReady(engine)) return std::nullopt;
+    const QJSManagedValue number(value, engine.data());
+    if (number.engine() != engine.data()) {
+        engine->throwError(QJSValue::TypeError, QStringLiteral("Usage value belongs to another engine"));
+        return std::nullopt;
+    }
+    const double result = number.toNumber();
+    engine.checked();
+    return panelUsageReady(engine) ? std::optional<double>(result) : std::nullopt;
+}
+QJSValue panelUsageAdd(const PanelUsageFrame& frame, const QJSValue& left, const QJSValue& right) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedValue a(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), left));
+    QV4::ScopedValue b(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), right));
+    QV4::ScopedValue result(scope, QV4::Runtime::Add::call(frame.vm(), *a, *b));
+    frame.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+struct PanelUsageLiteral { QJSValue value, prototype; };
+PanelUsageLiteral panelUsageLiteral(const PanelUsageFrame& engine, int arrayLength = -1) {
+    PanelUsageLiteral literal;
+    if (!panelUsageReady(engine)) return literal;
+    literal.value = arrayLength < 0 ? engine->newObject() : engine->newArray(arrayLength);
+    QJSManagedValue object(literal.value, engine.data());
+    literal.prototype = object.prototype().toJSValue();
+    const QJSManagedValue none(QJSValue(QJSValue::NullValue), engine.data());
+    object.setPrototype(none); // Original literal fields bypass inherited setters (ADR-0056).
+    return literal;
+}
+void panelUsageWrite(const PanelUsageFrame& engine, const QJSValue& object, const char* name, const QJSValue& value) {
+    if (!panelUsageReady(engine)) return;
+    QJSManagedValue target(object, engine.data());
+    if (target.engine() != engine.data()) {
+        engine->throwError(QJSValue::TypeError, QStringLiteral("Usage value belongs to another engine"));
+        return;
+    }
+    target.setProperty(QString::fromLatin1(name), value);
+    engine.checked();
+}
+QJSValue panelUsageComplete(const PanelUsageFrame& engine, const PanelUsageLiteral& literal) {
+    if (!panelUsageReady(engine)) return {};
+    QJSManagedValue object(literal.value, engine.data());
+    const QJSManagedValue prototype(literal.prototype, engine.data());
+    object.setPrototype(prototype);
+    return panelUsageReady(engine) ? literal.value : QJSValue();
+}
+bool panelUsageEach(const PanelUsageFrame& frame, const QJSValue& input,
+                    const std::function<bool(const QJSValue&)>& visit) {
+    if (!panelUsageReady(frame)) return false;
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedValue original(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), input));
+    QV4::ScopedValue iterator(scope, QV4::Runtime::GetIterator::call(frame.vm(), *original,
+        static_cast<int>(QQmlJS::AST::ForEachType::Of)));
+    frame.checked();
+    if (!panelUsageReady(frame)) return false;
+    QV4::ScopedValue value(scope);
+    for (;;) {
+        const auto done = QV4::Runtime::IteratorNext::call(frame.vm(), *iterator, value);
+        if (QV4::Value::fromReturnedValue(done).toBoolean()) {
+            frame.checked();
+            return panelUsageReady(frame);
+        }
+        const auto current = QJSValuePrivate::fromReturnedValue(value->asReturnedValue());
+        if (!visit(current)) {
+            QV4::Runtime::IteratorClose::call(frame.vm(), *iterator);
+            frame.checked();
+            return false;
+        }
+    }
+}
+QJSValue panelUsageArrayOrEmpty(const PanelUsageFrame& engine, const QJSValue& value) {
+    return !panelUsageReady(engine) ? QJSValue() : value.toBool() ? value : engine->newArray();
+}
+QJSValue panelUsageBuckets(const PanelUsageFrame& engine, const QJSValue& view) {
+    return panelUsageArrayOrEmpty(engine, panelUsageField(engine, view, "usageData", "buckets"));
+}
+bool panelUsageGreater(const PanelUsageFrame& frame, const QJSValue& first, const QJSValue& second) {
+    const auto left = panelUsageRead(frame, first, "usedPercent");
+    if (!panelUsageReady(frame)) return false;
+    const auto right = panelUsageRead(frame, second, "usedPercent");
+    if (!panelUsageReady(frame)) return false;
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedValue a(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), left));
+    QV4::ScopedValue b(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), right));
+    const bool result = bool(QV4::Runtime::CompareGreaterThan::call(*a, *b));
+    frame.checked();
+    return result;
+}
+QJSValue panelAllowanceWindow(const PanelUsageFrame& engine, const QJSValue& view, const QJSValue& minutes) {
+    QJSValue selected(QJSValue::NullValue);
+    const auto buckets = panelUsageBuckets(engine, view);
+    panelUsageEach(engine, buckets, [&](const QJSValue& bucket) {
+        const auto windows = panelUsageArrayOrEmpty(engine, panelUsageRead(engine, bucket, "windows"));
+        return panelUsageEach(engine, windows, [&](const QJSValue& window) {
+            const auto duration = panelUsageRead(engine, window, "windowDurationMins");
+            if (!panelUsageReady(engine)) return false;
+            if (duration.strictlyEquals(minutes) && (!selected.toBool() || panelUsageGreater(engine, window, selected))) selected = window;
+            return panelUsageReady(engine);
+        });
+    });
+    return panelUsageReady(engine) ? selected : QJSValue();
+}
+QJSValue panelUsageArg(const PanelUsageFrame& engine, const QJSValue& text,
+                      const std::function<QJSValue()>& argument) {
+    if (!panelUsageReady(engine)) return {};
+    const auto value = argument();
+    return panelUsageMemberCall(engine, text, "arg", {value});
+}
+QJSValue panelUsageMath(const PanelUsageFrame& engine, const char* operation,
+                       const std::function<QJSValue()>& argument) {
+    if (!panelUsageReady(engine)) return {};
+    const auto math = panelUsageRead(engine, engine->globalObject(), "Math");
+    const auto value = argument();
+    return panelUsageMemberCall(engine, math, operation, {value});
+}
+QJSValue panelUsageNow(const PanelUsageFrame& engine) {
+    const auto date = panelUsageRead(engine, engine->globalObject(), "Date");
+    return panelUsageMemberCall(engine, date, "now");
+}
+QJSValue panelUsageCallback(const PanelUsageFrame& frame, uint operation, QObject* panel = nullptr) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::Scoped<QV4::QmlContext> context(scope, frame.vm()->qmlContext());
+    QV4::Scoped<QV4::AssistantPanelCallback> callback(scope,
+        frame.vm()->memoryManager->allocate<QV4::AssistantPanelCallback>(frame.vm(), context.getPointer(), operation, panel));
+    callback->defineReadonlyConfigurableProperty(frame.vm()->id_length(), QV4::Value::fromInt32(1));
+    return QJSValuePrivate::fromReturnedValue(callback->asReturnedValue());
+}
+QJSValue panelUsageCapturedPanel(const PanelUsageFrame& frame, QObject* owner) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedString name(scope, frame.vm()->newString(QStringLiteral("panel")));
+    auto context = frame.context;
+    while (context) {
+        const int index = context->propertyIndex(name);
+        if (index >= 0 && index < context->numIdValues() && context->idValue(index) == owner) {
+            auto* qml = QQmlEnginePrivate::get(frame.vm()->qmlEngine());
+            if (qml->propertyCapture) qml->propertyCapture->captureProperty(context->idValueBindings(index));
+            break;
+        }
+        context = context->parent();
+    }
+    QV4::ScopedValue result(scope, QV4::QObjectWrapper::wrap(frame.vm(), owner));
+    frame.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+
+QJSValue panelUsagePlanWord(const PanelUsageFrame& engine, const QJSValue& word) {
+    const auto length = panelUsageRead(engine, word, "length");
+    if (!panelUsageReady(engine)) return {};
+    if (!length.toBool()) return QJSValue(QString());
+    const auto first = panelUsageIndex(engine, word, 0);
+    const auto head = panelUsageMemberCall(engine, first, "toUpperCase");
+    const auto tail = panelUsageMemberCall(engine, word, "slice", {QJSValue(1)});
+    return panelUsageAdd(engine, head, tail);
+}
+
+QJSValue panelUsageWindowLabel(const PanelUsageFrame& engine, const QJSValue& bucket, const QJSValue& window) {
+    auto duration = panelUsageRead(engine, window, "windowDurationMins");
+    if (!panelUsageReady(engine)) return {};
+    QJSValue label;
+    if (duration.strictlyEquals(QJSValue(300))) label = panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "Session limit"));
+    else {
+        duration = panelUsageRead(engine, window, "windowDurationMins");
+        if (!panelUsageReady(engine)) return {};
+        label = panelUsageText(engine, duration.strictlyEquals(QJSValue(10080)) ?
+            QT_TRANSLATE_NOOP("AssistantPanel", "Weekly") : QT_TRANSLATE_NOOP("AssistantPanel", "Other allowance"));
+    }
+    auto name = panelUsageRead(engine, bucket, "limitName");
+    if (!panelUsageReady(engine)) return {};
+    if (!name.toBool()) name = panelUsageRead(engine, bucket, "limitId");
+    if (!panelUsageReady(engine)) return {};
+    if (!name.toBool()) name = panelUsageRead(engine, bucket, "id");
+    if (!panelUsageReady(engine)) return {};
+    if (!name.toBool()) name = QJSValue(QString());
+    const auto length = panelUsageRead(engine, name, "length");
+    if (!panelUsageReady(engine)) return {};
+    return length.toBool() ? panelUsageAdd(engine, panelUsageAdd(engine, name, QJSValue(QStringLiteral(" · "))), label) : label;
+}
+} // namespace
+
+namespace edi_app::assistant_panel_presentation {
+QJSValue usageWindowLabel(QJSEngine* actualEngine, const QJSValue& bucket, const QJSValue& window) {
+    return panelUsageWindowLabel(PanelUsageFrame(actualEngine), bucket, window);
+}
+QJSValue accountPlanWord(QJSEngine* actualEngine, const QJSValue& word) {
+    return panelUsagePlanWord(PanelUsageFrame(actualEngine), word);
+}
+} // namespace edi_app::assistant_panel_presentation
+
+QJSValue ApplicationInfo::assistantUsageData(QObject* panel) const {
+    const auto engine = panelUsageEngine(this);
+    if (!panelUsageReady(engine)) return {};
+    const auto view = panelUsageView(engine, panel);
+    const auto outer = panelUsageRead(engine, engine->globalObject(), "JSON");
+    const auto inner = panelUsageRead(engine, engine->globalObject(), "JSON");
+    const auto owner = panelUsageRead(engine, view, "assistant");
+    const auto usage = panelUsageRead(engine, owner, "usage");
+    const auto serialized = panelUsageMemberCall(engine, inner, "stringify", {usage});
+    const auto projected = panelUsageMemberCall(engine, outer, "parse", {serialized});
+    if (panelUsageReady(engine)) return projected;
+    if (!engine || !engine->hasError()) return {};
+    engine->catchError();
+    const auto fallback = panelUsageLiteral(engine);
+    panelUsageWrite(engine, fallback.value, "available", QJSValue(false));
+    panelUsageWrite(engine, fallback.value, "stale", QJSValue(false));
+    panelUsageWrite(engine, fallback.value, "buckets", engine->newArray());
+    return panelUsageComplete(engine, fallback);
+}
+QJSValue ApplicationInfo::assistantUsageWindow(QObject* panel) const {
+    const auto engine = panelUsageEngine(this);
+    const auto view = panelUsageView(engine, panel);
+    QJSValue selected(QJSValue::NullValue);
+    const auto buckets = panelUsageBuckets(engine, view);
+    panelUsageEach(engine, buckets, [&](const QJSValue& bucket) {
+        const auto windows = panelUsageArrayOrEmpty(engine, panelUsageRead(engine, bucket, "windows"));
+        return panelUsageEach(engine, windows, [&](const QJSValue& window) {
+            if (!selected.toBool() || panelUsageGreater(engine, window, selected)) {
+                const auto literal = panelUsageLiteral(engine);
+                const auto percent = panelUsageRead(engine, window, "usedPercent");
+                if (!panelUsageReady(engine)) return false;
+                panelUsageWrite(engine, literal.value, "usedPercent", percent);
+                const auto label = panelUsageWindowLabel(engine, bucket, window);
+                panelUsageWrite(engine, literal.value, "label", label);
+                selected = panelUsageComplete(engine, literal);
+            }
+            return panelUsageReady(engine);
+        });
+    });
+    return panelUsageReady(engine) ? selected : QJSValue();
+}
+QJSValue ApplicationInfo::assistantAccountPlan(QObject* panel) const {
+    const auto engine = panelUsageEngine(this);
+    const auto view = panelUsageView(engine, panel);
+    const auto primary = panelUsageField(engine, view, "accountData", "planType");
+    if (!panelUsageReady(engine)) return {};
+    if (primary.toBool()) return panelUsageField(engine, view, "accountData", "planType");
+    const auto known = engine->newArray();
+    const auto buckets = panelUsageBuckets(engine, view);
+    panelUsageEach(engine, buckets, [&](const QJSValue& bucket) {
+        const auto offered = panelUsageRead(engine, bucket, "planType");
+        if (!panelUsageReady(engine)) return false;
+        if (!offered.toBool()) return true;
+        const auto plan = panelUsageRead(engine, bucket, "planType");
+        const auto index = panelUsageMemberCall(engine, known, "indexOf", {plan});
+        const auto measured = panelUsageNumber(engine, index);
+        if (!measured) return false;
+        if (*measured < 0) {
+            const auto value = panelUsageRead(engine, bucket, "planType");
+            panelUsageMemberCall(engine, known, "push", {value});
+        }
+        return panelUsageReady(engine);
+    });
+    return panelUsageMemberCall(engine, known, "join", {QJSValue(QStringLiteral(", "))});
+}
+QJSValue ApplicationInfo::assistantAccountInitial(QObject* panel) const {
+    const auto engine = panelUsageEngine(this);
+    const auto view = panelUsageView(engine, panel);
+    const auto offered = panelUsageField(engine, view, "accountData", "email");
+    if (!panelUsageReady(engine)) return {};
+    if (!offered.toBool()) return QJSValue(QString());
+    const auto array = panelUsageRead(engine, engine->globalObject(), "Array");
+    const auto email = panelUsageField(engine, view, "accountData", "email");
+    const auto characters = panelUsageMemberCall(engine, array, "from", {email});
+    const auto first = panelUsageIndex(engine, characters, 0);
+    return panelUsageMemberCall(engine, first, "toUpperCase");
+}
+QJSValue ApplicationInfo::assistantAccountPlanLabel(QObject* panel) const {
+    const auto engine = panelUsageEngine(this);
+    if (!panelUsageReady(engine)) return {};
+    const auto view = panelUsageView(engine, panel);
+    const auto plan = panelUsageRead(engine, view, "accountPlan");
+    const auto separator = engine->toScriptValue(QRegularExpression(QStringLiteral("[_ -]+")));
+    const auto words = panelUsageMemberCall(engine, plan, "split", {separator});
+    const auto callback = panelUsageCallback(engine, 0);
+    const auto mapped = panelUsageMemberCall(engine, words, "map", {callback});
+    return panelUsageMemberCall(engine, mapped, "join", {QJSValue(QStringLiteral(" "))});
+}
+QJSValue ApplicationInfo::assistantAccountPlanWord(const QJSValue& word,
+                                                  const QJSValue& /*index*/,
+                                                  const QJSValue& /*array*/) const {
+    const auto engine = panelUsageEngine(this);
+    return edi_app::assistant_panel_presentation::accountPlanWord(engine.data(), word);
+}
+QJSValue ApplicationInfo::assistantUsageCaption(QObject* panel) const {
+    const auto engine = panelUsageEngine(this);
+    const auto view = panelUsageView(engine, panel);
+    const auto selected = panelUsageRead(engine, view, "usageWindow");
+    if (!panelUsageReady(engine)) return {};
+    if (selected.toBool()) {
+        const auto text = panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "%1 · %2% used"));
+        const auto first = panelUsageArg(engine, text, [&] { return panelUsageField(engine, view, "usageWindow", "label"); });
+        return panelUsageArg(engine, first, [&] { return panelUsageField(engine, view, "usageWindow", "usedPercent"); });
+    }
+    const auto status = panelUsageField(engine, view, "usageData", "statusText");
+    return !panelUsageReady(engine) ? QJSValue() : status.toBool() ? status :
+        panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "Usage unavailable"));
+}
+QJSValue ApplicationInfo::assistantAllowanceWindow(QObject* panel, const QJSValue& minutes) const {
+    const auto engine = panelUsageEngine(this);
+    return panelAllowanceWindow(engine, panelUsageView(engine, panel), minutes);
+}
+QJSValue ApplicationInfo::assistantUsageAllowances(QObject* panel) const {
+    const auto engine = panelUsageEngine(this);
+    if (!panelUsageReady(engine)) return {};
+    const auto descriptors = panelUsageLiteral(engine, 2);
+    const int minutes[] = {300, 10080};
+    const char* keys[] = {"session", "weekly"};
+    const char* titles[] = {QT_TRANSLATE_NOOP("AssistantPanel", "Session limit"), QT_TRANSLATE_NOOP("AssistantPanel", "Weekly")};
+    for (int index = 0; index < 2; ++index) {
+        const auto title = panelUsageText(engine, titles[index]);
+        const auto row = panelUsageLiteral(engine);
+        panelUsageWrite(engine, row.value, "title", title);
+        panelUsageWrite(engine, row.value, "minutes", QJSValue(minutes[index]));
+        panelUsageWrite(engine, row.value, "key", QJSValue(QString::fromLatin1(keys[index])));
+        const auto value = panelUsageComplete(engine, row);
+        if (!panelUsageReady(engine)) return {};
+        panelUsageWrite(engine, descriptors.value, index == 0 ? "0" : "1", value);
+    }
+    const auto values = panelUsageComplete(engine, descriptors);
+    const auto callback = panelUsageCallback(engine, 1, panel);
+    return panelUsageMemberCall(engine, values, "filter", {callback});
+}
+QJSValue ApplicationInfo::assistantAllowanceColor(const QJSValue& remaining, const QJSValue& colors) const {
+    const auto engine = panelUsageEngine(this);
+    auto measured = panelUsageNumber(engine, remaining);
+    if (!measured) return {};
+    if (*measured >= 0) {
+        measured = panelUsageNumber(engine, remaining);
+        if (!measured) return {};
+        if (*measured < 5) return panelUsageRead(engine, colors, "red");
+    }
+    measured = panelUsageNumber(engine, remaining);
+    if (!measured) return {};
+    if (*measured >= 0) {
+        measured = panelUsageNumber(engine, remaining);
+        if (!measured) return {};
+        if (*measured < 25) return panelUsageRead(engine, colors, "orange");
+    }
+    return panelUsageRead(engine, colors, "themeForeground");
+}
+QJSValue ApplicationInfo::assistantUsageResetLabel(const QJSValue& value, const QJSValue& now) const {
+    const auto engine = panelUsageEngine(this);
+    if (!panelUsageReady(engine)) return {};
+    const auto unavailable = [&] { return panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "Reset unavailable")); };
+    if (!value.isNumber()) return unavailable();
+    const auto date = panelUsageRead(engine, engine->globalObject(), "Date");
+    if (!panelUsageReady(engine)) return {};
+    const double milliseconds = value.toNumber() * 1000;
+    const auto instance = panelUsageConstruct(engine, date, {QJSValue(milliseconds)});
+    const auto time = panelUsageMemberCall(engine, instance, "getTime");
+    const auto valid = panelUsageGlobalCall(engine, "isFinite", {time});
+    if (!panelUsageReady(engine)) return {};
+    if (!valid.toBool()) return unavailable();
+    const auto minutes = panelUsageMath(engine, "ceil", [&] {
+        const auto current = panelUsageNumber(engine, now);
+        return current ? QJSValue((milliseconds - *current) / 60000) : QJSValue();
+    });
+    auto measured = panelUsageNumber(engine, minutes);
+    if (!measured) return {};
+    if (*measured <= 0) return panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "Reset time reached"));
+    const auto days = panelUsageMath(engine, "floor", [&] {
+        const auto amount = panelUsageNumber(engine, minutes);
+        return amount ? QJSValue(*amount / 1440) : QJSValue();
+    });
+    const auto hours = panelUsageMath(engine, "floor", [&] {
+        const auto amount = panelUsageNumber(engine, minutes);
+        return amount ? QJSValue(std::fmod(*amount, 1440) / 60) : QJSValue();
+    });
+    measured = panelUsageNumber(engine, days);
+    if (!measured) return {};
+    if (*measured > 0) {
+        const auto text = panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "Resets in %1d %2h"));
+        const auto first = panelUsageArg(engine, text, [&] { return days; });
+        return panelUsageArg(engine, first, [&] { return hours; });
+    }
+    measured = panelUsageNumber(engine, hours);
+    if (!measured) return {};
+    if (*measured > 0) {
+        const auto text = panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "Resets in %1h %2 min"));
+        const auto first = panelUsageArg(engine, text, [&] { return hours; });
+        return panelUsageArg(engine, first, [&] {
+            const auto amount = panelUsageNumber(engine, minutes);
+            return amount ? QJSValue(std::fmod(*amount, 60)) : QJSValue();
+        });
+    }
+    const auto text = panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "Resets in %1 min"));
+    return panelUsageArg(engine, text, [&] { return minutes; });
+}
+QJSValue ApplicationInfo::assistantUsageNow() const { return panelUsageNow(panelUsageEngine(this)); }
+void ApplicationInfo::refreshAssistantUsageClock(QObject* dialog) const {
+    const auto engine = panelUsageEngine(this);
+    const auto target = panelUsageView(engine, dialog);
+    const auto now = panelUsageNow(engine);
+    panelUsageWrite(engine, target, "resetClock", now);
+}
+void ApplicationInfo::assistantAccountConnectionChanged(QObject* panel, QObject* dialog) const {
+    const auto engine = panelUsageEngine(this);
+    const auto view = panelUsageView(engine, panel);
+    const auto owner = panelUsageRead(engine, view, "assistant");
+    const auto connected = panelUsageRead(engine, owner, "connected");
+    if (!panelUsageReady(engine) || connected.toBool()) return;
+    const auto target = panelUsageView(engine, dialog);
+    panelUsageMemberCall(engine, target, "close");
+}
+
+
+QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject* function,
+    const Value*, const Value* arguments, int count) {
+    const auto* callback = static_cast<const AssistantPanelCallback*>(function);
+    QV4::Scope scope(function->engine());
+    QV4::Scoped<QV4::QmlContext> context(scope, callback->d()->context);
+    const PanelUsageFrame frame(function->engine()->jsEngine(), context ? context->qmlContext() : QQmlRefPointer<QQmlContextData>());
+    if (!panelUsageReady(frame)) return QV4::Encode::undefined();
+    const QJSValue value = count ? QJSValuePrivate::fromReturnedValue(arguments[0].asReturnedValue()) : QJSValue();
+    QJSValue result;
+    if (callback->d()->operation == 0) {
+        result = panelUsagePlanWord(frame, value);
+    } else {
+        const auto panel = panelUsageCapturedPanel(frame, callback->d()->panel);
+        const auto minutes = panelUsageRead(frame, value, "minutes");
+        const auto selected = panelUsageMemberCall(frame, panel, "allowanceWindow", {minutes});
+        if (panelUsageReady(frame)) result = QJSValue(!selected.isNull());
+    }
+    return QJSValuePrivate::convertToReturnedValue(frame.vm(), result);
+}
+#else
+namespace edi_app::assistant_panel_presentation {
+QJSValue usageWindowLabel(QJSEngine*, const QJSValue&, const QJSValue&) { return QJSValue(QString()); }
+QJSValue accountPlanWord(QJSEngine*, const QJSValue&) { return QJSValue(QString()); }
+}
+QJSValue ApplicationInfo::assistantUsageData(QObject*) const {
+    auto* engine = qjsEngine(this);
+    if (!engine) return QJSValue(QJSValue::NullValue);
+    auto value = engine->newObject();
+    value.setProperty(QStringLiteral("available"), false);
+    value.setProperty(QStringLiteral("stale"), false);
+    value.setProperty(QStringLiteral("buckets"), engine->newArray());
+    return value;
+}
+QJSValue ApplicationInfo::assistantUsageWindow(QObject*) const { return QJSValue(QJSValue::NullValue); }
+QJSValue ApplicationInfo::assistantAllowanceWindow(QObject*, const QJSValue&) const { return QJSValue(QJSValue::NullValue); }
+QJSValue ApplicationInfo::assistantUsageAllowances(QObject*) const {
+    auto* engine = qjsEngine(this);
+    return engine ? engine->newArray() : QJSValue(QJSValue::NullValue);
+}
+QJSValue ApplicationInfo::assistantAccountPlan(QObject*) const { return QJSValue(QString()); }
+QJSValue ApplicationInfo::assistantAccountInitial(QObject*) const { return QJSValue(QString()); }
+QJSValue ApplicationInfo::assistantAccountPlanLabel(QObject*) const { return QJSValue(QString()); }
+QJSValue ApplicationInfo::assistantAccountPlanWord(const QJSValue&, const QJSValue&, const QJSValue&) const { return QJSValue(QString()); }
+QJSValue ApplicationInfo::assistantUsageCaption(QObject*) const { return QJSValue(assistantUnavailableReason()); }
+QJSValue ApplicationInfo::assistantAllowanceColor(const QJSValue&, const QJSValue& colors) const {
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    return messageScriptProperty(engine, colors, QStringLiteral("themeForeground"));
+}
+QJSValue ApplicationInfo::assistantUsageResetLabel(const QJSValue&, const QJSValue&) const { return QJSValue(QString()); }
+QJSValue ApplicationInfo::assistantUsageNow() const { return QJSValue(0); }
+void ApplicationInfo::refreshAssistantUsageClock(QObject*) const {}
+void ApplicationInfo::assistantAccountConnectionChanged(QObject*, QObject*) const {}
+#endif
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
     return value.isString() ? edi_app::assistant_presentation::singleLineText(value.toString()) : QString();

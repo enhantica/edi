@@ -96,6 +96,29 @@ class ApplicationInfo : public QObject {
     // was chosen (web), threads, the Qt version and graphics backend, edi's and crysta's versions with the crysta
     // SDK commit, and the feature switches; one "name: value" line each, to read and to copy.
     Q_INVOKABLE QString diagnostics() const;
+    /// Original Panel projection/selection on the current QML thread; no cache or canonical lookup.
+    /// Borrows actual Panel/engine values; original JS errors remain pending except the projection's explicit catch.
+    Q_INVOKABLE QJSValue assistantUsageData(QObject* panel) const;
+    Q_INVOKABLE QJSValue assistantUsageWindow(QObject* panel) const;
+    Q_INVOKABLE QJSValue assistantAllowanceWindow(QObject* panel, const QJSValue& minutes) const;
+    Q_INVOKABLE QJSValue assistantUsageAllowances(QObject* panel) const;
+    /// Original account display relations and shared native word formatter bridge.
+    /// Borrows current QML-thread values; no new normalization, identity or disclosure policy.
+    Q_INVOKABLE QJSValue assistantAccountPlan(QObject* panel) const;
+    Q_INVOKABLE QJSValue assistantAccountInitial(QObject* panel) const;
+    Q_INVOKABLE QJSValue assistantAccountPlanLabel(QObject* panel) const;
+    /// Three-argument word formatter bridge; index and array are ignored as in the original callback.
+    Q_INVOKABLE QJSValue assistantAccountPlanWord(const QJSValue& word, const QJSValue& index,
+                                                const QJSValue& array) const;
+    /// Original Panel translation/String/Date/Math presentation relations; errors stay pending.
+    Q_INVOKABLE QJSValue assistantUsageCaption(QObject* panel) const;
+    Q_INVOKABLE QJSValue assistantAllowanceColor(const QJSValue& remaining, const QJSValue& colors) const;
+    Q_INVOKABLE QJSValue assistantUsageResetLabel(const QJSValue& value, const QJSValue& now) const;
+    /// Original Date.now source and existing dialog clock publication; no timer/service is added.
+    Q_INVOKABLE QJSValue assistantUsageNow() const;
+    Q_INVOKABLE void refreshAssistantUsageClock(QObject* dialog) const;
+    /// Apply the original connected-change close condition at its original current-owner read point.
+    Q_INVOKABLE void assistantAccountConnectionChanged(QObject* panel, QObject* dialog) const;
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
     Q_INVOKABLE QString fileSizeKilobytes(qint64 bytes) const;
