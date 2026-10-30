@@ -24,73 +24,18 @@ Item {
     // Between the comboboxes and the buttons on one line.
     readonly property real groupSpacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
     // The controls shown, and every width the layout depends on.
-    readonly property var units: Array.from(children).filter(child => child.visible)
-    readonly property string measure: [centre, leftEdge, rightEdge].concat(units.map(unit => unit.width + groupOf(unit))).join(",")
+    readonly property var units: ApplicationInfo.toolbarUnits()
+    readonly property string measure: ApplicationInfo.toolbarMeasure()
     // How many lines the controls take.
     property int lineCount: 0
 
-    function isComboBox(unit) {
-        return unit.closedTexts !== undefined;
-    }
-    function groupOf(unit) {
-        return unit.toolbarGroup ?? "";
-    }
+    function isComboBox(unit) { return ApplicationInfo.toolbarIsComboBox(unit); }
+    function groupOf(unit) { return ApplicationInfo.toolbarGroupOf(unit); }
     // The gap before a combobox that follows `before` on a line.
-    function boxGap(before, unit) {
-        return groupOf(before) === groupOf(unit) ? spacing : groupSpacing;
-    }
-    function widthOf(row, gap) {
-        return row.reduce((sum, unit, index) => sum + unit.width + (index > 0 ? gap : 0), 0);
-    }
-    function boxesWidth(row) {
-        return row.reduce((sum, unit, index) => sum + unit.width + (index > 0 ? boxGap(row[index - 1], unit) : 0), 0);
-    }
-    function layout() {
-        const boxes = units.filter(unit => isComboBox(unit));
-        const buttons = units.filter(unit => !isComboBox(unit));
-        const room = rightEdge - leftEdge;
-        const rows = [];
-        const together = boxesWidth(boxes) + widthOf(buttons, spacing) + (boxes.length > 0 && buttons.length > 0 ? groupSpacing : 0);
-        if (together <= room) {
-            rows.push({
-                "units": boxes.concat(buttons),
-                "gaps": boxes.map((unit, index) => index > 0 ? boxGap(boxes[index - 1], unit) : 0).concat(buttons.map((unit, index) => index > 0 ? spacing : boxes.length > 0 ? groupSpacing : 0))
-            });
-        } else {
-            // As many comboboxes as fit on each line, then the buttons on their own.
-            let row = null;
-            for (const box of boxes) {
-                if (row === null || boxesWidth(row.units.concat([box])) > room) {
-                    row = {
-                        "units": [],
-                        "gaps": []
-                    };
-                    rows.push(row);
-                }
-                row.gaps.push(row.units.length > 0 ? boxGap(row.units[row.units.length - 1], box) : 0);
-                row.units.push(box);
-            }
-            if (buttons.length > 0)
-                rows.push({
-                    "units": buttons,
-                    "gaps": buttons.map((unit, index) => index > 0 ? spacing : 0)
-                });
-        }
-        let top = 0;
-        for (const each of rows) {
-            const widthNow = each.units.reduce((sum, unit, index) => sum + unit.width + each.gaps[index], 0);
-            let x = Math.round(Math.max(leftEdge, Math.min(rightEdge - widthNow, centre - widthNow / 2)));
-            for (let i = 0; i < each.units.length; ++i) {
-                x += each.gaps[i];
-                each.units[i].x = x;
-                each.units[i].y = top;
-                x += each.units[i].width;
-            }
-            top += AppSizes.toolbarControlSize + AppSizes.toolbarSpacing;
-        }
-        lineCount = rows.length;
-        implicitHeight = Math.max(0, top - AppSizes.toolbarSpacing);
-    }
+    function boxGap(before, unit) { return ApplicationInfo.toolbarBoxGap(before, unit); }
+    function widthOf(row, gap) { return ApplicationInfo.toolbarRowWidth(row, gap, false); }
+    function boxesWidth(row) { return ApplicationInfo.toolbarRowWidth(row, undefined, true); }
+    function layout() { ApplicationInfo.toolbarLayout(); }
 
     onMeasureChanged: Qt.callLater(layout)
     Component.onCompleted: layout()

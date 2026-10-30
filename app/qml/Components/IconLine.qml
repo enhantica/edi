@@ -33,31 +33,14 @@ Item {
     property int elide: Text.ElideRight
 
     // The piece that gives way when the line is too long.
-    readonly property int elidedIndex: {
-        const marked = segments.findIndex(segment => segment.elides === true);
-        return marked >= 0 ? marked : segments.length - 1;
-    }
+    readonly property int elidedIndex: ApplicationInfo.iconElidedIndex()
     // A piece's width uncut. otherWidth sums these, never the pieces' `width`, so the elided piece's cut cannot feed
     // back into the room it is given while the segments change.
-    function naturalWidth(segment, piece) {
-        const fixed = fixedWidth(segment);
-        return fixed !== undefined ? fixed : piece.implicitWidth;
-    }
+    function naturalWidth(segment, piece) { return ApplicationInfo.iconNaturalWidth(segment, piece); }
     // A slot's or a mark's set width; undefined for a text, which takes its own.
-    function fixedWidth(segment) {
-        const mark = segment ? segment.mark ?? "" : "";
-        return segment && segment.slot ? pixelSize * 1.15 : mark === "dash" ? pixelSize * 1.2 : mark !== "" ? pixelSize * 0.6 : undefined;
-    }
+    function fixedWidth(segment) { return ApplicationInfo.iconFixedWidth(segment); }
     // The width of every other piece, with their spacing: what the elided piece leaves room for.
-    readonly property real otherWidth: {
-        let width = 0;
-        for (let i = 0; i < pieces.count; ++i) {
-            const piece = pieces.itemAt(i);
-            if (i !== elidedIndex)
-                width += piece ? line.naturalWidth(segments[i], piece) + spacing : 0;
-        }
-        return width;
-    }
+    readonly property real otherWidth: ApplicationInfo.iconOtherWidth()
 
     // The centre line, from the line's top: the text baseline, less half a capital's height.
     readonly property real centreY: textMetrics.ascent + capital.tightBoundingRect.y + capital.tightBoundingRect.height / 2

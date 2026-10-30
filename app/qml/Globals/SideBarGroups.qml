@@ -22,64 +22,19 @@ QtObject {
 
     // Open as the user left it; with nothing remembered, open when it is the first group its tab shows and closed
     // otherwise: the first group of every tab of every page starts unfolded (the owner, 2026-10-25).
-    function isOpen(key, group) {
-        if (openStates[key] !== undefined)
-            return openStates[key] === true;
-        return defaultOpen(group);
-    }
+    function isOpen(key, group) { return ApplicationInfo.sidebarIsOpen(key, group); }
 
     // Remembered once it differs from what the group would show by default: a group the user opened or folded.
-    function setOpen(key, open, group) {
-        if (openStates[key] === undefined && group !== undefined && open === defaultOpen(group))
-            return;
-        openStates[key] = open;
-    }
+    function setOpen(key, open, group) { ApplicationInfo.sidebarSetOpen(key, open, group); }
 
-    function defaultOpen(group) {
-        const shown = shownGroups(group);
-        return shown.length > 0 && shown[0] === group;
-    }
+    function defaultOpen(group) { return ApplicationInfo.sidebarEdge(group, false); }
 
     // The column's children in the order it lays them out. A Repeater's delegates are added at the end of the
     // children and only then moved behind the Repeater, with no change signal, so a group after a Repeater would
     // stay "not last". The delegates are taken from their Repeater, in its place.
-    function orderedChildren(parent) {
-        const children = [];
-        for (let i = 0; parent && i < parent.children.length; ++i)
-            children.push(parent.children[i]);
-        const repeaters = children.filter(child => typeof child.itemAt === "function" && typeof child.count === "number");
-        const repeated = [];
-        for (const repeater of repeaters) {
-            for (let i = 0; i < repeater.count; ++i)
-                repeated.push(repeater.itemAt(i));
-        }
-        const ordered = [];
-        for (const child of children) {
-            if (repeaters.includes(child)) {
-                for (let i = 0; i < child.count; ++i) {
-                    if (child.itemAt(i) !== null)
-                        ordered.push(child.itemAt(i));
-                }
-            } else if (!repeated.includes(child)) {
-                ordered.push(child);
-            }
-        }
-        return ordered;
-    }
+    function orderedChildren(parent) { return ApplicationInfo.sidebarOrderedChildren(parent); }
 
-    function shownGroups(group) {
-        const siblings = orderedChildren(group ? group.parent : null);
-        const shown = [];
-        for (let i = 0; i < siblings.length; ++i) {
-            const sibling = siblings[i];
-            if (typeof sibling.collapsible !== "undefined" && (typeof sibling.listed === "undefined" || sibling.listed))
-                shown.push(sibling);
-        }
-        return shown;
-    }
+    function shownGroups(group) { return ApplicationInfo.sidebarShownGroups(group); }
 
-    function isLast(group) {
-        const shown = shownGroups(group);
-        return shown.length > 0 && shown[shown.length - 1] === group;
-    }
+    function isLast(group) { return ApplicationInfo.sidebarEdge(group, true); }
 }
