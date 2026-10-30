@@ -47,5 +47,8 @@
          "wait-fit", "close-fit-results"], [], "", false);
     tabs("13-analysis", "analysis", "Completed Rietveld refinement");
     tabs("14-report", "report", "Review the fitted structure and report");
+    shot("15-project-examples", "project", "Browse the built-in examples",
+        ["appBar.tab.project", "sideBar.tab.basic", "group.getStarted", "expand:group.examples"],
+        ["group.examples"]);
     return {schema: 1, example: "pd-neut-cwl_y2o3-spodi", steps: steps};
 })();
