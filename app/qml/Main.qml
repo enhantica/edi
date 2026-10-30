@@ -1211,28 +1211,8 @@ EaComponents.ApplicationWindow {
     }
     // Stored only once restored, so the window's first size at start never replaces the kept one.
     property bool geometryRestored: false
-    function storeGeometry() {
-        if (!window.geometryRestored || WebFiles.available || window.visibility === Window.Maximized || window.visibility === Window.FullScreen)
-            return;
-        windowSettings.x = window.x;
-        windowSettings.y = window.y;
-        windowSettings.width = window.width;
-        windowSettings.height = window.height;
-    }
-    function restoreGeometry() {
-        if (WebFiles.available || windowSettings.width <= 0 || windowSettings.height <= 0) {
-            window.geometryRestored = true;
-            window.storeGeometry();
-            return;
-        }
-        window.width = windowSettings.width;
-        window.height = windowSettings.height;
-        const position = ApplicationInfo.onScreenPosition(windowSettings.x, windowSettings.y, window.width, window.height);
-        window.x = position.x;
-        window.y = position.y;
-        window.geometryRestored = true;
-        window.storeGeometry();
-    }
+    function storeGeometry() { ApplicationInfo.storeWindowGeometry(window, windowSettings); }
+    function restoreGeometry() { ApplicationInfo.restoreWindowGeometry(window, windowSettings); }
     onXChanged: storeGeometry()
     onYChanged: storeGeometry()
     onWidthChanged: storeGeometry()

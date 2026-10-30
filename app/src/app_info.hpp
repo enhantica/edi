@@ -254,6 +254,10 @@ class ApplicationInfo : public QObject {
     // Where a window of `width` x `height` kept at `x`, `y` opens: there when that point is on a connected screen, else
     // centred on the primary screen's available area (a screen unplugged since).
     Q_INVOKABLE QPoint onScreenPosition(int x, int y, int width, int height) const;
+    /// Store the original Main Window settings after restoration and outside maximized/fullscreen.
+    Q_INVOKABLE void storeWindowGeometry(QObject* window, QObject* settings) const;
+    /// Restore the existing settings through the screen-placement owner and actual Main store hook.
+    Q_INVOKABLE void restoreWindowGeometry(QObject* window, QObject* settings) const;
     Q_INVOKABLE QColor elementColor(const QString& typeSymbol, const QColor& fallback,
                                     const QString& scheme = QStringLiteral("jmol")) const;
     // `colour` as drawn flat on any of `backgrounds`: its lightness moved to 2:1 contrast on each, its hue kept (edi

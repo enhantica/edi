@@ -102,3 +102,34 @@ to know where Qt puts it.
 | Page settings among each page's Extras | Rejected: Extras holds project data written to `.edi`, so options there look like part of the project. |
 | A chart's display choices also in the page's Settings tab | Rejected by the owner: one choice in two places, and the chart already shows it. |
 | View settings in the project's `.edi` files | Rejected: they would travel with a project to another machine and person, and a change of view would mark the project modified. |
+
+
+## Native owner for the original Main window-geometry procedures
+
+The FIRST app-settings owner is this ADR's `Window` group. Prior art is Main.qml's storeGeometry /
+restoreGeometry, geometryRestored startup gate and x/y/width/height notifications, together with
+ApplicationInfo::onScreenPosition. The pinned EasyApplication ApplicationWindow also has its
+existing ApplicationWindow.Geometry alias settings; Main restores its Window group after the base.
+That base and both existing lifecycles remain unchanged. No second settings store, writer, cache,
+QObject, controller, timer or persisted field is introduced by this extraction.
+
+ApplicationInfo executes the original store/restore procedures against the actual Main window and
+existing Settings object. Main's original public method names remain one-line native dispatch;
+startup and geometry notifications still use those hooks, and restore still invokes the actual
+window.storeGeometry hook after geometryRestored publication. WebFiles::available is the existing
+constant native platform getter and is consumed only at its original short-circuit points. No eager
+WebFiles argument, new minimized/hidden/owner/retirement guard or geometry snapshot is introduced.
+
+Preserve original read and setter order, repeated visibility and settings reads, Qt conversion,
+reentrant notifications, maximized/fullscreen exclusion, invalid-kept-size/default branches, browser
+coldness and existing onScreenPosition result/primary-screen/no-screen behavior. Settings still
+belong to the machine and do not modify project data. The screen-placement method is unchanged;
+restore uses the same actual meta-call before reading its point fields. This finite pair removes
+its procedural JavaScript decisions while retaining declarations, method dispatch and existing
+startup scheduling. Other Main/focus/project/geometry procedures remain separate migration work.
+
+Independent unchanged-original and identical-post controls must cover startup/default/kept size,
+all geometry and visibility branches, web availability, current setter/reentry order and the normal
+settings writer/readback, using actual window/Settings/Qt identities. This source-only extraction is
+not a build, runtime, platform, full migration or task-acceptance claim. The unrelated external
+ai-assistant-on-dev workstream is not copied or changed and still requires eventual reconciliation.
