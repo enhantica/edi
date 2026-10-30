@@ -33,6 +33,9 @@
         panel("scan-extraction", "group.sequential_fit_extract", "Inspect values extracted from each dataset");
         } else {
             panel("joint-weights", "group.joint_fit", "Set the relative weights of the experiments in the joint fit");
+            panel("joint-result", "group.fit_result", "Inspect the overall outcome and statistics of the completed fit");
+            panel("joint-experiment-results", "group.fit_result_bank", "Compare fit statistics for the individual experiments");
+            panel("joint-structure-results", "group.fit_result_phase", "Inspect the structure contributions recorded for each experiment");
         }
         ["experiment", "analysis"].forEach(function (page) {
             ["stacked", "map"].forEach(function (view) {
