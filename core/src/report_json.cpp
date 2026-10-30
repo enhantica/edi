@@ -10,6 +10,7 @@
 
 #include "edi/model.hpp"
 #include "edi/report_model.hpp"
+#include "report_json.hpp"
 #include "json.hpp"
 
 // The report model's JSON (edi ADR-0036 §1): every field, in declaration order, so a model read from its JSON writes
@@ -361,7 +362,7 @@ Value browser_evolution(const ReportEvolution& series, const std::vector<SeriesS
     if (const auto* style = browser_style(styles, "meas.0")) out.emplace_back("color", style->light); return out;
 }
 
-Value pattern_json(const ReportPattern& pattern, const std::vector<SeriesStyle>& styles) {
+Value pattern_json(const ReportPattern& pattern, const std::vector<SeriesStyle>& styles, bool browser) {
     const PatternPresentation& shown = pattern.presentation;
     Array series, excluded, layout, hover;
     for (const PatternSeries& item : shown.series) {
@@ -381,21 +382,25 @@ Value pattern_json(const ReportPattern& pattern, const std::vector<SeriesStyle>&
     for (const BraggRowLabel& label : shown.bragg_labels) {
         labels.emplace_back(Object{{"text", label.text}, {"style", label.style}, {"centre", label.centre}});
     }
-    return Object{{"current", shown.current},   {"x", axis_json(shown.x)},
+    Object object{{"current", shown.current},   {"x", axis_json(shown.x)},
                   {"y_main", axis_json(shown.y_main)}, {"y_residual", axis_json(shown.y_residual)},
                   {"series", std::move(series)}, {"excluded", std::move(excluded)},
                   {"layout", std::move(layout)}, {"hover", std::move(hover)},
-                  {"bragg_labels", std::move(labels)}, {"title", pattern.title}, {"legend", pattern.legend}, {"browser", browser_pattern(pattern, styles)}};
+                  {"bragg_labels", std::move(labels)}, {"title", pattern.title}, {"legend", pattern.legend}};
+    if (browser) object.emplace_back("browser", browser_pattern(pattern, styles));
+    return object;
 }
 
-Value single_crystal_json(const ReportSingleCrystal& crystal, const std::vector<SeriesStyle>& styles) {
+Value single_crystal_json(const ReportSingleCrystal& crystal, const std::vector<SeriesStyle>& styles, bool browser) {
     const auto indices = [](const std::vector<int>& values) {
         return numbers(std::vector<double>(values.begin(), values.end()));
     };
-    return Object{{"h", indices(crystal.h)},         {"k", indices(crystal.k)},       {"l", indices(crystal.l)},
+    Object object{{"h", indices(crystal.h)},         {"k", indices(crystal.k)},       {"l", indices(crystal.l)},
                   {"meas", numbers(crystal.meas)},     {"su", numbers(crystal.su)},     {"calc", numbers(crystal.calc)},
                   {"title", crystal.title},            {"name", crystal.name},          {"x_title", crystal.x_title},
-                  {"y_title", crystal.y_title},        {"hover", strings(crystal.hover)}, {"browser", browser_single_crystal(crystal, styles)}};
+                  {"y_title", crystal.y_title},        {"hover", strings(crystal.hover)}};
+    if (browser) object.emplace_back("browser", browser_single_crystal(crystal, styles));
+    return object;
 }
 
 ReportSingleCrystal single_crystal_of(const Value& value) {
@@ -907,8 +912,9 @@ void check_indices(const ReportModel& model) {
 
 }  // namespace
 
-std::string report_to_json(const ReportModel& model) {
-    check_indices(model);
+namespace {
+std::string write_report_json(const ReportModel& model, bool browser) {
+    if (browser) check_indices(model);
     Array sections;
     for (ReportSection section : model.sections) {
         sections.emplace_back(report_section_name(section));
@@ -946,8 +952,9 @@ std::string report_to_json(const ReportModel& model) {
                 points.emplace_back(
                     Object{{"x", point.x}, {"y", point.y}, {"su", point.su}, {"text", point.text}});
             }
-            series.emplace_back(Object{
-                {"name", one.name}, {"units", one.units}, {"x_title", one.x_title}, {"points", std::move(points)}, {"browser", browser_evolution(one, model.pattern_styles)}});
+            Object item{{"name", one.name}, {"units", one.units}, {"x_title", one.x_title}, {"points", std::move(points)}};
+            if (browser) item.emplace_back("browser", browser_evolution(one, model.pattern_styles));
+            series.emplace_back(std::move(item));
         }
         evolution = std::move(series);
     }
@@ -961,22 +968,24 @@ std::string report_to_json(const ReportModel& model) {
             labels.emplace_back(
                 Object{{"atom", whole(label.atom)}, {"anchor", vec_json(label.anchor)}, {"text", label.text}});
         }
-        structures.emplace_back(Object{{"id", structure.id},
+        Object item{{"id", structure.id},
                                        {"categories", categories(structure.categories)},
                                        {"scene", scene_json(structure.scene)},
                                        {"view", view_json(structure.view)},
                                        {"drawing", drawing_json(structure.drawing)},
                                        {"along", std::move(along)},
-                                       {"labels", std::move(labels)}, {"browser", browser_structure(structure, model.structure_styles)}});
+                                       {"labels", std::move(labels)}};
+        if (browser) item.emplace_back("browser", browser_structure(structure, model.structure_styles));
+        structures.emplace_back(std::move(item));
     }
     Array experiments;
     for (const ReportExperiment& experiment : model.experiments) {
         Object item{{"id", experiment.id},
                     {"categories", categories(experiment.categories)},
-                    {"pattern", pattern_json(experiment.pattern, model.pattern_styles)}};
+                    {"pattern", pattern_json(experiment.pattern, model.pattern_styles, browser)}};
         // Only a single crystal carries its chart.
         if (experiment.single_crystal) {
-            item.emplace_back("single_crystal", single_crystal_json(*experiment.single_crystal, model.pattern_styles));
+            item.emplace_back("single_crystal", single_crystal_json(*experiment.single_crystal, model.pattern_styles, browser));
         }
         experiments.emplace_back(std::move(item));
     }
@@ -1001,6 +1010,11 @@ std::string report_to_json(const ReportModel& model) {
                           {"structure_styles", structure_styles_json(model.structure_styles)}};
     return json::write(document);
 }
+
+}  // namespace
+
+std::string report_to_json(const ReportModel& model) { return write_report_json(model, false); }
+std::string detail::report_html_model_json(const ReportModel& model) { return write_report_json(model, true); }
 
 ReportModel report_from_json(const std::string& text) {
     const Value document = json::parse(text);
