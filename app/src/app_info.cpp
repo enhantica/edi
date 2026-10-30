@@ -819,6 +819,7 @@ struct PanelUsageFrame {
     QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
     void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
 };
+QJSValue lifecycleCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue presentationCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue formsProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue recentRowCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
@@ -2624,7 +2625,9 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     const auto argument = [&](uint index) {
         return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
     };
-    const auto result = callback->d()->operation >= 360
+    const auto result = callback->d()->operation >= 380
+        ? lifecycleCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
+        : callback->d()->operation >= 360
         ? presentationCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
         : callback->d()->operation >= 340
         ? formsProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
@@ -3019,7 +3022,8 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto updateCapture = [&](uint index, const QJSValue& value) {
             if (panelUsageReady(frame)) captures->set(frame.vm(), index, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), value)));
         };
-        result = callback->d()->operation >= 360 ? presentationCallback(frame, callback->d()->operation, retained, argument)
+        result = callback->d()->operation >= 380 ? lifecycleCallback(frame, callback->d()->operation, retained, argument)
+            : callback->d()->operation >= 360 ? presentationCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 340 ? formsProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 320 ? recentRowCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 300 ? scanProcedureCallback(frame, callback->d()->operation, retained, argument)
@@ -9047,6 +9051,221 @@ QJSValue ApplicationInfo::nativeListProjection(int kind) const {
     const auto tags = assistantRelation(f, assistantContextField(f, "tagRow", "width"), assistantContextField(f, "descriptionCell", "width"), 1) ? panelUsageMemberCall(f, assistantContextField(f, "row", "tagLabels"), "join", {QJSValue(QStringLiteral(" · "))}) : QJSValue(QStringLiteral(""));
     const auto detail = panelUsageTruth(assistantContextField(f, "detailLabel", "truncated")) ? assistantContextField(f, "row", "detail") : QJSValue(QStringLiteral(""));
     return panelUsageMemberCall(f, panelUsageMemberCall(f, assistantGeometryArray(f, {identity, tags, detail}), "filter", {panelUsageClosure(f, 370, {}, 1)}), "join", {QJSValue(QStringLiteral("\n"))});
+}
+
+namespace {
+QJSValue createGroupField(const PanelUsageFrame& f, const char* name) { return assistantContextField(f, "group", name); }
+void createGroupWrite(const PanelUsageFrame& f, const char* name, const QJSValue& value) { projectWrite(f, "group", name, value); }
+bool createSameProject(const PanelUsageFrame& f, const QJSValue& original) { return assistantContextField(f, "Session", "project").strictlyEquals(panelUsageRead(f, original, "project")); }
+bool createAlive(const PanelUsageFrame& f, const QJSValue& life) { return panelUsageTruth(panelUsageRead(f, life, "alive")); }
+QJSValue lifecycleCallback(const PanelUsageFrame& f, uint op,
+    const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& a) {
+    if (op == 380) { projectInvoke(f, "Preferences", "apply"); return projectInvoke(f, "RecentProjects", "refresh"); }
+    if (op == 381) return panelUsageRead(f, a(0), "wanted");
+    if (op == 382) {
+        const auto wanted = panelUsageRead(f, a(0), "wanted"); if (!panelUsageTruth(wanted)) return wanted;
+        return QJSValue(panelUsageRead(f, a(0), "status").strictlyEquals(assistantContextField(f, "Loader", "Ready")));
+    }
+    if (op == 383) {
+        if (!panelUsageTruth(panelUsageRead(f, a(0), "wanted"))) return QJSValue(true);
+        return QJSValue(panelUsageRead(f, a(0), "status").strictlyEquals(assistantContextField(f, "Loader", "Ready")));
+    }
+    if (op == 384) {
+        if (!saved(0).isNull() && (!createGroupField(f, "assistantCreate").strictlyEquals(saved(0)) || !assistantContextField(f, "Session", "project").strictlyEquals(panelUsageRead(f, saved(0), "project")))) return {};
+        return projectInvoke(f, "group", "chooseCreate");
+    }
+    if (op == 385) {
+        if (!saved(0).isNull()) { const auto assistant = assistantContextField(f, "Session", "assistant"); return panelUsageDeferredMemberCall(f, assistant, "nativeProjectCreateReady", [&] { return QJSValueList{panelUsageRead(f, saved(0), "id"), QJSValue(false)}; }); } return {};
+    }
+    if (op == 386) {
+        const auto life = saved(0), original = saved(1);
+        if (!createAlive(f, life) || !createGroupField(f, "createIntent").strictlyEquals(original) || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
+        if (!original.isNull() && !panelUsageRead(f, original, "assistant").isNull() && createGroupField(f, "assistantCreate").strictlyEquals(panelUsageRead(f, original, "assistant"))) createGroupWrite(f, "assistantCreate", consentNull());
+        if (!createAlive(f, life) || !createGroupField(f, "createIntent").strictlyEquals(original) || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
+        createGroupWrite(f, "createIntent", consentNull());
+        if (!createAlive(f, life) || !createGroupField(f, "createIntent").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return {};
+        assistantMemberWrite(f, panelUsageRead(f, panelUsageContextRead(f, "EaGlobals"), "Vars"), "showProjectDescriptionDialog", QJSValue(false)); return {};
+    }
+    if (op == 387) {
+        const auto life = saved(0), original = saved(1);
+        if (!createAlive(f, life) || !createGroupField(f, "createOperation").strictlyEquals(original) || !createSameProject(f, original) || (!panelUsageRead(f, original, "assistant").isNull() && panelUsageTruth(panelUsageRead(f, panelUsageRead(f, original, "assistant"), "cancelled")))) return {};
+        const auto session = panelUsageContextRead(f, "Session");
+        const auto outcome = panelUsageDeferredMemberCall(f, session, "createProjectWithOutcome", [&] {
+            return QJSValueList{saved(2), saved(3), saved(4), assistantContextField(f, "Preferences", "newProjectSuRule"), saved(5), saved(6), QJSValue(assistantContextField(f, "Preferences", "newReportLibraries").strictlyEquals(QJSValue(QStringLiteral("embedded")))), !panelUsageRead(f, original, "assistant").isNull() ? panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id") : QJSValue(QStringLiteral(""))};
+        });
+        if (!panelUsageTruth(panelUsageRead(f, outcome, "success")) && panelUsageTruth(panelUsageRead(f, outcome, "current")) && panelUsageTruth(projectInvoke(f, "Session", "creationOutcomeCurrent", {outcome})) && assistantRelation(f, panelUsageRead(f, panelUsageRead(f, outcome, "error"), "length"), QJSValue(0), 1) && panelUsageRead(f, original, "assistant").isNull()) return projectInvoke(f, "AppState", "createFailed");
+    }
+    if (op == 388) return projectInvoke(f, "openChoice", "open");
+    return {};
+}
+QJSValue mainText(const PanelUsageFrame& f, const char* text) { return panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(text))}); }
+} // namespace
+
+QJSValue ApplicationInfo::workflowPagesCount(bool built) const {
+    const auto f = panelUsageEngine(this); if (!panelUsageTruth(assistantContextField(f, "Session", "hasProject"))) return QJSValue(0);
+    return panelUsageRead(f, panelUsageMemberCall(f, panelUsageContextRead(f, "pageLoaders"), "filter", {panelUsageClosure(f, built ? 382 : 381, {}, 1)}), "length");
+}
+QJSValue ApplicationInfo::workflowPageTurn(const QJSValue& loader) const {
+    const auto f = panelUsageEngine(this); const auto started = panelUsageContextRead(f, "pagesStarted"); if (!panelUsageTruth(started)) return started;
+    const auto loaders = panelUsageContextRead(f, "pageLoaders");
+    const auto earlier = panelUsageDeferredMemberCall(f, loaders, "slice", [&] { return QJSValueList{QJSValue(0), panelUsageMemberCall(f, panelUsageContextRead(f, "pageLoaders"), "indexOf", {loader})}; });
+    return panelUsageMemberCall(f, earlier, "every", {panelUsageClosure(f, 383, {}, 1)});
+}
+void ApplicationInfo::workflowProjectChanging() const {
+    const auto f = panelUsageEngine(this); projectWrite(f, "window", "pagesStarted", QJSValue(false));
+    if (assistantRelation(f, panelUsageRead(f, assistantContextField(f, "window", "appBarCentralTabs"), "currentIndex"), QJSValue(1), 1)) panelUsageMemberCall(f, assistantContextField(f, "window", "appBarCentralTabs"), "setCurrentIndex", {QJSValue(1)});
+}
+QJSValue ApplicationInfo::workflowPreparingTab() const {
+    const auto f = panelUsageEngine(this); if (!panelUsageTruth(assistantContextField(f, "tabBarHover", "hovered"))) return consentNull();
+    const auto tabs = assistantGeometryArray(f, {panelUsageContextRead(f, "projectTab"), panelUsageContextRead(f, "structureTab"), panelUsageContextRead(f, "experimentTab"), panelUsageContextRead(f, "analysisTab"), panelUsageContextRead(f, "reportTab")});
+    QJSValue found = consentNull(); panelUsageEach(f, tabs, [&](const QJSValue& tab) {
+        const auto point = panelUsageDeferredMemberCall(f, tab, "mapFromItem", [&] { return QJSValueList{panelUsageContextRead(f, "tabBarOverlay"), panelUsageRead(f, panelUsageRead(f, assistantContextField(f, "tabBarHover", "point"), "position"), "x"), panelUsageRead(f, panelUsageRead(f, assistantContextField(f, "tabBarHover", "point"), "position"), "y")}; });
+        if (panelUsageTruth(panelUsageRead(f, tab, "preparing")) && panelUsageTruth(panelUsageMemberCall(f, tab, "contains", {point}))) { found = tab; return false; } return panelUsageReady(f);
+    }); return found;
+}
+void ApplicationInfo::windowAssistantAction(int kind, const QJSValue& page, const QJSValue& extra) const {
+    const auto f = panelUsageEngine(this);
+    if (kind == 0) {
+        const auto project = assistantContextField(f, "Session", "project"); if (!panelUsageTruth(project)) return; QJSValue target = consentNull(), destination(-1);
+        const char* loader = nullptr; const char* name = nullptr;
+        if (page.strictlyEquals(QJSValue(QStringLiteral("analysis"))) && panelUsageTruth(assistantContextField(f, "AppState", "analysisPageEnabled"))) { loader = "analysisLoader"; name = "Analysis"; }
+        else if (page.strictlyEquals(QJSValue(QStringLiteral("experiment"))) && panelUsageTruth(assistantContextField(f, "AppState", "experimentPageEnabled"))) { loader = "experimentLoader"; name = "Experiment"; }
+        else if (page.strictlyEquals(QJSValue(QStringLiteral("structure"))) && panelUsageTruth(assistantContextField(f, "AppState", "structurePageEnabled"))) { loader = "structureLoader"; name = "Structure"; }
+        if (loader) { target = assistantContextField(f, loader, "item"); destination = panelUsageRead(f, assistantContextField(f, "AppState", "Page"), name); }
+        if (!panelUsageTruth(target) || assistantRelation(f, destination, QJSValue(0), 0)) return;
+        projectInvoke(f, "AppState", "open", {destination});
+        if (assistantContextField(f, "Session", "project").strictlyEquals(project) && target.strictlyEquals(assistantContextField(f, "window", "assistantWorkflowPage"))) panelUsageMemberCall(f, target, "showSidebarTab", {extra}); return;
+    }
+    if (kind == 1) { if (!panelUsageTruth(panelUsageRead(f, assistantContextField(f, "Session", "assistant"), "showingActions"))) projectWrite(f, "window", "assistantManualPane", QJSValue(false)); return; }
+    if (kind == 2) { if (!panelUsageRead(f, assistantContextField(f, "Session", "assistant"), "state").strictlyEquals(QJSValue(QStringLiteral("agent_active")))) projectInvoke(f, "assistantPointer", "hide"); return; }
+    projectWrite(f, "window", "assistantManualTakeoverProject", assistantContextField(f, "Session", "project")); projectWrite(f, "window", "assistantEmptyManualTakeover", QJSValue(assistantContextField(f, "Session", "project").isNull()));
+}
+void ApplicationInfo::windowWebSaved(const QJSValue& kind) const {
+    const auto f = panelUsageEngine(this); if (!kind.strictlyEquals(QJSValue(QStringLiteral("browser")))) return;
+    if (!assistantContextField(f, "browserSaved", "warnedFor").strictlyEquals(assistantContextField(f, "Session", "project"))) {
+        projectWrite(f, "browserSaved", "warnedFor", assistantContextField(f, "Session", "project")); projectWrite(f, "browserSaved", "kept", QJSValue(true)); projectInvoke(f, "browserSaved", "open");
+    } else { const auto notice = panelUsageContextRead(f, "webNotice"); panelUsageDeferredMemberCall(f, notice, "show", [&] { return QJSValueList{mainText(f, QT_TRANSLATE_NOOP("Main", "Saved in this browser only."))}; }); }
+}
+void ApplicationInfo::windowStorageUnavailable() const { const auto f = panelUsageEngine(this); projectWrite(f, "browserSaved", "kept", QJSValue(false)); projectInvoke(f, "browserSaved", "open"); }
+void ApplicationInfo::windowWebDownloaded(const QJSValue& name, const QJSValue& fromFile) const {
+    const auto f = panelUsageEngine(this); auto text = panelUsageMemberCall(f, mainText(f, QT_TRANSLATE_NOOP("Main", "%1 was handed to the browser to download.")), "arg", {name});
+    if (panelUsageTruth(fromFile)) text = panelUsageAdd(f, text, panelUsageAdd(f, QJSValue(QStringLiteral(" ")), mainText(f, QT_TRANSLATE_NOOP("Main", "To replace the original file, have the browser ask where to save downloads and choose that file."))));
+    projectInvoke(f, "webNotice", "show", {text});
+}
+void ApplicationInfo::windowFailure(int kind, const QJSValue& message) const {
+    const auto f = panelUsageEngine(this); const char* popup = kind == 0 ? "webFilesError" : kind == 3 ? "fitError" : "refusal";
+    if (kind == 1 || kind == 2) { const auto target = panelUsageContextRead(f, popup); assistantMemberWrite(f, target, "title", mainText(f, kind == 1 ? QT_TRANSLATE_NOOP("Main", "The project was not opened") : QT_TRANSLATE_NOOP("Main", "The change was not made"))); }
+    projectWrite(f, popup, "message", message); projectInvoke(f, popup, "open");
+}
+void ApplicationInfo::windowBrowserWarningReady() const {
+    const auto f = panelUsageEngine(this); const auto button = panelUsageGlobalCall(f, "standardButton", {assistantContextField(f, "Dialog", "Apply")});
+    assistantMemberWrite(f, button, "text", mainText(f, QT_TRANSLATE_NOOP("Main", "Save project as…")));
+    assistantMemberWrite(f, panelUsageGlobalCall(f, "standardButton", {assistantContextField(f, "Dialog", "Apply")}), "objectName", QJSValue(QStringLiteral("webStorageWarning.saveAs")));
+    assistantMemberWrite(f, panelUsageGlobalCall(f, "standardButton", {assistantContextField(f, "Dialog", "Ok")}), "objectName", QJSValue(QStringLiteral("webStorageWarning.ok")));
+}
+void ApplicationInfo::windowBrowserWarningApplied() const { const auto f = panelUsageEngine(this); panelUsageGlobalCall(f, "close", {}); projectInvoke(f, "window", "saveProjectAs"); }
+void ApplicationInfo::windowNotice(const QJSValue& message) const { const auto f = panelUsageEngine(this); panelUsageContextWrite(f, "text", message); panelUsageGlobalCall(f, "open", {}); projectInvoke(f, "webNoticeTimer", "restart"); }
+void ApplicationInfo::windowAutomaticResults() const { const auto f = panelUsageEngine(this); if (panelUsageTruth(assistantContextField(f, "Preferences", "showFitResults"))) projectInvoke(f, "fitResults", "open"); }
+void ApplicationInfo::windowCompleted() const {
+    const auto f = panelUsageEngine(this); const auto renderer = panelUsageContextRead(f, "RenderingInfo"); panelUsageDeferredMemberCall(f, renderer, "observe", [&] { return QJSValueList{panelUsageContextRead(f, "window")}; });
+    panelUsageGlobalCall(f, "restoreGeometry", {}); const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {projectGuardedClosure(f, 380)});
+}
+void ApplicationInfo::resetPatternProjectView() const {
+    const auto f = panelUsageEngine(this); const auto state = panelUsageContextRead(f, "AppState");
+    const auto ranges = assistantGeometryArray(f, {panelUsageContextRead(f, "NaN"), panelUsageContextRead(f, "NaN"), panelUsageContextRead(f, "NaN"), panelUsageContextRead(f, "NaN")}); assistantMemberWrite(f, state, "patternViewRanges", ranges);
+    projectWrite(f, "AppState", "patternViewAxis", QJSValue(QStringLiteral(""))); projectWrite(f, "AppState", "scanZoom", panelUsageComplete(f, panelUsageLiteral(f)));
+}
+
+QJSValue ApplicationInfo::prepareAssistantCreate(const QJSValue& id) const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageRead(f, id, "length").strictlyEquals(QJSValue(0)) || !panelUsageContextRead(f, "createIntent").isNull() || !panelUsageContextRead(f, "assistantCreate").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible")) || !panelUsageTruth(panelUsageMemberCall(f, assistantContextField(f, "Session", "assistant"), "nativeProjectCreateCurrent", {id}))) return QJSValue(false);
+    const auto before = assistantContextField(f, "Session", "project"); const auto next = chartRecord(f, {{"id", id}, {"project", before}, {"cancelled", QJSValue(false)}}); panelUsageContextWrite(f, "assistantCreate", next);
+    if (panelUsageContextRead(f, "assistantCreate").isNull()) return QJSValue(false);
+    if (!panelUsageRead(f, panelUsageContextRead(f, "assistantCreate"), "id").strictlyEquals(id)) return QJSValue(false);
+    return QJSValue(assistantContextField(f, "Session", "project").strictlyEquals(before));
+}
+QJSValue ApplicationInfo::assistantCreateDialog(const QJSValue& id) const {
+    const auto f = panelUsageEngine(this); return !panelUsageContextRead(f, "assistantCreate").isNull() && panelUsageRead(f, panelUsageContextRead(f, "assistantCreate"), "id").strictlyEquals(id) ? panelUsageContextRead(f, "createDialog") : consentNull();
+}
+void ApplicationInfo::retireAssistantCreate(const QJSValue& id, bool manual) const {
+    const auto f = panelUsageEngine(this); const auto original = panelUsageContextRead(f, "assistantCreate"); if (original.isNull() || !panelUsageRead(f, original, "id").strictlyEquals(id)) return;
+    assistantMemberWrite(f, original, "cancelled", QJSValue(true)); const auto pending = panelUsageContextRead(f, "createIntent");
+    if (manual && !pending.isNull() && panelUsageRead(f, pending, "assistant").strictlyEquals(original)) assistantMemberWrite(f, pending, "assistant", consentNull());
+    if (panelUsageContextRead(f, "assistantCreate").strictlyEquals(original)) panelUsageContextWrite(f, "assistantCreate", consentNull());
+    if (!manual && panelUsageContextRead(f, "createIntent").strictlyEquals(pending) && !pending.isNull() && panelUsageRead(f, pending, "assistant").strictlyEquals(original)) projectInvoke(f, "createDialog", "close");
+}
+QJSValue ApplicationInfo::createProjectNameError(const QJSValue& name) const {
+    const auto f = panelUsageEngine(this); if (panelUsageTruth(projectInvoke(f, "createDialog", "acceptsProjectName", {name}))) return QJSValue(QStringLiteral(""));
+    return mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Name must contain 2–31 characters: start with an ASCII letter, then use letters, digits, underscore, hyphen or period. Put human-readable text in Title. The supplied Name was not changed."));
+}
+QJSValue ApplicationInfo::createProjectDefaults(const QJSValue& name, const QJSValue& description, const QJSValue& title) const {
+    const auto f = panelUsageEngine(this); if (!panelUsageContextRead(f, "createIntent").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return panelUsageComplete(f, panelUsageLiteral(f));
+    const auto actual = assistantRelation(f, panelUsageRead(f, name, "length"), QJSValue(0), 1) ? name : QJSValue(QStringLiteral("project")); const auto error = panelUsageGlobalCall(f, "nativeProjectNameError", {actual});
+    if (assistantRelation(f, panelUsageRead(f, error, "length"), QJSValue(0), 1)) return chartRecord(f, {{"error", error}, {"target", QJSValue(QStringLiteral("createProject.name"))}});
+    const auto actualTitle = title.isUndefined() || title.isNull() ? assistantContextField(f, "createDialog", "projectTitle") : title;
+    if (!panelUsageTruth(projectInvoke(f, "createDialog", "acceptsProjectTitle", {actualTitle}))) {
+        const auto text = mainText(f, QT_TRANSLATE_NOOP("GetStartedGroup", "Project Title must fit the original single-line field (%1 UTF-16 units), without NUL, newline, carriage-return or tab. The supplied Title was not changed."));
+        const auto message = panelUsageDeferredMemberCall(f, text, "arg", [&] { return QJSValueList{assistantContextField(f, "createDialog", "projectTitleMaximumLength")}; }); return chartRecord(f, {{"error", message}, {"target", QJSValue(QStringLiteral("createProject.title"))}});
+    }
+    QJSValue parent;
+    if (panelUsageTruth(assistantContextField(f, "createDialog", "projectParentDirectory"))) {
+        const auto utils = panelUsageRead(f, panelUsageContextRead(f, "EaLogic"), "Utils"); parent = panelUsageDeferredMemberCall(f, utils, "urlToLocalFile", [&] { return QJSValueList{assistantContextField(f, "createDialog", "projectParentDirectory")}; });
+    } else parent = assistantContextField(f, "createDialog", "defaultProjectParentDirectory");
+    const auto authors = assistantContextField(f, "createDialog", "projectAuthors");
+    const auto location = panelUsageTruth(assistantContextField(f, "WebFiles", "available")) ? QJSValue(QStringLiteral("")) : projectInvoke(f, "createDialog", "joinedPath", {parent, actual});
+    const auto rule = assistantContextField(f, "Preferences", "newProjectSuRule"), libraries = assistantContextField(f, "Preferences", "newReportLibraries");
+    return chartRecord(f, {{"name", actual}, {"description", description}, {"title", actualTitle}, {"authors", authors}, {"location", location}, {"suRule", rule}, {"reportLibraries", QJSValue(libraries.strictlyEquals(QJSValue(QStringLiteral("embedded"))))}});
+}
+void ApplicationInfo::chooseCreateProject() const {
+    const auto f = panelUsageEngine(this); if (!panelUsageContextRead(f, "createIntent").isNull() || panelUsageTruth(assistantContextField(f, "createDialog", "visible"))) return;
+    const auto life = panelUsageContextRead(f, "createLife"), project = assistantContextField(f, "Session", "project"), assistant = panelUsageContextRead(f, "assistantCreate"); const auto original = chartRecord(f, {{"project", project}, {"assistant", assistant}});
+    panelUsageContextWrite(f, "createOperation", original); if (!createAlive(f, life) || !panelUsageContextRead(f, "createOperation").strictlyEquals(original)) return;
+    panelUsageContextWrite(f, "createIntent", original); if (!createAlive(f, life) || !panelUsageContextRead(f, "createIntent").strictlyEquals(original) || !createSameProject(f, original)) return;
+    assistantMemberWrite(f, panelUsageRead(f, panelUsageContextRead(f, "EaGlobals"), "Vars"), "showProjectDescriptionDialog", QJSValue(true));
+}
+void ApplicationInfo::createProjectClicked() const {
+    const auto f = panelUsageEngine(this); const auto original = createGroupField(f, "assistantCreate"), state = panelUsageContextRead(f, "AppState");
+    panelUsageMemberCall(f, state, "afterChanges", {panelUsageClosure(f, 384, {original}), panelUsageClosure(f, 385, {original})});
+}
+void ApplicationInfo::createProjectDialogEvent(int kind) const {
+    const auto f = panelUsageEngine(this); QJSValue life; if (kind >= 2) life = createGroupField(f, "createLife"); const auto original = createGroupField(f, "createIntent");
+    if (kind == 0 || kind == 1) {
+        if (!original.isNull() && !panelUsageRead(f, original, "assistant").isNull()) {
+            const auto assistant = assistantContextField(f, "Session", "assistant"); panelUsageDeferredMemberCall(f, assistant, "observeCreateDialog", [&] { return QJSValueList{panelUsageContextRead(f, "createDialog"), panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id"), QJSValue(kind == 0 ? QStringLiteral("opened") : QStringLiteral("rejected"))}; });
+        } return;
+    }
+    if (kind == 2) {
+        const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 386, {life, original})}); return;
+    }
+    if (original.isNull() || !createSameProject(f, original) || (!panelUsageRead(f, original, "assistant").isNull() && panelUsageTruth(panelUsageRead(f, panelUsageRead(f, original, "assistant"), "cancelled")))) return;
+    if (!panelUsageRead(f, original, "assistant").isNull()) {
+        const auto assistant = assistantContextField(f, "Session", "assistant"); const auto accepted = panelUsageDeferredMemberCall(f, assistant, "observeCreateDialog", [&] { return QJSValueList{panelUsageContextRead(f, "createDialog"), panelUsageRead(f, panelUsageRead(f, original, "assistant"), "id"), QJSValue(QStringLiteral("accepted"))}; }); if (!panelUsageTruth(accepted)) return;
+    }
+    createGroupWrite(f, "createIntent", consentNull()); if (!createAlive(f, life) || !createGroupField(f, "createOperation").strictlyEquals(original) || !createSameProject(f, original)) return;
+    if (!panelUsageRead(f, original, "assistant").isNull() && createGroupField(f, "assistantCreate").strictlyEquals(panelUsageRead(f, original, "assistant"))) createGroupWrite(f, "assistantCreate", consentNull());
+    const auto name = assistantContextField(f, "createDialog", "projectName"), description = assistantContextField(f, "createDialog", "projectDescription");
+    const auto location = panelUsageTruth(assistantContextField(f, "WebFiles", "available")) ? QJSValue(QStringLiteral("")) : assistantContextField(f, "createDialog", "projectLocation");
+    const auto title = assistantContextField(f, "createDialog", "projectTitle"), authors = assistantContextField(f, "createDialog", "projectAuthors");
+    assistantMemberWrite(f, panelUsageRead(f, panelUsageContextRead(f, "EaGlobals"), "Vars"), "showProjectDescriptionDialog", QJSValue(false));
+    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {panelUsageClosure(f, 387, {life, original, name, description, location, title, authors})});
+}
+void ApplicationInfo::openProjectChoice() const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageTruth(assistantContextField(f, "WebFiles", "available"))) projectInvoke(f, "Session", "openWebProject", {panelUsageTruth(panelUsageContextRead(f, "zip")) ? QJSValue(QStringLiteral("file")) : QJSValue(QStringLiteral("folder"))});
+    else if (panelUsageTruth(panelUsageContextRead(f, "zip"))) projectInvoke(f, "openZipDialog", "open"); else projectInvoke(f, "openFolderDialog", "open");
+}
+void ApplicationInfo::askOpenProjectChoice() const { const auto f = panelUsageEngine(this); const auto state = panelUsageContextRead(f, "AppState"); panelUsageMemberCall(f, state, "afterChanges", {projectGuardedClosure(f, 388)}); }
+void ApplicationInfo::windowSaveChoiceOpened() const {
+    const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "nativeAcceptButton"))) assistantMemberWrite(f, panelUsageContextRead(f, "nativeAcceptButton"), "objectName", QJSValue(QStringLiteral("saveAs.accept")));
+}
+QJSValue ApplicationInfo::windowUnsavedText() const {
+    const auto f = panelUsageEngine(this); const auto text = mainText(f, QT_TRANSLATE_NOOP("Main", "The current project <b>%1</b> has unsaved changes."));
+    return panelUsageDeferredMemberCall(f, text, "arg", [&] {
+        QJSValue name(QStringLiteral("")); if (!assistantContextField(f, "Session", "project").isNull()) {
+            const auto first = panelUsageMemberCall(f, panelUsageRead(f, assistantContextField(f, "Session", "project"), "name"), "replace", {panelRegex(f, QStringLiteral("&"), QV4::CompiledData::RegExp::RegExp_Global), QJSValue(QStringLiteral("&amp;"))});
+            name = panelUsageMemberCall(f, first, "replace", {panelRegex(f, QStringLiteral("<"), QV4::CompiledData::RegExp::RegExp_Global), QJSValue(QStringLiteral("&lt;"))});
+        } return QJSValueList{name};
+    });
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
