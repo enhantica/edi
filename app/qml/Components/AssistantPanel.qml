@@ -29,34 +29,10 @@ Popup {
     readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
     property var noticeState: null
     property var noticeProjection: ({})
-    function captureNotice() {
-        const component = panel, original = panel.assistant;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original)) return;
-        const previous = component.noticeState;
-        const message = original.lastError;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original) return;
-        if (!message.length) {
-            if (component.noticeState === previous) component.noticeState = null;
-            return;
-        }
-        if (previous && previous.owner === original && previous.text === message) return;
-        const rows = original.messages, count = rows.count;
-        const anchor = count > 0 ? rows.text(count - 1, "id") : "";
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original
-            || component.noticeState !== previous || original.lastError !== message) return;
-        component.noticeState = { owner: original, text: message, anchor: anchor };
-    }
-    readonly property bool noticeAnchorPresent: {
-        const revision = noticeProjection;
-        const notice = noticeState;
-        if (revision === null) return false;
-        if (!notice || notice.owner !== assistant || !notice.anchor.length) return false;
-        for (let i = 0; i < assistant.messages.count; ++i)
-            if (assistant.messages.text(i, "id") === notice.anchor) return true;
-        return false;
-    }
-    onAssistantChanged: { noticeState = null; captureNotice(); }
-    Component.onCompleted: { captureNotice(); Qt.callLater(function() {if(Qt.isQtObject(panel) && Qt.isQtObject(panel.assistant))panel.assistant.restoreLastSession();}); }
+    function captureNotice() { ApplicationInfo.panelCaptureNotice(); }
+    readonly property bool noticeAnchorPresent: ApplicationInfo.panelNoticeAnchorPresent()
+    onAssistantChanged: ApplicationInfo.panelNoticeOwnerChanged(0)
+    Component.onCompleted: ApplicationInfo.panelCompleted()
     component EdiNotice: Item {
         id: notice
         required property string noticeText
@@ -94,9 +70,9 @@ Popup {
     function scheduleConsentSend() { ApplicationInfo.panelScheduleConsentSend(); }
     Connections {
         target: panel.assistant
-        function onConversationRetired() { panel.retireConsentSend(); panel.noticeState = null; panel.captureNotice(); }
+        function onConversationRetired() { ApplicationInfo.panelNoticeOwnerChanged(1); }
         function onConnectedChanged() { panel.scheduleConsentSend(); }
-        function onAccountChanged() { panel.scheduleConsentSend(); panel.noticeState = null; panel.captureNotice(); }
+        function onAccountChanged() { ApplicationInfo.panelNoticeOwnerChanged(2); }
         function onSelectedModelChanged() { panel.retireConsentSend(); }
         function onSelectedEffortChanged() { panel.retireConsentSend(); }
         function onStateChanged() { panel.scheduleConsentSend(); }
@@ -122,35 +98,16 @@ Popup {
     Connections {
         target: panel.assistant
         function onSessionProjectRequested(threadId,location,intent) { ApplicationInfo.restoreSessionProject(threadId, location, intent); }
-        function onSessionConsentRequested(threadId) {
-            if(!Qt.isQtObject(panel) || !Qt.isQtObject(connectionDialog))return;
-            connectionDialog.beginOffer();connectionDialog.open();
-        }
+        function onSessionConsentRequested(threadId) { ApplicationInfo.panelSessionConsentRequested(); }
     }
     Component.onDestruction: retireConsentSend()
     // A user navigation link always refers to the current project's normal
     // Report page. Other links retain their completed-row/file ownership checks.
-    function openReportLink(sourceRowId, link) {
-        // Explicit clicked web links use the normal system browser. The fixed
-        // scheme/authority check never turns file or application schemes into web.
-        if (typeof link === "string" && /^https?:\/\/[^\s/?#\\]+(?:[/?#][^\s\\]*)?$/i.test(link)
-            && !/[\u0000-\u001f\u007f]/.test(link)) return Qt.openUrlExternally(link);
-        if (link === "edi:report") {
-            if (Session.project !== null && AppState.reportPageEnabled) {
-                AppState.open(AppState.Page.Report);
-                return true;
-            }
-            reportPageUnavailable.open();
-            return false;
-        }
-        return panel.assistant.openReport(sourceRowId, link);
-    }
+    function openReportLink(sourceRowId, link) { return ApplicationInfo.panelOpenReportLink(sourceRowId, link); }
     required property Item toggleControl
     readonly property Item firstFocusItem: connectionButton
     property bool shown: Preferences.assistantShown
-    onShownChanged: {
-        if (!shown) { panel.retireConsentSend(); connectionDialog.close(); composer.closeChoices(); }
-    }
+    onShownChanged: ApplicationInfo.panelShownChanged()
     visible: ApplicationInfo.assistantAvailable && shown
     x: 0
     y: 0
@@ -185,12 +142,7 @@ Popup {
             easing.type: Easing.InCirc
         }
     }
-    function focusComposer() {
-        if (!ApplicationInfo.assistantAvailable || !visible || !shown)
-            return;
-        if (panel.assistant.connected) composer.focusEditor();
-        else connectionButton.forceActiveFocus();
-    }
+    function focusComposer() { ApplicationInfo.panelFocusComposer(); }
 
     contentItem: Item {
         objectName: "assistant.panel"
@@ -400,25 +352,7 @@ Popup {
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: connectionButton.accountView ? usageButton : panel.toggleControl
                         KeyNavigation.tab: connectionButton.accountView ? composer.firstFocusItem : panel.toggleControl
-                        onClicked: {
-                            if (connectionButton.pendingConnection) {
-                                const component = panel, original = panel.assistant;
-                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original
-                                    || original.state !== "connecting" || !original.canCancel) return;
-                                original.cancel();
-                            } else if (connectionButton.accountView) accountDialog.open();
-                            else if (panel.assistant.resumeConnection()) { /* Original approved session owns reconnection. */ }
-                            else {
-                                const component = panel, original = panel.assistant, dialog = connectionDialog;
-                                const offer = dialog.beginOffer();
-                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || !Qt.isQtObject(dialog)
-                                    || component.assistant !== original || dialog.assistant !== original || dialog.approvalOwner !== offer) return;
-                                component.retireConsentSend();
-                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || !Qt.isQtObject(dialog)
-                                    || component.assistant !== original || dialog.assistant !== original || dialog.approvalOwner !== offer || original.connected) return;
-                                dialog.presentOffer(offer);
-                            }
-                        }
+                        onClicked: ApplicationInfo.panelConnectionActivated()
                     }
                 }
                 Rectangle {
@@ -511,11 +445,7 @@ Popup {
                             rowId: messageDelegate.rowId
                             stepNumber: messageDelegate.index + 1
                             onReportRequested: (sourceRowId, link) => panel.openReportLink(sourceRowId, link)
-                            onDetailsChanging: {
-                                conversation.cancelFlick();
-                                conversation.followsTail = false;
-                                conversation.jumpedUserId = "";
-                            }
+                            onDetailsChanging: ApplicationInfo.conversationDetailsChanging()
                             highlighted: kind === "user" && rowId === conversation.jumpedUserId
                         }
                         EdiNotice {
@@ -529,106 +459,23 @@ Popup {
                     property string jumpedUserId: ""
                     readonly property int previousUserIndex: userTarget(-1)
                     readonly property int nextUserIndex: userTarget(1)
-                    function userTarget(direction) {
-                        const count = panel.assistant.messages.count;
-                        const position = contentY;
-                        const layoutHeight = contentHeight;
-                        if (count === 0 || layoutHeight <= 0) return -1;
-                        // An explicit boundary remains the cursor even when the final row clamps at the end.
-                        if (jumpedUserId.length > 0) {
-                            let current = -1;
-                            for (let i = 0; i < count; ++i)
-                                if (panel.assistant.messages.text(i, "id") === jumpedUserId) { current = i; break; }
-                            if (current >= 0) {
-                                for (let i = current + direction; i >= 0 && i < count; i += direction)
-                                    if (panel.assistant.messages.text(i, "kind") === "user") return i;
-                                return -1;
-                            }
-                        }
-                        let first = indexAt(1, position + 1);
-                        if (first < 0) first = indexAt(1, position + spacing + 2);
-                        if (first < 0) first = atYEnd ? count - 1 : 0;
-                        let candidate = -1;
-                        for (let i = 0; i < count; ++i) {
-                            if (panel.assistant.messages.text(i, "kind") !== "user") continue;
-                            const item = itemAtIndex(i);
-                            const before = item ? item.y < position - 0.5 : i < first;
-                            const after = item ? item.y > position + 0.5 : i > first;
-                            if (direction < 0 && before) candidate = i;
-                            if (direction > 0 && after) return i;
-                        }
-                        return direction < 0 ? candidate : -1;
-                    }
-                    function jumpToUser(direction) {
-                        const target = direction < 0 ? previousUserIndex : nextUserIndex;
-                        if (target < 0) return;
-                        jumpedUserId = panel.assistant.messages.text(target, "id");
-                        followsTail = false;
-                        cancelFlick();
-                        positionViewAtIndex(target, ListView.Beginning);
-                    }
+                    function userTarget(direction) { return ApplicationInfo.conversationUserTarget(direction); }
+                    function jumpToUser(direction) { ApplicationInfo.conversationJumpToUser(direction); }
                     property string lastUserId: ""
-                    function observeUserAdmission() {
-                        let latest = "";
-                        for (let i = panel.assistant.messages.count - 1; i >= 0; --i) {
-                            if (panel.assistant.messages.text(i, "kind") === "user") {
-                                latest = panel.assistant.messages.text(i, "id");
-                                break;
-                            }
-                        }
-                        if (latest !== lastUserId) {
-                            if (latest.length > 0) {
-                                followsTail = true;
-                                jumpedUserId = "";
-                            }
-                            lastUserId = latest;
-                        }
-                    }
-                    function revealCurrentNotice() {
-                        const original = panel.assistant, notice = panel.noticeState;
-                        if (!notice || notice.owner !== original || !notice.text.length) return;
-                        let anchor = -1;
-                        for (let i = 0; i < original.messages.count; ++i)
-                            if (original.messages.text(i, "id") === notice.anchor) { anchor = i; break; }
-                        if (!Qt.isQtObject(panel) || !Qt.isQtObject(original) || original !== panel.assistant || panel.noticeState !== notice) return;
-                        cancelFlick(); followsTail = false; jumpedUserId = "";
-                        if (anchor >= 0) positionViewAtIndex(anchor, ListView.End);
-                        else positionViewAtBeginning();
-                    }
-                    function positionAtTail() {
-                        if (!followsTail || moving || historyScrollBar.pressed || height <= 0)
-                            return;
-                        // Columns report after their child geometry settles;
-                        // resolve the view's pending layout before using its end.
-                        forceLayout();
-                        if (followsTail && !moving && !historyScrollBar.pressed)
-                            positionViewAtEnd();
-                    }
-                    function followOutput() {
-                        if (followsTail)
-                            Qt.callLater(positionAtTail);
-                    }
-                    onCountChanged: {
-                        observeUserAdmission();
-                        followOutput();
-                    }
+                    function observeUserAdmission() { ApplicationInfo.conversationObserveAdmission(); }
+                    function revealCurrentNotice() { ApplicationInfo.conversationRevealNotice(); }
+                    function positionAtTail() { ApplicationInfo.conversationPositionAtTail(); }
+                    function followOutput() { ApplicationInfo.conversationFollowOutput(); }
+                    onCountChanged: ApplicationInfo.conversationUpdated(false)
                     onContentHeightChanged: followOutput()
                     onHeightChanged: followOutput()
-                    onContentYChanged: {
-                        if (moving || historyScrollBar.pressed) {
-                            jumpedUserId = "";
-                            followsTail = atYEnd;
-                        }
-                    }
-                    onMovementStarted: jumpedUserId = ""
-                    onMovementEnded: { if (jumpedUserId.length === 0) followsTail = atYEnd; }
-                    Component.onCompleted: {
-                        observeUserAdmission();
-                        followOutput();
-                    }
+                    onContentYChanged: ApplicationInfo.conversationContentYChanged()
+                    onMovementStarted: ApplicationInfo.conversationMovementChanged(true)
+                    onMovementEnded: ApplicationInfo.conversationMovementChanged(false)
+                    Component.onCompleted: ApplicationInfo.conversationUpdated(false)
                     Connections {
                         target: panel.assistant.messages
-                        function onDataChanged() { panel.noticeProjection = ({}); conversation.observeUserAdmission(); conversation.followOutput(); }
+                        function onDataChanged() { ApplicationInfo.conversationUpdated(true); }
                     }
                     ScrollBar.vertical: EaElements.ScrollBar {
                         id: historyScrollBar
@@ -638,18 +485,8 @@ Popup {
                         height: conversation.height
                         policy: ScrollBar.AsNeeded
                         interactive: false
-                        onPressedChanged: {
-                            if (!pressed)
-                                conversation.followsTail = conversation.atYEnd;
-                        }
-                        onPositionChanged: {
-                            if (activeFocus) {
-                                Qt.callLater(() => {
-                                    if (historyScrollBar.activeFocus)
-                                        conversation.followsTail = conversation.atYEnd;
-                                });
-                            }
-                        }
+                        onPressedChanged: ApplicationInfo.conversationScrollChanged(false)
+                        onPositionChanged: ApplicationInfo.conversationScrollChanged(true)
                     }
                 }
                 Rectangle {
@@ -670,12 +507,7 @@ Popup {
                     hasNextUserMessage: conversation.nextUserIndex >= 0
                     onPreviousUserRequested: conversation.jumpToUser(-1)
                     onNextUserRequested: conversation.jumpToUser(1)
-                    onSubmissionBlocked: {
-                        const component = panel, view = conversation, original = panel.assistant;
-                        component.captureNotice();
-                        if (Qt.isQtObject(component) && Qt.isQtObject(view) && Qt.isQtObject(original)
-                            && original === component.assistant && original.contextApprovalBlocked) view.revealCurrentNotice();
-                    }
+                    onSubmissionBlocked: ApplicationInfo.panelSubmissionBlocked()
                     onSubmissionRequested: draft => ApplicationInfo.panelSubmissionRequested(draft)
                     onContextApprovalRequested: draft => ApplicationInfo.panelContextApprovalRequested(draft)
                 }
@@ -758,18 +590,8 @@ Popup {
                 anchors.fill: chatBody
                 z: 2
                 enabled: panel.visible && panel.shown && panel.assistant.connected && ApplicationInfo.assistantAvailable && !WebFiles.available
-                onEntered: drag => drag.accepted = drag.hasUrls && !panel.assistant.canCancel
-                onDropped: drop => {
-                    if (!chatFilesDrop.enabled || !drop.hasUrls || panel.assistant.canCancel) { drop.accepted = false; return; }
-                    const original=panel.assistant;
-                    const files=drop.urls;
-                    const request=original.beginFileSelection(true);
-                    if (!Qt.isQtObject(panel) || !Qt.isQtObject(original) || original!==panel.assistant || !original.connected) {
-                        if (Qt.isQtObject(original)) original.cancelFileSelection(request);
-                        drop.accepted=false;return;
-                    }
-                    drop.accepted=request.length>0 && original.addSelectedFiles(request,files);
-                }
+                onEntered: drag => ApplicationInfo.panelFilesEntered(drag)
+                onDropped: drop => ApplicationInfo.panelFilesDropped(drop)
             }
         }
         AppDialog {
@@ -1052,7 +874,7 @@ Popup {
         AssistantConnectionDialog {
             id: connectionDialog
             assistant: panel.assistant
-            onRejected: { panel.retireConsentSend(); if(Qt.isQtObject(panel.assistant))panel.assistant.cancelSessionSelection(); }
+            onRejected: ApplicationInfo.panelConnectionRejected()
             onContextApproved: offer => ApplicationInfo.panelContextApproved(offer)
         }
     }

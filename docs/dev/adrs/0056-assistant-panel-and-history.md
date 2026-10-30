@@ -4843,3 +4843,12 @@ This migration preserves the current structure picker's actual property accesses
 ### Native remaining Composer input and work-report procedures
 
 ApplicationInfo executes Composer's remaining work-report capture/completion, file chooser admission/cancellation/retirement, focus/selection and owner-reset procedures. Existing AssistantViewModel receipts and file-selection tokens remain authoritative; records remain in their original Composer/dialog fields. Successor revision, IME, owner, binding and scope checks keep their original order. Selection is consumed before callbacks, and file answers still reach their original owner or its cancellation route. The remaining model/effort popup and Panel presentation procedures are separate migration work; this section does not claim their completion.
+
+
+### Native assistant choices, notices and conversation presentation
+
+ApplicationInfo executes the remaining model/effort choice construction, sorting/selection, reconciliation, keyboard navigation and deferred focus/scroll procedures. AssistantViewModel remains the actual model/effort authority; the popup's original intent/current-owner and available-model checks keep their original order, and selection presentation follows the actual setters, including refusal/no-op. Delayed row focus retains its original lexical values and checks, with no extra window/retirement guard. Original named forwarding functions retain their callable identities.
+
+Panel notice capture/anchor projection, session restoration, report links, file drops, focus and conversation user navigation, admission observation, notice reveal and tail following now execute in the same existing native UI owner. The original view fields, message table, one-use file-selection receipts and clipboard/report owners remain authoritative. URL regular-expression literals are created by the pinned VM and invoke its actual test method; there is no replacement URL policy or native-regex approximation. Message table-tone and sent-file presentation retain original translation, font and array iteration dependencies. Intrinsic iterator/error handling and native callback arity/scope/identity follow the preceding moves. No controller, message cache or script shim is introduced.
+
+Native/browser compilation and complete actual input, model-change/reentry, history geometry, privacy, link and error verification remain required. Remaining general controls/preferences actions and chart, scene and report procedures are separate source work; this section does not mark the full migration complete.
