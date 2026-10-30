@@ -16,7 +16,7 @@
         });
     }
     shot("01-home", "home", "Start a new diffraction analysis", ["platform:light", "theme:light"],
-        ["appBar", "workflow.home.mainContent", "home.start", "statusBar"]);
+        ["appBar", "workflow.home.mainContent", "home.start"]);
     shot("02-project-start", "project", "Choose Create a new project", ["home.start"],
         ["project.create", "group.getStarted"]);
     shot("03-project-details", "project", "Enter the project details and choose its location",
@@ -43,7 +43,7 @@
         ["workflow.experiment.mainContent", "workflow.experiment.manualSidebar"]);
     tabs("11-experiment", "experiment", "SPODI experiment");
     shot("12-run-refinement", "analysis", "Refine the model and close the results dialog",
-        ["appBar.tab.analysis", "sideBar.tab.basic", "reveal:fitting.start", "fitting.start",
+        ["appBar.tab.analysis", "sideBar.tab.basic", "statusBar.fit.button",
          "wait-fit", "close-fit-results"], [], "", false);
     tabs("13-analysis", "analysis", "Completed Rietveld refinement");
     tabs("14-report", "report", "Review the fitted structure and report");
