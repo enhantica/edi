@@ -76,6 +76,8 @@
         ["appBar.tab.analysis", "sideBar.tab.basic", "parameters.clearFilters", "parameters.freeHeader", "parameters.freeHeader.fixed"].concat(freeKind("scale"), freeKind("length_a")),
         ["group.parameters", "parameters.freeHeader"]);
     steps[steps.length-1].fitPhase = "setup";
+    shot("12-save-start", "analysis", "Keep the starting model for the comparison",
+        ["save-as:" + capture.checkpointDirectory + "/starting"], [], "", false);
     shot("12-fit-scale-cell", "analysis", "Fit the scale and cell length first",
         ["statusBar.fit.button", "wait-fit", "close-fit-results"], ["workflow.analysis.mainContent", "group.parameters"]);
     shot("12-fit-profile", "analysis", "Add the peak widths and zero offset to the free set",
@@ -83,6 +85,8 @@
         ["workflow.analysis.mainContent", "group.parameters"]);
     shot("12-run-refinement", "analysis", "Add background, coordinates and displacement parameters, then fit again",
         freeKind("background").concat(freeKind("fract_"), freeKind("adp_"), ["statusBar.fit.button", "wait-fit", "close-fit-results"]), [], "", false);
+    shot("12-save-refined", "analysis", "Keep the result of staged refinement",
+        ["save-as:" + capture.checkpointDirectory + "/refined"], [], "", false);
     shot("12-correlations", "analysis", "Inspect correlations after the staged refinement",
         ["mainArea.analysis.tab.correlations"], ["workflow.analysis.mainContent"]);
     shot("12-pattern-return", "analysis", "Return to the fitted pattern",

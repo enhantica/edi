@@ -2208,7 +2208,10 @@ bool DemoDriver::timed_slider(int count) {
 }
 
 void DemoDriver::fail(const QString& message) {
-    if (documentation_) saveDocumentationManifest("failed", message);
+    if (documentation_) {
+        window_.grabWindow().save(output_dir_.filePath("failure.png"));
+        saveDocumentationManifest("failed", message);
+    }
     std::fprintf(stderr, "edi_app --demo: %s\n", qPrintable(message));
     QCoreApplication::exit(1);
 }

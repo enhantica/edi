@@ -95,6 +95,7 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
     documentation_fixture_["id"] = example;
     auto context = engine.newObject();
     context.setProperty("projectDirectory", loaded_files_.filePath(example));
+    context.setProperty("checkpointDirectory", output_dir_.absoluteFilePath("checkpoints"));
     QStringList samples;
     for (const auto& sample : metadata.value("samples").toArray()) samples.append(sample.toString());
     context.setProperty("name", example.left(30));
@@ -274,7 +275,10 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
         const auto separator = body.indexOf('=');
         auto* item = separator > 0 ? find(body.left(separator), true) : nullptr;
         if (!item || !item->isEnabled() || !on_screen(item) || !click_item(item)) {
-            fail("cannot edit documentation form field: " + body.left(separator));
+            fail("cannot edit documentation form field: " + body.left(separator) +
+                 (item ? QString(" (enabled=%1, visible=%2, on-screen=%3, width=%4, height=%5)")
+                     .arg(item->isEnabled()).arg(item->isVisible()).arg(on_screen(item)).arg(item->width()).arg(item->height())
+                       : QString(" (missing)")));
             return false;
         }
         const auto combination = QKeySequence(QKeySequence::SelectAll)[0];
