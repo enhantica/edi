@@ -816,6 +816,7 @@ struct PanelUsageFrame {
     QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
     void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
 };
+QJSValue numberProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue controlProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue tableProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue assistantUiCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
@@ -2591,7 +2592,9 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     const auto argument = [&](uint index) {
         return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
     };
-    const auto result = callback->d()->operation >= 160
+    const auto result = callback->d()->operation >= 180
+        ? numberProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
+        : callback->d()->operation >= 160
         ? controlProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
         : callback->d()->operation >= 120
         ? tableProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
@@ -2963,7 +2966,8 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto argument = [&](uint index) {
             return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
         };
-        result = callback->d()->operation >= 160 ? controlProcedureCallback(frame, callback->d()->operation, retained, argument)
+        result = callback->d()->operation >= 180 ? numberProcedureCallback(frame, callback->d()->operation, retained, argument)
+            : callback->d()->operation >= 160 ? controlProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 120 ? tableProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 80 ? assistantUiCallback(frame, callback->d()->operation, retained, argument)
             : remainingProcedureCallback(frame, callback->d()->operation, retained, argument);
@@ -6329,6 +6333,307 @@ void ApplicationInfo::preferenceActivated(const QJSValue& index, int setting) co
         : setting == 4 ? "chartHiddenRange" : setting == 5 ? "textShow" : "scanRenderer";
     const char* source = setting == 1 ? "schemes" : setting == 10 ? "values" : "choices";
     assistantMemberWrite(f, preferences, property, textIndex(f, panelUsageContextRead(f, source), index));
+}
+
+namespace {
+QJSValue numberMath(const PanelUsageFrame& f, const char* name, const std::function<QJSValueList()>& arguments) {
+    const auto math = panelUsageContextRead(f, "Math"); const auto values = arguments();
+    return panelUsageMemberCall(f, math, name, values);
+}
+QJSValue numberNegate(const PanelUsageFrame& f, const QJSValue& input) {
+    if (!panelUsageReady(f)) return {};
+    QV4::Scope scope(f.vm()); QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), input));
+    QV4::ScopedValue result(scope, QV4::Runtime::UMinus::call(*value)); f.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+bool numberFinite(const PanelUsageFrame& f, const QJSValue& value) { return panelUsageTruth(panelUsageGlobalCall(f, "isFinite", {value})); }
+bool numberType(const PanelUsageFrame& f, const QJSValue& value) {
+    return tableTypeof(f, value).strictlyEquals(QJSValue(QStringLiteral("number")));
+}
+QJSValue numberString(const PanelUsageFrame& f, const QJSValue& value) { return panelUsageGlobalCall(f, "String", {value}); }
+QJSValue numberAbs(const PanelUsageFrame& f, const QJSValue& value) { return numberMath(f, "abs", [&] { return QJSValueList{value}; }); }
+QJSValue numberPower(const PanelUsageFrame& f, const std::function<QJSValue()>& power) {
+    return numberMath(f, "pow", [&] { return QJSValueList{QJSValue(10), power()}; });
+}
+QJSValue numberReplaceExponent(const PanelUsageFrame& f, const QJSValue& value) {
+    return panelUsageMemberCall(f, value, "replace", {QJSValue(QStringLiteral("e+")), QJSValue(QStringLiteral("e"))});
+}
+QJSValue numberRegex(const PanelUsageFrame& f, const char* pattern) { return panelRegex(f, QString::fromLatin1(pattern)); }
+QJSValue numberProcedureCallback(const PanelUsageFrame& f, uint operation,
+    const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
+    const auto tick = arg(0), power = saved(0), decimals = saved(1);
+    const auto divisor = numberPower(f, [&] { return power; });
+    const auto mantissa = viewArithmetic(f, tick, divisor, 2);
+    if (operation == 181) return panelUsageMemberCall(f, mantissa, "toFixed", {decimals});
+    if (!numberFinite(f, mantissa)) return QJSValue(true);
+    const auto distance = numberMath(f, "abs", [&] {
+        const auto fixed = panelUsageMemberCall(f, mantissa, "toFixed", {decimals});
+        const auto rounded = panelUsageGlobalCall(f, "Number", {fixed});
+        return QJSValueList{viewArithmetic(f, mantissa, rounded, 0)};
+    });
+    const auto scale = numberMath(f, "max", [&] { return QJSValueList{QJSValue(1), numberAbs(f, mantissa)}; });
+    return QJSValue(assistantRelation(f, distance, viewArithmetic(f, QJSValue(1e-9), scale, 1), 3));
+}
+} // namespace
+
+QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
+    const QJSValue& third, const QJSValue& fourth) const {
+    const auto f = panelUsageEngine(this);
+    const auto read = [&](const QJSValue& object, const char* name) { return panelUsageRead(f, object, name); };
+    const auto call = [&](const QJSValue& object, const char* name, const QJSValueList& args = QJSValueList()) { return panelUsageMemberCall(f, object, name, args); };
+    const auto named = [&](const char* name, const QJSValueList& args) { return panelUsageGlobalCall(f, name, args); };
+    const auto add = [&](const QJSValue& a, const QJSValue& b) { return panelUsageAdd(f, a, b); };
+    const auto sub = [&](const QJSValue& a, const QJSValue& b) { return viewArithmetic(f, a, b, 0); };
+    const auto mul = [&](const QJSValue& a, const QJSValue& b) { return viewArithmetic(f, a, b, 1); };
+    const auto div = [&](const QJSValue& a, const QJSValue& b) { return viewArithmetic(f, a, b, 2); };
+    const auto relation = [&](const QJSValue& a, const QJSValue& b, int kind) { return assistantRelation(f, a, b, kind); };
+    const QJSValue empty(QStringLiteral("")), zeroText(QStringLiteral("0")), dot(QStringLiteral(".")), e(QStringLiteral("e"));
+    if (operation == NumberScientific) {
+        if (!numberType(f, value) || !numberFinite(f, value) || value.strictlyEquals(QJSValue(0))) return QJSValue(false);
+        return QJSValue(relation(numberAbs(f, value), QJSValue(1e6), 2) || relation(numberAbs(f, value), QJSValue(1e-4), 0));
+    }
+    if (operation == NumberScientificExponent) return named("exponentOf", {call(value, "toExponential", {QJSValue(3)})});
+    if (operation == NumberExponentOf) {
+        const auto start = add(call(value, "indexOf", {e}), QJSValue(1));
+        return named("Number", {call(value, "slice", {start})});
+    }
+    if (operation == NumberFull) return numberString(f, value);
+    if (operation == NumberPlainFull) {
+        if (!numberType(f, value) || !numberFinite(f, value)) return numberString(f, value);
+        const auto text = numberString(f, value);
+        const auto parts = call(numberRegex(f, R"(^(-?)(\d)(?:\.(\d+))?e([+-]\d+)$)"), "exec", {text});
+        if (!panelUsageTruth(parts)) return text;
+        const auto first = textIndex(f, parts, QJSValue(2));
+        const auto digits = add(first, tableNullish(textIndex(f, parts, QJSValue(3)), empty));
+        const auto power = named("Number", {textIndex(f, parts, QJSValue(4))});
+        if (relation(power, QJSValue(0), 0)) {
+            const auto prefix = add(textIndex(f, parts, QJSValue(1)), QJSValue(QStringLiteral("0.")));
+            const auto zeros = call(zeroText, "repeat", {sub(numberNegate(f, power), QJSValue(1))});
+            return add(add(prefix, zeros), digits);
+        }
+        const auto point = add(power, QJSValue(1)); const auto sign = textIndex(f, parts, QJSValue(1)); QJSValue rest;
+        if (relation(read(digits, "length"), point, 3)) {
+            const auto zeros = call(zeroText, "repeat", {sub(point, read(digits, "length"))}); rest = add(digits, zeros);
+        } else {
+            const auto prefix = add(call(digits, "slice", {QJSValue(0), point}), dot);
+            rest = add(prefix, call(digits, "slice", {point}));
+        }
+        return add(sign, rest);
+    }
+    if (operation == NumberParameter) {
+        if (panelUsageTruth(named("scientific", {value}))) return numberReplaceExponent(f, call(value, "toExponential", {QJSValue(3)}));
+        const auto text = named("ruled", {value, second});
+        return panelUsageTruth(text) ? read(text, "value") : named("rounded", {value, second, panelUsageContextRead(f, "Infinity"), third});
+    }
+    if (operation == NumberRuled) {
+        const auto project = assistantContextField(f, "Session", "project");
+        if (!panelUsageTruth(project) || read(project, "suRule").strictlyEquals(empty) || !numberType(f, value) || !numberFinite(f, value)
+            || !numberType(f, second) || !numberFinite(f, second) || relation(second, QJSValue(0), 3)) return consentNull();
+        const auto text = call(project, "suText", {value, second});
+        return !read(text, "value").strictlyEquals(empty) ? text : consentNull();
+    }
+    if (operation == NumberRounded) {
+        if (!numberType(f, value)) return numberString(f, value);
+        if (!numberFinite(f, value)) return numberString(f, value);
+        const auto room = relation(third, QJSValue(0), 1) ? third : QJSValue(8);
+        const bool known = numberType(f, second) && numberFinite(f, second) && relation(second, QJSValue(0), 1);
+        const auto most = relation(fourth, QJSValue(0), 1) ? fourth : QJSValue(6); auto significant = most; QJSValue text;
+        if (known) {
+            const auto place = named("exponentOf", {call(second, "toExponential", {QJSValue(0)})});
+            const auto digits = numberMath(f, "round", [&] { return QJSValueList{div(value, numberPower(f, [&] { return place; }))}; });
+            significant = value.strictlyEquals(QJSValue(0)) ? QJSValue(1) : numberMath(f, "max", [&] {
+                const auto floor = numberMath(f, "floor", [&] {
+                    return QJSValueList{numberMath(f, "log10", [&] { return QJSValueList{numberAbs(f, value)}; })};
+                });
+                return QJSValueList{QJSValue(1), add(sub(floor, place), QJSValue(1))};
+            });
+            if (relation(place, QJSValue(0), 0)) text = call(value, "toFixed", {numberMath(f, "min", [&] { return QJSValueList{numberNegate(f, place), QJSValue(100)}; })});
+            else if (relation(numberAbs(f, digits), QJSValue(1e21), 0)) {
+                if (digits.strictlyEquals(QJSValue(0))) text = zeroText;
+                else { const auto prefix = numberString(f, digits); text = add(prefix, call(zeroText, "repeat", {place})); }
+            } else text = named("exponent", {value, significant});
+        } else {
+            const auto precise = call(value, "toPrecision", {most}); text = numberString(f, named("Number", {precise}));
+        }
+        if (relation(read(text, "length"), room, 3)) return text;
+        const auto digits = numberMath(f, "min", [&] {
+            return QJSValueList{significant, numberMath(f, "max", [&] { return QJSValueList{QJSValue(1), sub(room, QJSValue(5))}; })};
+        });
+        return named("exponent", {value, digits});
+    }
+    if (operation == NumberError) {
+        if (!numberType(f, value) || !numberFinite(f, value) || relation(value, QJSValue(0), 3)) return empty;
+        if (panelUsageTruth(named("scientific", {third}))) {
+            const auto power = named("scientificExponent", {third});
+            const auto mantissa = mul(value, numberPower(f, [&] { return numberNegate(f, power); }));
+            if (numberFinite(f, mantissa) && relation(mantissa, QJSValue(1e21), 0)) return add(add(call(mantissa, "toFixed", {QJSValue(3)}), e), power);
+            return add(add(named("sharedExponent", {value, power}), e), power);
+        }
+        const auto room = relation(second, QJSValue(0), 1) ? second : QJSValue(6);
+        const auto text = named("ruled", {third, value}); if (panelUsageTruth(text)) return read(text, "su");
+        const auto plain = numberString(f, named("Number", {call(value, "toPrecision", {QJSValue(1)})}));
+        return relation(read(plain, "length"), room, 3) ? plain : named("exponent", {value, QJSValue(1)});
+    }
+    if (operation == NumberSharedExponent) {
+        const auto shift = sub(named("exponentOf", {call(value, "toExponential")}), second); QJSValue thousandths;
+        if (relation(add(shift, QJSValue(3)), QJSValue(0), 0)) {
+            const auto rounded = numberMath(f, "round", [&] {
+                const auto exponential = call(value, "toExponential");
+                const auto parts = call(exponential, "split", {e});
+                const auto mantissa = named("Number", {textIndex(f, parts, QJSValue(0))});
+                return QJSValueList{mul(mantissa, numberPower(f, [&] { return add(shift, QJSValue(3)); }))};
+            });
+            thousandths = numberString(f, rounded);
+        } else {
+            const auto count = numberMath(f, "min", [&] { return QJSValueList{add(shift, QJSValue(3)), QJSValue(14)}; });
+            const auto text = call(value, "toExponential", {count});
+            const auto at = call(text, "indexOf", {e});
+            const auto digits = call(call(text, "slice", {QJSValue(0), at}), "replace", {dot, empty});
+            const auto padding = numberMath(f, "max", [&] {
+                const auto exponent = named("exponentOf", {text});
+                const auto first = sub(exponent, sub(second, QJSValue(3)));
+                return QJSValueList{QJSValue(0), sub(first, sub(read(digits, "length"), QJSValue(1)))};
+            });
+            thousandths = add(digits, call(zeroText, "repeat", {padding}));
+        }
+        const auto padded = call(thousandths, "padStart", {QJSValue(4), zeroText});
+        const auto prefix = add(call(padded, "slice", {QJSValue(0), QJSValue(-3)}), dot);
+        return add(prefix, call(padded, "slice", {QJSValue(-3)}));
+    }
+    if (operation == NumberPlain) return named("rounded", {value, QJSValue(0), second});
+    if (operation == NumberAxisFormat) {
+        QJSValue largest(0);
+        panelUsageEach(f, value, [&](const QJSValue& tick) {
+            if (numberFinite(f, tick)) largest = numberMath(f, "max", [&] { return QJSValueList{largest, numberAbs(f, tick)}; });
+            return panelUsageReady(f);
+        });
+        QJSValue power(0);
+        if (panelUsageTruth(second) && panelUsageTruth(named("scientific", {largest}))) power = named("scientificExponent", {largest});
+        auto literal = panelUsageLiteral(f); panelUsageWrite(f, literal.value, "shared", second); panelUsageWrite(f, literal.value, "power", power);
+        panelUsageWrite(f, literal.value, "decimals", QJSValue(0)); const auto format = panelUsageComplete(f, literal);
+        if (!panelUsageTruth(second)) return format;
+        const QJSValue most(power.strictlyEquals(QJSValue(0)) ? 6 : 3);
+        const auto exact = [&](const QJSValue& decimals) {
+            return call(value, "every", {panelUsageClosure(f, 180, {power, decimals}, 1)});
+        };
+        const auto distinct = [&](const QJSValue& decimals) {
+            const auto constructor = panelUsageContextRead(f, "Set");
+            const auto texts = call(value, "map", {panelUsageClosure(f, 181, {power, decimals}, 1)});
+            const auto set = panelUsageConstruct(f, constructor, {texts});
+            const auto size = read(set, "size"); return size.strictlyEquals(read(value, "length"));
+        };
+        assistantMemberWrite(f, format, "decimals", QJSValue(0));
+        while (panelUsageReady(f) && relation(read(format, "decimals"), most, 0) && !panelUsageTruth(exact(read(format, "decimals")))) {
+            const auto decimals = panelUsageNumber(f, read(format, "decimals")); if (!decimals) return {};
+            assistantMemberWrite(f, format, "decimals", QJSValue(*decimals + 1));
+        }
+        while (panelUsageReady(f) && relation(read(format, "decimals"), QJSValue(12), 0) && !distinct(read(format, "decimals"))) {
+            const auto decimals = panelUsageNumber(f, read(format, "decimals")); if (!decimals) return {};
+            assistantMemberWrite(f, format, "decimals", QJSValue(*decimals + 1));
+        }
+        return format;
+    }
+    if (operation == NumberAxisTick) {
+        if (!numberType(f, value) || !numberFinite(f, value)) return numberString(f, value);
+        if (!panelUsageTruth(read(second, "shared"))) {
+            if (panelUsageTruth(named("scientific", {value}))) return numberReplaceExponent(f, named("exponent", {value, QJSValue(4)}));
+            return numberString(f, named("Number", {call(value, "toPrecision", {QJSValue(6)})}));
+        }
+        const auto scaled = div(value, numberPower(f, [&] { return read(second, "power"); }));
+        const auto text = call(scaled, "toFixed", {read(second, "decimals")});
+        if (named("Number", {text}).strictlyEquals(QJSValue(0)))
+            return !read(second, "power").strictlyEquals(QJSValue(0)) ? zeroText : call(QJSValue(0), "toFixed", {read(second, "decimals")});
+        if (!read(second, "power").strictlyEquals(QJSValue(0))) { const auto prefix = add(text, e); return add(prefix, read(second, "power")); }
+        return text;
+    }
+    if (operation == NumberDecimal) {
+        const auto expression = numberRegex(f, R"(^([+-]?)(\d*)(?:\.(\d*))?$)");
+        const auto parts = call(expression, "exec", {numberString(f, value)});
+        if (!panelUsageTruth(parts) || (textIndex(f, parts, QJSValue(2)).strictlyEquals(empty)
+            && tableNullish(textIndex(f, parts, QJSValue(3)), empty).strictlyEquals(empty))) return consentNull();
+        const auto whole = call(textIndex(f, parts, QJSValue(2)), "replace", {numberRegex(f, "^0+"), empty});
+        const auto fraction = tableNullish(textIndex(f, parts, QJSValue(3)), empty);
+        if (!whole.strictlyEquals(empty)) {
+            auto result = panelUsageLiteral(f); panelUsageWrite(f, result.value, "sign", textIndex(f, parts, QJSValue(1)));
+            panelUsageWrite(f, result.value, "digits", add(whole, fraction));
+            panelUsageWrite(f, result.value, "power", sub(read(whole, "length"), QJSValue(1)));
+            panelUsageWrite(f, result.value, "whole", QJSValue(textIndex(f, parts, QJSValue(3)).isUndefined()));
+            return panelUsageComplete(f, result);
+        } else {
+            const auto first = call(fraction, "search", {numberRegex(f, "[1-9]")});
+            if (relation(first, QJSValue(0), 0)) return consentNull();
+            auto result = panelUsageLiteral(f); panelUsageWrite(f, result.value, "sign", textIndex(f, parts, QJSValue(1)));
+            panelUsageWrite(f, result.value, "digits", call(fraction, "slice", {first}));
+            panelUsageWrite(f, result.value, "power", numberNegate(f, add(first, QJSValue(1))));
+            panelUsageWrite(f, result.value, "whole", QJSValue(false));
+            return panelUsageComplete(f, result);
+        }
+    }
+    if (operation == NumberCompact) {
+        const auto number = named("decimal", {value}); if (number.isNull()) return numberString(f, value);
+        auto digits = read(number, "digits");
+        if (relation(second, QJSValue(0), 1)) digits = call(call(digits, "slice", {QJSValue(0), second}), "padEnd", {second, zeroText});
+        else if (panelUsageTruth(read(number, "whole"))) {
+            digits = call(digits, "replace", {numberRegex(f, "0+$"), empty}); if (!panelUsageTruth(digits)) digits = zeroText;
+        }
+        const auto sign = read(number, "sign"), firstDigit = textIndex(f, digits, QJSValue(0));
+        const auto first = add(sign, firstDigit);
+        const auto fraction = relation(read(digits, "length"), QJSValue(1), 1) ? add(dot, call(digits, "slice", {QJSValue(1)})) : empty;
+        const auto prefix = add(add(first, fraction), e); return add(prefix, read(number, "power"));
+    }
+    if (operation == NumberSuDigits) {
+        const auto project = assistantContextField(f, "Session", "project");
+        const auto expression = numberRegex(f, "[1-9]"); const auto first = call(expression, "exec", {numberString(f, value)});
+        const bool two = (panelUsageTruth(project) && read(project, "suRule").strictlyEquals(QJSValue(QStringLiteral("iucr_99"))))
+            || (!first.isNull() && textIndex(f, first, QJSValue(0)).strictlyEquals(QJSValue(QStringLiteral("1"))));
+        return QJSValue(two ? 2 : 1);
+    }
+    if (operation == NumberRuledDigits) {
+        const auto number = named("decimal", {value}), uncertainty = named("decimal", {second});
+        if (number.isNull() || uncertainty.isNull()) return QJSValue(0);
+        const auto count = named("suDigits", {second});
+        const auto numberPower = read(number, "power");
+        const auto uncertaintyPower = read(uncertainty, "power");
+        const auto digits = add(sub(numberPower, add(sub(uncertaintyPower, count), QJSValue(1))), QJSValue(1));
+        return relation(digits, QJSValue(1), 2) ? digits : count;
+    }
+    if (operation == NumberNarrowParameter) {
+        const auto text = named("parameter", {value, second, third}); if (panelUsageTruth(named("scientific", {value}))) return text;
+        const auto rule = named("ruled", {value, second});
+        if (panelUsageTruth(rule)) {
+            const auto ruleValue = read(rule, "value"), su = read(rule, "su");
+            return named("compact", {text, named("ruledDigits", {ruleValue, su})});
+        }
+        const auto number = named("decimal", {text});
+        if (number.isNull() || !numberType(f, second) || !numberFinite(f, second) || relation(second, QJSValue(0), 3)) return named("compact", {text});
+        const auto digits = numberMath(f, "max", [&] {
+            const auto power = read(number, "power"); const auto place = named("exponentOf", {call(second, "toExponential", {QJSValue(0)})});
+            return QJSValueList{QJSValue(1), add(sub(power, place), QJSValue(1))};
+        });
+        return named("compact", {text, digits});
+    }
+    if (operation == NumberFitted) {
+        if (!relation(second, QJSValue(0), 1) || relation(call(third, "advanceWidth", {value}), second, 3)) return value;
+        return fourth.isNull() || fourth.isUndefined() ? named("compact", {value}) : fourth;
+    }
+    if (operation == NumberOwnUncertainty) {
+        if (!numberType(f, value) || !numberFinite(f, value) || relation(value, QJSValue(0), 3)) return empty;
+        const auto text = named("ruled", {second, value});
+        const auto written = panelUsageTruth(text) ? read(text, "su") : numberString(f, named("Number", {call(value, "toPrecision", {QJSValue(1)})}));
+        if (panelUsageTruth(call(numberRegex(f, "e"), "test", {written}))) return numberReplaceExponent(f, written);
+        return named("compact", {written, panelUsageTruth(text) ? named("suDigits", {written}) : QJSValue(1)});
+    }
+    if (operation == NumberExponent) {
+        const auto count = numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), sub(second, QJSValue(1))}; });
+        const auto text = call(value, "toExponential", {count}), at = call(text, "indexOf", {e});
+        auto mantissa = call(text, "slice", {QJSValue(0), at});
+        if (relation(call(mantissa, "indexOf", {dot}), QJSValue(0), 2)) {
+            mantissa = call(mantissa, "replace", {numberRegex(f, "0+$"), empty});
+            mantissa = call(mantissa, "replace", {numberRegex(f, R"(\.$)"), empty});
+        }
+        return add(mantissa, call(text, "slice", {at}));
+    }
+    return {};
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
