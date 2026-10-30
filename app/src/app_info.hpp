@@ -367,6 +367,28 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void composerReturnPressed(const QJSValue& event) const;
     Q_INVOKABLE void assistantChoicesKey(const QJSValue& event, bool released) const;
     Q_INVOKABLE void assistantMessageCopyKey(const QJSValue& event) const;
+    /// Shared table procedures; the original view maps, row ownership and model notifications remain authoritative.
+    Q_INVOKABLE QJSValue tableColumnRowOwner(const QJSValue& row) const;
+    Q_INVOKABLE void tableApplyWidths(const QJSValue& row) const;
+    Q_INVOKABLE void tablePadForFiller(const QJSValue& cell, const QJSValue& column) const;
+    Q_INVOKABLE QJSValue tableCellKind(const QJSValue& cell) const;
+    Q_INVOKABLE void tableAlignCell(const QJSValue& cell, const QJSValue& kind) const;
+    Q_INVOKABLE void tableScheduleFitColumns() const;
+    Q_INVOKABLE QJSValue tableColumnWidths() const;
+    Q_INVOKABLE void tableFitColumns() const;
+    Q_INVOKABLE void tableRefit() const;
+    Q_INVOKABLE void tableColumnsChanged(bool widthsChanged) const;
+    Q_INVOKABLE void tableDestroyed() const;
+    Q_INVOKABLE QJSValue tableTextWidth(int row, const QString& role) const;
+    Q_INVOKABLE QJSValue tableAdvance(const QString& text) const;
+    Q_INVOKABLE QJSValue tableTextColumnWidth(const QString& role, const QString& title, bool natural) const;
+    Q_INVOKABLE void tableForgetWidths() const;
+    Q_INVOKABLE void tableRemeasure() const;
+    Q_INVOKABLE void tableDataChanged(const QJSValue& topLeft, const QJSValue& bottomRight) const;
+    Q_INVOKABLE void tableOwnerCallback(int kind) const;
+    Q_INVOKABLE bool tableRevealRow(int index) const;
+    Q_INVOKABLE bool tableRevealItem(const QJSValue& item) const;
+    Q_INVOKABLE void tableKeyPressed(const QJSValue& event) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

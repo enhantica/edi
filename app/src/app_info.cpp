@@ -816,6 +816,7 @@ struct PanelUsageFrame {
     QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
     void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
 };
+QJSValue tableProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue assistantUiCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue remainingProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue viewProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&);
@@ -2589,7 +2590,9 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     const auto argument = [&](uint index) {
         return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
     };
-    const auto result = callback->d()->operation >= 80
+    const auto result = callback->d()->operation >= 120
+        ? tableProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
+        : callback->d()->operation >= 80
         ? assistantUiCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
         : callback->d()->operation >= 60
             ? remainingProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
@@ -2957,7 +2960,8 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto argument = [&](uint index) {
             return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
         };
-        result = callback->d()->operation >= 80 ? assistantUiCallback(frame, callback->d()->operation, retained, argument)
+        result = callback->d()->operation >= 120 ? tableProcedureCallback(frame, callback->d()->operation, retained, argument)
+            : callback->d()->operation >= 80 ? assistantUiCallback(frame, callback->d()->operation, retained, argument)
             : remainingProcedureCallback(frame, callback->d()->operation, retained, argument);
     } else if (callback->d()->operation >= 40) {
         const auto argument = [&](uint index) {
@@ -5311,6 +5315,505 @@ void ApplicationInfo::assistantMessageCopyKey(const QJSValue& event) const {
     const auto actualStart = assistantContextField(f, "body", "selectionStart"); const auto actualEnd = assistantContextField(f, "body", "selectionEnd");
     const auto literal = panelUsageMemberCall(f, markdown, "selectedSource", {actualStart, actualEnd});
     panelUsageMemberCall(f, info, "copyText", {literal}); assistantMemberWrite(f, event, "accepted", QJSValue(true));
+}
+
+namespace {
+QJSValue tableCallback(const PanelUsageFrame& f, uint operation, const QJSValueList& values, int arity) {
+    return panelUsageClosure(f, operation, values, arity);
+}
+QJSValue tableNullish(const QJSValue& value, const QJSValue& fallback) { return value.isNull() || value.isUndefined() ? fallback : value; }
+bool tableAlive(const PanelUsageFrame& f, const QJSValue& life) { return panelUsageTruth(life) && editorLife(f, life); }
+QJSValue tableArrayFrom(const PanelUsageFrame& f, const QJSValue& value) {
+    const auto array = panelUsageContextRead(f, "Array"); return panelUsageMemberCall(f, array, "from", {value});
+}
+bool tableHas(const PanelUsageFrame& f, const QJSValue& object, const char* property) {
+    if (!panelUsageReady(f)) return false;
+    QV4::Scope scope(f.vm());
+    QV4::ScopedValue key(scope, f.vm()->newString(QString::fromLatin1(property)));
+    QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), object));
+    QV4::ScopedValue result(scope, QV4::Runtime::In::call(f.vm(), *key, *value)); f.checked(); return result->toBoolean();
+}
+QJSValue tableTypeof(const PanelUsageFrame& f, const QJSValue& input) {
+    if (!panelUsageReady(f)) return {};
+    QV4::Scope scope(f.vm()); QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), input));
+    QV4::ScopedValue result(scope, QV4::Runtime::TypeofValue::call(f.vm(), *value));
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+bool tableForIn(const PanelUsageFrame& f, const QJSValue& source, const std::function<bool(const QJSValue&)>& visit) {
+    if (!panelUsageReady(f)) return false;
+    QV4::Scope scope(f.vm()); QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), source));
+    QV4::ScopedValue iterator(scope, QV4::Runtime::GetIterator::call(f.vm(), *object, static_cast<int>(QQmlJS::AST::ForEachType::In)));
+    f.checked(); if (!panelUsageReady(f)) return false;
+    QV4::ScopedValue value(scope);
+    for (;;) {
+        const auto done = QV4::Runtime::IteratorNext::call(f.vm(), *iterator, value);
+        if (QV4::Value::fromReturnedValue(done).toBoolean()) { f.checked(); return panelUsageReady(f); }
+        if (!visit(QJSValuePrivate::fromReturnedValue(value->asReturnedValue()))) return false;
+    }
+}
+void tableIncrement(const PanelUsageFrame& f, const char* name, bool explicitTable = false) {
+    const auto original = explicitTable ? assistantContextField(f, "table", name) : panelUsageContextRead(f, name);
+    const auto number = panelUsageNumber(f, original); if (!number) return;
+    if (explicitTable) projectWrite(f, "table", name, QJSValue(*number + 1)); else panelUsageContextWrite(f, name, QJSValue(*number + 1));
+}
+QJSValue tableCellsOf(const PanelUsageFrame& f, const QJSValue& row) {
+    QJSValue first = consentNull();
+    if (panelUsageTruth(row) && panelUsageTruth(panelUsageRead(f, row, "contentRowData"))) {
+        const auto array = panelUsageContextRead(f, "Array");
+        const auto children = panelUsageRead(f, row, "contentRowData");
+        const auto cells = panelUsageMemberCall(f, array, "from", {children});
+        first = panelUsageMemberCall(f, cells, "find", {tableCallback(f, 131, {}, 1)});
+    }
+    if (!panelUsageTruth(first) || !panelUsageTruth(panelUsageRead(f, first, "parent"))) return consentNull();
+    const auto array = panelUsageContextRead(f, "Array"); const auto parent = panelUsageRead(f, first, "parent");
+    return panelUsageMemberCall(f, array, "from", {panelUsageRead(f, parent, "children")});
+}
+QJSValue tableControlWidth(const PanelUsageFrame& f, const QJSValue& child) {
+    return tableHas(f, child, "fittedWidth") ? panelUsageRead(f, child, "fittedWidth") : tableNullish(panelUsageRead(f, child, "implicitWidth"), QJSValue(0));
+}
+QJSValue tablePadded(const PanelUsageFrame& f, const QJSValue& cell, const QJSValue& width) {
+    const auto left = tableNullish(panelUsageRead(f, cell, "leftPadding"), QJSValue(0));
+    const auto first = panelUsageAdd(f, width, left);
+    return panelUsageAdd(f, first, tableNullish(panelUsageRead(f, cell, "rightPadding"), QJSValue(0)));
+}
+QJSValue tableMeasure(const PanelUsageFrame& f, const QJSValue& cell) {
+    if (tableHas(f, cell, "number")) {
+        const auto metrics = panelUsageContextRead(f, "metrics");
+        const auto width = panelUsageMemberCall(f, metrics, "advanceWidth", {panelUsageRead(f, cell, "number")});
+        return tablePadded(f, cell, width);
+    }
+    if (tableHas(f, cell, "elide")) return panelUsageRead(f, cell, "implicitWidth");
+    if (tableHas(f, cell, "contentWidth")) return tablePadded(f, cell, panelUsageRead(f, cell, "contentWidth"));
+    const auto array = panelUsageContextRead(f, "Array");
+    const auto children = panelUsageMemberCall(f, array, "from", {panelUsageRead(f, cell, "children")});
+    const auto callback = tableCallback(f, 130, {}, 2);
+    return panelUsageMemberCall(f, children, "reduce", {callback, panelUsageRead(f, cell, "implicitWidth")});
+}
+QJSValue tableProcedureCallback(const PanelUsageFrame& f, uint operation,
+    const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
+    if (operation == 121) return QJSValue(false);
+    if (operation == 120) {
+        const auto life = saved(0), row = saved(1);
+        if (!editorLife(f, life) || !consentQtObject(f, row) || !consentFieldEquals(f, row, "parent", saved(2))
+            || !projectFieldIs(f, "table", "sourceModel", saved(3)) || !projectFieldIs(f, "table", "modelRevision", saved(4))) return QJSValue(false);
+        const auto array = panelUsageContextRead(f, "Array"); const auto children = panelUsageRead(f, row, "children");
+        const auto current = panelUsageMemberCall(f, array, "from", {children});
+        if (!consentFieldsEqual(f, current, "length", saved(5), "length")) return QJSValue(false);
+        return panelUsageMemberCall(f, saved(5), "every", {tableCallback(f, 122, {current, row}, 2)});
+    }
+    if (operation == 122) {
+        const auto cell = arg(0), index = arg(1);
+        if (!consentQtObject(f, cell)) return QJSValue(false);
+        const auto current = textIndex(f, saved(0), index);
+        return QJSValue(current.strictlyEquals(cell) && consentFieldEquals(f, cell, "parent", saved(1)));
+    }
+    if (operation == 123) return QJSValue(arg(0).strictlyEquals(QJSValue(-1)));
+    if (operation == 124 || operation == 125) {
+        const auto sum = arg(0), width = arg(1), index = arg(2); bool include;
+        if (operation == 124) include = assistantRelation(f, width, QJSValue(0), 1) && !panelUsageTruth(textIndex(f, saved(0), index));
+        else include = panelUsageTruth(textIndex(f, saved(0), index));
+        return panelUsageAdd(f, sum, include ? width : QJSValue(0));
+    }
+    if (operation == 126) {
+        const auto width = arg(0), index = arg(1);
+        if (!panelUsageTruth(textIndex(f, saved(0), index))) return width;
+        const auto math = panelUsageContextRead(f, "Math");
+        const auto measured = textIndex(f, saved(1), index);
+        auto sum = panelUsageAdd(f, viewArithmetic(f, measured, saved(2), 1), saved(3));
+        const auto spreadColumns = panelUsageContextRead(f, "spreadColumns");
+        const auto extra = panelUsageTruth(panelUsageMemberCall(f, spreadColumns, "includes", {index})) ? saved(4) : QJSValue(0);
+        return panelUsageMemberCall(f, math, "floor", {panelUsageAdd(f, sum, extra)});
+    }
+    if (operation == 127) return panelUsageAdd(f, arg(0), arg(1));
+    if (operation == 130) {
+        const auto math = panelUsageContextRead(f, "Math"); const auto maximum = arg(0);
+        return panelUsageMemberCall(f, math, "max", {maximum, tableControlWidth(f, arg(1))});
+    }
+    if (operation == 131) {
+        const auto item = panelUsageContextRead(f, "Item");
+        if (!panelUsageReady(f)) return {};
+        QV4::Scope scope(f.vm()); QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), arg(0)));
+        QV4::ScopedValue type(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), item));
+        QV4::ScopedValue result(scope, QV4::Runtime::Instanceof::call(f.vm(), *value, *type)); f.checked();
+        return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+    }
+    if (operation == 132) return QJSValue(true);
+    if (operation == 133) {
+        const auto cell = arg(0), index = arg(1); const auto math = panelUsageContextRead(f, "Math");
+        const auto width = panelUsageRead(f, cell, "implicitWidth"); QJSValue filler(0);
+        if (assistantSameName(f, index, "fillerIndex")) {
+            const auto paddings = panelUsageContextRead(f, "basePaddings");
+            if (panelUsageTruth(panelUsageMemberCall(f, paddings, "has", {cell}))) filler = panelUsageContextRead(f, "fillerWidth");
+        }
+        return panelUsageMemberCall(f, math, "ceil", {viewArithmetic(f, width, filler, 0)});
+    }
+    if (operation == 134) {
+        const auto index = arg(1), math = panelUsageContextRead(f, "Math");
+        const auto header = tableNullish(textIndex(f, saved(0), index), QJSValue(0));
+        QJSValue previous(0);
+        if (!panelUsageTruth(panelUsageContextRead(f, "refitting"))) previous = tableNullish(textIndex(f, panelUsageContextRead(f, "fittedWidths"), index), QJSValue(0));
+        return panelUsageMemberCall(f, math, "max", {header, previous});
+    }
+    if (operation == 135) return panelUsageGlobalCall(f, "kindOf", {arg(0)});
+    if (operation == 142) {
+        const auto math = panelUsageContextRead(f, "Math"); return panelUsageMemberCall(f, math, "max", {arg(0), arg(1)});
+    }
+    if (editorLife(f, saved(0))) {
+        assistantMemberWrite(f, saved(0), "queued", QJSValue(false)); return projectInvoke(f, "table", "fitColumns");
+    }
+    return {};
+}
+} // namespace
+
+QJSValue ApplicationInfo::tableColumnRowOwner(const QJSValue& row) const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife");
+    if (!tableAlive(f, life) || !consentQtObject(f, row)) return tableCallback(f, 121, {}, 0);
+    const auto parent = panelUsageRead(f, row, "parent"); const auto source = panelUsageContextRead(f, "sourceModel");
+    const auto revision = panelUsageContextRead(f, "modelRevision"); const auto array = panelUsageContextRead(f, "Array");
+    const auto cells = panelUsageMemberCall(f, array, "from", {panelUsageRead(f, row, "children")});
+    return tableCallback(f, 120, {life, row, parent, source, revision, cells}, 0);
+}
+void ApplicationInfo::tableApplyWidths(const QJSValue& row) const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife");
+    if (!tableAlive(f, life) || !consentQtObject(f, row)) return;
+    const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {row}); const auto array = panelUsageContextRead(f, "Array");
+    const auto cells = panelUsageMemberCall(f, array, "from", {panelUsageRead(f, row, "children")});
+    for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageRead(f, cells, "length"), 0); ++index) {
+        if (!panelUsageTruth(projectCall(f, owns))) return;
+        const auto widths = panelUsageContextRead(f, "resolvedColumnWidths");
+        if (assistantRelation(f, QJSValue(index), panelUsageRead(f, widths, "length"), 2)) return;
+        const auto cell = textIndex(f, cells, QJSValue(index)); const auto width = textIndex(f, widths, QJSValue(index));
+        if (!panelUsageTruth(projectCall(f, owns))) return; assistantMemberWrite(f, cell, "width", width);
+    }
+}
+void ApplicationInfo::tablePadForFiller(const QJSValue& cell, const QJSValue& column) const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife");
+    if (!tableAlive(f, life) || !consentQtObject(f, cell) || !tableHas(f, cell, "rightPadding") || tableHas(f, cell, "keepsAlignment")) return;
+    const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {panelUsageRead(f, cell, "parent")});
+    if (!panelUsageTruth(projectCall(f, owns))) return;
+    auto paddings = panelUsageContextRead(f, "basePaddings");
+    if (!panelUsageTruth(panelUsageMemberCall(f, paddings, "has", {cell}))) {
+        paddings = panelUsageContextRead(f, "basePaddings"); const auto literal = panelUsageLiteral(f);
+        panelUsageWrite(f, literal.value, "left", panelUsageRead(f, cell, "leftPadding")); panelUsageWrite(f, literal.value, "right", panelUsageRead(f, cell, "rightPadding"));
+        panelUsageMemberCall(f, paddings, "set", {cell, panelUsageComplete(f, literal)});
+    }
+    paddings = panelUsageContextRead(f, "basePaddings"); const auto base = panelUsageMemberCall(f, paddings, "get", {cell});
+    const auto kinds = panelUsageContextRead(f, "cellKinds"); const auto kind = tableNullish(panelUsageMemberCall(f, kinds, "get", {cell}), QJSValue(QString{}));
+    const auto gap = assistantContextField(f, "EaStyle", "Sizes"); const auto spacing = panelUsageRead(f, gap, "tableColumnSpacing");
+    const auto left = panelUsageAdd(f, panelUsageRead(f, base, "left"), kind.strictlyEquals(QJSValue(QStringLiteral("text"))) ? spacing : QJSValue(0));
+    auto right = panelUsageRead(f, base, "right");
+    right = panelUsageAdd(f, right, kind.strictlyEquals(QJSValue(QStringLiteral("number"))) || kind.strictlyEquals(QJSValue(QStringLiteral("check"))) ? spacing : QJSValue(0));
+    right = panelUsageAdd(f, right, assistantSameName(f, column, "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0));
+    if (!panelUsageTruth(projectCall(f, owns))) return; assistantMemberWrite(f, cell, "leftPadding", left);
+    if (!panelUsageTruth(projectCall(f, owns))) return; assistantMemberWrite(f, cell, "rightPadding", right);
+}
+QJSValue ApplicationInfo::tableCellKind(const QJSValue& cell) const {
+    const auto f = panelUsageEngine(this);
+    if (tableHas(f, cell, "checked") && tableHas(f, cell, "horizontalAlignment")) return QJSValue(QStringLiteral("check"));
+    if (tableHas(f, cell, "ring") || tableHas(f, cell, "fontIcon")) return QJSValue(QStringLiteral("icon"));
+    if (tableHas(f, cell, "number") || tableHas(f, cell, "columnAlignment") || tableHas(f, cell, "item")
+        || (tableHas(f, cell, "numeric") && panelUsageTruth(panelUsageRead(f, cell, "numeric")))) return QJSValue(QStringLiteral("number"));
+    return QJSValue(QStringLiteral("text"));
+}
+void ApplicationInfo::tableAlignCell(const QJSValue& cell, const QJSValue& kind) const {
+    const auto f = panelUsageEngine(this); if (tableHas(f, cell, "keepsAlignment")) return;
+    const auto kinds = panelUsageContextRead(f, "cellKinds"); panelUsageMemberCall(f, kinds, "set", {cell, kind});
+    const bool number = kind.strictlyEquals(QJSValue(QStringLiteral("number"))) || kind.strictlyEquals(QJSValue(QStringLiteral("check")));
+    const auto alignment = assistantContextField(f, "Text", number ? "AlignRight" : kind.strictlyEquals(QJSValue(QStringLiteral("icon"))) ? "AlignHCenter" : "AlignLeft");
+    if (tableHas(f, cell, "columnAlignment")) assistantMemberWrite(f, cell, "columnAlignment", alignment);
+    else if (tableHas(f, cell, "horizontalAlignment")) assistantMemberWrite(f, cell, "horizontalAlignment", alignment);
+}
+void ApplicationInfo::tableScheduleFitColumns() const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife");
+    if (!tableAlive(f, life) || panelUsageTruth(panelUsageRead(f, life, "queued"))) return;
+    assistantMemberWrite(f, life, "queued", QJSValue(true));
+    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {tableCallback(f, 144, {life}, 0)});
+}
+QJSValue ApplicationInfo::tableColumnWidths() const {
+    const auto f = panelUsageEngine(this); const auto fitted = panelUsageContextRead(f, "fittedWidths");
+    if (panelUsageTruth(panelUsageContextRead(f, "equalColumns"))) return panelUsageContextRead(f, "columns");
+    const auto length = panelUsageRead(f, fitted, "length");
+    if (!consentFieldEquals(f, panelUsageContextRead(f, "columns"), "length", length)) return panelUsageContextRead(f, "columns");
+    auto columns = panelUsageContextRead(f, "columns");
+    const auto fits = panelUsageMemberCall(f, columns, "map", {tableCallback(f, 123, {}, 1)});
+    const auto filtered = panelUsageMemberCall(f, fits, "filter", {panelUsageContextRead(f, "Boolean")});
+    const auto fitting = panelUsageRead(f, filtered, "length");
+    columns = panelUsageContextRead(f, "columns");
+    const auto fixed = panelUsageMemberCall(f, columns, "reduce", {tableCallback(f, 124, {fits}, 3), QJSValue(0)});
+    const auto texts = panelUsageMemberCall(f, fitted, "reduce", {tableCallback(f, 125, {fits}, 3), QJSValue(0)});
+    const auto gaps = viewArithmetic(f, panelUsageRead(f, panelUsageContextRead(f, "columns"), "length"), QJSValue(1), 0);
+    auto room = viewArithmetic(f, panelUsageContextRead(f, "width"), fixed, 0);
+    auto sizes = assistantContextField(f, "EaStyle", "Sizes");
+    room = viewArithmetic(f, room, viewArithmetic(f, panelUsageRead(f, sizes, "tableColumnSpacing"), gaps, 1), 0);
+    sizes = assistantContextField(f, "EaStyle", "Sizes");
+    room = viewArithmetic(f, room, viewArithmetic(f, panelUsageRead(f, sizes, "borderThickness"), QJSValue(2), 1), 0);
+    room = viewArithmetic(f, room, viewArithmetic(f, panelUsageContextRead(f, "rowPadding"), QJSValue(2), 1), 0);
+    QJSValue margin(0);
+    if (assistantRelation(f, fitting, QJSValue(0), 1)) {
+        const auto math = panelUsageContextRead(f, "Math"), inner = panelUsageContextRead(f, "Math");
+        const auto padding = panelUsageContextRead(f, "autoColumnPadding");
+        const auto delta = viewArithmetic(f, room, texts, 0);
+        const auto least = panelUsageMemberCall(f, inner, "min", {padding, viewArithmetic(f, delta, fitting, 2)});
+        margin = panelUsageMemberCall(f, math, "max", {QJSValue(0), least});
+    }
+    QJSValue scale(1);
+    if (assistantRelation(f, texts, room, 1) && assistantRelation(f, texts, QJSValue(0), 1)) {
+        const auto math = panelUsageContextRead(f, "Math");
+        const auto maximum = panelUsageMemberCall(f, math, "max", {QJSValue(0), room}); scale = viewArithmetic(f, maximum, texts, 2);
+    }
+    QJSValue spread(0);
+    if (assistantRelation(f, panelUsageRead(f, panelUsageContextRead(f, "spreadColumns"), "length"), QJSValue(0), 1)) {
+        const auto math = panelUsageContextRead(f, "Math"); auto delta = viewArithmetic(f, room, texts, 0);
+        delta = viewArithmetic(f, delta, viewArithmetic(f, margin, fitting, 1), 0);
+        const auto maximum = panelUsageMemberCall(f, math, "max", {QJSValue(0), delta});
+        spread = viewArithmetic(f, maximum, panelUsageRead(f, panelUsageContextRead(f, "spreadColumns"), "length"), 2);
+    }
+    columns = panelUsageContextRead(f, "columns");
+    const auto widths = panelUsageMemberCall(f, columns, "map", {tableCallback(f, 126, {fits, fitted, scale, margin, spread}, 2)});
+    if (assistantRelation(f, panelUsageContextRead(f, "fillerIndex"), QJSValue(0), 2)) {
+        const auto used = panelUsageMemberCall(f, widths, "reduce", {tableCallback(f, 127, {}, 2), QJSValue(0)});
+        const auto math = panelUsageContextRead(f, "Math"); auto spare = panelUsageContextRead(f, "width");
+        sizes = assistantContextField(f, "EaStyle", "Sizes");
+        spare = viewArithmetic(f, spare, viewArithmetic(f, panelUsageRead(f, sizes, "tableColumnSpacing"), gaps, 1), 0);
+        sizes = assistantContextField(f, "EaStyle", "Sizes");
+        spare = viewArithmetic(f, spare, viewArithmetic(f, panelUsageRead(f, sizes, "borderThickness"), QJSValue(2), 1), 0);
+        spare = viewArithmetic(f, spare, viewArithmetic(f, panelUsageContextRead(f, "rowPadding"), QJSValue(2), 1), 0);
+        spare = panelUsageMemberCall(f, math, "max", {QJSValue(0), viewArithmetic(f, spare, used, 0)});
+        const auto index = panelUsageContextRead(f, "fillerIndex"), previous = textIndex(f, widths, index);
+        const auto floor = panelUsageContextRead(f, "Math"); const auto rounded = panelUsageMemberCall(f, floor, "floor", {spare});
+        textIndexWrite(f, widths, index, panelUsageAdd(f, previous, rounded));
+    }
+    return widths;
+}
+void ApplicationInfo::tableFitColumns() const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
+    QJSValue header;
+    if (panelUsageTruth(panelUsageContextRead(f, "headerItem")) && panelUsageTruth(assistantContextField(f, "headerItem", "implicitColumnWidths"))) {
+        const auto widths = assistantContextField(f, "headerItem", "implicitColumnWidths"); header = panelUsageMemberCall(f, widths, "filter", {tableCallback(f, 132, {}, 2)});
+    } else if (panelUsageReady(f)) header = f->newArray();
+    const auto headerCells = tableCellsOf(f, panelUsageContextRead(f, "headerItem"));
+    const auto headerWidths = panelUsageTruth(headerCells) ? panelUsageMemberCall(f, headerCells, "map", {tableCallback(f, 133, {}, 2)}) : header;
+    const auto widths = panelUsageMemberCall(f, panelUsageContextRead(f, "columns"), "map", {tableCallback(f, 134, {headerWidths}, 2)});
+    QJSValue kinds = consentNull(); bool complete = true;
+    panelUsageEach(f, assistantContextField(f, "contentItem", "children"), [&](const QJSValue& item) {
+        if (!editorLife(f, life)) { complete = false; return false; }
+        const auto cells = tableCellsOf(f, item);
+        if (!panelUsageTruth(cells) || panelUsageRead(f, cells, "length").strictlyEquals(QJSValue(0)) || assistantSameName(f, item, "headerItem")) return panelUsageReady(f);
+        if (!editorLife(f, life)) { complete = false; return false; }
+        const auto first = textIndex(f, cells, QJSValue(0)); const auto parent = panelUsageRead(f, first, "parent");
+        const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {parent});
+        if (!panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
+        if (kinds.isNull() || kinds.isUndefined()) kinds = panelUsageMemberCall(f, cells, "map", {tableCallback(f, 135, {}, 1)});
+        for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageRead(f, cells, "length"), 0)
+             && assistantRelation(f, QJSValue(index), panelUsageRead(f, widths, "length"), 0); ++index) {
+            if (!panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
+            if (index > 0 && panelUsageTruth(textIndex(f, kinds, QJSValue(index)))) panelUsageGlobalCall(f, "alignCell", {textIndex(f, cells, QJSValue(index)), textIndex(f, kinds, QJSValue(index))});
+            if (!panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
+            panelUsageGlobalCall(f, "padForFiller", {textIndex(f, cells, QJSValue(index)), QJSValue(index)});
+            if (!panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
+            const auto math = panelUsageContextRead(f, "Math"), previous = textIndex(f, widths, QJSValue(index)), inner = panelUsageContextRead(f, "Math");
+            const auto measured = tableMeasure(f, textIndex(f, cells, QJSValue(index)));
+            const auto filler = assistantSameName(f, QJSValue(index), "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0);
+            const auto rounded = panelUsageMemberCall(f, inner, "ceil", {viewArithmetic(f, measured, filler, 0)});
+            textIndexWrite(f, widths, QJSValue(index), panelUsageMemberCall(f, math, "max", {previous, rounded}));
+        }
+        return panelUsageReady(f);
+    });
+    if (!complete || !panelUsageReady(f)) return;
+    if (panelUsageTruth(kinds) && panelUsageTruth(headerCells) && panelUsageTruth(panelUsageRead(f, headerCells, "length"))) {
+        const auto first = textIndex(f, headerCells, QJSValue(0)); const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {panelUsageRead(f, first, "parent")});
+        for (double index = 1; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageRead(f, headerCells, "length"), 0)
+             && assistantRelation(f, QJSValue(index), panelUsageRead(f, kinds, "length"), 0); ++index) {
+            if (!panelUsageTruth(projectCall(f, owns))) return;
+            panelUsageGlobalCall(f, "alignCell", {textIndex(f, headerCells, QJSValue(index)), textIndex(f, kinds, QJSValue(index))});
+            if (!panelUsageTruth(projectCall(f, owns))) return;
+            panelUsageGlobalCall(f, "padForFiller", {textIndex(f, headerCells, QJSValue(index)), QJSValue(index)});
+        }
+    }
+    if (!editorLife(f, life)) return; panelUsageContextWrite(f, "refitting", QJSValue(false)); if (!editorLife(f, life)) return;
+    auto json = panelUsageContextRead(f, "JSON"); const auto before = panelUsageMemberCall(f, json, "stringify", {widths});
+    json = panelUsageContextRead(f, "JSON"); const auto after = panelUsageMemberCall(f, json, "stringify", {panelUsageContextRead(f, "fittedWidths")});
+    if (!before.strictlyEquals(after)) panelUsageContextWrite(f, "fittedWidths", widths);
+}
+void ApplicationInfo::tableRefit() const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;
+    panelUsageContextWrite(f, "refitting", QJSValue(true)); if (editorLife(f, life)) panelUsageGlobalCall(f, "scheduleFitColumns", {});
+}
+void ApplicationInfo::tableColumnsChanged(bool widthsChanged) const {
+    const auto f = panelUsageEngine(this);
+    if (!widthsChanged) {
+        if (panelUsageTruth(assistantContextField(f, "table", "columnFitLife")) && panelUsageTruth(panelUsageRead(f, assistantContextField(f, "table", "columnFitLife"), "alive"))) projectInvoke(f, "table", "refit");
+        return;
+    }
+    const auto life = assistantContextField(f, "table", "columnFitLife"); if (!tableAlive(f, life)) return;
+    QJSValue spare(0);
+    if (assistantRelation(f, panelUsageContextRead(f, "fillerIndex"), QJSValue(0), 2)) {
+        const auto fitted = panelUsageRead(f, panelUsageContextRead(f, "fittedWidths"), "length");
+        if (consentFieldEquals(f, panelUsageContextRead(f, "columns"), "length", fitted)) {
+            const auto math = panelUsageContextRead(f, "Math"), columns = panelUsageContextRead(f, "columnWidths"), index = panelUsageContextRead(f, "fillerIndex");
+            const auto first = textIndex(f, columns, index), previous = panelUsageContextRead(f, "fittedWidths"), actualIndex = panelUsageContextRead(f, "fillerIndex");
+            auto room = viewArithmetic(f, first, tableNullish(textIndex(f, previous, actualIndex), QJSValue(0)), 0);
+            room = viewArithmetic(f, room, panelUsageContextRead(f, "autoColumnPadding"), 0); spare = panelUsageMemberCall(f, math, "max", {QJSValue(0), room});
+        }
+    }
+    if (!assistantSameName(f, spare, "fillerWidth")) { panelUsageContextWrite(f, "fillerWidth", spare); if (editorLife(f, life)) panelUsageGlobalCall(f, "scheduleFitColumns", {}); }
+}
+void ApplicationInfo::tableDestroyed() const {
+    const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); assistantMemberWrite(f, life, "alive", QJSValue(false));
+    const auto owner = panelUsageContextRead(f, "table"); const auto literal = panelUsageLiteral(f, 1); panelUsageWrite(f, literal.value, "0", panelUsageContextRead(f, "headerItem"));
+    const auto array = panelUsageContextRead(f, "Array"); QJSValue children;
+    if (panelUsageTruth(panelUsageContextRead(f, "contentItem"))) children = assistantContextField(f, "contentItem", "children"); else if (panelUsageReady(f)) children = f->newArray();
+    const auto additional = panelUsageMemberCall(f, array, "from", {children}); uint index = 1;
+    panelUsageEach(f, additional, [&](const QJSValue& row) { panelUsageWrite(f, literal.value, qPrintable(QString::number(index++)), row); return panelUsageReady(f); });
+    const auto rows = panelUsageComplete(f, literal);
+    panelUsageEach(f, rows, [&](const QJSValue& row) {
+        if (!consentQtObject(f, row) || !consentFieldEquals(f, row, "listView", owner)) return panelUsageReady(f);
+        const auto arrayAgain = panelUsageContextRead(f, "Array"); const auto data = panelUsageRead(f, row, "data");
+        if (!panelUsageReady(f)) return false;
+        const auto source = data.isNull() || data.isUndefined() ? f->newArray() : data;
+        const auto childrenAgain = panelUsageMemberCall(f, arrayAgain, "from", {source});
+        return panelUsageEach(f, childrenAgain, [&](const QJSValue& child) {
+            if (consentQtObject(f, child) && tableHas(f, child, "ignoreUnknownSignals") && tableHas(f, child, "target") && consentFieldEquals(f, child, "target", owner)) assistantMemberWrite(f, child, "enabled", QJSValue(false));
+            return panelUsageReady(f);
+        });
+    });
+    panelUsageEach(f, rows, [&](const QJSValue& row) { if (consentQtObject(f, row) && consentFieldEquals(f, row, "listView", owner)) assistantMemberWrite(f, row, "listView", consentNull()); return panelUsageReady(f); });
+}
+QJSValue ApplicationInfo::tableTextWidth(int row, const QString& role) const {
+    const auto f = panelUsageEngine(this); QJSValue text(QString{});
+    auto model = panelUsageContextRead(f, "model"); const auto method = panelUsageRead(f, model, "text");
+    if (tableTypeof(f, method).strictlyEquals(QJSValue(QStringLiteral("function")))) {
+        model = panelUsageContextRead(f, "model"); text = panelUsageMemberCall(f, model, "text", {QJSValue(row), QJSValue(role)});
+    } else {
+        model = panelUsageContextRead(f, "model");
+        if (tableTypeof(f, panelUsageRead(f, model, "get")).strictlyEquals(QJSValue(QStringLiteral("function")))) {
+            model = panelUsageContextRead(f, "model"); const auto object = panelUsageMemberCall(f, model, "get", {QJSValue(row)});
+            const auto value = tableNullish(textIndex(f, object, QJSValue(role)), QJSValue(QString{})); text = panelUsageGlobalCall(f, "String", {value});
+        }
+    }
+    return projectInvoke(f, "metrics", "advanceWidth", {text});
+}
+QJSValue ApplicationInfo::tableAdvance(const QString& text) const { return projectInvoke(panelUsageEngine(this), "metrics", "advanceWidth", {QJSValue(text)}); }
+QJSValue ApplicationInfo::tableTextColumnWidth(const QString& role, const QString& title, bool natural) const {
+    const auto f = panelUsageEngine(this);
+    if (!natural) {
+        const auto math = panelUsageContextRead(f, "Math"); const auto needed = panelUsageGlobalCall(f, "naturalTextColumnWidth", {QJSValue(role), QJSValue(title)});
+        const auto width = panelUsageContextRead(f, "width"), share = panelUsageContextRead(f, "maximumTextColumnShare");
+        return panelUsageMemberCall(f, math, "min", {needed, viewArithmetic(f, width, share, 1)});
+    }
+    const auto revision = panelUsageContextRead(f, "modelRevision"); Q_UNUSED(revision);
+    QJSValue widths = textIndex(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role));
+    bool replace = !panelUsageTruth(widths);
+    if (!replace) { const auto length = panelUsageRead(f, widths, "length"); replace = !assistantSameName(f, length, "count"); }
+    if (replace) {
+        if (!panelUsageReady(f)) return {}; widths = f->newArray();
+        for (double row = 0; panelUsageReady(f) && panelUsageTruth(panelUsageContextRead(f, "model"))
+             && assistantRelation(f, QJSValue(row), panelUsageContextRead(f, "count"), 0); ++row) {
+            const auto measured = panelUsageGlobalCall(f, "textWidth", {QJSValue(row), QJSValue(role)}); panelUsageMemberCall(f, widths, "push", {measured});
+        }
+        textIndexWrite(f, panelUsageContextRead(f, "rowWidths"), QJSValue(role), widths);
+    }
+    const auto callback = projectGuardedClosure(f, 142, 2); const auto titleWidth = projectInvoke(f, "metrics", "advanceWidth", {QJSValue(title)});
+    const auto result = panelUsageMemberCall(f, widths, "reduce", {callback, titleWidth}); const auto math = panelUsageContextRead(f, "Math");
+    const auto rounded = panelUsageMemberCall(f, math, "ceil", {result}); const auto spacing = assistantContextField(f, "AppSizes", "fieldSpacing");
+    return panelUsageAdd(f, rounded, viewArithmetic(f, spacing, QJSValue(2), 1));
+}
+void ApplicationInfo::tableForgetWidths() const {
+    const auto f = panelUsageEngine(this); const auto source = panelUsageContextRead(f, "rowWidths");
+    tableForIn(f, source, [&](const QJSValue& role) { textIndexDelete(f, panelUsageContextRead(f, "rowWidths"), role); return panelUsageReady(f); });
+}
+void ApplicationInfo::tableRemeasure() const {
+    const auto f = panelUsageEngine(this); panelUsageGlobalCall(f, "forgetWidths", {}); tableIncrement(f, "modelRevision");
+}
+void ApplicationInfo::tableDataChanged(const QJSValue& topLeft, const QJSValue& bottomRight) const {
+    const auto f = panelUsageEngine(this); if (!tableAlive(f, panelUsageContextRead(f, "ownerLife"))) return;
+    projectInvoke(f, "table", "refit"); if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
+    bool changed = false; const auto source = assistantContextField(f, "table", "rowWidths");
+    tableForIn(f, source, [&](const QJSValue& role) {
+        const auto widths = textIndex(f, assistantContextField(f, "table", "rowWidths"), role);
+        for (QJSValue row = panelUsageRead(f, topLeft, "row"); panelUsageReady(f)
+             && assistantRelation(f, row, panelUsageRead(f, bottomRight, "row"), 3)
+             && assistantRelation(f, row, panelUsageRead(f, widths, "length"), 0);) {
+            const auto measured = projectInvoke(f, "table", "textWidth", {row, role});
+            if (!measured.strictlyEquals(textIndex(f, widths, row))) { textIndexWrite(f, widths, row, measured); changed = true; }
+            const auto number = panelUsageNumber(f, row); if (!number) return false; row = QJSValue(*number + 1);
+        }
+        return panelUsageReady(f);
+    });
+    if (changed) tableIncrement(f, "modelRevision", true);
+}
+void ApplicationInfo::tableOwnerCallback(int kind) const {
+    const auto f = panelUsageEngine(this);
+    if (kind == 3) { panelUsageContextWrite(f, "ownerLife", assistantContextField(f, "table", "columnFitLife")); return; }
+    if (!tableAlive(f, panelUsageContextRead(f, "ownerLife"))) return;
+    if (kind == 0) { projectInvoke(f, "table", "scheduleFitColumns"); return; }
+    if (kind == 2) { projectInvoke(f, "table", "remeasure"); return; }
+    QJSValue first = consentNull();
+    if (panelUsageTruth(assistantContextField(f, "table", "headerItem"))) {
+        auto header = assistantContextField(f, "table", "headerItem");
+        if (panelUsageTruth(panelUsageRead(f, header, "contentRowData"))) {
+            const auto array = panelUsageContextRead(f, "Array"); header = assistantContextField(f, "table", "headerItem");
+            const auto cells = panelUsageMemberCall(f, array, "from", {panelUsageRead(f, header, "contentRowData")});
+            first = panelUsageMemberCall(f, cells, "find", {projectGuardedClosure(f, 131, 1)});
+        }
+    }
+    if (!editorLife(f, panelUsageContextRead(f, "ownerLife"))) return;
+    if (panelUsageTruth(first) && panelUsageTruth(panelUsageRead(f, first, "parent"))) projectInvoke(f, "table", "applyWidths", {panelUsageRead(f, first, "parent")});
+    if (editorLife(f, panelUsageContextRead(f, "ownerLife"))) projectInvoke(f, "table", "scheduleFitColumns");
+}
+bool ApplicationInfo::tableRevealRow(int index) const {
+    const auto f = panelUsageEngine(this);
+    if (index < 0 || assistantRelation(f, QJSValue(index), panelUsageContextRead(f, "count"), 2)) return false;
+    const auto original = panelUsageContextRead(f, "sourceModel");
+    panelUsageGlobalCall(f, "positionViewAtIndex", {QJSValue(index), assistantContextField(f, "ListView", "Contain")}); panelUsageGlobalCall(f, "forceLayout", {});
+    const auto row = panelUsageGlobalCall(f, "itemAtIndex", {QJSValue(index)});
+    if (!assistantSameName(f, original, "sourceModel") || row.isNull() || !consentFieldEquals(f, row, "index", QJSValue(index))) return false;
+    const auto table = panelUsageContextRead(f, "table"); const auto point = panelUsageMemberCall(f, row, "mapToItem", {table, QJSValue(0), QJSValue(0)});
+    const auto top = panelUsageRead(f, point, "y");
+    const auto header = panelUsageTruth(panelUsageContextRead(f, "headerItem")) ? assistantContextField(f, "headerItem", "height") : QJSValue(0);
+    if (assistantRelation(f, top, header, 0)) {
+        const auto before = panelUsageContextRead(f, "contentY"); panelUsageContextWrite(f, "contentY", viewArithmetic(f, before, viewArithmetic(f, header, top, 0), 0));
+    } else {
+        const auto end = panelUsageAdd(f, top, panelUsageRead(f, row, "height"));
+        if (assistantRelation(f, end, panelUsageContextRead(f, "height"), 1)) {
+            const auto before = panelUsageContextRead(f, "contentY"), actual = panelUsageAdd(f, top, panelUsageRead(f, row, "height"));
+            const auto delta = viewArithmetic(f, actual, panelUsageContextRead(f, "height"), 0); panelUsageContextWrite(f, "contentY", panelUsageAdd(f, before, delta));
+        }
+    }
+    panelUsageGlobalCall(f, "forceLayout", {});
+    if (!assistantSameName(f, original, "sourceModel")) return false;
+    const auto actual = panelUsageGlobalCall(f, "itemAtIndex", {QJSValue(index)});
+    return actual.strictlyEquals(row) && consentFieldEquals(f, row, "index", QJSValue(index));
+}
+bool ApplicationInfo::tableRevealItem(const QJSValue& item) const {
+    const auto f = panelUsageEngine(this); if (item.isNull()) return false; QJSValue row = item;
+    while (panelUsageReady(f) && !row.isNull()) {
+        const auto parent = panelUsageRead(f, row, "parent"); if (assistantSameName(f, parent, "contentItem")) break; row = panelUsageRead(f, row, "parent");
+    }
+    if (row.isNull() || !tableHas(f, row, "index")) return false;
+    const auto first = panelUsageGlobalCall(f, "itemAtIndex", {panelUsageRead(f, row, "index")}); if (!first.strictlyEquals(row)) return false;
+    const auto index = panelUsageRead(f, row, "index"), model = panelUsageContextRead(f, "sourceModel");
+    if (!panelUsageTruth(panelUsageGlobalCall(f, "revealRow", {index})) || !assistantSameName(f, model, "sourceModel")) return false;
+    return panelUsageGlobalCall(f, "itemAtIndex", {index}).strictlyEquals(row);
+}
+void ApplicationInfo::tableKeyPressed(const QJSValue& event) const {
+    const auto f = panelUsageEngine(this); auto key = panelUsageRead(f, event, "key");
+    if (!key.strictlyEquals(assistantContextField(f, "Qt", "Key_Up"))) {
+        key = panelUsageRead(f, event, "key"); if (!key.strictlyEquals(assistantContextField(f, "Qt", "Key_Down"))) return;
+    }
+    if (assistantContextField(f, "table", "count").strictlyEquals(QJSValue(0))) return;
+    if (!panelUsageTruth(assistantContextField(f, "table", "selectable")) && !panelUsageTruth(assistantContextField(f, "table", "marksCurrentRow"))) return;
+    const auto window = assistantContextField(f, "table", "Window"); const auto focused = panelUsageRead(f, window, "activeFocusItem");
+    if (!focused.isNull() && tableHas(f, focused, "cursorPosition")) return;
+    const auto from = assistantContextField(f, "table", "markerRow"), math = panelUsageContextRead(f, "Math"), inner = panelUsageContextRead(f, "Math");
+    const auto last = viewArithmetic(f, assistantContextField(f, "table", "count"), QJSValue(1), 0); QJSValue proposed(0);
+    if (!assistantRelation(f, from, QJSValue(0), 0)) {
+        key = panelUsageRead(f, event, "key"); const bool down = key.strictlyEquals(assistantContextField(f, "Qt", "Key_Down")); proposed = panelUsageAdd(f, from, QJSValue(down ? 1 : -1));
+    }
+    const auto minimum = panelUsageMemberCall(f, inner, "min", {last, proposed}); const auto row = panelUsageMemberCall(f, math, "max", {QJSValue(0), minimum});
+    projectWrite(f, "table", "currentIndex", row); projectInvoke(f, "table", "positionViewAtIndex", {row, assistantContextField(f, "ListView", "Contain")});
+    if (panelUsageTruth(assistantContextField(f, "table", "selectable"))) projectInvoke(f, "table", "selectWithModifiers", {row, assistantContextField(f, "Qt", "NoModifier")});
+    projectInvoke(f, "table", "rowActivated", {row}); assistantMemberWrite(f, event, "accepted", QJSValue(true));
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
