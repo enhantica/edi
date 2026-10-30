@@ -4703,8 +4703,12 @@ def test_message_scalar_roles_keep_opaque_backend_and_announce_only_changed_rows
                    for event in insertion), 'An append does not invalidate unchanged original history rows'
     pending_count = _rows_probe(actor)['count']
     before = [_rows_probe(actor, 'roles', row=i)['roles'] for i in range(pending_count)]
+    usage_before_release = len(_session_wire(actor, 'account/rateLimits/read'))
     release.touch()
+    actor.command('refresh_usage')
     _rows_wait(actor, lambda value: value['state'] == 'idle')
+    assert len(_session_wire(actor, 'account/rateLimits/read')) > usage_before_release, (
+        'The genuine held research release is serviced by the established account-read RPC before completion')
     events = _rows_probe(actor, 'stop')['events']
     after = [_rows_probe(actor, 'roles', row=i)['roles'] for i in range(pending_count)]
     for event in events:
@@ -5234,12 +5238,12 @@ def test_lazy_command_human_details_preserve_first_supported_meanings_without_te
                                   name='assistant.command.toggle', action='click')['reply']
         assert response['reached'] and response['same_row_after'], (
             'Known command description is expanded through its exact original realized Qt activity control')
-        expression = '(function seek(x){if(x.rowId===' + json.dumps(current['id']) + '\
-&&typeof x.humanDetailsSnapshot!=="undefined"){const out=[];function visit(y){\
-if(y.objectName==="assistant.activity.details")out.push(y.text);\
-Array.from(y.children||[]).forEach(visit);}visit(x);return out;}\
-for(const c of (x.children||[])){const r=seek(c);if(r)return r;}return null;})(contentItem)'
-        displayed = qml(actor, expression)
+        scene = _a2b_original_row_scene(actor, current)
+        assert scene['row_id'] == current['id'] and scene['kind'] == current['kind'] \
+            and scene['status'] == current['status'] and scene['current_owner'] and scene['same_window'] \
+            and scene['checked'] and scene['body_visible'], (
+                'The prior command meaning is observed on its unique actual expanded current row in the original window')
+        displayed = [scene['body']]
         assert displayed and expected in '\n'.join(displayed), (
             'Lazy full-human expansion preserves the FIRST known skill/read/list/search/declared-purpose meaning')
         assert hidden not in '\n'.join(displayed) and 'opaque unread technical script' not in '\n'.join(displayed), (
@@ -5254,6 +5258,10 @@ for(const c of (x.children||[])){const r=seek(c);if(r)return r;}return null;})(c
         assert original['payload']['command'] == command and original['payload']['aggregatedOutput'] == hidden, (
             'Explicit exact-row technical lookup still retains immutable original command/output evidence')
         actor.command('message_input', row_id=current['id'], name='assistant.command.toggle', action='click')
+        collapsed = _a2b_original_row_scene(actor, current)
+        assert not collapsed['checked'] and collapsed['snapshot_null'] \
+            and collapsed['body'] == '' and not collapsed['body_visible'], (
+                'Each original command row collapses through its actual control and clears retained full details')
         observed.append({'fixture': identity, 'row_id': current['id'], 'human': displayed,
                          'default_copy': copied['clipboard']})
     (actor.folder / 'command-human-compatibility.json').write_text(json.dumps(observed, indent=2))
@@ -12592,8 +12600,12 @@ def test_original_a2b_expanded_web_completion_refreshes_body_and_default_copy(ma
         facts['pending_copy'] = _a2b_copy_original_human(
             actor, row, pending, marker, 'Search the web\n' + fallback)
         pending_args = ','.join(json.dumps(row[key]) for key in ('id', 'kind', 'status'))
+        usage_before_release = len(_session_wire(actor, 'account/rateLimits/read'))
         release.touch()
+        actor.command('refresh_usage')
         _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] == 3)
+        assert len(_session_wire(actor, 'account/rateLimits/read')) > usage_before_release, (
+            'The genuine held research release is serviced by the established account-read RPC before completion')
         after = [_rows_values(actor, 'messages', index) for index in range(3)]
         matching = [value for value in after if value['id'] == row['id']]
         assert len(matching) == 1 and matching[0]['kind'] == row['kind'] and matching[0]['status'] == 'completed', (
