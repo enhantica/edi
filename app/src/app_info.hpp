@@ -111,6 +111,23 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QString assistantWebSearchCaption(const QJSValue& payload) const;
     /// Lazy native caption only at its actual compact/full-body consumer branch.
     Q_INVOKABLE QString assistantNativeActivityCaption(const QJSValue& payload, QObject* assistant) const;
+    /// Format the original lazy projected value; no canonical read or new invalidation policy.
+    /// Owner/engine thread only; only the exact native snapshot type is accepted.
+    Q_INVOKABLE QString assistantActivityDescription(const QJSValue& snapshot, const QString& kind,
+        const QJSValue& compact, const QJSValue& payload, QObject* assistant) const;
+    /// Preserve the original payload/text/status invalidation and refresh ordering.
+    Q_INVOKABLE void assistantMessageChanged(const QJSValue& component, const QString& cause) const;
+    /// Expand reads once; collapse clears the existing lazy value.
+    Q_INVOKABLE void assistantMessageDisclosureChanged(const QJSValue& component, bool checked) const;
+    /// Copy one current original activity; technical JSON is read only on explicit preference.
+    /// Uses the existing clipboard writer once; retired owners receive no success feedback.
+    Q_INVOKABLE void assistantCopyActivity(const QJSValue& component, bool includeTechnical, bool offered = true) const;
+    /// Copy only literal completed user text, including when its assistant owner is null.
+    Q_INVOKABLE void assistantCopyUserText(const QJSValue& component, bool offered = true) const;
+    /// Clear the original row's copy feedback, optionally stopping its original visual timer.
+    Q_INVOKABLE void assistantMessageClearFeedback(const QJSValue& component, bool stopTimer = true) const;
+    /// Close disclosure, clear feedback and deselect original row editors on identity/pool/reuse changes.
+    Q_INVOKABLE void assistantMessageReset(const QJSValue& component) const;
     /// Device eligibility captured before QML observation; not provider connection or permission.
     /// Read on the owning QObject thread. Native desktop remains eligible.
     bool assistantAvailable() const;

@@ -21,6 +21,8 @@
 #include <QJsonObject>
 #include <QLocale>
 #include <QQuickWindow>
+#include <QQuickItem>
+#include <utility>
 #include <QPointer>
 #include <QQmlEngine>
 #include <QRegularExpression>
@@ -855,6 +857,285 @@ QString ApplicationInfo::assistantWebSearchCaption(const QJSValue& payload) cons
     if (!messageScriptReady(engine)) return {};
     const QString caption = presentWebSearch(input);
     return messageScriptReady(engine) ? caption : QString();
+}
+
+namespace {
+void messageScriptWrite(const QPointer<QJSEngine>& engine, const QJSValue& source,
+                        const QString& name, const QJSValue& value) {
+    if (!messageScriptReady(engine)) return;
+    QJSManagedValue target(source, engine.data());
+    if (target.engine() != engine.data()) {
+        engine->throwError(QJSValue::TypeError, QStringLiteral("Message value belongs to another engine"));
+        return;
+    }
+    target.setProperty(name, value);
+}
+struct MessageView {
+    QPointer<QJSEngine> engine;
+    QPointer<QQuickItem> item;
+    QPointer<edi_app::AssistantViewModel> owner;
+    QJSValue component, ownerValue, payload;
+    QString id, kind, status, text, identity;
+    bool lifetime() const {
+        return messageScriptReady(engine) && item && QThread::currentThread() == engine->thread() &&
+            QThread::currentThread() == item->thread() &&
+            (ownerValue.isNull() || (owner && owner->thread() == QThread::currentThread()));
+    }
+    bool current() const {
+        if (!lifetime()) return false;
+        for (const auto& field : {std::pair{QStringLiteral("rowId"), id}, std::pair{QStringLiteral("kind"), kind},
+             std::pair{QStringLiteral("status"), status}, std::pair{QStringLiteral("text"), text},
+             std::pair{QStringLiteral("disclosureIdentity"), identity}}) {
+            const auto value = messageScriptProperty(engine, component, field.first);
+            if (!lifetime() || !value.isString() || value.toString() != field.second) return false;
+        }
+        const auto originalPayload = messageScriptProperty(engine, component, QStringLiteral("payload"));
+        if (!lifetime() || !originalPayload.strictlyEquals(payload)) return false;
+        const auto originalOwner = messageScriptProperty(engine, component, QStringLiteral("assistant"));
+        return lifetime() && originalOwner.strictlyEquals(ownerValue);
+    }
+};
+std::optional<MessageView> captureMessageView(const QPointer<QJSEngine>& engine, const QJSValue& component) {
+    if (!messageScriptReady(engine) || QThread::currentThread() != engine->thread()) return std::nullopt;
+    MessageView view;
+    view.engine = engine; view.component = component;
+    view.item = qobject_cast<QQuickItem*>(component.toQObject());
+    if (!view.item || QThread::currentThread() != view.item->thread()) return std::nullopt;
+    for (auto field : {std::pair{QStringLiteral("rowId"), &view.id}, std::pair{QStringLiteral("kind"), &view.kind},
+         std::pair{QStringLiteral("status"), &view.status}, std::pair{QStringLiteral("text"), &view.text},
+         std::pair{QStringLiteral("disclosureIdentity"), &view.identity}}) {
+        const auto value = messageScriptProperty(engine, component, field.first);
+        if (!messageScriptReady(engine) || !view.item || !value.isString()) return std::nullopt;
+        *field.second = value.toString();
+    }
+    view.ownerValue = messageScriptProperty(engine, component, QStringLiteral("assistant"));
+    if (!messageScriptReady(engine) || !view.item) return std::nullopt;
+    view.owner = qobject_cast<edi_app::AssistantViewModel*>(view.ownerValue.toQObject());
+    if (!view.ownerValue.isNull() && !view.owner) return std::nullopt;
+    view.payload = messageScriptProperty(engine, component, QStringLiteral("payload"));
+    if (!view.lifetime()) return std::nullopt;
+    return view.current() ? std::optional<MessageView>(view) : std::nullopt;
+}
+QJSValue messageChild(const MessageView& view, const char* alias) {
+    if (!view.current()) return {};
+    const auto child = messageScriptProperty(view.engine, view.component, QString::fromLatin1(alias));
+    const QPointer<QObject> alive(child.toQObject());
+    return view.current() && alive && alive->thread() == QThread::currentThread() ? child : QJSValue();
+}
+bool invokeMessageChild(const MessageView& view, const QJSValue& child, const char* method) {
+    const QPointer<QObject> alive(child.toQObject());
+    if (!view.current() || !alive) return false;
+    const auto function = messageScriptProperty(view.engine, child, QString::fromLatin1(method));
+    if (!view.current() || !alive) return false;
+    messageScriptCall(view.engine, function, child, {});
+    return view.current() && alive;
+}
+bool clearMessageFeedback(const MessageView& view, bool stopTimer) {
+    if (!view.current()) return false;
+    messageScriptWrite(view.engine, view.component, QStringLiteral("technicalCopied"), QJSValue(false));
+    if (!view.current()) return false;
+    if (!stopTimer) return true;
+    const auto timer = messageChild(view, "detailsFeedback");
+    return !timer.isQObject() ? view.current() : invokeMessageChild(view, timer, "stop");
+}
+void showMessageFeedback(const MessageView& view) {
+    if (!view.current()) return;
+    messageScriptWrite(view.engine, view.component, QStringLiteral("technicalCopied"), QJSValue(true));
+    if (!view.current()) return;
+    const auto timer = messageChild(view, "detailsFeedback");
+    if (timer.isQObject()) invokeMessageChild(view, timer, "restart");
+}
+void copyMessageLiteral(const QPointer<const ApplicationInfo>& actor, const MessageView& view,
+                        const QString& literal) {
+    if (!messageScriptReady(view.engine)) return;
+    bool failed = false;
+    try {
+        const auto copy = [&] {
+            if (!actor || !view.current()) return;
+            actor->copyText(literal);
+            if (!actor || !view.current()) return;
+            showMessageFeedback(view);
+        };
+        copy();
+    } catch (...) { failed = true; }
+    // This is the original copy operation's explicit catch, not the formatter boundary.
+    if (view.engine && view.engine->hasError()) {
+        view.engine->catchError();
+        failed = true;
+    }
+    if (failed && view.current())
+        messageScriptWrite(view.engine, view.component, QStringLiteral("technicalCopied"), QJSValue(false));
+}
+using HumanSnapshot = edi_app::assistant_presentation::HumanActivitySnapshot;
+HumanSnapshot snapshotFrom(const edi_app::AssistantViewModel::PreparedActivityRead& detail) {
+    return {detail.payload, detail.text.toString(), detail.provenance, detail.rowId, detail.kind, detail.status};
+}
+std::optional<edi_app::assistant_presentation::HumanActivityInput> prepareHumanPresentation(
+    const QPointer<QJSEngine>& engine, const HumanSnapshot& snapshot, const QString& kind,
+    const QJSValue& compact, const QJSValue& payload, const QPointer<edi_app::AssistantViewModel>& owner) {
+    using namespace edi_app::assistant_presentation;
+    if (!messageScriptReady(engine)) return std::nullopt;
+    HumanActivityInput input;
+    input.kind = kind; input.payload = snapshot.payload; input.text = snapshot.text; input.provenance = snapshot.provenance;
+    const auto caption = messageScriptProperty(engine, compact, QStringLiteral("caption"));
+    if (!messageScriptReady(engine) || !caption.isString()) return std::nullopt;
+    input.caption = caption.toString();
+    const auto command = messageScriptProperty(engine, compact, QStringLiteral("commandActivity"));
+    if (!messageScriptReady(engine) || !command.isBool()) return std::nullopt;
+    input.commandActivity = command.toBool();
+    const auto decision = messageScriptProperty(engine, compact, QStringLiteral("decisionActivity"));
+    if (!messageScriptReady(engine) || !decision.isBool()) return std::nullopt;
+    input.decisionActivity = decision.toBool();
+    if (nativeDescriptionPlaceholder(input)) {
+        input.nativeLabel = messageNativeCaption(engine, payload, owner);
+        if (!messageScriptReady(engine) || !input.nativeLabel) return std::nullopt;
+    }
+    const auto lines = humanDescriptionLines(input);
+    if (needsHumanFallback(input, lines) && input.payload.value("type") == "dynamicToolCall" && owner)
+        input.nativeDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QString());
+    if (!nonblankLiteral(humanOutcomeMessage(input)) && humanOutcomeCode(input) == "project_required" && owner)
+        input.nativeErrorDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QStringLiteral("project_required"));
+    return messageScriptReady(engine) ? std::optional<HumanActivityInput>(std::move(input)) : std::nullopt;
+}
+void clearHumanSnapshot(const MessageView& view) {
+    if (view.current()) messageScriptWrite(view.engine, view.component,
+        QStringLiteral("humanDetailsSnapshot"), QJSValue(QJSValue::NullValue));
+}
+void refreshHumanSnapshot(const MessageView& view) {
+    QJSValue snapshot(QJSValue::NullValue);
+    if (view.owner) {
+        const auto detail = view.owner->prepareActivityRead(view.id, view.kind, view.status, false);
+        if (!view.current()) return;
+        if (detail.current) snapshot = view.engine->toScriptValue(QVariant::fromValue(snapshotFrom(detail)));
+    }
+    if (!view.current()) return;
+    const auto disclosure = messageChild(view, "detailsDisclosure");
+    if (!disclosure.isQObject()) return;
+    const auto checked = messageScriptProperty(view.engine, disclosure, QStringLiteral("checked"));
+    if (!view.current() || !checked.toBool()) return;
+    messageScriptWrite(view.engine, view.component, QStringLiteral("humanDetailsSnapshot"), snapshot);
+}
+void refreshExpandedHumanSnapshot(const MessageView& view) {
+    const auto disclosure = messageChild(view, "detailsDisclosure");
+    if (!disclosure.isQObject()) return;
+    const auto checked = messageScriptProperty(view.engine, disclosure, QStringLiteral("checked"));
+    if (view.current() && checked.toBool()) refreshHumanSnapshot(view);
+}
+} // namespace
+
+QString ApplicationInfo::assistantActivityDescription(const QJSValue& snapshot, const QString& kind,
+    const QJSValue& compact, const QJSValue& payload, QObject* assistant) const {
+    using namespace edi_app::assistant_presentation;
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    if (!messageScriptReady(engine)) return {};
+    if (auto* qml = qobject_cast<QQmlEngine*>(engine.data())) qml->markCurrentFunctionAsTranslationBinding();
+    const auto unavailable = [] { return messageText(
+        QT_TRANSLATE_NOOP("AssistantMessage", "This step's description is currently unavailable.")); };
+    try {
+        if (!snapshot.isVariant()) return unavailable();
+        const auto value = snapshot.toVariant();
+        if (value.metaType() != QMetaType::fromType<HumanSnapshot>()) return unavailable();
+        const auto input = prepareHumanPresentation(engine, value.value<HumanSnapshot>(), kind, compact, payload,
+            qobject_cast<edi_app::AssistantViewModel*>(assistant));
+        return input ? fullHumanDescription(*input, humanDescriptionLines(*input)) : unavailable();
+    } catch (...) { return unavailable(); }
+}
+
+void ApplicationInfo::assistantCopyActivity(const QJSValue& component, bool includeTechnical, bool offered) const {
+    if (!offered) return;
+    const QPointer<const ApplicationInfo> actor(this);
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    try {
+        const auto view = captureMessageView(engine, component);
+        if (!view || !view->owner) return;
+        const auto detail = view->owner->prepareActivityRead(view->id, view->kind, view->status, false);
+        if (!detail.current || !view->current()) return;
+        const auto compact = messageScriptProperty(engine, component, QStringLiteral("compactPresentation"));
+        if (!messageScriptReady(engine)) return;
+        const auto input = prepareHumanPresentation(engine, snapshotFrom(detail), view->kind, compact, view->payload, view->owner);
+        if (!input) return;
+        const auto full = edi_app::assistant_presentation::fullHumanDescription(*input,
+            edi_app::assistant_presentation::humanDescriptionLines(*input));
+        QString literal = edi_app::assistant_presentation::humanCopyText(input->caption, full);
+        if (includeTechnical) {
+            const auto technical = view->owner->prepareActivityRead(view->id, view->kind, view->status, true);
+            if (!technical.current || technical.technical.isEmpty() || !view->current()) return;
+            literal += QStringLiteral("\n\n") + technical.technical;
+        }
+        copyMessageLiteral(actor, *view, literal);
+    } catch (...) {}
+}
+
+void ApplicationInfo::assistantCopyUserText(const QJSValue& component, bool offered) const {
+    if (!offered) return;
+    const QPointer<const ApplicationInfo> actor(this);
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    try {
+        const auto view = captureMessageView(engine, component);
+        if (!view || view->kind != "user" || view->status != "completed" || !view->current() || !actor) return;
+        copyMessageLiteral(actor, *view, view->text);
+    } catch (...) {}
+}
+
+void ApplicationInfo::assistantMessageChanged(const QJSValue& component, const QString& cause) const {
+    try {
+        const auto view = captureMessageView(qjsEngine(this), component);
+        if (!view) return;
+        if (cause == "text") { clearMessageFeedback(*view, true); return; }
+        if (cause == "payload") {
+            messageScriptWrite(view->engine, view->component, QStringLiteral("technicalCopied"), QJSValue(false));
+            if (!view->current()) return;
+        }
+        if (cause != "payload" && cause != "status") return;
+        clearHumanSnapshot(*view);
+        if (!view->current()) return;
+        if (cause == "payload") {
+            const auto timer = messageChild(*view, "detailsFeedback");
+            if (timer.isQObject() && !invokeMessageChild(*view, timer, "stop")) return;
+        }
+        if (view->current()) refreshExpandedHumanSnapshot(*view);
+    } catch (...) {}
+}
+
+void ApplicationInfo::assistantMessageDisclosureChanged(const QJSValue& component, bool checked) const {
+    try {
+        const auto view = captureMessageView(qjsEngine(this), component);
+        if (!view) return;
+        if (checked) refreshHumanSnapshot(*view);
+        else clearHumanSnapshot(*view);
+    } catch (...) {}
+}
+
+void ApplicationInfo::assistantMessageClearFeedback(const QJSValue& component, bool stopTimer) const {
+    try {
+        const auto view = captureMessageView(qjsEngine(this), component);
+        if (view) clearMessageFeedback(*view, stopTimer);
+    } catch (...) {}
+}
+
+void ApplicationInfo::assistantMessageReset(const QJSValue& component) const {
+    try {
+        const auto view = captureMessageView(qjsEngine(this), component);
+        if (!view) return;
+        messageScriptWrite(view->engine, view->component, QStringLiteral("technicalCopied"), QJSValue(false));
+        if (!view->current()) return;
+        clearHumanSnapshot(*view);
+        if (!view->current()) return;
+        const auto timer = messageChild(*view, "detailsFeedback");
+        if (timer.isQObject() && !invokeMessageChild(*view, timer, "stop")) return;
+        if (!view->current()) return;
+        const auto disclosure = messageChild(*view, "detailsDisclosure");
+        const QPointer<QObject> control(disclosure.toQObject());
+        if (control) {
+            messageScriptWrite(view->engine, disclosure, QStringLiteral("checked"), QJSValue(false));
+            if (!view->current() || !control) return;
+        }
+        for (const auto* alias : {"detailsBody", "detailsEditor"}) {
+            const auto editor = messageChild(*view, alias);
+            if (editor.isQObject() && !invokeMessageChild(*view, editor, "deselect")) return;
+            if (!view->current()) return;
+        }
+    } catch (...) {}
 }
 
 void ApplicationInfo::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }

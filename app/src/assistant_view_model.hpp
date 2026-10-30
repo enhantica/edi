@@ -9,6 +9,8 @@
 #include <QUrl>
 #include <QList>
 #include <QVariantMap>
+#include <QJsonObject>
+#include <QJsonValue>
 #include <QtQml/qqmlregistration.h>
 #include <memory>
 #include <functional>
@@ -152,8 +154,25 @@ class AssistantViewModel : public QObject {
     /// Display-only intent label for a native action identifier; no action is executed.
     Q_INVOKABLE QString nativeActionLabel(const QString& action) const;
     Q_INVOKABLE QString nativeActionDescription(const QString& action, const QString& code) const;
+    /// Established owner-thread safe human read; delegates canonical lookup/projection to prepareActivityRead.
+    /// Returns the original map shape, including optional captured provenance, or empty on refusal/unavailability.
     Q_INVOKABLE QVariantMap activityHumanDetails(const QString& rowId, const QString& kind, const QString& status) const;
+    /// Established explicit technical read; returns original indented canonical JSON or empty on refusal.
     Q_INVOKABLE QString activityTechnicalDetails(const QString& rowId, const QString& kind, const QString& status) const;
+    /// Ephemeral full-human read of one original history value; never a stored snapshot or QML capability.
+    struct PreparedActivityRead {
+        QJsonObject payload;
+        QJsonValue text;
+        QString provenance, technical;
+        QString rowId, kind, status;
+        bool hasProvenance = false;
+        std::function<bool()> current;
+    };
+    /// Owner-thread only. Applies the original first-id/kind/status and scope/version guards.
+    /// Human mode projects only safe details; technical mode serializes only the original row.
+    /// Technical JSON is explicit; unavailable reads have no current predicate.
+    PreparedActivityRead prepareActivityRead(const QString& rowId, const QString& kind,
+                                             const QString& status, bool includeTechnical) const;
     // Original normal-dialog observations only; this is not a model tool.
     Q_INVOKABLE bool observeCreateDialog(QObject* form, const QString& intent, const QString& outcome);
     Q_INVOKABLE bool openReport(const QString& rowId, const QString& link);

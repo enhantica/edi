@@ -593,8 +593,8 @@ Popup {
                         width: conversation.width
                         spacing: chatBody.spacing
                         onPositioningComplete: conversation.followOutput()
-                        ListView.onPooled: messageItem.resetDetails()
-                        ListView.onReused: messageItem.resetDetails()
+                        ListView.onPooled: ApplicationInfo.assistantMessageReset(messageItem)
+                        ListView.onReused: ApplicationInfo.assistantMessageReset(messageItem)
                         AssistantMessage {
                             id: messageItem
                             assistant: panel.assistant

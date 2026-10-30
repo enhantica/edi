@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 #include <QCoreApplication>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QMetaType>
 #include <QString>
 #include <QStringList>
 #include <optional>
@@ -158,4 +161,115 @@ inline QString presentWebSearch(const WebActionInput& in) {
     }
     return {};
 }
+
+inline bool nonblankLiteral(const QString& value) {
+    for (const QChar unit : value) if (!isMessageTrimWhitespace(unit)) return true;
+    return false;
+}
+struct HumanActivitySnapshot {
+    QJsonObject payload;
+    QString text, provenance;
+    QString rowId, kind, status;
+};
+struct HumanActivityInput {
+    QString kind, caption, text, provenance;
+    QJsonObject payload;
+    bool commandActivity = false, decisionActivity = false;
+    std::optional<QString> nativeLabel, nativeDescription, nativeErrorDescription;
+};
+inline QString suppliedDescription(const QJsonObject& payload) {
+    for (const auto* field : {"purpose", "description"})
+        if (payload.value(field).isString()) return payload.value(field).toString();
+    return payload.value("arguments").toObject().value("purpose").toString();
+}
+inline bool nativeDescriptionPlaceholder(const HumanActivityInput& in) {
+    const auto supplied = suppliedDescription(in.payload);
+    return in.payload.value("type") == "dynamicToolCall" &&
+        (supplied == "Edi native action" || supplied == QStringLiteral("Edi native action: ") + (in.payload.value("tool").isUndefined() ? QStringLiteral("undefined") : in.payload.value("tool").toString()));
+}
+inline QString humanWebCaption(const QJsonObject& payload) {
+    WebActionInput input;
+    const auto value = payload.value("action");
+    if (!value.isUndefined() && !value.isNull()) {
+        if (!value.isObject()) return {};
+        const auto action = value.toObject();
+        const auto type = action.value("type");
+        input.kind = type == "search" ? WebActionKind::Search : type == "openPage" ? WebActionKind::OpenPage :
+            type == "findInPage" ? WebActionKind::FindInPage : WebActionKind::Other;
+        input.query = action.value("query").toString();
+        input.url = action.value("url").toString();
+        input.pattern = action.value("pattern").toString();
+        const auto queries = action.value("queries");
+        input.queriesPresent = !queries.isUndefined() && !queries.isNull();
+        if (queries.isArray()) {
+            QStringList strings;
+            for (const auto& query : queries.toArray()) {
+                if (!query.isString()) return {};
+                strings.append(query.toString());
+            }
+            input.queries = std::move(strings);
+        }
+    }
+    input.fallbackQuery = payload.value("query").toString();
+    return presentWebSearch(input);
+}
+inline QString activityHumanDescription(const HumanActivityInput& in) {
+    if (nativeDescriptionPlaceholder(in)) return in.nativeLabel.value_or(presentActivity({}).nativeCaption);
+    const auto supplied = suppliedDescription(in.payload);
+    if (nonblankLiteral(supplied)) return supplied;
+    if (in.payload.value("type") == "webSearch") return humanWebCaption(in.payload);
+    return in.commandActivity ? in.payload.value("commandDescription").toString() : QString();
+}
+inline bool humanTextProducer(const HumanActivityInput& in) {
+    return in.kind == "error" || in.kind == "plan" || in.kind == "question" || in.kind == "tool" || in.kind == "trial" ||
+        (in.decisionActivity && in.payload.value("type").isUndefined());
+}
+inline void appendHumanLine(QStringList& lines, const QString& value) {
+    if (nonblankLiteral(value) && !lines.contains(value)) lines.append(value);
+}
+inline QStringList humanDescriptionLines(const HumanActivityInput& in) {
+    QStringList lines;
+    const auto description = activityHumanDescription(in);
+    if (nonblankLiteral(description) && singleLineText(description) != in.caption) appendHumanLine(lines, description);
+    if (humanTextProducer(in) && singleLineText(in.text) != in.caption) appendHumanLine(lines, in.text);
+    return lines;
+}
+inline bool needsHumanFallback(const HumanActivityInput& in, const QStringList& lines) {
+    for (const auto& line : lines) if (singleLineText(line).size() > in.caption.size()) return false;
+    return true;
+}
+inline QString humanOutcomeMessage(const HumanActivityInput& in) {
+    const auto outcome = in.payload.value("nativeOutcome").toObject();
+    if (outcome.value("message").isString()) return outcome.value("message").toString();
+    return in.payload.value("error").toObject().value("message").toString();
+}
+inline QString humanOutcomeCode(const HumanActivityInput& in) {
+    const auto outcome = in.payload.value("nativeOutcome").toObject();
+    for (const auto* field : {"action_error", "code"})
+        if (outcome.value(field).isString()) return outcome.value(field).toString();
+    return in.payload.value("code").toString();
+}
+inline QString fullHumanDescription(const HumanActivityInput& in, QStringList lines) {
+    if (needsHumanFallback(in, lines)) {
+        if (in.payload.value("type") == "dynamicToolCall" && in.nativeDescription) appendHumanLine(lines, *in.nativeDescription);
+        else if (in.payload.value("type") == "webSearch")
+            appendHumanLine(lines, messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Find or read public sources relevant to the current task.")));
+        else if (in.commandActivity)
+            appendHumanLine(lines, messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Use the reported operation to support the current task.")));
+        else appendHumanLine(lines, messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Carry out the requested assistant action for the current task.")));
+    }
+    appendHumanLine(lines, in.provenance);
+    const auto message = humanOutcomeMessage(in);
+    appendHumanLine(lines, message);
+    if (humanTextProducer(in)) appendHumanLine(lines, in.payload.value("message").toString());
+    if (!nonblankLiteral(message) && humanOutcomeCode(in) == "project_required" && in.nativeErrorDescription)
+        appendHumanLine(lines, *in.nativeErrorDescription);
+    return lines.join(QLatin1Char('\n'));
+}
+inline QString humanCopyText(const QString& caption, const QString& full) {
+    return caption == full ? full : caption + QLatin1Char('\n') + full;
+}
 } // namespace edi_app::assistant_presentation
+
+
+Q_DECLARE_METATYPE(edi_app::assistant_presentation::HumanActivitySnapshot)

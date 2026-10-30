@@ -17782,56 +17782,67 @@ QString AssistantViewModel::nativeActionDescription(const QString& action,const 
 }
 
 
-QVariantMap AssistantViewModel::activityHumanDetails(const QString& rowId,const QString& kind,const QString& status) const {
+AssistantViewModel::PreparedActivityRead AssistantViewModel::prepareActivityRead(
+    const QString& rowId, const QString& kind, const QString& status, bool includeTechnical) const {
 #ifdef __EMSCRIPTEN__
-    Q_UNUSED(rowId);Q_UNUSED(kind);Q_UNUSED(status);
+    Q_UNUSED(rowId); Q_UNUSED(kind); Q_UNUSED(status); Q_UNUSED(includeTechnical);
     return {};
 #else
     try {
-        if(QThread::currentThread()!=thread() || kind=="user" || kind=="assistant")return {};
-        const QPointer<const AssistantViewModel> receiver(this);const auto* original=state_.get();
-        const auto binding=original->generation;const auto account=original->usage_epoch;
+        if (QThread::currentThread() != thread() || kind == "user" || kind == "assistant") return {};
+        const QPointer<const AssistantViewModel> receiver(this);
+        const auto* original = state_.get();
+        const auto binding = original->generation;
+        const auto account = original->usage_epoch;
         const QPointer<ProjectViewModel> project(original->project);
-        for(const auto& value:original->history) {
-            const auto row=value.toObject();
-            if(row.value("id")!=rowId)continue;
-            if(row.value("kind")!=kind || row.value("status")!=status)return {};
-            const auto payload=row.value("payload").toObject();
-            const bool human=kind=="error" || kind=="plan" || kind=="question" || kind=="tool" || kind=="trial" ||
-                (kind=="activity" && !payload.contains("type") && payload.value("decision").isString() && payload.value("item_id").isString());
-            Object detail{{"row_id",rowId},{"kind",kind},{"status",status},{"text",human?row.value("text"):QJsonValue(QString())},
-                {"payload",message_payload(payload,true)}};
-            if(row.value("historyOrigin")=="runtime")detail["provenance"]=tr("Restored from runtime history. Detailed app delivery and scientific-result receipts are unavailable for this earlier step.");
-            const auto result=detail.toVariantMap();
-            if(!receiver || receiver->state_.get()!=original || original->generation!=binding || original->usage_epoch!=account || original->project!=project)return {};
-            for(const auto& current:original->history)if(current.toObject().value("id")==rowId)return current==value?result:QVariantMap{};
-            return {};
+        for (const QJsonValue value : original->history) {
+            const auto row = value.toObject();
+            if (row.value("id") != rowId) continue;
+            if (row.value("kind") != kind || row.value("status") != status) return {};
+            PreparedActivityRead result;
+            result.rowId = row.value("id").toString();
+            result.kind = row.value("kind").toString();
+            result.status = row.value("status").toString();
+            if (includeTechnical) result.technical = QString::fromUtf8(QJsonDocument(row).toJson(QJsonDocument::Indented));
+            else {
+                const auto payload = row.value("payload").toObject();
+                const bool human = kind == "error" || kind == "plan" || kind == "question" || kind == "tool" || kind == "trial" ||
+                    (kind == "activity" && !payload.contains("type") && payload.value("decision").isString() && payload.value("item_id").isString());
+                result.payload = message_payload(payload, true);
+                result.text = human ? row.value("text") : QJsonValue(QString());
+                if (row.value("historyOrigin") == "runtime") {
+                    result.hasProvenance = true;
+                    result.provenance = tr("Restored from runtime history. Detailed app delivery and scientific-result receipts are unavailable for this earlier step.");
+                }
+            }
+            result.current = [receiver, original, binding, account, project, value, rowId] {
+                if (!receiver || QThread::currentThread() != receiver->thread() || receiver->state_.get() != original ||
+                    original->generation != binding || original->usage_epoch != account || original->project != project) return false;
+                for (const auto& current : original->history)
+                    if (current.toObject().value("id") == rowId) return current == value;
+                return false;
+            };
+            return result.current() ? result : PreparedActivityRead{};
         }
-    }catch(...) {}
+    } catch (...) {}
     return {};
 #endif
 }
-QString AssistantViewModel::activityTechnicalDetails(const QString& rowId,const QString& kind,const QString& status) const {
-#ifdef __EMSCRIPTEN__
-    Q_UNUSED(rowId);Q_UNUSED(kind);Q_UNUSED(status);
-    return {};
-#else
+
+QVariantMap AssistantViewModel::activityHumanDetails(const QString& rowId, const QString& kind, const QString& status) const {
     try {
-        if(QThread::currentThread()!=thread() || kind=="user" || kind=="assistant")return {};
-        const QPointer<const AssistantViewModel> receiver(this);const auto* original=state_.get();
-        const auto binding=original->generation;const auto account=original->usage_epoch;
-        const QPointer<ProjectViewModel> project(original->project);
-        for(const auto& value:original->history) {
-            const auto row=value.toObject();if(row.value("id")!=rowId)continue;
-            if(row.value("kind")!=kind || row.value("status")!=status)return {};
-            const auto text=QString::fromUtf8(QJsonDocument(row).toJson(QJsonDocument::Indented));
-            if(!receiver || receiver->state_.get()!=original || original->generation!=binding || original->usage_epoch!=account || original->project!=project)return {};
-            for(const auto& current:original->history)if(current.toObject().value("id")==rowId)return current==value?text:QString();
-            return {};
-        }
-    }catch(...) {}
-    return {};
-#endif
+        const auto prepared = prepareActivityRead(rowId, kind, status, false);
+        if (!prepared.current) return {};
+        Object detail{{"row_id", prepared.rowId}, {"kind", prepared.kind}, {"status", prepared.status},
+            {"text", prepared.text}, {"payload", prepared.payload}};
+        if (prepared.hasProvenance) detail["provenance"] = prepared.provenance;
+        const auto result = detail.toVariantMap();
+        return prepared.current() ? result : QVariantMap{};
+    } catch (...) { return {}; }
+}
+
+QString AssistantViewModel::activityTechnicalDetails(const QString& rowId, const QString& kind, const QString& status) const {
+    return prepareActivityRead(rowId, kind, status, true).technical;
 }
 
 QString AssistantViewModel::contextPreview() const {

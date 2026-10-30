@@ -4505,3 +4505,77 @@ is not a throw. No new hardened dynamic-length bound is introduced by a migratio
 All existing consumers, labels/accessibility, geometry and native input/consent/scientific policies
 remain unchanged. This source batch requires independent original/post characterization and actual
 public Qt/QML qualification; source preparation is not a runtime pass or whole-migration completion.
+
+
+### E11-T5 B2: move the existing lazy message body, copy and reset procedures into their C++ owners
+
+Prior art is AssistantMessage's readHumanDetails/refreshHumanDetails, fullHumanDescription/
+humanActivityText/activityDescription, activity/user copy and resetDetails, together with both
+AssistantMessage and AssistantPanel pool/reuse entrances. The existing AssistantViewModel owns
+canonical first-id lookup, human-safe message_payload projection and version/scope revalidation;
+ApplicationInfo owns display formatting, clipboard writes and the original row's UI operations.
+The same assistant_message_presentation value helper owns literal line assembly and normalization.
+No scientific/tool, account, disclosure-approval, Undo or model policy moves into presentation.
+
+Keep the existing humanDetailsSnapshot property and its original lazy invalidation semantics.
+It now carries one opaque, exact native HumanActivitySnapshot value containing only the original
+human-safe projection, human-producer text, already-translated provenance and matched canonical
+row identity (row_id/kind/status). It is not a new
+store, canonical mirror or capability. Full-body formatting accepts only that metatype and never
+recursively converts a frontend object graph. Expansion reads; collapse/reset clears. Payload
+changes clear feedback, clear the snapshot, stop the original timer and refresh only when expanded;
+status changes clear/refresh without changing feedback; text changes only clear feedback/stop the
+timer. Identity/classification/pool/reuse resets close the original disclosure and deselect both
+original editors. Actual child aliases replace frontend procedural access; their original Timer
+and interval remain unchanged. No owner-change reset, window-retirement condition or publication
+notification is added, and full-only canonical changes retain their original invalidation behavior.
+
+AssistantViewModel::prepareActivityRead is the normal C++ ownership entrance behind the existing
+public human and technical QML read getters, whose original invokable signatures remain as thin
+C++ delegates for established non-row diagnostic/readback consumers. It retains their owner-thread, first-id/kind/status and original State,
+generation/account/project/immutable-value guards. It adds no displayed-thread/hidden membership
+restriction. Optional technical JSON remains explicit. Core copying preserves the original human
+read followed by an optional second technical read, then the original compact-row identity checks,
+one copyText write and feedback only for the same live row. Completed user copy remains literal,
+including with no assistant owner, and never includes attachment bytes. The original explicit
+copy catch is implemented through Qt's public pending-error API; other property/call boundaries
+retain the established managed-value exception handling. Replaced private row/helper entrypoints
+retire; the established public AVM read getter pair remains available. The original public
+ApplicationInfo normalization/web/native-caption C++ bridges also remain byte-exact for existing
+mechanism/diagnostic consumers, sharing the same underlying formatter and native-label owner.
+
+Literal nonblank insertion, deduplication, order, UTF-16 normalization comparisons, native description
+priority, human-text eligibility and outcome/error priority remain the prior implementation's.
+Provenance stays translated at lazy capture time; this migration does not change locale freshness.
+Same-version human/technical closure is a separately retained, unelected defect-fix delta; displayed
+membership, new owner resets and publication/live-locale changes remain deferred. Source preparation
+is not compiler/runtime/test qualification or completion of the broader procedural-QML migration.
+
+
+The public read API delegates preserve the original human map fields, safe payload, eligible raw
+JSON text type and provenance presence even when its captured translation is empty. The row's
+full-human presentation still consumes only string text. All canonical lookup, serialization and
+scope/version guards stay in prepareActivityRead; the human delegate rechecks that same prepared
+value after map conversion, as the original read API did. Technical refusal remains an empty
+string. Retaining these original C++ entrances adds no JavaScript compatibility algorithm, second
+canonical owner, state or new policy, and leaves the core's original two-read copy timing intact.
+
+
+The actual full-body formatter is the existing internal typed HumanActivityInput plus
+humanDescriptionLines/fullHumanDescription/humanCopyText in assistant_message_presentation.hpp.
+It is consumed by ApplicationInfo's migrated body/copy paths. An independent test-owned phase
+adapter may include that same internal implementation to exercise its declared typed contract;
+production adds no test-facing QML entrypoint, canonical injection or compatibility JavaScript.
+Retaining the prior public C++ bridges preserves their original separate input-adaptation contracts
+without restoring the procedural row functions or duplicating the pure value formatter.
+
+
+The opaque HumanActivitySnapshot retains the original safe row_id/kind/status metadata alongside
+its projected body data. prepareActivityRead captures these scalar strings from the actual matched
+canonical row after the original equality guards; snapshotFrom carries those exact prepared values
+into the existing lazy property. They are data, never a new permission/currentness proof, and are
+not synthesized from a test fixture or the live delegate. The established human map getter uses
+the same captured values, preserving its identical original envelope after the match. This adds
+no public QML map/API, controller/store, lookup, refresh event, guard or copy-timing change. An
+independent test-owned exact-metatype probe can observe the actual stored scalar identity through
+the normal QVariant representation without a production compatibility or injection entrypoint.
