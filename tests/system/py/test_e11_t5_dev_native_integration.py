@@ -5002,6 +5002,47 @@ def test_actual_long_history_virtualizes_lazy_details_and_restores_exact_origina
             'Original cached-view population appears without creating a substitute conversation or sending another turn')
         assert all(row['params']['threadId'] == original_thread for row in startup_wire
                    if row.get('method') == 'thread/resume'), 'Any ordinary automatic resume retains the genuine original thread'
+        # Restored cached rows do not imply a workflow page or exposed pane.
+        # Home Start is independent of whether automatic resume connected first.
+        before_workspace = restored.command('inspect')
+        wait_positive_tab(restored, 'appBar.tab.project')
+        restored.command('click', name='appBar.tab.project')
+        before_manual_connect_wire = _ordinary_restart_connect(restored)
+        workspace_ready = restored.until(lambda value: value['ui']['connected']
+            and _unique_input_control(value, 'assistant.messages') is not None)
+        workspace_view = _unique_input_control(workspace_ready, 'assistant.messages')
+        workspace = qml(restored, '(function(){const p=' + control_expression('assistant.popup')
+            + ',v=' + control_expression('assistant.messages') + ';return {'
+            'workflow_page_present:window.assistantWorkflowPage!==null,'
+            'available:ApplicationInfo.assistantAvailable,panel_present:!!p,'
+            'panel_shown:p?p.shown:null,panel_visible:p?p.visible:null,'
+            'panel_current_owner:p?p.assistant===Session.assistant:null,'
+            'view_present:!!v,view_visible:v?v.visible:null,view_enabled:v?v.enabled:null,'
+            'view_same_window:v?v.Window.window===window:null};})()')
+        readiness_wire = _session_wire(restored)
+        readiness_resumes = [row for row in readiness_wire if row.get('method') == 'thread/resume']
+        canonical_before_browsing = Path(witness['destination']).read_bytes()
+        canonical_before_path = restored.folder / 'long-history-canonical-before-browsing.json'
+        canonical_before_path.write_bytes(canonical_before_browsing)
+        readiness = {'before_workspace': before_workspace['ui'], 'workspace_ready': workspace_ready['ui'],
+            'native_view_control': workspace_view, 'workspace': workspace,
+            'before_manual_connect_wire': before_manual_connect_wire, 'wire': readiness_wire,
+            'actual_account': qml(restored, 'Session.assistant.account'), 'original_thread': original_thread,
+            'canonical_source': witness['destination'], 'canonical_capture': str(canonical_before_path),
+            'canonical_sha256': hashlib.sha256(canonical_before_browsing).hexdigest()}
+        (restored.folder / 'long-history-workspace-readiness.json').write_text(json.dumps(readiness, indent=2))
+        assert workspace['workflow_page_present'] and workspace['available'] and workspace['panel_present'] \
+            and workspace['panel_shown'] and workspace['panel_visible'] and workspace['panel_current_owner'] \
+            and workspace['view_present'] and workspace['view_visible'] and workspace['view_enabled'] \
+            and workspace['view_same_window'] and workspace_view, (
+            'Ordinary workspace and same-owner native viewport exposure precede restored UI browsing')
+        assert readiness['actual_account'] == sources['actual_account'] and readiness_resumes \
+            and all(row['params']['threadId'] == original_thread for row in readiness_resumes) \
+            and not any(row.get('method') in ('thread/start', 'turn/start') for row in readiness_wire), (
+            'Ordinary readiness confirms the genuine same account/thread without substitute conversation or replayed input')
+        assert workspace_ready['ui']['project'] == before_workspace['ui']['project'] \
+            and workspace_ready['ui']['selected_files'] == before_workspace['ui']['selected_files'], (
+            'Entering the ordinary workspace preserves the original project and input descriptors')
         count = _rows_probe(restored)['count']
         view = control_expression('assistant.messages')
         observed = []
