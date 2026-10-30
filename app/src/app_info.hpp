@@ -495,6 +495,25 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void structurePointer(const QJSValue& event, int kind) const;
     Q_INVOKABLE void structureHoverShow(const QJSValue& x, const QJSValue& y) const;
     Q_INVOKABLE void structureColourChoice(const QJSValue& index) const;
+    /// Pattern chart UI procedures; the existing controller owns source, series, transforms and ranges.
+    Q_INVOKABLE QJSValue patternTickValues(const QJSValue& axis) const;
+    Q_INVOKABLE QJSValue patternYValues(const QJSValue& axis, const QJSValue& scale) const;
+    Q_INVOKABLE QJSValue patternGridTicks(const QJSValue& axis) const;
+    Q_INVOKABLE QJSValue patternYLabelText(const QJSValue& text, const QJSValue& axis, const QJSValue& scale, const QJSValue& format) const;
+    Q_INVOKABLE QJSValue patternYLabelsRoom() const;
+    Q_INVOKABLE void patternAlignPanes() const;
+    Q_INVOKABLE QJSValue patternClosedTexts(bool measured) const;
+    Q_INVOKABLE void patternChoice(const QJSValue& index, int kind) const;
+    Q_INVOKABLE QJSValue patternSameRanges(const QJSValue& a, const QJSValue& b) const;
+    Q_INVOKABLE void patternViewChanged(int event) const;
+    Q_INVOKABLE void patternStructureReady() const;
+    Q_INVOKABLE void patternBraggSeries(const QJSValue& index, const QJSValue& series, bool added) const;
+    Q_INVOKABLE QJSValue patternBraggLabelsRoom() const;
+    Q_INVOKABLE void patternPointer(const QJSValue& mouse, int kind) const;
+    Q_INVOKABLE void patternHoverRead(const QJSValue& pane, const QJSValue& area, const QJSValue& mouse) const;
+    Q_INVOKABLE void patternHoverShow(const QJSValue& text, const QJSValue& atX, const QJSValue& atY) const;
+    Q_INVOKABLE void chartToolbarAction(int action) const;
+    Q_INVOKABLE void renewPatternChart() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

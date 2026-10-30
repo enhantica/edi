@@ -90,39 +90,16 @@ Item {
     readonly property GraphsView bottomView: controller.hasResidual ? residualView : controller.braggRows > 0 ? braggView : mainView
 
     // The values at an axis' ticks: its anchor and every whole interval from it, within its range.
-    function tickValues(axis: ValueAxis): list<real> {
-        const out = [];
-        const span = axis.max - axis.min;
-        if (!(axis.tickInterval > 0) || !(span > 0))
-            return out;
-        const first = Math.ceil((axis.min - axis.tickAnchor) / axis.tickInterval - 1e-9);
-        for (let i = first; out.length < 64; ++i) {
-            const value = axis.tickAnchor + i * axis.tickInterval;
-            if ((value - axis.min) / span > 1 + 1e-9)
-                break;
-            out.push(value);
-        }
-        return out;
-    }
+    function tickValues(axis: ValueAxis): list<real> { return ApplicationInfo.patternTickValues(axis); }
     // The y labels are NumberText's (the owner, 2026-10-11): `2.5e8` on an axis of large intensities, one
     // exponent for the axis. Each axis' ticks are written in one form, on the main pane in their original
     // values on its scale.
-    function yValues(axis: ValueAxis, scale: int): list<real> {
-        return tickValues(axis).map(value => controller.originalValue(value, scale));
-    }
+    function yValues(axis: ValueAxis, scale: int): list<real> { return ApplicationInfo.patternYValues(axis, scale); }
     readonly property var mainYFormat: NumberText.axisFormat(yValues(mainY, controller.yScale), controller.yScale !== PatternChartController.Log10)
     readonly property var residualYFormat: NumberText.axisFormat(yValues(residualY, PatternChartController.Linear), true)
     // A y label's text: Qt Graphs gives the label its own text of the tick's display value, which names the
     // nearest tick.
-    function yLabelText(text: string, axis: ValueAxis, scale: int, format: var): string {
-        const shown = Number(text);
-        let display = NaN;
-        for (const value of tickValues(axis)) {
-            if (isNaN(display) || Math.abs(value - shown) < Math.abs(display - shown))
-                display = value;
-        }
-        return isFinite(shown) && !isNaN(display) ? NumberText.axisTick(controller.originalValue(display, scale), format) : text;
-    }
+    function yLabelText(text: string, axis: ValueAxis, scale: int, format: var): string { return ApplicationInfo.patternYLabelText(text, axis, scale, format); }
     FontMetrics {
         id: labelMetrics
         font: titleProbe.font
@@ -132,39 +109,13 @@ Item {
         visible: false
     }
     // The room the widest y label takes beside the plot areas, so the y titles stay clear of the labels.
-    readonly property real yLabelsRoom: {
-        let widest = 0;
-        for (const value of yValues(mainY, controller.yScale))
-            widest = Math.max(widest, labelMetrics.advanceWidth(NumberText.axisTick(value, mainYFormat)));
-        if (controller.hasResidual) {
-            for (const value of yValues(residualY, PatternChartController.Linear))
-                widest = Math.max(widest, labelMetrics.advanceWidth(NumberText.axisTick(value, residualYFormat)));
-        }
-        return Math.ceil(widest + em * 0.5);
-    }
+    readonly property real yLabelsRoom: ApplicationInfo.patternYLabelsRoom()
     onYLabelsRoomChanged: Qt.callLater(alignPanes)
 
     // The three plot areas share their left edge. Each view lays its own y labels out, and their widths
     // differ, so each view's left margin makes up the difference. Assigned, not bound: the plot area follows
     // the margin, and a binding on it would read as a loop.
-    function alignPanes() {
-        const under = view => view.height - view.plotArea.y - view.plotArea.height;
-        if (bottomView.plotArea.height > 0 && Math.abs(xLabelsHeight - under(bottomView)) > 0.5)
-            xLabelsHeight = under(bottomView);
-        if (bottomView !== mainView && mainView.plotArea.height > 0 && Math.abs(mainAxisHeight - under(mainView)) > 0.5)
-            mainAxisHeight = under(mainView);
-        const mainAxis = mainView.plotArea.x - mainView.marginLeft;
-        const residualAxis = residualView.visible ? residualView.plotArea.x - residualView.marginLeft : 0;
-        // Far enough right for the y titles and labels, and for the longest structure name of the tick rows (4.8).
-        const edge = Math.round(Math.max(sideMargin + titleGutter + Math.max(mainAxis, residualAxis, yLabelsRoom), sideMargin + braggLabelsRoom + braggLabelGap));
-        const set = (view, margin) => {
-            if (Math.abs(view.marginLeft - margin) > 0.5)
-                view.marginLeft = margin;
-        };
-        set(mainView, edge - mainAxis);
-        set(residualView, edge - residualAxis);
-        set(braggView, edge - (braggView.plotArea.x - braggView.marginLeft));
-    }
+    function alignPanes() { ApplicationInfo.patternAlignPanes(); }
 
     // A pane's theme (ChartTheme): the labels themselves are `AxisLabel`s; the theme's font is the size the axis keeps
     // room for.
@@ -220,9 +171,7 @@ Item {
         property bool rows: true
 
         // The ticks of one axis as shares of its range: the anchor and every whole interval from it.
-        function ticks(axis: ValueAxis): list<real> {
-            return chart.tickValues(axis).map(value => (value - axis.min) / (axis.max - axis.min));
-        }
+        function ticks(axis: ValueAxis): list<real> { return ApplicationInfo.patternGridTicks(axis); }
 
         x: pane.x + pane.plotArea.x
         y: pane.y + pane.plotArea.y
@@ -429,12 +378,7 @@ Item {
             // The closed box names its axis (owner, 2026-10-05), its value capitalised (the owner, 2026-10-27).
             closedTexts: [qsTr("y: Linear"), qsTr("y: Square root"), qsTr("y: Log")]
             shownIndex: controller.yScale
-            onActivated: index => {
-                if (chart.settingsPage === "pattern")
-                    Preferences.patternYScale = chart.scaleTokens[index];
-                else
-                    controller.yScale = index;
-            }
+            onActivated: index => ApplicationInfo.patternChoice(index, 0)
         }
         ToolbarComboBox {
             objectName: "chart.toolbar.xaxis"
@@ -445,14 +389,9 @@ Item {
             toolTip: controller.dAvailable ? qsTr("X axis") : qsTr("X axis: d-spacing can be chosen after a calculation")
             readonly property var entries: [Session.label(chart.nativeAxis === "timeOfFlight" ? "data.time_of_flight" : "data.two_theta"), qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))]
             model: entries
-            closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
+            closedTexts: ApplicationInfo.patternClosedTexts(false)
             shownIndex: controller.dSpacing && controller.dAvailable ? 1 : 0
-            onActivated: index => {
-                if (chart.axisProject)
-                    chart.axisProject.patternDSpacing = index === 1;
-                else
-                    controller.dSpacing = index === 1;
-            }
+            onActivated: index => ApplicationInfo.patternChoice(index, 1)
         }
         // How the measured pattern is drawn (the owner, 2026-10-22), one box of four choices named as the axis boxes
         // name theirs: the band of measured ± s.u., the default, with the residual drawn the same way; the line; the
@@ -465,9 +404,9 @@ Item {
             visible: !chart.report
             toolTip: qsTr("How the measured data are drawn")
             model: entries
-            closedTexts: entries.map(text => qsTr("meas: %1").arg(text))
+            closedTexts: ApplicationInfo.patternClosedTexts(true)
             shownIndex: Math.max(0, tokens.indexOf(controller.measuredStyle))
-            onActivated: index => Preferences.patternMeasuredStyle = tokens[index]
+            onActivated: index => ApplicationInfo.patternChoice(index, 2)
         }
         ChartToolbar {
             id: toolbar
@@ -479,8 +418,8 @@ Item {
             subtractBackground: Preferences.chartSubtractBackground
             backgroundAvailable: controller.backgroundAvailable
             onResetClicked: controller.reset()
-            onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
-            onSubtractBackgroundToggled: Preferences.chartSubtractBackground = !Preferences.chartSubtractBackground
+            onIncludedOnlyToggled: ApplicationInfo.chartToolbarAction(5)
+            onSubtractBackgroundToggled: ApplicationInfo.chartToolbarAction(6)
         }
     }
 
@@ -607,34 +546,15 @@ Item {
         enabled: chart.followsSharedView && chart.shown
         // Only different ranges are written: the view this chart was just given comes straight back, and writing it
         // again inside that binding is a loop. The axis the ranges are on goes with them.
-        function sameRanges(a, b) {
-            if (a.length !== b.length)
-                return false;
-            for (let i = 0; i < a.length; ++i) {
-                if (a[i] !== b[i] && !(isNaN(a[i]) && isNaN(b[i])))
-                    return false;
-            }
-            return true;
-        }
-        function onViewRangesChanged() {
-            if (!sameRanges(controller.viewRanges, AppState.patternViewRanges)) {
-                AppState.patternViewAxis = controller.viewRangesAxis;
-                AppState.patternViewRanges = controller.viewRanges;
-            }
-        }
+        function sameRanges(a, b) { return ApplicationInfo.patternSameRanges(a, b); }
+        function onViewRangesChanged() { ApplicationInfo.patternViewChanged(0); }
     }
     Connections {
         target: toolbar
         enabled: chart.followsSharedView && chart.shown
-        function onLegendShownChanged() {
-            Preferences.patternLegendShown = toolbar.legendShown;
-        }
-        function onHoverShownChanged() {
-            Preferences.patternHoverShown = toolbar.hoverShown;
-        }
-        function onPointerModeChanged() {
-            Preferences.patternPointerMode = toolbar.pointerMode;
-        }
+        function onLegendShownChanged() { ApplicationInfo.patternViewChanged(1); }
+        function onHoverShownChanged() { ApplicationInfo.patternViewChanged(2); }
+        function onPointerModeChanged() { ApplicationInfo.patternViewChanged(3); }
     }
 
     // Each structure's curve (edi ADR-0017 §15): a soft fill from the background up to the curve and an outline, in
@@ -645,9 +565,7 @@ Item {
     property int structureCurveSlots: 0
     Connections {
         target: controller
-        function onStructureCurveColorsChanged() {
-            chart.structureCurveSlots = Math.max(chart.structureCurveSlots, controller.structureCurveColors.length);
-        }
+        function onStructureCurveColorsChanged() { ApplicationInfo.patternViewChanged(4); }
         Component.onCompleted: onStructureCurveColorsChanged()
     }
     Instantiator {
@@ -671,11 +589,7 @@ Item {
             upperSeries: LineSeries {}
             lowerSeries: LineSeries {}
 
-            Component.onCompleted: {
-                mainView.insertSeries(0, area.outline);
-                mainView.insertSeries(0, area);
-                controller.setStructureSeries(area.index, area.upperSeries, area.lowerSeries, area.outline);
-            }
+            Component.onCompleted: ApplicationInfo.patternStructureReady()
         }
     }
 
@@ -731,18 +645,9 @@ Item {
             color: controller.braggColors[index] ?? "transparent"
             width: 1
         }
-        onObjectAdded: (index, series) => {
-            braggView.addSeries(series);
-            controller.setBraggSeries(index, series);
-        }
+        onObjectAdded: (index, series) => ApplicationInfo.patternBraggSeries(index, series, true)
         // A series removed or emptied can keep its last drawing, so it holds one undrawable point first.
-        onObjectRemoved: (index, series) => {
-            controller.setBraggSeries(index, null);
-            const ticks = series as LineSeries;
-            ticks.clear();
-            ticks.append(NaN, NaN);
-            braggView.removeSeries(ticks);
-        }
+        onObjectRemoved: (index, series) => ApplicationInfo.patternBraggSeries(index, series, false)
     }
 
     GraphsView {
@@ -825,15 +730,7 @@ Item {
     // Each Bragg row's label at its left (edi::BraggRowLabel): the structure's icon and name in its colour. The widest
     // label sets how far right the panes' shared left edge must be (alignPanes), so a long name never runs into them.
     readonly property real braggLabelGap: Math.round(chart.em * 0.4)
-    readonly property real braggLabelsRoom: {
-        let widest = 0;
-        for (let i = 0; i < braggLabelRepeater.count; ++i) {
-            const label = braggLabelRepeater.itemAt(i);
-            if (label && label.visible)
-                widest = Math.max(widest, label.width);
-        }
-        return Math.ceil(widest);
-    }
+    readonly property real braggLabelsRoom: ApplicationInfo.patternBraggLabelsRoom()
     onBraggLabelsRoomChanged: Qt.callLater(alignPanes)
     Repeater {
         id: braggLabelRepeater
@@ -927,30 +824,9 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: toolbar.hoverShown
 
-        onPressed: mouse => {
-            pressX = lastX = mouse.x;
-            pressY = mouse.y;
-        }
-        onPositionChanged: mouse => {
-            if (pressed && pressedButtons & Qt.LeftButton && toolbar.pointerMode === "pan") {
-                controller.panBy(mouse.x - lastX);
-                lastX = mouse.x;
-            }
-            if (toolbar.hoverShown && !pressed)
-                hoverLabel.read(0, pointer, mouse);
-            else
-                hoverLabel.show("", 0, 0);
-        }
-        onReleased: mouse => {
-            // A click, not a drag, on a legend row hides or shows its curve.
-            const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
-            if (mouse.button === Qt.LeftButton && still && chartLegend.toggleAt(pointer, mouse.x, mouse.y))
-                return;
-            if (mouse.button === Qt.RightButton)
-                controller.reset();
-            else if (toolbar.pointerMode === "zoom")
-                controller.zoomTo(pressX, mouse.x, pressY, mouse.y);
-        }
+        onPressed: mouse => ApplicationInfo.patternPointer(mouse, 0)
+        onPositionChanged: mouse => ApplicationInfo.patternPointer(mouse, 1)
+        onReleased: mouse => ApplicationInfo.patternPointer(mouse, 2)
         onWheel: wheel => controller.wheelAt(wheel.x, wheel.angleDelta.y)
         onExited: hoverLabel.show("", 0, 0)
 
@@ -1015,16 +891,9 @@ Item {
         id: hoverLabel
 
         // The point near the pointer in `pane` (over `area`), if any: its read-out, by the point.
-        function read(pane, area, mouse) {
-            const at = controller.hoverPoint(mouse.x, mouse.y, pane, area.height);
-            show(at.x < 0 ? "" : controller.hoverReadout(mouse.x, mouse.y, pane, area.height), area.x + at.x, area.y + at.y);
-        }
+        function read(pane, area, mouse) { ApplicationInfo.patternHoverRead(pane, area, mouse); }
         // Right of and above the point, or on the other side where the chart ends.
-        function show(text, atX, atY) {
-            hoverText.text = text;
-            x = atX + chart.em + width <= chart.width ? atX + chart.em : atX - chart.em - width;
-            y = atY - height - chart.em * 0.5 >= 0 ? atY - height - chart.em * 0.5 : atY + chart.em;
-        }
+        function show(text, atX, atY) { ApplicationInfo.patternHoverShow(text, atX, atY); }
 
         objectName: "chart.hover"
         visible: hoverText.text !== ""
