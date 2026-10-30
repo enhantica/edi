@@ -4799,3 +4799,12 @@ its public presentation invokables supply valid empty/unavailable bindings witho
 headers or backend queries. This does not remove other browser file, transport or rendering code.
 The source migration is implemented before full verification; desktop/WASM builds, actual UI,
 callback/reentry/lifetime, locale/clock and final app/native/scientific/platform/CI checks still follow.
+
+
+### Native acknowledgement and window focus dispatch
+
+The existing Composer acknowledgement transaction and Main assistant focus procedures execute in ApplicationInfo, extending the earlier draft, selected-file and usage moves. Composer still owns submittedDrafts, revisions and editor state; AssistantViewModel and its message table remain the admission and history authorities. Native iteration uses the current engine's intrinsic iterator protocol, including custom iterators and abrupt-completion closure. Bookkeeping is published before editor clearing, with the original successor, revision and IME checks and repeated current-owner reads.
+
+Main retains its named one-call forwarding functions so existing callers and Qt.callLater coalescing keep their function identities. The two original deferred arrows become distinct native function values per invocation, retaining only their original lexical values and QML creation context; Qt's existing delayed-call queue still owns scheduling. No additional window-retirement guard, timer, controller or state store is introduced. Focus ancestry, geometry dependency reads, opener fallback and original effect order stay in the native procedure.
+
+The shared script bridge resolves unqualified names through the original QML scope, context properties, imports and global fallback, preserving dependency capture and call bases. Native map/filter callbacks retain their creation scope. Panel presentation functions keep thin forwarding methods where their original function scope is observable. Null member reads use the original property-read error wording. Browser builds keep the assistant unavailable and do not acquire a private Qt dependency. Desktop/private-Qt compilation, complete runtime and malformed/reentrant carrier checks remain required after the migration.

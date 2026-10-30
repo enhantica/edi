@@ -411,28 +411,7 @@ Rectangle {
             if (Qt.isQtObject(nativeFiles) && nativeFiles.selection===null) nativeFiles.reject();
         }
     }
-    function acknowledgeVisiblePrompt() {
-        const original = submittedDrafts;
-        const ownerRevision = draftOwnerRevision;
-        const pending = [];
-        let acknowledged = null;
-        for (const draft of original) {
-            let status = "";
-            for (let i = 0; i < assistant.messages.count; ++i)
-                if (assistant.messages.text(i, "id") === draft.id && assistant.messages.text(i, "kind") === "user") {
-                    status = assistant.messages.text(i, "status"); break;
-                }
-            if (status === "completed") {
-                if (draft.revision === textRevision && draft.text === editor.text
-                    && !editor.inputMethodComposing && editor.preeditText.length === 0) acknowledged = draft;
-            } else if (status !== "refused" && status !== "interrupted") pending.push(draft);
-        }
-        if (submittedDrafts !== original || draftOwnerRevision !== ownerRevision) return;
-        submittedDrafts = pending; // Retire old bookkeeping before text notification can admit a new draft.
-        if (acknowledged && draftOwnerRevision === ownerRevision && textRevision === acknowledged.revision
-            && editor.text === acknowledged.text && !editor.inputMethodComposing
-            && editor.preeditText.length === 0) editor.clear();
-    }
+    function acknowledgeVisiblePrompt() { ApplicationInfo.composerAcknowledgeVisiblePrompt(); }
     Connections {
         target: composer.assistant.messages
         function onCountChanged() { composer.acknowledgeVisiblePrompt(); }
