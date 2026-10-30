@@ -240,6 +240,8 @@ std::string reliability_text(const Project& project, std::size_t experiment);
 ReportModel build_report(const Project& project, const ReportOptions& options);
 
 /// The model as JSON (ADR-0036 §1): every field, doubles in their shortest round-trip form, a non-finite one as null.
+/// Derived `browser` chart projections carry the native report policy to offline HTML; the reader recomputes them.
+/// Derived non-finite arithmetic uses the reserved `edi_renderer_number` codec, leaving raw model nulls unchanged.
 /// The text has no literal <, > or &, so it can sit inside an HTML <script> element.
 std::string report_to_json(const ReportModel& model);
 /// A model from its JSON; throws std::invalid_argument for malformed JSON, a missing field or another schema version.
