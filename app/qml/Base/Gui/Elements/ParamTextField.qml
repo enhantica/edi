@@ -155,7 +155,7 @@ EaElements.TextField {
                     // Header
                     EaElements.Label {
                         color: EaStyle.Colors.themeForegroundMinor
-                        text: control.cifDict ? 'cif name' : 'cif-like name'
+                        text: qsTr("Edi key · documentation")
                     }
                     EaElements.Label {
                         color: EaStyle.Colors.themeForegroundMinor
@@ -182,6 +182,7 @@ EaElements.TextField {
                     EaElements.Button {
                         text: `${control.category}.${control.name}`
                         checked: true
+                        enabled: control.url !== ""
                         onClicked: Qt.openUrlExternally(control.url)
                     }
                     EaElements.Label {

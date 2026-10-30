@@ -144,6 +144,7 @@ EaComponents.ListViewParameter {
         "fit": item.free && cell.canFit,
         "category": item.category,
         "name": item.name,
+        "url": Session.documentationUrl(item.uid).toString(),
         "units": item.displayUnits
     } : ({})
 

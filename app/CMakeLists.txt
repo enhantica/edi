@@ -322,7 +322,7 @@ edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
 qt_add_resources(edi_app_module "edi_documentation_script" PREFIX "/edi/docs"
                  BASE ${CMAKE_CURRENT_SOURCE_DIR}/docs FILES docs/y2o3-spodi.js)
 qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"
-                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json)
+                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json ${CMAKE_CURRENT_SOURCE_DIR}/examples/tags.json)
 list(JOIN EDI_APP_EXAMPLE_IDS "\n" _index)
 file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/examples/index.txt CONTENT "${_index}\n")
 qt_add_resources(edi_app_module "edi_example_index" PREFIX "/edi/examples"
@@ -458,4 +458,10 @@ if(NOT EMSCRIPTEN)
         BASE ${PROJECT_SOURCE_DIR}/data/assistant/skills FILES ${EDI_RUNTIME_SKILL_FILES})
     include(${PROJECT_SOURCE_DIR}/cmake/assistant_runtime.cmake)
     edi_bundle_assistant_runtime()
+endif()
+
+# Read-only documentation export, using the same linked dictionary as the app (ADR-0060).
+if(NOT EMSCRIPTEN)
+    add_executable(edi_doc_metadata EXCLUDE_FROM_ALL ${PROJECT_SOURCE_DIR}/tools/docs/reference-metadata.cpp)
+    target_link_libraries(edi_doc_metadata PRIVATE edi::core Qt6::Core)
 endif()

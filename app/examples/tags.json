@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "tones": {
+    "technique": {
+      "light": "#0084c7",
+      "dark": "#4fc3f7"
+    },
+    "neutral": {
+      "light": "#424242",
+      "dark": "#dedede"
+    },
+    "simulation": {
+      "light": "#8354a9",
+      "dark": "#cba1eb"
+    },
+    "fitting": {
+      "light": "#398648",
+      "dark": "#9ac776"
+    },
+    "mode": {
+      "light": "#96601d",
+      "dark": "#e3b06d"
+    }
+  },
+  "tags": {
+    "purpose": {
+      "refinement": {
+        "label": "Fitting",
+        "meaning": "Fitting measured data",
+        "tone": "fitting",
+        "anchor": "fitting",
+        "icon": "bullseye",
+        "glyph": ""
+      },
+      "simulation": {
+        "label": "Simulation",
+        "meaning": "Calculation without measured data",
+        "tone": "simulation",
+        "anchor": "simulation",
+        "icon": "wave-square",
+        "glyph": ""
+      }
+    },
+    "fittingMode": {
+      "single": {
+        "label": "Single",
+        "meaning": "Fit one experiment",
+        "tone": "mode",
+        "anchor": "single-fit",
+        "icon": "dot-circle",
+        "glyph": ""
+      },
+      "joint": {
+        "label": "Joint",
+        "meaning": "Fit several experiments together",
+        "tone": "mode",
+        "anchor": "joint-fit",
+        "icon": "link",
+        "glyph": ""
+      },
+      "sequential": {
+        "label": "Sequential",
+        "meaning": "Fit a scan using the preceding result",
+        "tone": "mode",
+        "anchor": "sequential-fit",
+        "icon": "angle-double-right",
+        "glyph": ""
+      },
+      "independent": {
+        "label": "Independent",
+        "meaning": "Fit a scan from common starting values",
+        "tone": "mode",
+        "anchor": "independent-fit",
+        "icon": "random",
+        "glyph": ""
+      }
+    },
+    "sampleForm": {
+      "powder": {
+        "label": "pd",
+        "meaning": "Powder diffraction",
+        "tone": "technique",
+        "anchor": "powder-diffraction",
+        "icon": "",
+        "glyph": ""
+      },
+      "single crystal": {
+        "label": "sc",
+        "meaning": "Single-crystal diffraction",
+        "tone": "neutral",
+        "anchor": "single-crystal-diffraction",
+        "icon": "",
+        "glyph": ""
+      }
+    },
+    "probe": {
+      "neutron": {
+        "label": "neut",
+        "meaning": "Neutron diffraction",
+        "tone": "technique",
+        "anchor": "neutron-diffraction",
+        "icon": "",
+        "glyph": ""
+      },
+      "x-ray": {
+        "label": "xray",
+        "meaning": "X-ray diffraction",
+        "tone": "neutral",
+        "anchor": "x-ray-diffraction",
+        "icon": "",
+        "glyph": ""
+      },
+      "xray": {
+        "label": "xray",
+        "meaning": "X-ray diffraction",
+        "tone": "neutral",
+        "anchor": "x-ray-diffraction",
+        "icon": "",
+        "glyph": ""
+      }
+    },
+    "beamMode": {
+      "constant wavelength": {
+        "label": "cwl",
+        "meaning": "Constant wavelength",
+        "tone": "neutral",
+        "anchor": "constant-wavelength",
+        "icon": "",
+        "glyph": ""
+      },
+      "time-of-flight": {
+        "label": "tof",
+        "meaning": "Time of flight",
+        "tone": "technique",
+        "anchor": "time-of-flight",
+        "icon": "",
+        "glyph": ""
+      }
+    },
+    "scatteringType": {
+      "bragg": {
+        "label": "Bragg",
+        "meaning": "Bragg diffraction",
+        "tone": "technique",
+        "anchor": "bragg-diffraction",
+        "icon": "",
+        "glyph": ""
+      }
+    }
+  }
+}

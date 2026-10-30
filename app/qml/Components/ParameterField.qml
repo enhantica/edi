@@ -55,6 +55,7 @@ EaElements.ParamTextField {
         "category": item.category,
         "name": item.name,
         "shortPrettyName": field.label,
+        "url": Session.documentationUrl(item.uid).toString(),
         "units": item.displayUnits
     } : ({})
 

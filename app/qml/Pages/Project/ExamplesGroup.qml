@@ -86,6 +86,8 @@ EaElements.GroupBox {
                 required property string detail
                 required property list<string> tagLabels
                 required property list<string> tagIcons
+                required property list<string> tagColors
+                required property list<string> tagDarkColors
                 objectName: `examples.open.${exampleId}`
                 // Screen readers and browser checks find a row by its id and title, which the three lines show
                 // only in part. The row itself carries them, as the list moves the row.
@@ -139,8 +141,7 @@ EaElements.GroupBox {
                                         id: badge
                                         required property string modelData
                                         required property int index
-                                        readonly property bool blueTechnique: ["pd", "neut", "tof", Session.optionLabel("experiment_type.scattering_type", "bragg")].includes(modelData)
-                                        readonly property color ink: index === 0 ? (modelData === qsTr("Simulation") ? (EaStyle.Colors.isDarkPalette ? "#cba1eb" : "#8354a9") : (EaStyle.Colors.isDarkPalette ? "#9ac776" : "#398648")) : index === 1 ? (EaStyle.Colors.isDarkPalette ? "#e3b06d" : "#96601d") : blueTechnique ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                        readonly property color ink: EaStyle.Colors.isDarkPalette ? row.tagDarkColors[index] : row.tagColors[index]
                                         radius: 3
                                         color: Qt.rgba(ink.r, ink.g, ink.b, 0.13)
                                         width: badgeContent.implicitWidth + 2 * AppSizes.fieldSpacing

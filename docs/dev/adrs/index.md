@@ -85,6 +85,8 @@ in the same change — see `AGENTS.md` §ADRs.
 
 | [0059](0059-scripted-gui-documentation-captures.md) | Scripted GUI documentation captures | Implemented | 🟡 | Medium | native JavaScript walkthrough, settled screenshots and matching QML layout metadata |
 
+| [0060](0060-linked-parameter-reference.md) | Linked parameter reference and experiment tags | Implemented | 🟡 | Medium | dictionary export, existing parameter menu links, shared badge registry |
+
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.

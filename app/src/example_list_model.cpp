@@ -23,6 +23,21 @@ const QStringList allTitles{"All purposes",     "All fitting modes",    "All fac
                             "All instruments",  "All sample forms",     "All beam modes",
                             "All probes",       "All scattering types", "All dimensionalities",
                             "All polarisations"};
+const QJsonObject& tagRegistry() {
+    static const auto registry = [] {
+        QFile file(QStringLiteral(":/edi/examples/tags.json"));
+        if (!file.open(QIODevice::ReadOnly)) qFatal("Bundled tag registry is missing");
+        QJsonParseError error;
+        const auto result = QJsonDocument::fromJson(file.readAll(), &error).object();
+        if (error.error != QJsonParseError::NoError || result.value("schema").toInt() != 1)
+            qFatal("Invalid tag registry");
+        return result;
+    }();
+    return registry;
+}
+QJsonObject tagDefinition(const QString& family, const QString& value) {
+    return tagRegistry().value("tags").toObject().value(family).toObject().value(value).toObject();
+}
 QString normalize(const QString& text) {
     return text.normalized(QString::NormalizationForm_KD).toCaseFolded();
 }
@@ -43,13 +58,6 @@ QStringList strings(const QJsonArray& array) {
     for (const auto& item : array) result.append(item.toString());
     return result;
 }
-QString tag(const QString& value) {
-    static const QHash<QString, QString> tags{
-        {"powder", "pd"},         {"single crystal", "sc"}, {"neutron", "neut"},
-        {"x-ray", "xray"},        {"xray", "xray"},         {"constant wavelength", "cwl"},
-        {"time-of-flight", "tof"}};
-    return tags.value(value, label(value));
-}
 }  // namespace
 
 QStringList ExampleListModel::bundledIds() {
@@ -59,7 +67,7 @@ QStringList ExampleListModel::bundledIds() {
 }
 ExampleListModel::ExampleListModel(QObject* parent)
     : RowTableModel({"exampleId", "name", "description", "sample", "origin", "detail", "tagLabels",
-                     "tagIcons"},
+                     "tagIcons", "tagColors", "tagDarkColors"},
                     parent),
       properties_({"value", "title"}, this),
       options_({"value", "title", "matchingCount"}, this) {
@@ -96,30 +104,22 @@ ExampleListModel::ExampleListModel(QObject* parent)
             if (data.isEmpty()) data.append(unknown);
             entry.values.insert(key, data);
         }
-        const QHash<QString, QString> purpose_icons{{"refinement", "\uf140"},
-                                                    {"simulation", "\uf83e"}};
-        for (const auto& purpose : entry.values.value("purpose")) {
-            entry.tags.append(label(purpose));
-            entry.tag_icons.append(purpose_icons.value(purpose));
-        }
-        // Glyphs in the bundled Font Awesome 5 face; select by stored enum, never translated
-        // label.
-        const QHash<QString, QString> mode_icons{{"single", "\uf192"},
-                                                 {"joint", "\uf0c1"},
-                                                 {"sequential", "\uf101"},
-                                                 {"independent", "\uf074"}};
-        for (const auto& mode : entry.values.value("fittingMode")) {
-            if (mode == unknown) continue;
-            entry.tags.append(label(mode));
-            entry.tag_icons.append(mode_icons.value(mode));
-        }
-        for (const QString& key : {QStringLiteral("sampleForm"), QStringLiteral("probe"),
+        const auto addTag = [&](const QString& family, const QString& value) {
+            const auto definition = tagDefinition(family, value);
+            const QString title = definition.value("label").toString(label(value));
+            if (entry.tags.contains(title)) return;
+            const auto tone = tagRegistry().value("tones").toObject()
+                                  .value(definition.value("tone").toString("neutral")).toObject();
+            entry.tags.append(title);
+            entry.tag_icons.append(definition.value("glyph").toString());
+            entry.tag_colors.append(tone.value("light").toString());
+            entry.tag_dark_colors.append(tone.value("dark").toString());
+        };
+        for (const QString& key : {QStringLiteral("purpose"), QStringLiteral("fittingMode"),
+                                   QStringLiteral("sampleForm"), QStringLiteral("probe"),
                                    QStringLiteral("beamMode"), QStringLiteral("scatteringType")})
             for (const auto& value : entry.values.value(key))
-                if (value != unknown && !entry.tags.contains(tag(value))) {
-                    entry.tags.append(tag(value));
-                    entry.tag_icons.append(QString());
-                }
+                if (value != unknown) addTag(key, value);
         entry.search = normalize(entry.search + " " + entry.tags.join(' '));
         entries_.append(entry);
     }
@@ -187,7 +187,7 @@ void ExampleListModel::refresh() {
             {reinterpret_cast<const void*>(i + 1),
              {entry.id, entry.sample + QStringLiteral(" · ") + entry.origin,
               entry.tags.join(QStringLiteral(" · ")) + QStringLiteral(" · ") + entry.detail,
-              entry.sample, entry.origin, entry.detail, entry.tags, entry.tag_icons}});
+              entry.sample, entry.origin, entry.detail, entry.tags, entry.tag_icons, entry.tag_colors, entry.tag_dark_colors}});
     }
     QStringList choices = counts.keys();
     std::sort(choices.begin(), choices.end(), [](const QString& a, const QString& b) {

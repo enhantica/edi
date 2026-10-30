@@ -195,6 +195,7 @@ class Session : public QObject {
     Q_INVOKABLE QString tooltip(const QString& uid, const QString& variant = QString()) const;
     Q_INVOKABLE QString optionLabel(const QString& uid, const QString& token) const;
     Q_INVOKABLE QString optionTooltip(const QString& uid, const QString& token) const;
+    Q_INVOKABLE QUrl documentationUrl(const QString& uid) const;
     Q_INVOKABLE QString categoryTitle(const QString& id) const;
     // A value of item `uid` as a save writes it, for an input field or an editable cell (edi ADR-0051).
     Q_INVOKABLE QString written(const QString& uid, double value) const;

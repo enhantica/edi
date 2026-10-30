@@ -1614,6 +1614,15 @@ QString Session::optionTooltip(const QString& uid, const QString& token) const {
     return from_bridge([&] { return edi::option_tooltip(uid.toStdString(), token.toStdString()); });
 }
 
+QUrl Session::documentationUrl(const QString& uid) const {
+    // Only dictionary identities may become links; no user-provided URL or fragment.
+    if (!edi::has_item(uid.toStdString())) return {};
+    QString anchor = uid;
+    anchor.replace('_', '-');
+    anchor.replace('.', '-');
+    return QUrl(QStringLiteral("https://enhantica.github.io/edi-website-preview/physics/parameters/#") + anchor);
+}
+
 QString Session::categoryTitle(const QString& id) const {
     return from_bridge([&] { return edi::category_label(id.toStdString()); });
 }

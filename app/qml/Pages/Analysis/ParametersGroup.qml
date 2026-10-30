@@ -467,6 +467,10 @@ EaElements.GroupBox {
                         anchors.verticalCenter: parent.verticalCenter
                         segments: ParameterNames.segments(row.parameter)
                     }
+                    TapHandler {
+                        acceptedButtons: Qt.RightButton
+                        onTapped: valueCell.openContextMenu(valueCell)
+                    }
                     HoverHandler {
                         id: nameHover
                     }
@@ -476,6 +480,7 @@ EaElements.GroupBox {
                     }
                 }
                 ParameterCell {
+                    id: valueCell
                     columnAlignment: Text.AlignRight
                     objectName: `parameters.value.${row.index}`
                     item: row.parameter
