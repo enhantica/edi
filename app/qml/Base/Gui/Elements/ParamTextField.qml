@@ -137,6 +137,7 @@ EaElements.TextField {
             id: contextMenuComponent
 
             EaElements.Menu {
+                objectName: "parameter.contextMenu"
                 width: layout.implicitWidth
 
                 // Layout
@@ -180,6 +181,8 @@ EaElements.TextField {
 
                     // Content
                     EaElements.Button {
+                        objectName: "parameter.documentation"
+                        readonly property url documentationUrl: control.url
                         text: `${control.category}.${control.name}`
                         checked: true
                         enabled: control.url !== ""

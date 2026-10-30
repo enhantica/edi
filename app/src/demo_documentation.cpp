@@ -179,6 +179,14 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
         documentation_skip_ = !item->isEnabled();
         return true;
     }
+    if (action.startsWith("right-click:")) {
+        auto* item = find(action.mid(12), true);
+        if (!item || !item->isEnabled() || !on_screen(item)) {
+            fail("cannot open documentation context menu: " + action);
+            return false;
+        }
+        return click_item(item, Qt::RightButton);
+    }
     if (action.startsWith("fill:")) {
         const auto body = action.mid(5);
         const auto separator = body.indexOf('=');
@@ -269,6 +277,8 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
                     const auto group_icon = item->property("icon");
                     if (icon.isEmpty() && group_icon.metaType().id() == QMetaType::QString) icon = group_icon.toString();
                     if (!icon.isEmpty()) record["icon"] = icon;
+                    const auto documentation = item->property("documentationUrl").toUrl();
+                    if (!documentation.isEmpty()) record["documentation_url"] = documentation.toString();
                     if (auto* options = item->property("options").value<OptionListModel*>()) {
                         QJsonArray choices;
                         for (int row = 0; row < options->rowCount(); ++row) {
