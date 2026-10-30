@@ -23,57 +23,13 @@ EaComponents.ApplicationWindow {
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
     property var assistantCreateGuard: null
-    function prepareNativeProjectCreate(intent) {
-        const original=Session.assistant, before=Session.project;
-        if(!original.nativeProjectCreateCurrent(intent) || assistantCreateGuard!==null)return false;
-        const token={assistant:original,project:before,intent:intent,action:null};
-        const current=() => Qt.isQtObject(window) && Qt.isQtObject(original) && Session.assistant===original
-            && Session.project===before && original.nativeProjectCreateCurrent(intent);
-        const release=() => {if(window.assistantCreateGuard===token)window.assistantCreateGuard=null;};
-        token.action=() => {
-            release();
-            if(!current()){if(Qt.isQtObject(original))original.nativeProjectCreateReady(intent,false);return;}
-            if(original.showActions)AppState.open(AppState.Page.Project);
-            else AppState.reached=Math.max(AppState.reached,AppState.Page.Project);
-            if(current())original.nativeProjectCreateReady(intent,true);
-        };
-        assistantCreateGuard=token;
-        AppState.afterChanges(token.action,() => {release();if(Qt.isQtObject(original))original.nativeProjectCreateReady(intent,false);});
-        return true; // Original deferred guard, not a created/adopted result.
-    }
-    function nativeProjectCreateSaveCurrent(intent,control) {
-        const token=assistantCreateGuard;
-        return token!==null && token.intent===intent && unsavedChanges.nativeCreation===token
-            && Qt.isQtObject(token.assistant) && Session.assistant===token.assistant && Session.project===token.project
-            && token.assistant.nativeProjectCreateCurrent(intent) && unsavedChanges.visible && unsavedChanges.opened
-            && unsavedChanges.standardButton(Dialog.Save)===control;
-    }
-    function chooseNativeProjectCreateSave(intent,control) {
-        if(!nativeProjectCreateSaveCurrent(intent,control))return false;
-        control.click(); // FIRST original Save role; OFF has no physical cue.
-        return true;
-    }
-    function finishNativeProjectCreateGuard(intent) {
-        const token=assistantCreateGuard;
-        if(token===null || token.intent!==intent)return;
-        assistantCreateGuard=null;
-        if(unsavedChanges.nativeCreation!==token)return;
-        unsavedChanges.nativeCreation=null;
-        if(unsavedChanges.action!==token.action)return;
-        unsavedChanges.action=null;unsavedChanges.abandoned=null;unsavedChanges.close();
-    }
+    function prepareNativeProjectCreate(intent) { return ApplicationInfo.prepareProjectCreation(intent); }
+    function nativeProjectCreateSaveCurrent(intent,control) { return ApplicationInfo.projectCreationSaveCurrent(intent, control); }
+    function chooseNativeProjectCreateSave(intent,control) { return ApplicationInfo.chooseProjectCreationSave(intent, control); }
+    function finishNativeProjectCreateGuard(intent) { ApplicationInfo.finishProjectCreationGuard(intent); }
 
-    function createNativeProject(values,intent) {
-        if(!Session.assistant.nativeProjectCreateCurrent(intent) || (Session.project!==null && Session.project.modified))return ({});
-        return Session.createProjectWithOutcome(values.name,values.description,values.location,values.suRule,
-            values.title,values.authors,values.reportLibraries,intent);
-    }
-    function showNativeReport(project) {
-        if (project === null || Session.project !== project || !reportTab.enabled) return false;
-        AppState.open(AppState.Page.Report);
-        return Session.project === project && AppState.reportPageEnabled
-            && EaGlobals.Vars.appBarCurrentIndex === AppState.Page.Report;
-    }
+    function createNativeProject(values,intent) { return ApplicationInfo.createProjectFromIntent(values, intent); }
+    function showNativeReport(project) { return ApplicationInfo.showProjectReport(project); }
 
     readonly property Item assistantWorkflowPage: ApplicationInfo.assistantWorkflowPage()
     readonly property Item activeAssistantHost: assistantWorkflowPage ? assistantWorkflowPage.assistantOverlayHost : assistantFallbackHost
@@ -149,7 +105,7 @@ EaComponents.ApplicationWindow {
             fontIcon: "backspace"
             ToolTip.text: qsTr("Reset to initial state without project, model and data")
             Accessible.name: ToolTip.text
-            onClicked: AppState.afterChanges(() => AppState.reset())
+            onClicked: ApplicationInfo.resetProjectAfterChanges()
         }
     ]
 
@@ -562,38 +518,13 @@ EaComponents.ApplicationWindow {
 
     // Saving (edi ADR-0017 §13): the core writes (Session.save / saveAs -> edi::save_project_as); a refusal
     // shows the core's message.
-    function saveProject() {
-        if (Session.project === null)
-            return;
-        if (Session.needsSaveAs) {
-            window.saveProjectAs();
-            return;
-        }
-        // Where the browser keeps nothing, Save says so itself (webStorageUnavailable) with no error of its own.
-        if (!Session.save() && Session.lastError !== "")
-            saveError.open();
-    }
+    function saveProject() { ApplicationInfo.saveCurrentProject(); }
     // Save project as asks first, on every surface (edi ADR-0052 §6, §9). A browser that cannot write the disk offers
     // only a copy as a .zip download (owner, 2026-10-25).
     property string assistantSaveIntent: ""
-    function saveProjectAs(intent = "") {
-        if (Session.project === null) return;
-        if (assistantSaveIntent !== "" && assistantSaveIntent !== intent)
-            Session.cancelAssistantSaveAs(assistantSaveIntent);
-        assistantSaveIntent = intent;
-        saveAsChoice.open();
-    }
-    function finishAssistantSaveAs(target, zip, copy) {
-        const intent = assistantSaveIntent;
-        assistantSaveIntent = "";
-        return intent === "" ? Session.saveProjectAs(target, zip, copy)
-            : Session.completeAssistantSaveAs(intent, target, zip, copy);
-    }
-    function cancelAssistantSaveAs() {
-        const intent = assistantSaveIntent;
-        assistantSaveIntent = "";
-        if (intent !== "") Session.cancelAssistantSaveAs(intent);
-    }
+    function saveProjectAs(intent = "") { ApplicationInfo.saveCurrentProjectAs(intent); }
+    function finishAssistantSaveAs(target, zip, copy) { return ApplicationInfo.finishProjectSaveAs(target, zip, copy); }
+    function cancelAssistantSaveAs() { ApplicationInfo.cancelProjectSaveAs(); }
     Connections {
         target: Session
         function onAssistantSaveAsRequested(intent) { window.saveProjectAs(intent); }
@@ -626,26 +557,10 @@ EaComponents.ApplicationWindow {
     // Unsaved changes are saved or discarded before the project is replaced, closed or the app quits (edi ADR-0052): a
     // project's temporary folder goes with it.
     property bool quitting: false
-    onClosing: close => {
-        if (!quitting && Session.project !== null && Session.project.modified) {
-            close.accepted = false;
-            AppState.afterChanges(() => {
-                window.quitting = true;
-                window.close();
-            });
-        }
-    }
+    onClosing: close => ApplicationInfo.projectWindowClosing(close)
     Connections {
         target: AppState
-        function onChangesQuestion(action, abandoned) {
-            const previous=unsavedChanges.abandoned;unsavedChanges.abandoned=null;
-            if(previous)previous();
-            unsavedChanges.abandoned=abandoned;
-            const token=window.assistantCreateGuard;
-            unsavedChanges.nativeCreation=token!==null && token.action===action ? token : null;
-            unsavedChanges.action = action;
-            unsavedChanges.open();
-        }
+        function onChangesQuestion(action, abandoned) { ApplicationInfo.projectChangesQuestion(action, abandoned); }
     }
     AppDialog {
         id: unsavedChanges
@@ -653,12 +568,8 @@ EaComponents.ApplicationWindow {
         property var action: null
         property var abandoned: null
         property var nativeCreation: null
-        onOpened: {
-            const token=nativeCreation;
-            if(token!==null && token===window.assistantCreateGuard && Qt.isQtObject(token.assistant))
-                token.assistant.nativeProjectCreateSaveChoice(token.intent,unsavedChanges,standardButton(Dialog.Save));
-        }
-        function abandonAction() {const callback=abandoned;abandoned=null;action=null;if(callback)callback();}
+        onOpened: ApplicationInfo.unsavedProjectOpened()
+        function abandonAction() { ApplicationInfo.abandonUnsavedProjectAction(); }
         onRejected: abandonAction()
         title: qsTr("Save the changes?")
         standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
@@ -670,42 +581,13 @@ EaComponents.ApplicationWindow {
         // dropped if it is not (the window says why).
         property var afterSave: null
         property var afterSaveAbandoned: null
-        onAccepted: {
-            const original=nativeCreation, waiting=action;
-            if (Session.needsSaveAs) {
-                abandonAction();if(Qt.isQtObject(window))window.saveProjectAs();
-            } else {
-                const saved=original!==null
-                    ? (Qt.isQtObject(original.assistant) && Session.assistant===original.assistant
-                        && Session.project===original.project && original.assistant.nativeProjectCreateSave(original.intent))
-                    : Session.save();
-                if(original!==null && (nativeCreation!==original || window.assistantCreateGuard!==original || action!==waiting
-                    || !Qt.isQtObject(original.assistant) || Session.assistant!==original.assistant || Session.project!==original.project))return;
-                if(saved) {
-                    if (WebFiles.available) {afterSave=action;afterSaveAbandoned=abandoned;abandoned=null;}
-                    else {abandoned=null;action=null;Qt.callLater(waiting);}
-                } else {abandonAction();if(Session.lastError!=="")saveError.open();}
-            }
-        }
+        onAccepted: ApplicationInfo.acceptUnsavedProject()
 
         Connections {
             target: Session
-            function onWebSaveFinished(saved) {
-                const waiting = unsavedChanges.afterSave;
-                const abandoned=unsavedChanges.afterSaveAbandoned;
-                unsavedChanges.afterSave=null;unsavedChanges.afterSaveAbandoned=null;
-                // An edit made while the place was written is asked about again.
-                if (saved && waiting !== null)
-                    AppState.afterChanges(waiting,abandoned);
-                else if(abandoned)abandoned();
-            }
+            function onWebSaveFinished(saved) { ApplicationInfo.projectWebSaveFinished(saved); }
         }
-        onDiscarded: {
-            const waiting=action;action=null;abandoned=null;
-            close();
-            Session.discardKeptChanges();
-            Qt.callLater(waiting);
-        }
+        onDiscarded: ApplicationInfo.discardUnsavedProject()
 
         // The app's warning icon, then the project's name in bold (owner, 2026-10-25).
         Row {
@@ -746,33 +628,8 @@ EaComponents.ApplicationWindow {
         // About half the usual dialog width, never narrower than its content (owner, 2026-10-25).
         contentWidth: Math.max(saveAsChoiceColumn.implicitWidth, Math.round(AppSizes.messagesDialogContentWidth / 2))
         contentHeight: saveAsChoiceColumn.implicitHeight
-        onAboutToShow: {
-            zip = !diskWritable;
-            copy = !diskWritable;
-        }
-        onAccepted: {
-            // Delegated native Save uses this original selected/default format
-            // and its actual suggested destination. Manual Save As retains the
-            // original native picker, including its explicit overwrite choice.
-            const intent = window.assistantSaveIntent;
-            if (intent !== "" && !WebFiles.available) {
-                if (!Session.assistantSaveAsCurrent(intent)) {
-                    window.cancelAssistantSaveAs();
-                    return;
-                }
-                const target = Session.assistantSaveAsTarget(intent, zip);
-                window.finishAssistantSaveAs(target, zip, copy);
-                return;
-            }
-            if (!diskWritable)
-                Session.downloadWebProject();
-            else if (WebFiles.available)
-                Session.saveWebProjectAs(zip ? "zip" : "folder", copy);
-            else if (zip)
-                saveZip.openAt(window.assistantSaveIntent === "" ? Session.suggestedSaveTarget(true) : Session.assistantSaveAsTarget(window.assistantSaveIntent, true));
-            else
-                saveFolder.openAt(window.assistantSaveIntent === "" ? Session.suggestedSaveTarget(false) : Session.assistantSaveAsTarget(window.assistantSaveIntent, false));
-        }
+        onAboutToShow: ApplicationInfo.prepareProjectSaveChoice()
+        onAccepted: ApplicationInfo.acceptProjectSaveChoice()
 
         Column {
             id: saveAsChoiceColumn
@@ -828,49 +685,29 @@ EaComponents.ApplicationWindow {
     FileDialog {
         id: saveFolder
         onRejected: window.cancelAssistantSaveAs()
-        function openAt(target) {
-            currentFolder = target.toString().substring(0, target.toString().lastIndexOf("/"));
-            selectedFile = target;
-            open();
-        }
+        function openAt(target) { ApplicationInfo.openProjectSavePicker(target); }
         title: saveAsChoice.copy ? qsTr("Save a copy of the project as a folder") : qsTr("Save the project as a folder")
         fileMode: FileDialog.SaveFile
         acceptLabel: qsTr("Save")
-        onAccepted: {
-            if (!window.finishAssistantSaveAs(selectedFile, false, saveAsChoice.copy))
-                saveError.open();
-        }
+        onAccepted: ApplicationInfo.acceptProjectSavePicker(false)
     }
 
     FileDialog {
         id: saveZip
         onRejected: window.cancelAssistantSaveAs()
-        function openAt(target) {
-            currentFolder = target.toString().substring(0, target.toString().lastIndexOf("/"));
-            selectedFile = target;
-            open();
-        }
+        function openAt(target) { ApplicationInfo.openProjectSavePicker(target); }
         title: saveAsChoice.copy ? qsTr("Save a copy of the project as a .zip") : qsTr("Save the project as a .zip")
         fileMode: FileDialog.SaveFile
         defaultSuffix: "zip"
         nameFilters: [qsTr("Zip archives (*.zip)")]
         acceptLabel: qsTr("Save")
-        onAccepted: {
-            if (!window.finishAssistantSaveAs(selectedFile, true, saveAsChoice.copy))
-                saveError.open();
-        }
+        onAccepted: ApplicationInfo.acceptProjectSavePicker(true)
     }
 
     // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052).
     DropArea {
         anchors.fill: parent
-        onDropped: drop => {
-            if (drop.hasUrls && drop.urls.length > 0) {
-                drop.accept();
-                const url = drop.urls[0];
-                AppState.afterChanges(() => Session.openProject(url));
-            }
-        }
+        onDropped: drop => ApplicationInfo.dropProject(drop)
     }
 
     // The browser's file access: an archive that could not be opened or a project not packed.

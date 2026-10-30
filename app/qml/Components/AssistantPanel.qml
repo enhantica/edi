@@ -121,17 +121,7 @@ Popup {
     }
     Connections {
         target: panel.assistant
-        function onSessionProjectRequested(threadId,location,intent) {
-            const original=panel.assistant;const originalProject=Session.project;
-            const abandon=() => {if(Qt.isQtObject(original))original.cancelSessionSelection(intent);};
-            AppState.afterChanges(function() {
-                if(!Qt.isQtObject(panel) || !Qt.isQtObject(original) || panel.assistant!==original || original.sessionSelection!==intent || Session.project!==originalProject){abandon();return;}
-                if(!original.beginSessionProjectRestore(intent)){abandon();return;}
-                const opened=Session.openProject(location);
-                if(opened && Qt.isQtObject(original) && panel.assistant===original && original.sessionSelection===intent)original.continueSessionRestore(threadId);
-                else if(!Qt.isQtObject(original) || !original.sessionProjectRestorePending(intent))abandon();
-            },abandon);
-        }
+        function onSessionProjectRequested(threadId,location,intent) { ApplicationInfo.restoreSessionProject(threadId, location, intent); }
         function onSessionConsentRequested(threadId) {
             if(!Qt.isQtObject(panel) || !Qt.isQtObject(connectionDialog))return;
             connectionDialog.beginOffer();connectionDialog.open();

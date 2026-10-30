@@ -256,9 +256,9 @@ target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR}
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
+find_package(Qt6QmlPrivate REQUIRED)
+target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
 if(NOT EMSCRIPTEN)
-    find_package(Qt6QmlPrivate REQUIRED)
-    target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
     target_link_libraries(edi_app_module PRIVATE EdiMath::JKQTMathTextEdi)
     target_compile_definitions(edi_app_module PRIVATE EDI_HAS_NATIVE_MATH=1)
 endif()
