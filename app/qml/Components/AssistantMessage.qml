@@ -13,22 +13,7 @@ Rectangle {
     required property string kind
     required property string text
     property var payload: ({})
-    readonly property var inputFiles: {
-        if (kind !== "user" || !payload || payload.type !== "ediInput" || !payload.files) return [];
-        const files = payload.files;
-        // Existing SelectedFileLimits::files/name_bytes and Limits::id_bytes.
-        if (!Number.isInteger(files.length) || files.length < 0 || files.length > 32) return [];
-        const result = [];
-        for (let i = 0; i < files.length; ++i) {
-            const file = files[i];
-            if (!file || typeof file.id !== "string" || file.id.length === 0 || file.id.length > 256
-                || typeof file.name !== "string" || file.name.length > 512
-                || typeof file.bytes !== "number" || !Number.isFinite(file.bytes) || file.bytes < 0
-                || typeof file.textReadable !== "boolean" || typeof file.format !== "string") return [];
-            result.push(file); // Bounded presentation references, not copied source bytes or another archive.
-        }
-        return result;
-    }
+    readonly property var inputFiles: ApplicationInfo.assistantHistoryInputFiles(kind, payload)
     property string status: ""
     property string rowId: ""
     property int stepNumber: 0
