@@ -256,6 +256,11 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
                     if (label.isEmpty()) label = item->property("title").toString();
                     QJsonObject record{{"bounds", rect_json(bounds)}, {"visible_bounds", rect_json(visible)},
                         {"enabled", item->isEnabled()}, {"label", label.left(256)}};
+                    auto icon = item->property("fontIcon").toString();
+                    if (icon.isEmpty()) icon = item->property("keyIcon").toString();
+                    const auto group_icon = item->property("icon");
+                    if (icon.isEmpty() && group_icon.metaType().id() == QMetaType::QString) icon = group_icon.toString();
+                    if (!icon.isEmpty()) record["icon"] = icon;
                     if (auto* options = item->property("options").value<OptionListModel*>()) {
                         QJsonArray choices;
                         for (int row = 0; row < options->rowCount(); ++row) {

@@ -42,3 +42,5 @@ The schema-2 script declares one `EXAMPLE_ID` and a `build(capture)` factory. Th
 Named `guide-*` scenes cover project file choices, structural symmetry/cell/sites, experiment data/instrument/profile/background/exclusions/links, analysis modes/minimizer/constraints, and report contents/formats/export status. The two native file-choice content columns gain stable names. These guide scenes supplement the complete page/sidebar inventory and drive the relevant UI controls through the original DemoDriver executor.
 
 Selector metadata also retains the current native option tokens, display labels and selection from `OptionListModel`. This supplies the documentation's short option lists from the same source used by the app. A corrected deterministic timestamp uses the existing STAR timestamp format, so saving/export can be exercised rather than refused by the core.
+
+GUI icon names are captured from the visible control's `fontIcon`, `keyIcon` or string `icon` property. Documentation uses those actual Font Awesome 5 names alongside the native labels; controls without a GUI icon do not gain an invented one.
