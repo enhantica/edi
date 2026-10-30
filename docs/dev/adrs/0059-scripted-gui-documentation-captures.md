@@ -1,6 +1,6 @@
 # ADR-0059: Scripted GUI documentation captures
 
-Status: implementation in progress
+Status: implemented; manual native workflow verified
 Date: 2026-10-30
 
 ## Context and prior art
@@ -28,3 +28,9 @@ A documentation importer validates the complete bundle, image hashes, dimensions
 ## Validation
 
 Exercise the actual native workflow, including project creation, separate imports, all enabled sidebar modes, the fit completion/closed-popup contract and target geometry. Refuse malformed script data, stale/mismatched artifacts and missing required targets. Existing demo semantics remain covered by a representative original-mode run. A manually generated bundle is the first consumer; the same command can later consume a CI-built native app artifact.
+
+## First verified run
+
+The source-matched app at `eb945aa8fb5964658daeab4a5bdc488b653e3bf3` completed the bundled default walkthrough. Its manifest records 23 captured images at 1480 by 800 and explicit skips for disabled modes. The fit state is success; every Analysis and Report image has no running fit and no open results popup. The preview importer validated this complete bundle before publication.
+
+Manual capture entry point and import instructions: [app/docs/README.md](../../../app/docs/README.md). The CI documentation build validates committed captures; native GUI capture itself is not yet scheduled in CI.
