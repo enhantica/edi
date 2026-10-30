@@ -137,7 +137,12 @@ Rectangle {
             const calculators = items(dialog.contentItem).filter(item => item.fontIcon === "calculator");
             verify(calculators.length > 0, "The calculation marker uses the approved calculator icon");
             const strip = explanation.parent;
-            const colours = items(strip).flatMap(item => [String(item.color), String(item.textColor)]).map(value => value.toUpperCase());
+            const colourItems = items(strip), colourValues = [];
+            for (let index = 0; index < colourItems.length; ++index) {
+                const item = colourItems[index];
+                colourValues.push(String(item.color), String(item.textColor));
+            }
+            const colours = colourValues.map(value => value.toUpperCase());
             verify(owner.palettes[0].light.every(colour => colours.includes(colour)), "The live strip displays all eleven independently recorded palette positions");
             const before = grabImage(strip);
             verify(before.width > 0, "The live order strip renders actual pixels");
