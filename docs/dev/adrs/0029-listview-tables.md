@@ -182,3 +182,12 @@ before their listView references are released, preventing late inherited callbac
 from resolving removed derived methods. Other fit signal entries retain the plain
 lifetime token before dispatch. This changes neither the pinned dependency nor live
 layout, and adds no timer or ignored-warning path.
+
+
+## Native table procedures with the original view records
+
+ApplicationInfo executes DataTable's column projection, fitting/measurement, row/cell ownership, padding/alignment, delayed scheduling, destruction, cache updates, reveal and keyboard procedures. The pinned base ListView remains the visual control; the existing fittedWidths/rowWidths maps, Map objects, revision and lifetime records remain on the same view. No second model, width cache, controller or broader currentness rule is introduced. Each original row ownership predicate retains its parent/model/revision and member-reference checks around observable assignments.
+
+The procedures call the current engine's real property, method, coercion, array and intrinsic iterator operations. For-in follows the pinned compiler's enumeration path without IteratorClose; for-of retains original completion/close behavior. Literal construction bypasses inherited setters while original later writes retain them. Native callback values preserve formal arity, original captures and function/lifetime identity; width fitting remains queued by Qt's existing delayed-call queue. Original model notifications and exact text-cache invalidation order remain, including read/measurement dependencies. Scientific models and Undo writes are untouched.
+
+QML keeps state declarations, visual delegates, direct bindings and named one-call forwarding methods. Complete desktop/browser compilation and live row/model mutation, destruction, geometry, font, key and error verification remain required after the full migration.
