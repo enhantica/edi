@@ -22,9 +22,7 @@ Column {
     // Why the last edit was refused.
     property string refusal: ""
 
-    function apply(row: int, name: string, value: string) {
-        group.refusal = Session.project ? Session.project.applyText(group.source.file, data.editedText(row, name, value)) : "";
-    }
+    function apply(row: int, name: string, value: string) { ApplicationInfo.applyGeneratedCategory(row, name, value); }
 
     spacing: AppSizes.groupContentSpacing
     width: EaStyle.Sizes.sideBarContentWidth

@@ -39,16 +39,7 @@ Column {
         })
 
     // The type a choice names, applied now when nothing would be removed, else after the question.
-    function chooseType(token: string) {
-        const rows = experiment.backgroundType === "line-segment" ? (points ? points.count : 0) : (terms ? terms.count : 0);
-        if (rows === 0) {
-            experiment.backgroundType = token;
-            return;
-        }
-        typeQuestion.token = token;
-        typeQuestion.rows = rows;
-        typeQuestion.open();
-    }
+    function chooseType(token: string) { ApplicationInfo.chooseBackgroundType(token); }
 
     spacing: AppSizes.groupContentSpacing
 

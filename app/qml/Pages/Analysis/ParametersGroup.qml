@@ -57,17 +57,10 @@ EaElements.GroupBox {
     // A row is always selected while the table shows any (the owner, 2026-09-29; edi ADR-0017 §11): the first
     // shown row, when a project opens, when the experiment changes or when the filters hide the selected row;
     // a row the user selected stays selected while it is shown.
-    function ensureSelection() {
-        if (group.selected === null || !parameterFilter.shows(group.selected))
-            group.selected = parameterFilter.parameterAt(0);
-        group.selectedRow = parameterFilter.rowOf(group.selected);
-    }
-    onSelectedChanged: selectedRow = parameterFilter.rowOf(selected)
+    function ensureSelection() { ApplicationInfo.ensureParameterSelection(); }
+    onSelectedChanged: ApplicationInfo.parameterSelectionChanged(false)
 
-    onProjectChanged: {
-        group.selected = null;
-        group.ensureSelection();
-    }
+    onProjectChanged: ApplicationInfo.parameterSelectionChanged(true)
     Component.onCompleted: group.ensureSelection()
 
     Connections {
@@ -101,53 +94,14 @@ EaElements.GroupBox {
 
     // A picker entry's line: a datablock's icon in its colour, a category's icon in the minor colour, a kind heading in
     // bold, and the title with its parameter count.
-    function datablockSegments(entry) {
-        if (!entry)
-            return [];
-        const title = {
-            "text": entry.title,
-            "elides": true
-        };
-        return entry.icon === "" ? [title] : [
-            {
-                "icon": entry.icon,
-                "color": group.datablockColor(entry.blockKind, entry.blockName)
-            },
-            title];
-    }
-    function categorySegments(entry) {
-        if (!entry)
-            return [];
-        const title = {
-            "text": entry.title,
-            "bold": entry.datablock,
-            "elides": true
-        };
-        return entry.icon === "" ? [title] : [
-            {
-                "icon": entry.icon,
-                "color": EaStyle.Colors.themeForegroundMinor
-            },
-            title];
-    }
+    function datablockSegments(entry) { return ApplicationInfo.parameterSegments(entry, false); }
+    function categorySegments(entry) { return ApplicationInfo.parameterSegments(entry, true); }
 
     // A datablock's colour, as its icon has it elsewhere: a structure's or an experiment's by its place in the
     // project's list.
-    function datablockColor(kind, name) {
-        const blocks = group.project ? (kind === "structure" ? group.project.structures : group.project.experiments) : null;
-        let place = 0;
-        for (let row = 0; blocks && row < blocks.count; ++row) {
-            if (blocks.text(row, "name") === name) {
-                place = row;
-                break;
-            }
-        }
-        return kind === "structure" ? AppColors.structure(place) : AppColors.experiment(place);
-    }
+    function datablockColor(kind, name) { return ApplicationInfo.parameterDatablockColor(kind, name); }
 
-    function bound(value) {
-        return value === Infinity ? "inf" : value === -Infinity ? "-inf" : String(value);
-    }
+    function bound(value) { return ApplicationInfo.parameterBound(value); }
 
     Column {
         spacing: AppSizes.groupContentSpacing
@@ -550,16 +504,7 @@ EaElements.GroupBox {
             property real lower: 0
             property real upper: 1
 
-            function updateLimits() {
-                if (!selected) {
-                    lower = 0;
-                    upper = 1;
-                    return;
-                }
-                const span = selected.sliderHalfWidth();
-                lower = selected.value - span;
-                upper = selected.value + span;
-            }
+            function updateLimits() { ApplicationInfo.updateParameterSliderLimits(); }
 
             spacing: EaStyle.Sizes.fontPixelSize
             onSelectedChanged: updateLimits()
@@ -598,17 +543,9 @@ EaElements.GroupBox {
                 toolTipText: sliderRow.selected ? sliderRow.selected.fileValue : ""
                 onMoved: sliderRow.selected.value = value
                 // Held, the pattern charts keep their y range; let go, they fit it again (ProjectViewModel.adjusting).
-                onPressedChanged: {
-                    if (group.project)
-                        group.project.adjusting = pressed;
-                    if (!pressed)
-                        sliderRow.updateLimits();
-                }
+                onPressedChanged: ApplicationInfo.parameterSliderPressed(false)
                 // A slider gone while held (the page left) holds nothing.
-                Component.onDestruction: {
-                    if (pressed && group.project)
-                        group.project.adjusting = false;
-                }
+                Component.onDestruction: ApplicationInfo.parameterSliderPressed(true)
             }
             EaElements.TextField {
                 objectName: "parameters.slider.to"

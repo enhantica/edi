@@ -29,17 +29,9 @@ Column {
     readonly property bool editable: experiment !== null && experiment.calculationOnly
 
     // Each column, measured or calculated, in its item's display format; the table shows the data, it does not edit it.
-    function shown(uid, value) {
-        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
-    }
+    function shown(uid, value) { return ApplicationInfo.formShownValue(uid, value, true); }
     // The step, or the smallest and largest steps of an uneven pattern, in the step's display format.
-    function increment(summary) {
-        if (!summary)
-            return "";
-        const smallest = Session.display(group.rangeItem + "_step", summary.stepMinimum);
-        const largest = Session.display(group.rangeItem + "_step", summary.stepMaximum);
-        return smallest === largest ? summary.step : `${smallest}–${largest}`;
-    }
+    function increment(summary) { return ApplicationInfo.measuredRangeIncrement(summary); }
 
     spacing: AppSizes.groupContentSpacing
 

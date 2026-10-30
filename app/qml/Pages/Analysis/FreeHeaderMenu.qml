@@ -24,65 +24,31 @@ EaElements.Menu {
     property int membership: 0
 
     // The shown rows that can be fitted, as the filter model has them now.
-    function fittableRows() {
-        const rows = [];
-        if (menu.filter === null || menu.project === null)
-            return rows;
-        for (let i = 0; i < menu.filter.rowCount(); ++i) {
-            const parameter = menu.filter.parameterAt(i);
-            if (parameter !== null && parameter.fittable)
-                rows.push(parameter);
-        }
-        return rows;
-    }
+    function fittableRows() { return ApplicationInfo.parameterFreeRows(true); }
 
     // The shown rows that are free, fittable or not: Fixed clears a flag set before a change that blocked it too.
-    function freeRows() {
-        const rows = [];
-        if (menu.filter === null || menu.project === null)
-            return rows;
-        for (let i = 0; i < menu.filter.rowCount(); ++i) {
-            const parameter = menu.filter.parameterAt(i);
-            if (parameter !== null && parameter.free)
-                rows.push(parameter);
-        }
-        return rows;
-    }
+    function freeRows() { return ApplicationInfo.parameterFreeRows(false); }
 
     // The shown rows that can be fitted, and how many of them are free. Reading each row's `free` keeps it live. The
     // count is used, not only read: the compiled binding drops a read whose value is unused (`void x`), and with it
     // the dependency.
     readonly property var shown: menu.membership >= 0 ? menu.fittableRows() : []
-    readonly property int freeCount: shown.filter(parameter => parameter.free).length
+    readonly property int freeCount: ApplicationInfo.parameterFreeCount()
     readonly property int fixedCount: shown.length - freeCount
 
     // Free or Fixed acts on the rows shown when it is chosen.
-    function apply(free) {
-        if (menu.project !== null)
-            menu.project.setParametersFree(free ? menu.fittableRows() : menu.freeRows(), free);
-        menu.close();
-    }
+    function apply(free) { ApplicationInfo.applyParametersFree(free); }
 
     Connections {
         target: menu.filter
-        function onRowsInserted() {
-            ++menu.membership;
-        }
-        function onRowsRemoved() {
-            ++menu.membership;
-        }
-        function onModelReset() {
-            ++menu.membership;
-        }
-        function onLayoutChanged() {
-            ++menu.membership;
-        }
+        function onRowsInserted() { ApplicationInfo.parameterMenuMembershipChanged(); }
+        function onRowsRemoved() { ApplicationInfo.parameterMenuMembershipChanged(); }
+        function onModelReset() { ApplicationInfo.parameterMenuMembershipChanged(); }
+        function onLayoutChanged() { ApplicationInfo.parameterMenuMembershipChanged(); }
     }
     Connections {
         target: menu.project
-        function onCurrentExperimentIndexChanged() {
-            ++menu.membership;
-        }
+        function onCurrentExperimentIndexChanged() { ApplicationInfo.parameterMenuMembershipChanged(); }
     }
 
     // Centred in the app window, as the app's dialogs are, not at the click (the owner, 2026-10-27).
