@@ -34,91 +34,15 @@ QtObject {
             recentProjects.refresh();
         }
     }
-    function webRows(): list<var> {
-        const kept = [];
-        const saved = [];
-        const places = WebStorage.places;
-        for (let row = 0; row < places.count; ++row) {
-            const key = places.key(row), name = places.name(row), inBrowser = places.kind(row) === "browser";
-            if (places.recovery(row))
-                kept.push({
-                    "path": "kept:" + key,
-                    "label": qsTr("Continue where you left off: %1").arg(name),
-                    "inBrowser": false,
-                    "available": true
-                });
-            if (places.saved(row))
-                saved.push({
-                    "path": "place:" + key,
-                    "label": inBrowser ? qsTr("%1 · in this browser").arg(name) : qsTr("%1 · on this computer").arg(name),
-                    "inBrowser": inBrowser,
-                    "available": true
-                });
-        }
-        return kept.concat(saved);
-    }
+    function webRows(): list<var> { return ApplicationInfo.recentWebRows(); }
     // A web row's place and whether it is the unsaved state kept for it.
-    function webKey(path: string): string {
-        return path.substring(path.indexOf(":") + 1);
-    }
-    function open(path: string) {
-        if (WebFiles.available)
-            Session.openStoredProject(webKey(path), path.startsWith("kept:"));
-        else
-            Session.openProject(Session.projectDirectoryUrl(path));
-    }
+    function webKey(path: string): string { return ApplicationInfo.recentWebKey(path); }
+    function open(path: string) { ApplicationInfo.recentOpen(path); }
 
-    function paths(): list<string> {
-        return recentSettings.recent.filter(path => path.length > 0);
-    }
+    function paths(): list<string> { return ApplicationInfo.recentPaths(); }
     // Rows are updated in place, so a project that goes missing or comes back changes the cell already shown.
-    function refresh() {
-        const saved = WebFiles.available ? webRows() : paths().map(path => ({
-                    "path": path,
-                    "label": path,
-                    "inBrowser": false,
-                    "available": Session.projectDirectoryExists(path)
-                }));
-        for (let index = 0; index < saved.length; ++index) {
-            const row = saved[index];
-            if (index < rows.count)
-                rows.set(index, row);
-            else
-                rows.append(row);
-        }
-        if (rows.count > saved.length)
-            rows.remove(saved.length, rows.count - saved.length);
-    }
-    function remember(path: string) {
-        if (!path || WebFiles.available)
-            return;
-        const saved = paths().filter(item => item !== path);
-        saved.unshift(path);
-        recentSettings.recent = saved;
-        recentSettings.last = path;
-        refresh();
-    }
-    function forget(index: int) {
-        if (WebFiles.available) {
-            // A kept project is deleted from the browser with its row; unsaved changes kept for one are dropped.
-            const path = index >= 0 && index < rows.count ? rows.get(index).path : "";
-            if (path.startsWith("kept:"))
-                WebStorage.dropRecovery(webKey(path));
-            else if (path.startsWith("place:"))
-                WebStorage.forget(webKey(path));
-            return;
-        }
-        const saved = paths();
-        if (index < 0 || index >= saved.length)
-            return;
-        saved.splice(index, 1);
-        recentSettings.recent = saved;
-        refresh();
-    }
-    Component.onCompleted: {
-        if (Session.project && !Session.needsSaveAs && !WebFiles.available)
-            remember(Session.projectLocation);
-        else
-            refresh();
-    }
+    function refresh() { ApplicationInfo.recentRefresh(); }
+    function remember(path: string) { ApplicationInfo.recentRemember(path); }
+    function forget(index: int) { ApplicationInfo.recentForget(index); }
+    Component.onCompleted: ApplicationInfo.recentCompleted()
 }

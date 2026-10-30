@@ -583,6 +583,18 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void workingElapsed() const;
     Q_INVOKABLE void workingCadence(bool peak) const;
     Q_INVOKABLE void workingAnimation(bool started) const;
+    /// Recent-project persistence/navigation and row activation/setup retain their existing owners and records.
+    Q_INVOKABLE QJSValue recentWebRows() const;
+    Q_INVOKABLE QJSValue recentWebKey(const QJSValue& path) const;
+    Q_INVOKABLE void recentOpen(const QJSValue& path) const;
+    Q_INVOKABLE QJSValue recentPaths() const;
+    Q_INVOKABLE void recentRefresh() const;
+    Q_INVOKABLE void recentRemember(const QJSValue& path) const;
+    Q_INVOKABLE void recentForget(const QJSValue& index) const;
+    Q_INVOKABLE void recentCompleted() const;
+    Q_INVOKABLE void tableRowEditing() const;
+    Q_INVOKABLE void tableRowActivated() const;
+    Q_INVOKABLE void tableRowCompleted(const QJSValue& installOpacity) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
