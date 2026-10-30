@@ -1293,6 +1293,7 @@ void DemoDriver::next_action() {
     if (action_ < step.actions.size()) {
         const QString& action = step.actions.at(action_);
         ++action_;
+        if (documentation_) documentation_actions_.append(QJsonObject{{"scene", step.image}, {"action", action}});
         if (action == QLatin1String("capture-now")) {
             next_action();
             return;

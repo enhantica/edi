@@ -50,7 +50,7 @@ Session* session_for(QQuickWindow& window) {
 }  // namespace
 
 bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
-    const auto refuse = [error](const QString& why) { *error = why; return false; };
+    const auto refuse = [error](const QString& why) { if (error) *error = why; return false; };
     if (!output_dir_.entryList({"*.png", "manifest.json"}, QDir::Files).isEmpty())
         return refuse("documentation output contains an earlier capture; choose an empty directory");
     if (!loaded_files_.isValid() || !output_dir_.mkpath("inputs"))
@@ -110,6 +110,9 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
         }
         loaded.push_back(std::move(step));
     }
+    QSaveFile retained(output_dir_.filePath("walkthrough.js"));
+    if (!retained.open(QIODevice::WriteOnly) || retained.write(bytes) != bytes.size() || !retained.commit())
+        return refuse("cannot retain the walkthrough script");
     steps_ = std::move(loaded);
     documentation_ = true;
     documentation_script_ = QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex());
@@ -118,7 +121,6 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
 }
 
 std::optional<bool> DemoDriver::documentationAction(const QString& action) {
-    documentation_actions_.append(QJsonObject{{"scene", steps_[current_].image}, {"action", action}});
     if (action.startsWith("examples.open.") || action.startsWith("open-cli-project:") ||
         action.startsWith("open-project:")) {
         fail("the documentation walkthrough must create its project and import separate inputs");
@@ -185,7 +187,7 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
 
 bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
     const auto& step = steps_[current_];
-    const auto refuse = [error](const QString& why) { *error = why; return false; };
+    const auto refuse = [error](const QString& why) { if (error) *error = why; return false; };
     auto* tab = find("appBar.tab." + step.page, false);
     if (!tab || !tab->property("checked").toBool()) return refuse("capture is on the wrong workflow page");
     auto* session = session_for(window_);
@@ -236,6 +238,12 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
         if (item && on_screen(item))
             tabs.append(QJsonObject{{"id", QString("sideBar.tab.") + name}, {"label", item->property("text").toString()},
                                     {"enabled", item->isEnabled()}, {"checked", item->property("checked").toBool()}});
+    }
+    if (!step.sidebar.isEmpty()) {
+        QStringList selected;
+        for (const auto& entry : tabs)
+            if (entry.toObject().value("checked").toBool()) selected.append(entry.toObject().value("label").toString());
+        if (selected != QStringList{step.sidebar}) return refuse("capture has the wrong sidebar selection");
     }
     QJsonObject state{{"page", step.page}, {"sidebar", step.sidebar}, {"sidebar_tabs", tabs},
         {"has_project", project != nullptr}, {"structures", project ? project->structureModels().size() : 0},

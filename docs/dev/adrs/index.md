@@ -83,6 +83,8 @@ in the same change — see `AGENTS.md` §ADRs.
 | [0057](0057-assistant-product-skills.md) | Assistant product skills | Accepted | 🟡 | Medium | versioned bundled and selected guidance, tied to actual executable native capabilities |
 | [0058](0058-defined-background-editing.md) | Defined background editing | Accepted | 🟡 | Medium | explicit manual anchor edits through ordinary native validation and Undo, alongside ADR-0040 Estimate |
 
+| [0059](0059-scripted-gui-documentation-captures.md) | Scripted GUI documentation captures | In progress | 🟡 | Medium | native JavaScript walkthrough, settled screenshots and matching QML layout metadata |
+
 New cross-cutting decisions that should also bind crysta are authored as **(shared)** and, once the
 Copier agent-OS template exists (ADR-0004), live in its shared-ADR range so `copier update`
 propagates them to both repos.
