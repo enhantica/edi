@@ -83,6 +83,8 @@ class ApplicationInfo : public QObject {
         NumberExponent
     };
     Q_ENUM(NumberOperation)
+    enum FitOutcomeOperation { FitIcon, FitRing, FitWord, FitMeaning, FitColor, FitTextColor };
+    Q_ENUM(FitOutcomeOperation)
 
     explicit ApplicationInfo(QObject* parent = nullptr);
 
@@ -472,6 +474,27 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void reportTableRowsChanged() const;
     Q_INVOKABLE QJSValue reportCorrelationLabelWidth() const;
     Q_INVOKABLE QJSValue reportCorrelationColor(const QJSValue& value) const;
+    /// Shared scene, legend, block and correlation presentation; existing native controllers own the data.
+    Q_INVOKABLE QJSValue legendToggleAt(const QJSValue& item, const QJSValue& x, const QJSValue& y) const;
+    Q_INVOKABLE QJSValue legendRichLabel(const QJSValue& pieces) const;
+    Q_INVOKABLE QJSValue legendMarkPiece(const QJSValue& mark, const QJSValue& width, const QJSValue& color) const;
+    Q_INVOKABLE QJSValue legendSegments() const;
+    Q_INVOKABLE QJSValue factorPresentation(const QJSValue& value, bool rich) const;
+    Q_INVOKABLE QJSValue fitOutcomePresentation(FitOutcomeOperation operation, const QJSValue& key, const QJSValue& neutral) const;
+    Q_INVOKABLE void stepBlock(const QJSValue& offset) const;
+    Q_INVOKABLE QJSValue blockSegments(const QJSValue& index, const QJSValue& name, const QJSValue& nameColor, const QJSValue& outcome, const QJSValue& isTemplate) const;
+    Q_INVOKABLE void activateBlock(const QJSValue& index, const QJSValue& restoreBinding) const;
+    Q_INVOKABLE QJSValue correlationNumbers() const;
+    Q_INVOKABLE QJSValue correlationEdgeText(const QJSValue& index) const;
+    Q_INVOKABLE QJSValue correlationValueAt(const QJSValue& index) const;
+    Q_INVOKABLE void correlationCommit(const QJSValue& text, bool count) const;
+    Q_INVOKABLE void correlationNumberDone(const QJSValue& restoreBinding) const;
+    Q_INVOKABLE void correlationToggle(bool full) const;
+    Q_INVOKABLE QJSValue correlationWidestLabel() const;
+    Q_INVOKABLE QJSValue structureHoverText(const QJSValue& result) const;
+    Q_INVOKABLE void structurePointer(const QJSValue& event, int kind) const;
+    Q_INVOKABLE void structureHoverShow(const QJSValue& x, const QJSValue& y) const;
+    Q_INVOKABLE void structureColourChoice(const QJSValue& index) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

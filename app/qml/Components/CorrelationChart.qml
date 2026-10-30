@@ -67,35 +67,15 @@ Item {
     }
     readonly property int count: labels.length
     // With the names hidden, each parameter's number in the Analysis table labels its ticks (the owner, 2026-10-27).
-    readonly property var numbers: {
-        const project = Session.project;
-        return labels.map(label => {
-            const number = project ? project.parameterNumber(label) : 0;
-            return number > 0 ? String(number) : "";
-        });
-    }
-    function edgeText(index: int): string {
-        return (namesShown ? labels[index] : numbers[index]) ?? "";
-    }
+    readonly property var numbers: ApplicationInfo.correlationNumbers()
+    function edgeText(index: int): string { return ApplicationInfo.correlationEdgeText(index); }
 
     // A cell's value; NaN outside the values, which can trail the labels by one change. Above the diagonal, the full
     // matrix shows the cell mirrored below it.
-    function valueAt(index: int): real {
-        if (count <= 0)
-            return NaN;
-        const row = Math.floor(index / count);
-        const column = index % count;
-        const source = fullMatrix && column > row ? column * count + row : index;
-        return source >= 0 && source < values.length ? values[source] : NaN;
-    }
+    function valueAt(index: int): real { return ApplicationInfo.correlationValueAt(index); }
 
     // The colour of a coefficient: the background mixed towards red or blue by its size.
-    function cellColor(value: real): color {
-        const background = EaStyle.Colors.chartBackground;
-        const end = value < 0 ? negativeColor : positiveColor;
-        const share = Math.min(1, Math.abs(value));
-        return Qt.rgba(background.r + (end.r - background.r) * share, background.g + (end.g - background.g) * share, background.b + (end.b - background.b) * share, 1);
-    }
+    function cellColor(value: real): color { return ApplicationInfo.reportCorrelationColor(value); }
 
     Rectangle {
         anchors.fill: parent
@@ -127,11 +107,7 @@ Item {
                 notation: DoubleValidator.StandardNotation
                 locale: "C"
             }
-            onCommitted: text => {
-                const level = Number(text);
-                if (!isNaN(level))
-                    chart.correlations.level = level;
-            }
+            onCommitted: text => ApplicationInfo.correlationCommit(text, false)
         }
         NumberBox {
             objectName: "correlations.toolbar.parameters"
@@ -145,11 +121,7 @@ Item {
                 bottom: 2
                 top: 999
             }
-            onCommitted: text => {
-                const count = parseInt(text);
-                if (!isNaN(count))
-                    chart.correlations.maxParameters = count;
-            }
+            onCommitted: text => ApplicationInfo.correlationCommit(text, true)
         }
         // Set apart from the boxes as the pattern chart's button groups are.
         Item {
@@ -162,7 +134,7 @@ Item {
             fontIcon: "font"
             toolTip: chart.namesShown ? qsTr("Hide the parameter names along the axes") : qsTr("Show the parameter names along the axes")
             checked: chart.namesShown
-            onClicked: chart.namesShown = !chart.namesShown
+            onClicked: ApplicationInfo.correlationToggle(false)
         }
         ChartToolButton {
             objectName: "correlations.toolbar.fullMatrix"
@@ -170,7 +142,7 @@ Item {
             fontIcon: "th"
             toolTip: chart.fullMatrix ? qsTr("Show the lower triangle only") : qsTr("Show the full matrix")
             checked: chart.fullMatrix
-            onClicked: chart.fullMatrix = !chart.fullMatrix
+            onClicked: ApplicationInfo.correlationToggle(true)
         }
     }
 
@@ -245,11 +217,7 @@ Item {
                 selectedTextColor: EaStyle.Colors.themeBackground
                 color: !box.enabled ? EaStyle.Colors.themeForegroundDisabled : box.hovered || activeFocus ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
                 text: box.shown
-                onEditingFinished: {
-                    if (text !== box.shown)
-                        box.committed(text);
-                    text = Qt.binding(() => box.shown);
-                }
+                onEditingFinished: ApplicationInfo.correlationNumberDone(() => { text = Qt.binding(() => box.shown); })
 
                 // The text cursor over the number, which is what is edited (owner, 2026-10-11).
                 HoverHandler {
@@ -280,12 +248,7 @@ Item {
     Item {
         id: area
 
-        readonly property real widestLabel: {
-            let widest = 0;
-            for (let i = 0; i < chart.count; ++i)
-                widest = Math.max(widest, metrics.advanceWidth(chart.edgeText(i)));
-            return Math.ceil(widest);
-        }
+        readonly property real widestLabel: ApplicationInfo.correlationWidestLabel()
         readonly property real rowLabelWidth: Math.min(widestLabel, width * 0.4) + chart.em * 0.5
         readonly property real colourBarWidth: chart.namesShown ? chart.em * 4.5 : 0
         readonly property real flatLabelHeight: chart.em * 2

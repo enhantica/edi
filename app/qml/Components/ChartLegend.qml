@@ -37,37 +37,14 @@ Rectangle {
     // A click at (x, y) in `item`, the chart's pointer area, on a row: its curve hidden or shown again. The legend takes
     // no press, so a drag that starts on it still zooms, and the pointer area passes its clicks here; true when a row
     // took the click.
-    function toggleAt(item, x, y) {
-        if (!legend.toggles || !legend.visible)
-            return false;
-        const at = item.mapToItem(column, x, y);
-        const row = column.childAt(at.x, at.y);
-        if (row === null || row.key === undefined)
-            return false;
-        legend.toggled(row.key);
-        return true;
-    }
+    function toggleAt(item, x, y) { return ApplicationInfo.legendToggleAt(item, x, y); }
 
     // A label's pieces as one styled text, each coloured piece a span: spaced as the text itself, as the residual axis
     // title is, never by the line's gaps between pieces.
-    function richLabel(pieces) {
-        return pieces.map(piece => {
-            const text = String(piece.text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-            return legend.labelInColor && piece.color ? "<font color=\"" + piece.color + "\">" + text + "</font>" : text;
-        }).join("");
-    }
+    function richLabel(pieces) { return ApplicationInfo.legendRichLabel(pieces); }
 
     // An entry's mark: an element's is the atom icon the Atom sites table shows, a series' a drawn line or tick.
-    function markPiece(mark, width, color) {
-        return mark === "atom" ? {
-            "icon": "atom",
-            "color": AppColors.readable(color, [legend.colors.mainContentBackgroundHalfTransparent])
-        } : {
-            "mark": mark,
-            "width": width,
-            "color": color
-        };
-    }
+    function markPiece(mark, width, color) { return ApplicationInfo.legendMarkPiece(mark, width, color); }
 
     width: column.width
     height: Math.max(column.height, minimumHeight)
@@ -105,55 +82,7 @@ Rectangle {
                 textColor: hidden ? legend.colors.themeForegroundDisabled : color
                 // A hidden entry keeps its own pieces, its mark or icon included, each in the disabled colour (the
                 // owner, 2026-10-25).
-                segments: {
-                    const ink = shown => entry.hidden ? legend.colors.themeForegroundDisabled : shown;
-                    const mark = legend.markPiece(entry.mark, entry.markWidth, ink(entry.color));
-                    if (entry.bragg)
-                        return [mark,
-                            {
-                                "text": qsTr("Bragg peaks")
-                            },
-                            {
-                                "icon": "layer-group",
-                                "color": ink(entry.color)
-                            },
-                            {
-                                "text": entry.label
-                            }
-                        ];
-                    if (entry.selected)
-                        return [mark,
-                            // The selected dataset: its name bold in its own colour.
-                            {
-                                "text": entry.label,
-                                "color": ink(entry.color),
-                                "bold": true
-                            }
-                        ];
-                    // Hidden, the name is one plain text in the disabled colour, its coloured pieces included.
-                    if (entry.hidden)
-                        return [mark,
-                            {
-                                "text": entry.label,
-                                "color": ink(entry.color)
-                            }
-                        ];
-                    return [mark,
-                        {
-                            "text": legend.richLabel(entry.labelTexts.length > 0 ? entry.labelTexts.map((text, i) => ({
-                                        "text": text,
-                                        "color": ink(entry.labelColors[i])
-                                    })) : [
-                                {
-                                    "text": entry.label,
-                                    "color": ink(entry.color)
-                                }
-                            ]),
-                            "rich": true,
-                            "color": ink(legend.colors.themeForeground)
-                        }
-                    ];
-                }
+                segments: ApplicationInfo.legendSegments()
 
                 // The row's hover cue only: no button, so a press goes on to the chart's pointer area, which passes a
                 // click back (toggleAt).
