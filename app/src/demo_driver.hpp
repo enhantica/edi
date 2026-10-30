@@ -5,12 +5,15 @@
 #include <QDir>
 #include <QElapsedTimer>
 #include <QImage>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QObject>
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <functional>
+#include <optional>
 #include <vector>
 
 class QQuickItem;
@@ -34,6 +37,8 @@ class DemoDriver : public QObject {
     DemoDriver(QQuickWindow& window, const QString& output_dir, const QString& only = QString(),
                QObject* parent = nullptr);
     void start();
+    /// Load a documentation walkthrough; see ADR-0059. Refuses invalid scripts or fixture inputs.
+    bool loadDocumentationScript(const QString& path, QString* error);
 
    private:
     // One image and the actions that lead to it, in order. An action is an objectName to click, or:
@@ -72,6 +77,11 @@ class DemoDriver : public QObject {
     struct Step {
         QString image;
         QStringList actions;
+        QString description{};
+        QString page{};
+        QString sidebar{};
+        QStringList highlights{};
+        bool capture = true;
     };
 
     void run_step();
@@ -106,6 +116,9 @@ class DemoDriver : public QObject {
     bool timed_slider(int count);
     void record_samples(const QString& label, std::vector<double> samples);
     void delay_then_record();
+    std::optional<bool> documentationAction(const QString& action);
+    bool saveDocumentationFrame(const QString& path, QString* error);
+    bool saveDocumentationManifest(const QString& status, const QString& error = {});
 
     QQuickWindow& window_;
     QDir output_dir_;
@@ -118,6 +131,12 @@ class DemoDriver : public QObject {
     QElapsedTimer timer_;
     std::vector<double> pre_fit_values_;
     QString loaded_cli_project_;
+    bool documentation_ = false;
+    bool documentation_skip_ = false;
+    QString documentation_script_;
+    QJsonArray documentation_scenes_;
+    QJsonArray documentation_actions_;
+    QJsonObject documentation_inputs_;
 };
 
 }  // namespace edi_app

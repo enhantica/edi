@@ -19,6 +19,8 @@ import edi.app
 // is shown, so each is told whether it is the shown one (WorkflowPage.current).
 EaComponents.ApplicationWindow {
     id: window
+    appBar.objectName: "appBar"
+    appBarCentralTabs.objectName: "appBar.workflow"
 
     // Same Create API/preferences as the ordinary current-window form. Native
     // callers pass an original Session-bound intent, never another app/window.
@@ -502,6 +504,7 @@ EaComponents.ApplicationWindow {
     ]
 
     statusBar: StatusBar {
+        objectName: "statusBar"
         assistantChatShown: assistantPanel.visible && assistantPanel.shown
         assistantManualTakeover: window.assistantManualTakeover
         pagesBuilt: window.pagesBuilt

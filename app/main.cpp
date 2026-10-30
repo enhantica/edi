@@ -44,9 +44,16 @@ int main(int argc, char* argv[]) {
     // `--demo <dir>`: the scripted click-through that saves one image per page state; `--demo-only <prefix>`
     // runs just the steps whose image name starts with the prefix.
     const qsizetype demo_flag = arguments.indexOf(QStringLiteral("--demo"));
-    const bool demo = demo_flag >= 0;
-    if (demo && demo_flag + 1 >= arguments.size()) {
-        std::fprintf(stderr, "usage: edi_app --demo <output-directory>\n");
+    const qsizetype docs_flag = arguments.indexOf(QStringLiteral("--docs-capture"));
+    const qsizetype script_flag = arguments.indexOf(QStringLiteral("--docs-script"));
+    const bool documentation = docs_flag >= 0;
+    const bool demo = demo_flag >= 0 || documentation;
+    const qsizetype capture_flag = documentation ? docs_flag : demo_flag;
+    if ((demo_flag >= 0 && documentation) || (script_flag >= 0 && !documentation) ||
+        (demo && (capture_flag + 1 >= arguments.size() || arguments.at(capture_flag + 1).startsWith("--"))) ||
+        (script_flag >= 0 && (script_flag + 1 >= arguments.size() || arguments.at(script_flag + 1).startsWith("--")))) {
+        std::fprintf(stderr, "usage: edi_app --demo <output-directory>\n"
+                             "       edi_app --docs-capture <output-directory> [--docs-script <walkthrough.js>]\n");
         return 2;
     }
     if (demo) {
@@ -90,10 +97,19 @@ int main(int argc, char* argv[]) {
         if (window == nullptr) {
             return -1;
         }
-        window->resize(1280, 768);  // the originals' logical window size
+        window->resize(documentation ? 1480 : 1280, documentation ? 800 : 768);
         const qsizetype only_flag = arguments.indexOf(QStringLiteral("--demo-only"));
-        driver = std::make_unique<edi_app::DemoDriver>(*window, arguments.at(demo_flag + 1),
+        driver = std::make_unique<edi_app::DemoDriver>(*window, arguments.at(capture_flag + 1),
                                                        only_flag >= 0 ? arguments.value(only_flag + 1) : QString());
+        if (documentation) {
+            QString error;
+            const auto script = script_flag >= 0 ? arguments.at(script_flag + 1)
+                                                 : QStringLiteral(":/edi/docs/y2o3-spodi.js");
+            if (!driver->loadDocumentationScript(script, &error)) {
+                std::fprintf(stderr, "edi_app --docs-capture: %s\n", qPrintable(error));
+                return 2;
+            }
+        }
         driver->start();
     }
     return QGuiApplication::exec();

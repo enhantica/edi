@@ -66,7 +66,7 @@ qt_add_qml_module(edi_app_module
         src/assistant_skill_import.hpp src/assistant_skill_import.cpp
         src/example_list_model.hpp src/example_list_model.cpp
         src/engine_setup.hpp src/engine_setup.cpp
-        src/demo_driver.hpp src/demo_driver.cpp
+        src/demo_driver.hpp src/demo_driver.cpp src/demo_documentation.cpp
         src/test_observer.hpp src/test_observer.cpp
         src/web_page_hooks.hpp src/web_page_hooks.cpp
         src/project_editor.hpp
@@ -319,6 +319,8 @@ function(edi_app_bundle_examples root)
     endforeach()
 endfunction()
 edi_app_bundle_examples(${_cli} ${EDI_APP_EXAMPLE_IDS})
+qt_add_resources(edi_app_module "edi_documentation_script" PREFIX "/edi/docs"
+                 BASE ${CMAKE_CURRENT_SOURCE_DIR}/docs FILES docs/y2o3-spodi.js)
 qt_add_resources(edi_app_module "edi_example_metadata" PREFIX "/edi/examples"
                  BASE ${CMAKE_CURRENT_SOURCE_DIR}/examples FILES ${CMAKE_CURRENT_SOURCE_DIR}/examples/metadata.json)
 list(JOIN EDI_APP_EXAMPLE_IDS "\n" _index)

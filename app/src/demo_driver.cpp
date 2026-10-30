@@ -1258,14 +1258,23 @@ void DemoDriver::start() {
         fail(QStringLiteral("cannot create the output directory %1").arg(output_dir_.path()));
         return;
     }
+    if (documentation_ && !output_dir_.entryList(QStringList{"*.png", "manifest.json"}, QDir::Files).isEmpty()) {
+        fail(QStringLiteral("documentation output must not contain an earlier capture"));
+        return;
+    }
     park_pointer();
     QTimer::singleShot(0, this, [this] { run_step(); });
 }
 
 void DemoDriver::run_step() {
     if (current_ == steps_.size()) {
-        QCoreApplication::exit(0);
+        QCoreApplication::exit(!documentation_ || saveDocumentationManifest("complete") ? 0 : 1);
         return;
+    }
+    documentation_skip_ = false;
+    if (documentation_) {
+        std::fprintf(stdout, "docs-capture: %s\n", qPrintable(steps_[current_].image));
+        std::fflush(stdout);
     }
     action_ = 0;
     next_action();
@@ -1273,6 +1282,13 @@ void DemoDriver::run_step() {
 
 void DemoDriver::next_action() {
     const Step& step = steps_[current_];
+    if (documentation_skip_) {
+        documentation_scenes_.append(QJsonObject{{"id", step.image}, {"page", step.page},
+            {"sidebar", step.sidebar}, {"status", "skipped"}, {"reason", "sidebar tab is disabled"}});
+        ++current_;
+        run_step();
+        return;
+    }
     const bool unsettled = step.actions.contains(QStringLiteral("capture-now"));
     if (action_ < step.actions.size()) {
         const QString& action = step.actions.at(action_);
@@ -1333,10 +1349,22 @@ void DemoDriver::next_action() {
         return;
     }
     const auto save = [this] {
+        if (!steps_[current_].capture) {
+            ++current_;
+            run_step();
+            return;
+        }
         const QString path = output_dir_.filePath(steps_[current_].image + QStringLiteral(".png"));
         if (!previous_frame_.save(path)) {
             fail(QStringLiteral("cannot write %1").arg(path));
             return;
+        }
+        if (documentation_) {
+            QString error;
+            if (!saveDocumentationFrame(path, &error)) {
+                fail(error);
+                return;
+            }
         }
         ++current_;
         run_step();
@@ -1370,6 +1398,9 @@ void DemoDriver::wait_fit_then(std::function<void()> next, int waited_ms, int fi
 }
 
 bool DemoDriver::perform(const QString& action) {
+    if (documentation_) {
+        if (auto handled = documentationAction(action)) return *handled;
+    }
     // Scrolls the view a control is in until the control shows (a sidebar column longer than the window).
     if (action.startsWith(QLatin1String("reveal:"))) {
         QQuickItem* item = find(action.mid(7), false);
@@ -2173,6 +2204,7 @@ bool DemoDriver::timed_slider(int count) {
 }
 
 void DemoDriver::fail(const QString& message) {
+    if (documentation_) saveDocumentationManifest("failed", message);
     std::fprintf(stderr, "edi_app --demo: %s\n", qPrintable(message));
     QCoreApplication::exit(1);
 }
