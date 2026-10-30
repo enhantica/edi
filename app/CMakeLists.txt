@@ -53,6 +53,7 @@ qt_add_qml_module(edi_app_module
     DEPENDENCIES QtGraphs QtQuick3D
     SOURCES
         src/app_info.hpp src/app_info.cpp
+        src/assistant_message_presentation.hpp
         src/assistant_view_model.hpp src/assistant_view_model.cpp
         src/assistant_widget_input.hpp src/assistant_widget_input.cpp
         src/assistant_result.hpp src/assistant_result.cpp

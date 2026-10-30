@@ -4362,3 +4362,116 @@ Allocation/serialization unavailability is diagnostic absence, never a reason to
 block or authorize work. This is an instrumented discriminator for the observed
 model/effort pending boundary, not a causal repair or qualification. Independent
 request/reply/notification/retirement and real-runtime verification remain owed.
+
+## FIRST compact activity presentation moves to C++ (A1)
+
+AssistantMessage's compact caption/state/explanation/outcome and activity
+classification use one stateless internal assistant_message_presentation helper.
+The existing ApplicationInfo singleton is the frontend entrance even when no
+AssistantViewModel is bound; dynamic native captions still use the original AVM
+nativeActionLabel owner when present. No QObject/controller, canonical snapshot,
+message store, renderer, dependency, action or clipboard owner is added. Only
+already exposed lightweight display fields are read; no lazy detail/technical
+getter is called for a collapsed caption.
+
+The original AssistantMessage translation context is retained, and the C++ QML
+bridge marks the current binding through QQmlEngine's public translation-binding
+API. Null assistant uses the original project-action fallback; original command
+versus public status corroboration, decision precedence and unconfirmed/applied
+unconfirmed explanations remain. Unused commandCaption and its running-label/
+non-command activityLabel branches are removed, not revived as new behavior.
+
+Full-human description/web purpose assembly, original-row lazy lookup, opt-in
+technical copy, explicit user/Markdown source copy and delegate/pool/reset
+lifetimes remain their original A2/B paths. They bind the same compact result
+rather than duplicate its algorithm. Row privacy/projection, currentness, native
+permission/action/scientific/Save/guide semantics and generated math are unchanged.
+This is only the first compact presentation slice, not completion of procedural
+QML migration. Independent unchanged-JS characterization must run before source
+election; translated/null-owner/type/status and lifecycle regression qualification
+still requires execution. Source or compilation alone is not behavior/full-suite
+or task acceptance.
+
+## FIRST compact bridge preserves JavaScript getter exceptions (A1 boundary correction)
+
+The A1 value algorithm is unchanged, but its ApplicationInfo property reads use
+Qt6.11.2's public QJSManagedValue boundary. QJSValue property/call APIs can catch
+and return arbitrary thrown values; inspecting their Error type is not proof of
+success. The existing owning engine's pending-exception flag distinguishes the
+outcome, including throws of undefined/null/strings or ordinary objects. No caught
+value is cleared/replaced, and no later caption work runs after a pending error.
+Preexisting exceptions remain pending; the value-only helper needs no engine,
+while the actual QML bridge uses its existing engine and creates none. This is a
+separately qualified correction to the earlier reviewed A1 bridge, not unchanged
+review carry or a new controller/permission/formatting policy. Native labels,
+translation context and compact projection rules remain their original owners.
+
+## FIRST compact capture follows guarded consumers (A1 read dependencies)
+
+The public managed-value exception boundary remains, but it must not read an
+unused field first. Capture commandCategory only when the command-caption branch
+wins; capture command status only for command classification; capture item_id
+only after an actual string decision. Fixed human kinds and decision captions
+win before native-label lookup. Type is not fetched for an unrelated fixed-kind
+caption. Native outcome remains an independent state/explanation dependency.
+The pure value formatter still owns all returned classification/text/status rules.
+
+The eager map cannot supply an actually lazy native caption to a later full-body
+placeholder branch. That ONE live leaf now calls ApplicationInfo's normal lazy
+native-caption entrance using the same original row payload/assistant. It shares
+the compact branch's existing-owner lookup, not a second label policy or restored
+JS/test wrapper. The existing AVM QObject slot preserves its original argument
+conversion; no QObject/controller is created. Null owner and a genuinely empty
+native return remain different values. QML otherwise keeps its original A1 delta,
+and no full-human/copy/lifecycle or scientific action policy is migrated here.
+Source239/244 correction and post behavior still require fresh qualification;
+earlier218 review is not reused as proof for these changed bridge/leaf bytes.
+
+## FIRST literal normalization and web captions move to C++ (A2a)
+
+After the compact A1 presentation slice, AssistantMessage's consumed single-line
+normalization and search/open/find web-caption procedures use the existing
+ApplicationInfo entrance and the same internal value presentation helper. Strict
+string types, the original UTF-16/trim/whitespace meaning, query-list precedence,
+invalid/null handling and AssistantMessage translations remain. The original
+engine JSON projection of retained query lists remains the serialization owner;
+C++ invokes its public built-ins, without evaluating a new JavaScript function,
+coercing QVariant strings or creating an engine. Caption logic lives only in C++.
+
+The original lazy getter, full-human line assembly, human/default versus explicit
+technical copy, clipboard/feedback, disclosure/pooling/reuse and current-row guards
+remain separate A2/B work. Expanded description and copy use direct backend calls
+to this one normalization/caption implementation; no canonical lookup, state,
+controller, store, timer or eager payload role is added. Marking the C++ translated
+binding uses the original public Qt owner. This finite source slice is not full
+procedural-QML migration or runtime acceptance; independent unchanged-source and
+post-source Unicode/type/query/language/lazy/copy characterization remains owed.
+
+The serialization and every implicated property/index read use the public
+QJSManagedValue boundary, not QJSValue's caught-and-returned exception convention.
+The actual engine pending-exception flag is checked after each operation and is
+never cleared/replaced: any original thrown value propagates, including a string
+that looks like valid JSON or undefined/null. A returned Error object alone is
+not misclassified as a throw. Preexisting errors stop reads without consumption.
+Original query priority, guarded getter reads, nested JSON callee/receiver order
+and normal Qt-sequence projection remain; no later fallback or caption is built
+from an exception. This repairs the earlier221 candidate, whose private static
+source-clear assumptions did not establish arbitrary exception preservation.
+
+## FIRST Qt trim and positive-regex whitespace are distinct (A2a source preservation)
+
+The original Qt6.11.2 normalizer trims both edges using QChar::isSpace plus FEFF,
+then replaces positive Yarr whitespace runs. These are two different populations:
+edge NEL is removed by the Qt trim owner, while interior NEL remains literal.
+The C++ normalizer now performs those phases separately, reusing the actual public
+QChar edge rule and retaining the original positive-regex population. This is not
+a new general Unicode policy, global NEL replacement or QString::simplified.
+
+The same one normalizer serves purpose/description/argument-purpose compact text,
+search/fallback/projected query lists, open URLs and find patterns. Full/raw text
+continues through its original unnormalized path. FEFF/separators, excluded
+zero-width/obsolete separators, embedded NUL and other UTF-16 units retain their
+original phase-specific meaning. Earlier238/239/243 and private223 claims that one
+abstract ECMAScript population preserved both phases were incomplete; original55
+remains a retained failed baseline, not an original product defect or a repaired
+post result. Independent corrected original/post qualification is still owed.

@@ -39,10 +39,10 @@ Rectangle {
         return Qt.rgba(Math.min(1,base.r+lift/255),Math.min(1,base.g+lift/255),Math.min(1,base.b+lift/255),base.a);
     }
     property bool highlighted: false
-    readonly property bool commandActivity: kind === "activity" && payload && payload.type === "commandExecution"
-    readonly property bool decisionActivity: kind === "activity" && payload && typeof payload.decision === "string" && typeof payload.item_id === "string"
-    readonly property bool summarizedActivity: decisionActivity || kind === "activity" && payload &&
-        ["commandExecution", "fileChange", "webSearch", "mcpToolCall", "dynamicToolCall", "collabAgentToolCall", "plan", "ediOutcome"].indexOf(payload.type) >= 0
+    readonly property var compactPresentation: ApplicationInfo.assistantActivityPresentation(kind, status, payload, assistant)
+    readonly property bool commandActivity: compactPresentation.commandActivity
+    readonly property bool decisionActivity: compactPresentation.decisionActivity
+    readonly property bool summarizedActivity: compactPresentation.summarizedActivity
     readonly property string disclosureIdentity: rowId + "\n" + (payload && typeof payload.id === "string" ? payload.id : "")
     property var humanDetailsSnapshot: null
     property bool technicalCopied: false
@@ -67,15 +67,15 @@ Rectangle {
         const payload = detail.payload || {}, text = typeof detail.text === "string" ? detail.text : "";
         const lines = [];
         const add = value => { if (typeof value === "string" && value.trim().length && lines.indexOf(value) < 0) lines.push(value); };
-        const short = activityCaption();
+        const short = compactPresentation.caption;
         const description = activityDescription(true, payload);
-        if (description.trim().length && shortActionObject(description, false) !== short) add(description);
+        if (description.trim().length && ApplicationInfo.assistantSingleLineText(description) !== short) add(description);
         // Only established human producers use row.text as a description.
         // Generic/command activity text may contain shell or protocol bytes.
         const humanRow = ["error", "plan", "question", "tool", "trial"].indexOf(kind) >= 0
             || (decisionActivity && typeof payload.type === "undefined");
-        if (humanRow && shortActionObject(text, false) !== short) add(text);
-        if (!lines.some(line => shortActionObject(line, false).length > short.length)) {
+        if (humanRow && ApplicationInfo.assistantSingleLineText(text) !== short) add(text);
+        if (!lines.some(line => ApplicationInfo.assistantSingleLineText(line).length > short.length)) {
             if (payload && payload.type === "dynamicToolCall" && assistant)
                 add(assistant.nativeActionDescription(typeof payload.tool === "string" ? payload.tool : "", ""));
             else if (payload && payload.type === "webSearch") add(qsTr("Find or read public sources relevant to the current task."));
@@ -96,7 +96,7 @@ Rectangle {
         return lines.join("\n");
     }
     function humanActivityText(detail) {
-        const short = activityCaption(), full = fullHumanDescription(detail);
+        const short = compactPresentation.caption, full = fullHumanDescription(detail);
         return short === full ? full : short + "\n" + full;
     }
     function copyActivity() {
@@ -151,77 +151,6 @@ Rectangle {
     onSummarizedActivityChanged: resetDetails()
     ListView.onPooled: resetDetails()
     ListView.onReused: resetDetails()
-    function commandCaption() {
-        const actual = payload && typeof payload.status === "string" ? payload.status : "";
-        const settled = actual === "completed" || actual === "failed" || actual === "declined" || actual === "interrupted";
-        // The immutable original can remain inProgress after the public activity
-        // is interrupted/failed. Neither that older original nor an exit field
-        // alone proves a settled command outcome.
-        if (!settled || row.status !== actual) {
-            if (actual === "inProgress" && row.status === "in_progress")
-                return activityLabel(true);
-            let unconfirmed = qsTr("Command outcome unconfirmed");
-            if (row.status === "interrupted") unconfirmed += qsTr(" · activity interrupted");
-            else if (row.status === "failed") unconfirmed += qsTr(" · activity failed");
-            else if (row.status === "completed") unconfirmed += qsTr(" · activity completed");
-            else if (row.status === "refused" || row.status === "declined") unconfirmed += qsTr(" · activity refused");
-            return unconfirmed;
-        }
-        let caption = actual === "completed" ? activityLabel(false)
-                    : actual === "failed" ? qsTr("Command failed")
-                    : actual === "declined" ? qsTr("Command declined")
-                    : qsTr("Command interrupted");
-        return caption;
-    }
-    function activityLabel(running) {
-        if (!commandActivity) {
-            const names = {fileChange: qsTr("File changes"), webSearch: qsTr("Web search"),
-                mcpToolCall: qsTr("Tool activity"), dynamicToolCall: qsTr("Project action"),
-                collabAgentToolCall: qsTr("Agent activity"), plan: qsTr("Plan update")};
-            return names[payload && payload.type] || qsTr("Activity");
-        }
-        const category = payload && typeof payload.commandCategory === "string" ? payload.commandCategory : "";
-        if (category === "read") return running ? qsTr("Reading files") : qsTr("Read files");
-        if (category === "listFiles") return running ? qsTr("Listing files") : qsTr("Listed files");
-        if (category === "search") return running ? qsTr("Searching files") : qsTr("Searched files");
-        return running ? qsTr("Running command") : qsTr("Ran command");
-    }
-    function shortActionObject(value, path) {
-        // Only the single-line presentation changes; the retained literal stays exact.
-        if (typeof value !== "string") return "";
-        return value.trim().replace(/\s+/g, " ");
-    }
-    function webSearchCaption(source) {
-        const payload = source || row.payload;
-        const action = payload.action;
-        if (action !== undefined && action !== null && (typeof action !== "object" || Array.isArray(action))) return "";
-        if (!action || action.type === "search") {
-            let query = shortActionObject(action ? action.query : "", false);
-            if (!query.length && action && action.queries !== undefined && action.queries !== null) {
-                // Retained QVariantList fields use the same JSON projection as command actions.
-                const queries = JSON.parse(JSON.stringify(action.queries));
-                if (!Array.isArray(queries) || !queries.every(value => typeof value === "string")) return "";
-                query = queries.map(value => shortActionObject(value, false)).filter(value => value.length).join(" · ");
-            }
-            if (!query.length) query = shortActionObject(payload.query, false);
-            return query.length ? qsTr("Search the web for %1").arg(query) : "";
-        }
-        if (action.type === "openPage") {
-            const url = shortActionObject(action.url, false);
-            return url.length ? qsTr("Open web page %1").arg(url) : "";
-        }
-        if (action.type === "findInPage") {
-            const url = shortActionObject(action.url, false), pattern = shortActionObject(action.pattern, false);
-            if (url.length && pattern.length) return qsTr("Find %1 on %2").arg(pattern).arg(url);
-            if (pattern.length) return qsTr("Find %1 on a web page").arg(pattern);
-            if (url.length) return qsTr("Find text on %1").arg(url);
-        }
-        return "";
-    }
-    function nativeActionCaption() {
-        const action = payload && typeof payload.tool === "string" ? payload.tool : "";
-        return assistant ? assistant.nativeActionLabel(action) : qsTr("Work on the current project");
-    }
     function activityDescription(full, source) {
         const payload = source || row.payload;
         if (!payload || typeof payload !== "object") return "";
@@ -229,48 +158,11 @@ Rectangle {
                        : typeof payload.description === "string" ? payload.description
                        : payload.arguments && typeof payload.arguments.purpose === "string" ? payload.arguments.purpose : "";
         if (payload.type === "dynamicToolCall" && (supplied === "Edi native action"
-                || supplied === "Edi native action: " + payload.tool)) return nativeActionCaption();
-        if (supplied.trim().length) return full ? supplied : shortActionObject(supplied, false);
-        if (payload.type === "webSearch") return webSearchCaption(payload);
+                || supplied === "Edi native action: " + payload.tool)) return ApplicationInfo.assistantNativeActivityCaption(row.payload, row.assistant);
+        if (supplied.trim().length) return full ? supplied : ApplicationInfo.assistantSingleLineText(supplied);
+        if (payload.type === "webSearch") return ApplicationInfo.assistantWebSearchCaption(payload);
         if (!commandActivity) return "";
         return typeof payload.commandDescription === "string" ? payload.commandDescription : "";
-    }
-    function activityCaption() {
-        const kinds = {error: qsTr("Assistant error"), plan: qsTr("Review work plan"), question: qsTr("Assistant question"),
-            tool: qsTr("Project action"), trial: qsTr("Review refinement trial")};
-        if (Object.prototype.hasOwnProperty.call(kinds, kind)) return kinds[kind];
-        if (decisionActivity) return qsTr("Review requested action");
-        if (commandActivity) return activityLabel(false);
-        if (payload && payload.type === "dynamicToolCall") return nativeActionCaption();
-        const names = {fileChange: qsTr("Update files"), webSearch: qsTr("Search the web"),
-            mcpToolCall: qsTr("Use external tool"), collabAgentToolCall: qsTr("Coordinate assistant task"),
-            plan: qsTr("Update work plan"), ediOutcome: qsTr("Report project action")};
-        return payload && Object.prototype.hasOwnProperty.call(names, payload.type) ? names[payload.type] : qsTr("Perform assistant action");
-    }
-    function activityState() {
-        if (commandActivity) {
-            const actual = typeof payload.status === "string" ? payload.status : "";
-            if (["completed", "failed", "declined", "interrupted"].indexOf(actual) >= 0 && row.status === actual) return actual;
-            return actual === "inProgress" && row.status === "in_progress" ? "in_progress" : "unconfirmed";
-        }
-        if (payload && payload.nativeOutcome && ["unconfirmed", "applied_unconfirmed"].indexOf(payload.nativeOutcome.status) >= 0) return "unconfirmed";
-        return ["completed", "failed", "refused", "declined", "interrupted", "in_progress"].indexOf(row.status) >= 0 ? row.status : "unconfirmed";
-    }
-    function activityExplanation() {
-        const state = activityState();
-        const native = payload && payload.nativeOutcome ? payload.nativeOutcome.status : "";
-        if (native === "applied_unconfirmed")
-            return qsTr("Changes were made, but completion could not be confirmed.");
-        if (native === "unconfirmed" || state === "unconfirmed")
-            return qsTr("The result could not be confirmed. Inspect the project before continuing.");
-        const statuses = {completed: qsTr("Completed"), failed: qsTr("Failed"), refused: qsTr("Refused"),
-            declined: qsTr("Declined"), interrupted: qsTr("Stopped"), in_progress: qsTr("In progress")};
-        return statuses[state] || qsTr("Result unavailable");
-    }
-    function activityOutcomeKey() {
-        const state = activityState();
-        return state === "completed" ? "success" : state === "failed" ? "failed"
-             : state === "refused" || state === "declined" ? "refused" : state === "interrupted" ? "stopped" : "notConverged";
     }
     color: "transparent"
     function sentFileLabel(file) {
@@ -451,17 +343,17 @@ Rectangle {
                 Layout.fillWidth: true
                 Layout.minimumWidth: 0
                 checkable: true
-                text: row.activityCaption()
+                text: row.compactPresentation.caption
                 contentItem: RowLayout {
                     spacing: AppSizes.unit * 0.5
                     EaElements.Label {
-                        text: row.activityState() === "in_progress" ? "hourglass-half" : FitOutcomes.icon(row.activityOutcomeKey())
+                        text: row.compactPresentation.state === "in_progress" ? "hourglass-half" : FitOutcomes.icon(row.compactPresentation.outcomeKey)
                         Layout.preferredWidth: AppSizes.unit
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
                         font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
                         font.family: EaStyle.Fonts.iconsFamily
-                        color: row.activityState() === "in_progress" ? EaStyle.Colors.themeAccent : FitOutcomes.color(row.activityOutcomeKey())
+                        color: row.compactPresentation.state === "in_progress" ? EaStyle.Colors.themeAccent : FitOutcomes.color(row.compactPresentation.outcomeKey)
                         Accessible.ignored: true
                     }
                     EaElements.Label {
@@ -482,7 +374,7 @@ Rectangle {
                         elide: Text.ElideRight
                     }
                 }
-                ToolTip.text: row.activityExplanation() + " · " + text
+                ToolTip.text: row.compactPresentation.explanation + " · " + text
                 EaElements.ToolTip {
                     text: commandDisclosure.ToolTip.text
                     visible: commandDisclosure.visible && commandDisclosure.hovered && EaGlobals.Vars.showToolTips && text !== ""

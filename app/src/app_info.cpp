@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "app_info.hpp"
+#include "assistant_message_presentation.hpp"
+#include "assistant_view_model.hpp"
 
 #include "app_build_info.hpp"
 #include "engine_setup.hpp"
@@ -11,10 +13,13 @@
 #include <QClipboard>
 #include <QFile>
 #include <QGuiApplication>
+#include <QJSManagedValue>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocale>
 #include <QQuickWindow>
+#include <QPointer>
+#include <QQmlEngine>
 #include <QRegularExpression>
 #include <QScreen>
 #include <QSGRendererInterface>
@@ -25,6 +30,7 @@
 #include <QtGlobal>
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <string_view>
 
 #ifdef _OPENMP
@@ -483,6 +489,273 @@ QString ApplicationInfo::diagnostics() const {
     add(QStringLiteral("Build flavour"), QStringLiteral("desktop, multithreaded"));
 #endif
     return lines.join(QLatin1Char('\n'));
+}
+
+namespace {
+bool messageScriptReady(const QPointer<QJSEngine>& engine) {
+    return engine && !engine->hasError();
+}
+QJSValue messageScriptProperty(const QPointer<QJSEngine>& engine, const QJSValue& source,
+                              const QString& name) {
+    if (!messageScriptReady(engine)) return {};
+    const QJSManagedValue value(source, engine.data());
+    if (value.engine() != engine.data()) {
+        engine->throwError(QJSValue::TypeError, QStringLiteral("Message value belongs to another engine"));
+        return {};
+    }
+    // The managed API leaves every thrown value pending; never catch or inspect its type.
+    return value.property(name);
+}
+QJSValue messageScriptIndex(const QPointer<QJSEngine>& engine, const QJSValue& source,
+                           quint32 index) {
+    if (!messageScriptReady(engine)) return {};
+    const QJSManagedValue value(source, engine.data());
+    if (value.engine() != engine.data()) {
+        engine->throwError(QJSValue::TypeError, QStringLiteral("Message value belongs to another engine"));
+        return {};
+    }
+    return value.property(index);
+}
+QJSValue messageScriptCall(const QPointer<QJSEngine>& engine, const QJSValue& function,
+                          const QJSValue& receiver, const QJSValueList& arguments) {
+    if (!messageScriptReady(engine)) return {};
+    const QJSManagedValue callable(function, engine.data());
+    const QJSManagedValue instance(receiver, engine.data());
+    if (callable.engine() != engine.data() || instance.engine() != engine.data()) {
+        engine->throwError(QJSValue::TypeError, QStringLiteral("Message value belongs to another engine"));
+        return {};
+    }
+    for (const auto& argument : arguments) {
+        const QJSManagedValue value(argument, engine.data());
+        if (value.engine() != engine.data()) {
+            engine->throwError(QJSValue::TypeError, QStringLiteral("Message value belongs to another engine"));
+            return {};
+        }
+    }
+    // Qt's managed call keeps the success/throw disposition in the engine, even for
+    // non-Error throws. It also supplies TypeError for a non-callable managed value.
+    return callable.callWithInstance(receiver, arguments);
+}
+QJSValue messageScriptArray(const QPointer<QJSEngine>& engine, const QJSValue& value) {
+    if (!messageScriptReady(engine)) return {};
+    const QJSValue array = messageScriptProperty(engine, engine->globalObject(), QStringLiteral("Array"));
+    if (!messageScriptReady(engine)) return {};
+    const QJSValue predicate = messageScriptProperty(engine, array, QStringLiteral("isArray"));
+    if (!messageScriptReady(engine)) return {};
+    return messageScriptCall(engine, predicate, array, {value});
+}
+std::optional<QString> messageNativeCaption(const QPointer<QJSEngine>& engine, const QJSValue& payload,
+                                            const QPointer<edi_app::AssistantViewModel>& original) {
+    if (!messageScriptReady(engine)) return std::nullopt;
+    QJSValue action(QStringLiteral(""));
+    if (payload.toBool()) {
+        const QJSValue tool = messageScriptProperty(engine, payload, QStringLiteral("tool"));
+        if (!messageScriptReady(engine)) return std::nullopt;
+        if (tool.isString()) {
+            action = messageScriptProperty(engine, payload, QStringLiteral("tool"));
+            if (!messageScriptReady(engine)) return std::nullopt;
+        }
+    }
+    if (original) {
+        // This is the SAME existing QObject/CPP slot the original QML invoked,
+        // retaining its QString argument conversion and actual empty-string return.
+        const QJSValue receiver = engine->newQObject(original.data());
+        if (!messageScriptReady(engine)) return std::nullopt;
+        const QJSValue label = messageScriptProperty(engine, receiver, QStringLiteral("nativeActionLabel"));
+        if (!messageScriptReady(engine)) return std::nullopt;
+        const QJSValue value = messageScriptCall(engine, label, receiver, {action});
+        if (!messageScriptReady(engine) || !value.isString()) return std::nullopt;
+        return value.toString();
+    }
+    // Nullable owner fallback stays in the ONE original value formatter/dictionary.
+    return edi_app::assistant_presentation::presentActivity({}).nativeCaption;
+}
+}  // namespace
+
+QVariantMap ApplicationInfo::assistantActivityPresentation(const QString& kind, const QString& status,
+                                                           const QJSValue& payload, QObject* assistant) const {
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    if (!messageScriptReady(engine)) return {};
+    if (auto* qml = qobject_cast<QQmlEngine*>(engine.data()))
+        qml->markCurrentFunctionAsTranslationBinding();
+    const QPointer<edi_app::AssistantViewModel> original(qobject_cast<edi_app::AssistantViewModel*>(assistant));
+    const auto field = [&](const QJSValue& from, const QString& name) {
+        return from.isObject() ? messageScriptProperty(engine, from, name) : QJSValue();
+    };
+    const auto text = [](const QJSValue& value) { return value.isString() ? value.toString() : QString(); };
+    edi_app::assistant_presentation::ActivityInput input;
+    input.kind = kind; input.rowStatus = status;
+    const bool hasPayload = payload.toBool();
+    const bool fixedCaption = kind == "error" || kind == "plan" || kind == "question" ||
+        kind == "tool" || kind == "trial";
+    if (kind == "activity" && hasPayload) {
+        input.type = text(field(payload, QStringLiteral("type")));
+        if (!messageScriptReady(engine)) return {};
+        input.decisionIsString = field(payload, QStringLiteral("decision")).isString();
+        if (!messageScriptReady(engine)) return {};
+        if (input.decisionIsString) {
+            input.itemIdIsString = field(payload, QStringLiteral("item_id")).isString();
+            if (!messageScriptReady(engine)) return {};
+        }
+    } else if (!fixedCaption && hasPayload) {
+        input.type = text(field(payload, QStringLiteral("type")));
+        if (!messageScriptReady(engine)) return {};
+    }
+    // Capture requirements follow the FIRST consumed branches; the helper still owns
+    // classification, wording and result composition, not this property adapter.
+    const bool command = kind == "activity" && input.type == "commandExecution";
+    const bool decision = kind == "activity" && input.decisionIsString && input.itemIdIsString;
+    if (command && !decision) {
+        QJSValue category = field(payload, QStringLiteral("commandCategory"));
+        if (!messageScriptReady(engine)) return {};
+        if (category.isString()) {
+            category = field(payload, QStringLiteral("commandCategory"));
+            if (!messageScriptReady(engine)) return {};
+            input.commandCategory = text(category);
+        }
+    }
+    if (!fixedCaption && !decision && !command && input.type == "dynamicToolCall") {
+        const auto caption = messageNativeCaption(engine, payload, original);
+        if (!messageScriptReady(engine) || !caption) return {};
+        input.nativeLabel = *caption; // An actually empty caption is still an observed value.
+    }
+    if (command) {
+        QJSValue actual = field(payload, QStringLiteral("status"));
+        if (!messageScriptReady(engine)) return {};
+        if (actual.isString()) {
+            actual = field(payload, QStringLiteral("status"));
+            if (!messageScriptReady(engine)) return {};
+            input.payloadStatus = text(actual);
+        }
+    }
+    // Explanation consumes native outcome independently of the command-caption branch.
+    if (hasPayload) {
+        const QJSValue outcome = field(payload, QStringLiteral("nativeOutcome"));
+        if (!messageScriptReady(engine)) return {};
+        if (outcome.toBool()) {
+            input.nativeOutcomeStatus = text(field(outcome, QStringLiteral("status")));
+            if (!messageScriptReady(engine)) return {};
+        }
+    }
+    const auto shown = edi_app::assistant_presentation::presentActivity(input);
+    if (!messageScriptReady(engine)) return {};
+    return {{"caption", shown.caption}, {"state", shown.state}, {"explanation", shown.explanation},
+        {"outcomeKey", shown.outcomeKey}, {"nativeCaption", shown.nativeCaption},
+        {"commandActivity", shown.commandActivity}, {"decisionActivity", shown.decisionActivity},
+        {"summarizedActivity", shown.summarizedActivity}};
+}
+
+QString ApplicationInfo::assistantNativeActivityCaption(const QJSValue& payload, QObject* assistant) const {
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    if (!messageScriptReady(engine)) return {};
+    if (auto* qml = qobject_cast<QQmlEngine*>(engine.data()))
+        qml->markCurrentFunctionAsTranslationBinding();
+    const QPointer<edi_app::AssistantViewModel> original(qobject_cast<edi_app::AssistantViewModel*>(assistant));
+    const auto caption = messageNativeCaption(engine, payload, original);
+    return messageScriptReady(engine) && caption ? *caption : QString();
+}
+
+QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
+    return value.isString() ? edi_app::assistant_presentation::singleLineText(value.toString()) : QString();
+}
+
+QString ApplicationInfo::assistantWebSearchCaption(const QJSValue& payload) const {
+    using namespace edi_app::assistant_presentation;
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    if (!messageScriptReady(engine)) return {};
+    if (auto* qml = qobject_cast<QQmlEngine*>(engine.data()))
+        qml->markCurrentFunctionAsTranslationBinding();
+    if (!payload.isObject() || payload.isCallable()) return {};
+    const auto read = [&](const QJSValue& from, const char* name) {
+        return messageScriptProperty(engine, from, QString::fromLatin1(name));
+    };
+    const auto text = [](const QJSValue& value) { return value.isString() ? value.toString() : QString(); };
+    WebActionInput input;
+    const QJSValue action = read(payload, "action");
+    if (!messageScriptReady(engine)) return {};
+    if (!action.isUndefined() && !action.isNull()) {
+        if (!action.isObject() || action.isCallable()) return {};
+        const QJSValue isArray = messageScriptArray(engine, action);
+        if (!messageScriptReady(engine)) return {};
+        if (isArray.toBool()) return {};
+        QJSValue type = read(action, "type");
+        if (!messageScriptReady(engine)) return {};
+        if (text(type) == "search") input.kind = WebActionKind::Search;
+        else {
+            type = read(action, "type");
+            if (!messageScriptReady(engine)) return {};
+            if (text(type) == "openPage") input.kind = WebActionKind::OpenPage;
+            else {
+                type = read(action, "type");
+                if (!messageScriptReady(engine)) return {};
+                input.kind = text(type) == "findInPage" ? WebActionKind::FindInPage : WebActionKind::Other;
+            }
+        }
+    }
+    if (input.kind == WebActionKind::Search) {
+        input.query = text(read(action, "query"));
+        if (!messageScriptReady(engine)) return {};
+        if (singleLineText(input.query).isEmpty()) {
+            // Preserve the original short-circuit guard reads; getters can throw on any read.
+            QJSValue queries = read(action, "queries");
+            if (!messageScriptReady(engine)) return {};
+            if (!queries.isUndefined()) {
+                queries = read(action, "queries");
+                if (!messageScriptReady(engine)) return {};
+                input.queriesPresent = !queries.isNull();
+            }
+            if (input.queriesPresent) {
+                // Original JSON.parse(JSON.stringify(action.queries)) evaluation order:
+                // resolve the outer receiver/callee before evaluating its argument.
+                const QJSValue outer = read(engine->globalObject(), "JSON");
+                if (!messageScriptReady(engine)) return {};
+                const QJSValue parse = read(outer, "parse");
+                if (!messageScriptReady(engine)) return {};
+                const QJSValue inner = read(engine->globalObject(), "JSON");
+                if (!messageScriptReady(engine)) return {};
+                const QJSValue stringify = read(inner, "stringify");
+                if (!messageScriptReady(engine)) return {};
+                queries = read(action, "queries");
+                if (!messageScriptReady(engine)) return {};
+                const QJSValue serialized = messageScriptCall(engine, stringify, inner, {queries});
+                if (!messageScriptReady(engine)) return {};
+                const QJSValue projected = messageScriptCall(engine, parse, outer, {serialized});
+                if (!messageScriptReady(engine)) return {};
+                const QJSValue isArray = messageScriptArray(engine, projected);
+                if (!messageScriptReady(engine)) return {};
+                if (!isArray.toBool()) return {};
+                const QJSValue lengthValue = read(projected, "length");
+                if (!messageScriptReady(engine)) return {};
+                if (!lengthValue.isNumber()) return {};
+                const quint32 length = lengthValue.toUInt();
+                QStringList values;
+                for (quint32 i = 0; i < length; ++i) {
+                    const QJSValue value = messageScriptIndex(engine, projected, i);
+                    if (!messageScriptReady(engine)) return {};
+                    if (!value.isString()) return {};
+                    values.append(value.toString());
+                }
+                input.queries = std::move(values);
+            }
+        }
+    }
+    if (input.kind == WebActionKind::Missing || input.kind == WebActionKind::Search) {
+        const auto query = webSearchQuery(input);
+        if (query && query->isEmpty()) {
+            input.fallbackQuery = text(read(payload, "query"));
+            if (!messageScriptReady(engine)) return {};
+        }
+    } else if (input.kind == WebActionKind::OpenPage || input.kind == WebActionKind::FindInPage) {
+        input.url = text(read(action, "url"));
+        if (!messageScriptReady(engine)) return {};
+        if (input.kind == WebActionKind::FindInPage) {
+            input.pattern = text(read(action, "pattern"));
+            if (!messageScriptReady(engine)) return {};
+        }
+    }
+    if (!messageScriptReady(engine)) return {};
+    const QString caption = presentWebSearch(input);
+    return messageScriptReady(engine) ? caption : QString();
 }
 
 void ApplicationInfo::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }
