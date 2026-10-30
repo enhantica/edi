@@ -19,6 +19,7 @@
 #include <QTextStream>
 #include <limits>
 #include "edi/io.hpp"
+#include "edi/categories.hpp"
 #include <QUrl>
 #include <functional>
 
@@ -175,9 +176,11 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
             context.setProperty("wavelength", experiment.instrument.setup_wavelength->value.get());
             context.setProperty("profileType", QString::fromStdString(experiment.peak.type.value_or("cwl-tch-pseudo-voigt")));
             QJsonObject profile;
-            for (const auto* parameter : experiment.peak.parameters())
-                if (parameter->spec && parameter->spec->name && std::string(parameter->spec->name).starts_with("broad_gauss_"))
-                    profile[parameter->spec->name] = parameter->value.get();
+            for (const auto& category : edi::experiment_categories(experiment))
+                if (category.id == "peak")
+                    for (const auto& field : category.fields)
+                        if (field.used_by_profile && field.parameter && field.name.starts_with("broad_gauss_"))
+                            profile[QString::fromStdString(field.name)] = field.parameter->value.get();
             context.setProperty("profileStart", engine.toScriptValue(profile.toVariantMap()));
             QJsonArray excluded;
             for (const auto& region : experiment.excluded_regions)
