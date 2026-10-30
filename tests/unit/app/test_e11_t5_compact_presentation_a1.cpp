@@ -168,6 +168,7 @@ class CompactPresentationA1Proof final : public QObject {
         struct GuardCase {
             QString name,kind,payload,caption;
             QStringList unused,required;
+            bool stableDecisionCommand=false;
         };
         const QString native = QStringLiteral("Create a project");
         const std::vector<GuardCase> cases{
@@ -202,7 +203,7 @@ class CompactPresentationA1Proof final : public QObject {
             {"decision-shadows-command-category","activity",
                 "({type:'commandExecution',decision:'deny',item_id:'original-presentation-id',"
                 "get status(){a1GuardTrace.reads.push('status');return 'completed';}})",
-                "Review requested action",{"commandCategory","tool"},{"status"}},
+                "Review requested action",{"commandCategory","tool"},{"status"},true},
             {"command-reads-category-and-status","activity",
                 "({type:'commandExecution',get commandCategory(){a1GuardTrace.reads.push('commandCategory');return 'read';},"
                 "get status(){a1GuardTrace.reads.push('status');return 'completed';}})",
@@ -247,12 +248,22 @@ class CompactPresentationA1Proof final : public QObject {
             component.setData("import QtQuick\nimport edi.app\nAssistantMessage { assistant: Session.assistant }\n",
                               QUrl("qrc:/tests/A1OriginalGuardedReads.qml"));
             if(component.isError())throw std::runtime_error(component.errorString().toStdString());
+            const QVariantMap initialPayload=item.stableDecisionCommand
+                ? QVariantMap{{"type",QStringLiteral("commandExecution")},{"decision",QStringLiteral("deny")},
+                    {"item_id",QStringLiteral("original-presentation-id")},{"status",QStringLiteral("completed")}}
+                : QVariantMap{};
             std::unique_ptr<QObject> row(component.createWithInitialProperties({
                 {"kind",item.kind},{"status",QStringLiteral("completed")},
                 {"text",QStringLiteral("RAW_ONLY_GUARDED_BODY")},
                 {"rowId",QStringLiteral("A1-absent-guarded-presentation-row")},
-                {"payload",QVariantMap{}},{"width",600}},&context));
+                {"payload",initialPayload},{"width",600}},&context));
             if(!row)throw std::runtime_error(component.errorString().toStdString());
+            if(item.stableDecisionCommand) {
+                const auto initialHeaders=row->findChildren<QObject*>(QStringLiteral("assistant.command.toggle"));
+                const bool stable=initialHeaders.size()==1 && initialHeaders.front()->property("text").toString()==item.caption;
+                check.require(stable,prefix+"original initial command disclosure already renders the decision caption before guarded assignment; suffix UNREACHED otherwise");
+                if(!stable)return;
+            }
             QSignalSpy warnings(engine_,&QQmlEngine::warnings);
             const auto quote=[](const QString& value) {
                 return QString::fromUtf8(QJsonDocument(QJsonArray{value}).toJson(QJsonDocument::Compact).mid(1).chopped(1));
