@@ -5,6 +5,8 @@
 #include <QColor>
 #include <QDir>
 #include <QFileInfo>
+#include <QJSValue>
+#include <QVariantMap>
 #include <QObject>
 #include <QPoint>
 #include <QString>
@@ -97,6 +99,14 @@ class ApplicationInfo : public QObject {
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
     Q_INVOKABLE QString fileSizeKilobytes(qint64 bytes) const;
+    /// Stateless compact message presentation; no canonical/detail lookup or clipboard write.
+    Q_INVOKABLE QVariantMap assistantActivityPresentation(const QString& kind, const QString& status,
+                                                        const QJSValue& payload, QObject* assistant) const;
+    /// Original display-only literal normalization and web captions; no lookup or clipboard write.
+    Q_INVOKABLE QString assistantSingleLineText(const QJSValue& value) const;
+    Q_INVOKABLE QString assistantWebSearchCaption(const QJSValue& payload) const;
+    /// Lazy native caption only at its actual compact/full-body consumer branch.
+    Q_INVOKABLE QString assistantNativeActivityCaption(const QJSValue& payload, QObject* assistant) const;
     /// Device eligibility captured before QML observation; not provider connection or permission.
     /// Read on the owning QObject thread. Native desktop remains eligible.
     bool assistantAvailable() const;
