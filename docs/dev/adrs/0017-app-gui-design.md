@@ -1147,3 +1147,10 @@ saved files, the Report and the CLI write the numbers as before.
 | Keep singular loop titles (easydiffractionbeta's *Background*) | Rejected by the owner (idea 19): a loop names its rows, and the title carries their count. |
 | Leave unimplemented actions out until they work | Rejected (ideas 13, 17): the owner wants the final layout visible now. |
 | Fix `last` in gui-components | Deferred: the base is consumed unmodified (ADR-0015 §1); reported upstream as gui-components#55. |
+
+
+### Native Text-tab edit transactions
+
+ApplicationInfo executes TextTab's block presentation, kept-edit/refusal map operations, apply and leave/discard/return transactions. The original maps and action record stay on the view, and Session/BlockText retain actual text application and output preservation. An answer consumes the original action record before invoking it. Source changes retain their captured file/block/source/text references; a Show choice shares the same original continuation value for leave and drop. Native callbacks retain function arity, distinct/shared identity, creation scope and deletion strictness. Qt's existing queue owns guards for non-capturing QML-scope callbacks. No edit store, controller, parser or evaluated script is added.
+
+QML retains only the Show selector's inline declarative Qt.binding restoration. Native code decides when that installation executes. Native and browser compilation and complete kept-edit, refusal, destruction/reentry and error verification remain required after migration.
