@@ -59,6 +59,30 @@ class ApplicationInfo : public QObject {
    public:
     enum EditorKind { ParameterFieldEditor, ParameterCellEditor, TextCellEditor };
     Q_ENUM(EditorKind)
+    enum NumberOperation {
+        NumberScientific,
+        NumberScientificExponent,
+        NumberExponentOf,
+        NumberFull,
+        NumberPlainFull,
+        NumberParameter,
+        NumberRuled,
+        NumberRounded,
+        NumberError,
+        NumberSharedExponent,
+        NumberPlain,
+        NumberAxisFormat,
+        NumberAxisTick,
+        NumberDecimal,
+        NumberCompact,
+        NumberSuDigits,
+        NumberRuledDigits,
+        NumberNarrowParameter,
+        NumberFitted,
+        NumberOwnUncertainty,
+        NumberExponent
+    };
+    Q_ENUM(NumberOperation)
 
     explicit ApplicationInfo(QObject* parent = nullptr);
 
@@ -426,6 +450,9 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue preferenceStackedChoices() const;
     Q_INVOKABLE QJSValue preferenceEngineThreads() const;
     Q_INVOKABLE void preferenceActivated(const QJSValue& index, int setting) const;
+    /// NumberText presentation; project uncertainty formatting remains ProjectViewModel/core-owned.
+    Q_INVOKABLE QJSValue numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
+                                          const QJSValue& third, const QJSValue& fourth) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
