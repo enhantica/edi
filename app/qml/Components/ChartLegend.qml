@@ -93,6 +93,7 @@ Rectangle {
                 // The row's hover cue only: no button, so a press goes on to the chart's pointer area, which passes a
                 // click back (toggleAt).
                 MouseArea {
+                    id: entryHover
                     objectName: "chart.legend.toggle"
                     anchors.fill: parent
                     enabled: legend.toggles
@@ -101,7 +102,7 @@ Rectangle {
                     cursorShape: Qt.PointingHandCursor
 
                     EaElements.ToolTip {
-                        visible: parent.containsMouse && EaGlobals.Vars.showToolTips
+                        visible: entryHover.containsMouse && EaGlobals.Vars.showToolTips
                         text: entry.hidden ? qsTr("Click to show") : qsTr("Click to hide")
                     }
                 }

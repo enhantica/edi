@@ -42,15 +42,16 @@ AppDialog {
             Repeater {
                 model: dialog.assistant.skills
                 delegate: Column {
+                    id: skillEntry
                     required property var model
                     required property int index
                     width: content.width
                     spacing: AppSizes.unit * 0.25
                     EaElements.Button {
                         width: parent.width
-                        text: model.title + " · " + model.version
+                        text: skillEntry.model.title + " · " + skillEntry.model.version
                         checkable: true
-                        checked: dialog.assistant.selectedSkill.length === 0 ? index === dialog.selectedIndex : model.id === dialog.assistant.selectedSkill
+                        checked: dialog.assistant.selectedSkill.length === 0 ? skillEntry.index === dialog.selectedIndex : skillEntry.model.id === dialog.assistant.selectedSkill
                         enabled: dialog.assistant.selectedSkill.length === 0 || !dialog.assistant.canCancel
                         Accessible.name: text + (checked ? qsTr(" · selected") : "")
                         Accessible.checkable: checkable
@@ -59,7 +60,7 @@ AppDialog {
                     }
                     EaElements.Label {
                         width: parent.width
-                        text: model.summary + (model.available ? "" : "\n" + model.blocked_reason)
+                        text: skillEntry.model.summary + (skillEntry.model.available ? "" : "\n" + skillEntry.model.blocked_reason)
                         textFormat: Text.PlainText
                         wrapMode: Text.Wrap
                     }

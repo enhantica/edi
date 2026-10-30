@@ -179,19 +179,20 @@ Rectangle {
             Repeater {
                 model: row.inputFiles
                 delegate: RowLayout {
+                    id: sentFileChip
                     required property var modelData
-                    objectName: "assistant.sentFile." + modelData.id
+                    objectName: "assistant.sentFile." + sentFileChip.modelData.id
                     width: sentFiles.width
                     spacing: AppSizes.unit * 0.125
                     EaElements.Label {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
-                        text: row.sentFileLabel(modelData)
+                        text: row.sentFileLabel(sentFileChip.modelData)
                         font: historyCopyMetrics.font
                         textFormat: Text.PlainText
                         elide: Text.ElideMiddle
                         color: EaStyle.Colors.themeForegroundMinor
-                        Accessible.name: qsTr("Sent file snapshot: %1, %2").arg(modelData.name).arg(ApplicationInfo.fileSizeKilobytes(modelData.bytes))
+                        Accessible.name: qsTr("Sent file snapshot: %1, %2").arg(sentFileChip.modelData.name).arg(ApplicationInfo.fileSizeKilobytes(sentFileChip.modelData.bytes))
                     }
                 }
             }

@@ -461,10 +461,11 @@ Rectangle {
                 Repeater {
                     model: composer.assistant.selectedFiles
                     delegate: Row {
+                        id: selectedFileChip
                         required property var model
-                        objectName: "assistant.file." + model.id
+                        objectName: "assistant.file." + selectedFileChip.model.id
                         width: selectedChips.width
-                        visible: model.pending !== false
+                        visible: selectedFileChip.model.pending !== false
                         spacing: attachmentMetrics.advanceWidth("  ")
                         FontMetrics {
                             id: attachmentMetrics
@@ -473,10 +474,10 @@ Rectangle {
                         EaElements.Label {
                             id: selectedFileLabel
                             width: Math.min(implicitWidth, Math.max(0, selectedChips.width - removeFileButton.implicitWidth - parent.spacing))
-                            text: qsTr("%1 (%2)%3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes)).arg(model.textReadable ? "" : qsTr(" · text export required"))
+                            text: qsTr("%1 (%2)%3").arg(selectedFileChip.model.name).arg(ApplicationInfo.fileSizeKilobytes(selectedFileChip.model.bytes)).arg(selectedFileChip.model.textReadable ? "" : qsTr(" · text export required"))
                             textFormat: Text.PlainText
                             elide: Text.ElideMiddle
-                            Accessible.name: qsTr("Selected file: %1, %2. %3").arg(model.name).arg(ApplicationInfo.fileSizeKilobytes(model.bytes)).arg(model.textReadable ? qsTr("Available for consented text reads") : qsTr("Unsupported binary; text export required"))
+                            Accessible.name: qsTr("Selected file: %1, %2. %3").arg(selectedFileChip.model.name).arg(ApplicationInfo.fileSizeKilobytes(selectedFileChip.model.bytes)).arg(selectedFileChip.model.textReadable ? qsTr("Available for consented text reads") : qsTr("Unsupported binary; text export required"))
                         }
                         EaElements.ToolButton {
                             id: removeFileButton
@@ -496,9 +497,9 @@ Rectangle {
                                 verticalAlignment: Text.AlignVCenter
                             }
                             enabled: composer.assistant.connected && !composer.assistant.canCancel
-                            ToolTip.text: qsTr("Remove %1").arg(model.name)
+                            ToolTip.text: qsTr("Remove %1").arg(selectedFileChip.model.name)
                             Accessible.name: ToolTip.text
-                            onClicked: composer.assistant.removeSelectedFile(model.id)
+                            onClicked: composer.assistant.removeSelectedFile(selectedFileChip.model.id)
                         }
                     }
                 }
