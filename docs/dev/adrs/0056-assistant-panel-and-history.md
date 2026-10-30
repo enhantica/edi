@@ -2419,7 +2419,7 @@ Corrected compile/link and native behavior remain separate pending validations;
 this source change and the prior failure do not establish Mac or whole-task success.
 
 
-### Local work-report evidence and native terminal ownership (E11-T5,684)
+### Local work-report evidence and native terminal ownership
 
 Extends the FIRST panel/composer, retained history, NativeRecord, immutable skill/input disclosure, protected assistant-result file primitives and existing gated test observer. One local collector projects bounded same-owner retained rows across actual turns; legacy or other-owner history is excluded with coverage. Canonical arguments, purpose and native outcomes remain in the original row. Only missing exact projected replies, original UI first-cause snapshots, immutable identity and turn metadata supplement that row. Optional diagnostic admission yields to original terminal/history promises and cannot fence, retry or change science. Public agent assessments stay unverified. Original terminal capture precedes cleanup; actual pending work is settlement unknown, never invented completion. Early Main sidebar lookup and later relation reveal are distinct original phases.
 
@@ -4477,7 +4477,7 @@ remains a retained failed baseline, not an original product defect or a repaired
 post result. Independent corrected original/post qualification is still owed.
 
 
-### E11-T5 B3: preserve history attachment metadata admission in the existing C++ owner
+### B3: preserve history attachment metadata admission in the existing C++ owner
 
 Prior art is AssistantMessage.inputFiles and its actual widestSentFile/sentFiles/Repeater
 consumers. Move only that procedural property body into stateless ApplicationInfo::
@@ -4507,7 +4507,7 @@ remain unchanged. This source batch requires independent original/post character
 public Qt/QML qualification; source preparation is not a runtime pass or whole-migration completion.
 
 
-### E11-T5 B2: move the existing lazy message body, copy and reset procedures into their C++ owners
+### B2: move the existing lazy message body, copy and reset procedures into their C++ owners
 
 Prior art is AssistantMessage's readHumanDetails/refreshHumanDetails, fullHumanDescription/
 humanActivityText/activityDescription, activity/user copy and resetDetails, together with both
@@ -4634,7 +4634,7 @@ unreached suffixes; neither a bounded diagnostic nor passing direct unit calls
 qualifies compiled real UI transport.
 
 
-### E11-T5 composer draft handoff uses the stable ApplicationInfo UI actor
+### composer draft handoff uses the stable ApplicationInfo UI actor
 
 Prior art is AssistantComposer's session-selection/restore and Clear requested/committed signal
 handlers, retirement reset and text/preedit/IME revision publication, together with the original
@@ -4680,7 +4680,7 @@ is added. The previous private per-view-AVM dispatch candidates and their mechan
 historical unelected source; disjoint hashes did not clear this semantic entrance class.
 
 
-### E11-T5 saved-session browser view procedures use the stable ApplicationInfo UI actor
+### saved-session browser view procedures use the stable ApplicationInfo UI actor
 
 Prior art is AssistantPanel's session-button open/refresh sequence, sessionsTable prefetch and
 its scroll/height triggers, activated/select row sequence and sessionButtons naturalButtonWidth
@@ -4745,3 +4745,21 @@ native invocation or infer source positions/counts from output. Full same-depend
 controls over real selected-file notifications, revision/order/reentry, display state, errors and
 lifetime remain required before election. Broader accepted-input/admission/ACK/closure lifecycle and
 all other procedural QML remain in scope; this finite presentation extraction does not qualify them.
+
+
+### Desktop-only assistant availability and native toolbar dispatch
+
+Prior art is ApplicationInfo's captured availability, the Main toolbar robot/pane toggle and the
+AI assistance tab in AppPreferencesDialog. Browser builds now report unavailable unconditionally;
+the navigator classification/probe is retired. Desktop availability remains true. The preferences
+tab is disabled in browsers, while the robot remains clickable on every page and opens the ordinary
+centered AppDialog explaining that AI assistance requires the desktop version. That branch returns
+before reading the view assistant, requesting a pane, changing preferences or inspecting the device.
+
+The complete existing desktop toolbar click procedure moves to the existing ApplicationInfo UI
+actor. Its QML handler is one direct dispatch with actual controls/singletons, not eager assistant
+snapshots. Keep the enabled check, show/hide admission calls, current Session reads, manual takeover
+reset, focus-epoch/capture ordering and final manual-pane/preferences publication. No new backend controller,
+store, cache, timer or permission authority is introduced. Existing file presentation, activity,
+copy/disclosure/account/scientific/Undo behavior remains additive. This source change implements the
+platform requirement; actual desktop/browser builds, UI/runtime and remaining full checks follow.

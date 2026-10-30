@@ -42,7 +42,6 @@
 #include <omp.h>
 #endif
 #ifdef Q_OS_WASM
-#include <emscripten.h>
 #include <emscripten/val.h>
 #endif
 
@@ -69,66 +68,11 @@ QString read_resource(const QString& path) {
 }  // namespace
 
 
-#ifdef Q_OS_WASM
-// Keep bounded navigator inspection/throw handling inside the existing browser bridge (ADR-0041).
-EM_JS(int, edi_assistant_device_available, (), {
-    try {
-        const nav = globalThis.navigator;
-        if (!nav || typeof nav !== "object") return 0;
-        const bounded = value => typeof value === "string" && value.length <= 4096;
-        const uaValue = nav.userAgent;
-        if (!bounded(uaValue) || uaValue.trim().length === 0) return 0;
-        const platformValue = nav.platform;
-        if (platformValue !== undefined && !bounded(platformValue)) return 0;
-        const touch = nav.maxTouchPoints;
-        if (touch !== undefined && (!Number.isSafeInteger(touch) || touch < 0)) return 0;
-        const hints = nav.userAgentData;
-        let hintPlatform = "";
-        if (hints !== undefined) {
-            if (hints === null || typeof hints !== "object" || Array.isArray(hints)) return 0;
-            const mobile = hints.mobile;
-            if (mobile !== undefined && typeof mobile !== "boolean") return 0;
-            if (mobile === true) return 0;
-            const value = hints.platform;
-            if (value !== undefined && !bounded(value)) return 0;
-            hintPlatform = value === undefined ? "" : value.toLowerCase();
-        }
-        const ua = uaValue.toLowerCase();
-        const platform = platformValue === undefined ? "" : platformValue.toLowerCase();
-        const mobile = value => /iphone|ipad|ipod|android|mobile|windows phone|iemobile|wince/.test(value);
-        if (mobile(ua) || mobile(platform) || mobile(hintPlatform)) return 0;
-        const family = value => {
-            let bits = 0;
-            if (/windows|win32|win64/.test(value)) bits |= 1;
-            if (/macintosh|macintel|macppc|mac68k|macos|mac os|^mac$/.test(value)) bits |= 2;
-            if (/linux|x11/.test(value)) bits |= 4;
-            if (/cros|chrome os|chromium os|chromeos/.test(value)) bits |= 8;
-            return bits;
-        };
-        const uaFamily = family(ua);
-        const platformFamily = family(platform);
-        const hintFamily = family(hintPlatform);
-        if (uaFamily === 0 || (platform.trim() !== "" && platformFamily === 0)
-            || (hintPlatform.trim() !== "" && hintFamily === 0)) return 0;
-        let combined = uaFamily | platformFamily | hintFamily;
-        // Chromium's CrOS UA and Linux legacy platform are compatible aliases.
-        if (combined === (4 | 8)) combined = 8;
-        if ((combined & (combined - 1)) !== 0) return 0;
-        if (combined === 2) {
-            const explicitDesktopHint = hintFamily === 2;
-            if (!explicitDesktopHint && (touch === undefined || touch > 1)) return 0;
-        }
-        return 1;
-    } catch (_) {
-        return 0;
-    }
-});
-#endif
 
 namespace {
 bool assistant_device_available() {
 #ifdef Q_OS_WASM
-    return edi_assistant_device_available() != 0;
+    return false;
 #else
     return true;
 #endif
@@ -141,7 +85,7 @@ ApplicationInfo::ApplicationInfo(QObject* parent)
 bool ApplicationInfo::assistantAvailable() const { return assistant_available_; }
 
 QString ApplicationInfo::assistantUnavailableReason() const {
-    return assistant_available_ ? QString() : tr("AI chat is not available on this device. Use a supported computer.");
+    return assistant_available_ ? QString() : tr("AI assistance is only available in the desktop version.");
 }
 
 void ApplicationInfo::useDemoIdentity() { g_demo_identity = true; }
@@ -1502,3 +1446,68 @@ int ApplicationInfo::engineThreadsMaximum() const { return std::clamp(2 * QThrea
 void ApplicationInfo::setEngineThreads(int count) const { edi::set_engine_threads(count); }
 
 void ApplicationInfo::storeSettings() const { edi_app::store_settings_now(); }
+
+void ApplicationInfo::assistantToolbarActivated(const QJSValue& window, const QJSValue& toggle,
+                                                const QJSValue& panel, const QJSValue& session,
+                                                const QJSValue& preferences, const QJSValue& desktopOnlyDialog) const {
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    if (!messageScriptReady(engine)) return;
+    const auto read = [&](const QJSValue& source, const char* name) {
+        return messageScriptProperty(engine, source, QString::fromLatin1(name));
+    };
+    const auto write = [&](const QJSValue& target, const char* name, const QJSValue& value) {
+        messageScriptWrite(engine, target, QString::fromLatin1(name), value);
+        return messageScriptReady(engine);
+    };
+    const auto call = [&](const QJSValue& target, const char* name, const QJSValueList& arguments = QJSValueList()) {
+        const auto method = read(target, name);
+        return messageScriptCall(engine, method, target, arguments);
+    };
+    if (!assistantAvailable()) {
+        call(desktopOnlyDialog, "open");
+        return;
+    }
+    const auto enabled = read(toggle, "enabled");
+    if (!messageScriptReady(engine) || !enabled.toBool()) return;
+    const auto shown = read(panel, "shown");
+    if (!messageScriptReady(engine)) return;
+    const bool show = !shown.toBool();
+    if (!show) {
+        const auto owner = read(session, "assistant");
+        call(owner, "dismissChatReveal");
+        if (!messageScriptReady(engine)) return;
+    }
+    if (show) {
+        const auto owner = read(session, "assistant");
+        const auto accepted = call(owner, "requestAssistantPane", {toggle});
+        if (!messageScriptReady(engine) || !accepted.toBool()) return;
+    }
+    if (show) {
+        const auto takeover = read(window, "assistantManualTakeover");
+        if (!messageScriptReady(engine)) return;
+        if (takeover.toBool()) {
+            if (!write(window, "assistantManualTakeoverProject", QJSValue(QJSValue::NullValue))) return;
+            if (!write(window, "assistantEmptyManualTakeover", QJSValue(false))) return;
+        }
+        const auto epoch = read(window, "assistantFocusEpoch");
+        if (!messageScriptReady(engine)) return;
+        if (!write(window, "assistantFocusEpoch", QJSValue(epoch.toNumber() + 1))) return;
+        const auto focus = read(window, "activeFocusItem");
+        if (!messageScriptReady(engine) || !write(window, "assistantPreviousFocus", focus)) return;
+        const auto page = read(window, "assistantCurrentPage");
+        if (!messageScriptReady(engine) || !write(window, "assistantPreviousPage", page)) return;
+        const auto host = read(window, "activeAssistantHost");
+        if (!messageScriptReady(engine) || !write(window, "assistantPreviousHost", host)) return;
+        const auto project = read(session, "project");
+        if (!messageScriptReady(engine) || !write(window, "assistantPreviousProject", project)) return;
+    }
+    bool manualPane = false;
+    if (show) {
+        const auto owner = read(session, "assistant");
+        const auto actions = read(owner, "showingActions");
+        if (!messageScriptReady(engine)) return;
+        manualPane = actions.toBool();
+    }
+    if (!write(window, "assistantManualPane", QJSValue(manualPane))) return;
+    write(preferences, "assistantShown", QJSValue(show));
+}

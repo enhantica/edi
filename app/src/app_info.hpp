@@ -164,10 +164,14 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void assistantMessageClearFeedback(const QJSValue& component, bool stopTimer = true) const;
     /// Close disclosure, clear feedback and deselect original row editors on identity/pool/reuse changes.
     Q_INVOKABLE void assistantMessageReset(const QJSValue& component) const;
-    /// Device eligibility captured before QML observation; not provider connection or permission.
-    /// Read on the owning QObject thread. Native desktop remains eligible.
+    /// Route the toolbar action through the existing UI owner; browsers only show availability.
+    Q_INVOKABLE void assistantToolbarActivated(const QJSValue& window, const QJSValue& toggle,
+        const QJSValue& panel, const QJSValue& session, const QJSValue& preferences,
+        const QJSValue& desktopOnlyDialog) const;
+    /// Desktop availability captured before QML observation; not provider connection or permission.
+    /// Read on the owning QObject thread. Browser builds remain unavailable.
     bool assistantAvailable() const;
-    /// Localized unsupported-device explanation, or empty when eligible. No network access.
+    /// Localized desktop-only explanation, or empty when available. No network access.
     QString assistantUnavailableReason() const;
     bool engineThreadsSelectable() const;
     // Twice the cores the platform reports, at least 16 and at most 64: a browser may report fewer cores
