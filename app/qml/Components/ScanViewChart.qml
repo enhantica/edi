@@ -256,14 +256,7 @@ Item {
     }
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
-    function niceStep(span, count) {
-        if (!(span > 0))
-            return 1;
-        const raw = span / count;
-        const power = Math.pow(10, Math.floor(Math.log10(raw)));
-        const scaled = raw / power;
-        return (scaled < 1.5 ? 1 : scaled < 3.5 ? 2 : scaled < 7.5 ? 5 : 10) * power;
-    }
+    function niceStep(span, count) { return ApplicationInfo.chartNiceStep(span, count); }
 
     Rectangle {
         anchors.fill: parent
@@ -321,19 +314,7 @@ Item {
     Item {
         id: plot
 
-        function ticks(axis: ValueAxis): list<real> {
-            const out = [];
-            const span = axis.max - axis.min;
-            if (!(axis.tickInterval > 0) || !(span > 0))
-                return out;
-            for (let i = Math.ceil(axis.min / axis.tickInterval - 1e-9); out.length < 64; ++i) {
-                const share = (i * axis.tickInterval - axis.min) / span;
-                if (share > 1 + 1e-9)
-                    break;
-                out.push(share);
-            }
-            return out;
-        }
+        function ticks(axis: ValueAxis): list<real> { return ApplicationInfo.chartGridShares(axis); }
 
         visible: chart.hasData
         x: view.x + view.plotArea.x

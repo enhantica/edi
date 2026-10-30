@@ -208,3 +208,10 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
 | A rainbow (jet) colour map | Rejected: not perceptually uniform; it shows edges the data do not have and fails in grey. |
 | Rows at equal heights, labelled with the scan value | Rejected while every dataset has a value: unequal steps along the scan would read as equal. |
 | Reading the calculated patterns too | Deferred: a finished scan does not keep them, and recalculating each would cost a calculation per dataset. |
+
+
+## Native evolution and common chart procedures
+
+ApplicationInfo executes EvolutionChart's report-style/range projection, mode captions, pointer move/pick/drag/wheel transactions and report-point publication. The identical round-step and grid-share procedures in EvolutionChart, ScanViewChart and SingleCrystalChart now share one native implementation; EvolutionChart and SingleCrystalChart also share their identical pointer coordinate projection. Existing EvolutionViewModel/project selection, scan data and MeasuredLayer remain the result/data/publication authorities. Their original QML zoom, picking and press fields remain the view state. No result model, chart controller, timer, cache or store is added.
+
+The current VM retains original typed forwarding conversions, property/context access, repeated reads, arithmetic, finite/range guards, intrinsic iteration and observable map/find callbacks. Report points retain original uncertainty admission and read order. Drag/wheel transactions retain the same thresholds, endpoint recomputation, flat/non-finite refusal and selection/reset order. The first rules are this ADR's chart presentation and ADR-0017 §19's Evolution tab; scientific results, native setters, Undo and report construction remain unchanged. QML retains its declarative axes/grid/series/point layer, visual bindings and direct existing setter dispatches. Remaining scan/single-crystal-specific procedures stay explicit migration work. Compilation and full scientific/lifecycle/input/error verification follow the complete source migration.
