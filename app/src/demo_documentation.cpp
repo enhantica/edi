@@ -275,6 +275,16 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
         const auto separator = body.indexOf('=');
         auto* item = separator > 0 ? find(body.left(separator), true) : nullptr;
         if (!item || !item->isEnabled() || !on_screen(item) || !click_item(item)) {
+            if (item) {
+                const auto bounds = item->mapRectToScene(item->boundingRect());
+                std::fprintf(stderr, "capture field %s scene=(%g,%g,%g,%g)\n", qPrintable(body.left(separator)), bounds.x(), bounds.y(), bounds.width(), bounds.height());
+                for (auto* parent = item->parentItem(); parent; parent = parent->parentItem())
+                    if (parent->clip()) {
+                        const auto clip = parent->mapRectToScene(parent->clipRect());
+                        const auto bounds = parent->mapRectToScene(parent->boundingRect());
+                        std::fprintf(stderr, "clip %s %s rect=(%g,%g,%g,%g) bounds=(%g,%g,%g,%g)\n", parent->metaObject()->className(), qPrintable(parent->objectName()), clip.x(), clip.y(), clip.width(), clip.height(), bounds.x(), bounds.y(), bounds.width(), bounds.height());
+                    }
+            }
             fail("cannot edit documentation form field: " + body.left(separator) +
                  (item ? QString(" (enabled=%1, visible=%2, on-screen=%3, width=%4, height=%5)")
                      .arg(item->isEnabled()).arg(item->isVisible()).arg(on_screen(item)).arg(item->width()).arg(item->height())
