@@ -561,6 +561,28 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue scanClosedTexts(int kind) const;
     Q_INVOKABLE void scanChoice(const QJSValue& index, int kind) const;
     Q_INVOKABLE void scanToggle(int kind) const;
+    /// Common control presentation and the existing working-indicator timer procedures.
+    Q_INVOKABLE void queueToolbarBinding(const QJSValue& install) const;
+    Q_INVOKABLE QJSValue toolbarWidestEntry() const;
+    Q_INVOKABLE QJSValue tabTitleSegments() const;
+    Q_INVOKABLE QJSValue digitCellWidth() const;
+    Q_INVOKABLE QJSValue digitTextRuns() const;
+    Q_INVOKABLE QJSValue digitRunIsDigit(const QJSValue& text) const;
+    Q_INVOKABLE QJSValue palettePositions() const;
+    Q_INVOKABLE QJSValue nameBlockIcon(const QJSValue& kind) const;
+    Q_INVOKABLE QJSValue nameParameterIcon(const QJSValue& name) const;
+    Q_INVOKABLE QJSValue nameSegments(const QJSValue& item) const;
+    Q_INVOKABLE QJSValue blockNamesShown() const;
+    Q_INVOKABLE QJSValue blockNamesLine(const QJSValue& row) const;
+    Q_INVOKABLE void blockNamesChanged() const;
+    Q_INVOKABLE QJSValue workingInitialVariant() const;
+    Q_INVOKABLE QJSValue workingText() const;
+    Q_INVOKABLE void workingStateChanged(int event) const;
+    Q_INVOKABLE void workingScheduleVariant() const;
+    Q_INVOKABLE void workingChangeVariant() const;
+    Q_INVOKABLE void workingElapsed() const;
+    Q_INVOKABLE void workingCadence(bool peak) const;
+    Q_INVOKABLE void workingAnimation(bool started) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

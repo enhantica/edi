@@ -8197,6 +8197,179 @@ void ApplicationInfo::scanToggle(int kind) const {
     const auto preferences = panelUsageContextRead(f, "Preferences"); assistantMemberWrite(f, preferences, names[kind], QJSValue(!panelUsageTruth(assistantContextField(f, "Preferences", names[kind]))));
 }
 
+namespace {
+QJSValue workingRandom(const PanelUsageFrame& f, int choices) {
+    return numberMath(f, "floor", [&] { return QJSValueList{viewArithmetic(f, numberMath(f, "random", [] { return QJSValueList{}; }), QJSValue(choices), 1)}; });
+}
+QJSValue workingPhase(const PanelUsageFrame& f, const QJSValue& now) {
+    const auto elapsed = viewArithmetic(f, now, assistantContextField(f, "workStatus", "rotationStartedAt"), 0);
+    const auto phase = chartBinary(f, elapsed, QJSValue(2000), true), positive = panelUsageAdd(f, phase, QJSValue(2000));
+    return chartBinary(f, positive, QJSValue(2000), true);
+}
+void workingSeekPeak(const PanelUsageFrame& f, const QJSValue& now, const QJSValue& phase) {
+    const auto timer = panelUsageContextRead(f, "peakSwitch");
+    const auto interval = numberMath(f, "max", [&] { return QJSValueList{QJSValue(1), numberMath(f, "ceil", [&] {
+        return QJSValueList{numberMath(f, "min", [&] {
+            const auto remaining = viewArithmetic(f, QJSValue(2000), phase, 0), deadline = assistantContextField(f, "workStatus", "variantSwitchDeadline");
+            return QJSValueList{remaining, viewArithmetic(f, deadline, now, 0)};
+        })};
+    })}; });
+    assistantMemberWrite(f, timer, "interval", interval); projectInvoke(f, "peakSwitch", "start");
+}
+} // namespace
+
+void ApplicationInfo::queueToolbarBinding(const QJSValue& install) const { const auto f = panelUsageEngine(this); panelUsageCallLater(f, install); }
+QJSValue ApplicationInfo::toolbarWidestEntry() const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageTruth(panelUsageRead(f, assistantContextField(f, "metrics", "font"), "family"))) return QJSValue(0);
+    QJSValue widest(0); const auto model = assistantContextField(f, "box", "model"); const auto base = panelUsageTruth(model) ? model : controlEmptyArray(f);
+    const auto entries = panelUsageMemberCall(f, base, "concat", {assistantContextField(f, "box", "closedTexts")});
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, entries, "length"), 0); ++i)
+        widest = numberMath(f, "max", [&] {
+            const auto metrics = panelUsageContextRead(f, "metrics"); const auto text = numberString(f, textIndex(f, entries, QJSValue(i)));
+            return QJSValueList{widest, panelUsageMemberCall(f, metrics, "advanceWidth", {text})};
+        });
+    return numberMath(f, "ceil", [&] { return QJSValueList{widest}; });
+}
+QJSValue ApplicationInfo::tabTitleSegments() const {
+    const auto f = panelUsageEngine(this); auto record = panelUsageLiteral(f);
+    panelUsageWrite(f, record.value, "text", assistantContextField(f, "tab", "text")); panelUsageWrite(f, record.value, "bold", assistantContextField(f, "tab", "checked")); const auto name = panelUsageComplete(f, record);
+    if (assistantContextField(f, "tab", "fontIcon").strictlyEquals(QJSValue(QStringLiteral("")))) return assistantGeometryArray(f, {name});
+    auto icon = panelUsageLiteral(f); panelUsageWrite(f, icon.value, "icon", assistantContextField(f, "tab", "fontIcon"));
+    const auto color = !assistantContextField(f, "tab", "iconColor").strictlyEquals(QJSValue(QStringLiteral(""))) ? assistantContextField(f, "tab", "iconColor") : projectInvoke(f, "tab", "foregroundColor");
+    panelUsageWrite(f, icon.value, "color", color); return assistantGeometryArray(f, {panelUsageComplete(f, icon), name});
+}
+QJSValue ApplicationInfo::digitCellWidth() const {
+    const auto f = panelUsageEngine(this); const auto font = assistantContextField(f, "metrics", "font"); Q_UNUSED(font)
+    QJSValue widest(0);
+    for (int digit = 0; digit <= 9 && panelUsageReady(f); ++digit)
+        widest = numberMath(f, "max", [&] {
+            const auto metrics = panelUsageContextRead(f, "metrics"), text = numberString(f, QJSValue(digit));
+            return QJSValueList{widest, panelUsageMemberCall(f, metrics, "advanceWidth", {text})};
+        });
+    return numberMath(f, "ceil", [&] { return QJSValueList{widest}; });
+}
+QJSValue ApplicationInfo::digitTextRuns() const {
+    const auto f = panelUsageEngine(this); const auto text = panelUsageContextRead(f, "text");
+    const auto expression = panelRegex(f, QString::fromUtf8("[0-9]|→|[^0-9→]+"), QV4::CompiledData::RegExp::RegExp_Global);
+    const auto runs = panelUsageMemberCall(f, text, "match", {expression}); return runs.isNull() || runs.isUndefined() ? controlEmptyArray(f) : runs;
+}
+QJSValue ApplicationInfo::digitRunIsDigit(const QJSValue& text) const {
+    const auto f = panelUsageEngine(this); return panelUsageMemberCall(f, panelRegex(f, QStringLiteral("^[0-9]$")), "test", {text});
+}
+QJSValue ApplicationInfo::palettePositions() const {
+    const auto f = panelUsageEngine(this); const auto kinds = controlEmptyArray(f), project = assistantContextField(f, "Session", "project");
+    if (panelUsageTruth(project)) {
+        panelUsageEach(f, panelUsageRead(f, project, "experimentColourPositions"), [&](const QJSValue& position) { textIndexWrite(f, kinds, position, QJSValue(QStringLiteral("experiment"))); return panelUsageReady(f); });
+        panelUsageEach(f, panelUsageRead(f, project, "structureColourPositions"), [&](const QJSValue& position) { textIndexWrite(f, kinds, position, QJSValue(QStringLiteral("structure"))); return panelUsageReady(f); });
+    }
+    return kinds;
+}
+QJSValue ApplicationInfo::nameBlockIcon(const QJSValue& kind) const {
+    return QJSValue(kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? QStringLiteral("layer-group") : kind.strictlyEquals(QJSValue(QStringLiteral("experiment"))) ? QStringLiteral("microscope") : kind.strictlyEquals(QJSValue(QStringLiteral("parameter"))) ? QStringLiteral("chart-line") : QString());
+}
+QJSValue ApplicationInfo::nameParameterIcon(const QJSValue& name) const {
+    const auto f = panelUsageEngine(this);
+    static constexpr std::pair<const char*, const char*> icons[] = {{"length_", "ruler"}, {"angle_", "ruler"}, {"fract_", "map-marker-alt"}, {"occupancy", "fill"}, {"adp_", "arrows-alt"}, {"scale", "weight"}, {"setup_wavelength", "radiation"}, {"setup_twotheta_bank", "hashtag"}, {"calib_d_to_tof_offset", "arrows-alt-h"}, {"calib_d_to_tof_", "radiation"}, {"calib_", "arrows-alt-h"}, {"broad_", "shapes"}, {"rise_", "shapes"}, {"decay_", "shapes"}, {"asym_", "balance-scale-left"}, {"intensity", "mountain"}};
+    for (const auto& icon : icons) if (panelUsageTruth(panelUsageMemberCall(f, name, "startsWith", {QJSValue(QString::fromLatin1(icon.first))}))) return QJSValue(QString::fromLatin1(icon.second));
+    return QJSValue(QStringLiteral(""));
+}
+QJSValue ApplicationInfo::nameSegments(const QJSValue& item) const {
+    const auto f = panelUsageEngine(this); if (!panelUsageTruth(item)) return controlEmptyArray(f);
+    const auto minor = chartStyle(f, "themeForegroundMinor"); QJSValue categoryColor = minor;
+    if (!panelUsageRead(f, item, "elementSymbol").strictlyEquals(QJSValue(QStringLiteral("")))) {
+        const auto colors = panelUsageContextRead(f, "AppColors"); categoryColor = panelUsageMemberCall(f, colors, "element", {panelUsageRead(f, item, "elementSymbol")});
+    } else if (assistantRelation(f, panelUsageRead(f, item, "phaseIndex"), QJSValue(0), 2)) {
+        const auto colors = panelUsageContextRead(f, "AppColors"); categoryColor = panelUsageMemberCall(f, colors, "structure", {panelUsageRead(f, item, "phaseIndex")});
+    }
+    auto block = panelUsageLiteral(f); const auto names = panelUsageContextRead(f, "names"); panelUsageWrite(f, block.value, "icon", panelUsageMemberCall(f, names, "blockIcon", {panelUsageRead(f, item, "blockKind")}));
+    const auto colors = panelUsageContextRead(f, "AppColors"); const QJSValueList args{panelUsageRead(f, item, "blockKind"), panelUsageRead(f, item, "blockIndex")}; panelUsageWrite(f, block.value, "color", panelUsageMemberCall(f, colors, "block", args));
+    const auto pieces = assistantGeometryArray(f, {panelUsageComplete(f, block)});
+    if (!panelUsageRead(f, item, "categoryIcon").strictlyEquals(QJSValue(QStringLiteral("")))) {
+        const auto icon = panelUsageRead(f, item, "categoryIcon"); panelUsageMemberCall(f, pieces, "push", {chartRecord(f, {{"icon", icon}, {"color", categoryColor}})});
+    }
+    if (!panelUsageRead(f, item, "rowLabel").strictlyEquals(QJSValue(QStringLiteral("")))) {
+        const auto text = panelUsageRead(f, item, "rowLabel"); panelUsageMemberCall(f, pieces, "push", {chartRecord(f, {{"text", text}, {"color", categoryColor}})});
+    }
+    const auto receiver = panelUsageContextRead(f, "names"), parameter = panelUsageMemberCall(f, receiver, "parameterIcon", {panelUsageRead(f, item, "name")});
+    if (!parameter.strictlyEquals(QJSValue(QStringLiteral("")))) panelUsageMemberCall(f, pieces, "push", {chartRecord(f, {{"icon", parameter}, {"color", minor}})});
+    panelUsageMemberCall(f, pieces, "push", {chartRecord(f, {{"text", panelUsageRead(f, item, "shortName")}})}); return pieces;
+}
+QJSValue ApplicationInfo::blockNamesShown() const {
+    const auto f = panelUsageEngine(this); const auto rows = controlEmptyArray(f);
+    if (assistantRelation(f, panelUsageContextRead(f, "count"), QJSValue(11), 3)) {
+        for (double row = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(row), panelUsageContextRead(f, "count"), 0); ++row) panelUsageMemberCall(f, rows, "push", {QJSValue(row)});
+        return rows;
+    }
+    for (int row = 0; row < 5 && panelUsageReady(f); ++row) panelUsageMemberCall(f, rows, "push", {QJSValue(row)});
+    panelUsageMemberCall(f, rows, "push", {QJSValue(-1)}); const auto start = panelUsageNumber(f, viewArithmetic(f, panelUsageContextRead(f, "count"), QJSValue(5), 0)); if (!start) return {};
+    for (double row = *start; panelUsageReady(f) && assistantRelation(f, QJSValue(row), panelUsageContextRead(f, "count"), 0); ++row) panelUsageMemberCall(f, rows, "push", {QJSValue(row)});
+    return rows;
+}
+QJSValue ApplicationInfo::blockNamesLine(const QJSValue& row) const {
+    const auto f = panelUsageEngine(this);
+    if (assistantRelation(f, assistantContextField(f, "names", "revision"), QJSValue(0), 0) || !panelUsageTruth(assistantContextField(f, "names", "blocks")) || assistantRelation(f, row, QJSValue(0), 0)) return QJSValue(QStringLiteral(""));
+    if (assistantContextField(f, "names", "blockKind").strictlyEquals(QJSValue(QStringLiteral("experiment")))) {
+        const auto first = panelUsageMemberCall(f, assistantContextField(f, "names", "blocks"), "text", {row, QJSValue(QStringLiteral("name"))});
+        const auto prefix = panelUsageAdd(f, first, QJSValue(QStringLiteral(" · ")));
+        return panelUsageAdd(f, prefix, panelUsageMemberCall(f, assistantContextField(f, "names", "blocks"), "text", {row, QJSValue(QStringLiteral("file"))}));
+    }
+    return panelUsageMemberCall(f, assistantContextField(f, "names", "blocks"), "text", {row, QJSValue(QStringLiteral("label"))});
+}
+void ApplicationInfo::blockNamesChanged() const {
+    const auto f = panelUsageEngine(this); const auto names = panelUsageContextRead(f, "names"); const auto previous = panelUsageNumber(f, assistantContextField(f, "names", "revision"));
+    if (previous) assistantMemberWrite(f, names, "revision", QJSValue(*previous + 1));
+}
+QJSValue ApplicationInfo::workingInitialVariant() const { const auto f = panelUsageEngine(this); return workingRandom(f, 3); }
+QJSValue ApplicationInfo::workingText() const {
+    const auto f = panelUsageEngine(this);
+    if (assistantRelation(f, panelUsageContextRead(f, "elapsedSeconds"), QJSValue(60), 0)) {
+        const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("AssistantWorking", "%1s · Agent working...")))});
+        return panelUsageMemberCall(f, format, "arg", {panelUsageContextRead(f, "elapsedSeconds")});
+    }
+    const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("AssistantWorking", "%1m %2s · Agent working...")))});
+    const auto minutes = numberMath(f, "floor", [&] { return QJSValueList{viewArithmetic(f, panelUsageContextRead(f, "elapsedSeconds"), QJSValue(60), 2)}; });
+    const auto first = panelUsageMemberCall(f, format, "arg", {minutes}); return panelUsageMemberCall(f, first, "arg", {chartBinary(f, panelUsageContextRead(f, "elapsedSeconds"), QJSValue(60), true)});
+}
+void ApplicationInfo::workingStateChanged(int event) const {
+    const auto f = panelUsageEngine(this);
+    if (event == 0) {
+        panelUsageContextWrite(f, "workingSince", panelUsageTruth(panelUsageContextRead(f, "working")) ? panelUsageNow(f) : QJSValue(0)); panelUsageContextWrite(f, "elapsedSeconds", QJSValue(0));
+    } else if (event == 1) {
+        if (!panelUsageTruth(panelUsageContextRead(f, "animating")) && panelUsageTruth(assistantContextField(f, "peakSwitch", "running"))) { projectInvoke(f, "peakSwitch", "stop"); panelUsageGlobalCall(f, "changeVariant"); }
+    } else {
+        if (panelUsageTruth(panelUsageContextRead(f, "working"))) panelUsageContextWrite(f, "workingSince", panelUsageNow(f)); panelUsageGlobalCall(f, "scheduleVariantChange");
+    }
+}
+void ApplicationInfo::workingScheduleVariant() const {
+    const auto f = panelUsageEngine(this); panelUsageContextWrite(f, "variantSwitchDeadline", panelUsageAdd(f, panelUsageNow(f), QJSValue(60000)));
+    const auto cadence = panelUsageContextRead(f, "variantCadence"); assistantMemberWrite(f, cadence, "interval", panelUsageAdd(f, QJSValue(30000), workingRandom(f, 28001))); projectInvoke(f, "variantCadence", "start");
+}
+void ApplicationInfo::workingChangeVariant() const {
+    const auto f = panelUsageEngine(this); const bool wasLinear = panelUsageContextRead(f, "variant").strictlyEquals(QJSValue(0));
+    const auto first = panelUsageAdd(f, panelUsageContextRead(f, "variant"), QJSValue(1)); const auto next = panelUsageAdd(f, first, workingRandom(f, 2)); panelUsageContextWrite(f, "variant", chartBinary(f, next, QJSValue(3), true));
+    if (panelUsageTruth(panelUsageContextRead(f, "animating")) && wasLinear != panelUsageContextRead(f, "variant").strictlyEquals(QJSValue(0))) projectInvoke(f, "rotationAnimator", "restart");
+    panelUsageGlobalCall(f, "scheduleVariantChange");
+}
+void ApplicationInfo::workingElapsed() const {
+    const auto f = panelUsageEngine(this); const auto status = panelUsageContextRead(f, "workStatus");
+    const auto elapsed = numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), numberMath(f, "floor", [&] {
+        const auto now = panelUsageNow(f), start = assistantContextField(f, "workStatus", "workingSince"); return QJSValueList{viewArithmetic(f, viewArithmetic(f, now, start, 0), QJSValue(1000), 2)};
+    })}; }); assistantMemberWrite(f, status, "elapsedSeconds", elapsed);
+}
+void ApplicationInfo::workingCadence(bool peak) const {
+    const auto f = panelUsageEngine(this); const auto now = panelUsageNow(f);
+    if (panelUsageTruth(assistantContextField(f, "workStatus", "animating")) && !assistantContextField(f, "workStatus", "variant").strictlyEquals(QJSValue(0)) && assistantRelation(f, now, assistantContextField(f, "workStatus", "variantSwitchDeadline"), 0)) {
+        const auto phase = workingPhase(f, now); if (!peak || assistantRelation(f, phase, QJSValue(32), 1)) { workingSeekPeak(f, now, phase); return; }
+    }
+    projectInvoke(f, "workStatus", "changeVariant");
+}
+void ApplicationInfo::workingAnimation(bool started) const {
+    const auto f = panelUsageEngine(this);
+    if (started) { const auto status = panelUsageContextRead(f, "workStatus"); assistantMemberWrite(f, status, "rotationStartedAt", panelUsageNow(f)); }
+    else if (!panelUsageTruth(assistantContextField(f, "workStatus", "animating"))) projectWrite(f, "workGlyph", "rotation", QJSValue(0));
+}
+
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
     return value.isString() ? edi_app::assistant_presentation::singleLineText(value.toString()) : QString();
 }
