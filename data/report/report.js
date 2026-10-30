@@ -3,12 +3,14 @@
 // three.js scene, from the report model in this page. The series, panes, error bars, ticks, colours, instances and
 // views all come from the model; this file only places them.
 
-const model = JSON.parse(document.getElementById('edi-report-model').textContent);
+// Decode only the native renderer-number transport; original raw model nulls remain null.
+const model = JSON.parse(document.getElementById('edi-report-model').textContent, (_key, value) =>
+  value !== null && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, 'edi_renderer_number')
+    ? Number(value.edi_renderer_number) : value);
 // A value of the page's stylesheet; empty where no stylesheet is computed, and the chart keeps plotly's own.
 const pageStyle = name =>
   typeof getComputedStyle === 'function' ? getComputedStyle(document.documentElement).getPropertyValue(name).trim() : '';
 
-const patternStyle = key => (model.pattern_styles ?? []).find(row => row.key === key) ?? {};
 const sceneStyle = key => (model.structure_styles ?? []).find(row => row.key === key) ?? {};
 
 // The Structure page's toolbar icons: Font Awesome Free 5 solid glyphs as SVG paths, [width, height, path] (icons CC
@@ -153,12 +155,9 @@ function notice(figure, text) {
 
 // --- The pattern charts (edi ADR-0021) ---
 
-const paneAxis = { main: 'y', bragg: 'y2', residual: 'y3' };
-
 // Each pane's y domain, top to bottom: a fixed pane takes its pixels of the plot's height, a stretching one its share
 // of what the fixed panes leave.
-function paneDomains(layout, plotHeight) {
-  const fixed = layout.reduce((sum, pane) => sum + pane.fixed_px, 0);
+function paneDomains(layout, plotHeight, fixed) {
   const rest = Math.max(0, 1 - fixed / plotHeight);
   const domains = {};
   let top = 1;
@@ -170,66 +169,7 @@ function paneDomains(layout, plotHeight) {
   return domains;
 }
 
-// An axis title as its coloured pieces, each series' word in its colour, as the app draws it; the plain title when it
-// has none.
-function axisTitle(axis) {
-  const segments = axis.segments ?? [];
-  return segments.length === 0
-    ? axis.title
-    : segments.map(segment => (segment.style ? inColour(segment.text, patternStyle(segment.style).light) : segment.text)).join('');
-}
-
-// A text in a colour, as plotly writes a styled span.
-function inColour(text, colour) {
-  return `<span style="color:${colour}">${text}</span>`;
-}
-
-// A series as a plotly trace: a null point is a gap, the measured bars are error bars to their ends (a missing lower
-// end reaches the bottom of the pane), and a Bragg tick hovers with its Miller indices.
-function trace(pattern, series, index) {
-  const look = patternStyle(series.style);
-  const marks = (look.mark ?? 'line').split('+');
-  const out = {
-    type: 'scatter',
-    // The legend names each series in its colour, as the app's chart legend does: the residual's `meas − calc`
-    // coloured as the residual pane's title (edi::legend_label).
-    name: series.kind === 'residual' && (pattern.y_residual.segments ?? []).length > 0
-      ? `${inColour('Residual (', look.light)}${axisTitle(pattern.y_residual)}${inColour(')', look.light)}`
-      : inColour(series.label, look.light),
-    x: series.x,
-    y: series.y,
-    xaxis: 'x',
-    yaxis: paneAxis[series.pane],
-    mode: marks.includes('markers') ? 'lines+markers' : 'lines',
-    connectgaps: false,
-    opacity: look.opacity ?? 1,
-    line: { color: look.light, width: look.width_px, dash: marks.includes('dash') ? 'dash' : 'solid' },
-    hovertemplate: '%{x}, %{y}<extra>%{fullData.name}</extra>',
-  };
-  if (marks.includes('markers')) {
-    out.marker = { color: look.light, size: look.marker_px };
-  }
-  if (marks.includes('bars') && series.bar_high.length === series.y.length) {
-    out.error_y = {
-      type: 'data',
-      symmetric: false,
-      color: look.light,
-      thickness: 1,
-      width: 0,
-      array: series.y.map((y, i) => (y === null || series.bar_high[i] === null ? null : series.bar_high[i] - y)),
-      arrayminus: series.y.map((y, i) =>
-        y === null ? null : series.bar_low[i] === null ? y - pattern.y_main.min : y - series.bar_low[i]),
-    };
-  }
-  if (series.kind === 'bragg') {
-    // Named as the app's legend names a structure's ticks.
-    out.name = inColour(`Bragg peaks · ${series.label}`, look.light);
-    out.text = pattern.hover[index];
-    out.hovertemplate = '%{text}<extra>%{fullData.name}</extra>';
-  }
-  return out;
-}
-
+// Portable trace, colour, label and bar projections come from the native report writer.
 function drawPattern(figure, pattern) {
   if (!window.Plotly) {
     notice(figure, 'The chart needs plotly.js, which could not be loaded.');
@@ -246,16 +186,12 @@ function drawPattern(figure, pattern) {
   // The plot starts no closer to the frame's top than to its sides, and plotly's toolbar sits above it, clear of the
   // legend.
   const margin = { l: 16, r: 16, t: 36, b: 16 };
-  const domains = paneDomains(pattern.layout, figure.clientHeight - margin.t - margin.b);
-  const bottom = 'residual' in domains ? 'y3' : 'bragg' in domains ? 'y2' : 'y';
-  const excluded = patternStyle('excluded');
+  const domains = paneDomains(pattern.layout, figure.clientHeight - margin.t - margin.b, pattern.browser.fixed_height);
+  const bottom = pattern.browser.bottom_axis;
   const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false };
-  // Each Bragg row's label at its left, the structure's name in its colour, as the app draws it.
-  const braggLabels = 'bragg' in domains
-    ? (pattern.bragg_labels ?? []).map(label => ({
-        text: inColour(label.text, patternStyle(label.style).light), xref: 'paper', yref: 'y2', x: 0, y: label.centre,
-        xanchor: 'right', xshift: -6, showarrow: false, font: { family: font } }))
-    : [];
+  // Runtime CSS font decoration belongs to the browser renderer.
+  const annotations = pattern.browser.annotations;
+  for (const annotation of annotations) annotation.font = { family: font };
   const layout = {
     height: figure.clientHeight,
     margin,
@@ -265,28 +201,13 @@ function drawPattern(figure, pattern) {
     legend: { x: 1, xanchor: 'right', y: 1, yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)' },
     hovermode: 'closest',
     // The experiment's reliability in its last fit, above the plot's top left, as the app's selector shows it.
-    annotations: (pattern.title
-      ? [{ text: pattern.title, xref: 'paper', yref: 'paper', x: 0, y: 1, xanchor: 'left', yanchor: 'bottom',
-           showarrow: false, font: { family: font } }]
-      : []).concat(braggLabels),
+    annotations,
     xaxis: { ...axis, title: { text: pattern.x.title }, range: [pattern.x.min, pattern.x.max], anchor: bottom },
-    yaxis: { ...axis, title: { text: axisTitle(pattern.y_main) }, domain: domains.main ?? [0, 1] },
-    shapes: pattern.excluded.map(([x0, x1]) => ({
-      type: 'rect',
-      xref: 'x',
-      yref: 'paper',
-      x0,
-      x1,
-      y0: 0,
-      y1: 1,
-      fillcolor: excluded.light,
-      opacity: excluded.opacity,
-      line: { width: 0 },
-      layer: 'below',
-    })),
+    yaxis: { ...axis, title: { text: pattern.browser.main_title }, domain: domains.main ?? [0, 1] },
+    shapes: pattern.browser.shapes,
   };
   if ('bragg' in domains) {
-    const rows = pattern.series.filter(series => series.kind === 'bragg').length;
+    const rows = pattern.browser.bragg_rows;
     layout.yaxis2 = {
       ...axis,
       domain: domains.bragg,
@@ -297,9 +218,9 @@ function drawPattern(figure, pattern) {
     };
   }
   if ('residual' in domains) {
-    layout.yaxis3 = { ...axis, title: { text: axisTitle(pattern.y_residual) }, domain: domains.residual };
+    layout.yaxis3 = { ...axis, title: { text: pattern.browser.residual_title }, domain: domains.residual };
   }
-  const traces = pattern.series.map((series, index) => trace(pattern, series, index));
+  const traces = pattern.browser.traces;
   window.Plotly.newPlot(figure, traces, layout, { responsive: true, displaylogo: false });
 }
 
@@ -318,19 +239,7 @@ function drawSingleCrystal(figure, crystal) {
   const font = pageStyle('--head-font');
   const grid = pageStyle('--rowshade');
   const frame = pageStyle('--tableborder');
-  const style = patternStyle('meas.0');
-  let low = 0;
-  let high = 0;
-  crystal.meas.forEach((meas, i) => {
-    for (const end of [meas - crystal.su[i], meas + crystal.su[i], crystal.calc[i]]) {
-      if (Number.isFinite(end)) {
-        low = Math.min(low, end);
-        high = Math.max(high, end);
-      }
-    }
-  });
-  const pad = (high - low) * 0.05 || 1;
-  const range = [Math.min(0, low - pad), high + pad];
+  const range = crystal.browser.range;
   const axis = { automargin: true, showline: true, mirror: true, linecolor: frame, gridcolor: grid, zeroline: false, range };
   const points = {
     type: 'scatter',
@@ -338,11 +247,11 @@ function drawSingleCrystal(figure, crystal) {
     name: crystal.name,
     x: crystal.calc,
     y: crystal.meas,
-    error_y: { type: 'data', array: crystal.su, visible: true, thickness: 1, width: 0, color: style.light },
+    error_y: { type: 'data', array: crystal.su, visible: true, thickness: 1, width: 0, color: crystal.browser.color },
     // Each point's hover as the core writes it: its indices and values by the dictionary's labels and formats.
     text: crystal.hover,
     hovertemplate: '%{text}<extra></extra>',
-    marker: { color: style.light, size: 5 },
+    marker: { color: crystal.browser.color, size: 5 },
   };
   const diagonal = {
     type: 'scatter',
@@ -383,18 +292,17 @@ function drawEvolution(figure, series) {
     notice(figure, 'The chart needs plotly.js, which could not be loaded.');
     return;
   }
-  const style = patternStyle('meas.0');
   const trace = {
     // Points with their s.u. bars and no line, as the Evolution tab draws them.
     type: 'scatter',
     mode: 'markers',
     name: series.name,
-    x: series.points.map(point => point.x),
-    y: series.points.map(point => point.y),
-    error_y: { type: 'data', array: series.points.map(point => point.su), visible: true, thickness: 1, color: style.light },
-    text: series.points.map(point => point.text),
+    x: series.browser.x,
+    y: series.browser.y,
+    error_y: { type: 'data', array: series.browser.su, visible: true, thickness: 1, color: series.browser.color },
+    text: series.browser.text,
     hovertemplate: '%{x}: %{text}<extra></extra>',
-    marker: { color: style.light, size: 6 },
+    marker: { color: series.browser.color, size: 6 },
   };
   const layout = {
     height: figure.clientHeight,
@@ -402,7 +310,7 @@ function drawEvolution(figure, series) {
     margin: { l: 16, r: 40, t: 40, b: 16 },
     modebar: { orientation: 'v' },
     font: { family: font },
-    title: { text: series.units ? `${series.name} (${series.units})` : series.name, x: 0.02, xanchor: 'left' },
+    title: { text: series.browser.title, x: 0.02, xanchor: 'left' },
     showlegend: false,
     hovermode: 'closest',
     xaxis: { ...axis, title: { text: series.x_title } },
