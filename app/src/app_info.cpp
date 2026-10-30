@@ -1770,6 +1770,617 @@ void ApplicationInfo::enforceAssistantHomeFocus() const {
     } else panelUsageGlobalCall(frame, "focusAssistantOpener", {});
 }
 
+namespace {
+bool consentQtObject(const PanelUsageFrame& f, const QJSValue& value) {
+    const auto qt = panelUsageContextRead(f, "Qt");
+    return panelUsageReady(f) && panelUsageMemberCall(f, qt, "isQtObject", {value}).toBool();
+}
+bool consentOwner(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& owner) {
+    if (!consentQtObject(f, component) || !consentQtObject(f, owner)) return false;
+    const auto actual = panelUsageRead(f, component, "assistant");
+    return panelUsageReady(f) && owner.strictlyEquals(actual);
+}
+bool consentPanelOwner(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& draft, const QJSValue& owner) {
+    if (!consentQtObject(f, component) || !consentQtObject(f, draft) || !consentQtObject(f, owner)) return false;
+    const auto actual = panelUsageRead(f, component, "assistant");
+    return panelUsageReady(f) && owner.strictlyEquals(actual);
+}
+bool consentFieldEquals(const PanelUsageFrame& f, const QJSValue& source, const char* key, const QJSValue& expected) {
+    const auto actual = panelUsageRead(f, source, key);
+    return panelUsageReady(f) && actual.strictlyEquals(expected);
+}
+bool consentFieldsEqual(const PanelUsageFrame& f, const QJSValue& left, const char* leftKey,
+                        const QJSValue& right, const char* rightKey) {
+    const auto a = panelUsageRead(f, left, leftKey);
+    const auto b = panelUsageRead(f, right, rightKey);
+    return panelUsageReady(f) && a.strictlyEquals(b);
+}
+QJSValue consentStatus(const PanelUsageFrame& f, const char* status) {
+    const auto literal = panelUsageLiteral(f);
+    panelUsageWrite(f, literal.value, "status", QJSValue(QString::fromLatin1(status)));
+    return panelUsageComplete(f, literal);
+}
+QJSValue consentNull() { return QJSValue(QJSValue::NullValue); }
+void consentClear(const PanelUsageFrame& f, const QJSValue& object, const char* field) {
+    assistantMemberWrite(f, object, field, consentNull());
+}
+bool connectionOwnerCurrent(const PanelUsageFrame& f, const std::function<QJSValue(uint)>& v) {
+    const auto dialog = panelUsageContextRead(f, "dialog");
+    if (!consentQtObject(f, dialog) || !consentQtObject(f, v(0))) return false;
+    const auto currentDialog = panelUsageContextRead(f, "dialog");
+    if (!consentFieldEquals(f, currentDialog, "assistant", v(0))) return false;
+    const auto approvalDialog = panelUsageContextRead(f, "dialog");
+    if (!consentFieldEquals(f, approvalDialog, "approvalOwner", v(7))) return false;
+    const auto project = assistantContextField(f, "Session", "project");
+    if (!panelUsageReady(f) || !project.strictlyEquals(v(1))) return false;
+    if (!consentFieldEquals(f, v(0), "selectedModel", v(2)) || !consentFieldEquals(f, v(0), "selectedEffort", v(3))) return false;
+    if (v(4).toBool()) {
+        const auto account = panelUsageRead(f, v(0), "account");
+        if (!consentFieldEquals(f, account, "email", v(5))) return false;
+        const auto accountAgain = panelUsageRead(f, v(0), "account");
+        if (!consentFieldEquals(f, accountAgain, "planType", v(6))) return false;
+    }
+    const auto blocked = panelUsageRead(f, v(0), "contextApprovalBlocked");
+    if (!panelUsageReady(f) || blocked.toBool()) return false;
+    const auto callback = panelUsageRead(f, v(7), "currentDraft");
+    if (!panelUsageReady(f)) return false;
+    return !callback.isCallable() || panelUsageMemberCall(f, v(7), "currentDraft").toBool();
+}
+QJSValue connectionCurrent(const PanelUsageFrame& f, const std::function<QJSValue(uint)>& v) {
+    if (!connectionOwnerCurrent(f, v)) return QJSValue(false);
+    const auto context = panelUsageRead(f, v(0), "contextConsentIdentity");
+    if (!connectionOwnerCurrent(f, v)) return QJSValue(false);
+    const auto offered = v(8);
+    const auto length = panelUsageRead(f, offered, "length");
+    if (!assistantRelation(f, length, QJSValue(0), 1)) return QJSValue(false);
+    const auto identity = assistantContextField(f, "dialog", "disclosedContextIdentity");
+    return QJSValue(panelUsageReady(f) && identity.strictlyEquals(offered) && context.strictlyEquals(offered));
+}
+} // namespace
+
+QJSValue ApplicationInfo::composerCaptureConsentDraft() const {
+    const auto f = panelUsageEngine(this);
+    const auto composing = assistantContextField(f, "editor", "inputMethodComposing");
+    if (!panelUsageReady(f) || composing.toBool()) return consentNull();
+    const auto preedit = assistantContextField(f, "editor", "preeditText");
+    const auto length = panelUsageRead(f, preedit, "length");
+    if (!panelUsageReady(f) || length.toBool()) return consentNull();
+    const auto component = panelUsageContextRead(f, "composer");
+    const auto draft = panelUsageLiteral(f);
+    panelUsageWrite(f, draft.value, "owner", panelUsageContextRead(f, "assistant"));
+    panelUsageWrite(f, draft.value, "text", assistantContextField(f, "editor", "text"));
+    for (const auto& field : {std::pair{"revision", "textRevision"}, std::pair{"ownerRevision", "draftOwnerRevision"}, std::pair{"files", "consentFileRevision"}})
+        panelUsageWrite(f, draft.value, field.first, panelUsageContextRead(f, field.second));
+    panelUsageWrite(f, draft.value, "project", assistantContextField(f, "Session", "project"));
+    panelUsageWrite(f, draft.value, "model", assistantContextField(f, "assistant", "selectedModel"));
+    panelUsageWrite(f, draft.value, "effort", assistantContextField(f, "assistant", "selectedEffort"));
+    auto account = assistantContextField(f, "assistant", "account");
+    panelUsageWrite(f, draft.value, "email", panelUsageRead(f, account, "email"));
+    account = assistantContextField(f, "assistant", "account");
+    panelUsageWrite(f, draft.value, "plan", panelUsageRead(f, account, "planType"));
+    const auto actual = panelUsageComplete(f, draft);
+    const auto owner = panelUsageRead(f, actual, "owner");
+    const auto context = panelUsageRead(f, owner, "contextConsentIdentity");
+    const auto currentOwner = [&] {
+        if (!consentQtObject(f, component)) return false;
+        const auto captured = panelUsageRead(f, actual, "owner");
+        if (!consentQtObject(f, captured)) return false;
+        return consentFieldsEqual(f, actual, "owner", component, "assistant");
+    };
+    if (!currentOwner()) return consentNull();
+    assistantMemberWrite(f, actual, "context", context);
+    const auto owned = panelUsageMemberCall(f, component, "ownsConsentDraft", {actual});
+    if (!currentOwner()) return consentNull();
+    return owned.toBool() ? actual : consentNull();
+}
+bool ApplicationInfo::composerOwnsConsentDraft(const QJSValue& draft) const {
+    const auto f = panelUsageEngine(this);
+    if (draft.isNull()) return false;
+    const auto owner = panelUsageRead(f, draft, "owner");
+    if (!assistantSameName(f, owner, "assistant")) return false;
+    const auto original = panelUsageContextRead(f, "assistant");
+    const auto context = panelUsageRead(f, original, "contextConsentIdentity");
+    const auto composer = panelUsageContextRead(f, "composer");
+    if (!consentQtObject(f, composer) || !consentQtObject(f, original) || !assistantSameName(f, original, "assistant")) return false;
+    if (!consentFieldEquals(f, draft, "owner", original)) return false;
+    const auto text = panelUsageRead(f, draft, "text");
+    const auto editorText = assistantContextField(f, "editor", "text");
+    if (!panelUsageReady(f) || !text.strictlyEquals(editorText)) return false;
+    for (const auto& field : {std::pair{"revision", "textRevision"}, std::pair{"ownerRevision", "draftOwnerRevision"}, std::pair{"files", "consentFileRevision"}}) {
+        const auto value = panelUsageRead(f, draft, field.first);
+        if (!assistantSameName(f, value, field.second)) return false;
+    }
+    const auto project = panelUsageRead(f, draft, "project");
+    const auto currentProject = assistantContextField(f, "Session", "project");
+    if (!panelUsageReady(f) || !project.strictlyEquals(currentProject)) return false;
+    const auto offered = panelUsageRead(f, draft, "context");
+    const auto length = panelUsageRead(f, offered, "length");
+    if (!assistantRelation(f, length, QJSValue(0), 1) || !consentFieldEquals(f, draft, "context", context)) return false;
+    for (const auto& field : {std::pair{"model", "selectedModel"}, std::pair{"effort", "selectedEffort"}}) {
+        const auto value = panelUsageRead(f, draft, field.first);
+        const auto selected = assistantContextField(f, "assistant", field.second);
+        if (!panelUsageReady(f) || !value.strictlyEquals(selected)) return false;
+    }
+    for (const auto& field : {std::pair{"email", "email"}, std::pair{"plan", "planType"}}) {
+        const auto value = panelUsageRead(f, draft, field.first);
+        const auto account = assistantContextField(f, "assistant", "account");
+        const auto selected = panelUsageRead(f, account, field.second);
+        if (!panelUsageReady(f) || !value.strictlyEquals(selected)) return false;
+    }
+    return assistantEditorIdle(f);
+}
+QJSValue ApplicationInfo::composerSubmitApprovedDraft(const QJSValue& draft) const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "composer");
+    const auto original = panelUsageContextRead(f, "assistant");
+    const auto owned = panelUsageMemberCall(f, component, "ownsConsentDraft", {draft});
+    const auto retired = QJSValue(QStringLiteral("retired"));
+    const auto waiting = QJSValue(QStringLiteral("waiting"));
+    if (!consentOwner(f, component, original) || !owned.toBool()) return retired;
+    const auto connected = panelUsageRead(f, original, "connected");
+    if (!panelUsageReady(f) || !connected.toBool()) return waiting;
+    const auto required = panelUsageRead(f, original, "contextConsentRequired");
+    if (!consentOwner(f, component, original)) return retired;
+    const auto stillOwned = panelUsageMemberCall(f, component, "ownsConsentDraft", {draft});
+    if (!consentOwner(f, component, original) || !stillOwned.toBool()) return retired;
+    if (required.toBool()) return waiting;
+    const auto state = panelUsageRead(f, original, "state");
+    if (!panelUsageReady(f) || !state.strictlyEquals(QJSValue(QStringLiteral("idle")))) return waiting;
+    const auto canCancel = panelUsageRead(f, original, "canCancel");
+    if (!panelUsageReady(f) || canCancel.toBool()) return waiting;
+    const auto result = panelUsageMemberCall(f, component, "submit", {draft});
+    return panelUsageReady(f) && result.toBool() ? panelUsageRead(f, result, "status") : retired;
+}
+bool ApplicationInfo::composerExplainBlockedSubmission() const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "composer");
+    const auto original = panelUsageContextRead(f, "assistant");
+    const auto blocked = panelUsageRead(f, original, "contextApprovalBlocked");
+    if (!consentOwner(f, component, original)) return true;
+    if (!blocked.toBool()) return false;
+    const auto connected = panelUsageRead(f, original, "connected");
+    if (!panelUsageReady(f) || !connected.toBool()) return true;
+    const auto hasDraft = panelUsageRead(f, component, "hasDraft");
+    if (!panelUsageReady(f) || !hasDraft.toBool()) return true;
+    const auto composing = assistantContextField(f, "editor", "inputMethodComposing");
+    if (!panelUsageReady(f) || composing.toBool()) return true;
+    const auto preedit = assistantContextField(f, "editor", "preeditText");
+    if (panelUsageRead(f, preedit, "length").toBool() || !panelUsageReady(f)) return true;
+    const auto text = assistantContextField(f, "editor", "text");
+    const auto revision = panelUsageContextRead(f, "textRevision");
+    const auto ownerRevision = panelUsageContextRead(f, "draftOwnerRevision");
+    const auto files = panelUsageContextRead(f, "consentFileRevision");
+    const auto project = assistantContextField(f, "Session", "project");
+    const auto model = panelUsageRead(f, original, "selectedModel");
+    const auto effort = panelUsageRead(f, original, "selectedEffort");
+    auto account = panelUsageRead(f, original, "account");
+    const auto email = panelUsageRead(f, account, "email");
+    account = panelUsageRead(f, original, "account");
+    const auto plan = panelUsageRead(f, account, "planType");
+    panelUsageMemberCall(f, original, "submitDraft", {text});
+    if (!consentOwner(f, component, original) || !consentFieldEquals(f, component, "textRevision", revision)
+        || !consentFieldEquals(f, component, "draftOwnerRevision", ownerRevision)) return true;
+    const auto currentText = assistantContextField(f, "editor", "text");
+    if (!panelUsageReady(f) || !text.strictlyEquals(currentText) || !consentFieldEquals(f, component, "consentFileRevision", files)) return true;
+    const auto currentProject = assistantContextField(f, "Session", "project");
+    if (!panelUsageReady(f) || !project.strictlyEquals(currentProject) || !consentFieldEquals(f, original, "selectedModel", model)
+        || !consentFieldEquals(f, original, "selectedEffort", effort)) return true;
+    account = panelUsageRead(f, original, "account");
+    if (!consentFieldEquals(f, account, "email", email)) return true;
+    account = panelUsageRead(f, original, "account");
+    if (!consentFieldEquals(f, account, "planType", plan)) return true;
+    const auto stillBlocked = panelUsageRead(f, original, "contextApprovalBlocked");
+    if (panelUsageReady(f) && stillBlocked.toBool()) panelUsageMemberCall(f, component, "submissionBlocked");
+    return true;
+}
+QJSValue ApplicationInfo::composerSubmit(const QJSValue& approved) const {
+    const auto f = panelUsageEngine(this);
+    if (!approved.toBool()) {
+        const auto local = panelUsageContextRead(f, "localWorkReport");
+        if (!panelUsageReady(f)) return {};
+        if (local.toBool()) { panelUsageGlobalCall(f, "submitWorkReport", {}); return {}; }
+    }
+    const auto component = panelUsageContextRead(f, "composer");
+    const auto original = panelUsageContextRead(f, "assistant");
+    if (!approved.toBool()) {
+        const auto blocked = panelUsageMemberCall(f, component, "explainBlockedSubmission");
+        if (!panelUsageReady(f) || blocked.toBool()) return {};
+    }
+    if (!consentOwner(f, component, original)) return {};
+    const auto requested = approved.toBool() ? approved : panelUsageMemberCall(f, component, "captureConsentDraft");
+    if (!consentOwner(f, component, original) || !requested.toBool()) return {};
+    if (!approved.toBool()) {
+        panelUsageMemberCall(f, component, "submissionRequested", {requested});
+        if (!consentOwner(f, component, original)) return {};
+    }
+    const auto owned = panelUsageMemberCall(f, component, "ownsConsentDraft", {requested});
+    if (!consentOwner(f, component, original) || !owned.toBool()) return {};
+    const auto hasDraft = panelUsageContextRead(f, "hasDraft");
+    if (!panelUsageReady(f) || !hasDraft.toBool()) return {};
+    const auto connected = panelUsageRead(f, original, "connected");
+    bool waiting = !connected.toBool();
+    if (!waiting) {
+        const auto cancel = panelUsageRead(f, original, "canCancel");
+        if (cancel.toBool()) waiting = !panelUsageContextRead(f, "canSteer").toBool();
+    }
+    if (!panelUsageReady(f)) return {};
+    if (waiting) return approved.toBool() ? consentStatus(f, "waiting") : consentNull();
+    const auto required = panelUsageRead(f, original, "contextConsentRequired");
+    if (!consentOwner(f, component, original)) return {};
+    const auto stillOwned = panelUsageMemberCall(f, component, "ownsConsentDraft", {requested});
+    if (!consentOwner(f, component, original) || !stillOwned.toBool()) return {};
+    if (required.toBool()) {
+        if (approved.toBool()) return consentStatus(f, "waiting");
+        const auto blocked = panelUsageRead(f, original, "contextApprovalBlocked");
+        if (blocked.toBool()) { panelUsageMemberCall(f, component, "explainBlockedSubmission"); return {}; }
+        const auto text = panelUsageRead(f, requested, "text");
+        panelUsageMemberCall(f, component, "contextApprovalRequested", {text});
+        return {};
+    }
+    const auto text = assistantContextField(f, "editor", "text");
+    const auto revision = panelUsageContextRead(f, "textRevision");
+    const auto ownerRevision = panelUsageContextRead(f, "draftOwnerRevision");
+    if (approved.toBool()) {
+        const auto state = panelUsageRead(f, original, "state");
+        if (!state.strictlyEquals(QJSValue(QStringLiteral("idle")))) return consentStatus(f, "waiting");
+        if (panelUsageRead(f, original, "canCancel").toBool()) return consentStatus(f, "waiting");
+    }
+    const auto admission = approved.toBool() ? panelUsageMemberCall(f, original, "submitDraftAdmission", {text}) : consentNull();
+    const auto rowId = approved.toBool() ? (admission.toBool() ? panelUsageRead(f, admission, "row_id") : QJSValue(QString{}))
+                                       : panelUsageMemberCall(f, original, "submitDraft", {text});
+    if (!consentOwner(f, component, original)) return {};
+    const auto length = panelUsageRead(f, rowId, "length");
+    if (length.toBool() && assistantSameName(f, ownerRevision, "draftOwnerRevision")) {
+        const auto submitted = panelUsageContextRead(f, "submittedDrafts");
+        const auto pending = panelUsageMemberCall(f, submitted, "slice");
+        const auto literal = panelUsageLiteral(f);
+        panelUsageWrite(f, literal.value, "id", rowId);
+        panelUsageWrite(f, literal.value, "text", text);
+        panelUsageWrite(f, literal.value, "revision", revision);
+        panelUsageMemberCall(f, pending, "push", {panelUsageComplete(f, literal)});
+        panelUsageContextWrite(f, "submittedDrafts", pending);
+        panelUsageGlobalCall(f, "acknowledgeVisiblePrompt", {});
+    }
+    return admission;
+}
+
+void ApplicationInfo::panelRetireConsentSend() const { panelUsageContextWrite(panelUsageEngine(this), "consentSend", consentNull()); }
+bool ApplicationInfo::panelOwnsConsentSend(const QJSValue& intent) const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "panel");
+    const auto original = assistantContextField(f, "panel", "assistant");
+    const auto draft = panelUsageContextRead(f, "composer");
+    const auto dialog = panelUsageContextRead(f, "connectionDialog");
+    if (!consentQtObject(f, dialog) || intent.isNull() || !assistantSameName(f, intent, "consentSend")
+        || !consentFieldEquals(f, intent, "owner", original) || !consentFieldsEqual(f, intent, "offer", dialog, "approvalOwner")) return false;
+    auto value = panelUsageRead(f, intent, "draft");
+    const auto owned = panelUsageMemberCall(f, draft, "ownsConsentDraft", {value});
+    if (!consentPanelOwner(f, component, draft, original) || !owned.toBool() || !consentQtObject(f, dialog)
+        || !consentFieldsEqual(f, intent, "offer", dialog, "approvalOwner")) return false;
+    const auto context = panelUsageRead(f, original, "contextConsentIdentity");
+    if (!consentPanelOwner(f, component, draft, original) || !consentQtObject(f, dialog)
+        || !consentFieldEquals(f, component, "consentSend", intent) || !consentFieldEquals(f, intent, "owner", original)
+        || !consentFieldsEqual(f, intent, "offer", dialog, "approvalOwner")) return false;
+    value = panelUsageRead(f, intent, "project");
+    const auto project = assistantContextField(f, "Session", "project");
+    if (!panelUsageReady(f) || !value.strictlyEquals(project)) return false;
+    if (!panelUsageRead(f, context, "length").toBool() || !panelUsageReady(f) || !consentFieldEquals(f, intent, "context", context)) return false;
+    if (!consentFieldsEqual(f, original, "selectedModel", intent, "model") || !consentFieldsEqual(f, original, "selectedEffort", intent, "effort")) return false;
+    value = panelUsageRead(f, intent, "draft");
+    const auto stillOwned = panelUsageMemberCall(f, draft, "ownsConsentDraft", {value});
+    return consentPanelOwner(f, component, draft, original) && stillOwned.toBool()
+        && consentFieldEquals(f, component, "consentSend", intent) && consentQtObject(f, dialog)
+        && consentFieldsEqual(f, intent, "offer", dialog, "approvalOwner");
+}
+void ApplicationInfo::panelResumeConsentSend() const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "panel");
+    const auto original = assistantContextField(f, "panel", "assistant");
+    const auto draft = panelUsageContextRead(f, "composer");
+    const auto intent = panelUsageRead(f, component, "consentSend");
+    if (!panelUsageReady(f) || !intent.toBool() || panelUsageRead(f, intent, "submitting").toBool()) return;
+    const auto owned = panelUsageMemberCall(f, component, "ownsConsentSend", {intent});
+    if (!consentPanelOwner(f, component, draft, original)) return;
+    if (!owned.toBool()) {
+        if (consentFieldEquals(f, component, "consentSend", intent)) panelUsageMemberCall(f, component, "retireConsentSend");
+        return;
+    }
+    if (!panelUsageRead(f, intent, "approved").toBool() || !panelUsageReady(f)) return;
+    const auto required = panelUsageRead(f, original, "contextConsentRequired");
+    if (!consentPanelOwner(f, component, draft, original)) return;
+    const auto stillOwned = panelUsageMemberCall(f, component, "ownsConsentSend", {intent});
+    if (!consentPanelOwner(f, component, draft, original) || !stillOwned.toBool()) return;
+    if (!panelUsageRead(f, original, "connected").toBool() || required.toBool()
+        || !panelUsageRead(f, original, "draftAdmissionReady").toBool()
+        || !consentFieldEquals(f, original, "state", QJSValue(QStringLiteral("idle")))
+        || panelUsageRead(f, original, "canCancel").toBool() || !panelUsageReady(f)) return;
+    assistantMemberWrite(f, intent, "submitting", QJSValue(true));
+    const auto requested = panelUsageRead(f, intent, "draft");
+    const auto result = panelUsageMemberCall(f, draft, "submitApprovedDraft", {requested});
+    if (!consentPanelOwner(f, component, draft, original) || !consentFieldEquals(f, component, "consentSend", intent)) return;
+    assistantMemberWrite(f, intent, "submitting", QJSValue(false));
+    if (!result.strictlyEquals(QJSValue(QStringLiteral("waiting")))) panelUsageMemberCall(f, component, "retireConsentSend");
+}
+void ApplicationInfo::panelConsentContextChanged() const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "panel");
+    const auto original = assistantContextField(f, "panel", "assistant");
+    const auto intent = panelUsageRead(f, component, "consentSend");
+    const auto owned = intent.toBool() ? panelUsageMemberCall(f, component, "ownsConsentSend", {intent}) : QJSValue(true);
+    if (!consentOwner(f, component, original)) return;
+    if (!owned.toBool()) {
+        if (consentFieldEquals(f, component, "consentSend", intent)) panelUsageMemberCall(f, component, "retireConsentSend");
+    } else if (consentFieldEquals(f, component, "consentSend", intent)) panelUsageMemberCall(f, component, "scheduleConsentSend");
+}
+void ApplicationInfo::panelContextApproved(const QJSValue& offer) const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "panel");
+    const auto original = assistantContextField(f, "panel", "assistant");
+    const auto dialog = panelUsageContextRead(f, "connectionDialog");
+    const auto intent = panelUsageRead(f, component, "consentSend");
+    if (!panelUsageReady(f) || !intent.toBool() || !consentQtObject(f, dialog)
+        || !consentFieldEquals(f, intent, "offer", offer) || !consentFieldEquals(f, dialog, "approvalOwner", offer)) return;
+    const auto owned = panelUsageMemberCall(f, component, "ownsConsentSend", {intent});
+    if (!consentOwner(f, component, original)) return;
+    if (!owned.toBool()) {
+        if (consentFieldEquals(f, component, "consentSend", intent)) panelUsageMemberCall(f, component, "retireConsentSend");
+        return;
+    }
+    if (!consentQtObject(f, dialog) || !consentFieldEquals(f, component, "consentSend", intent)
+        || !consentFieldEquals(f, intent, "offer", offer) || !consentFieldEquals(f, dialog, "approvalOwner", offer)) return;
+    assistantMemberWrite(f, intent, "approved", QJSValue(true));
+    panelUsageMemberCall(f, component, "scheduleConsentSend");
+}
+void ApplicationInfo::panelScheduleConsentSend() const {
+    const auto f = panelUsageEngine(this);
+    const auto qt = panelUsageContextRead(f, "Qt");
+    const auto callback = panelUsageContextRead(f, "resumeConsentSend");
+    panelUsageMemberCall(f, qt, "callLater", {callback});
+}
+
+QJSValue ApplicationInfo::connectionBeginOffer() const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    const auto offer = f->newObject();
+    panelUsageContextWrite(f, "acceptedOffer", consentNull());
+    panelUsageContextWrite(f, "approvalOwner", offer);
+    return offer;
+}
+void ApplicationInfo::connectionPresentOffer(const QJSValue& offer) const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "dialog");
+    const auto original = assistantContextField(f, "dialog", "assistant");
+    const auto token = offer.isUndefined() ? panelUsageMemberCall(f, component, "beginOffer") : offer;
+    if (!consentOwner(f, component, original) || token.isNull() || !consentFieldEquals(f, component, "approvalOwner", token)) return;
+    panelUsageMemberCall(f, component, "open");
+}
+void ApplicationInfo::connectionResumeAcceptedOffer() const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "dialog");
+    const auto accepted = panelUsageRead(f, component, "acceptedOffer");
+    if (!panelUsageReady(f) || !accepted.toBool() || panelUsageRead(f, accepted, "submitting").toBool()) return;
+    const auto original = panelUsageRead(f, accepted, "owner");
+    const auto current = panelUsageMemberCall(f, accepted, "current");
+    bool retired = !current.toBool() || !consentQtObject(f, component) || !consentQtObject(f, original)
+        || !consentFieldEquals(f, component, "acceptedOffer", accepted);
+    if (!retired) retired = !panelUsageRead(f, original, "connected").toBool();
+    if (!panelUsageReady(f)) return;
+    if (retired) {
+        if (consentQtObject(f, component) && consentFieldEquals(f, component, "acceptedOffer", accepted)) consentClear(f, component, "acceptedOffer");
+        return;
+    }
+    const auto ready = panelUsageRead(f, original, "draftAdmissionReady");
+    if (!consentQtObject(f, component) || !consentQtObject(f, original) || !consentFieldEquals(f, component, "acceptedOffer", accepted)
+        || !panelUsageMemberCall(f, accepted, "current").toBool() || !ready.toBool() || !panelUsageReady(f)) return;
+    assistantMemberWrite(f, accepted, "submitting", QJSValue(true));
+    const auto context = panelUsageRead(f, accepted, "context");
+    const auto result = panelUsageMemberCall(f, original, "acceptConnectionOffer", {context});
+    if (!consentQtObject(f, component) || !consentQtObject(f, original) || !consentFieldEquals(f, component, "acceptedOffer", accepted)) return;
+    assistantMemberWrite(f, accepted, "submitting", QJSValue(false));
+    if (result.strictlyEquals(QJSValue(QStringLiteral("waiting"))) && panelUsageMemberCall(f, accepted, "current").toBool()) return;
+    consentClear(f, component, "acceptedOffer");
+    if (result.strictlyEquals(QJSValue(QStringLiteral("approved"))) && panelUsageMemberCall(f, accepted, "current").toBool()) {
+        const auto approval = panelUsageRead(f, accepted, "approval");
+        panelUsageMemberCall(f, component, "contextApproved", {approval});
+    }
+}
+void ApplicationInfo::connectionScheduleAcceptedOffer() const {
+    const auto f = panelUsageEngine(this);
+    const auto qt = panelUsageContextRead(f, "Qt");
+    const auto callback = panelUsageContextRead(f, "resumeAcceptedOffer");
+    panelUsageMemberCall(f, qt, "callLater", {callback});
+}
+void ApplicationInfo::connectionShowFailure() const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageContextRead(f, "connectionAttempt").toBool() || !panelUsageReady(f)) return;
+    if (assistantContextField(f, "assistant", "state").strictlyEquals(QJSValue(QStringLiteral("connecting")))) return;
+    panelUsageContextWrite(f, "connectionAttempt", QJSValue(false));
+    if (assistantContextField(f, "assistant", "connected").toBool() || !panelUsageReady(f)) return;
+    const auto error = assistantContextField(f, "assistant", "lastError");
+    if (!assistantRelation(f, panelUsageRead(f, error, "length"), QJSValue(0), 1)) return;
+    const auto failure = panelUsageContextRead(f, "connectionFailure");
+    const auto message = assistantContextField(f, "assistant", "lastError");
+    assistantMemberWrite(f, failure, "message", message);
+    const auto actual = panelUsageContextRead(f, "connectionFailure");
+    panelUsageMemberCall(f, actual, "open");
+}
+void ApplicationInfo::connectionRefreshContext() const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "dialog");
+    const auto original = assistantContextField(f, "dialog", "assistant");
+    if (!consentQtObject(f, component) || !consentQtObject(f, original)) return;
+    const auto request = f->newObject();
+    assistantMemberWrite(f, component, "contextPresentation", request);
+    const auto current = [&] { return consentOwner(f, component, original) && consentFieldEquals(f, component, "contextPresentation", request); };
+    if (!current()) return;
+    const auto identity = panelUsageRead(f, original, "contextConsentIdentity");
+    const bool firstCurrent = panelUsageReady(f) && current();
+    if (panelUsageReady(f) && !firstCurrent) return;
+    if (panelUsageReady(f)) {
+        const auto exact = panelUsageRead(f, original, "contextPreview");
+        const bool secondCurrent = panelUsageReady(f) && current();
+        if (panelUsageReady(f) && !secondCurrent) return;
+        if (panelUsageReady(f)) {
+            const auto actual = panelUsageRead(f, original, "contextConsentIdentity");
+            if (panelUsageReady(f) && current() && panelUsageRead(f, identity, "length").toBool() && identity.strictlyEquals(actual)) {
+                assistantMemberWrite(f, component, "disclosedContextText", exact);
+                if (current()) assistantMemberWrite(f, component, "disclosedContextIdentity", identity);
+            }
+        }
+    }
+    if (!f || !f->hasError()) return;
+    f->catchError();
+    if (!current()) return;
+    assistantMemberWrite(f, component, "disclosedContextText", QJSValue(QString{}));
+    if (current()) assistantMemberWrite(f, component, "disclosedContextIdentity", QJSValue(QString{}));
+    if (current()) assistantMemberWrite(f, component, "approvalOwner", f->newObject());
+}
+QJSValue ApplicationInfo::connectionDisclosedContext() const {
+    const auto f = panelUsageEngine(this);
+    const auto json = panelUsageContextRead(f, "JSON");
+    const auto text = panelUsageContextRead(f, "disclosedContextText");
+    const auto result = panelUsageMemberCall(f, json, "parse", {text});
+    if (panelUsageReady(f)) return result;
+    if (!f || !f->hasError()) return {};
+    f->catchError();
+    const auto literal = panelUsageLiteral(f);
+    panelUsageWrite(f, literal.value, "error", QJSValue(true));
+    return panelUsageComplete(f, literal);
+}
+void ApplicationInfo::connectionAccepted() const {
+    const auto f = panelUsageEngine(this);
+    const auto original = panelUsageContextRead(f, "assistant");
+    const auto project = assistantContextField(f, "Session", "project");
+    const auto model = panelUsageRead(f, original, "selectedModel");
+    const auto effort = panelUsageRead(f, original, "selectedEffort");
+    const auto connected = panelUsageRead(f, original, "connected");
+    auto account = panelUsageRead(f, original, "account");
+    const auto email = panelUsageRead(f, account, "email");
+    account = panelUsageRead(f, original, "account");
+    const auto plan = panelUsageRead(f, account, "planType");
+    const auto approval = assistantContextField(f, "dialog", "approvalOwner");
+    QJSValueList values{original, project, model, effort, connected, email, plan, approval};
+    const auto get = [&](uint index) { return values[index]; };
+    if (!connectionOwnerCurrent(f, get)) return;
+    const auto offered = assistantContextField(f, "dialog", "disclosedContextIdentity");
+    if (!connectionOwnerCurrent(f, get)) return;
+    values.append(offered);
+    const auto current = [&] { return connectionCurrent(f, get).toBool(); };
+    if (!current()) return;
+    const auto failure = panelUsageContextRead(f, "connectionFailure");
+    panelUsageMemberCall(f, failure, "close");
+    if (!current()) return;
+    panelUsageContextWrite(f, "connectionAttempt", QJSValue(!connected.toBool()));
+    const auto result = panelUsageMemberCall(f, original, "acceptConnectionOffer", {offered});
+    if (!current()) return;
+    if (result.strictlyEquals(QJSValue(QStringLiteral("waiting")))) {
+        const auto dialog = panelUsageContextRead(f, "dialog");
+        const auto accepted = panelUsageLiteral(f);
+        panelUsageWrite(f, accepted.value, "owner", original);
+        panelUsageWrite(f, accepted.value, "approval", approval);
+        panelUsageWrite(f, accepted.value, "context", offered);
+        panelUsageWrite(f, accepted.value, "current", panelUsageClosure(f, 10, values));
+        panelUsageWrite(f, accepted.value, "submitting", QJSValue(false));
+        assistantMemberWrite(f, dialog, "acceptedOffer", panelUsageComplete(f, accepted));
+        const auto actual = panelUsageContextRead(f, "dialog");
+        panelUsageMemberCall(f, actual, "scheduleAcceptedOffer");
+        return;
+    }
+    panelUsageGlobalCall(f, "showConnectionFailureIfFinished", {});
+    if (result.strictlyEquals(QJSValue(QStringLiteral("approved"))) && current()) panelUsageGlobalCall(f, "contextApproved", {approval});
+}
+
+void ApplicationInfo::panelSubmissionRequested(const QJSValue& draft) const {
+    const auto f = panelUsageEngine(this);
+    const auto intent = assistantContextField(f, "panel", "consentSend");
+    if (!panelUsageReady(f) || !intent.toBool() || !draft.toBool()) return;
+    for (const char* field : {"owner", "revision", "ownerRevision", "files", "project"}) {
+        const auto captured = panelUsageRead(f, intent, "draft");
+        if (!consentFieldsEqual(f, captured, field, draft, field)) return;
+    }
+    const auto panel = panelUsageContextRead(f, "panel");
+    panelUsageMemberCall(f, panel, "retireConsentSend");
+}
+void ApplicationInfo::panelContextApprovalRequested(const QJSValue& text) const {
+    const auto f = panelUsageEngine(this);
+    const auto component = panelUsageContextRead(f, "panel");
+    const auto original = assistantContextField(f, "panel", "assistant");
+    const auto draft = panelUsageContextRead(f, "composer");
+    const auto dialog = panelUsageContextRead(f, "connectionDialog");
+    const auto previous = panelUsageRead(f, component, "consentSend");
+    const auto offer = panelUsageMemberCall(f, dialog, "beginOffer");
+    if (!consentQtObject(f, component) || !consentQtObject(f, draft) || !consentQtObject(f, original)
+        || !consentQtObject(f, dialog) || !consentFieldEquals(f, component, "assistant", original)
+        || !consentFieldEquals(f, dialog, "assistant", original) || !consentFieldEquals(f, dialog, "approvalOwner", offer)
+        || !consentFieldEquals(f, component, "consentSend", previous)) return;
+    const auto captured = panelUsageMemberCall(f, draft, "captureConsentDraft");
+    const auto ownedComponents = [&] {
+        return consentPanelOwner(f, component, draft, original) && consentQtObject(f, dialog)
+            && consentFieldEquals(f, dialog, "assistant", original) && consentFieldEquals(f, dialog, "approvalOwner", offer);
+    };
+    if (!ownedComponents() || !captured.toBool() || !consentFieldEquals(f, captured, "text", text)
+        || !consentFieldEquals(f, captured, "owner", original)) return;
+    const auto owned = panelUsageMemberCall(f, draft, "ownsConsentDraft", {captured});
+    if (!ownedComponents() || !owned.toBool() || !consentFieldEquals(f, component, "consentSend", previous)) return;
+    const auto literal = panelUsageLiteral(f);
+    panelUsageWrite(f, literal.value, "owner", original);
+    panelUsageWrite(f, literal.value, "project", panelUsageRead(f, captured, "project"));
+    panelUsageWrite(f, literal.value, "draft", captured);
+    for (const char* field : {"context", "model", "effort"}) panelUsageWrite(f, literal.value, field, panelUsageRead(f, captured, field));
+    panelUsageWrite(f, literal.value, "offer", offer);
+    panelUsageWrite(f, literal.value, "approved", QJSValue(false));
+    panelUsageWrite(f, literal.value, "submitting", QJSValue(false));
+    const auto intent = panelUsageComplete(f, literal);
+    assistantMemberWrite(f, component, "consentSend", intent);
+    assistantMemberWrite(f, offer, "currentDraft", panelUsageClosure(f, 11, {component, intent}));
+    if (!consentPanelOwner(f, component, draft, original) || !consentQtObject(f, dialog)
+        || !consentFieldEquals(f, dialog, "approvalOwner", offer) || !consentFieldEquals(f, component, "consentSend", intent)) return;
+    const auto stillOwned = panelUsageMemberCall(f, component, "ownsConsentSend", {intent});
+    if (!consentPanelOwner(f, component, draft, original) || !consentQtObject(f, dialog)
+        || !consentFieldEquals(f, dialog, "approvalOwner", offer) || !stillOwned.toBool()) return;
+    panelUsageMemberCall(f, dialog, "presentOffer", {offer});
+}
+void ApplicationInfo::connectionUpdateAcceptButton() const {
+    const auto f = panelUsageEngine(this);
+    const auto ok = assistantContextField(f, "Dialog", "Ok");
+    const auto accept = panelUsageGlobalCall(f, "standardButton", {ok});
+    if (!panelUsageReady(f)) return;
+    if (accept.toBool()) {
+        auto connected = assistantContextField(f, "assistant", "connected");
+        if (!panelUsageReady(f)) return;
+        if (auto* qml = qobject_cast<QQmlEngine*>(f.data())) qml->markCurrentFunctionAsTranslationBinding();
+        const auto text = QJSValue(QCoreApplication::translate("AssistantConnectionDialog", connected.toBool()
+            ? "Share project information" : "Connect ChatGPT"));
+        assistantMemberWrite(f, accept, "text", text);
+        connected = assistantContextField(f, "assistant", "connected");
+        assistantMemberWrite(f, accept, "fontIcon", QJSValue(connected.toBool() ? QStringLiteral("check") : QStringLiteral("comment-dots")));
+        const auto blocked = assistantContextField(f, "assistant", "contextApprovalBlocked");
+        assistantMemberWrite(f, accept, "enabled", QJSValue(!blocked.toBool()));
+    }
+    const auto cancel = assistantContextField(f, "Dialog", "Cancel");
+    const auto button = panelUsageGlobalCall(f, "standardButton", {cancel});
+    if (panelUsageReady(f) && button.toBool()) assistantMemberWrite(f, button, "fontIcon", QJSValue(QStringLiteral("times")));
+}
+void ApplicationInfo::connectionResetOffer(bool refresh, bool retired) const {
+    const auto f = panelUsageEngine(this);
+    if (refresh) {
+        panelUsageContextWrite(f, "acceptedOffer", consentNull());
+        if (panelUsageReady(f)) panelUsageContextWrite(f, "approvalOwner", f->newObject());
+        panelUsageGlobalCall(f, "refreshDisclosedContext", {});
+    } else {
+        const auto dialog = panelUsageContextRead(f, "dialog");
+        consentClear(f, dialog, "acceptedOffer");
+        const auto actual = panelUsageContextRead(f, "dialog");
+        if (panelUsageReady(f)) assistantMemberWrite(f, actual, "approvalOwner", f->newObject());
+    }
+    if (retired) {
+        const auto current = panelUsageContextRead(f, "dialog");
+        assistantMemberWrite(f, current, "connectionAttempt", QJSValue(false));
+        const auto failure = panelUsageContextRead(f, "connectionFailure");
+        panelUsageMemberCall(f, failure, "close");
+    }
+}
+
 QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject* function,
     const Value*, const Value* arguments, int count) {
     const auto* callback = static_cast<const AssistantPanelCallback*>(function);
@@ -1792,7 +2403,14 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto captured = [&](uint index) {
             return QJSValuePrivate::fromReturnedValue((*captures)[index].asReturnedValue());
         };
-        mainAssistantDelayed(frame, callback->d()->operation, captured);
+        if (callback->d()->operation < 10) mainAssistantDelayed(frame, callback->d()->operation, captured);
+        else if (callback->d()->operation == 10) result = connectionCurrent(frame, captured);
+        else {
+            const auto component = captured(0), intent = captured(1);
+            if (consentQtObject(frame, component) && consentFieldEquals(frame, component, "consentSend", intent))
+                result = panelUsageMemberCall(frame, component, "ownsConsentSend", {intent});
+            else result = QJSValue(false);
+        }
     }
     return QJSValuePrivate::convertToReturnedValue(frame.vm(), result);
 }

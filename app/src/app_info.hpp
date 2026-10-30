@@ -156,6 +156,30 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void restoreAssistantFocus() const;
     Q_INVOKABLE bool assistantHomeFocusCovered() const;
     Q_INVOKABLE void enforceAssistantHomeFocus() const;
+    /// Original consent and admission procedures, called in their retained QML function scope.
+    Q_INVOKABLE QJSValue composerCaptureConsentDraft() const;
+    Q_INVOKABLE bool composerOwnsConsentDraft(const QJSValue& draft) const;
+    Q_INVOKABLE QJSValue composerSubmitApprovedDraft(const QJSValue& draft) const;
+    Q_INVOKABLE bool composerExplainBlockedSubmission() const;
+    Q_INVOKABLE QJSValue composerSubmit(const QJSValue& approved) const;
+    Q_INVOKABLE void panelRetireConsentSend() const;
+    Q_INVOKABLE bool panelOwnsConsentSend(const QJSValue& intent) const;
+    Q_INVOKABLE void panelResumeConsentSend() const;
+    Q_INVOKABLE void panelConsentContextChanged() const;
+    Q_INVOKABLE void panelContextApproved(const QJSValue& offer) const;
+    Q_INVOKABLE void panelScheduleConsentSend() const;
+    Q_INVOKABLE void panelSubmissionRequested(const QJSValue& draft) const;
+    Q_INVOKABLE void panelContextApprovalRequested(const QJSValue& text) const;
+    Q_INVOKABLE QJSValue connectionBeginOffer() const;
+    Q_INVOKABLE void connectionPresentOffer(const QJSValue& offer) const;
+    Q_INVOKABLE void connectionResumeAcceptedOffer() const;
+    Q_INVOKABLE void connectionScheduleAcceptedOffer() const;
+    Q_INVOKABLE void connectionShowFailure() const;
+    Q_INVOKABLE void connectionRefreshContext() const;
+    Q_INVOKABLE QJSValue connectionDisclosedContext() const;
+    Q_INVOKABLE void connectionAccepted() const;
+    Q_INVOKABLE void connectionUpdateAcceptButton() const;
+    Q_INVOKABLE void connectionResetOffer(bool refresh, bool retired) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

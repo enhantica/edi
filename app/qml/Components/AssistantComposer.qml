@@ -452,106 +452,11 @@ Rectangle {
         if (restore)
             editor.select(start, end);
     }
-    function captureConsentDraft() {
-        if (editor.inputMethodComposing || editor.preeditText.length) return null;
-        const component = composer;
-        const draft = { owner: assistant, text: editor.text, revision: textRevision, ownerRevision: draftOwnerRevision,
-            files: consentFileRevision, project: Session.project,
-            model: assistant.selectedModel, effort: assistant.selectedEffort,
-            email: assistant.account.email, plan: assistant.account.planType };
-        const context = draft.owner.contextConsentIdentity;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draft.owner) || draft.owner !== component.assistant) return null;
-        draft.context = context;
-        const owned = component.ownsConsentDraft(draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draft.owner) || draft.owner !== component.assistant) return null;
-        return owned ? draft : null;
-    }
-    function ownsConsentDraft(draft) {
-        if (draft === null || draft.owner !== assistant) return false;
-        const original = assistant;
-        const context = original.contextConsentIdentity;
-        return Qt.isQtObject(composer) && Qt.isQtObject(original) && original === assistant
-            && draft.owner === original && draft.text === editor.text
-            && draft.revision === textRevision && draft.ownerRevision === draftOwnerRevision
-            && draft.files === consentFileRevision && draft.project === Session.project
-            && draft.context.length > 0 && draft.context === context && draft.model === assistant.selectedModel
-            && draft.effort === assistant.selectedEffort && draft.email === assistant.account.email
-            && draft.plan === assistant.account.planType
-            && !editor.inputMethodComposing && editor.preeditText.length === 0;
-    }
-    function submitApprovedDraft(draft) {
-        const component = composer, original = assistant;
-        const owned = component.ownsConsentDraft(draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !owned) return "retired";
-        if (!original.connected) return "waiting";
-        const required = original.contextConsentRequired;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return "retired";
-        const stillOwned = component.ownsConsentDraft(draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return "retired";
-        if (required || original.state !== "idle" || original.canCancel) return "waiting";
-        const result=component.submit(draft);
-        return result ? result.status : "retired";
-    }
-    function explainBlockedSubmission() {
-        const component = composer, original = assistant;
-        const blocked = original.contextApprovalBlocked;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return true;
-        if (!blocked) return false;
-        if (!original.connected || !component.hasDraft || editor.inputMethodComposing || editor.preeditText.length) return true;
-        const text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision;
-        const scope = { files: consentFileRevision, project: Session.project, model: original.selectedModel,
-            effort: original.selectedEffort, email: original.account.email, plan: original.account.planType };
-        // Existing VM refusal only; no pending ACK is added and no draft is consumed.
-        original.submitDraft(text);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant
-            || revision !== component.textRevision || ownerRevision !== component.draftOwnerRevision || text !== editor.text
-            || scope.files !== component.consentFileRevision || scope.project !== Session.project
-            || scope.model !== original.selectedModel || scope.effort !== original.selectedEffort
-            || scope.email !== original.account.email || scope.plan !== original.account.planType
-            || !original.contextApprovalBlocked) return true;
-        component.submissionBlocked();
-        return true;
-    }
-    function submit(approvedDraft) {
-        if (!approvedDraft && localWorkReport) { submitWorkReport(); return; }
-        const component = composer, original = assistant;
-        if (!approvedDraft && component.explainBlockedSubmission()) return;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
-        const requested = approvedDraft || component.captureConsentDraft();
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !requested) return;
-        if (!approvedDraft) {
-            component.submissionRequested(requested);
-            if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
-        }
-        const owned = component.ownsConsentDraft(requested);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !owned) return;
-        if (!hasDraft) return;
-        if (!original.connected || (original.canCancel && !canSteer)) return approvedDraft ? {status:"waiting"} : null;
-        const required = original.contextConsentRequired;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
-        const stillOwned = component.ownsConsentDraft(requested);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
-        if (required) {
-            // Approval cannot resolve a retained native/history outcome. Keep
-            // the original draft and existing Clear/inspection diagnostic.
-            if (approvedDraft) return {status:"waiting"};
-            if (original.contextApprovalBlocked) { component.explainBlockedSubmission(); return; }
-            component.contextApprovalRequested(requested.text);
-            return;
-        }
-        const text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision;
-        if (approvedDraft && (original.state !== "idle" || original.canCancel)) return {status:"waiting"};
-        const admission = approvedDraft ? original.submitDraftAdmission(text) : null;
-        const rowId = approvedDraft ? (admission ? admission.row_id : "") : original.submitDraft(text);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
-        if (rowId.length && draftOwnerRevision === ownerRevision) {
-            const pending = submittedDrafts.slice();
-            pending.push({id: rowId, text: text, revision: revision});
-            submittedDrafts = pending;
-            acknowledgeVisiblePrompt();
-        }
-        return admission;
-    }
+    function captureConsentDraft() { return ApplicationInfo.composerCaptureConsentDraft(); }
+    function ownsConsentDraft(draft) { return ApplicationInfo.composerOwnsConsentDraft(draft); }
+    function submitApprovedDraft(draft) { return ApplicationInfo.composerSubmitApprovedDraft(draft); }
+    function explainBlockedSubmission() { return ApplicationInfo.composerExplainBlockedSubmission(); }
+    function submit(approvedDraft) { return ApplicationInfo.composerSubmit(approvedDraft); }
     Column {
         id: composerContent
         x: AppSizes.unit * 0.75
