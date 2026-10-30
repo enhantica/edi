@@ -38,17 +38,11 @@ DataTable {
         objectName: "singleCrystal.reflections.sort." + role
         horizontalAlignment: Text.AlignHCenter
         // The header lays a mouse area over its row of titles, which would take the click: the row goes above it.
-        Component.onCompleted: {
-            if (parent)
-                parent.z = 1;
-        }
+        Component.onCompleted: ApplicationInfo.finishUiEvent(4, undefined)
         text: label + (table.sourceModel && table.sourceModel.sortRole === role ? (table.sourceModel.sortAscending ? " ˄" : " ˅") : "")
 
         TapHandler {
-            onTapped: {
-                if (table.sourceModel)
-                    table.sourceModel.sortBy(title.role);
-            }
+            onTapped: ApplicationInfo.finishUiEvent(5, undefined)
         }
         EaElements.ToolTip {
             text: title.uid !== "" ? Session.tooltip(title.uid) : ""

@@ -157,8 +157,7 @@ EaElements.GroupBox {
                     objectName: `experiments.name.${row.index}`
                     horizontalAlignment: Text.AlignLeft
                     value: row.name
-                    onActiveFocusChanged: if (activeFocus)
-                        group.project.currentExperimentIndex = row.index
+                    onActiveFocusChanged: ApplicationInfo.finishUiEvent(12, undefined)
                     onCommitted: text => row.experiment.name = text
                 }
                 // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,

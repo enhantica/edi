@@ -414,8 +414,7 @@ EaElements.GroupBox {
                     item: row.parameter
                     // An auto-mode background's values are the estimate's, as in the Experiment page's table.
                     locked: row.parameter ? row.parameter.estimated : false
-                    onActiveFocusChanged: if (activeFocus)
-                        group.selected = row.parameter
+                    onActiveFocusChanged: ApplicationInfo.finishUiEvent(11, undefined)
                 }
                 EaComponents.ListViewLabel {
                     color: EaStyle.Colors.themeForegroundMinor
@@ -490,10 +489,7 @@ EaElements.GroupBox {
 
             Connections {
                 target: sliderRow.selected
-                function onValueChanged() {
-                    if (!slider.pressed)
-                        sliderRow.updateLimits();
-                }
+                function onValueChanged() { ApplicationInfo.finishUiEvent(6, undefined); }
             }
 
             EaElements.TextField {

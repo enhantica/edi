@@ -85,8 +85,7 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignLeft
                     objectName: `structures.name.${row.index}`
                     value: row.name
-                    onActiveFocusChanged: if (activeFocus)
-                        group.project.currentStructureIndex = row.index
+                    onActiveFocusChanged: ApplicationInfo.finishUiEvent(10, undefined)
                     onCommitted: text => row.structure.name = text
                 }
                 EaComponents.ListViewButton {
