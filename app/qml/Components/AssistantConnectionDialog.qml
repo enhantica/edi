@@ -64,14 +64,7 @@ AppDialog {
             }
         }
         // Measure standard buttons independently of the view's laid-out width.
-        readonly property real naturalButtonWidth: {
-            let total = 0;
-            for (let index = 0; index < count; ++index) {
-                const button = itemAt(index);
-                if (button) total += button.implicitWidth;
-            }
-            return total + Math.max(0, count - 1) * spacing;
-        }
+        readonly property real naturalButtonWidth: ApplicationInfo.connectionNaturalButtonsWidth()
         contentWidth: naturalButtonWidth
         contentItem: ListView {
             implicitWidth: connectionButtons.naturalButtonWidth
@@ -84,25 +77,13 @@ AppDialog {
     }
     function updateAcceptButton() { ApplicationInfo.connectionUpdateAcceptButton(); }
     onAboutToShow: updateAcceptButton()
-    onOpened: {
-        const component = dialog, original = dialog.assistant;
-        refreshDisclosedContext();
-        if (Qt.isQtObject(component) && Qt.isQtObject(original) && component.assistant === original) component.updateAcceptButton();
-    }
+    onOpened: ApplicationInfo.connectionPresentationChanged(0)
     Connections {
         target: dialog.assistant
-        function onConnectedChanged() {
-            if (dialog.visible)
-                dialog.updateAcceptButton();
-        }
-        function onStateChanged() { dialog.showConnectionFailureIfFinished(); dialog.scheduleAcceptedOffer(); }
+        function onConnectedChanged() { ApplicationInfo.connectionPresentationChanged(1); }
+        function onStateChanged() { ApplicationInfo.connectionPresentationChanged(3); }
         function onDraftAdmissionReadyChanged() { dialog.scheduleAcceptedOffer(); }
-        function onContextPreviewChanged() {
-            const component = dialog, original = dialog.assistant;
-            component.refreshDisclosedContext();
-            if (Qt.isQtObject(component) && Qt.isQtObject(original) && component.assistant === original && component.visible)
-                component.updateAcceptButton();
-        }
+        function onContextPreviewChanged() { ApplicationInfo.connectionPresentationChanged(2); }
         function onLastErrorChanged() { dialog.showConnectionFailureIfFinished(); }
         function onConversationRetired() { ApplicationInfo.connectionResetOffer(false, true); }
     }

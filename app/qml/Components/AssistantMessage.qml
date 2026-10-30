@@ -19,10 +19,7 @@ Rectangle {
     property int stepNumber: 0
     property AssistantViewModel assistant: null
     property color chatBackgroundColor: EaStyle.Colors.appBarBackground
-    function tableTone(lift) {
-        const base=chatBackgroundColor;
-        return Qt.rgba(Math.min(1,base.r+lift/255),Math.min(1,base.g+lift/255),Math.min(1,base.b+lift/255),base.a);
-    }
+    function tableTone(lift) { return ApplicationInfo.assistantMessageTableTone(lift); }
     property bool highlighted: false
     readonly property var compactPresentation: ApplicationInfo.assistantActivityPresentation(kind, status, payload, assistant)
     readonly property bool commandActivity: compactPresentation.commandActivity
@@ -51,19 +48,8 @@ Rectangle {
     ListView.onPooled: ApplicationInfo.assistantMessageReset(row)
     ListView.onReused: ApplicationInfo.assistantMessageReset(row)
     color: "transparent"
-    function sentFileLabel(file) {
-        return qsTr("%1 (%2)%3").arg(file.name).arg(ApplicationInfo.fileSizeKilobytes(file.bytes))
-            .arg(file.textReadable ? "" : qsTr(" · text export required"));
-    }
-    readonly property real widestSentFile: {
-        if (kind !== "user" || status !== "completed") return 0;
-        // advanceWidth is a method: read its actual font to track font/theme changes.
-        const metricsFont = historyCopyMetrics.font;
-        let widest = 0;
-        for (const file of inputFiles)
-            widest = Math.max(widest, Math.ceil(historyCopyMetrics.advanceWidth(sentFileLabel(file))));
-        return widest;
-    }
+    function sentFileLabel(file) { return ApplicationInfo.assistantSentFileLabel(file); }
+    readonly property real widestSentFile: ApplicationInfo.assistantWidestSentFile()
     readonly property real historyCopyExtent: Math.ceil(historyCopyMetrics.height)
     readonly property real historyCopyGutter: kind === "user" ? historyCopyExtent + AppSizes.unit : 0
     implicitHeight: Math.max(content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5),
@@ -172,11 +158,7 @@ Rectangle {
             selectionColor: EaStyle.Colors.themeAccent
             selectedTextColor: EaStyle.Colors.themeBackground
             textFormat: TextEdit.PlainText
-            Keys.onPressed: event => {
-                if(event.matches(StandardKey.Copy) && body.selectionStart!==body.selectionEnd) {
-                    ApplicationInfo.copyText(markdownPresentation.selectedSource(body.selectionStart,body.selectionEnd));event.accepted=true;
-                }
-            }
+            Keys.onPressed: event => ApplicationInfo.assistantMessageCopyKey(event)
             onLinkActivated: link => row.reportRequested(row.rowId, link)
             HoverHandler { cursorShape: body.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.IBeamCursor }
             wrapMode: TextEdit.Wrap

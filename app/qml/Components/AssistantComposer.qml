@@ -20,40 +20,16 @@ Rectangle {
     readonly property Item firstFocusItem: editor
     readonly property alias actionsControl: showActionsControl
     readonly property real actionSize: AppSizes.assistantIconExtent
-    function closeChoices() { if (Qt.isQtObject(choicePopup)) choicePopup.close(); }
+    function closeChoices() { ApplicationInfo.assistantCloseChoices(); }
     readonly property bool choicesEnabled: assistant.connected && !assistant.canCancel
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
-    readonly property var effortChoices: [""].concat(assistant.availableEfforts.slice().sort((a,b)=>effortRank(b)-effortRank(a))).map(token => ({token: token, label: effortLabel(token)}))
-    readonly property int selectedModelRow: {
-        for (let i=0;i<assistant.models.count;++i)
-            if (assistant.models.text(i,"id")===assistant.selectedModel) return i;
-        return -1;
-    }
+    readonly property var effortChoices: ApplicationInfo.assistantEffortChoices()
+    readonly property int selectedModelRow: ApplicationInfo.assistantSelectedModelRow()
     readonly property string modelLabel: selectedModelRow>=0 ? assistant.models.text(selectedModelRow,"displayName") : qsTr("Model")
-    readonly property string selectedEffortLabel: effortChoices.some(row=>row.token===assistant.selectedEffort) ? effortLabel(assistant.selectedEffort) : qsTr("Effort")
-    function effortRank(value) {
-        const order = ["none", "low", "medium", "high", "xhigh", "max", "ultra"];
-        return order.indexOf(value);
-    }
-    function effortLabel(value) {
-        switch (value) {
-        case "": return qsTr("Auto");
-        case "none": return qsTr("None");
-        case "low": return qsTr("Low");
-        case "medium": return qsTr("Medium");
-        case "high": return qsTr("High");
-        case "xhigh": return qsTr("Extra high");
-        case "max": return qsTr("Maximum");
-        case "ultra": return qsTr("Ultra");
-        default: return value;
-        }
-    }
-    function openChoices() {
-        if(!choicesEnabled || !Qt.isQtObject(choicePopup) || choicePopup.visible)return;
-        const original={owner:assistant};
-        choicePopup.intent=original;
-        if(Qt.isQtObject(choicePopup) && choicePopup.intent===original && Qt.isQtObject(original.owner) && original.owner===composer.assistant && composer.choicesEnabled)choicePopup.open();
-    }
+    readonly property string selectedEffortLabel: ApplicationInfo.assistantSelectedEffortLabel()
+    function effortRank(value) { return ApplicationInfo.assistantEffortRank(value); }
+    function effortLabel(value) { return ApplicationInfo.assistantEffortLabel(value); }
+    function openChoices() { ApplicationInfo.assistantOpenChoices(); }
     onAssistantChanged: ApplicationInfo.composerOwnerChanged()
     onChoicesEnabledChanged: ApplicationInfo.composerChoicesEnabledChanged()
     Connections {
@@ -72,12 +48,7 @@ Rectangle {
         property var intent: null
         readonly property real viewportHeight: Math.max(0,parent.height-AppSizes.unit*2)
         readonly property real radioColumnWidth: AppSizes.iconColumnWidth
-        readonly property real desiredLabelWidth: {
-            let measured=Math.max(choiceMetrics.advanceWidth(qsTr("Model")),choiceMetrics.advanceWidth(qsTr("Reasoning effort")));
-            for(let i=0;i<composer.assistant.models.count;++i)measured=Math.max(measured,choiceMetrics.advanceWidth(composer.assistant.models.text(i,"displayName")));
-            for(const row of composer.effortChoices)measured=Math.max(measured,choiceMetrics.advanceWidth(row.label));
-            return Math.ceil(measured)+AppSizes.fieldSpacing*2;
-        }
+        readonly property real desiredLabelWidth: ApplicationInfo.assistantChoiceLabelWidth()
         readonly property real tableWidth: radioColumnWidth+desiredLabelWidth+EaStyle.Sizes.tableColumnSpacing+modelTable.rowPadding*2+EaStyle.Sizes.borderThickness*2
         bottomPadding: leftPadding
         width: Math.min(choiceContent.implicitWidth+leftPadding+rightPadding,Math.max(0,parent.width-AppSizes.unit*2))
@@ -88,79 +59,16 @@ Rectangle {
         focus: true
         modal: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        function current(original) {
-            return original && intent===original && visible && Qt.isQtObject(composer) && Qt.isQtObject(original.owner) && original.owner===composer.assistant && composer.choicesEnabled;
-        }
-        function focusRow(table,index,original) {
-            if(!current(original) || index<0 || index>=table.count)return;
-            table.positionViewAtIndex(index,ListView.Contain);
-            Qt.callLater(function() {
-                if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original) || !Qt.isQtObject(table))return;
-                const row=table.itemAtIndex(index);
-                if(!Qt.isQtObject(row) || !row.selector.enabled)return;
-                const flick=choiceScroll.contentItem;
-                if(!Qt.isQtObject(flick) || !Qt.isQtObject(flick.contentItem))return;
-                const point=row.selector.mapToItem(flick.contentItem,0,0);
-                const horizontal=point.x < flick.contentX ? point.x : Math.max(flick.contentX,point.x+row.selector.width-flick.width);
-                const vertical=point.y < flick.contentY ? point.y : Math.max(flick.contentY,point.y+row.selector.height-flick.height);
-                flick.contentX=Math.max(0,Math.min(horizontal,flick.contentWidth-flick.width));
-                if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original) || !Qt.isQtObject(row))return;
-                flick.contentY=Math.max(0,Math.min(vertical,flick.contentHeight-flick.height));
-                if(Qt.isQtObject(choicePopup) && choicePopup.current(original) && Qt.isQtObject(row) && row.selector.enabled)row.selector.forceActiveFocus();
-            });
-        }
-        function modelAvailable(model,index) { return model.text(index,"available")==="true"; }
-        function reconcile(group,original) {
-            if(!current(original))return;
-            let actual=null;
-            for(const button of group.buttons)
-                if(Qt.isQtObject(button) && button.selectionCurrent){actual=button;break;}
-            group.checkedButton=actual; // Actual selection owns presentation, including a refused/no-op setter.
-        }
-        function focusModel(start,step,original) {
-            if(!current(original))return;
-            const model=original.owner.models;
-            for(let i=start;i>=0&&i<model.count;i+=step)
-                if(modelAvailable(model,i)){focusRow(modelTable,i,original);return;}
-            focusEffort(step>0?0:composer.effortChoices.length-1,original);
-        }
-        function focusEffort(index,original) { focusRow(effortTable,index,original); }
-        function chooseModel(id) {
-            const original=intent;
-            if(!current(original))return;
-            let offered=false;
-            for(let i=0;i<original.owner.models.count;++i)
-                if(original.owner.models.text(i,"id")===id && modelAvailable(original.owner.models,i)){offered=true;break;}
-            if(!offered){reconcile(modelSelection,original);return;}
-            original.owner.selectedModel=id;
-            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
-            reconcile(modelSelection,original);
-            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
-            const selected=composer.effortChoices.findIndex(row=>row.token===original.owner.selectedEffort);
-            focusEffort(Math.max(0,selected),original);
-        }
-        function chooseEffort(token) {
-            const original=intent;
-            if(!current(original))return;
-            if(!composer.effortChoices.some(row=>row.token===token)){reconcile(effortSelection,original);return;}
-            original.owner.selectedEffort=token;
-            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
-            reconcile(effortSelection,original);
-            if(Qt.isQtObject(choicePopup) && choicePopup.current(original))close();
-        }
-        onOpened: {
-            const original=intent;
-            reconcile(modelSelection,original);
-            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
-            reconcile(effortSelection,original);
-            if(!Qt.isQtObject(choicePopup) || !choicePopup.current(original))return;
-            focusModel(Math.max(0,composer.selectedModelRow),1,original);
-        }
-        onClosed: {
-            const original=intent;
-            intent=null;
-            if(Qt.isQtObject(choicePopup) && choicePopup.intent===null && Qt.isQtObject(composer) && original && original.owner===composer.assistant && composer.choicesEnabled && modelEffortButton.visible)modelEffortButton.forceActiveFocus();
-        }
+        function current(original) { return ApplicationInfo.assistantChoiceCurrent(original); }
+        function focusRow(table,index,original) { ApplicationInfo.assistantChoiceFocusRow(table, index, original); }
+        function modelAvailable(model,index) { return ApplicationInfo.assistantModelAvailable(model, index); }
+        function reconcile(group,original) { ApplicationInfo.assistantChoiceReconcile(group, original); }
+        function focusModel(start,step,original) { ApplicationInfo.assistantChoiceFocusModel(start, step, original); }
+        function focusEffort(index,original) { ApplicationInfo.assistantChoiceFocusEffort(index, original); }
+        function chooseModel(id) { ApplicationInfo.assistantChooseModel(id); }
+        function chooseEffort(token) { ApplicationInfo.assistantChooseEffort(token); }
+        onOpened: ApplicationInfo.assistantChoicesOpened()
+        onClosed: ApplicationInfo.assistantChoicesClosed()
         ScrollView {
             id: choiceScroll
             width: choicePopup.contentWidth
@@ -231,12 +139,12 @@ Rectangle {
                                 Accessible.name: modelRow.model.displayName
                                 ToolTip.text: modelRow.model.displayName
                                 onClicked: choicePopup.chooseModel(modelRow.modelId)
-                                Keys.onReturnPressed: event=>{choicePopup.chooseModel(modelRow.modelId);event.accepted=true;}
-                                Keys.onEnterPressed: event=>{choicePopup.chooseModel(modelRow.modelId);event.accepted=true;}
-                                Keys.onTabPressed: event=>{choicePopup.focusModel(modelRow.index+1,1,choicePopup.intent);event.accepted=true;}
-                                Keys.onBacktabPressed: event=>{choicePopup.focusModel(modelRow.index-1,-1,choicePopup.intent);event.accepted=true;}
-                                Keys.onDownPressed: event=>{choicePopup.focusModel(modelRow.index+1,1,choicePopup.intent);event.accepted=true;}
-                                Keys.onUpPressed: event=>{choicePopup.focusModel(modelRow.index-1,-1,choicePopup.intent);event.accepted=true;}
+                                Keys.onReturnPressed: event => ApplicationInfo.assistantChoiceActivateKey(modelRow.modelId, event, true)
+                                Keys.onEnterPressed: event => ApplicationInfo.assistantChoiceActivateKey(modelRow.modelId, event, true)
+                                Keys.onTabPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, 1, event)
+                                Keys.onBacktabPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, -1, event)
+                                Keys.onDownPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, 1, event)
+                                Keys.onUpPressed: event => ApplicationInfo.assistantChoiceModelNavigate(modelRow.index, -1, event)
                             }
                         }
                         EaComponents.TableViewLabel {
@@ -268,7 +176,7 @@ Rectangle {
                     interactive: false
                     scrollBarPolicy: ScrollBar.AlwaysOff
                     marksCurrentRow: true
-                    currentRow: composer.effortChoices.findIndex(row=>row.token===composer.assistant.selectedEffort)
+                    currentRow: ApplicationInfo.assistantSelectedEffortRow()
                     columnWidths: [choicePopup.radioColumnWidth,choicePopup.desiredLabelWidth]
                     delegate: EaComponents.ListViewDelegate {
                         id: effortRow
@@ -293,12 +201,12 @@ Rectangle {
                                 Accessible.name: effortRow.modelData.label
                                 ToolTip.text: effortRow.modelData.token.length ? effortRow.modelData.label : qsTr("Provider default reasoning effort")
                                 onClicked: choicePopup.chooseEffort(effortRow.modelData.token)
-                                Keys.onReturnPressed: event=>{choicePopup.chooseEffort(effortRow.modelData.token);event.accepted=true;}
-                                Keys.onEnterPressed: event=>{choicePopup.chooseEffort(effortRow.modelData.token);event.accepted=true;}
-                                Keys.onTabPressed: event=>{if(effortRow.index+1<effortTable.count)choicePopup.focusEffort(effortRow.index+1,choicePopup.intent);else choicePopup.focusModel(0,1,choicePopup.intent);event.accepted=true;}
-                                Keys.onBacktabPressed: event=>{if(effortRow.index>0)choicePopup.focusEffort(effortRow.index-1,choicePopup.intent);else choicePopup.focusModel(modelTable.count-1,-1,choicePopup.intent);event.accepted=true;}
-                                Keys.onDownPressed: event=>{if(effortRow.index+1<effortTable.count)choicePopup.focusEffort(effortRow.index+1,choicePopup.intent);event.accepted=true;}
-                                Keys.onUpPressed: event=>{if(effortRow.index>0)choicePopup.focusEffort(effortRow.index-1,choicePopup.intent);event.accepted=true;}
+                                Keys.onReturnPressed: event => ApplicationInfo.assistantChoiceActivateKey(effortRow.modelData.token, event, false)
+                                Keys.onEnterPressed: event => ApplicationInfo.assistantChoiceActivateKey(effortRow.modelData.token, event, false)
+                                Keys.onTabPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, true, true, event)
+                                Keys.onBacktabPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, false, true, event)
+                                Keys.onDownPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, true, false, event)
+                                Keys.onUpPressed: event => ApplicationInfo.assistantChoiceEffortNavigate(effortRow, false, false, event)
                             }
                         }
                         EaComponents.TableViewLabel {
@@ -431,14 +339,7 @@ Rectangle {
                 padding: AppSizes.unit * 0.4
                 background: null
                 Accessible.name: qsTr("Message to the assistant")
-                Keys.onReturnPressed: event => {
-                    if (event.modifiers & Qt.ShiftModifier) {
-                        event.accepted = false;
-                    } else {
-                        composer.submit();
-                        event.accepted = true;
-                    }
-                }
+                Keys.onReturnPressed: event => ApplicationInfo.composerReturnPressed(event)
             }
         }
         ScrollView {
@@ -642,15 +543,8 @@ Rectangle {
                 KeyNavigation.tab: previousUserButton
                 onClicked: composer.openChoices()
                 Keys.priority: Keys.BeforeItem
-                Keys.onPressed: event=>{
-                    if(event.key===Qt.Key_Return || event.key===Qt.Key_Enter){
-                        event.accepted=true;
-                        if(!event.isAutoRepeat)composer.openChoices();
-                    } else event.accepted=false;
-                }
-                Keys.onReleased: event=>{
-                    event.accepted=event.key===Qt.Key_Return || event.key===Qt.Key_Enter;
-                }
+                Keys.onPressed: event => ApplicationInfo.assistantChoicesKey(event, false)
+                Keys.onReleased: event => ApplicationInfo.assistantChoicesKey(event, true)
             }
             Item { Layout.fillWidth: true }
             EaElements.ToolButton {
