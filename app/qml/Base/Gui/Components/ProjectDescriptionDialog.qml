@@ -22,13 +22,8 @@ EaElements.Dialog {
     property alias projectAuthors: projectAuthorsField.text
     property alias projectDescription: projectDescriptionField.text
 
-    function acceptsProjectName(value) {
-        return typeof value === "string" && projectNameField.validator.regularExpression.test(value);
-    }
-    function acceptsProjectTitle(value) {
-        return typeof value === "string" && value.length <= projectTitleField.maximumLength
-            && !/[\x00\r\n\t]/.test(value);
-    }
+    function acceptsProjectName(value) { return ApplicationInfo.projectDescriptionAdmitted(value, false); }
+    function acceptsProjectTitle(value) { return ApplicationInfo.projectDescriptionAdmitted(value, true); }
     readonly property int projectTitleMaximumLength: projectTitleField.maximumLength
 
     property string projectLocation: ""
@@ -37,14 +32,7 @@ EaElements.Dialog {
 
     // A folder and a name joined by one separator, whatever separators the folder ends with (a folder chosen in
     // the dialog arrives as a URL that may end in one).
-    function joinedPath(folder, name) {
-        let path = folder;
-        while (path.length > 1 && (path.endsWith("/") || path.endsWith("\\")))
-            path = path.slice(0, -1);
-        if (path === "")
-            return name;
-        return path.endsWith("/") || path.endsWith("\\") ? path + name : path + EaLogic.Utils.osPathSep() + name;
-    }
+    function joinedPath(folder, name) { return ApplicationInfo.projectJoinedPath(folder, name); }
 
     property int inputFieldWidth: EaStyle.Sizes.fontPixelSize * 35
 
@@ -53,10 +41,7 @@ EaElements.Dialog {
     standardButtons: Dialog.Ok
 
     onAccepted: projectLocation = projectLocationField.text
-    onOpened: {
-        const create = standardButton(Dialog.Ok);
-        if (create) create.objectName = "createProject.accept";
-    }
+    onOpened: ApplicationInfo.projectDescriptionOpened()
 
     // Main layout
 

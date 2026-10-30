@@ -105,10 +105,7 @@ Column {
                     displayText: row.structureId
                     foregroundColor: missing ? EaStyle.Colors.red : _foregroundColor()
                     ToolTip.text: missing ? qsTr("The project holds no structure '%1'; pick one of its structures").arg(row.structureId) : row.structureId
-                    onActivated: index => {
-                        group.rows.setStructureId(row.index, group.rows.structureNames[index]);
-                        currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1);
-                    }
+                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 4, () => { currentIndex = Qt.binding(() => group.rows ? group.rows.structureNames.indexOf(row.structureId) : -1); })
                 }
             }
             ParameterCell {

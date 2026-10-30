@@ -5,6 +5,7 @@
 pragma Singleton
 
 import QtQuick
+import edi.app
 import QtQuick.Window
 
 QtObject {
@@ -101,7 +102,5 @@ QtObject {
     property int measuredScatterSize: 5
 
     // Functions
-    function scalePx(size) {
-        return Math.round(size * (defaultScale / 100));
-    }
+    function scalePx(size) { return ApplicationInfo.styleScalePx(size); }
 }

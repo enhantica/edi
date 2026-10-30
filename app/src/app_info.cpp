@@ -819,6 +819,7 @@ struct PanelUsageFrame {
     QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
     void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
 };
+QJSValue formsProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue recentRowCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue scanProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue singleProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
@@ -2622,7 +2623,9 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     const auto argument = [&](uint index) {
         return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
     };
-    const auto result = callback->d()->operation >= 320
+    const auto result = callback->d()->operation >= 340
+        ? formsProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
+        : callback->d()->operation >= 320
         ? recentRowCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
         : callback->d()->operation >= 300
         ? scanProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
@@ -3013,7 +3016,8 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto updateCapture = [&](uint index, const QJSValue& value) {
             if (panelUsageReady(frame)) captures->set(frame.vm(), index, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), value)));
         };
-        result = callback->d()->operation >= 320 ? recentRowCallback(frame, callback->d()->operation, retained, argument)
+        result = callback->d()->operation >= 340 ? formsProcedureCallback(frame, callback->d()->operation, retained, argument)
+            : callback->d()->operation >= 320 ? recentRowCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 300 ? scanProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 280 ? singleProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 260 ? evolutionProcedureCallback(frame, callback->d()->operation, retained, argument)
@@ -8696,6 +8700,169 @@ void ApplicationInfo::searchOpened() const {
     if (!panelUsageTruth(opening) || !consentQtObject(f, popup) || !consentFieldEquals(f, opening, "popup", popup) || !panelUsageTruth(panelUsageRead(f, popup, "visible"))) return;
     panelUsageMemberCall(f, component, "positionPopup", {opening}); if (!searchOpeningCurrent(f, component, pending, popup, opening)) return;
     const auto field = searchHeaderItem(f, popup); if (panelUsageTruth(field) && panelUsageTruth(panelUsageRead(f, component, "searchable"))) panelUsageMemberCall(f, field, "focusField");
+}
+
+namespace {
+QJSValue formsProcedureCallback(const PanelUsageFrame& f, uint operation,
+    const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>&) {
+    if (operation == 340) return panelUsageMemberCall(f, saved(0), "setType", {saved(1), saved(2)});
+    const auto owner = panelUsageContextRead(f, operation == 341 ? "Session" : "RecentProjects");
+    return panelUsageMemberCall(f, owner, operation == 341 ? "openExample" : "open", {assistantContextField(f, "row", operation == 341 ? "exampleId" : "path")});
+}
+QJSValue formsStyleSize(const PanelUsageFrame& f, const char* name) {
+    return panelUsageRead(f, panelUsageRead(f, panelUsageContextRead(f, "EaStyle"), "Sizes"), name);
+}
+} // namespace
+
+void ApplicationInfo::descriptionPressed(const QJSValue& mouse) const {
+    const auto f = panelUsageEngine(this); projectInvoke(f, "tab", "forceActiveFocus"); assistantMemberWrite(f, mouse, "accepted", QJSValue(false));
+}
+void ApplicationInfo::descriptionCommit(int field, const QJSValue& restoreBinding) const {
+    const auto f = panelUsageEngine(this);
+    if (field == 0) {
+        if (!panelUsageTruth(assistantContextField(f, "tab", "project"))) return;
+        const auto text = panelUsageContextRead(f, "text"), name = panelUsageRead(f, assistantContextField(f, "tab", "project"), "name"); if (text.strictlyEquals(name)) return;
+        if (panelUsageContextRead(f, "text").strictlyEquals(QJSValue(QStringLiteral(""))))
+            panelUsageContextWrite(f, "refusal", panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("DescriptionTab", "A project needs a name")))}));
+        else {
+            const auto project = assistantContextField(f, "tab", "project"); assistantMemberWrite(f, project, "name", panelUsageContextRead(f, "text"));
+            panelUsageContextWrite(f, "refusal", panelUsageRead(f, assistantContextField(f, "tab", "project"), "lastError"));
+        }
+        projectCall(f, restoreBinding); return;
+    }
+    const char* name = field == 1 ? "title" : field == 2 ? "authors" : "description";
+    if (panelUsageTruth(assistantContextField(f, "tab", "project"))) {
+        const auto text = panelUsageContextRead(f, "text"), current = panelUsageRead(f, assistantContextField(f, "tab", "project"), name);
+        if (!text.strictlyEquals(current)) { const auto project = assistantContextField(f, "tab", "project"); assistantMemberWrite(f, project, name, panelUsageContextRead(f, "text")); }
+    }
+}
+void ApplicationInfo::parameterPickerChanged(int kind, bool chosen, const QJSValue& index) const {
+    const auto f = panelUsageEngine(this); const char* picker = kind == 0 ? "datablockPicker" : kind == 1 ? "categoryPicker" : "variabilityPicker";
+    if (chosen) {
+        const auto filter = panelUsageContextRead(f, "parameterFilter");
+        const auto value = kind == 2 ? index : textIndex(f, assistantContextField(f, "parameterFilter", kind == 0 ? "datablocks" : "categories"), index);
+        assistantMemberWrite(f, filter, kind == 0 ? "datablockFilter" : kind == 1 ? "categoryFilter" : "variability", value);
+        projectInvoke(f, picker, "follow");
+    } else {
+        projectInvoke(f, picker, "follow"); const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {assistantContextField(f, picker, "follow")});
+    }
+}
+void ApplicationInfo::parameterShownGroupsFollow() const {
+    const auto f = panelUsageEngine(this);
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, panelUsageContextRead(f, "wanted"), "length"), 0); ++i)
+        panelUsageGlobalCall(f, "setShownGroup", {QJSValue(i + 1), textIndex(f, panelUsageContextRead(f, "wanted"), QJSValue(i))});
+}
+QJSValue ApplicationInfo::atomWyckoffWidth() const {
+    const auto f = panelUsageEngine(this); QJSValue widest(0);
+    const auto names = panelUsageTruth(panelUsageContextRead(f, "sites")) ? assistantContextField(f, "sites", "wyckoffNames") : controlEmptyArray(f);
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, names, "length"), 0); ++i)
+        widest = numberMath(f, "max", [&] { const auto metrics = panelUsageContextRead(f, "wyckoffMetrics"); return QJSValueList{widest, panelUsageMemberCall(f, metrics, "advanceWidth", {textIndex(f, names, QJSValue(i))})}; });
+    const auto measured = numberMath(f, "ceil", [&] { return QJSValueList{numberMath(f, "max", [&] { return QJSValueList{widest, projectInvoke(f, "wyckoffMetrics", "advanceWidth", {QJSValue(QStringLiteral("WP"))})}; })}; });
+    return panelUsageAdd(f, measured, viewArithmetic(f, formsStyleSize(f, "fontPixelSize"), QJSValue(2.5), 1));
+}
+QJSValue ApplicationInfo::atomAdpIsoWidth() const {
+    const auto f = panelUsageEngine(this); const auto own = panelUsageContextRead(f, "modelRevision"), other = assistantContextField(f, "group", "adpRevision"), revision = panelUsageAdd(f, own, other); Q_UNUSED(revision)
+    bool beta = false;
+    for (double row = 0; panelUsageReady(f) && panelUsageTruth(assistantContextField(f, "group", "adps")) && assistantRelation(f, QJSValue(row), panelUsageContextRead(f, "count"), 0) && !beta; ++row)
+        beta = panelUsageMemberCall(f, assistantContextField(f, "group", "adps"), "text", {QJSValue(row), QJSValue(QStringLiteral("adpType"))}).strictlyEquals(QJSValue(QStringLiteral("beta")));
+    if (!beta) return QJSValue(-1);
+    auto widest = panelUsageGlobalCall(f, "advance", {projectInvoke(f, "Session", "label", {QJSValue(QStringLiteral("atom_site.adp_iso"))})});
+    for (double row = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(row), panelUsageContextRead(f, "count"), 0); ++row) {
+        const auto item = chartAs(f, panelUsageMemberCall(f, assistantContextField(f, "group", "adps"), "item", {QJSValue(row), QJSValue(QStringLiteral("adpIso"))}), "ParameterItem");
+        if (panelUsageTruth(item)) widest = numberMath(f, "max", [&] {
+            QJSValue text;
+            if (!panelUsageRead(f, item, "fileValue").strictlyEquals(QJSValue(QStringLiteral("")))) text = panelUsageRead(f, item, "fileValue");
+            else {
+                const auto numbers = panelUsageContextRead(f, "NumberText"), value = panelUsageRead(f, item, "value");
+                const auto error = panelUsageTruth(panelUsageRead(f, item, "hasUncertainty")) ? panelUsageRead(f, item, "uncertainty") : QJSValue(0); text = panelUsageMemberCall(f, numbers, "parameter", {value, error, QJSValue(5)});
+            }
+            return QJSValueList{widest, panelUsageGlobalCall(f, "advance", {text})};
+        });
+    }
+    const auto measured = numberMath(f, "ceil", [&] { return QJSValueList{widest}; }); return panelUsageAdd(f, measured, viewArithmetic(f, assistantContextField(f, "AppSizes", "fieldSpacing"), QJSValue(2), 1));
+}
+void ApplicationInfo::scientificSelectorChanged(const QJSValue& index, int kind, const QJSValue& restoreBinding) const {
+    const auto f = panelUsageEngine(this);
+    if (kind == 5) {
+        const auto site = assistantContextField(f, "row", "index"), type = panelUsageGlobalCall(f, "textAt", {index}), adps = assistantContextField(f, "group", "adps");
+        projectCall(f, restoreBinding); const auto qt = panelUsageContextRead(f, "Qt"); const auto change = panelUsageClosure(f, 340, {adps, site, type}, 0); panelUsageMemberCall(f, qt, "callLater", {change}); return;
+    }
+    if (kind == 0 || kind == 1) {
+        const auto sites = assistantContextField(f, "group", "sites"), row = assistantContextField(f, "row", "index"); QJSValue value;
+        if (kind == 0) value = panelUsageGlobalCall(f, "textAt", {index}); else value = textIndex(f, panelUsageRead(f, assistantContextField(f, "group", "sites"), "wyckoffLetters"), index);
+        panelUsageMemberCall(f, sites, "setText", {row, QJSValue(kind == 0 ? QStringLiteral("typeSymbol") : QStringLiteral("wyckoffLetter")), value});
+    } else if (kind == 2 || kind == 3) {
+        const auto spaceGroup = assistantContextField(f, "row", "spaceGroup"); assistantMemberWrite(f, spaceGroup, kind == 2 ? "nameHM" : "coordSystemCode", panelUsageGlobalCall(f, "textAt", {index}));
+    } else {
+        const auto rows = assistantContextField(f, "group", "rows"), row = assistantContextField(f, "row", "index");
+        const auto value = textIndex(f, panelUsageRead(f, assistantContextField(f, "group", "rows"), "structureNames"), index); panelUsageMemberCall(f, rows, "setStructureId", {row, value});
+    }
+    projectCall(f, restoreBinding);
+}
+void ApplicationInfo::appearanceCommit(bool probability, const QJSValue& restoreBinding) const {
+    const auto f = panelUsageEngine(this); if (assistantContextField(f, "group", "options").isNull()) return;
+    const auto text = panelUsageContextRead(f, "text"), value = assistantContextField(f, probability ? "probability" : "scale", "value");
+    if (text.strictlyEquals(value)) return;
+    const auto options = assistantContextField(f, "group", "options"); assistantMemberWrite(f, options, probability ? "adpProbability" : "atomScale", panelUsageGlobalCall(f, "Number", {panelUsageContextRead(f, "text")})); projectCall(f, restoreBinding);
+}
+QJSValue ApplicationInfo::spaceGroupNumberAdmitted(const QJSValue& text) const {
+    const auto f = panelUsageEngine(this); const auto pattern = panelRegex(f, QStringLiteral("^\\s*\\d+\\s*$")); if (!panelUsageTruth(panelUsageMemberCall(f, pattern, "test", {text}))) return QJSValue(false);
+    if (!assistantRelation(f, panelUsageGlobalCall(f, "Number", {text}), QJSValue(1), 2)) return QJSValue(false);
+    return QJSValue(assistantRelation(f, panelUsageGlobalCall(f, "Number", {text}), QJSValue(230), 3));
+}
+void ApplicationInfo::spaceGroupNumberCommit(const QJSValue& text) const {
+    const auto f = panelUsageEngine(this); const auto group = assistantContextField(f, "row", "spaceGroup");
+    assistantMemberWrite(f, group, "itNumber", text.strictlyEquals(QJSValue(QStringLiteral(""))) ? QJSValue(0) : panelUsageGlobalCall(f, "Number", {text}));
+}
+QJSValue ApplicationInfo::reflectionShown(const QJSValue& uid, const QJSValue& value, bool residual) const {
+    const auto f = panelUsageEngine(this); if (value.isUndefined() || panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {value}))) return QJSValue(QStringLiteral(""));
+    return residual ? panelUsageMemberCall(f, value, "toFixed", {QJSValue(2)}) : projectInvoke(f, "Session", "display", {uid, value});
+}
+void ApplicationInfo::placeReflectionTable() const {
+    const auto f = panelUsageEngine(this); const auto column = assistantContextField(f, "page", "extrasColumn"); if (!panelUsageTruth(column) || !panelUsageTruth(panelUsageRead(f, column, "contentItem"))) return;
+    const auto top = panelUsageRead(f, panelUsageGlobalCall(f, "mapToItem", {panelUsageRead(f, column, "contentItem"), QJSValue(0), QJSValue(0)}), "y");
+    const auto height = numberMath(f, "floor", [&] { const auto first = viewArithmetic(f, panelUsageRead(f, column, "height"), top, 0); return QJSValueList{viewArithmetic(f, first, formsStyleSize(f, "fontPixelSize"), 0)}; }); panelUsageContextWrite(f, "spareHeight", height);
+}
+QJSValue ApplicationInfo::exampleChoiceIndex(const QJSValue& model, const QJSValue& value) const {
+    const auto f = panelUsageEngine(this);
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, model, "count"), 0); ++i)
+        if (panelUsageMemberCall(f, model, "text", {QJSValue(i), QJSValue(QStringLiteral("value"))}).strictlyEquals(value)) return QJSValue(i);
+    return QJSValue(0);
+}
+void ApplicationInfo::openProjectRow(bool recent, bool activate) const {
+    const auto f = panelUsageEngine(this); if (activate) projectInvoke(f, "row", "activated"); if (recent && !panelUsageTruth(assistantContextField(f, "row", "available"))) return;
+    const auto state = panelUsageContextRead(f, "AppState"), action = projectGuardedClosure(f, recent ? 342 : 341, 0); panelUsageMemberCall(f, state, "afterChanges", {action});
+}
+QJSValue ApplicationInfo::projectDescriptionAdmitted(const QJSValue& value, bool title) const {
+    const auto f = panelUsageEngine(this); if (!tableTypeof(f, value).strictlyEquals(QJSValue(QStringLiteral("string")))) return QJSValue(false);
+    if (!title) {
+        const auto validator = assistantContextField(f, "projectNameField", "validator"), expression = panelUsageRead(f, validator, "regularExpression"); return panelUsageMemberCall(f, expression, "test", {value});
+    }
+    const auto length = panelUsageRead(f, value, "length"), maximum = assistantContextField(f, "projectTitleField", "maximumLength"); if (!assistantRelation(f, length, maximum, 3)) return QJSValue(false);
+    return QJSValue(!panelUsageTruth(panelUsageMemberCall(f, panelRegex(f, QString::fromLatin1(R"([\x00\r\n\t])")), "test", {value})));
+}
+QJSValue ApplicationInfo::projectJoinedPath(const QJSValue& folder, const QJSValue& name) const {
+    const auto f = panelUsageEngine(this); auto path = folder; const QJSValue slash(QStringLiteral("/")), backslash(QStringLiteral("\\"));
+    while (panelUsageReady(f) && assistantRelation(f, panelUsageRead(f, path, "length"), QJSValue(1), 1)
+        && (panelUsageTruth(panelUsageMemberCall(f, path, "endsWith", {slash})) || panelUsageTruth(panelUsageMemberCall(f, path, "endsWith", {backslash})))) path = panelUsageMemberCall(f, path, "slice", {QJSValue(0), QJSValue(-1)});
+    if (path.strictlyEquals(QJSValue(QStringLiteral("")))) return name;
+    if (panelUsageTruth(panelUsageMemberCall(f, path, "endsWith", {slash})) || panelUsageTruth(panelUsageMemberCall(f, path, "endsWith", {backslash}))) return panelUsageAdd(f, path, name);
+    const auto utils = panelUsageRead(f, panelUsageContextRead(f, "EaLogic"), "Utils"), separator = panelUsageMemberCall(f, utils, "osPathSep"); const auto first = panelUsageAdd(f, path, separator); return panelUsageAdd(f, first, name);
+}
+void ApplicationInfo::projectDescriptionOpened() const {
+    const auto f = panelUsageEngine(this); const auto create = panelUsageGlobalCall(f, "standardButton", {assistantContextField(f, "Dialog", "Ok")}); if (panelUsageTruth(create)) assistantMemberWrite(f, create, "objectName", QJSValue(QStringLiteral("createProject.accept")));
+}
+void ApplicationInfo::toolTipAboutToShow() const {
+    const auto f = panelUsageEngine(this); if (!panelUsageTruth(panelUsageContextRead(f, "parent"))) return;
+    const auto parent = panelUsageContextRead(f, "parent"), height = assistantContextField(f, "parent", "height");
+    const auto bottom = panelUsageRead(f, panelUsageMemberCall(f, parent, "mapToItem", {consentNull(), QJSValue(0), height}), "y");
+    const auto first = panelUsageAdd(f, bottom, panelUsageContextRead(f, "gap")), lower = panelUsageAdd(f, first, panelUsageContextRead(f, "implicitHeight"));
+    const auto windowHeight = panelUsageRead(f, panelUsageRead(f, panelUsageContextRead(f, "parent"), "Window"), "height"), room = viewArithmetic(f, windowHeight, panelUsageContextRead(f, "margins"), 0); QJSValue y;
+    if (assistantRelation(f, lower, room, 3)) { const auto height = assistantContextField(f, "parent", "height"); y = panelUsageAdd(f, height, panelUsageContextRead(f, "gap")); }
+    else { const auto height = numberNegate(f, panelUsageContextRead(f, "implicitHeight")); y = viewArithmetic(f, height, panelUsageContextRead(f, "gap"), 0); } panelUsageContextWrite(f, "y", y);
+}
+QJSValue ApplicationInfo::styleScalePx(const QJSValue& size) const {
+    const auto f = panelUsageEngine(this); return numberMath(f, "round", [&] { return QJSValueList{viewArithmetic(f, size, viewArithmetic(f, panelUsageContextRead(f, "defaultScale"), QJSValue(100), 2), 1)}; });
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {

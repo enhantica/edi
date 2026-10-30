@@ -44,21 +44,7 @@ Column {
         // present iso/eq is only as wide as its header and values, and the six component columns share the rest,
         // each showing five significant digits, in smaller text where they would not fit. Measured again on every
         // change of the rows.
-        readonly property real isoWidth: {
-            const revision = modelRevision + group.adpRevision;
-            let beta = false;
-            for (let row = 0; group.adps && row < count && !beta; ++row)
-                beta = group.adps.text(row, "adpType") === "beta";
-            if (!beta)
-                return -1;  // without a beta row no value is measured
-            let widest = advance(Session.label("atom_site.adp_iso"));
-            for (let row = 0; row < count; ++row) {
-                const item = group.adps.item(row, "adpIso") as ParameterItem;
-                if (item)
-                    widest = Math.max(widest, advance(item.fileValue !== "" ? item.fileValue : NumberText.parameter(item.value, item.hasUncertainty ? item.uncertainty : 0, 5)));
-            }
-            return Math.ceil(widest) + AppSizes.fieldSpacing * 2;
-        }
+        readonly property real isoWidth: ApplicationInfo.atomAdpIsoWidth()
         // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
         equalColumns: true
         columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), isoWidth, -1, -1, -1, -1, -1, -1]
@@ -149,13 +135,7 @@ Column {
                     currentIndex: group.adps ? group.adps.types.indexOf(row.adpType) : -1
                     // The type change can add or remove a tensor row, which rebuilds this table: it runs after the
                     // popup has closed.
-                    onActivated: index => {
-                        const site = row.index;
-                        const type = textAt(index);
-                        const adps = group.adps;
-                        currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1);
-                        Qt.callLater(() => adps.setType(site, type));
-                    }
+                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 5, () => { currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1); })
                 }
             }
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its

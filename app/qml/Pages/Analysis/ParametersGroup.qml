@@ -143,14 +143,8 @@ EaElements.GroupBox {
                     popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
                     currentIndex: selectedIndex
                     displayText: selected ? selected.title : ""
-                    onModelChanged: {
-                        datablockPicker.follow();
-                        Qt.callLater(datablockPicker.follow);
-                    }
-                    onActivated: index => {
-                        parameterFilter.datablockFilter = parameterFilter.datablocks[index];
-                        datablockPicker.follow();
-                    }
+                    onModelChanged: ApplicationInfo.parameterPickerChanged(0, false, undefined)
+                    onActivated: index => ApplicationInfo.parameterPickerChanged(0, true, index)
                     contentItem: Item {
                         clip: true
                         IconLine {
@@ -196,14 +190,8 @@ EaElements.GroupBox {
                     popup.width: Math.max(width, optionWidth + 3 * font.pixelSize)
                     currentIndex: selectedIndex
                     displayText: selected ? selected.title : ""
-                    onModelChanged: {
-                        categoryPicker.follow();
-                        Qt.callLater(categoryPicker.follow);
-                    }
-                    onActivated: index => {
-                        parameterFilter.categoryFilter = parameterFilter.categories[index];
-                        categoryPicker.follow();
-                    }
+                    onModelChanged: ApplicationInfo.parameterPickerChanged(1, false, undefined)
+                    onActivated: index => ApplicationInfo.parameterPickerChanged(1, true, index)
                     contentItem: Item {
                         clip: true
                         IconLine {
@@ -246,14 +234,8 @@ EaElements.GroupBox {
                     model: titles
                     currentIndex: parameterFilter.variability
                     displayText: titles[parameterFilter.variability]
-                    onModelChanged: {
-                        variabilityPicker.follow();
-                        Qt.callLater(variabilityPicker.follow);
-                    }
-                    onActivated: index => {
-                        parameterFilter.variability = index;
-                        variabilityPicker.follow();
-                    }
+                    onModelChanged: ApplicationInfo.parameterPickerChanged(2, false, undefined)
+                    onActivated: index => ApplicationInfo.parameterPickerChanged(2, true, index)
                 }
             }
             Row {
@@ -292,10 +274,7 @@ EaElements.GroupBox {
                 sourceModel: group.project ? group.project.parameters : null
                 // The Settings tab's show-filters, by ParameterItem.FitGroup from NotMeasured (edi ADR-0053).
                 readonly property var wanted: [Preferences.analysisShowNotMeasured, Preferences.analysisShowBySymmetry, Preferences.analysisShowByConstraint, Preferences.analysisShowFixedSettings]
-                function follow() {
-                    for (let i = 0; i < wanted.length; ++i)
-                        setShownGroup(i + 1, wanted[i]);
-                }
+                function follow() { ApplicationInfo.parameterShownGroupsFollow(); }
                 onWantedChanged: follow()
                 Component.onCompleted: follow()
             }

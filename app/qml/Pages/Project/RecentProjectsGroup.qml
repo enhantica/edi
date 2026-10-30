@@ -54,11 +54,7 @@ EaElements.GroupBox {
                     height: row.height
                     width: row.width - AppSizes.iconColumnWidth - table.rowPadding - EaStyle.Sizes.tableColumnSpacing
                     cursorShape: row.available ? Qt.PointingHandCursor : Qt.ArrowCursor
-                    onClicked: {
-                        row.activated();
-                        if (row.available)
-                            AppState.afterChanges(() => RecentProjects.open(row.path));
-                    }
+                    onClicked: ApplicationInfo.openProjectRow(true, true)
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter

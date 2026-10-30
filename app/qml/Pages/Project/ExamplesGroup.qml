@@ -16,12 +16,7 @@ EaElements.GroupBox {
     title: qsTr("Examples")
     icon: "database"
 
-    function choiceIndex(model, value) {
-        for (let i = 0; i < model.count; ++i)
-            if (model.text(i, "value") === value)
-                return i;
-        return 0;
-    }
+    function choiceIndex(model, value) { return ApplicationInfo.exampleChoiceIndex(model, value); }
 
     Column {
         // Hidden while collapsed, so each row's accessible box is placed when it shows: the web platform does
@@ -92,15 +87,12 @@ EaElements.GroupBox {
                 Accessible.role: Accessible.Button
                 Accessible.name: `${row.exampleId}: ${row.sample} · ${row.origin}`
                 Accessible.description: row.detail
-                Accessible.onPressAction: AppState.afterChanges(() => Session.openExample(row.exampleId))
+                Accessible.onPressAction: ApplicationInfo.openProjectRow(false, false)
                 MouseArea {
                     parent: row
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        row.activated();
-                        AppState.afterChanges(() => Session.openExample(row.exampleId));
-                    }
+                    onClicked: ApplicationInfo.openProjectRow(false, true)
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
