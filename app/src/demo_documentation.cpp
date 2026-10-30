@@ -256,10 +256,10 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
             fail("the requested selector option is unavailable: " + action);
             return false;
         }
-        if (item->property("token").toString() == token) return click("key:Escape");
-        if (!click("key:Home")) return false;
-        for (int row = 0; row < index; ++row) if (!click("key:Down")) return false;
-        if (!click("key:Return")) return false;
+        if (item->property("token").toString() == token) return perform("key:Escape");
+        if (!perform("key:Home")) return false;
+        for (int row = 0; row < index; ++row) if (!perform("key:Down")) return false;
+        if (!perform("key:Return")) return false;
         if (item->property("token").toString() != token) {
             fail("the selector did not retain the requested token: " + action);
             return false;
