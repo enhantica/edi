@@ -132,3 +132,12 @@ are notebook calls, not report sections; the owner asked for all three in edi's 
 | Render the report from the project in each surface | Rejected: three implementations of the same sections would drift; the owner ratified one model. |
 | Give `report.js` the raw pattern columns | Rejected: it would decide gaps, error bars and pane layout again, which ADR-0021 assigns to `present_pattern`. |
 | A web view in the app | Rejected by ADR-0006 and ADR-0015 §8 (no WebEngine in the browser build). |
+
+
+## Native preview, export and capture procedures
+
+ApplicationInfo executes the original ExportGroup save/wait/Save-as continuations, saved-row selection, ReportPreview figure-job construction and asynchronous frame/grab queue, ReportTable numeric splitting/measurement and in-place row updates, and ReportCorrelations width/colour procedures. ReportViewModel remains the sole report-model, scientific-data, figure and file-publication owner; Session still writes reports back, and the existing controllers still draw each copied figure. These extend the original §7 export and preview implementations without a second report, capture controller or store.
+
+The existing saving/savePending/afterSaveAs fields and printFigures jobs/done/frame fields remain on their views. Native function values retain the original report/job/image/callback references; the shared remaining-image count is a marked mutable closure capture. Every callback uses the original capture/arity/lifetime relation. A write's original finally still resets saving while preserving a thrown value unless cleanup throws. Images publish only after the original grab callbacks, failed grabs, destruction order and completion call. Frame swapping, item creation, grabToImage, window updates and destruction use the same Qt owners and APIs.
+
+The current VM supplies original property/method/coercion, regex, intrinsic iteration, destructuring-close, template-string and array operations. Hidden views retain original lazy model reads; no new admission/currentness guard, timer, cache, validation or rendering policy is introduced. Scientific report generation, calculations, formats and native setters are unchanged. QML retains visual declarations, bindings and named direct forwarding functions. Full desktop/browser compilation, capture/export/reentry/error and report verification follows the complete source migration.

@@ -33,59 +33,17 @@ Flickable {
     readonly property int windowRows: 20
     // Every width is measured with the cells' own font, and again when it changes: a font that loads after the table
     // is made (macOS) would otherwise leave the columns measured with the fallback one, and clip their text.
-    readonly property real dotWidth: {
-        metrics.font;  // re-measured when the font changes
-        return Math.ceil(metrics.advanceWidth("."));
-    }
+    readonly property real dotWidth: ApplicationInfo.reportTableDotWidth()
     // Per column: whether its cells are numbers, the widths of their parts before and after the decimal point, and
     // the column's width.
-    readonly property var layout: {
-        metrics.font;  // re-measured when the font changes
-        const out = [];
-        for (let column = 0; column < columnCount; ++column) {
-            let numbers = 0, others = 0, left = 0, right = 0, plain = 0;
-            for (const row of rows) {
-                const text = row[column] ?? "";
-                if (text === "")
-                    continue;
-                const parts = table.split(text);
-                if (parts) {
-                    ++numbers;
-                    left = Math.max(left, metrics.advanceWidth(parts.left));
-                    right = Math.max(right, metrics.advanceWidth(parts.right));
-                } else {
-                    ++others;
-                }
-                plain = Math.max(plain, metrics.advanceWidth(text));
-            }
-            const numeric = numbers > 0 && others === 0;
-            const header = keyValue ? 0 : metrics.advanceWidth(columns[column]);
-            const content = numeric ? Math.ceil(left) + dotWidth + Math.ceil(right) : Math.ceil(plain);
-            out.push({
-                "numeric": numeric,
-                "left": Math.ceil(left),
-                "right": Math.ceil(right),
-                "width": Math.max(content, Math.ceil(header)) + 2 * padding + (keyValue && column === 0 ? keyGap : 0)
-            });
-        }
-        return out;
-    }
+    readonly property var layout: ApplicationInfo.reportTableLayout()
     // The list's width: the columns, the spacing the rows put between them and the frame, and a windowed table's scroll
     // bar clear of the last column.
-    readonly property real tableWidth: layout.reduce((sum, column) => sum + column.width, 0) + Math.max(0, columnCount - 1) * EaStyle.Sizes.tableColumnSpacing + 2 * border + (windowed ? EaStyle.Sizes.fontPixelSize : 0)
+    readonly property real tableWidth: ApplicationInfo.reportTableWidth()
 
     // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units after a space).
     // Null for a text that is not a number.
-    function split(text: string): var {
-        const match = /^([-−+]?[0-9]*)(\.?)([0-9]*(?:\([0-9]+\))?(?:[eE][-+]?[0-9]+)?(?: [^ 0-9].*)?)$/.exec(text);
-        if (!match || !/[0-9]/.test(match[1] + match[3]))
-            return null;
-        return {
-            "left": match[1],
-            "dot": match[2] !== "",
-            "right": match[3]
-        };
-    }
+    function split(text: string): var { return ApplicationInfo.reportTableSplit(text); }
 
     width: Math.min(tableWidth, parent ? parent.width : tableWidth)
     height: contentHeight + (horizontal.visible ? horizontal.height : 0)
@@ -166,19 +124,7 @@ Flickable {
         id: rowModel
     }
     // Rebuilt in place: a row keeps its delegate while it exists, and only rows past the new end are removed.
-    onRowsChanged: {
-        for (let row = 0; row < rows.length; ++row) {
-            const cells = rows[row].join(table.cellSeparator);
-            if (row < rowModel.count)
-                rowModel.setProperty(row, "cells", cells);
-            else
-                rowModel.append({
-                    "cells": cells
-                });
-        }
-        if (rowModel.count > rows.length)
-            rowModel.remove(rows.length, rowModel.count - rows.length);
-    }
+    onRowsChanged: ApplicationInfo.reportTableRowsChanged()
 
     // The cells size themselves from `layout`, so the list sets no column widths.
     EaComponents.ListView {
