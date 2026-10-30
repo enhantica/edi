@@ -145,6 +145,17 @@ class ApplicationInfo : public QObject {
     /// Refresh the selected-file pending display, advancing the revision only for file change events.
     /// Borrows the actual Composer; selection and admission remain in AssistantViewModel.
     Q_INVOKABLE void composerRefreshFilePresentation(QObject* composer, bool advanceRevision) const;
+    /// Acknowledge the current message table in the original Composer function scope.
+    Q_INVOKABLE void composerAcknowledgeVisiblePrompt() const;
+    /// Original window focus procedures; view state and Qt's delayed queue retain ownership.
+    Q_INVOKABLE bool assistantContainsItem(const QJSValue& ancestor, const QJSValue& item) const;
+    Q_INVOKABLE QJSValue assistantWorkflowPage() const;
+    Q_INVOKABLE void rehostAssistant() const;
+    Q_INVOKABLE void focusAssistantOpener() const;
+    Q_INVOKABLE void retireAssistantFocus() const;
+    Q_INVOKABLE void restoreAssistantFocus() const;
+    Q_INVOKABLE bool assistantHomeFocusCovered() const;
+    Q_INVOKABLE void enforceAssistantHomeFocus() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

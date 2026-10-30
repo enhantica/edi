@@ -45,6 +45,15 @@
 #include <private/qjsengine_p.h>
 #include <private/qjsvalue_p.h>
 #include <private/qqmlcontextdata_p.h>
+#include <private/qqmlcontext_p.h>
+#include <private/qqmlimport_p.h>
+#include <private/qqmltypenamecache_p.h>
+#include <private/qqmllistwrapper_p.h>
+#include <private/qqmltypewrapper_p.h>
+#include <private/qv4compileddata_p.h>
+#include <private/qv4function_p.h>
+#include <private/qv4memberdata_p.h>
+#include <private/qmetaobject_p.h>
 #include <private/qqmlengine_p.h>
 #include <private/qqmljavascriptexpression_p.h>
 #include <private/qv4functionobject_p.h>
@@ -74,13 +83,15 @@ namespace QV4 {
 namespace Heap {
 #define AssistantPanelCallbackMembers(class, Member) \
     Member(class, Pointer, QmlContext*, context) \
+    Member(class, Pointer, MemberData*, captures) \
     Member(class, NoMark, uint, operation)
 DECLARE_HEAP_OBJECT(AssistantPanelCallback, FunctionObject) {
     DECLARE_MARKOBJECTS(AssistantPanelCallback)
     QV4QPointer<QObject> panel;
-    void init(QV4::ExecutionEngine* engine, QV4::QmlContext* captured, uint kind, QObject* owner) {
+    void init(QV4::ExecutionEngine* engine, QV4::QmlContext* captured, uint kind, QObject* owner, QV4::MemberData* values = nullptr) {
         FunctionObject::init(engine, QString());
         context.set(engine, captured ? captured->d() : nullptr);
+        captures.set(engine, values ? values->d() : nullptr);
         panel.init(owner);
         operation = kind;
     }
@@ -757,12 +768,15 @@ namespace {
 struct PanelUsageFrame {
     QPointer<QJSEngine> pointer;
     QQmlRefPointer<QQmlContextData> context;
+    QV4::Heap::QmlContext* qmlScope = nullptr;
     mutable bool interrupted = false;
     explicit PanelUsageFrame(QJSEngine* engine = nullptr,
-                             QQmlRefPointer<QQmlContextData> captured = {}) : pointer(engine), context(std::move(captured)) {
+                             QQmlRefPointer<QQmlContextData> captured = {}, QV4::Heap::QmlContext* scope = nullptr)
+        : pointer(engine), context(std::move(captured)), qmlScope(scope) {
         if (pointer) {
             auto* vm = QJSEnginePrivate::get(pointer.data())->v4Engine.get();
             if (!context) context = vm->callingQmlContext();
+            if (!qmlScope) qmlScope = vm->qmlContext();
             interrupted = vm->isInterrupted.loadRelaxed();
         }
     }
@@ -858,6 +872,146 @@ QJSValue panelUsageConstruct(const PanelUsageFrame& frame, const QJSValue& const
     frame.checked();
     return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
 }
+QJSValue panelUsageMemberCall(const PanelUsageFrame&, const QJSValue&, const char*, const QJSValueList&);
+QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::String* name,
+                                           QV4::Value* base, bool forCall = false) {
+    auto* vm = frame.vm();
+    QV4::Scope scope(vm);
+    QV4::Scoped<QV4::QmlContext> qml(scope, frame.qmlScope);
+    auto context = frame.context;
+    if (!qml) {
+        bool found = false;
+        const auto value = vm->globalObject->get(name, &found);
+        return found ? value : vm->throwReferenceError(name->toQString());
+    }
+    QV4::Scoped<QV4::QQmlContextWrapper> resource(scope, qml->d()->qml());
+    if (!context) return QV4::Encode::undefined();
+    const auto expressionContext = context;
+    const bool isJSContext = context->isJSContext();
+    bool hasProperty = false;
+    if (isJSContext) {
+        QV4::ScopedValue value(scope, QV4::Object::virtualGet(resource, name->toPropertyKey(), nullptr, &hasProperty));
+        if (hasProperty) return value->asReturnedValue();
+    }
+    auto* ep = QQmlEnginePrivate::get(vm->qmlEngine());
+    QObject* scopeObject = resource->getScopeObject();
+    const auto* meta = scopeObject ? reinterpret_cast<const QMetaObjectPrivate*>(scopeObject->metaObject()->d.data) : nullptr;
+    if (meta && (meta->flags & DynamicMetaObject)) {
+        QV4::ScopedValue value(scope, vm->globalObject->get(name, &hasProperty));
+        if (hasProperty) return value->asReturnedValue();
+    }
+    const auto contextProperty = [&](const QQmlRefPointer<QQmlContextData>& source, bool* found) -> QV4::ReturnedValue {
+        const int index = source->propertyIndex(name);
+        if (index < 0) return QV4::Encode::undefined();
+        *found = true;
+        if (index < source->numIdValues()) {
+            if (ep->propertyCapture) ep->propertyCapture->captureProperty(source->idValueBindings(index));
+            return QV4::QObjectWrapper::wrap(vm, source->idValue(index));
+        }
+        auto* cp = source->asQQmlContextPrivate();
+        if (ep->propertyCapture)
+            ep->propertyCapture->captureProperty(source->asQQmlContext(), -1, index + cp->notifyIndex());
+        const auto& value = cp->propertyValue(index);
+        if (value.userType() == qMetaTypeId<QList<QObject*>>()) {
+            QQmlListProperty<QObject> list(source->asQQmlContext(), reinterpret_cast<void*>(qintptr(index)),
+                QQmlContextPrivate::context_count, QQmlContextPrivate::context_at);
+            return QV4::QmlListWrapper::create(vm, list, QMetaType::fromType<QQmlListProperty<QObject>>());
+        }
+        return vm->fromVariant(value);
+    };
+    if (context && context->imports() && (name->startsWithUpper() || context->valueTypesAreAddressable())) {
+        const auto imported = context->imports()->query<QQmlImport::AllowRecursion>(name, vm->typeLoader());
+        if (imported.isValid()) {
+            if (imported.scriptIndex != -1) {
+                QV4::ScopedObject scripts(scope, context->importedScripts());
+                return scripts ? scripts->get(imported.scriptIndex) : QV4::Encode::null();
+            }
+            if (imported.type.isValid()) return QV4::QQmlTypeWrapper::create(vm, scopeObject, imported.type);
+            if (imported.importNamespace)
+                return QV4::QQmlTypeWrapper::create(vm, scopeObject, context->imports(), imported.importNamespace);
+        }
+    }
+    if (scopeObject == context->contextObject()) scopeObject = nullptr;
+    auto outer = context;
+    bool calling = forCall;
+    while (context) {
+        if (outer == context) {
+            bool found = false;
+            auto value = contextProperty(context, &found);
+            if (found) return value;
+            outer = outer->parent();
+            if (const auto unit = context->typeCompilationUnit(); unit && unit->componentsAreBound()) {
+                while (outer && outer->typeCompilationUnit() == unit) {
+                    value = contextProperty(outer, &found);
+                    if (found) return value;
+                    outer = outer->parent();
+                }
+            }
+        }
+        for (QObject* object : {scopeObject, context->contextObject()}) {
+            if (!object) continue;
+            QV4::ScopedObject wrapper(scope, QV4::QObjectWrapper::wrap(vm, object));
+            bool found = false;
+            const auto flags = QV4::QObjectWrapper::Flags(QV4::QObjectWrapper::CheckRevision
+                | (calling ? QV4::QObjectWrapper::NoFlag : QV4::QObjectWrapper::AttachMethods));
+            const auto value = QV4::QObjectWrapper::getQmlProperty(vm, context, wrapper->d(), object, name, flags, &found);
+            if (found) {
+                if (base) *base = wrapper;
+                return value;
+            }
+            if (object == context->contextObject()) break;
+        }
+        scopeObject = nullptr;
+        context = context->parent();
+        calling = false;
+    }
+    if (!isJSContext) {
+        QV4::ScopedValue value(scope, QV4::Object::virtualGet(resource, name->toPropertyKey(), nullptr, &hasProperty));
+        if (hasProperty) return value->asReturnedValue();
+    }
+    bool found = false;
+    const auto result = vm->globalObject->get(name, &found);
+    if (found) return result;
+    expressionContext->setUnresolvedNames(true);
+    return vm->throwReferenceError(name->toQString());
+}
+QJSValue panelUsageContextRead(const PanelUsageFrame& frame, const char* name) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedValue result(scope, panelUsageResolveContext(frame, key, nullptr));
+    frame.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+void panelUsageContextWrite(const PanelUsageFrame& frame, const char* name, const QJSValue& value) {
+    if (!panelUsageReady(frame)) return;
+    QV4::Scope scope(frame.vm());
+    QV4::Scoped<QV4::QmlContext> qml(scope, frame.qmlScope);
+    if (!qml) { frame.vm()->throwReferenceError(QString::fromLatin1(name)); return; }
+    QV4::Scoped<QV4::QQmlContextWrapper> wrapper(scope, qml->d()->qml());
+    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
+    QV4::ScopedValue actual(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), value));
+    wrapper->put(key, actual);
+    frame.checked();
+}
+QJSValue panelUsageClosure(const PanelUsageFrame& frame, uint operation, const QJSValueList& values) {
+    if (!panelUsageReady(frame)) return {};
+    QV4::Scope scope(frame.vm());
+    QV4::Scoped<QV4::MemberData> captures(scope, QV4::MemberData::allocate(frame.vm(), values.size()));
+    captures->d()->values.size = values.size();
+    for (qsizetype i = 0; i < values.size(); ++i)
+        captures->set(frame.vm(), i, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), values[i])));
+    QV4::Scoped<QV4::QmlContext> context(scope, frame.qmlScope);
+    QV4::Scoped<QV4::AssistantPanelCallback> callback(scope,
+        frame.vm()->memoryManager->allocate<QV4::AssistantPanelCallback>(frame.vm(), context.getPointer(), operation, nullptr, captures.getPointer()));
+    callback->defineReadonlyConfigurableProperty(frame.vm()->id_length(), QV4::Value::fromInt32(0));
+    return QJSValuePrivate::fromReturnedValue(callback->asReturnedValue());
+}
+void panelUsageCallLater(const PanelUsageFrame& frame, const QJSValue& callback) {
+    const auto qt = panelUsageContextRead(frame, "Qt");
+    panelUsageMemberCall(frame, qt, "callLater", {callback});
+}
+
 QJSValue panelUsageGlobalCall(const PanelUsageFrame& frame, const char* name, const QJSValueList& arguments) {
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
@@ -866,11 +1020,10 @@ QJSValue panelUsageGlobalCall(const PanelUsageFrame& frame, const char* name, co
     for (qsizetype i = 0; i < arguments.size(); ++i)
         call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
     QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
-    QV4::ScopedObject global(scope, frame.vm()->globalObject);
-    QV4::ScopedValue callable(scope, panelUsageGet(frame, *global, key, true));
+    QV4::ScopedValue callable(scope, panelUsageResolveContext(frame, key, call.thisObject, true));
     QV4::ScopedValue result(scope);
     if (const auto* function = callable->as<QV4::FunctionObject>()) result = function->call(call);
-    else result = frame.vm()->throwTypeError(QStringLiteral("Property '%1' of object undefined is not a function").arg(key->toQString()));
+    else result = frame.vm()->throwTypeError(QStringLiteral("Property '%1' of object %2 is not a function").arg(key->toQString(), call.thisObject->toQStringNoThrow()));
     frame.checked();
     return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
 }
@@ -885,7 +1038,7 @@ QJSValue panelUsageMemberCall(const PanelUsageFrame& frame, const QJSValue& rece
     QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
     QV4::ScopedValue result(scope);
     if (call.thisObject->isNullOrUndefined()) {
-        result = frame.vm()->throwTypeError(QStringLiteral("Cannot call method '%1' of %2")
+        result = frame.vm()->throwTypeError(QStringLiteral("Cannot read property '%1' of %2")
             .arg(key->toQString(), call.thisObject->toQStringNoThrow()));
     } else {
         QV4::ScopedValue callable(scope, panelUsageGet(frame, *call.thisObject, key, true));
@@ -1026,18 +1179,18 @@ QJSValue panelUsageArg(const PanelUsageFrame& engine, const QJSValue& text,
 QJSValue panelUsageMath(const PanelUsageFrame& engine, const char* operation,
                        const std::function<QJSValue()>& argument) {
     if (!panelUsageReady(engine)) return {};
-    const auto math = panelUsageRead(engine, engine->globalObject(), "Math");
+    const auto math = panelUsageContextRead(engine, "Math");
     const auto value = argument();
     return panelUsageMemberCall(engine, math, operation, {value});
 }
 QJSValue panelUsageNow(const PanelUsageFrame& engine) {
-    const auto date = panelUsageRead(engine, engine->globalObject(), "Date");
+    const auto date = panelUsageContextRead(engine, "Date");
     return panelUsageMemberCall(engine, date, "now");
 }
 QJSValue panelUsageCallback(const PanelUsageFrame& frame, uint operation, QObject* panel = nullptr) {
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
-    QV4::Scoped<QV4::QmlContext> context(scope, frame.vm()->qmlContext());
+    QV4::Scoped<QV4::QmlContext> context(scope, frame.qmlScope);
     QV4::Scoped<QV4::AssistantPanelCallback> callback(scope,
         frame.vm()->memoryManager->allocate<QV4::AssistantPanelCallback>(frame.vm(), context.getPointer(), operation, panel));
     callback->defineReadonlyConfigurableProperty(frame.vm()->id_length(), QV4::Value::fromInt32(1));
@@ -1109,8 +1262,8 @@ QJSValue ApplicationInfo::assistantUsageData(QObject* panel) const {
     const auto engine = panelUsageEngine(this);
     if (!panelUsageReady(engine)) return {};
     const auto view = panelUsageView(engine, panel);
-    const auto outer = panelUsageRead(engine, engine->globalObject(), "JSON");
-    const auto inner = panelUsageRead(engine, engine->globalObject(), "JSON");
+    const auto outer = panelUsageContextRead(engine, "JSON");
+    const auto inner = panelUsageContextRead(engine, "JSON");
     const auto owner = panelUsageRead(engine, view, "assistant");
     const auto usage = panelUsageRead(engine, owner, "usage");
     const auto serialized = panelUsageMemberCall(engine, inner, "stringify", {usage});
@@ -1176,7 +1329,7 @@ QJSValue ApplicationInfo::assistantAccountInitial(QObject* panel) const {
     const auto offered = panelUsageField(engine, view, "accountData", "email");
     if (!panelUsageReady(engine)) return {};
     if (!offered.toBool()) return QJSValue(QString());
-    const auto array = panelUsageRead(engine, engine->globalObject(), "Array");
+    const auto array = panelUsageContextRead(engine, "Array");
     const auto email = panelUsageField(engine, view, "accountData", "email");
     const auto characters = panelUsageMemberCall(engine, array, "from", {email});
     const auto first = panelUsageIndex(engine, characters, 0);
@@ -1261,7 +1414,7 @@ QJSValue ApplicationInfo::assistantUsageResetLabel(const QJSValue& value, const 
     if (!panelUsageReady(engine)) return {};
     const auto unavailable = [&] { return panelUsageText(engine, QT_TRANSLATE_NOOP("AssistantPanel", "Reset unavailable")); };
     if (!value.isNumber()) return unavailable();
-    const auto date = panelUsageRead(engine, engine->globalObject(), "Date");
+    const auto date = panelUsageContextRead(engine, "Date");
     if (!panelUsageReady(engine)) return {};
     const double milliseconds = value.toNumber() * 1000;
     const auto instance = panelUsageConstruct(engine, date, {QJSValue(milliseconds)});
@@ -1322,22 +1475,324 @@ void ApplicationInfo::assistantAccountConnectionChanged(QObject* panel, QObject*
 }
 
 
+namespace {
+void assistantMemberWrite(const PanelUsageFrame& frame, const QJSValue& receiver,
+                          const char* property, const QJSValue& value) {
+    if (!panelUsageReady(frame)) return;
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver));
+    QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(property)));
+    QV4::ScopedValue actual(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), value));
+    QV4::Runtime::StoreElement::call(frame.vm(), *object, *key, *actual);
+    frame.checked();
+}
+QJSValue assistantContextField(const PanelUsageFrame& frame, const char* object, const char* name) {
+    const auto owner = panelUsageContextRead(frame, object);
+    return panelUsageRead(frame, owner, name);
+}
+bool assistantRelation(const PanelUsageFrame& frame, const QJSValue& left, const QJSValue& right, int operation) {
+    if (!panelUsageReady(frame)) return false;
+    QV4::Scope scope(frame.vm());
+    QV4::ScopedValue a(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), left));
+    QV4::ScopedValue b(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), right));
+    bool result = false;
+    if (operation == 0) result = bool(QV4::Runtime::CompareLessThan::call(*a, *b));
+    else if (operation == 1) result = bool(QV4::Runtime::CompareGreaterThan::call(*a, *b));
+    else if (operation == 2) result = bool(QV4::Runtime::CompareGreaterEqual::call(*a, *b));
+    else result = bool(QV4::Runtime::CompareLessEqual::call(*a, *b));
+    frame.checked();
+    return result;
+}
+bool assistantSameName(const PanelUsageFrame& frame, const QJSValue& value, const char* name) {
+    const auto actual = panelUsageContextRead(frame, name);
+    return panelUsageReady(frame) && value.strictlyEquals(actual);
+}
+bool assistantEditorIdle(const PanelUsageFrame& frame) {
+    const auto composing = assistantContextField(frame, "editor", "inputMethodComposing");
+    if (!panelUsageReady(frame) || composing.toBool()) return false;
+    const auto preedit = assistantContextField(frame, "editor", "preeditText");
+    const auto length = panelUsageRead(frame, preedit, "length");
+    return panelUsageReady(frame) && length.strictlyEquals(QJSValue(0));
+}
+bool assistantDraftMatchesEditor(const PanelUsageFrame& frame, const QJSValue& draft) {
+    const auto revision = panelUsageRead(frame, draft, "revision");
+    if (!assistantSameName(frame, revision, "textRevision")) return false;
+    const auto text = panelUsageRead(frame, draft, "text");
+    const auto current = assistantContextField(frame, "editor", "text");
+    return panelUsageReady(frame) && text.strictlyEquals(current) && assistantEditorIdle(frame);
+}
+QJSValue assistantMessageText(const PanelUsageFrame& frame, double index, const char* role) {
+    const auto messages = assistantContextField(frame, "assistant", "messages");
+    return panelUsageMemberCall(frame, messages, "text", {QJSValue(index), QJSValue(QString::fromLatin1(role))});
+}
+bool assistantContains(const PanelUsageFrame& frame, const QJSValue& ancestor, const QJSValue& item) {
+    for (QJSValue current = item; panelUsageReady(frame) && current.toBool();
+         current = panelUsageRead(frame, current, "parent")) {
+        if (current.strictlyEquals(ancestor)) return true;
+    }
+    return false;
+}
+bool assistantContainsCall(const PanelUsageFrame& frame, const QJSValue& ancestor, const QJSValue& item) {
+    return panelUsageGlobalCall(frame, "containsAssistantItem", {ancestor, item}).toBool();
+}
+void assistantIncrementEpoch(const PanelUsageFrame& frame) {
+    const auto value = panelUsageContextRead(frame, "assistantFocusEpoch");
+    const auto number = panelUsageNumber(frame, value);
+    if (number) panelUsageContextWrite(frame, "assistantFocusEpoch", QJSValue(*number + 1));
+}
+void assistantFocusOpener(const PanelUsageFrame& frame) {
+    const auto enabled = assistantContextField(frame, "assistantToggle", "enabled");
+    if (!panelUsageReady(frame)) return;
+    if (enabled.toBool()) {
+        const auto toggle = panelUsageContextRead(frame, "assistantToggle");
+        panelUsageMemberCall(frame, toggle, "forceActiveFocus");
+    } else {
+        const auto item = assistantContextField(frame, "appBarCentralTabs", "currentItem");
+        if (panelUsageReady(frame) && item.toBool()) {
+            const auto current = assistantContextField(frame, "appBarCentralTabs", "currentItem");
+            panelUsageMemberCall(frame, current, "forceActiveFocus");
+        }
+    }
+}
+QJSValue assistantGeometryArray(const PanelUsageFrame& frame, const QJSValueList& entries) {
+    const auto literal = panelUsageLiteral(frame, static_cast<int>(entries.size()));
+    if (!panelUsageReady(frame)) return {};
+    QJSManagedValue array(literal.value, frame.data());
+    for (qsizetype index = 0; index < entries.size(); ++index) {
+        array.setProperty(static_cast<quint32>(index), entries[index]);
+        frame.checked();
+        if (!panelUsageReady(frame)) return {};
+    }
+    return panelUsageComplete(frame, literal);
+}
+bool assistantGeometryFinite(const PanelUsageFrame& frame, const QJSValue& values) {
+    const auto number = panelUsageContextRead(frame, "Number");
+    const auto predicate = panelUsageRead(frame, number, "isFinite");
+    return panelUsageMemberCall(frame, values, "every", {predicate}).toBool();
+}
+void mainAssistantDelayed(const PanelUsageFrame& frame, uint operation,
+                          const std::function<QJSValue(uint)>& captured) {
+    if (operation == 2) {
+        const auto epoch = captured(0), host = captured(1), project = captured(2), previous = captured(3);
+        if (!assistantSameName(frame, epoch, "assistantFocusEpoch") || !assistantSameName(frame, host, "activeAssistantHost")) return;
+        const auto currentProject = assistantContextField(frame, "Session", "project");
+        if (!panelUsageReady(frame) || !project.strictlyEquals(currentProject)) return;
+        const auto visible = assistantContextField(frame, "assistantPanel", "visible");
+        if (!panelUsageReady(frame) || !visible.toBool()) return;
+        const auto shown = assistantContextField(frame, "assistantPanel", "shown");
+        if (!panelUsageReady(frame) || !shown.toBool() || !previous.toBool()) return;
+        const auto previousVisible = panelUsageRead(frame, previous, "visible");
+        if (!panelUsageReady(frame) || !previousVisible.toBool()) return;
+        const auto enabled = panelUsageRead(frame, previous, "enabled");
+        if (!panelUsageReady(frame) || !enabled.toBool()) return;
+        const auto content = assistantContextField(frame, "assistantPanel", "contentItem");
+        if (assistantContainsCall(frame, content, previous)) panelUsageMemberCall(frame, previous, "forceActiveFocus");
+        return;
+    }
+    const auto previous = captured(0), page = captured(1), host = captured(2), project = captured(3), epoch = captured(4);
+    if (!assistantSameName(frame, epoch, "assistantFocusEpoch")) return;
+    const auto shown = assistantContextField(frame, "assistantPanel", "shown");
+    if (!panelUsageReady(frame) || shown.toBool()) return;
+    const auto visible = assistantContextField(frame, "assistantPanel", "visible");
+    if (!panelUsageReady(frame) || visible.toBool()) return;
+    bool restore = assistantSameName(frame, page, "assistantCurrentPage") && assistantSameName(frame, host, "activeAssistantHost");
+    if (restore) {
+        const auto currentProject = assistantContextField(frame, "Session", "project");
+        restore = panelUsageReady(frame) && project.strictlyEquals(currentProject) && previous.toBool();
+    }
+    if (restore) {
+        const auto previousVisible = panelUsageRead(frame, previous, "visible");
+        restore = panelUsageReady(frame) && previousVisible.toBool();
+    }
+    if (restore) {
+        const auto enabled = panelUsageRead(frame, previous, "enabled");
+        restore = panelUsageReady(frame) && enabled.toBool();
+    }
+    if (restore) {
+        restore = assistantContainsCall(frame, page, previous);
+        if (panelUsageReady(frame) && !restore) restore = assistantSameName(frame, previous, "assistantToggle");
+    }
+    if (!panelUsageReady(frame)) return;
+    if (restore) panelUsageMemberCall(frame, previous, "forceActiveFocus");
+    else panelUsageGlobalCall(frame, "focusAssistantOpener", {});
+}
+} // namespace
+
+void ApplicationInfo::composerAcknowledgeVisiblePrompt() const {
+    const auto frame = panelUsageEngine(this);
+    const auto original = panelUsageContextRead(frame, "submittedDrafts");
+    const auto ownerRevision = panelUsageContextRead(frame, "draftOwnerRevision");
+    if (!panelUsageReady(frame)) return;
+    const auto pending = frame->newArray();
+    QJSValue acknowledged(QJSValue::NullValue);
+    panelUsageEach(frame, original, [&](const QJSValue& draft) {
+        QJSValue status(QString{});
+        for (double index = 0; panelUsageReady(frame); ++index) {
+            const auto messages = assistantContextField(frame, "assistant", "messages");
+            const auto count = panelUsageRead(frame, messages, "count");
+            if (!assistantRelation(frame, QJSValue(index), count, 0)) break;
+            const auto id = assistantMessageText(frame, index, "id");
+            const auto draftId = panelUsageRead(frame, draft, "id");
+            if (!panelUsageReady(frame)) return false;
+            if (!id.strictlyEquals(draftId)) continue;
+            const auto kind = assistantMessageText(frame, index, "kind");
+            if (!panelUsageReady(frame)) return false;
+            if (kind.strictlyEquals(QJSValue(QStringLiteral("user")))) {
+                status = assistantMessageText(frame, index, "status");
+                break;
+            }
+        }
+        if (!panelUsageReady(frame)) return false;
+        if (status.strictlyEquals(QJSValue(QStringLiteral("completed")))) {
+            if (assistantDraftMatchesEditor(frame, draft)) acknowledged = draft;
+        } else if (!status.strictlyEquals(QJSValue(QStringLiteral("refused")))
+                   && !status.strictlyEquals(QJSValue(QStringLiteral("interrupted")))) {
+            panelUsageMemberCall(frame, pending, "push", {draft});
+        }
+        return panelUsageReady(frame);
+    });
+    if (!panelUsageReady(frame) || !assistantSameName(frame, original, "submittedDrafts")
+        || !assistantSameName(frame, ownerRevision, "draftOwnerRevision")) return;
+    panelUsageContextWrite(frame, "submittedDrafts", pending);
+    if (!panelUsageReady(frame) || !acknowledged.toBool() || !assistantSameName(frame, ownerRevision, "draftOwnerRevision")) return;
+    // Final checks intentionally read the current editor before clearing it.
+    const auto revision = panelUsageContextRead(frame, "textRevision");
+    const auto acknowledgedRevision = panelUsageRead(frame, acknowledged, "revision");
+    if (!panelUsageReady(frame) || !revision.strictlyEquals(acknowledgedRevision)) return;
+    const auto text = assistantContextField(frame, "editor", "text");
+    const auto acknowledgedText = panelUsageRead(frame, acknowledged, "text");
+    if (!panelUsageReady(frame) || !text.strictlyEquals(acknowledgedText) || !assistantEditorIdle(frame)) return;
+    const auto editor = panelUsageContextRead(frame, "editor");
+    panelUsageMemberCall(frame, editor, "clear");
+}
+bool ApplicationInfo::assistantContainsItem(const QJSValue& ancestor, const QJSValue& item) const {
+    return assistantContains(panelUsageEngine(this), ancestor, item);
+}
+QJSValue ApplicationInfo::assistantWorkflowPage() const {
+    const auto frame = panelUsageEngine(this);
+    QJSValueList loaders;
+    for (const char* name : {"projectLoader", "structureLoader", "experimentLoader", "analysisLoader", "reportLoader"})
+        loaders.append(panelUsageContextRead(frame, name));
+    const auto current = assistantContextField(frame, "appBarCentralTabs", "currentIndex");
+    const auto number = panelUsageNumber(frame, current);
+    if (!number) return {};
+    const auto index = *number - 1;
+    if (!(index >= 0 && index < loaders.size())) return QJSValue(QJSValue::NullValue);
+    const auto array = assistantGeometryArray(frame, loaders);
+    const auto loader = panelUsageIndex(frame, array, static_cast<quint32>(index));
+    return panelUsageRead(frame, loader, "item");
+}
+void ApplicationInfo::rehostAssistant() const {
+    const auto frame = panelUsageEngine(this);
+    assistantIncrementEpoch(frame);
+    const auto active = panelUsageContextRead(frame, "activeAssistantHost");
+    if (!panelUsageReady(frame) || !active.toBool()) return;
+    const auto panel = panelUsageContextRead(frame, "assistantPanel");
+    if (!panelUsageReady(frame) || !panel.toBool()) return;
+    const auto previous = panelUsageContextRead(frame, "activeFocusItem");
+    const auto content = assistantContextField(frame, "assistantPanel", "contentItem");
+    const auto restore = assistantContainsCall(frame, content, previous);
+    const auto actualPanel = panelUsageContextRead(frame, "assistantPanel");
+    const auto fallback = panelUsageContextRead(frame, "assistantFallbackHost");
+    assistantMemberWrite(frame, actualPanel, "parent", fallback);
+    const auto epoch = panelUsageContextRead(frame, "assistantFocusEpoch");
+    const auto host = panelUsageContextRead(frame, "activeAssistantHost");
+    const auto project = assistantContextField(frame, "Session", "project");
+    if (panelUsageReady(frame) && restore) panelUsageCallLater(frame, panelUsageClosure(frame, 2, {epoch, host, project, previous}));
+}
+void ApplicationInfo::focusAssistantOpener() const { assistantFocusOpener(panelUsageEngine(this)); }
+void ApplicationInfo::retireAssistantFocus() const {
+    const auto frame = panelUsageEngine(this);
+    assistantIncrementEpoch(frame);
+    panelUsageGlobalCall(frame, "focusAssistantOpener", {});
+}
+void ApplicationInfo::restoreAssistantFocus() const {
+    const auto frame = panelUsageEngine(this);
+    const auto previous = panelUsageContextRead(frame, "assistantPreviousFocus");
+    const auto page = panelUsageContextRead(frame, "assistantPreviousPage");
+    const auto host = panelUsageContextRead(frame, "assistantPreviousHost");
+    const auto project = panelUsageContextRead(frame, "assistantPreviousProject");
+    const auto epoch = panelUsageContextRead(frame, "assistantFocusEpoch");
+    for (const char* name : {"assistantPreviousFocus", "assistantPreviousPage", "assistantPreviousHost", "assistantPreviousProject"})
+        panelUsageContextWrite(frame, name, QJSValue(QJSValue::NullValue));
+    const auto takeover = panelUsageContextRead(frame, "assistantManualTakeover");
+    if (!panelUsageReady(frame) || takeover.toBool()) return;
+    panelUsageCallLater(frame, panelUsageClosure(frame, 3, {previous, page, host, project, epoch}));
+}
+bool ApplicationInfo::assistantHomeFocusCovered() const {
+    const auto frame = panelUsageEngine(this);
+    const auto item = panelUsageContextRead(frame, "activeFocusItem");
+    const auto panel = panelUsageContextRead(frame, "assistantPanel");
+    if (!panelUsageReady(frame) || !panel.toBool()) return false;
+    const auto visible = assistantContextField(frame, "assistantPanel", "visible");
+    if (!panelUsageReady(frame) || !visible.toBool() || !item.toBool()) return false;
+    const auto page = panelUsageContextRead(frame, "assistantCurrentPage");
+    if (!assistantContainsCall(frame, page, item)) return false;
+    for (QJSValue current = item; panelUsageReady(frame) && current.toBool(); current = panelUsageRead(frame, current, "parent")) {
+        QJSValueList values;
+        for (const char* name : {"x", "y", "width", "height", "scale", "rotation"}) values.append(panelUsageRead(frame, current, name));
+        const auto geometry = assistantGeometryArray(frame, values);
+        if (!assistantGeometryFinite(frame, geometry)) return false;
+    }
+    QJSValueList strip;
+    for (const char* name : {"x", "y"}) strip.append(assistantContextField(frame, "assistantPanel", name));
+    for (const char* name : {"x", "y", "width", "height"}) strip.append(assistantContextField(frame, "activeAssistantHost", name));
+    for (const char* name : {"width", "height"}) strip.append(assistantContextField(frame, "window", name));
+    if (!assistantGeometryFinite(frame, assistantGeometryArray(frame, strip))) return false;
+    const auto content = assistantContextField(frame, "assistantPanel", "contentItem");
+    const auto width = panelUsageRead(frame, item, "width");
+    const auto height = panelUsageRead(frame, item, "height");
+    const auto rectangle = panelUsageMemberCall(frame, item, "mapToItem", {content, QJSValue(0), QJSValue(0), width, height});
+    const auto greaterZero = [&](const char* field) { return assistantRelation(frame, panelUsageRead(frame, rectangle, field), QJSValue(0), 1); };
+    const auto nonnegative = [&](const char* field) { return assistantRelation(frame, panelUsageRead(frame, rectangle, field), QJSValue(0), 2); };
+    if (!greaterZero("width") || !greaterZero("height") || !nonnegative("x") || !nonnegative("y")) return false;
+    for (const auto& pair : {std::pair{"x", "width"}, std::pair{"y", "height"}}) {
+        const auto position = panelUsageRead(frame, rectangle, pair.first);
+        const auto extent = panelUsageRead(frame, rectangle, pair.second);
+        const auto end = panelUsageAdd(frame, position, extent);
+        const auto currentContent = assistantContextField(frame, "assistantPanel", "contentItem");
+        const auto available = panelUsageRead(frame, currentContent, pair.second);
+        if (!assistantRelation(frame, end, available, 3)) return false;
+    }
+    return panelUsageReady(frame);
+}
+void ApplicationInfo::enforceAssistantHomeFocus() const {
+    const auto frame = panelUsageEngine(this);
+    const auto takeover = panelUsageContextRead(frame, "assistantManualTakeover");
+    if (!panelUsageReady(frame) || takeover.toBool()) return;
+    const auto covered = panelUsageContextRead(frame, "assistantHomeFocusCovered");
+    if (!panelUsageReady(frame) || !covered.toBool()) return;
+    const auto shown = assistantContextField(frame, "assistantPanel", "shown");
+    if (!panelUsageReady(frame)) return;
+    if (shown.toBool()) {
+        const auto panel = panelUsageContextRead(frame, "assistantPanel");
+        panelUsageMemberCall(frame, panel, "focusComposer");
+    } else panelUsageGlobalCall(frame, "focusAssistantOpener", {});
+}
+
 QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject* function,
     const Value*, const Value* arguments, int count) {
     const auto* callback = static_cast<const AssistantPanelCallback*>(function);
     QV4::Scope scope(function->engine());
     QV4::Scoped<QV4::QmlContext> context(scope, callback->d()->context);
-    const PanelUsageFrame frame(function->engine()->jsEngine(), context ? context->qmlContext() : QQmlRefPointer<QQmlContextData>());
+    const PanelUsageFrame frame(function->engine()->jsEngine(), context ? context->qmlContext() : QQmlRefPointer<QQmlContextData>(), context ? context->d() : nullptr);
     if (!panelUsageReady(frame)) return QV4::Encode::undefined();
     const QJSValue value = count ? QJSValuePrivate::fromReturnedValue(arguments[0].asReturnedValue()) : QJSValue();
     QJSValue result;
     if (callback->d()->operation == 0) {
         result = panelUsagePlanWord(frame, value);
-    } else {
+    } else if (callback->d()->operation == 1) {
         const auto panel = panelUsageCapturedPanel(frame, callback->d()->panel);
         const auto minutes = panelUsageRead(frame, value, "minutes");
         const auto selected = panelUsageMemberCall(frame, panel, "allowanceWindow", {minutes});
         if (panelUsageReady(frame)) result = QJSValue(!selected.isNull());
+    }
+    else {
+        QV4::Scoped<QV4::MemberData> captures(scope, callback->d()->captures);
+        const auto captured = [&](uint index) {
+            return QJSValuePrivate::fromReturnedValue((*captures)[index].asReturnedValue());
+        };
+        mainAssistantDelayed(frame, callback->d()->operation, captured);
     }
     return QJSValuePrivate::convertToReturnedValue(frame.vm(), result);
 }
@@ -1374,6 +1829,16 @@ QJSValue ApplicationInfo::assistantUsageResetLabel(const QJSValue&, const QJSVal
 QJSValue ApplicationInfo::assistantUsageNow() const { return QJSValue(0); }
 void ApplicationInfo::refreshAssistantUsageClock(QObject*) const {}
 void ApplicationInfo::assistantAccountConnectionChanged(QObject*, QObject*) const {}
+void ApplicationInfo::composerAcknowledgeVisiblePrompt() const {}
+bool ApplicationInfo::assistantContainsItem(const QJSValue&, const QJSValue&) const { return false; }
+QJSValue ApplicationInfo::assistantWorkflowPage() const { return QJSValue(QJSValue::NullValue); }
+void ApplicationInfo::rehostAssistant() const {}
+void ApplicationInfo::focusAssistantOpener() const {}
+void ApplicationInfo::retireAssistantFocus() const {}
+void ApplicationInfo::restoreAssistantFocus() const {}
+bool ApplicationInfo::assistantHomeFocusCovered() const { return false; }
+void ApplicationInfo::enforceAssistantHomeFocus() const {}
+
 #endif
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {

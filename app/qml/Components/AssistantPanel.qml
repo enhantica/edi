@@ -20,6 +20,9 @@ Popup {
     readonly property var accountData: panel.assistant.account
     readonly property string accountPlan: ApplicationInfo.assistantAccountPlan(panel)
     readonly property string accountInitial: ApplicationInfo.assistantAccountInitial(panel)
+    function usageResetLabel(value, now) { return ApplicationInfo.assistantUsageResetLabel(value, now); }
+    function usageCaption() { return ApplicationInfo.assistantUsageCaption(panel); }
+    function allowanceColor(remaining) { return ApplicationInfo.assistantAllowanceColor(remaining, EaStyle.Colors); }
     function allowanceWindow(minutes) { return ApplicationInfo.assistantAllowanceWindow(panel, minutes); }
     readonly property string accountPlanLabel: ApplicationInfo.assistantAccountPlanLabel(panel)
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
@@ -369,11 +372,11 @@ Popup {
                             font: usageButton.font
                             color: !usageButton.enabled ? EaStyle.Colors.themeForegroundDisabled
                                 : usageButton.hovered || usageButton.down || usageButton.visualFocus
-                                    ? EaStyle.Colors.themeAccent : ApplicationInfo.assistantAllowanceColor(panel.remainingPercent, EaStyle.Colors)
+                                    ? EaStyle.Colors.themeAccent : panel.allowanceColor(panel.remainingPercent)
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
-                        ToolTip.text: ApplicationInfo.assistantUsageCaption(panel)
+                        ToolTip.text: panel.usageCaption()
                         Accessible.name: ToolTip.text
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: clearButton
@@ -936,7 +939,7 @@ Popup {
                             EaElements.Label {
                                 objectName: allowance.objectName+".reset"
                                 visible: allowance.window !== null
-                                text: allowance.window ? ApplicationInfo.assistantUsageResetLabel(allowance.window.resetsAt,usageDialog.resetClock) : ""
+                                text: allowance.window ? panel.usageResetLabel(allowance.window.resetsAt,usageDialog.resetClock) : ""
                                 color: EaStyle.Colors.themeForegroundMinor
                                 textFormat: Text.PlainText
                                 wrapMode: Text.WordWrap

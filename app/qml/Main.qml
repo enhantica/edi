@@ -75,11 +75,7 @@ EaComponents.ApplicationWindow {
             && EaGlobals.Vars.appBarCurrentIndex === AppState.Page.Report;
     }
 
-    readonly property Item assistantWorkflowPage: {
-        const loaders = [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader];
-        const index = appBarCentralTabs.currentIndex - 1;
-        return index >= 0 && index < loaders.length ? loaders[index].item : null;
-    }
+    readonly property Item assistantWorkflowPage: ApplicationInfo.assistantWorkflowPage()
     readonly property Item activeAssistantHost: assistantWorkflowPage ? assistantWorkflowPage.assistantOverlayHost : assistantFallbackHost
     readonly property Item assistantCurrentPage: assistantWorkflowPage || homePage
     property Item assistantPreviousFocus: null
@@ -93,86 +89,15 @@ EaComponents.ApplicationWindow {
     readonly property bool assistantManualTakeover: assistantEmptyManualTakeover && Session.project === null
         || assistantManualTakeoverProject !== null && assistantManualTakeoverProject === Session.project
 
-    function containsAssistantItem(ancestor, item) {
-        for (let current = item; current; current = current.parent)
-            if (current === ancestor)
-                return true;
-        return false;
-    }
-    function rehostAssistant() {
-        ++assistantFocusEpoch;
-        if (!activeAssistantHost || !assistantPanel)
-            return;
-        const previous = activeFocusItem;
-        const restoreChatFocus = containsAssistantItem(assistantPanel.contentItem, previous);
-        // The active page identifies focus/currentness; its SwipeView transform
-        // must not move the independent fixed sidebar sheet during navigation.
-        assistantPanel.parent = assistantFallbackHost;
-        const epoch = assistantFocusEpoch;
-        const host = activeAssistantHost;
-        const project = Session.project;
-        if (restoreChatFocus) {
-            Qt.callLater(() => {
-                if (epoch === assistantFocusEpoch && host === activeAssistantHost && project === Session.project && assistantPanel.visible && assistantPanel.shown && previous && previous.visible && previous.enabled && containsAssistantItem(assistantPanel.contentItem, previous))
-                    previous.forceActiveFocus();
-            });
-        }
-    }
-    function focusAssistantOpener() {
-        if (assistantToggle.enabled) assistantToggle.forceActiveFocus();
-        else if (appBarCentralTabs.currentItem) appBarCentralTabs.currentItem.forceActiveFocus();
-    }
-    function retireAssistantFocus() {
-        ++assistantFocusEpoch;
-        // Establish a safe current window focus before Qt's Popup exit restoration.
-        focusAssistantOpener();
-    }
-    function restoreAssistantFocus() {
-        const previous = assistantPreviousFocus;
-        const page = assistantPreviousPage;
-        const host = assistantPreviousHost;
-        const project = assistantPreviousProject;
-        const epoch = assistantFocusEpoch;
-        assistantPreviousFocus = null;
-        assistantPreviousPage = null;
-        assistantPreviousHost = null;
-        assistantPreviousProject = null;
-        if (assistantManualTakeover) return; // Never redirect a genuine manual event/focus.
-        Qt.callLater(() => {
-            if (epoch !== assistantFocusEpoch || assistantPanel.shown || assistantPanel.visible)
-                return;
-            if (page === assistantCurrentPage && host === activeAssistantHost && project === Session.project && previous && previous.visible && previous.enabled && (containsAssistantItem(page, previous) || previous === assistantToggle))
-                previous.forceActiveFocus();
-            else
-                focusAssistantOpener();
-        });
-    }
+    function containsAssistantItem(ancestor, item) { return ApplicationInfo.assistantContainsItem(ancestor, item); }
+    function rehostAssistant() { ApplicationInfo.rehostAssistant(); }
+    function focusAssistantOpener() { ApplicationInfo.focusAssistantOpener(); }
+    function retireAssistantFocus() { ApplicationInfo.retireAssistantFocus(); }
+    function restoreAssistantFocus() { ApplicationInfo.restoreAssistantFocus(); }
     // This binding observes the complete target/ancestor and strip geometry, including movement
     // without a focus change. A partly exposed control remains usable in its uncovered portion.
-    readonly property bool assistantHomeFocusCovered: {
-        const item = activeFocusItem;
-        if (!assistantPanel || !assistantPanel.visible || !item || !containsAssistantItem(assistantCurrentPage, item))
-            return false;
-        for (let current = item; current; current = current.parent) {
-            const geometry = [current.x, current.y, current.width, current.height, current.scale, current.rotation];
-            if (!geometry.every(Number.isFinite))
-                return false;
-        }
-        const stripGeometry = [assistantPanel.x, assistantPanel.y, activeAssistantHost.x, activeAssistantHost.y, activeAssistantHost.width, activeAssistantHost.height, window.width, window.height];
-        if (!stripGeometry.every(Number.isFinite))
-            return false;
-        const rectangle = item.mapToItem(assistantPanel.contentItem, 0, 0, item.width, item.height);
-        return rectangle.width > 0 && rectangle.height > 0 && rectangle.x >= 0 && rectangle.y >= 0 && rectangle.x + rectangle.width <= assistantPanel.contentItem.width && rectangle.y + rectangle.height <= assistantPanel.contentItem.height;
-    }
-    function enforceAssistantHomeFocus() {
-        if (assistantManualTakeover) return;
-        if (assistantHomeFocusCovered) {
-            if (assistantPanel.shown)
-                assistantPanel.focusComposer();
-            else
-                focusAssistantOpener();
-        }
-    }
+    readonly property bool assistantHomeFocusCovered: ApplicationInfo.assistantHomeFocusCovered()
+    function enforceAssistantHomeFocus() { ApplicationInfo.enforceAssistantHomeFocus(); }
     onAssistantHomeFocusCoveredChanged: Qt.callLater(enforceAssistantHomeFocus)
     onActiveAssistantHostChanged: rehostAssistant()
     onActiveFocusItemChanged: Qt.callLater(enforceAssistantHomeFocus)
