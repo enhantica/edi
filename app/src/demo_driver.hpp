@@ -82,6 +82,7 @@ class DemoDriver : public QObject {
         QString sidebar{};
         QStringList highlights{};
         bool capture = true;
+        QString fit_phase{};
     };
 
     void run_step();
@@ -89,7 +90,7 @@ class DemoDriver : public QObject {
     bool perform(const QString& action);
     QQuickItem* find(const QString& object_name, bool must_be_usable);
     bool on_screen(QQuickItem* item) const;  // any part of it shown: inside the window and every clip
-    bool click_item(QQuickItem* item, Qt::MouseButton button = Qt::LeftButton);
+    bool click_item(QQuickItem* item);
     void park_pointer();
     bool click(const QString& object_name);
     void settle_then(std::function<void()> next);

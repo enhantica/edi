@@ -2,7 +2,7 @@
 // Evaluated by --docs-capture; capture contains this run's isolated input/workspace paths.
 (function () {
     const EXAMPLE_ID = "pd-neut-cwl_y2o3-spodi";
-    return {schema: 2, example: EXAMPLE_ID, build: function (capture) {
+    return {schema: 2, inputs: "cif-and-data", example: EXAMPLE_ID, build: function (capture) {
     const steps = [];
     function shot(id, page, description, actions, highlights, sidebar, captureImage) {
         steps.push({id: id, page: page, description: description, actions: actions,
@@ -37,16 +37,56 @@
         ["import-structure:" + capture.structureFile],
         ["structures.list", "workflow.structure.mainContent"]);
     tabs("08-structure", "structure", "Crystal structure");
-    shot("09-experiment-import", "experiment", "Load the experiment and measured intensities",
+    function setValue(id, value) { return ["reveal:" + id, "fill:" + id + "=" + value, "key:Return"]; }
+    function select(id, token) { return [id, "choose-token:" + id + "=" + token]; }
+    shot("09-experiment-import", "experiment", "Create an experiment for the measurement",
         ["appBar.tab.experiment", "sideBar.tab.basic", "expand:group.experiments"],
-        ["experiments.load", "workflow.experiment.mainContent"]);
-    shot("10-experiment-loaded", "experiment", "Compare the measured pattern with the initial calculation",
-        ["import-experiment:" + capture.experimentFile],
+        ["experiments.create"]);
+    shot("09-experiment-type", "experiment", "Choose the sample form, beam mode and probe before loading data",
+        ["experiments.create"].concat(select("experimentType.sampleForm", capture.fixture.values.sampleForm[0]),
+          select("experimentType.beamMode", capture.fixture.values.beamMode[0]),
+          select("experimentType.radiationProbe", capture.fixture.values.probe[0])),
+        ["experimentType"]);
+    shot("09-experiment-data", "experiment", "Load the measured angle, intensity and uncertainty columns",
+        ["import-data:" + capture.dataFile], ["experiments.loadData.0", "workflow.experiment.mainContent"]);
+    shot("09-wavelength", "experiment", "Set the wavelength used for this measurement",
+        ["reveal:group.instrument", "expand:group.instrument"].concat(setValue("instrument.setup_wavelength", capture.wavelength)),
+        ["instrument.setup_wavelength"]);
+    shot("09-profile", "experiment", "Choose the peak profile and starting coefficients",
+        ["reveal:group.peak", "expand:group.peak"].concat(select("peak.type", capture.profileType)), ["peak.type", "group.peak"]);
+    Object.keys(capture.profileStart).forEach(function (name) {
+        shot("09-profile-" + name.replace(/_/g,"-"), "experiment", "Set a starting profile coefficient",
+            setValue("peak." + name, capture.profileStart[name]), ["peak." + name]);
+    });
+    capture.excludedRegions.forEach(function (region, index) {
+        shot("09-exclusion-" + index, "experiment", "Exclude the measured regions outside the fitting range",
+            ["reveal:group.excluded_region", "expand:group.excluded_region", "excludedRegions.append"].concat(
+              setValue("excludedRegion.start." + index, region.start), setValue("excludedRegion.end." + index, region.end)),
+            ["excludedRegions.list"]);
+    });
+    shot("09-background-estimate", "experiment", "Estimate a starting background from the measured pattern",
+        ["reveal:group.background", "expand:group.background", "reveal:background.estimate", "background.estimate"], ["background.rows", "background.estimate"]);
+    shot("10-experiment-loaded", "experiment", "Inspect the starting pattern before choosing free parameters", [],
         ["workflow.experiment.mainContent", "workflow.experiment.manualSidebar"]);
     tabs("11-experiment", "experiment", "Experiment and measured data");
-    shot("12-run-refinement", "analysis", "Refine the model and close the results dialog",
-        ["appBar.tab.analysis", "sideBar.tab.basic", "statusBar.fit.button",
-         "wait-fit", "close-fit-results"], [], "", false);
+    function freeKind(name) {
+        return ["fill:parameters.nameFilter=" + name, "parameters.freeHeader", "parameters.freeHeader.free", "parameters.clearFilters"];
+    }
+    shot("12-analysis-choose", "analysis", "Begin with the scale and cell length; keep the other parameters fixed",
+        ["appBar.tab.analysis", "sideBar.tab.basic", "parameters.clearFilters", "parameters.freeHeader", "parameters.freeHeader.fixed"].concat(freeKind("scale"), freeKind("length_a")),
+        ["group.parameters", "parameters.freeHeader"]);
+    steps[steps.length-1].fitPhase = "setup";
+    shot("12-fit-scale-cell", "analysis", "Fit the scale and cell length first",
+        ["statusBar.fit.button", "wait-fit", "close-fit-results"], ["workflow.analysis.mainContent", "group.parameters"]);
+    shot("12-fit-profile", "analysis", "Add the peak widths and zero offset to the free set",
+        freeKind("broad_gauss_").concat(freeKind("calib_twotheta_offset"), ["statusBar.fit.button", "wait-fit", "close-fit-results"]),
+        ["workflow.analysis.mainContent", "group.parameters"]);
+    shot("12-run-refinement", "analysis", "Add background, coordinates and displacement parameters, then fit again",
+        freeKind("background").concat(freeKind("fract_"), freeKind("adp_"), ["statusBar.fit.button", "wait-fit", "close-fit-results"]), [], "", false);
+    shot("12-correlations", "analysis", "Inspect correlations after the staged refinement",
+        ["mainArea.analysis.tab.correlations"], ["workflow.analysis.mainContent"]);
+    shot("12-pattern-return", "analysis", "Return to the fitted pattern",
+        ["mainArea.analysis.tab.fitting"], [], "", false);
     tabs("13-analysis", "analysis", "Completed Rietveld refinement");
     tabs("14-report", "report", "Review the fitted structure and report");
     shot("15-project-examples", "project", "Browse the built-in examples",

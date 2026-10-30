@@ -1753,7 +1753,7 @@ bool DemoDriver::click(const QString& object_name) {
     return click_item(item);
 }
 
-bool DemoDriver::click_item(QQuickItem* item, Qt::MouseButton button) {
+bool DemoDriver::click_item(QQuickItem* item) {
     // A group box is clicked on its title bar (its centre may be its content when expanded).
     const QVariant title_area = item->property("titleArea");
     auto* target = title_area.isValid() ? qvariant_cast<QQuickItem*>(title_area) : nullptr;
@@ -1762,9 +1762,9 @@ bool DemoDriver::click_item(QQuickItem* item, Qt::MouseButton button) {
     }
     const QPointF centre = target->mapToScene(QPointF(target->width() / 2, target->height() / 2));
     const QPointF global = window_.mapToGlobal(centre);
-    QMouseEvent press(QEvent::MouseButtonPress, centre, global, button, button, Qt::NoModifier);
+    QMouseEvent press(QEvent::MouseButtonPress, centre, global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     QCoreApplication::sendEvent(&window_, &press);
-    QMouseEvent release(QEvent::MouseButtonRelease, centre, global, button, Qt::NoButton, Qt::NoModifier);
+    QMouseEvent release(QEvent::MouseButtonRelease, centre, global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     QCoreApplication::sendEvent(&window_, &release);
     return true;
 }

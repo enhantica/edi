@@ -16,6 +16,9 @@
 #include <QRegularExpression>
 #include <QSaveFile>
 #include <QSet>
+#include <QTextStream>
+#include <limits>
+#include "edi/io.hpp"
 #include <QUrl>
 #include <functional>
 
@@ -125,6 +128,66 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
         return true;
     };
     if (!copy_inputs({})) return refuse("cannot copy the separate example inputs and their data dependencies");
+    if (declaration.property("inputs").toString() == "cif-and-data") {
+        try {
+            const auto structure_path = context.property("structureFile").toString();
+            const auto experiment_path = context.property("experimentFile").toString();
+            auto model = edi::empty_project("documentation-inputs", "");
+            model.structures.push_back(edi::load_structure_file(structure_path.toStdString()));
+            model.experiments.push_back(edi::load_experiment_file(experiment_path.toStdString()));
+            const auto& experiment = model.experiments.front();
+            if (!experiment.data || !experiment.data->two_theta.get() ||
+                !experiment.instrument.setup_wavelength)
+                return refuse("CIF/data teaching currently requires a constant-wavelength powder example");
+            const auto cif = QString::fromStdString(edi::cif_report_text(model));
+            const auto block = "data_" + QFileInfo(structure_path).completeBaseName();
+            const auto begin = cif.indexOf(block + "\n");
+            if (begin < 0) return refuse("cannot identify the structure block in its CIF export");
+            const auto end = cif.indexOf("\ndata_", begin + block.size());
+            const auto filename = "inputs/structures/" + QFileInfo(structure_path).completeBaseName() + ".cif";
+            QFile output(output_dir_.filePath(filename));
+            const auto content = (cif.mid(begin, end < 0 ? -1 : end - begin).trimmed() + "\n").toUtf8();
+            if (!output.open(QIODevice::WriteOnly) || output.write(content) != content.size())
+                return refuse("cannot write the tutorial CIF");
+            output.close();
+            documentation_dependencies_.append(documentation_inputs_["structure"]);
+            documentation_inputs_["structure"] = QJsonObject{{"file", filename}, {"sha256", digest(output.fileName())}};
+            context.setProperty("structureFile", output.fileName());
+            context.setProperty("structureFileName", QFileInfo(filename).fileName());
+            const auto data_name = "inputs/" + QFileInfo(experiment_path).completeBaseName() + ".xye";
+            QFile data_output(output_dir_.filePath(data_name));
+            if (!data_output.open(QIODevice::WriteOnly)) return refuse("cannot write the measured data file");
+            QTextStream stream(&data_output);
+            stream.setRealNumberPrecision(std::numeric_limits<double>::max_digits10);
+            stream << "# 2theta(deg) intensity standard_uncertainty\n";
+            const auto& x = *experiment.data->two_theta.get();
+            const auto& y = experiment.data->intensity_meas.get();
+            const auto& sigma = experiment.data->intensity_meas_su.get();
+            if (x.size() != y.size() || x.size() != sigma.size()) return refuse("measured data columns differ in length");
+            for (std::size_t row = 0; row < x.size(); ++row)
+                stream << x[row] << ' ' << y[row] << ' ' << sigma[row] << '\n';
+            stream.flush();
+            if (stream.status() != QTextStream::Ok) return refuse("cannot flush measured data");
+            data_output.close();
+            documentation_inputs_["data"] = QJsonObject{{"file", data_name}, {"sha256", digest(data_output.fileName())}};
+            context.setProperty("dataFile", data_output.fileName());
+            context.setProperty("dataFileName", QFileInfo(data_name).fileName());
+            context.setProperty("wavelength", experiment.instrument.setup_wavelength->value);
+            context.setProperty("profileType", QString::fromStdString(experiment.peak.type.value_or("cwl-tch-pseudo-voigt")));
+            QJsonObject profile;
+            for (const auto* parameter : experiment.peak.parameters())
+                if (parameter->spec && parameter->spec->name && std::string(parameter->spec->name).starts_with("broad_gauss_"))
+                    profile[parameter->spec->name] = parameter->value;
+            context.setProperty("profileStart", engine.toScriptValue(profile.toVariantMap()));
+            QJsonArray excluded;
+            for (const auto& region : experiment.excluded_regions)
+                excluded.append(QJsonObject{{"start", region.first.get()}, {"end", region.second.get()}});
+            context.setProperty("excludedRegions", engine.toScriptValue(excluded.toVariantList()));
+        } catch (const std::exception& problem) {
+            return refuse("cannot prepare CIF/data teaching inputs: " + QString::fromUtf8(problem.what()));
+        }
+    }
+
     const auto step_values = declaration.property("build").call({context});
     if (step_values.isError()) return refuse("documentation plan: " + step_values.toString());
     if (!step_values.isArray() || step_values.property("length").toInt() == 0)
@@ -142,6 +205,9 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
         step.page = object.value("page").toString();
         step.sidebar = object.value("sidebar").toString();
         step.capture = object.value("capture").toBool(true);
+        step.fit_phase = object.value("fitPhase").toString();
+        if (!step.fit_phase.isEmpty() && (step.fit_phase != "setup" || step.page != "analysis"))
+            return refuse("only Analysis setup scenes may precede fitting");
         if (!safe_name.match(step.image).hasMatch() || names.contains(step.image) || !object.value("actions").isArray())
             return refuse("documentation step ids must be unique safe filenames, with an actions array");
         names.insert(step.image);
@@ -179,13 +245,26 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
         documentation_skip_ = !item->isEnabled();
         return true;
     }
-    if (action.startsWith("right-click:")) {
-        auto* item = find(action.mid(12), true);
-        if (!item || !item->isEnabled() || !on_screen(item)) {
-            fail("cannot open documentation context menu: " + action);
+    if (action.startsWith("choose-token:")) {
+        const auto body = action.mid(13);
+        const auto split = body.indexOf('=');
+        auto* item = split > 0 ? find(body.left(split), true) : nullptr;
+        auto* options = item ? item->property("options").value<OptionListModel*>() : nullptr;
+        const auto token = body.mid(split + 1);
+        const auto index = options ? options->indexOf(token) : -1;
+        if (!item || !item->isEnabled() || index < 0) {
+            fail("the requested selector option is unavailable: " + action);
             return false;
         }
-        return click_item(item, Qt::RightButton);
+        if (item->property("token").toString() == token) return click("key:Escape");
+        if (!click("key:Home")) return false;
+        for (int row = 0; row < index; ++row) if (!click("key:Down")) return false;
+        if (!click("key:Return")) return false;
+        if (item->property("token").toString() != token) {
+            fail("the selector did not retain the requested token: " + action);
+            return false;
+        }
+        return true;
     }
     if (action.startsWith("fill:")) {
         const auto body = action.mid(5);
@@ -208,6 +287,16 @@ std::optional<bool> DemoDriver::documentationAction(const QString& action) {
             QCoreApplication::sendEvent(&window_, &up);
         }
         if (item->property("text").toString() != text) { fail("form field did not retain the requested value"); return false; }
+        return true;
+    }
+    if (action.startsWith("import-data:")) {
+        auto* session = session_for(window_);
+        const auto file = action.mid(12);
+        if (!session || !session->project() || !QFileInfo(file).isFile() ||
+            !session->project()->loadData(0, QUrl::fromLocalFile(file))) {
+            fail("cannot load the tutorial measured data: " + file);
+            return false;
+        }
         return true;
     }
     if (action.startsWith("import-structure:") || action.startsWith("import-experiment:")) {
@@ -250,7 +339,7 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
     auto* fit = project ? project->fit() : nullptr;
     auto* fit_dialog = window_.findChild<QObject*>("fit.results");
     const bool results_open = fit_dialog && fit_dialog->property("visible").toBool();
-    if ((step.page == "analysis" || step.page == "report") &&
+    if ((step.page == "report" || (step.page == "analysis" && step.fit_phase != "setup")) &&
         (!fit || fit->running() || fit->results()->rowCount() == 0 || results_open))
         return refuse("Analysis and Report captures require a completed fit and a closed results popup");
     const auto collect = [this] {
@@ -334,7 +423,7 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
         {"pixel_size", QJsonArray{frame.width(), frame.height()}},
         {"source_revision", QString::fromLatin1(edi::build_commit())}, {"qt_version", qVersion()},
         {"gui_components_revision", EDI_APP_GUI_COMMIT}, {"script_sha256", documentation_script_},
-        {"state", state}, {"items", items}, {"highlights", QJsonArray::fromStringList(step.highlights)}};
+        {"fit_phase", step.fit_phase}, {"state", state}, {"items", items}, {"highlights", QJsonArray::fromStringList(step.highlights)}};
     const auto sidecar = step.image + ".json";
     if (!write_json(output_dir_.filePath(sidecar), metadata)) return refuse("cannot save capture metadata");
     documentation_scenes_.append(QJsonObject{{"id", step.image}, {"status", "captured"}, {"image", filename},
