@@ -82,7 +82,8 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
     const auto base = ":/edi/examples/" + example + "/project";
     const auto structures = QDir(base + "/structures").entryList({"*.edi"}, QDir::Files);
     const auto experiments = QDir(base + "/experiments").entryList({"*.edi"}, QDir::Files);
-    if (structures.size() != 1 || experiments.size() != 1)
+    if (structures.isEmpty() || experiments.isEmpty() ||
+        (workflow == "creation" && (structures.size() != 1 || experiments.size() != 1)))
         return refuse("this walkthrough requires one structure and one experiment; adapt its import steps for a multi-block example");
     documentation_example_ = example;
     documentation_workflow_ = workflow;

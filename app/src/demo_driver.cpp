@@ -1803,15 +1803,18 @@ void DemoDriver::settle_then(std::function<void()> next) {
             next();
             return;
         }
-        if (++settle_attempts_ > kSettleMaxAttempts) {
+        const int max_attempts = documentation_ && documentation_workflow_ == "reference"
+                                     ? kSettleMaxAttempts * 10 : kSettleMaxAttempts;
+        if (++settle_attempts_ > max_attempts) {
             // The last two frames, to see what kept changing.
             previous_frame_.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-a.png")));
             frame.save(output_dir_.filePath(steps_[current_].image + QStringLiteral("-unsettled-b.png")));
             fail(QStringLiteral("step %1 did not settle within %2 ms (%3)")
                      .arg(steps_[current_].image)
-                     .arg(kSettleIntervalMs * kSettleMaxAttempts)
+                     .arg(kSettleIntervalMs * max_attempts)
                      .arg(calculating ? QStringLiteral("a calculation is in flight")
-                                      : QStringLiteral("the window kept changing")));
+                                      : preparing ? QStringLiteral("a workflow page is preparing")
+                                                  : QStringLiteral("the window kept changing")));
             return;
         }
         previous_frame_ = frame;
