@@ -17,17 +17,18 @@ AppDialog {
     width: Math.min(AppSizes.unit * 44, Math.max(0, parent.width - AppSizes.unit * 2))
     height: Math.min(implicitHeight, viewportHeight)
     contentWidth: Math.max(0, width - leftPadding - rightPadding)
-    contentHeight: Math.min(content.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding
-        - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0)
-        - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
+    contentHeight: Math.min(content.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
     standardButtons: Dialog.Close
     ScrollView {
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
         id: scroll
+        ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
         width: dialog.contentWidth
         height: dialog.contentHeight
         clip: true
-        ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
+        ScrollBar.vertical: EaElements.ScrollBar {
+            policy: ScrollBar.AsNeeded
+            interactive: false
+        }
         Column {
             id: content
             width: scroll.availableWidth
@@ -67,8 +68,7 @@ AppDialog {
             TextArea {
                 objectName: "assistant.skillContent"
                 width: parent.width
-                text: dialog.selectedIndex < 0 ? qsTr("Workflow content is unavailable. Nothing will be sent.")
-                    : dialog.assistant.skills.text(dialog.selectedIndex, "content")
+                text: dialog.selectedIndex < 0 ? qsTr("Workflow content is unavailable. Nothing will be sent.") : dialog.assistant.skills.text(dialog.selectedIndex, "content")
                 textFormat: TextEdit.PlainText
                 readOnly: true
                 selectByMouse: true

@@ -22,19 +22,31 @@ QtObject {
 
     // Open as the user left it; with nothing remembered, open when it is the first group its tab shows and closed
     // otherwise: the first group of every tab of every page starts unfolded (the owner, 2026-10-25).
-    function isOpen(key, group) { return ApplicationInfo.sidebarIsOpen(key, group); }
+    function isOpen(key, group) {
+        return ApplicationInfo.sidebarIsOpen(key, group);
+    }
 
     // Remembered once it differs from what the group would show by default: a group the user opened or folded.
-    function setOpen(key, open, group) { ApplicationInfo.sidebarSetOpen(key, open, group); }
+    function setOpen(key, open, group) {
+        ApplicationInfo.sidebarSetOpen(key, open, group);
+    }
 
-    function defaultOpen(group) { return ApplicationInfo.sidebarEdge(group, false); }
+    function defaultOpen(group) {
+        return ApplicationInfo.sidebarEdge(group, false);
+    }
 
     // The column's children in the order it lays them out. A Repeater's delegates are added at the end of the
     // children and only then moved behind the Repeater, with no change signal, so a group after a Repeater would
     // stay "not last". The delegates are taken from their Repeater, in its place.
-    function orderedChildren(parent) { return ApplicationInfo.sidebarOrderedChildren(parent); }
+    function orderedChildren(parent) {
+        return ApplicationInfo.sidebarOrderedChildren(parent);
+    }
 
-    function shownGroups(group) { return ApplicationInfo.sidebarShownGroups(group); }
+    function shownGroups(group) {
+        return ApplicationInfo.sidebarShownGroups(group);
+    }
 
-    function isLast(group) { return ApplicationInfo.sidebarEdge(group, true); }
+    function isLast(group) {
+        return ApplicationInfo.sidebarEdge(group, true);
+    }
 }

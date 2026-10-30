@@ -54,7 +54,9 @@ Item {
     readonly property string mapDirection: chart.project ? chart.project.mapDirection : "auto"
     // A chart selector's value as its box shows it: a capital first, after the lower-case prefix ("y: Datablock"); the
     // x box's symbols keep their case (the owner, 2026-10-27).
-    function capitalised(text: string): string { return ApplicationInfo.chartCapitalised(text); }
+    function capitalised(text: string): string {
+        return ApplicationInfo.chartCapitalised(text);
+    }
     // The plot area's colour: the chart's background, but black for the Map in the dark theme, so its low values (from
     // #181818 in Blue-Red) stand apart from empty areas as they do on white in the light theme (the owner, 2026-10-27).
     readonly property color plotBackground: mode === "map" && chart.colors.isDarkPalette ? "#000000" : chart.colors.chartBackground
@@ -69,15 +71,21 @@ Item {
     // The x and y ranges change together and are published once, so another page never takes up a new x with the
     // old y.
     property bool settingZoom: false
-    function setZoom(x, y) { ApplicationInfo.scanSetZoom(x, y); }
-    function resetZoom() { ApplicationInfo.scanResetZoom(); }
+    function setZoom(x, y) {
+        ApplicationInfo.scanSetZoom(x, y);
+    }
+    function resetZoom() {
+        ApplicationInfo.scanResetZoom();
+    }
     // The zoom is one per view across the pages (the owner, 2026-10-22): the shown chart writes it, and a chart
     // takes it up when it is shown.
     readonly property var sharedZoom: AppState.scanZoom[mode] ?? ({
             "x": [],
             "y": []
         })
-    function publishZoom() { ApplicationInfo.scanPublishZoom(); }
+    function publishZoom() {
+        ApplicationInfo.scanPublishZoom();
+    }
     onZoomXChanged: publishZoom()
     onZoomYChanged: publishZoom()
     readonly property real xTitleHeight: Math.round(em * 1.7)
@@ -110,7 +118,9 @@ Item {
     // (edi ADR-0029, 8): the project it told so.
     property ProjectViewModel presentedTo: null
     readonly property bool presenting: shown && project !== null
-    function reportShown() { ApplicationInfo.scanReportShown(); }
+    function reportShown() {
+        ApplicationInfo.scanReportShown();
+    }
     onPresentingChanged: reportShown()
     onProjectChanged: reportShown()
     onScanChanged: ApplicationInfo.scanViewLifecycle(2)
@@ -206,7 +216,9 @@ Item {
     }
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
-    function niceStep(span, count) { return ApplicationInfo.chartNiceStep(span, count); }
+    function niceStep(span, count) {
+        return ApplicationInfo.chartNiceStep(span, count);
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -264,7 +276,9 @@ Item {
     Item {
         id: plot
 
-        function ticks(axis: ValueAxis): list<real> { return ApplicationInfo.chartGridShares(axis); }
+        function ticks(axis: ValueAxis): list<real> {
+            return ApplicationInfo.chartGridShares(axis);
+        }
 
         visible: chart.hasData
         x: view.x + view.plotArea.x
@@ -601,9 +615,13 @@ Item {
     }
 
     // An end of the colour bar as an intensity: the y scale's value taken back to counts.
-    function intensityCounts(value: real): real { return ApplicationInfo.scanIntensityCounts(value); }
+    function intensityCounts(value: real): real {
+        return ApplicationInfo.scanIntensityCounts(value);
+    }
     // The ends in scientific notation with two significant digits, 1.4e4 (the owner, 2026-10-27).
-    function intensityText(value: real): string { return ApplicationInfo.scanIntensityText(value); }
+    function intensityText(value: real): string {
+        return ApplicationInfo.scanIntensityText(value);
+    }
 
     EaElements.Label {
         objectName: "scanView." + chart.mode + ".title.y"

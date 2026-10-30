@@ -135,7 +135,9 @@ Column {
                     currentIndex: group.adps ? group.adps.types.indexOf(row.adpType) : -1
                     // The type change can add or remove a tensor row, which rebuilds this table: it runs after the
                     // popup has closed.
-                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 5, () => { currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1); })
+                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 5, () => {
+                            currentIndex = Qt.binding(() => group.adps ? group.adps.types.indexOf(row.adpType) : -1);
+                        })
                 }
             }
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its

@@ -38,11 +38,11 @@ EaComponents.ListViewTextInput {
     property var ownerToken: ({})
     property var draft: null
     property var commitInProgress: null
-    property var editorLife: ({ alive: true })
+    property var editorLife: ({
+            alive: true
+        })
     readonly property bool manualEdited: draft !== null && draft.kind === "manual"
-    readonly property bool assistantManualDraft: inputMethodComposing ||
-        (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken)) ||
-        (!assistantEditing && !assistantCommitReady && text !== shown)
+    readonly property bool assistantManualDraft: inputMethodComposing || (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken)) || (!assistantEditing && !assistantCommitReady && text !== shown)
     readonly property string editText: shown
     property bool assistantEditing: false
     property bool assistantCommitReady: false
@@ -57,13 +57,21 @@ EaComponents.ListViewTextInput {
     onLockedChanged: ApplicationInfo.editorRetireOwner()
     Component.onDestruction: ApplicationInfo.editorDestroyed()
 
-    function rememberManualDraft() { ApplicationInfo.editorRememberDraft(ApplicationInfo.TextCellEditor); }
+    function rememberManualDraft() {
+        ApplicationInfo.editorRememberDraft(ApplicationInfo.TextCellEditor);
+    }
     onTextEdited: rememberManualDraft()
     onInputMethodComposingChanged: ApplicationInfo.editorCompositionChanged(ApplicationInfo.TextCellEditor)
 
-    function beginAssistantEdit() { ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.TextCellEditor); }
-    function allowAssistantCommit() { ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.TextCellEditor); }
-    function cancelAssistantEdit() { ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.TextCellEditor); }
+    function beginAssistantEdit() {
+        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.TextCellEditor);
+    }
+    function allowAssistantCommit() {
+        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.TextCellEditor);
+    }
+    function cancelAssistantEdit() {
+        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.TextCellEditor);
+    }
     Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.TextCellEditor, event)
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
@@ -86,8 +94,7 @@ EaComponents.ListViewTextInput {
         target: cell
         property: "text"
         value: cell.shown
-        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady &&
-              cell.commitInProgress === null && !cell.inputMethodComposing
+        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady && cell.commitInProgress === null && !cell.inputMethodComposing
         restoreMode: Binding.RestoreNone
     }
     warned: refusal !== ""
@@ -113,5 +120,7 @@ EaComponents.ListViewTextInput {
 
     // The same original draft can emit only once while its model publishes.
     // Each genuine text/preedit event installs a new record, even identical text.
-    function commit() { ApplicationInfo.editorCommit(ApplicationInfo.TextCellEditor); }
+    function commit() {
+        ApplicationInfo.editorCommit(ApplicationInfo.TextCellEditor);
+    }
 }

@@ -139,17 +139,29 @@ EaElements.GroupBox {
         }
     }
 
-    property var pickerLife: ({ alive: true })
+    property var pickerLife: ({
+            alive: true
+        })
     Component.onDestruction: ApplicationInfo.formPickerDestroyed()
     property int webRequest: 0
     property var webIntent: null
-    function chooseStructure() { return ApplicationInfo.chooseStructureFile(); }
-    function takeWebIntent(request) { return ApplicationInfo.takeStructureWebIntent(request); }
+    function chooseStructure() {
+        return ApplicationInfo.chooseStructureFile();
+    }
+    function takeWebIntent(request) {
+        return ApplicationInfo.takeStructureWebIntent(request);
+    }
     Connections {
         target: WebFiles
-        function onFilesOpened(request, files) { ApplicationInfo.formFilesOpened(request, files, false); }
-        function onFailed(request) { ApplicationInfo.formFilesCancelled(request, false); }
-        function onCancelled(request) { ApplicationInfo.formFilesCancelled(request, false); }
+        function onFilesOpened(request, files) {
+            ApplicationInfo.formFilesOpened(request, files, false);
+        }
+        function onFailed(request) {
+            ApplicationInfo.formFilesCancelled(request, false);
+        }
+        function onCancelled(request) {
+            ApplicationInfo.formFilesCancelled(request, false);
+        }
     }
 
     FileDialog {

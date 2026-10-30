@@ -40,7 +40,9 @@ Row {
     property bool currentTemplate: false
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
-    function step(offset) { ApplicationInfo.stepBlock(offset); }
+    function step(offset) {
+        ApplicationInfo.stepBlock(offset);
+    }
 
     width: EaStyle.Sizes.sideBarContentWidth
     // The gap between buttons in a chart toolbar group, between the box and each button (owner, 2026-10-05).
@@ -56,7 +58,9 @@ Row {
 
         // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
         // outcome, its name and a scan's template mark, on one centre line (IconLine, §10).
-        function segments(index, name, nameColor, outcome, isTemplate) { return ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate); }
+        function segments(index, name, nameColor, outcome, isTemplate) {
+            return ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate);
+        }
 
         objectName: row.objectName ? `${row.objectName}.box` : ""
         width: row.width - 2 * (up.width + row.spacing)
@@ -71,7 +75,9 @@ Row {
         onCountChanged: selector.currentIndex = Qt.binding(() => selector.blockIndex)
         // The choice goes to the one shared current index; the box then follows that index again, so every
         // selector over the same blocks shows the same one (edi ADR-0017 §7).
-        onActivated: index => ApplicationInfo.activateBlock(index, () => { selector.currentIndex = Qt.binding(() => selector.blockIndex); })
+        onActivated: index => ApplicationInfo.activateBlock(index, () => {
+                selector.currentIndex = Qt.binding(() => selector.blockIndex);
+            })
 
         // The shown block, as the base's content label places its text.
         contentItem: Item {

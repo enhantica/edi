@@ -32,7 +32,9 @@ Flickable {
     // The figures (the structure views and the pattern charts), unless Contents leaves the charts out.
     readonly property bool charts: ApplicationInfo.reportChartsIncluded()
 
-    function shown(name) { return ApplicationInfo.reportSection(name, false); }
+    function shown(name) {
+        return ApplicationInfo.reportSection(name, false);
+    }
 
     // The Text tab's background, under the scrolling content (the owner, 2026-10-21).
     Rectangle {
@@ -45,10 +47,16 @@ Flickable {
     // (structure-0, pattern-1, ...). They are copies of the preview's figures in the light colours, as a PDF is for
     // print, made outside the view, given a few frames to draw, then grabbed and removed. `done` gets the images once
     // every grab has answered; a figure that cannot be grabbed is left out.
-    function grabFigures(done) { ApplicationInfo.reportGrabFigures(done); }
-    function number(section) { return ApplicationInfo.reportSection(section, true); }
+    function grabFigures(done) {
+        ApplicationInfo.reportGrabFigures(done);
+    }
+    function number(section) {
+        return ApplicationInfo.reportSection(section, true);
+    }
     // A key-value table's rows from the model's rows, each value followed by its units after a space (90 deg, 3.88 Å).
-    function keyValues(rows) { return ApplicationInfo.reportKeyValues(rows); }
+    function keyValues(rows) {
+        return ApplicationInfo.reportKeyValues(rows);
+    }
 
     contentHeight: column.implicitHeight + 2 * AppSizes.reportPadding
     clip: true
@@ -242,9 +250,13 @@ Flickable {
         property var done: null
         property int frames: 0
 
-        function start(jobs, done) { ApplicationInfo.reportCaptureStart(jobs, done); }
+        function start(jobs, done) {
+            ApplicationInfo.reportCaptureStart(jobs, done);
+        }
         // Grabs every copy, removes them all once the last grab has answered and hands the images on.
-        function grabAll() { ApplicationInfo.reportCaptureAll(); }
+        function grabAll() {
+            ApplicationInfo.reportCaptureAll();
+        }
 
         x: -width - AppSizes.reportPadding
         width: column.width
@@ -253,7 +265,9 @@ Flickable {
         // Three drawn frames after the copies are made, so the charts and the 3D views have drawn.
         Connections {
             target: printFigures.jobs.length > 0 ? printFigures.Window.window : null
-            function onFrameSwapped() { ApplicationInfo.reportCaptureFrame(); }
+            function onFrameSwapped() {
+                ApplicationInfo.reportCaptureFrame();
+            }
         }
     }
 

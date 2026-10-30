@@ -21,7 +21,9 @@ import edi.app
 // file in its place. Create, Load and Load data are each one undoable step.
 EaElements.GroupBox {
     id: group
-    property var pickerLife: ({ alive: true })
+    property var pickerLife: ({
+            alive: true
+        })
     Component.onDestruction: ApplicationInfo.formPickerDestroyed()
 
     property ProjectViewModel project: null
@@ -217,10 +219,16 @@ EaElements.GroupBox {
                             cursorShape: Qt.PointingHandCursor
                         }
                         TapHandler {
-                            readonly property var assistantGesture: ({ current: null })
+                            readonly property var assistantGesture: ({
+                                    current: null
+                                })
 
-                            function sameGesture(point) { return ApplicationInfo.sameExperimentGesture(point); }
-                            function discardGesture(point) { ApplicationInfo.discardExperimentGesture(point); }
+                            function sameGesture(point) {
+                                return ApplicationInfo.sameExperimentGesture(point);
+                            }
+                            function discardGesture(point) {
+                                ApplicationInfo.discardExperimentGesture(point);
+                            }
                             onGrabChanged: (transition, eventPoint) => ApplicationInfo.experimentGrabChanged(transition, eventPoint)
                             onCanceled: eventPoint => ApplicationInfo.experimentGestureCancelled(eventPoint)
                             onTapped: eventPoint => ApplicationInfo.experimentGestureTapped(eventPoint)
@@ -318,7 +326,9 @@ EaElements.GroupBox {
     // Load data… for `experiment`: the file dialog, or in the browser the page's file chooser. The answer goes to
     // that experiment wherever its row is by then, and is refused if it has gone.
     readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv,.int,.hkl"
-    function chooseData(experiment) { ApplicationInfo.chooseExperimentData(experiment); }
+    function chooseData(experiment) {
+        ApplicationInfo.chooseExperimentData(experiment);
+    }
 
     // This page's browser file request and the project it was made for: only its own answer is used, and only
     // while that project is still open. `webDataExperiment`: the experiment a Load data… request is for, or null
@@ -328,9 +338,15 @@ EaElements.GroupBox {
     property var webDataExperiment: null
     Connections {
         target: WebFiles
-        function onFilesOpened(request, files) { ApplicationInfo.formFilesOpened(request, files, true); }
-        function onFailed(request) { ApplicationInfo.formFilesCancelled(request, true); }
-        function onCancelled(request) { ApplicationInfo.formFilesCancelled(request, true); }
+        function onFilesOpened(request, files) {
+            ApplicationInfo.formFilesOpened(request, files, true);
+        }
+        function onFailed(request) {
+            ApplicationInfo.formFilesCancelled(request, true);
+        }
+        function onCancelled(request) {
+            ApplicationInfo.formFilesCancelled(request, true);
+        }
     }
 
     FileDialog {

@@ -23,13 +23,17 @@ Column {
     readonly property var shown: ApplicationInfo.blockNamesShown()
 
     // A block's line: a structure's label is already "name · name.edi"; an experiment's data file is its `file`.
-    function line(row: int): string { return ApplicationInfo.blockNamesLine(row); }
+    function line(row: int): string {
+        return ApplicationInfo.blockNamesLine(row);
+    }
 
     spacing: EaStyle.Sizes.fontPixelSize * 0.25
 
     Connections {
         target: names.blocks
-        function onDataChanged() { ApplicationInfo.blockNamesChanged(); }
+        function onDataChanged() {
+            ApplicationInfo.blockNamesChanged();
+        }
     }
 
     Repeater {

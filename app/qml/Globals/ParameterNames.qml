@@ -16,12 +16,18 @@ QtObject {
     id: names
 
     // A block kind's icon, as the block tables show it.
-    function blockIcon(kind) { return ApplicationInfo.nameBlockIcon(kind); }
+    function blockIcon(kind) {
+        return ApplicationInfo.nameBlockIcon(kind);
+    }
 
     // easydiffractionbeta's parameter icons (Logic/Calculators.py), by `.edi` item name or its prefix; none
     // for a parameter the original had no icon for.
-    function parameterIcon(name) { return ApplicationInfo.nameParameterIcon(name); }
+    function parameterIcon(name) {
+        return ApplicationInfo.nameParameterIcon(name);
+    }
 
     // A ParameterItem's name as IconLine pieces (§10).
-    function segments(item) { return ApplicationInfo.nameSegments(item); }
+    function segments(item) {
+        return ApplicationInfo.nameSegments(item);
+    }
 }

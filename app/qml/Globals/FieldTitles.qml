@@ -20,5 +20,11 @@ QtObject {
     property EaElements.ComboBox probe: EaElements.ComboBox {}
     readonly property real inset: titles.probe.contentItemLabel ? titles.probe.contentItemLabel.leftPadding : 0
 
-    function align(field) { ApplicationInfo.alignFieldTitle(field, child => { child.anchors.leftMargin = Qt.binding(() => titles.inset); }, child => { child.width = Qt.binding(() => field.width - titles.inset); }); }
+    function align(field) {
+        ApplicationInfo.alignFieldTitle(field, child => {
+            child.anchors.leftMargin = Qt.binding(() => titles.inset);
+        }, child => {
+            child.width = Qt.binding(() => field.width - titles.inset);
+        });
+    }
 }

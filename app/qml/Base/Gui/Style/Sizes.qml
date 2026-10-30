@@ -102,5 +102,7 @@ QtObject {
     property int measuredScatterSize: 5
 
     // Functions
-    function scalePx(size) { return ApplicationInfo.styleScalePx(size); }
+    function scalePx(size) {
+        return ApplicationInfo.styleScalePx(size);
+    }
 }

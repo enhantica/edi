@@ -67,12 +67,18 @@ AppDialog {
     }
 
     // Every item under `item` that `wanted` accepts.
-    function itemsUnder(item, wanted) { return ApplicationInfo.preferenceItemsUnder(item, wanted); }
+    function itemsUnder(item, wanted) {
+        return ApplicationInfo.preferenceItemsUnder(item, wanted);
+    }
     // The width a box needs for its longest item: its paddings, its text's own and its arrow, which the box draws inside
     // its content.
-    function boxNeed(box) { return ApplicationInfo.preferenceBoxNeed(box); }
+    function boxNeed(box) {
+        return ApplicationInfo.preferenceBoxNeed(box);
+    }
     // The width a button needs for its text with an em at each side (its content reports no width of its own).
-    function buttonNeed(button) { return ApplicationInfo.preferenceButtonNeed(button); }
+    function buttonNeed(button) {
+        return ApplicationInfo.preferenceButtonNeed(button);
+    }
 
     readonly property var rowItems: ApplicationInfo.preferenceRowItems()
     readonly property real labelWidth: ApplicationInfo.preferenceRowWidth(false)
@@ -380,11 +386,13 @@ AppDialog {
 
         ScrollView {
             id: aiPage
-            implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height-bar.implicitHeight-AppSizes.unit*8))
+            implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height - bar.implicitHeight - AppSizes.unit * 8))
             readonly property var original: Session.assistant
             property string copyError: ""
             onOriginalChanged: ApplicationInfo.preferenceAssistantChanged()
-            function copyDiagnostics(button, report) { ApplicationInfo.preferenceCopyDiagnostics(button, report); }
+            function copyDiagnostics(button, report) {
+                ApplicationInfo.preferenceCopyDiagnostics(button, report);
+            }
             clip: true
             Column {
                 id: aiContent
@@ -402,10 +410,13 @@ AppDialog {
                     maxRowCountShow: 5
                     sourceModel: aiPage.original ? aiPage.original.skillSources : null
                     defaultInfoText: qsTr("No skill sources")
-                    columnWidths: [numberColumnWidth,-1,AppSizes.iconColumnWidth,AppSizes.iconColumnWidth]
+                    columnWidths: [numberColumnWidth, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
                     header: EaComponents.ListViewHeader {
                         EaComponents.TableViewLabel {}
-                        EaComponents.TableViewLabel { text: qsTr("Source"); horizontalAlignment: Text.AlignLeft }
+                        EaComponents.TableViewLabel {
+                            text: qsTr("Source")
+                            horizontalAlignment: Text.AlignLeft
+                        }
                         EaComponents.TableViewLabel {}
                         EaComponents.TableViewLabel {}
                     }
@@ -423,19 +434,19 @@ AppDialog {
                         onSourceIdChanged: ApplicationInfo.preferenceSourceRevision()
                         onOriginalChanged: ApplicationInfo.preferenceSourceRevision()
                         EaComponents.TableViewLabel {
-                            text: sourceRow.index+1
+                            text: sourceRow.index + 1
                             horizontalAlignment: Text.AlignHCenter
                         }
                         EaComponents.TableViewLabel {
-                            objectName: "preferences.ai.source.label."+sourceRow.sourceId
+                            objectName: "preferences.ai.source.label." + sourceRow.sourceId
                             text: sourceRow.builtin ? qsTr("EasyDiffraction") : sourceRow.label.startsWith("https://github.com/") ? sourceRow.label : sourceRow.path
                             horizontalAlignment: Text.AlignLeft
                             elide: Text.ElideMiddle
-                            ToolTip.text: text+(sourceRow.status.length ? "\n"+sourceRow.status : "")
+                            ToolTip.text: text + (sourceRow.status.length ? "\n" + sourceRow.status : "")
                         }
                         EaComponents.TableViewButton {
                             id: sourceEnabled
-                            objectName: "preferences.ai.source.enabled."+sourceRow.sourceId
+                            objectName: "preferences.ai.source.enabled." + sourceRow.sourceId
                             fontIcon: sourceRow.model.enabled ? "toggle-on" : "toggle-off"
                             enabled: ApplicationInfo.assistantAvailable && sourceRow.original && !sourceRow.original.canCancel
                             ToolTip.text: sourceRow.model.enabled ? qsTr("Disable this skill source") : qsTr("Enable this skill source")
@@ -444,27 +455,31 @@ AppDialog {
                             Accessible.checked: sourceRow.model.enabled
                             property var gesture: null
                             onPressed: ApplicationInfo.preferenceSourceGesture(false, true)
-                            onCanceled: gesture=null
+                            onCanceled: gesture = null
                             onClicked: ApplicationInfo.preferenceSourceGesture(false, false)
                             Connections {
                                 target: sourceRow.original
-                                function onSkillSourcesChanged() { sourceEnabled.gesture=null; }
+                                function onSkillSourcesChanged() {
+                                    sourceEnabled.gesture = null;
+                                }
                             }
                         }
                         EaComponents.TableViewButton {
-                            objectName: "preferences.ai.source.remove."+sourceRow.sourceId
+                            id: sourceRemove
+                            objectName: "preferences.ai.source.remove." + sourceRow.sourceId
                             fontIcon: "minus-circle"
                             enabled: ApplicationInfo.assistantAvailable && !sourceRow.builtin && sourceRow.original && !sourceRow.original.canCancel
                             ToolTip.text: sourceRow.builtin ? qsTr("The built-in source cannot be removed") : qsTr("Remove this skill source")
                             Accessible.name: ToolTip.text
-                            id: sourceRemove
                             property var gesture: null
                             onPressed: ApplicationInfo.preferenceSourceGesture(true, true)
-                            onCanceled: gesture=null
+                            onCanceled: gesture = null
                             onClicked: ApplicationInfo.preferenceSourceGesture(true, false)
                             Connections {
                                 target: sourceRow.original
-                                function onSkillSourcesChanged() { sourceRemove.gesture=null; }
+                                function onSkillSourcesChanged() {
+                                    sourceRemove.gesture = null;
+                                }
                             }
                         }
                     }
@@ -473,16 +488,16 @@ AppDialog {
                     width: parent.width
                     spacing: AppSizes.unit
                     EaElements.SideBarButton {
-                    objectName: "preferences.ai.sources.add"
-                    width: (parent.width-parent.spacing)/2
-                    text: qsTr("Add skill source")
-                    fontIcon: "plus-circle"
-                    enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel && !Session.assistant.skillSourceImporting
-                    onClicked: ApplicationInfo.preferenceBeginSourceSelection(false)
-                }
+                        objectName: "preferences.ai.sources.add"
+                        width: (parent.width - parent.spacing) / 2
+                        text: qsTr("Add skill source")
+                        fontIcon: "plus-circle"
+                        enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel && !Session.assistant.skillSourceImporting
+                        onClicked: ApplicationInfo.preferenceBeginSourceSelection(false)
+                    }
                     EaElements.SideBarButton {
                         objectName: "preferences.ai.sources.web"
-                        width: (parent.width-parent.spacing)/2
+                        width: (parent.width - parent.spacing) / 2
                         text: Session.assistant.skillSourceImporting ? qsTr("Cancel web import") : qsTr("Add skills from web")
                         fontIcon: Session.assistant.skillSourceImporting ? "times-circle" : "globe"
                         enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
@@ -492,12 +507,15 @@ AppDialog {
                 EaElements.Label {
                     width: parent.width
                     text: Session.assistant.skillSourceError
-                    visible: text.length>0
+                    visible: text.length > 0
                     textFormat: Text.PlainText
                     wrapMode: Text.WrapAnywhere
                     color: EaStyle.Colors.red
                 }
-                EaElements.Label { text: qsTr("Diagnostics"); font.bold: true }
+                EaElements.Label {
+                    text: qsTr("Diagnostics")
+                    font.bold: true
+                }
                 EaElements.CheckBox {
                     objectName: "preferences.ai.copyTechnicalDetails"
                     text: qsTr("Include technical details when copying steps")
@@ -507,66 +525,74 @@ AppDialog {
                 Row {
                     width: parent.width
                     spacing: AppSizes.unit
-                EaElements.SideBarButton {
-                    id: copyWorkReport
-                    objectName: "preferences.ai.workReport"
-                    width: (parent.width-parent.spacing)/2
-                    property bool copied: false
-                    text: copied ? qsTr("Copied") : qsTr("Copy work report")
-                    fontIcon: copied ? "check" : "copy"
-                    contentItem: Item {
-                        implicitWidth: copyWorkReportContent.implicitWidth
-                        Row {
-                            id: copyWorkReportContent
-                            anchors.centerIn: parent
-                            spacing: AppSizes.unit * 0.5
-                        EaElements.Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: copyWorkReport.fontIcon
-                            font.family: EaStyle.Fonts.iconsFamily
-                            color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-                            Accessible.ignored: true
+                    EaElements.SideBarButton {
+                        id: copyWorkReport
+                        objectName: "preferences.ai.workReport"
+                        width: (parent.width - parent.spacing) / 2
+                        property bool copied: false
+                        text: copied ? qsTr("Copied") : qsTr("Copy work report")
+                        fontIcon: copied ? "check" : "copy"
+                        contentItem: Item {
+                            implicitWidth: copyWorkReportContent.implicitWidth
+                            Row {
+                                id: copyWorkReportContent
+                                anchors.centerIn: parent
+                                spacing: AppSizes.unit * 0.5
+                                EaElements.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: copyWorkReport.fontIcon
+                                    font.family: EaStyle.Fonts.iconsFamily
+                                    color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                    Accessible.ignored: true
+                                }
+                                EaElements.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: copyWorkReport.text
+                                    color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                }
+                            }
                         }
-                        EaElements.Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: copyWorkReport.text
-                            color: copyWorkReport.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-                        }
-                    }
-                    }
-                    onClicked: aiPage.copyDiagnostics(copyWorkReport, true)
-                    Timer { id: reportCopyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: copyWorkReport.copied = false }
-                }
-                EaElements.SideBarButton {
-                    id: copyConnection
-                    objectName: "preferences.ai.copyConnection"
-                    width: (parent.width-parent.spacing)/2
-                    property bool copied: false
-                    text: copied ? qsTr("Copied") : qsTr("Copy connection details")
-                    fontIcon: copied ? "check" : "copy"
-                    contentItem: Item {
-                        implicitWidth: copyConnectionContent.implicitWidth
-                        Row {
-                            id: copyConnectionContent
-                            anchors.centerIn: parent
-                            spacing: AppSizes.unit * 0.5
-                        EaElements.Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: copyConnection.fontIcon
-                            font.family: EaStyle.Fonts.iconsFamily
-                            color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-                            Accessible.ignored: true
-                        }
-                        EaElements.Label {
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: copyConnection.text
-                            color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                        onClicked: aiPage.copyDiagnostics(copyWorkReport, true)
+                        Timer {
+                            id: reportCopyFeedback
+                            interval: EaStyle.Times.introAnimation
+                            onTriggered: copyWorkReport.copied = false
                         }
                     }
+                    EaElements.SideBarButton {
+                        id: copyConnection
+                        objectName: "preferences.ai.copyConnection"
+                        width: (parent.width - parent.spacing) / 2
+                        property bool copied: false
+                        text: copied ? qsTr("Copied") : qsTr("Copy connection details")
+                        fontIcon: copied ? "check" : "copy"
+                        contentItem: Item {
+                            implicitWidth: copyConnectionContent.implicitWidth
+                            Row {
+                                id: copyConnectionContent
+                                anchors.centerIn: parent
+                                spacing: AppSizes.unit * 0.5
+                                EaElements.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: copyConnection.fontIcon
+                                    font.family: EaStyle.Fonts.iconsFamily
+                                    color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                    Accessible.ignored: true
+                                }
+                                EaElements.Label {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: copyConnection.text
+                                    color: copyConnection.copied ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+                                }
+                            }
+                        }
+                        onClicked: aiPage.copyDiagnostics(copyConnection, false)
+                        Timer {
+                            id: connectionCopyFeedback
+                            interval: EaStyle.Times.introAnimation
+                            onTriggered: copyConnection.copied = false
+                        }
                     }
-                    onClicked: aiPage.copyDiagnostics(copyConnection, false)
-                    Timer { id: connectionCopyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: copyConnection.copied = false }
-                }
                 }
                 EaElements.Label {
                     width: parent.width
@@ -576,7 +602,10 @@ AppDialog {
                     wrapMode: Text.Wrap
                     color: EaStyle.Colors.red
                 }
-                EaElements.Label { text: qsTr("History"); font.bold: true }
+                EaElements.Label {
+                    text: qsTr("History")
+                    font.bold: true
+                }
                 EaElements.SideBarButton {
                     objectName: "preferences.ai.clearCachedHistory"
                     width: parent.width
@@ -771,7 +800,9 @@ AppDialog {
         Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(true, false)
         Connections {
             target: webSource.original
-            function onSkillSourceSelectionRetired(token) { ApplicationInfo.preferenceRetireSourceSelection(token, true); }
+            function onSkillSourceSelectionRetired(token) {
+                ApplicationInfo.preferenceRetireSourceSelection(token, true);
+            }
         }
     }
 
@@ -787,7 +818,9 @@ AppDialog {
         Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
         Connections {
             target: sourcesFolder.original
-            function onSkillSourceSelectionRetired(token) { ApplicationInfo.preferenceRetireSourceSelection(token, false); }
+            function onSkillSourceSelectionRetired(token) {
+                ApplicationInfo.preferenceRetireSourceSelection(token, false);
+            }
         }
     }
 

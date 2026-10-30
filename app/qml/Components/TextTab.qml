@@ -51,14 +51,22 @@ EaComponents.SideBarColumn {
     signal stayRequested
     signal blockRequested(int index)
 
-    function showBlock() { ApplicationInfo.textTabShowBlock(); }
+    function showBlock() {
+        ApplicationInfo.textTabShowBlock();
+    }
     // Applies `text` as the block `source`'s file: the refusal, with nothing changed, or empty.
-    function applyTo(source: BlockText, text: string): string { return ApplicationInfo.textTabApplyTo(source, text); }
-    function applyEdit() { ApplicationInfo.textTabApplyEdit(); }
+    function applyTo(source: BlockText, text: string): string {
+        return ApplicationInfo.textTabApplyTo(source, text);
+    }
+    function applyEdit() {
+        ApplicationInfo.textTabApplyEdit();
+    }
     // Leaving the edit with it unapplied asks (the owner, 2026-10-27): Apply applies it as ✓ does and leaves, and a
     // refused apply stays on the text with its reason; Don't apply drops it and leaves; Cancel stays. `apply` gives
     // the refusal, `leave` leaves, `drop` drops the edit and leaves, `stay` comes back to the edit.
-    function askLeave(apply, leave, drop, stay) { ApplicationInfo.textTabAskLeave(apply, leave, drop, stay); }
+    function askLeave(apply, leave, drop, stay) {
+        ApplicationInfo.textTabAskLeave(apply, leave, drop, stay);
+    }
     onShownTextChanged: ApplicationInfo.textTabChanged(0)
     // Another block: its own text shows, and the edit of the one left is kept while the user is asked; kept, that
     // block is shown again with it.
@@ -102,7 +110,9 @@ EaComponents.SideBarColumn {
                 model: [qsTr("Editable"), qsTr("Everything")]
                 shownIndex: Math.max(0, choices.indexOf(Preferences.textShow))
                 // Another Show choice with the edit unapplied changes only once the edit is discarded.
-                onActivated: index => ApplicationInfo.textTabShowChoice(index, () => { showBox.currentIndex = Qt.binding(() => showBox.shownIndex); })
+                onActivated: index => ApplicationInfo.textTabShowChoice(index, () => {
+                        showBox.currentIndex = Qt.binding(() => showBox.shownIndex);
+                    })
             }
             // A disabled button takes no hover, so the reason it is disabled comes from here.
             Item {
@@ -202,7 +212,9 @@ EaComponents.SideBarColumn {
         // What each answer runs (askLeave).
         property var actions: ({})
 
-        function answer(name: string, argument): void { ApplicationInfo.textTabAnswer(name, argument); }
+        function answer(name: string, argument): void {
+            ApplicationInfo.textTabAnswer(name, argument);
+        }
 
         objectName: "text.discard"
         title: qsTr("Discard changes?")

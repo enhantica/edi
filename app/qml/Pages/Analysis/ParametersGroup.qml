@@ -57,7 +57,9 @@ EaElements.GroupBox {
     // A row is always selected while the table shows any (the owner, 2026-09-29; edi ADR-0017 §11): the first
     // shown row, when a project opens, when the experiment changes or when the filters hide the selected row;
     // a row the user selected stays selected while it is shown.
-    function ensureSelection() { ApplicationInfo.ensureParameterSelection(); }
+    function ensureSelection() {
+        ApplicationInfo.ensureParameterSelection();
+    }
     onSelectedChanged: ApplicationInfo.parameterSelectionChanged(false)
 
     onProjectChanged: ApplicationInfo.parameterSelectionChanged(true)
@@ -94,14 +96,22 @@ EaElements.GroupBox {
 
     // A picker entry's line: a datablock's icon in its colour, a category's icon in the minor colour, a kind heading in
     // bold, and the title with its parameter count.
-    function datablockSegments(entry) { return ApplicationInfo.parameterSegments(entry, false); }
-    function categorySegments(entry) { return ApplicationInfo.parameterSegments(entry, true); }
+    function datablockSegments(entry) {
+        return ApplicationInfo.parameterSegments(entry, false);
+    }
+    function categorySegments(entry) {
+        return ApplicationInfo.parameterSegments(entry, true);
+    }
 
     // A datablock's colour, as its icon has it elsewhere: a structure's or an experiment's by its place in the
     // project's list.
-    function datablockColor(kind, name) { return ApplicationInfo.parameterDatablockColor(kind, name); }
+    function datablockColor(kind, name) {
+        return ApplicationInfo.parameterDatablockColor(kind, name);
+    }
 
-    function bound(value) { return ApplicationInfo.parameterBound(value); }
+    function bound(value) {
+        return ApplicationInfo.parameterBound(value);
+    }
 
     Column {
         spacing: AppSizes.groupContentSpacing
@@ -274,7 +284,9 @@ EaElements.GroupBox {
                 sourceModel: group.project ? group.project.parameters : null
                 // The Settings tab's show-filters, by ParameterItem.FitGroup from NotMeasured (edi ADR-0053).
                 readonly property var wanted: [Preferences.analysisShowNotMeasured, Preferences.analysisShowBySymmetry, Preferences.analysisShowByConstraint, Preferences.analysisShowFixedSettings]
-                function follow() { ApplicationInfo.parameterShownGroupsFollow(); }
+                function follow() {
+                    ApplicationInfo.parameterShownGroupsFollow();
+                }
                 onWantedChanged: follow()
                 Component.onCompleted: follow()
             }
@@ -482,14 +494,18 @@ EaElements.GroupBox {
             property real lower: 0
             property real upper: 1
 
-            function updateLimits() { ApplicationInfo.updateParameterSliderLimits(); }
+            function updateLimits() {
+                ApplicationInfo.updateParameterSliderLimits();
+            }
 
             spacing: EaStyle.Sizes.fontPixelSize
             onSelectedChanged: updateLimits()
 
             Connections {
                 target: sliderRow.selected
-                function onValueChanged() { ApplicationInfo.finishUiEvent(6, undefined); }
+                function onValueChanged() {
+                    ApplicationInfo.finishUiEvent(6, undefined);
+                }
             }
 
             EaElements.TextField {

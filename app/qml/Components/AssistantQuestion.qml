@@ -10,7 +10,7 @@ Column {
     visible: Object.keys(assistant.pendingQuestion).length > 0
     spacing: AppSizes.unit * 0.5
     EaElements.Label {
-            textFormat: Text.PlainText
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: card.assistant.pendingQuestion.text || ""
@@ -22,19 +22,19 @@ Column {
             required property var modelData
             width: card.width
             EaElements.Button {
-            id: optionButton
-            width: parent.width
-            contentItem: EaElements.Label {
-                text: optionButton.text
-                textFormat: Text.PlainText
-                font: optionButton.font
-                color: optionButton.foregroundColor()
-                wrapMode: Text.Wrap
-                horizontalAlignment: Text.AlignLeft
-            }
-            text: optionRow.modelData.label
-            highlighted: optionRow.modelData.id === card.assistant.pendingQuestion.recommended
-            onClicked: card.assistant.answerQuestion(card.assistant.pendingQuestion.question_id, optionRow.modelData.id)
+                id: optionButton
+                width: parent.width
+                contentItem: EaElements.Label {
+                    text: optionButton.text
+                    textFormat: Text.PlainText
+                    font: optionButton.font
+                    color: optionButton.foregroundColor()
+                    wrapMode: Text.Wrap
+                    horizontalAlignment: Text.AlignLeft
+                }
+                text: optionRow.modelData.label
+                highlighted: optionRow.modelData.id === card.assistant.pendingQuestion.recommended
+                onClicked: card.assistant.answerQuestion(card.assistant.pendingQuestion.question_id, optionRow.modelData.id)
             }
             EaElements.Label {
                 width: parent.width

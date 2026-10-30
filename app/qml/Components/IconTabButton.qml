@@ -12,7 +12,9 @@ import edi.app
 EaElements.TabButton {
     id: tab
 
-    function titleSegments() { return ApplicationInfo.tabTitleSegments(); }
+    function titleSegments() {
+        return ApplicationInfo.tabTitleSegments();
+    }
 
     contentItem: Item {
         implicitWidth: title.implicitWidth

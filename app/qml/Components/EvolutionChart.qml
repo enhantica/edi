@@ -102,7 +102,9 @@ Item {
     }
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
-    function niceStep(span, count) { return ApplicationInfo.chartNiceStep(span, count); }
+    function niceStep(span, count) {
+        return ApplicationInfo.chartNiceStep(span, count);
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -208,7 +210,9 @@ Item {
         height: view.plotArea.height
         clip: true
 
-        function ticks(axis: ValueAxis): list<real> { return ApplicationInfo.chartGridShares(axis); }
+        function ticks(axis: ValueAxis): list<real> {
+            return ApplicationInfo.chartGridShares(axis);
+        }
 
         Repeater {
             model: plot.ticks(axisX)
@@ -272,9 +276,15 @@ Item {
             property bool picking: true
             readonly property bool dragging: pressed && (pressedButtons & Qt.LeftButton) && (Math.abs(mouseX - pressX) > chart.em * 0.3 || Math.abs(mouseY - pressY) > chart.em * 0.3)
 
-            function xAt(px: real): real { return ApplicationInfo.chartCoordinate(px, false); }
-            function yAt(py: real): real { return ApplicationInfo.chartCoordinate(py, true); }
-            function moved(mouse): bool { return ApplicationInfo.evolutionMoved(mouse); }
+            function xAt(px: real): real {
+                return ApplicationInfo.chartCoordinate(px, false);
+            }
+            function yAt(py: real): real {
+                return ApplicationInfo.chartCoordinate(py, true);
+            }
+            function moved(mouse): bool {
+                return ApplicationInfo.evolutionMoved(mouse);
+            }
 
             objectName: "evolution.pointer"
             anchors.fill: parent
@@ -345,12 +355,18 @@ Item {
     // Another parameter or x axis is drawn at its whole range.
     Connections {
         target: chart.evolution
-        function onCurrentParameterChanged() { ApplicationInfo.evolutionResetZoom(); }
-        function onXModeChanged() { ApplicationInfo.evolutionResetZoom(); }
+        function onCurrentParameterChanged() {
+            ApplicationInfo.evolutionResetZoom();
+        }
+        function onXModeChanged() {
+            ApplicationInfo.evolutionResetZoom();
+        }
     }
     // A report's points go to the layer whenever its series changes, each with its s.u. bar (none without a finite
     // s.u.).
-    function drawReportPoints() { ApplicationInfo.evolutionDrawReportPoints(); }
+    function drawReportPoints() {
+        ApplicationInfo.evolutionDrawReportPoints();
+    }
     onReportPointsChanged: ApplicationInfo.evolutionReportChanged()
     Component.onCompleted: ApplicationInfo.evolutionReportChanged()
 

@@ -63,7 +63,9 @@ QtObject {
     property string newReportLibraries: "online"
 
     // ADR-0031 §5: every preference back to its default, as Preferences' Reset does; the open project is untouched.
-    function resetToDefaults() { ApplicationInfo.resetPreferences(); }
+    function resetToDefaults() {
+        ApplicationInfo.resetPreferences();
+    }
 
     property Settings settings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -239,5 +241,7 @@ QtObject {
     // Saved at once too: no write of an earlier choice is left pending to land over what is read next.
     onScanPatternUpdatesChanged: ApplicationInfo.persistPreference(3)
 
-    function apply() { ApplicationInfo.applyPreferences(); }
+    function apply() {
+        ApplicationInfo.applyPreferences();
+    }
 }

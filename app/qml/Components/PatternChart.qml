@@ -90,16 +90,22 @@ Item {
     readonly property GraphsView bottomView: controller.hasResidual ? residualView : controller.braggRows > 0 ? braggView : mainView
 
     // The values at an axis' ticks: its anchor and every whole interval from it, within its range.
-    function tickValues(axis: ValueAxis): list<real> { return ApplicationInfo.patternTickValues(axis); }
+    function tickValues(axis: ValueAxis): list<real> {
+        return ApplicationInfo.patternTickValues(axis);
+    }
     // The y labels are NumberText's (the owner, 2026-10-11): `2.5e8` on an axis of large intensities, one
     // exponent for the axis. Each axis' ticks are written in one form, on the main pane in their original
     // values on its scale.
-    function yValues(axis: ValueAxis, scale: int): list<real> { return ApplicationInfo.patternYValues(axis, scale); }
+    function yValues(axis: ValueAxis, scale: int): list<real> {
+        return ApplicationInfo.patternYValues(axis, scale);
+    }
     readonly property var mainYFormat: NumberText.axisFormat(yValues(mainY, controller.yScale), controller.yScale !== PatternChartController.Log10)
     readonly property var residualYFormat: NumberText.axisFormat(yValues(residualY, PatternChartController.Linear), true)
     // A y label's text: Qt Graphs gives the label its own text of the tick's display value, which names the
     // nearest tick.
-    function yLabelText(text: string, axis: ValueAxis, scale: int, format: var): string { return ApplicationInfo.patternYLabelText(text, axis, scale, format); }
+    function yLabelText(text: string, axis: ValueAxis, scale: int, format: var): string {
+        return ApplicationInfo.patternYLabelText(text, axis, scale, format);
+    }
     FontMetrics {
         id: labelMetrics
         font: titleProbe.font
@@ -115,7 +121,9 @@ Item {
     // The three plot areas share their left edge. Each view lays its own y labels out, and their widths
     // differ, so each view's left margin makes up the difference. Assigned, not bound: the plot area follows
     // the margin, and a binding on it would read as a loop.
-    function alignPanes() { ApplicationInfo.patternAlignPanes(); }
+    function alignPanes() {
+        ApplicationInfo.patternAlignPanes();
+    }
 
     // A pane's theme (ChartTheme): the labels themselves are `AxisLabel`s; the theme's font is the size the axis keeps
     // room for.
@@ -171,7 +179,9 @@ Item {
         property bool rows: true
 
         // The ticks of one axis as shares of its range: the anchor and every whole interval from it.
-        function ticks(axis: ValueAxis): list<real> { return ApplicationInfo.patternGridTicks(axis); }
+        function ticks(axis: ValueAxis): list<real> {
+            return ApplicationInfo.patternGridTicks(axis);
+        }
 
         x: pane.x + pane.plotArea.x
         y: pane.y + pane.plotArea.y
@@ -546,15 +556,25 @@ Item {
         enabled: chart.followsSharedView && chart.shown
         // Only different ranges are written: the view this chart was just given comes straight back, and writing it
         // again inside that binding is a loop. The axis the ranges are on goes with them.
-        function sameRanges(a, b) { return ApplicationInfo.patternSameRanges(a, b); }
-        function onViewRangesChanged() { ApplicationInfo.patternViewChanged(0); }
+        function sameRanges(a, b) {
+            return ApplicationInfo.patternSameRanges(a, b);
+        }
+        function onViewRangesChanged() {
+            ApplicationInfo.patternViewChanged(0);
+        }
     }
     Connections {
         target: toolbar
         enabled: chart.followsSharedView && chart.shown
-        function onLegendShownChanged() { ApplicationInfo.patternViewChanged(1); }
-        function onHoverShownChanged() { ApplicationInfo.patternViewChanged(2); }
-        function onPointerModeChanged() { ApplicationInfo.patternViewChanged(3); }
+        function onLegendShownChanged() {
+            ApplicationInfo.patternViewChanged(1);
+        }
+        function onHoverShownChanged() {
+            ApplicationInfo.patternViewChanged(2);
+        }
+        function onPointerModeChanged() {
+            ApplicationInfo.patternViewChanged(3);
+        }
     }
 
     // Each structure's curve (edi ADR-0017 §15): a soft fill from the background up to the curve and an outline, in
@@ -565,7 +585,9 @@ Item {
     property int structureCurveSlots: 0
     Connections {
         target: controller
-        function onStructureCurveColorsChanged() { ApplicationInfo.patternViewChanged(4); }
+        function onStructureCurveColorsChanged() {
+            ApplicationInfo.patternViewChanged(4);
+        }
         Component.onCompleted: onStructureCurveColorsChanged()
     }
     Instantiator {
@@ -891,9 +913,13 @@ Item {
         id: hoverLabel
 
         // The point near the pointer in `pane` (over `area`), if any: its read-out, by the point.
-        function read(pane, area, mouse) { ApplicationInfo.patternHoverRead(pane, area, mouse); }
+        function read(pane, area, mouse) {
+            ApplicationInfo.patternHoverRead(pane, area, mouse);
+        }
         // Right of and above the point, or on the other side where the chart ends.
-        function show(text, atX, atY) { ApplicationInfo.patternHoverShow(text, atX, atY); }
+        function show(text, atX, atY) {
+            ApplicationInfo.patternHoverShow(text, atX, atY);
+        }
 
         objectName: "chart.hover"
         visible: hoverText.text !== ""

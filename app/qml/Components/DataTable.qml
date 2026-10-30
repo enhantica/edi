@@ -9,8 +9,12 @@ import edi.app
 EaComponents.ListView {
     id: table
 
-    function revealRow(index: int): bool { return ApplicationInfo.tableRevealRow(index); }
-    function revealItem(item: Item): bool { return ApplicationInfo.tableRevealItem(item); }
+    function revealRow(index: int): bool {
+        return ApplicationInfo.tableRevealRow(index);
+    }
+    function revealItem(item: Item): bool {
+        return ApplicationInfo.tableRevealItem(item);
+    }
 
     // The selection model needs an explicit empty model while a page is being attached.
     property var sourceModel: null
@@ -61,21 +65,40 @@ EaComponents.ListView {
     property var cellKinds: new Map()
     // A cell's padding: its own, a spacing more on the side it aligns to, so a right-aligned number and a
     // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it.
-    function columnRowOwner(row) { return ApplicationInfo.tableColumnRowOwner(row); }
+    function columnRowOwner(row) {
+        return ApplicationInfo.tableColumnRowOwner(row);
+    }
     // Same width distribution as the pinned base ListView, with the original
     // row/cell lifetime retained across each observable width assignment.
-    function applyWidths(row) { ApplicationInfo.tableApplyWidths(row); }
-    function padForFiller(cell, column) { ApplicationInfo.tablePadForFiller(cell, column); }
+    function applyWidths(row) {
+        ApplicationInfo.tableApplyWidths(row);
+    }
+    function padForFiller(cell, column) {
+        ApplicationInfo.tablePadForFiller(cell, column);
+    }
     // A cell's kind, which sets how it aligns: a number, an icon or button, or text.
-    function kindOf(cell) { return ApplicationInfo.tableCellKind(cell); }
-    function alignCell(cell, kind) { ApplicationInfo.tableAlignCell(cell, kind); }
-    property var columnFitLife: ({alive: true, queued: false})
-    function scheduleFitColumns() { ApplicationInfo.tableScheduleFitColumns(); }
+    function kindOf(cell) {
+        return ApplicationInfo.tableCellKind(cell);
+    }
+    function alignCell(cell, kind) {
+        ApplicationInfo.tableAlignCell(cell, kind);
+    }
+    property var columnFitLife: ({
+            alive: true,
+            queued: false
+        })
+    function scheduleFitColumns() {
+        ApplicationInfo.tableScheduleFitColumns();
+    }
     Component.onDestruction: ApplicationInfo.tableDestroyed()
 
-    function fitColumns() { ApplicationInfo.tableFitColumns(); }
+    function fitColumns() {
+        ApplicationInfo.tableFitColumns();
+    }
     // A change of the content fits the columns afresh; scrolling only adds rows to what was measured.
-    function refit() { ApplicationInfo.tableRefit(); }
+    function refit() {
+        ApplicationInfo.tableRefit();
+    }
     onColumnsChanged: ApplicationInfo.tableColumnsChanged(false)
     // The spare width follows the columns: the last data column's cells take it as padding after their content.
     onColumnWidthsChanged: ApplicationInfo.tableColumnsChanged(true)
@@ -86,7 +109,9 @@ EaComponents.ListView {
         property var ownerLife: null
         Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
         target: table.contentItem
-        function onChildrenChanged() { ApplicationInfo.tableOwnerCallback(0); }
+        function onChildrenChanged() {
+            ApplicationInfo.tableOwnerCallback(0);
+        }
     }
     // A header whose cells change after it was made (a column per structure arriving with the calculation) has
     // them sized and the columns fitted again.
@@ -95,7 +120,9 @@ EaComponents.ListView {
         Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
         target: table.headerItem
         ignoreUnknownSignals: true
-        function onImplicitColumnWidthsChanged() { ApplicationInfo.tableOwnerCallback(1); }
+        function onImplicitColumnWidthsChanged() {
+            ApplicationInfo.tableOwnerCallback(1);
+        }
     }
     // Long IDs and paths must leave room for the numeric cells and row controls.
     property real maximumTextColumnShare: 0.25
@@ -103,15 +130,27 @@ EaComponents.ListView {
     // only changes when one of those widths did: a scan's rows update one by one, hundreds of times.
     property var rowWidths: ({})
 
-    function textWidth(row: int, role: string): real { return ApplicationInfo.tableTextWidth(row, role); }
+    function textWidth(row: int, role: string): real {
+        return ApplicationInfo.tableTextWidth(row, role);
+    }
     // The width of `text` in the table's font.
-    function advance(text: string): real { return ApplicationInfo.tableAdvance(text); }
-    function textColumnWidth(role: string, title: string): real { return ApplicationInfo.tableTextColumnWidth(role, title, false); }
+    function advance(text: string): real {
+        return ApplicationInfo.tableAdvance(text);
+    }
+    function textColumnWidth(role: string, title: string): real {
+        return ApplicationInfo.tableTextColumnWidth(role, title, false);
+    }
     // The widest of the column's texts and its title, with a cell's margins, however wide the table is.
-    function naturalTextColumnWidth(role: string, title: string): real { return ApplicationInfo.tableTextColumnWidth(role, title, true); }
+    function naturalTextColumnWidth(role: string, title: string): real {
+        return ApplicationInfo.tableTextColumnWidth(role, title, true);
+    }
     // Cleared in place: the bindings that read the cache depend on modelRevision, never on the cache itself.
-    function forgetWidths() { ApplicationInfo.tableForgetWidths(); }
-    function remeasure() { ApplicationInfo.tableRemeasure(); }
+    function forgetWidths() {
+        ApplicationInfo.tableForgetWidths();
+    }
+    function remeasure() {
+        ApplicationInfo.tableRemeasure();
+    }
 
     // A table with a current row (the base's `currentRow`, which its moving accent marker shows; edi ADR-0017 §11)
     // selects no row, since the base draws a bar on a selected (clicked) row, which would show at once beside the
@@ -134,10 +173,20 @@ EaComponents.ListView {
         Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
         target: table.model
         ignoreUnknownSignals: true
-        function onDataChanged(topLeft, bottomRight) { ApplicationInfo.tableDataChanged(topLeft, bottomRight); }
-        function onCountChanged() { ApplicationInfo.tableOwnerCallback(2); }
-        function onModelReset() { ApplicationInfo.tableOwnerCallback(2); }
-        function onRowsMoved() { ApplicationInfo.tableOwnerCallback(2); }
-        function onLayoutChanged() { ApplicationInfo.tableOwnerCallback(2); }
+        function onDataChanged(topLeft, bottomRight) {
+            ApplicationInfo.tableDataChanged(topLeft, bottomRight);
+        }
+        function onCountChanged() {
+            ApplicationInfo.tableOwnerCallback(2);
+        }
+        function onModelReset() {
+            ApplicationInfo.tableOwnerCallback(2);
+        }
+        function onRowsMoved() {
+            ApplicationInfo.tableOwnerCallback(2);
+        }
+        function onLayoutChanged() {
+            ApplicationInfo.tableOwnerCallback(2);
+        }
     }
 }

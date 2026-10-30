@@ -68,14 +68,20 @@ Item {
     readonly property int count: labels.length
     // With the names hidden, each parameter's number in the Analysis table labels its ticks (the owner, 2026-10-27).
     readonly property var numbers: ApplicationInfo.correlationNumbers()
-    function edgeText(index: int): string { return ApplicationInfo.correlationEdgeText(index); }
+    function edgeText(index: int): string {
+        return ApplicationInfo.correlationEdgeText(index);
+    }
 
     // A cell's value; NaN outside the values, which can trail the labels by one change. Above the diagonal, the full
     // matrix shows the cell mirrored below it.
-    function valueAt(index: int): real { return ApplicationInfo.correlationValueAt(index); }
+    function valueAt(index: int): real {
+        return ApplicationInfo.correlationValueAt(index);
+    }
 
     // The colour of a coefficient: the background mixed towards red or blue by its size.
-    function cellColor(value: real): color { return ApplicationInfo.reportCorrelationColor(value); }
+    function cellColor(value: real): color {
+        return ApplicationInfo.reportCorrelationColor(value);
+    }
 
     Rectangle {
         anchors.fill: parent
@@ -217,7 +223,9 @@ Item {
                 selectedTextColor: EaStyle.Colors.themeBackground
                 color: !box.enabled ? EaStyle.Colors.themeForegroundDisabled : box.hovered || activeFocus ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForeground
                 text: box.shown
-                onEditingFinished: ApplicationInfo.correlationNumberDone(() => { text = Qt.binding(() => box.shown); })
+                onEditingFinished: ApplicationInfo.correlationNumberDone(() => {
+                    text = Qt.binding(() => box.shown);
+                })
 
                 // The text cursor over the number, which is what is edited (owner, 2026-10-11).
                 HoverHandler {

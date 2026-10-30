@@ -37,14 +37,20 @@ Rectangle {
     // A click at (x, y) in `item`, the chart's pointer area, on a row: its curve hidden or shown again. The legend takes
     // no press, so a drag that starts on it still zooms, and the pointer area passes its clicks here; true when a row
     // took the click.
-    function toggleAt(item, x, y) { return ApplicationInfo.legendToggleAt(item, x, y); }
+    function toggleAt(item, x, y) {
+        return ApplicationInfo.legendToggleAt(item, x, y);
+    }
 
     // A label's pieces as one styled text, each coloured piece a span: spaced as the text itself, as the residual axis
     // title is, never by the line's gaps between pieces.
-    function richLabel(pieces) { return ApplicationInfo.legendRichLabel(pieces); }
+    function richLabel(pieces) {
+        return ApplicationInfo.legendRichLabel(pieces);
+    }
 
     // An entry's mark: an element's is the atom icon the Atom sites table shows, a series' a drawn line or tick.
-    function markPiece(mark, width, color) { return ApplicationInfo.legendMarkPiece(mark, width, color); }
+    function markPiece(mark, width, color) {
+        return ApplicationInfo.legendMarkPiece(mark, width, color);
+    }
 
     width: column.width
     height: Math.max(column.height, minimumHeight)

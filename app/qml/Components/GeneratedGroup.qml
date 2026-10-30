@@ -22,7 +22,9 @@ Column {
     // Why the last edit was refused.
     property string refusal: ""
 
-    function apply(row: int, name: string, value: string) { ApplicationInfo.applyGeneratedCategory(row, name, value); }
+    function apply(row: int, name: string, value: string) {
+        ApplicationInfo.applyGeneratedCategory(row, name, value);
+    }
 
     spacing: AppSizes.groupContentSpacing
     width: EaStyle.Sizes.sideBarContentWidth

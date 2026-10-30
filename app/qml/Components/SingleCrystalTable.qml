@@ -52,8 +52,12 @@ DataTable {
 
     // A reflection's values, each in its item's display format (edi ADR-0051); the normalised residual, no item's
     // value, to two decimals.
-    function shown(uid, value) { return ApplicationInfo.reflectionShown(uid, value, false); }
-    function residual(value) { return ApplicationInfo.reflectionShown(undefined, value, true); }
+    function shown(uid, value) {
+        return ApplicationInfo.reflectionShown(uid, value, false);
+    }
+    function residual(value) {
+        return ApplicationInfo.reflectionShown(undefined, value, true);
+    }
 
     objectName: "singleCrystal.reflections"
     maxRowCountShow: spareHeight > 0 ? Math.max(5, Math.floor((spareHeight - (headerItem ? headerItem.height : 0) - AppSizes.groupContentSpacing) / tableRowHeight - 0.5)) : EaStyle.Sizes.tableMaxRowCountShow

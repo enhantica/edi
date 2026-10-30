@@ -25,7 +25,9 @@ Item {
     readonly property color negativeColor: "#d73027"
     readonly property color positiveColor: "#4575b4"
 
-    function cellColor(value) { return ApplicationInfo.reportCorrelationColor(value); }
+    function cellColor(value) {
+        return ApplicationInfo.reportCorrelationColor(value);
+    }
 
     width: labelWidth + count * cell
     height: count > 0 ? (count + 1) * cell : empty.implicitHeight

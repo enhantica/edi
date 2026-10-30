@@ -45,8 +45,12 @@ EaElements.Label {
     onWorkingChanged: ApplicationInfo.workingStateChanged(0)
     onAnimatingChanged: ApplicationInfo.workingStateChanged(1)
     Component.onCompleted: ApplicationInfo.workingStateChanged(2)
-    function scheduleVariantChange() { ApplicationInfo.workingScheduleVariant(); }
-    function changeVariant() { ApplicationInfo.workingChangeVariant(); }
+    function scheduleVariantChange() {
+        ApplicationInfo.workingScheduleVariant();
+    }
+    function changeVariant() {
+        ApplicationInfo.workingChangeVariant();
+    }
     Timer {
         interval: 1000
         repeat: true

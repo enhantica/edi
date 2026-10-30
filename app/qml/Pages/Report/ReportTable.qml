@@ -43,7 +43,9 @@ Flickable {
 
     // A number's parts: before its decimal point, and after it (an s.u. bracket, an exponent and units after a space).
     // Null for a text that is not a number.
-    function split(text: string): var { return ApplicationInfo.reportTableSplit(text); }
+    function split(text: string): var {
+        return ApplicationInfo.reportTableSplit(text);
+    }
 
     width: Math.min(tableWidth, parent ? parent.width : tableWidth)
     height: contentHeight + (horizontal.visible ? horizontal.height : 0)

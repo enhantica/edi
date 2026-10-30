@@ -39,7 +39,9 @@ Column {
         })
 
     // The type a choice names, applied now when nothing would be removed, else after the question.
-    function chooseType(token: string) { ApplicationInfo.chooseBackgroundType(token); }
+    function chooseType(token: string) {
+        ApplicationInfo.chooseBackgroundType(token);
+    }
 
     spacing: AppSizes.groupContentSpacing
 

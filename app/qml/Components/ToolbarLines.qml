@@ -29,13 +29,25 @@ Item {
     // How many lines the controls take.
     property int lineCount: 0
 
-    function isComboBox(unit) { return ApplicationInfo.toolbarIsComboBox(unit); }
-    function groupOf(unit) { return ApplicationInfo.toolbarGroupOf(unit); }
+    function isComboBox(unit) {
+        return ApplicationInfo.toolbarIsComboBox(unit);
+    }
+    function groupOf(unit) {
+        return ApplicationInfo.toolbarGroupOf(unit);
+    }
     // The gap before a combobox that follows `before` on a line.
-    function boxGap(before, unit) { return ApplicationInfo.toolbarBoxGap(before, unit); }
-    function widthOf(row, gap) { return ApplicationInfo.toolbarRowWidth(row, gap, false); }
-    function boxesWidth(row) { return ApplicationInfo.toolbarRowWidth(row, undefined, true); }
-    function layout() { ApplicationInfo.toolbarLayout(); }
+    function boxGap(before, unit) {
+        return ApplicationInfo.toolbarBoxGap(before, unit);
+    }
+    function widthOf(row, gap) {
+        return ApplicationInfo.toolbarRowWidth(row, gap, false);
+    }
+    function boxesWidth(row) {
+        return ApplicationInfo.toolbarRowWidth(row, undefined, true);
+    }
+    function layout() {
+        ApplicationInfo.toolbarLayout();
+    }
 
     onMeasureChanged: Qt.callLater(layout)
     Component.onCompleted: layout()
