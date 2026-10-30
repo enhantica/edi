@@ -413,6 +413,19 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue statusFitValues() const;
     Q_INVOKABLE QJSValue statusProgressText() const;
     Q_INVOKABLE QJSValue colourMapTitles() const;
+    /// Preference actions use the existing view records and assistant selection authority.
+    Q_INVOKABLE void preferencesClosed() const;
+    Q_INVOKABLE void preferenceAssistantChanged() const;
+    Q_INVOKABLE void preferenceCopyDiagnostics(const QJSValue& button, const QJSValue& report) const;
+    Q_INVOKABLE void preferenceSourceRevision() const;
+    Q_INVOKABLE void preferenceSourceGesture(bool remove, bool pressed) const;
+    Q_INVOKABLE void preferenceBeginSourceSelection(bool web) const;
+    Q_INVOKABLE void preferenceCompleteSourceSelection(bool web, bool accepted) const;
+    Q_INVOKABLE void preferenceRetireSourceSelection(const QJSValue& token, bool web) const;
+    Q_INVOKABLE QJSValue preferenceColourTitles() const;
+    Q_INVOKABLE QJSValue preferenceStackedChoices() const;
+    Q_INVOKABLE QJSValue preferenceEngineThreads() const;
+    Q_INVOKABLE void preferenceActivated(const QJSValue& index, int setting) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

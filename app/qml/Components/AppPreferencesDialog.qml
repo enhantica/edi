@@ -84,15 +84,7 @@ AppDialog {
 
     objectName: "preferences"
     visible: Preferences.dialogShown
-    onClosed: {
-        Preferences.dialogShown = false;
-        const intent=sourcesFolder.selection;
-        if(intent) {
-            sourcesFolder.selection=null;
-            if(Qt.isQtObject(intent.owner))intent.owner.cancelSkillSourceSelection(intent.id);
-            if(Qt.isQtObject(sourcesFolder) && sourcesFolder.selection===null)sourcesFolder.reject();
-        }
-    }
+    onClosed: ApplicationInfo.preferencesClosed()
     onOpened: Session.assistant.refreshSkillSources()
 
     title: qsTr("Preferences")
@@ -249,9 +241,7 @@ AppDialog {
                 objectName: "preferences.theme"
                 model: [qsTr("Light"), qsTr("Dark"), qsTr("System")]
                 currentIndex: EaStyle.Colors.theme === EaStyle.Colors.DarkTheme ? 1 : EaStyle.Colors.theme === EaStyle.Colors.SystemTheme ? 2 : 0
-                onActivated: index => {
-                    EaStyle.Colors.theme = index === 1 ? EaStyle.Colors.DarkTheme : index === 2 ? EaStyle.Colors.SystemTheme : EaStyle.Colors.LightTheme;
-                }
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 0)
             }
 
             // The figure palette, one for experiments and structures (the owner, 2026-10-26), the palettes' tokens and
@@ -269,7 +259,7 @@ AppDialog {
                     objectName: "preferences.colours"
                     model: ApplicationInfo.colourSchemeTitles
                     currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)))
-                    onActivated: index => Preferences.colourScheme = schemes[index]
+                    onActivated: index => ApplicationInfo.preferenceActivated(index, 1)
                     ToolTip.text: qsTr("The colours of experiments and structures: their icons, patterns, Bragg ticks and curves")
                 }
                 PaletteStrip {
@@ -280,14 +270,14 @@ AppDialog {
                 text: qsTr("Stacked") + ":"
             }
             RowBox {
-                readonly property var choices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
+                readonly property var choices: ApplicationInfo.preferenceStackedChoices()
                 // Empty follows the palette.
                 readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme
 
                 objectName: "preferences.stackedColours"
-                model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
+                model: ApplicationInfo.preferenceColourTitles()
                 currentIndex: Math.max(0, choices.indexOf(current))
-                onActivated: index => Preferences.scanStackedPalette = choices[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 2)
                 ToolTip.text: qsTr("The Stacked view's patterns")
             }
             RowLabel {
@@ -297,9 +287,9 @@ AppDialog {
                 readonly property var choices: ApplicationInfo.scanColourMaps
 
                 objectName: "preferences.mapColours"
-                model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
+                model: ApplicationInfo.preferenceColourTitles()
                 currentIndex: Math.max(0, choices.indexOf(Preferences.scanMapColours))
-                onActivated: index => Preferences.scanMapColours = choices[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 3)
                 ToolTip.text: qsTr("The Map's colour map, also chosen on the Map's toolbar")
             }
             RowLabel {
@@ -311,7 +301,7 @@ AppDialog {
                 objectName: "preferences.hiddenRange"
                 model: [qsTr("Keep the y range"), qsTr("Fit the range to visible curves")]
                 currentIndex: Math.max(0, choices.indexOf(Preferences.chartHiddenRange))
-                onActivated: index => Preferences.chartHiddenRange = choices[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 4)
                 ToolTip.text: qsTr("What the pattern chart's y range does when a click on its legend hides or shows a curve")
             }
 
@@ -322,7 +312,7 @@ AppDialog {
                 objectName: "preferences.sideBarSide"
                 model: [qsTr("Left"), qsTr("Right")]
                 currentIndex: Preferences.sideBarOnLeft ? 0 : 1
-                onActivated: index => Preferences.sideBarSide = index === 0 ? "Left" : "Right"
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 6)
             }
 
             RowLabel {
@@ -357,7 +347,7 @@ AppDialog {
                 objectName: "preferences.textShow"
                 model: [qsTr("Editable"), qsTr("Everything")]
                 currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
-                onActivated: index => Preferences.textShow = choices[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 5)
                 ToolTip.text: qsTr("What every Text tab shows: the categories you can edit, or also the measured data and results, read-only")
             }
         }
@@ -372,7 +362,7 @@ AppDialog {
                 objectName: "preferences.newProjectSuRule"
                 model: [qsTr("IUCr recommendation"), qsTr("Always 2 digits")]
                 currentIndex: Preferences.newProjectSuRule === "iucr_99" ? 1 : 0
-                onActivated: index => Preferences.newProjectSuRule = index === 1 ? "iucr_99" : "iucr_19"
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 7)
                 ToolTip.text: qsTr("How a new project writes values with a standard uncertainty: 1 digit, or 2 from 10 to 19, or always 2")
             }
 
@@ -383,7 +373,7 @@ AppDialog {
                 objectName: "preferences.newReportLibraries"
                 model: [qsTr("Online"), qsTr("Embedded")]
                 currentIndex: Preferences.newReportLibraries === "embedded" ? 1 : 0
-                onActivated: index => Preferences.newReportLibraries = index === 1 ? "embedded" : "online"
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 8)
                 ToolTip.text: qsTr("Whether a new project's HTML reports load plotly.js and three.js from the web or carry them, so they open offline")
             }
         }
@@ -393,35 +383,8 @@ AppDialog {
             implicitHeight: Math.min(aiContent.implicitHeight, Math.max(0, dialog.parent.height-bar.implicitHeight-AppSizes.unit*8))
             readonly property var original: Session.assistant
             property string copyError: ""
-            onOriginalChanged: {
-                copyError = "";
-                if (copyWorkReport) copyWorkReport.copied = false;
-                if (copyConnection) copyConnection.copied = false;
-            }
-            function copyDiagnostics(button, report) {
-                const page = aiPage, owner = Session.assistant, project = Session.project;
-                const current = () => Qt.isQtObject(page) && Qt.isQtObject(button) && Qt.isQtObject(owner)
-                    && Session.assistant === owner && page.original === owner && Session.project === project;
-                try {
-                    if (!current()) return;
-                    page.copyError = "";
-                    const literal = report ? owner.workReportDocument() : JSON.stringify({
-                        connection: owner.connectionLabel, state: owner.state, account: owner.account,
-                        model: owner.selectedModel, effort: owner.selectedEffort, error: owner.lastError,
-                        context: owner.contextPreview
-                    }, null, 2);
-                    if (!current()) return;
-                    if (typeof literal !== "string" || !literal.length) {
-                        page.copyError = qsTr("No report is available to copy yet."); return;
-                    }
-                    ApplicationInfo.copyText(literal);
-                    if (!current()) return;
-                    button.copied = true;
-                    if (report) reportCopyFeedback.restart(); else connectionCopyFeedback.restart();
-                } catch (error) {
-                    if (current()) { button.copied = false; page.copyError = qsTr("The details could not be copied. Try again."); }
-                }
-            }
+            onOriginalChanged: ApplicationInfo.preferenceAssistantChanged()
+            function copyDiagnostics(button, report) { ApplicationInfo.preferenceCopyDiagnostics(button, report); }
             clip: true
             Column {
                 id: aiContent
@@ -457,8 +420,8 @@ AppDialog {
                         required property var model
                         readonly property var original: aiPage.original
                         property int presentation: 0
-                        onSourceIdChanged: ++presentation
-                        onOriginalChanged: ++presentation
+                        onSourceIdChanged: ApplicationInfo.preferenceSourceRevision()
+                        onOriginalChanged: ApplicationInfo.preferenceSourceRevision()
                         EaComponents.TableViewLabel {
                             text: sourceRow.index+1
                             horizontalAlignment: Text.AlignHCenter
@@ -480,13 +443,9 @@ AppDialog {
                             Accessible.checkable: true
                             Accessible.checked: sourceRow.model.enabled
                             property var gesture: null
-                            onPressed: gesture={owner:sourceRow.original,id:sourceRow.sourceId,revision:sourceRow.original.skillSourceRevision,presentation:sourceRow.presentation,enabled:!sourceRow.model.enabled}
+                            onPressed: ApplicationInfo.preferenceSourceGesture(false, true)
                             onCanceled: gesture=null
-                            onClicked: {
-                                const original=gesture;gesture=null;
-                                if(original && Qt.isQtObject(original.owner) && original.owner===aiPage.original && original.id===sourceRow.sourceId && original.presentation===sourceRow.presentation && original.enabled===!sourceRow.model.enabled)
-                                    original.owner.setSkillSourceEnabled(original.id,original.enabled,original.revision);
-                            }
+                            onClicked: ApplicationInfo.preferenceSourceGesture(false, false)
                             Connections {
                                 target: sourceRow.original
                                 function onSkillSourcesChanged() { sourceEnabled.gesture=null; }
@@ -500,13 +459,9 @@ AppDialog {
                             Accessible.name: ToolTip.text
                             id: sourceRemove
                             property var gesture: null
-                            onPressed: gesture={owner:sourceRow.original,id:sourceRow.sourceId,revision:sourceRow.original.skillSourceRevision,presentation:sourceRow.presentation}
+                            onPressed: ApplicationInfo.preferenceSourceGesture(true, true)
                             onCanceled: gesture=null
-                            onClicked: {
-                                const original=gesture;gesture=null;
-                                if(original && Qt.isQtObject(original.owner) && original.owner===aiPage.original && original.id===sourceRow.sourceId && original.presentation===sourceRow.presentation)
-                                    original.owner.removeSkillSource(original.id,original.revision);
-                            }
+                            onClicked: ApplicationInfo.preferenceSourceGesture(true, false)
                             Connections {
                                 target: sourceRow.original
                                 function onSkillSourcesChanged() { sourceRemove.gesture=null; }
@@ -523,18 +478,7 @@ AppDialog {
                     text: qsTr("Add skill source")
                     fontIcon: "plus-circle"
                     enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel && !Session.assistant.skillSourceImporting
-                    onClicked: {
-                        const original=Session.assistant;
-                        const token=original.beginSkillSourceSelection();
-                        if (!Qt.isQtObject(original) || original!==Session.assistant || !token.length || sourcesFolder.intent.length) {
-                            if (Qt.isQtObject(original)) original.cancelSkillSourceSelection(token);
-                            return;
-                        }
-                        const intent={owner:original,id:token};
-                        sourcesFolder.selection=intent;
-                        if (Qt.isQtObject(sourcesFolder) && sourcesFolder.selection===intent) sourcesFolder.open();
-                        else if (Qt.isQtObject(original)) original.cancelSkillSourceSelection(token);
-                    }
+                    onClicked: ApplicationInfo.preferenceBeginSourceSelection(false)
                 }
                     EaElements.SideBarButton {
                         objectName: "preferences.ai.sources.web"
@@ -542,16 +486,7 @@ AppDialog {
                         text: Session.assistant.skillSourceImporting ? qsTr("Cancel web import") : qsTr("Add skills from web")
                         fontIcon: Session.assistant.skillSourceImporting ? "times-circle" : "globe"
                         enabled: ApplicationInfo.assistantAvailable && !Session.assistant.canCancel
-                        onClicked: {
-                            const original=Session.assistant;
-                            if(original.skillSourceImporting){original.cancelWebSkillSourceImport();return;}
-                            const token=original.beginSkillSourceSelection();
-                            if(!Qt.isQtObject(original) || Session.assistant!==original || !token.length || webSource.selection!==null) {
-                                if(Qt.isQtObject(original))original.cancelSkillSourceSelection(token);
-                                return;
-                            }
-                            webSource.selection={owner:original,id:token};webSource.open();
-                        }
+                        onClicked: ApplicationInfo.preferenceBeginSourceSelection(true)
                     }
                 }
                 EaElements.Label {
@@ -717,19 +652,9 @@ AppDialog {
             RowBox {
                 objectName: "preferences.engineThreads"
                 enabled: ApplicationInfo.engineThreadsSelectable
-                model: {
-                    if (!ApplicationInfo.engineThreadsSelectable)
-                        return [qsTr("1 (single-thread build)")];
-                    const counts = [qsTr("Auto")];
-                    for (let count = 1; count <= ApplicationInfo.engineThreadsMaximum; ++count)
-                        counts.push(String(count));
-                    return counts;
-                }
+                model: ApplicationInfo.preferenceEngineThreads()
                 currentIndex: ApplicationInfo.engineThreadsSelectable ? Math.min(Preferences.engineThreads, ApplicationInfo.engineThreadsMaximum) : 0
-                onActivated: index => {
-                    if (ApplicationInfo.engineThreadsSelectable)
-                        Preferences.engineThreads = index;
-                }
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 9)
             }
 
             // What Qt draws with (edi ADR-0041): its graphics API and renderer, read in the first frame, and whether that
@@ -755,7 +680,7 @@ AppDialog {
                 readonly property var values: ["auto", "gpu", "software"]
                 model: [qsTr("Automatic"), qsTr("GPU"), qsTr("Software painter")]
                 currentIndex: Math.max(0, values.indexOf(Preferences.scanRenderer))
-                onActivated: index => Preferences.scanRenderer = values[index]
+                onActivated: index => ApplicationInfo.preferenceActivated(index, 10)
             }
 
             // What the app runs on and with, to read and to copy (the owner, 2026-10-06).
@@ -841,18 +766,12 @@ AppDialog {
                 }
             }
         }
-        onAccepted: {
-            const target=original, token=intent, url=sourceUrl.text;selection=null;
-            if(Qt.isQtObject(target))target.addWebSkillSource(token,url);
-        }
-        onRejected: {const target=original,token=intent;selection=null;if(Qt.isQtObject(target))target.cancelSkillSourceSelection(token);}
-        Component.onDestruction: {const target=original,token=intent;selection=null;if(Qt.isQtObject(target))target.cancelSkillSourceSelection(token);}
+        onAccepted: ApplicationInfo.preferenceCompleteSourceSelection(true, true)
+        onRejected: ApplicationInfo.preferenceCompleteSourceSelection(true, false)
+        Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(true, false)
         Connections {
             target: webSource.original
-            function onSkillSourceSelectionRetired(token) {
-                if(webSource.intent!==token)return;
-                webSource.selection=null;webSource.reject();
-            }
+            function onSkillSourceSelectionRetired(token) { ApplicationInfo.preferenceRetireSourceSelection(token, true); }
         }
     }
 
@@ -863,20 +782,12 @@ AppDialog {
         readonly property string intent: selection ? selection.id : ""
         readonly property var original: selection ? selection.owner : null
         title: qsTr("Choose a skill folder or collection")
-        onAccepted: {
-            const target=original; const token=intent; const folder=selectedFolder;
-            selection=null;
-            if (Qt.isQtObject(target)) target.addSkillSource(token,folder);
-        }
-        onRejected: { const target=original; const token=intent; selection=null; if (Qt.isQtObject(target)) target.cancelSkillSourceSelection(token); }
-        Component.onDestruction: { const target=original; const token=intent; selection=null; if (Qt.isQtObject(target)) target.cancelSkillSourceSelection(token); }
+        onAccepted: ApplicationInfo.preferenceCompleteSourceSelection(false, true)
+        onRejected: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
+        Component.onDestruction: ApplicationInfo.preferenceCompleteSourceSelection(false, false)
         Connections {
             target: sourcesFolder.original
-            function onSkillSourceSelectionRetired(token) {
-                if (sourcesFolder.intent!==token) return;
-                sourcesFolder.selection=null;
-                if (Qt.isQtObject(sourcesFolder) && sourcesFolder.selection===null) sourcesFolder.reject();
-            }
+            function onSkillSourceSelectionRetired(token) { ApplicationInfo.preferenceRetireSourceSelection(token, false); }
         }
     }
 

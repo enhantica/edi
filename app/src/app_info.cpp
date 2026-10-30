@@ -6163,6 +6163,174 @@ QJSValue ApplicationInfo::colourMapTitles() const {
     return panelUsageMemberCall(f, panelUsageContextRead(f, "maps"), "map", {projectGuardedClosure(f, 177, 1)});
 }
 
+namespace {
+QJSValue preferenceText(const PanelUsageFrame& f, const char* text) {
+    return panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(text))});
+}
+} // namespace
+void ApplicationInfo::preferencesClosed() const {
+    const auto f = panelUsageEngine(this); projectWrite(f, "Preferences", "dialogShown", QJSValue(false));
+    const auto intent = assistantContextField(f, "sourcesFolder", "selection");
+    if (panelUsageTruth(intent)) {
+        projectWrite(f, "sourcesFolder", "selection", consentNull());
+        if (consentQtObject(f, panelUsageRead(f, intent, "owner"))) {
+            const auto owner = panelUsageRead(f, intent, "owner");
+            panelUsageMemberCall(f, owner, "cancelSkillSourceSelection", {panelUsageRead(f, intent, "id")});
+        }
+        if (consentQtObject(f, panelUsageContextRead(f, "sourcesFolder")) && assistantContextField(f, "sourcesFolder", "selection").isNull())
+            projectInvoke(f, "sourcesFolder", "reject");
+    }
+}
+void ApplicationInfo::preferenceAssistantChanged() const {
+    const auto f = panelUsageEngine(this); panelUsageContextWrite(f, "copyError", QJSValue(QStringLiteral("")));
+    if (panelUsageTruth(panelUsageContextRead(f, "copyWorkReport"))) projectWrite(f, "copyWorkReport", "copied", QJSValue(false));
+    if (panelUsageTruth(panelUsageContextRead(f, "copyConnection"))) projectWrite(f, "copyConnection", "copied", QJSValue(false));
+}
+void ApplicationInfo::preferenceCopyDiagnostics(const QJSValue& button, const QJSValue& report) const {
+    const auto f = panelUsageEngine(this); const auto page = panelUsageContextRead(f, "aiPage");
+    const auto owner = assistantContextField(f, "Session", "assistant"), project = assistantContextField(f, "Session", "project");
+    if (!panelUsageReady(f)) return;
+    const auto current = [&] {
+        return consentQtObject(f, page) && consentQtObject(f, button) && consentQtObject(f, owner)
+            && assistantContextField(f, "Session", "assistant").strictlyEquals(owner) && consentFieldEquals(f, page, "original", owner)
+            && assistantContextField(f, "Session", "project").strictlyEquals(project);
+    };
+    const auto body = [&] {
+        if (!current()) return;
+        assistantMemberWrite(f, page, "copyError", QJSValue(QStringLiteral(""))); QJSValue literal;
+        if (panelUsageTruth(report)) literal = panelUsageMemberCall(f, owner, "workReportDocument");
+        else {
+            const auto json = panelUsageContextRead(f, "JSON"); auto details = panelUsageLiteral(f);
+            for (const auto& field : {std::pair{"connection", "connectionLabel"}, {"state", "state"}, {"account", "account"},
+                     {"model", "selectedModel"}, {"effort", "selectedEffort"}, {"error", "lastError"}, {"context", "contextPreview"}})
+                panelUsageWrite(f, details.value, field.first, panelUsageRead(f, owner, field.second));
+            literal = panelUsageMemberCall(f, json, "stringify", {panelUsageComplete(f, details), consentNull(), QJSValue(2)});
+        }
+        if (!current()) return;
+        if (!literal.isString() || !panelUsageTruth(panelUsageRead(f, literal, "length"))) {
+            assistantMemberWrite(f, page, "copyError", preferenceText(f, QT_TRANSLATE_NOOP("AppPreferencesDialog", "No report is available to copy yet."))); return;
+        }
+        projectInvoke(f, "ApplicationInfo", "copyText", {literal});
+        if (!current()) return;
+        assistantMemberWrite(f, button, "copied", QJSValue(true));
+        projectInvoke(f, panelUsageTruth(report) ? "reportCopyFeedback" : "connectionCopyFeedback", "restart");
+    };
+    body();
+    // This is the original explicit catch: discard only its caught exception,
+    // then allow a failing currentness check or recovery write to propagate.
+    if (f && f.vm()->hasException) {
+        f.vm()->catchException();
+        if (current()) {
+            assistantMemberWrite(f, button, "copied", QJSValue(false));
+            assistantMemberWrite(f, page, "copyError", preferenceText(f, QT_TRANSLATE_NOOP("AppPreferencesDialog", "The details could not be copied. Try again.")));
+        }
+    }
+}
+void ApplicationInfo::preferenceSourceRevision() const { const auto f = panelUsageEngine(this); tableIncrement(f, "presentation"); }
+void ApplicationInfo::preferenceSourceGesture(bool remove, bool pressed) const {
+    const auto f = panelUsageEngine(this);
+    if (pressed) {
+        auto gesture = panelUsageLiteral(f);
+        panelUsageWrite(f, gesture.value, "owner", assistantContextField(f, "sourceRow", "original"));
+        panelUsageWrite(f, gesture.value, "id", assistantContextField(f, "sourceRow", "sourceId"));
+        panelUsageWrite(f, gesture.value, "revision", panelUsageRead(f, assistantContextField(f, "sourceRow", "original"), "skillSourceRevision"));
+        panelUsageWrite(f, gesture.value, "presentation", assistantContextField(f, "sourceRow", "presentation"));
+        if (!remove) panelUsageWrite(f, gesture.value, "enabled", QJSValue(!panelUsageTruth(panelUsageRead(f, assistantContextField(f, "sourceRow", "model"), "enabled"))));
+        panelUsageContextWrite(f, "gesture", panelUsageComplete(f, gesture)); return;
+    }
+    const auto original = panelUsageContextRead(f, "gesture"); panelUsageContextWrite(f, "gesture", consentNull());
+    if (!panelUsageTruth(original) || !consentQtObject(f, panelUsageRead(f, original, "owner"))
+        || !panelUsageRead(f, original, "owner").strictlyEquals(assistantContextField(f, "aiPage", "original"))
+        || !panelUsageRead(f, original, "id").strictlyEquals(assistantContextField(f, "sourceRow", "sourceId"))
+        || !panelUsageRead(f, original, "presentation").strictlyEquals(assistantContextField(f, "sourceRow", "presentation"))) return;
+    if (!remove && !panelUsageRead(f, original, "enabled").strictlyEquals(QJSValue(!panelUsageTruth(panelUsageRead(f, assistantContextField(f, "sourceRow", "model"), "enabled"))))) return;
+    const auto owner = panelUsageRead(f, original, "owner"), id = panelUsageRead(f, original, "id");
+    if (remove) panelUsageMemberCall(f, owner, "removeSkillSource", {id, panelUsageRead(f, original, "revision")});
+    else {
+        const auto enabled = panelUsageRead(f, original, "enabled"), revision = panelUsageRead(f, original, "revision");
+        panelUsageMemberCall(f, owner, "setSkillSourceEnabled", {id, enabled, revision});
+    }
+}
+void ApplicationInfo::preferenceBeginSourceSelection(bool web) const {
+    const auto f = panelUsageEngine(this); const auto original = assistantContextField(f, "Session", "assistant");
+    if (web && panelUsageTruth(panelUsageRead(f, original, "skillSourceImporting"))) { panelUsageMemberCall(f, original, "cancelWebSkillSourceImport"); return; }
+    const auto token = panelUsageMemberCall(f, original, "beginSkillSourceSelection");
+    bool refused = !consentQtObject(f, original);
+    if (!refused) {
+        if (web) refused = !assistantContextField(f, "Session", "assistant").strictlyEquals(original);
+        else refused = !original.strictlyEquals(assistantContextField(f, "Session", "assistant"));
+    }
+    if (!refused) refused = !panelUsageTruth(panelUsageRead(f, token, "length"));
+    if (!refused) refused = web ? !assistantContextField(f, "webSource", "selection").isNull() : panelUsageTruth(panelUsageRead(f, assistantContextField(f, "sourcesFolder", "intent"), "length"));
+    if (refused) { if (consentQtObject(f, original)) panelUsageMemberCall(f, original, "cancelSkillSourceSelection", {token}); return; }
+    auto record = panelUsageLiteral(f); panelUsageWrite(f, record.value, "owner", original); panelUsageWrite(f, record.value, "id", token);
+    const auto intent = panelUsageComplete(f, record); projectWrite(f, web ? "webSource" : "sourcesFolder", "selection", intent);
+    if (web) projectInvoke(f, "webSource", "open");
+    else if (consentQtObject(f, panelUsageContextRead(f, "sourcesFolder")) && assistantContextField(f, "sourcesFolder", "selection").strictlyEquals(intent)) projectInvoke(f, "sourcesFolder", "open");
+    else if (consentQtObject(f, original)) panelUsageMemberCall(f, original, "cancelSkillSourceSelection", {token});
+}
+void ApplicationInfo::preferenceCompleteSourceSelection(bool web, bool accepted) const {
+    const auto f = panelUsageEngine(this); const auto target = panelUsageContextRead(f, "original"), token = panelUsageContextRead(f, "intent"); QJSValue value;
+    if (accepted) value = web ? assistantContextField(f, "sourceUrl", "text") : panelUsageContextRead(f, "selectedFolder");
+    panelUsageContextWrite(f, "selection", consentNull());
+    if (consentQtObject(f, target)) {
+        if (accepted) panelUsageMemberCall(f, target, web ? "addWebSkillSource" : "addSkillSource", {token, value});
+        else panelUsageMemberCall(f, target, "cancelSkillSourceSelection", {token});
+    }
+}
+void ApplicationInfo::preferenceRetireSourceSelection(const QJSValue& token, bool web) const {
+    const auto f = panelUsageEngine(this); const char* dialog = web ? "webSource" : "sourcesFolder";
+    if (!assistantContextField(f, dialog, "intent").strictlyEquals(token)) return;
+    projectWrite(f, dialog, "selection", consentNull());
+    if (web || (consentQtObject(f, panelUsageContextRead(f, "sourcesFolder")) && assistantContextField(f, "sourcesFolder", "selection").isNull()))
+        projectInvoke(f, dialog, "reject");
+}
+QJSValue ApplicationInfo::preferenceColourTitles() const {
+    const auto f = panelUsageEngine(this);
+    return panelUsageMemberCall(f, panelUsageContextRead(f, "choices"), "map", {projectGuardedClosure(f, 177, 1)});
+}
+QJSValue ApplicationInfo::preferenceStackedChoices() const {
+    const auto f = panelUsageEngine(this); const auto array = panelUsageContextRead(f, "Array");
+    const auto schemes = panelUsageMemberCall(f, array, "from", {assistantContextField(f, "ApplicationInfo", "colourSchemes")});
+    const auto second = panelUsageContextRead(f, "Array");
+    const auto maps = panelUsageMemberCall(f, second, "from", {assistantContextField(f, "ApplicationInfo", "scanColourMaps")});
+    return panelUsageMemberCall(f, schemes, "concat", {maps});
+}
+QJSValue ApplicationInfo::preferenceEngineThreads() const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageTruth(assistantContextField(f, "ApplicationInfo", "engineThreadsSelectable")))
+        return assistantGeometryArray(f, {preferenceText(f, QT_TRANSLATE_NOOP("AppPreferencesDialog", "1 (single-thread build)"))});
+    const auto counts = assistantGeometryArray(f, {preferenceText(f, QT_TRANSLATE_NOOP("AppPreferencesDialog", "Auto"))});
+    for (double count = 1; panelUsageReady(f) && assistantRelation(f, QJSValue(count), assistantContextField(f, "ApplicationInfo", "engineThreadsMaximum"), 3); ++count)
+        panelUsageMemberCall(f, counts, "push", {panelUsageGlobalCall(f, "String", {QJSValue(count)})});
+    return counts;
+}
+void ApplicationInfo::preferenceActivated(const QJSValue& index, int setting) const {
+    const auto f = panelUsageEngine(this);
+    if (setting == 0) {
+        const auto colors = panelUsageRead(f, panelUsageContextRead(f, "EaStyle"), "Colors");
+        const char* name = index.strictlyEquals(QJSValue(1)) ? "DarkTheme" : index.strictlyEquals(QJSValue(2)) ? "SystemTheme" : "LightTheme";
+        const auto selected = panelUsageRead(f, panelUsageRead(f, panelUsageContextRead(f, "EaStyle"), "Colors"), name);
+        assistantMemberWrite(f, colors, "theme", selected); return;
+    }
+    if (setting == 9) {
+        if (panelUsageTruth(assistantContextField(f, "ApplicationInfo", "engineThreadsSelectable")))
+            projectWrite(f, "Preferences", "engineThreads", index);
+        return;
+    }
+    const auto preferences = panelUsageContextRead(f, "Preferences");
+    if (setting == 6 || setting == 7 || setting == 8) {
+        const bool alternate = index.strictlyEquals(QJSValue(setting == 6 ? 0 : 1));
+        const char* property = setting == 6 ? "sideBarSide" : setting == 7 ? "newProjectSuRule" : "newReportLibraries";
+        const char* text = setting == 6 ? (alternate ? "Left" : "Right") : setting == 7 ? (alternate ? "iucr_99" : "iucr_19") : (alternate ? "embedded" : "online");
+        assistantMemberWrite(f, preferences, property, QJSValue(QString::fromLatin1(text))); return;
+    }
+    const char* property = setting == 1 ? "colourScheme" : setting == 2 ? "scanStackedPalette" : setting == 3 ? "scanMapColours"
+        : setting == 4 ? "chartHiddenRange" : setting == 5 ? "textShow" : "scanRenderer";
+    const char* source = setting == 1 ? "schemes" : setting == 10 ? "values" : "choices";
+    assistantMemberWrite(f, preferences, property, textIndex(f, panelUsageContextRead(f, source), index));
+}
+
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
     return value.isString() ? edi_app::assistant_presentation::singleLineText(value.toString()) : QString();
 }
