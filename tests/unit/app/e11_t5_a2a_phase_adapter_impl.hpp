@@ -27,11 +27,13 @@ inline QString description(QObject* row,bool full,const QVariantMap& payload) {
     const auto value=input(row,{{"payload",payload}});
     const auto literal=edi_app::assistant_presentation::activityHumanDescription(value);
     if(full)return literal;
-    QQmlContext context(QQmlEngine::contextForObject(row));
-    context.setContextProperty("e11A2aLiteral",literal);
-    QQmlExpression expression(&context,row,"ApplicationInfo.assistantSingleLineText(e11A2aLiteral)");
-    const auto result=expression.evaluate();
-    if(expression.hasError())throw std::runtime_error(expression.error().toString().toStdString());
+    // Transport every QString code unit literally into the EXISTING imported
+    // row scope; a new C++ child context does not inherit component imports.
+    QString source=QStringLiteral("ApplicationInfo.assistantSingleLineText(\"");
+    for(const auto character:literal)
+        source+=QStringLiteral("\\u")+QString::number(character.unicode(),16).rightJustified(4,QLatin1Char('0'));
+    source+=QStringLiteral("\")");
+    const auto result=evaluate(row,source);
     if(result.metaType()!=QMetaType::fromType<QString>())throw std::runtime_error("Native public normalization did not return a string");
     return result.toString();
 }
