@@ -630,6 +630,24 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void projectDescriptionOpened() const;
     Q_INVOKABLE void toolTipAboutToShow() const;
     Q_INVOKABLE QJSValue styleScalePx(const QJSValue& size) const;
+    /// Application-owned colours, results, menus and list projections use the actual calling QML scope.
+    Q_INVOKABLE QJSValue appColour(int kind, const QJSValue& first, const QJSValue& second, const QJSValue& third) const;
+    Q_INVOKABLE QJSValue fitResultProjection(int kind) const;
+    Q_INVOKABLE void fitResultsPassive(const QJSValue& row) const;
+    Q_INVOKABLE QJSValue fitResultsSummaryWidth(const QJSValue& title, const QJSValue& cell) const;
+    Q_INVOKABLE QJSValue fitResultsColumnWidth(bool value) const;
+    Q_INVOKABLE void fitResultsRevisionChanged() const;
+    Q_INVOKABLE void fitResultsShowEvolution() const;
+    Q_INVOKABLE void aboutOpenLicence() const;
+    Q_INVOKABLE void aboutPopulateComponents() const;
+    Q_INVOKABLE QJSValue aboutComponentsWidth() const;
+    Q_INVOKABLE QJSValue parameterFieldValue(bool error) const;
+    Q_INVOKABLE void parameterFieldMenu(const QJSValue& parent) const;
+    Q_INVOKABLE void parameterFieldMouse(const QJSValue& mouse, bool hold) const;
+    Q_INVOKABLE QJSValue assistantPlanDescription() const;
+    Q_INVOKABLE QJSValue assistantSkillsIndex() const;
+    Q_INVOKABLE void assistantSkillClicked() const;
+    Q_INVOKABLE QJSValue nativeListProjection(int kind) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

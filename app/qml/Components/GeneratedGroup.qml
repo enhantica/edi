@@ -71,7 +71,7 @@ Column {
                 defaultInfoText: qsTr("No rows")
                 sourceModel: data.loop ? data.rows : null
                 // The cells a Repeater makes come before it, so the Repeater, declared last, takes the last width.
-                columns: [numberColumnWidth].concat(data.names.map(() => -1)).concat([0.001])
+                columns: ApplicationInfo.nativeListProjection(0)
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {

@@ -37,13 +37,7 @@ Column {
             width: parent.width
             wrapMode: Text.WrapAnywhere
             textFormat: Text.PlainText
-            text: {
-                const plan = card.assistant.pendingPlan;
-                if (!plan.budget)
-                    return "";
-                const groups = (plan.groups || []).map(group => group.id + ": " + group.paths.join(", ")).join("\n");
-                return groups + "\n" + qsTr("Budget: %1 trials, %2 iterations, %3 seconds").arg(plan.budget.max_trials).arg(plan.budget.max_iterations).arg(plan.budget.max_elapsed_ms / 1000) + "\n" + qsTr("Improvement tolerance: absolute %1, relative %2").arg(plan.objective.absolute_tolerance).arg(plan.objective.relative_tolerance);
-            }
+            text: ApplicationInfo.assistantPlanDescription()
         }
     }
     EaElements.Button {

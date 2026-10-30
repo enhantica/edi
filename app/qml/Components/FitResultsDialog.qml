@@ -44,40 +44,22 @@ AppDialog {
         id: structureMetrics
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
-        text: dialog.factorColumns.reduce((longest, column) => column.structure.length > longest.length ? column.structure : longest, "")
+        text: ApplicationInfo.fitResultProjection(0)
     }
-    readonly property bool structureHeaders: dialog.factorColumns.some(column => column.structure !== "")
+    readonly property bool structureHeaders: ApplicationInfo.fitResultProjection(1)
 
     // The summary table is as wide as its content (the owner, 2026-10-21): each text column its widest entry.
     property int resultsRevision: 0
     Connections {
         target: dialog.results
-        function onDataChanged() {
-            dialog.resultsRevision++;
-        }
-        function onCountChanged() {
-            dialog.resultsRevision++;
-        }
+        function onDataChanged() { ApplicationInfo.fitResultsRevisionChanged(); }
+        function onCountChanged() { ApplicationInfo.fitResultsRevisionChanged(); }
     }
     // A read-only row takes no hover: the base row tints itself from its own hover handler, which a disabled row keeps.
-    function passive(row) {
-        for (const handler of row.resources) {
-            if (handler instanceof HoverHandler)
-                handler.enabled = false;
-        }
-    }
-    function widestSummaryText(title, cell) {
-        const revision = dialog.resultsRevision;
-        let widest = table.advance(title);
-        for (let row = 0; dialog.results && row < dialog.results.count; ++row)
-            widest = Math.max(widest, table.advance(cell(row)));
-        return Math.ceil(widest) + AppSizes.fieldSpacing * 2;
-    }
-    readonly property real metricColumnWidth: widestSummaryText(qsTr("Metric"), row => dialog.results.text(row, "metric"))
-    readonly property real valueColumnWidth: widestSummaryText(qsTr("Value"), row => {
-        const outcome = dialog.results.text(row, "outcome");
-        return outcome !== "" ? FitOutcomes.word(outcome) : dialog.results.text(row, "value");
-    }) + EaStyle.Sizes.fontPixelSize
+    function passive(row) { ApplicationInfo.fitResultsPassive(row); }
+    function widestSummaryText(title, cell) { return ApplicationInfo.fitResultsSummaryWidth(title, cell); }
+    readonly property real metricColumnWidth: ApplicationInfo.fitResultsColumnWidth(false)
+    readonly property real valueColumnWidth: ApplicationInfo.fitResultsColumnWidth(true)
 
     EaElements.SideBarButton {
         id: evolutionButton
@@ -88,11 +70,7 @@ AppDialog {
         width: listArea.width
         fontIcon: "chart-line"
         text: qsTr("Show evolution")
-        onClicked: {
-            dialog.close();
-            AppState.open(AppState.Page.Analysis);
-            AppState.evolutionRequested();
-        }
+        onClicked: ApplicationInfo.fitResultsShowEvolution()
     }
 
     Rectangle {
@@ -235,7 +213,7 @@ AppDialog {
             sourceModel: dialog.agreement
 
             // The icon, the dataset, then one real column per factor.
-            columns: [AppSizes.iconOnlyColumnWidth, -1].concat(dialog.factorColumns.map(() => dialog.factorWidth))
+            columns: ApplicationInfo.fitResultProjection(2)
 
             header: EaComponents.ListViewHeader {
                 height: (dialog.structureHeaders ? 2 : 1) * EaStyle.Sizes.tableRowHeight

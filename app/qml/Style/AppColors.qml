@@ -35,23 +35,12 @@ QtObject {
     // A block's colour from the figure palette (edi ADR-0038): the palette's colour at the block's position, which the
     // open project holds (a block keeps its position; a new one takes the next free). `dark` picks the dark theme's
     // colour; without it, the app's theme decides (a PDF's figure asks for the light one).
-    function positioned(positions, index, dark) {
-        const project = Session.project;
-        if (!project || index < 0 || index >= positions.length)
-            return EaStyle.Colors.themeForegroundMinor;
-        return ApplicationInfo.figureColour(Preferences.colourScheme, positions[index], project.colourPositionCount, dark === undefined ? EaStyle.Colors.isDarkPalette : dark);
-    }
-    function structure(index, dark) {
-        return colors.positioned(Session.project ? Session.project.structureColourPositions : [], index, dark);
-    }
-    function experiment(index, dark) {
-        return colors.positioned(Session.project ? Session.project.experimentColourPositions : [], index, dark);
-    }
+    function positioned(positions, index, dark) { return ApplicationInfo.appColour(0, positions, index, dark); }
+    function structure(index, dark) { return ApplicationInfo.appColour(1, index, dark, undefined); }
+    function experiment(index, dark) { return ApplicationInfo.appColour(2, index, dark, undefined); }
 
     // A block's colour by its kind ("structure" or "experiment") and place.
-    function block(kind, index) {
-        return kind === "structure" ? colors.structure(index) : kind === "experiment" ? colors.experiment(index) : EaStyle.Colors.themeForegroundMinor;
-    }
+    function block(kind, index) { return ApplicationInfo.appColour(3, kind, index, undefined); }
 
     // The structure view's colour scheme ("jmol" or "vesta"), which every table's atom icons follow too.
     readonly property string elementScheme: Session.project && Session.project.structureViewOptions ? Session.project.structureViewOptions.colorScheme : "jmol"
@@ -61,10 +50,7 @@ QtObject {
     // foreground colour for an element the table does not have. Drawn flat, so made readable on `backgrounds`, by
     // default every underlay of a table cell: both alternating rows, the hover tint and the page behind the table
     // (edi ADR-0047).
-    function element(typeSymbol, backgrounds) {
-        const colour = ApplicationInfo.elementColor(String(typeSymbol), EaStyle.Colors.themeForegroundMinor, colors.elementScheme);
-        return colors.readable(colour, backgrounds === undefined ? colors.tableUnderlays : backgrounds);
-    }
+    function element(typeSymbol, backgrounds) { return ApplicationInfo.appColour(4, typeSymbol, backgrounds, undefined); }
     readonly property list<color> tableUnderlays: [EaStyle.Colors.themeBackgroundHovered1, EaStyle.Colors.themeBackgroundHovered2, EaStyle.Colors.themeRowHovered, EaStyle.Colors.mainContentBackground]
 
     // A colour drawn flat on any of `backgrounds`, moved to 2:1 contrast on each by its lightness (edi ADR-0047).
