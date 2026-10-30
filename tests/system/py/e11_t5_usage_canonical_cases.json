@@ -1,0 +1,282 @@
+[
+  {
+    "id": "first_ties_fallback_and_live_projection",
+    "account": {
+      "type": "chatgpt",
+      "email": "ß<b>@example.invalid",
+      "planType": "",
+      "displayName": "NEVER_ACCOUNT_DISPLAY_269"
+    },
+    "usage": {
+      "rateLimits": {},
+      "rateLimitsByLimitId": {
+        "omega": {
+          "primary": {
+            "usedPercent": 150,
+            "windowDurationMins": 42
+          },
+          "planType": "TEAM"
+        },
+        "delta": {
+          "limitId": "delta",
+          "limitName": "SHOULD_NOT_WIN",
+          "planType": "free-tier",
+          "primary": {
+            "usedPercent": 150,
+            "windowDurationMins": 300
+          }
+        },
+        "beta": {
+          "limitId": "beta",
+          "limitName": "",
+          "planType": "team_pro",
+          "primary": {
+            "usedPercent": 150,
+            "windowDurationMins": 300
+          },
+          "secondary": {
+            "usedPercent": 150,
+            "windowDurationMins": 10080
+          }
+        },
+        "alpha": {
+          "limitId": "alpha",
+          "limitName": "First <plain>",
+          "planType": "team_pro",
+          "primary": {
+            "usedPercent": 75,
+            "windowDurationMins": 300
+          },
+          "secondary": {
+            "usedPercent": 75,
+            "windowDurationMins": 10080
+          }
+        }
+      }
+    },
+    "expected": {
+      "bucket_ids": [
+        "alpha",
+        "beta",
+        "delta",
+        "omega"
+      ],
+      "global": {
+        "usedPercent": 150,
+        "label": "beta · Session limit"
+      },
+      "remaining": 0,
+      "session_path": [
+        1,
+        0
+      ],
+      "weekly_path": [
+        1,
+        1
+      ],
+      "caption": "beta · Session limit · 150% used",
+      "button": "150% used",
+      "descriptors": [
+        "session",
+        "weekly"
+      ],
+      "percent": [
+        "150% used",
+        "150% used"
+      ],
+      "plan": "team_pro, free-tier, TEAM",
+      "plan_label": "Team Pro, Free Tier, TEAM",
+      "initial": "SS",
+      "identity": "ß<b>@example.invalid",
+      "plan_visible": true
+    },
+    "update": {
+      "rateLimits": {
+        "limitId": "updated",
+        "limitName": "Actual refreshed name",
+        "planType": "enterprise_team",
+        "primary": {
+          "usedPercent": 0,
+          "windowDurationMins": 300
+        },
+        "secondary": {
+          "usedPercent": 0,
+          "windowDurationMins": 10080
+        }
+      },
+      "rateLimitsByLimitId": null
+    },
+    "expected_update": {
+      "bucket_ids": [
+        ""
+      ],
+      "global": {
+        "usedPercent": 0,
+        "label": "Actual refreshed name · Session limit"
+      },
+      "remaining": 100,
+      "session_path": [
+        0,
+        0
+      ],
+      "weekly_path": [
+        0,
+        1
+      ],
+      "caption": "Actual refreshed name · Session limit · 0% used",
+      "button": "0% used",
+      "descriptors": [
+        "session",
+        "weekly"
+      ],
+      "percent": [
+        "0% used",
+        "0% used"
+      ],
+      "plan": "enterprise_team",
+      "plan_label": "Enterprise Team",
+      "initial": "SS",
+      "identity": "ß<b>@example.invalid",
+      "plan_visible": true
+    }
+  },
+  {
+    "id": "account_plan_priority_and_codepoint_vs_word_head",
+    "account": {
+      "type": "chatgpt",
+      "email": "𐐨@example.invalid",
+      "planType": "𐐨_pro-TEAM",
+      "displayName": "NEVER_ACCOUNT_DISPLAY_269"
+    },
+    "usage": {
+      "rateLimits": {
+        "limitId": "code",
+        "limitName": "Custom α",
+        "planType": "wrong_fallback",
+        "primary": {
+          "usedPercent": 40,
+          "windowDurationMins": 300
+        },
+        "secondary": {
+          "usedPercent": 70,
+          "windowDurationMins": 10080
+        }
+      },
+      "rateLimitsByLimitId": null
+    },
+    "expected": {
+      "bucket_ids": [
+        ""
+      ],
+      "global": {
+        "usedPercent": 70,
+        "label": "Custom α · Weekly"
+      },
+      "remaining": 30,
+      "session_path": [
+        0,
+        0
+      ],
+      "weekly_path": [
+        0,
+        1
+      ],
+      "caption": "Custom α · Weekly · 70% used",
+      "button": "70% used",
+      "descriptors": [
+        "session",
+        "weekly"
+      ],
+      "percent": [
+        "40% used",
+        "70% used"
+      ],
+      "plan": "𐐨_pro-TEAM",
+      "plan_label": "𐐨 Pro TEAM",
+      "initial": "𐐀",
+      "identity": "𐐨@example.invalid",
+      "plan_visible": true
+    }
+  },
+  {
+    "id": "credits_only_empty_identity_and_delimiter_plan",
+    "account": {
+      "type": "chatgpt",
+      "email": "",
+      "planType": "_--",
+      "displayName": "NEVER_ACCOUNT_DISPLAY_269"
+    },
+    "usage": {
+      "rateLimits": {
+        "credits": {
+          "hasCredits": true,
+          "unlimited": false,
+          "balance": "12.50"
+        }
+      },
+      "rateLimitsByLimitId": null
+    },
+    "expected": {
+      "bucket_ids": [
+        ""
+      ],
+      "global": null,
+      "remaining": -1,
+      "session_path": null,
+      "weekly_path": null,
+      "caption": "Usage information updated.",
+      "button": "Usage",
+      "descriptors": [],
+      "percent": [],
+      "plan": "_--",
+      "plan_label": " ",
+      "initial": "",
+      "identity": "Account email unavailable",
+      "plan_visible": true
+    }
+  },
+  {
+    "id": "bucket_id_other_missing_duration_and_empty_plan",
+    "account": {
+      "type": "chatgpt",
+      "email": "🧪@example.invalid",
+      "displayName": "NEVER_ACCOUNT_DISPLAY_269"
+    },
+    "usage": {
+      "rateLimits": {},
+      "rateLimitsByLimitId": {
+        "omega": {
+          "limitName": "",
+          "primary": {
+            "usedPercent": 90
+          },
+          "secondary": {
+            "usedPercent": 90,
+            "windowDurationMins": 42
+          }
+        }
+      }
+    },
+    "expected": {
+      "bucket_ids": [
+        "omega"
+      ],
+      "global": {
+        "usedPercent": 90,
+        "label": "omega · Other allowance"
+      },
+      "remaining": 10,
+      "session_path": null,
+      "weekly_path": null,
+      "caption": "omega · Other allowance · 90% used",
+      "button": "90% used",
+      "descriptors": [],
+      "percent": [],
+      "plan": "",
+      "plan_label": "",
+      "initial": "🧪",
+      "identity": "🧪@example.invalid",
+      "plan_visible": false
+    }
+  }
+]
