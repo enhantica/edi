@@ -99,6 +99,10 @@ class ApplicationInfo : public QObject {
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
     Q_INVOKABLE QString fileSizeKilobytes(qint64 bytes) const;
+    /// Validate original history attachment metadata on the owning QML engine/thread.
+    /// Returns a fresh array of original member references, or empty for invalid metadata.
+    /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
+    Q_INVOKABLE QJSValue assistantHistoryInputFiles(const QString& kind, const QJSValue& payload) const;
     /// Stateless compact message presentation; no canonical/detail lookup or clipboard write.
     Q_INVOKABLE QVariantMap assistantActivityPresentation(const QString& kind, const QString& status,
                                                         const QJSValue& payload, QObject* assistant) const;

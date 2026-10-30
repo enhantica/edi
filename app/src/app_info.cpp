@@ -6,6 +6,8 @@
 #include "app_build_info.hpp"
 #include "engine_setup.hpp"
 #include "edi/palette.hpp"
+#include "edi/assistant_files.hpp"
+#include "edi/assistant_limits.hpp"
 #include "edi/scan_views.hpp"
 #include "edi/structure_scene.hpp"
 #include "edi/threading.hpp"
@@ -14,6 +16,7 @@
 #include <QFile>
 #include <QGuiApplication>
 #include <QJSManagedValue>
+#include <QJSPrimitiveValue>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocale>
@@ -571,6 +574,102 @@ std::optional<QString> messageNativeCaption(const QPointer<QJSEngine>& engine, c
     return edi_app::assistant_presentation::presentActivity({}).nativeCaption;
 }
 }  // namespace
+
+QJSValue ApplicationInfo::assistantHistoryInputFiles(const QString& kind, const QJSValue& payload) const {
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    if (!messageScriptReady(engine) || QThread::currentThread() != engine->thread()) return {};
+    const auto empty = [&]() { return messageScriptReady(engine) ? engine->newArray() : QJSValue(); };
+    const auto read = [&](const QJSValue& source, const char* name) {
+        return messageScriptProperty(engine, source, QString::fromLatin1(name));
+    };
+    const auto number = [&](const QJSValue& value) -> std::optional<double> {
+        if (!messageScriptReady(engine)) return std::nullopt;
+        const QJSManagedValue converted(value, engine.data());
+        if (converted.engine() != engine.data()) {
+            engine->throwError(QJSValue::TypeError, QStringLiteral("Message value belongs to another engine"));
+            return std::nullopt;
+        }
+        const auto result = converted.toNumber();
+        return messageScriptReady(engine) ? std::optional<double>(result) : std::nullopt;
+    };
+    const auto numberPredicate = [&](const char* predicate, const QJSValue& source, const char* field) {
+        if (!messageScriptReady(engine)) return QJSValue();
+        const auto receiver = read(engine->globalObject(), "Number");
+        if (!messageScriptReady(engine)) return QJSValue();
+        const auto function = read(receiver, predicate);
+        if (!messageScriptReady(engine)) return QJSValue();
+        const auto argument = read(source, field);
+        if (!messageScriptReady(engine)) return QJSValue();
+        return messageScriptCall(engine, function, receiver, {argument});
+    };
+    const auto fieldLength = [&](const QJSValue& file, const char* field) {
+        const auto value = read(file, field);
+        if (!messageScriptReady(engine)) return QJSValue();
+        return read(value, "length");
+    };
+    if (kind != "user" || !payload.toBool()) return empty();
+    const auto type = read(payload, "type");
+    if (!messageScriptReady(engine)) return {};
+    if (!type.strictlyEquals(QJSValue(QStringLiteral("ediInput")))) return empty();
+    const auto offered = read(payload, "files");
+    if (!messageScriptReady(engine)) return {};
+    if (!offered.toBool()) return empty();
+    const auto files = read(payload, "files");
+    if (!messageScriptReady(engine)) return {};
+    const auto integer = numberPredicate("isInteger", files, "length");
+    if (!messageScriptReady(engine)) return {};
+    if (!integer.toBool()) return empty();
+    auto extent = number(read(files, "length"));
+    if (!extent) return {};
+    if (*extent < 0) return empty();
+    extent = number(read(files, "length"));
+    if (!extent) return {};
+    if (*extent > static_cast<double>(edi::assistant::SelectedFileLimits::files)) return empty();
+    QJSValue result = engine->newArray();
+    for (double index = 0; ; index += 1) {
+        extent = number(read(files, "length"));
+        if (!extent) return {};
+        if (!(index < *extent)) break;
+        const auto file = messageScriptProperty(engine, files, QJSPrimitiveValue(index).toString());
+        if (!messageScriptReady(engine)) return {};
+        if (!file.toBool()) return empty();
+        auto field = read(file, "id");
+        if (!messageScriptReady(engine)) return {};
+        if (!field.isString()) return empty();
+        auto length = fieldLength(file, "id");
+        if (!messageScriptReady(engine)) return {};
+        if (length.strictlyEquals(QJSValue(0))) return empty();
+        auto measured = number(fieldLength(file, "id"));
+        if (!measured) return {};
+        if (*measured > static_cast<double>(edi::assistant::Limits::id_bytes)) return empty();
+        field = read(file, "name");
+        if (!messageScriptReady(engine)) return {};
+        if (!field.isString()) return empty();
+        measured = number(fieldLength(file, "name"));
+        if (!measured) return {};
+        if (*measured > static_cast<double>(edi::assistant::SelectedFileLimits::name_bytes)) return empty();
+        field = read(file, "bytes");
+        if (!messageScriptReady(engine)) return {};
+        if (!field.isNumber()) return empty();
+        const auto finite = numberPredicate("isFinite", file, "bytes");
+        if (!messageScriptReady(engine)) return {};
+        if (!finite.toBool()) return empty();
+        measured = number(read(file, "bytes"));
+        if (!measured) return {};
+        if (*measured < 0) return empty();
+        field = read(file, "textReadable");
+        if (!messageScriptReady(engine)) return {};
+        if (!field.isBool()) return empty();
+        field = read(file, "format");
+        if (!messageScriptReady(engine)) return {};
+        if (!field.isString()) return empty();
+        const auto push = read(result, "push");
+        if (!messageScriptReady(engine)) return {};
+        messageScriptCall(engine, push, result, {file});
+        if (!messageScriptReady(engine)) return {};
+    }
+    return result;
+}
 
 QVariantMap ApplicationInfo::assistantActivityPresentation(const QString& kind, const QString& status,
                                                            const QJSValue& payload, QObject* assistant) const {

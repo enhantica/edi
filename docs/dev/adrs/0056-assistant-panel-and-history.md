@@ -4475,3 +4475,33 @@ original phase-specific meaning. Earlier238/239/243 and private223 claims that o
 abstract ECMAScript population preserved both phases were incomplete; original55
 remains a retained failed baseline, not an original product defect or a repaired
 post result. Independent corrected original/post qualification is still owed.
+
+
+### E11-T5 B3: preserve history attachment metadata admission in the existing C++ owner
+
+Prior art is AssistantMessage.inputFiles and its actual widestSentFile/sentFiles/Repeater
+consumers. Move only that procedural property body into stateless ApplicationInfo::
+assistantHistoryInputFiles, leaving one declarative call in QML. The bridge uses its current
+public QML engine and the established managed property/call boundary, never AVM canonical
+reconstruction, JSON conversion, a new controller/store or a source-file reader.
+
+Retain history metadata length32 from SelectedFileLimits::files, distinct from the composer
+message_files6 policy. Original string length checks count UTF-16 units at Limits::id_bytes256
+and SelectedFileLimits::name_bytes512; they do not add UTF-8 byte limits. Original kind/type/
+truthiness, Number.isInteger, primitive field types, Number.isFinite/nonnegative bytes and
+first-invalid-empty behavior remain unchanged. Arrays and array-like values use the same
+property observations; no new array/object-class, status, account or canonical-membership
+condition is added. Empty name/format, fractional bytes, negative zero, duplicate ids/member
+references and extra fields retain the original behavior. Only original file references are
+returned, in order, in a fresh current-engine result array.
+
+Repeated container/length/field reads and original Number/push call evaluation order remain
+observable. Use public managed property/numeric/call operations, original numeric index string
+conversion and original result.push dispatch; do not cache getters, narrow counters, copy fields
+or evaluate a JavaScript replacement function. An accessor/call/coercion throw remains pending
+rather than becoming an empty result, including non-Error thrown values. A returned Error object
+is not a throw. No new hardened dynamic-length bound is introduced by a migration.
+
+All existing consumers, labels/accessibility, geometry and native input/consent/scientific policies
+remain unchanged. This source batch requires independent original/post characterization and actual
+public Qt/QML qualification; source preparation is not a runtime pass or whole-migration completion.
