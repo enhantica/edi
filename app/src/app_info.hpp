@@ -99,10 +99,43 @@ class ApplicationInfo : public QObject {
     // Puts `text` on the clipboard (the web build's needs the click that asks for it).
     Q_INVOKABLE void copyText(const QString& text) const;
     Q_INVOKABLE QString fileSizeKilobytes(qint64 bytes) const;
+    // Declaration-only members of existing global ApplicationInfo (QML singleton ApplicationInfo).
+    /// Capture the original session draft intent in its existing view field.
+    /// Borrows actual QML-thread controls; no retained pointers; JS exceptions remain pending.
+    Q_INVOKABLE void composerSessionSelectionStarted(QObject* composer, QObject* editor, const QString& threadId) const;
+    /// Apply the original restore/IME/successor checks, then publish actual text through sessionDraft.
+    /// Borrows actual QML-thread controls; no extra account/window policy; JS exceptions remain pending.
+    Q_INVOKABLE void composerSessionDraftRestored(QObject* composer, QObject* editor,
+                                                 const QString& threadId, const QString& text) const;
+    /// Capture the original Clear text/revision/intent without consuming editor text.
+    /// Borrows actual QML-thread controls; data stays in the original view field; errors remain pending.
+    Q_INVOKABLE void composerConversationClearRequested(QObject* composer, QObject* editor, const QString& intent) const;
+    /// Consume only the matching Clear record and clear the unchanged, idle original editor.
+    /// Borrows actual QML-thread controls; no native/history operation is initiated; errors remain pending.
+    Q_INVOKABLE void composerConversationClearCommitted(QObject* composer, QObject* editor, const QString& intent) const;
+    /// Apply original revision/pending/report retirement resets, in order, on the QML thread.
+    /// Borrows the actual composer; no additional record or editor reset; errors remain pending.
+    Q_INVOKABLE void composerConversationRetired(QObject* composer) const;
+    /// Preserve original text/preedit/IME revision increments; text events also publish sessionDraft.
+    /// Borrows actual QML-thread controls; preserves native int conversion; errors remain pending.
+    Q_INVOKABLE void composerDraftEdited(QObject* composer, QObject* editor, bool publishText) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
     Q_INVOKABLE QJSValue assistantHistoryInputFiles(const QString& kind, const QJSValue& payload) const;
+    // Declaration-only members of existing global ApplicationInfo (QML singleton ApplicationInfo).
+    /// Open the original session popup, then refresh through the actual current panel assistant.
+    /// Borrows QML-thread controls; no new store/eligibility; property/call errors remain pending.
+    Q_INVOKABLE void openSessionBrowser(QObject* panel, QObject* dialog) const;
+    /// Preserve original opened/more/loading/scroll prefetch order and the existing next-page request.
+    /// Borrows actual QML-thread popup/table controls; no debounce/timer/policy; errors remain pending.
+    Q_INVOKABLE void prefetchSessionBrowser(QObject* panel, QObject* dialog, QObject* table) const;
+    /// Activate the actual session row before resolving its current owner/ID for selectSession.
+    /// Borrows actual QML-thread controls; original selection guards remain native; errors remain pending.
+    Q_INVOKABLE void activateSessionBrowserRow(QObject* panel, QObject* row) const;
+    /// Sum original visible button implicit widths and original count/spacing gaps for the live binding.
+    /// Borrows actual QML-thread controls; no retained geometry; errors remain pending.
+    Q_INVOKABLE qreal sessionBrowserButtonsWidth(QObject* panel, QObject* buttons) const;
     /// Stateless compact message presentation; no canonical/detail lookup or clipboard write.
     Q_INVOKABLE QVariantMap assistantActivityPresentation(const QString& kind, const QString& status,
                                                         const QJSValue& payload, QObject* assistant) const;

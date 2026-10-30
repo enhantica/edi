@@ -361,7 +361,7 @@ Popup {
                         }
                         ToolTip.text: qsTr("Browse this application's saved assistant sessions")
                         Accessible.name: text
-                        onClicked: { sessionsDialog.open(); panel.assistant.refreshSessions(); }
+                        onClicked: ApplicationInfo.openSessionBrowser(panel, sessionsDialog)
                     }
                     EaElements.Button {
                         id: clearButton
@@ -1096,13 +1096,9 @@ Popup {
                     objectName: "assistant.sessions.list"
                     width: parent.width
                     maxRowCountShow: 8
-                    function prefetch() {
-                        if(sessionsDialog.opened && panel.assistant.sessionsHaveMore && !panel.assistant.sessionsLoading &&
-                            contentY+height>=contentHeight-height)panel.assistant.refreshSessions(true);
-                    }
-                    onContentYChanged: prefetch()
-                    onContentHeightChanged: prefetch()
-                    onHeightChanged: prefetch()
+                    onContentYChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
+                    onContentHeightChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
+                    onHeightChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
                     sourceModel: panel.assistant.sessions
                     defaultInfoText: panel.assistant.sessionsLoading ? qsTr("Loading sessions…") : qsTr("No app-created sessions")
                     columns: [numberColumnWidth, -1, AppSizes.unit*14, AppSizes.iconColumnWidth]
@@ -1125,7 +1121,7 @@ Popup {
                             width: Math.max(0,sessionRow.width-AppSizes.iconColumnWidth-sessionsTable.rowPadding-EaStyle.Sizes.tableColumnSpacing)
                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                             enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
-                            onClicked: {sessionRow.activated();panel.assistant.selectSession(sessionRow.threadId);}
+                            onClicked: ApplicationInfo.activateSessionBrowserRow(panel, sessionRow)
                         }
                         EaComponents.ListViewLabel { text: sessionRow.index+1; horizontalAlignment: Text.AlignHCenter }
                         EaComponents.ListViewLabel {
@@ -1170,14 +1166,7 @@ Popup {
                     enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
                     onClicked: panel.assistant.refreshSessions()
                 }
-                readonly property real naturalButtonWidth: {
-                    let total=0;
-                    for(let index=0;index<count;++index) {
-                        const button=itemAt(index);
-                        if(button && button.visible)total+=button.implicitWidth;
-                    }
-                    return total+Math.max(0,count-1)*spacing;
-                }
+                readonly property real naturalButtonWidth: ApplicationInfo.sessionBrowserButtonsWidth(panel, sessionButtons)
                 contentWidth: naturalButtonWidth
                 contentItem: ListView {
                     implicitWidth: sessionButtons.naturalButtonWidth

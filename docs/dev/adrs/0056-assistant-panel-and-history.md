@@ -4632,3 +4632,91 @@ full display/refresh/copy/privacy and malformed-carrier qualification still must
 compare the rebuilt application. Keep all original expectations and reached or
 unreached suffixes; neither a bounded diagnostic nor passing direct unit calls
 qualifies compiled real UI transport.
+
+
+### E11-T5 composer draft handoff uses the stable ApplicationInfo UI actor
+
+Prior art is AssistantComposer's session-selection/restore and Clear requested/committed signal
+handlers, retirement reset and text/preedit/IME revision publication, together with the original
+AVM sessionDraft getter/setter and session/history signal producers. The existing ApplicationInfo UI actor executes those
+view procedures through stable dispatch with the actual composer/editor handles. Canonical
+sessionDraft persistence and session/Clear signal producers remain in the existing AVM. QML retains
+its original declared view data, controls and direct signal bindings; no new store/controller,
+canonical draft, timer, registry, source-file read or consent/admission policy is introduced.
+
+Keep the original sessionDraftIntent and clearDraft record shapes and plain object references.
+Capture actual editor text/revision at the original event, clear a matching consumed record before
+editor mutation, preserve changed successor text and active IME/preedit, and publish actual editor
+text through the then-current original sessionDraft property. An unmatched restore still retires
+its captured intent and preserves current text; an unmatched Clear commit keeps its record. A
+failed Clear without commit never consumes the text. Retirement increments draftOwnerRevision,
+then empties submittedDrafts and clears workReportDraft, without introducing extra resets. Only
+text events publish sessionDraft; text/preedit/composition events retain their original revision
+increment order and the QML int property's original numeric conversion.
+
+The public managed Qt engine boundary belongs to the actual QML composer. Property/call throws
+remain pending; no JavaScript function/evaluator or compatibility algorithm is introduced. Draft
+record construction uses ordinary engine objects and restores the original object prototype before
+publication. While constructing still-unpublished fields, own data properties bypass inherited
+setters as the original object literal did. No field is normalized or given extra validation.
+Weak QObject/engine survival prevents an operation from continuing through a destroyed control;
+no new account/project/window eligibility is added.
+
+This family does not complete the full inventory212 migration: consent/Share/Send ownership,
+pending-ACK handling, work-report submission, chooser/model-effort state, selection/navigation and
+all other recorded app families remain explicit subsequent work. Independent original-control
+characterization must precede source application, then the same assertions must qualify the CPP
+path; private source preparation is not a build/runtime/CI or complete-migration result.
+
+
+The stable ApplicationInfo dispatch deliberately does not resolve composer.assistant or
+panel.assistant before entering owner-independent, guarded or late-owner view operations.
+This preserves original record/revision/reset/IME effects, popup-open and activated effects,
+closed-prefetch coldness and owner-independent footer geometry up to the original later error
+boundary. Current-view AVM lookup still occurs only at the original canonical publication,
+refresh or selection point inside the unchanged native body. No nonnull guard, silent skip,
+stale-owner capture, changed expectation, new policy/store/controller or compatibility JavaScript
+is added. The previous private per-view-AVM dispatch candidates and their mechanical union remain
+historical unelected source; disjoint hashes did not clear this semantic entrance class.
+
+
+### E11-T5 saved-session browser view procedures use the stable ApplicationInfo UI actor
+
+Prior art is AssistantPanel's session-button open/refresh sequence, sessionsTable prefetch and
+its scroll/height triggers, activated/select row sequence and sessionButtons naturalButtonWidth
+loop. The existing ApplicationInfo UI actor executes these view procedures through stable dispatch
+with actual panel/popup/table/row/button-box handles. The existing AVM sessions/refresh/select/archive
+owner retains canonical session operations and all original guards. QML retains direct dispatch and declaration;
+no new controller/store, cached geometry, timer, pagination cursor or session policy is introduced.
+
+Open the original popup before reading the actual current owner for the existing refresh call.
+Prefetch retains opened, more, not-loading and contentY+height >= contentHeight-height checks in
+that order, including the original two height reads; only then enter refreshSessions(true).
+Activate the actual row first, then resolve the current panel owner, selection method and current
+row ID in the original order. Native selection/archive/account/project/last-session safeguards
+remain unchanged; direct existing archive/refresh and Qt accept/reject dispatch remain frontend.
+
+Footer width reads the actual box count on every iteration, original itemAt/visible/implicitWidth
+properties, and the final count/spacing/Math.max operation in original order. The managed public
+Qt property/call boundary keeps the real QML binding's dependencies and pending thrown-value
+semantics; it adds no JavaScript helper/function/evaluator. No width snapshot, per-row mirror,
+notifier, clock or debounce replaces the existing binding. All original display strings, tr
+contexts, native session name/modified labels, usage/account timer and locale behavior stay as
+before; their actual count/visibility/font/translation/theme dependency behavior still requires
+independent original/post qualification, not inference from source.
+
+This family leaves usage/account formatting, notice/consent/tail/navigation procedures and the
+other full inventory212 obligations explicit. It does not complete all procedural migration or
+change provider/scientific/input/disclosure/Undo behavior. Private source preparation is not an
+original-control characterization, build/runtime/CI result or source application election.
+
+
+The stable ApplicationInfo dispatch deliberately does not resolve composer.assistant or
+panel.assistant before entering owner-independent, guarded or late-owner view operations.
+This preserves original record/revision/reset/IME effects, popup-open and activated effects,
+closed-prefetch coldness and owner-independent footer geometry up to the original later error
+boundary. Current-view AVM lookup still occurs only at the original canonical publication,
+refresh or selection point inside the unchanged native body. No nonnull guard, silent skip,
+stale-owner capture, changed expectation, new policy/store/controller or compatibility JavaScript
+is added. The previous private per-view-AVM dispatch candidates and their mechanical union remain
+historical unelected source; disjoint hashes did not clear this semantic entrance class.

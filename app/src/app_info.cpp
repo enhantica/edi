@@ -1139,9 +1139,328 @@ void ApplicationInfo::assistantMessageReset(const QJSValue& component) const {
 }
 
 void ApplicationInfo::copyText(const QString& text) const { QGuiApplication::clipboard()->setText(text); }
+namespace {
+struct SessionBrowserFrame {
+    QPointer<QJSEngine> engine;
+    QPointer<QObject> panel;
+    QJSValue view;
+    bool live() const {
+        return engine && !engine->hasError() && panel && QThread::currentThread() == engine->thread() &&
+            panel->thread() == QThread::currentThread();
+    }
+};
+std::optional<SessionBrowserFrame> sessionBrowserFrame(QObject* panel) {
+    if (!panel || panel->thread() != QThread::currentThread()) return std::nullopt;
+    SessionBrowserFrame frame;
+    frame.engine = qjsEngine(panel); frame.panel = panel;
+    if (!frame.live()) return std::nullopt;
+    frame.view = frame.engine->newQObject(panel);
+    return frame.live() ? std::optional<SessionBrowserFrame>(frame) : std::nullopt;
+}
+QJSValue sessionBrowserObject(const SessionBrowserFrame& frame, QObject* object) {
+    if (!frame.live()) return {};
+    if (!object) return QJSValue(QJSValue::NullValue);
+    if (object->thread() != QThread::currentThread()) {
+        frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Session browser control belongs to another thread"));
+        return {};
+    }
+    return frame.engine->newQObject(object);
+}
+QJSValue sessionBrowserRead(const SessionBrowserFrame& frame, const QJSValue& source, const char* name) {
+    if (!frame.live()) return {};
+    const QJSManagedValue value(source, frame.engine.data());
+    if (value.engine() != frame.engine.data()) {
+        frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Session browser value belongs to another engine"));
+        return {};
+    }
+    return value.property(QString::fromLatin1(name));
+}
+QJSValue sessionBrowserCall(const SessionBrowserFrame& frame, const QJSValue& function,
+                           const QJSValue& receiver, const QJSValueList& arguments = {}) {
+    if (!frame.live()) return {};
+    const QJSManagedValue callable(function, frame.engine.data());
+    const QJSManagedValue instance(receiver, frame.engine.data());
+    if (callable.engine() != frame.engine.data() || instance.engine() != frame.engine.data()) {
+        frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Session browser value belongs to another engine"));
+        return {};
+    }
+    for (const auto& argument : arguments) {
+        const QJSManagedValue value(argument, frame.engine.data());
+        if (value.engine() != frame.engine.data()) {
+            frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Session browser value belongs to another engine"));
+            return {};
+        }
+    }
+    return callable.callWithInstance(receiver, arguments);
+}
+std::optional<double> sessionBrowserNumber(const SessionBrowserFrame& frame, const QJSValue& value) {
+    if (!frame.live()) return std::nullopt;
+    const QJSManagedValue number(value, frame.engine.data());
+    if (number.engine() != frame.engine.data()) {
+        frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Session browser value belongs to another engine"));
+        return std::nullopt;
+    }
+    const double result = number.toNumber();
+    return frame.live() ? std::optional<double>(result) : std::nullopt;
+}
+} // namespace
+
+void ApplicationInfo::openSessionBrowser(QObject* panel, QObject* dialog) const {
+    const auto frame = sessionBrowserFrame(panel);
+    if (!frame) return;
+    const auto popup = sessionBrowserObject(*frame, dialog);
+    const auto open = sessionBrowserRead(*frame, popup, "open");
+    sessionBrowserCall(*frame, open, popup);
+    if (!frame->live()) return;
+    const auto owner = sessionBrowserRead(*frame, frame->view, "assistant");
+    const auto refresh = sessionBrowserRead(*frame, owner, "refreshSessions");
+    sessionBrowserCall(*frame, refresh, owner);
+}
+void ApplicationInfo::prefetchSessionBrowser(QObject* panel, QObject* dialog, QObject* table) const {
+    const auto frame = sessionBrowserFrame(panel);
+    if (!frame) return;
+    const auto popup = sessionBrowserObject(*frame, dialog);
+    const auto opened = sessionBrowserRead(*frame, popup, "opened");
+    if (!frame->live() || !opened.toBool()) return;
+    auto owner = sessionBrowserRead(*frame, frame->view, "assistant");
+    const auto more = sessionBrowserRead(*frame, owner, "sessionsHaveMore");
+    if (!frame->live() || !more.toBool()) return;
+    owner = sessionBrowserRead(*frame, frame->view, "assistant");
+    const auto loading = sessionBrowserRead(*frame, owner, "sessionsLoading");
+    if (!frame->live() || loading.toBool()) return;
+    const auto view = sessionBrowserObject(*frame, table);
+    const auto position = sessionBrowserNumber(*frame, sessionBrowserRead(*frame, view, "contentY"));
+    if (!position) return;
+    const auto firstHeight = sessionBrowserNumber(*frame, sessionBrowserRead(*frame, view, "height"));
+    if (!firstHeight) return;
+    const auto content = sessionBrowserNumber(*frame, sessionBrowserRead(*frame, view, "contentHeight"));
+    if (!content) return;
+    const auto secondHeight = sessionBrowserNumber(*frame, sessionBrowserRead(*frame, view, "height"));
+    if (!secondHeight || !(*position + *firstHeight >= *content - *secondHeight)) return;
+    owner = sessionBrowserRead(*frame, frame->view, "assistant");
+    const auto refresh = sessionBrowserRead(*frame, owner, "refreshSessions");
+    sessionBrowserCall(*frame, refresh, owner, {QJSValue(true)});
+}
+void ApplicationInfo::activateSessionBrowserRow(QObject* panel, QObject* row) const {
+    const auto frame = sessionBrowserFrame(panel);
+    if (!frame) return;
+    const auto item = sessionBrowserObject(*frame, row);
+    const auto activated = sessionBrowserRead(*frame, item, "activated");
+    sessionBrowserCall(*frame, activated, item);
+    if (!frame->live()) return;
+    const auto owner = sessionBrowserRead(*frame, frame->view, "assistant");
+    const auto select = sessionBrowserRead(*frame, owner, "selectSession");
+    if (!frame->live()) return;
+    const auto id = sessionBrowserRead(*frame, item, "threadId");
+    sessionBrowserCall(*frame, select, owner, {id});
+}
+qreal ApplicationInfo::sessionBrowserButtonsWidth(QObject* panel, QObject* buttons) const {
+    const auto frame = sessionBrowserFrame(panel);
+    if (!frame) return 0;
+    const auto box = sessionBrowserObject(*frame, buttons);
+    double total = 0;
+    for (double index = 0; ; index += 1) {
+        const auto count = sessionBrowserNumber(*frame, sessionBrowserRead(*frame, box, "count"));
+        if (!count) return 0;
+        if (!(index < *count)) break;
+        const auto itemAt = sessionBrowserRead(*frame, box, "itemAt");
+        const auto button = sessionBrowserCall(*frame, itemAt, box, {QJSValue(index)});
+        if (!frame->live()) return 0;
+        if (!button.toBool()) continue;
+        const auto visible = sessionBrowserRead(*frame, button, "visible");
+        if (!frame->live()) return 0;
+        if (!visible.toBool()) continue;
+        const auto width = sessionBrowserNumber(*frame, sessionBrowserRead(*frame, button, "implicitWidth"));
+        if (!width) return 0;
+        total += *width;
+    }
+    const auto math = sessionBrowserRead(*frame, frame->engine->globalObject(), "Math");
+    const auto maximum = sessionBrowserRead(*frame, math, "max");
+    if (!frame->live()) return 0;
+    const auto count = sessionBrowserNumber(*frame, sessionBrowserRead(*frame, box, "count"));
+    if (!count) return 0;
+    const auto gaps = sessionBrowserCall(*frame, maximum, math, {QJSValue(0), QJSValue(*count - 1)});
+    if (!frame->live()) return 0;
+    const auto spacing = sessionBrowserRead(*frame, box, "spacing");
+    const auto measuredGaps = sessionBrowserNumber(*frame, gaps);
+    if (!measuredGaps) return 0;
+    const auto measuredSpacing = sessionBrowserNumber(*frame, spacing);
+    return measuredSpacing ? total + *measuredGaps * *measuredSpacing : 0;
+}
+
 QString ApplicationInfo::fileSizeKilobytes(qint64 bytes) const {
     if(bytes<0)return tr("Size unavailable");
     return tr("%1 KB").arg(QLocale().toString(static_cast<double>(bytes)/1000.0,'f',1));
+}
+
+namespace {
+struct ComposerDraftFrame {
+    QPointer<QJSEngine> engine;
+    QPointer<QObject> composer, editor;
+    bool hasEditor = false;
+    QJSValue view, edit;
+    bool live() const {
+        return engine && !engine->hasError() && composer && (!hasEditor || editor) &&
+            QThread::currentThread() == engine->thread() && composer->thread() == QThread::currentThread() &&
+            (!hasEditor || editor->thread() == QThread::currentThread());
+    }
+};
+std::optional<ComposerDraftFrame> composerDraftFrame(QObject* composer, QObject* editor = nullptr) {
+    if (!composer || composer->thread() != QThread::currentThread()) return std::nullopt;
+    ComposerDraftFrame frame;
+    frame.engine = qjsEngine(composer); frame.composer = composer; frame.editor = editor; frame.hasEditor = editor != nullptr;
+    if (!frame.live()) return std::nullopt;
+    frame.view = frame.engine->newQObject(composer);
+    if (editor) frame.edit = frame.engine->newQObject(editor);
+    return frame.live() ? std::optional<ComposerDraftFrame>(frame) : std::nullopt;
+}
+QJSValue composerDraftRead(const ComposerDraftFrame& frame, const QJSValue& source, const char* name) {
+    if (!frame.live()) return {};
+    const QJSManagedValue value(source, frame.engine.data());
+    if (value.engine() != frame.engine.data()) {
+        frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Composer value belongs to another engine"));
+        return {};
+    }
+    return value.property(QString::fromLatin1(name));
+}
+void composerDraftWrite(const ComposerDraftFrame& frame, const QJSValue& source, const char* name, const QJSValue& value) {
+    if (!frame.live()) return;
+    QJSManagedValue target(source, frame.engine.data());
+    if (target.engine() != frame.engine.data()) {
+        frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Composer value belongs to another engine"));
+        return;
+    }
+    target.setProperty(QString::fromLatin1(name), value);
+}
+void composerDraftCall(const ComposerDraftFrame& frame, const QJSValue& source, const char* name) {
+    const auto method = composerDraftRead(frame, source, name);
+    if (!frame.live()) return;
+    const QJSManagedValue function(method, frame.engine.data());
+    const QJSManagedValue receiver(source, frame.engine.data());
+    if (function.engine() != frame.engine.data() || receiver.engine() != frame.engine.data()) {
+        frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Composer value belongs to another engine"));
+        return;
+    }
+    function.callWithInstance(source);
+}
+struct ComposerDraftLiteral { QJSValue value, prototype; };
+ComposerDraftLiteral composerDraftLiteral(const ComposerDraftFrame& frame) {
+    ComposerDraftLiteral literal;
+    if (!frame.live()) return literal;
+    literal.value = frame.engine->newObject();
+    QJSManagedValue object(literal.value, frame.engine.data());
+    literal.prototype = object.prototype().toJSValue();
+    const QJSManagedValue none(QJSValue(QJSValue::NullValue), frame.engine.data());
+    // Object literals define own data fields without inherited setters (ADR-0056).
+    object.setPrototype(none);
+    return literal;
+}
+QJSValue completeComposerDraftLiteral(const ComposerDraftFrame& frame, const ComposerDraftLiteral& literal) {
+    if (!frame.live()) return {};
+    QJSManagedValue object(literal.value, frame.engine.data());
+    const QJSManagedValue prototype(literal.prototype, frame.engine.data());
+    object.setPrototype(prototype);
+    return frame.live() ? literal.value : QJSValue();
+}
+void captureComposerDraft(const ComposerDraftFrame& frame, const char* property, const char* key, const QString& identity) {
+    if (!frame.live()) return;
+    const auto literal = composerDraftLiteral(frame);
+    composerDraftWrite(frame, literal.value, key, QJSValue(identity));
+    const auto text = composerDraftRead(frame, frame.edit, "text");
+    if (!frame.live()) return;
+    composerDraftWrite(frame, literal.value, "text", text);
+    const auto revision = composerDraftRead(frame, frame.view, "textRevision");
+    if (!frame.live()) return;
+    composerDraftWrite(frame, literal.value, "revision", revision);
+    const auto value = completeComposerDraftLiteral(frame, literal);
+    if (frame.live()) composerDraftWrite(frame, frame.view, property, value);
+}
+bool composerDraftEditorIdle(const ComposerDraftFrame& frame) {
+    const auto composing = composerDraftRead(frame, frame.edit, "inputMethodComposing");
+    if (!frame.live() || composing.toBool()) return false;
+    const auto preedit = composerDraftRead(frame, frame.edit, "preeditText");
+    if (!frame.live()) return false;
+    const auto length = composerDraftRead(frame, preedit, "length");
+    return frame.live() && !length.toBool();
+}
+bool composerDraftFieldEqual(const ComposerDraftFrame& frame, const QJSValue& captured, const char* field,
+                            const QJSValue& current, const char* currentField) {
+    const auto before = composerDraftRead(frame, captured, field);
+    if (!frame.live()) return false;
+    const auto after = composerDraftRead(frame, current, currentField);
+    return frame.live() && before.strictlyEquals(after);
+}
+void publishComposerDraft(const ComposerDraftFrame& frame) {
+    const auto owner = composerDraftRead(frame, frame.view, "assistant");
+    if (!frame.live()) return;
+    const auto text = composerDraftRead(frame, frame.edit, "text");
+    if (frame.live()) composerDraftWrite(frame, owner, "sessionDraft", text);
+}
+void incrementComposerDraftRevision(const ComposerDraftFrame& frame, const char* property) {
+    const auto revision = composerDraftRead(frame, frame.view, property);
+    if (!frame.live()) return;
+    const QJSManagedValue number(revision, frame.engine.data());
+    if (number.engine() != frame.engine.data()) {
+        frame.engine->throwError(QJSValue::TypeError, QStringLiteral("Composer value belongs to another engine"));
+        return;
+    }
+    const double next = number.toNumber() + 1;
+    if (frame.live()) composerDraftWrite(frame, frame.view, property, QJSValue(next));
+}
+} // namespace
+
+void ApplicationInfo::composerSessionSelectionStarted(QObject* composer, QObject* editor, const QString& threadId) const {
+    const auto frame = composerDraftFrame(composer, editor);
+    if (frame) captureComposerDraft(*frame, "sessionDraftIntent", "id", threadId);
+}
+void ApplicationInfo::composerSessionDraftRestored(QObject* composer, QObject* editor,
+                                                     const QString& threadId, const QString& text) const {
+    const auto frame = composerDraftFrame(composer, editor);
+    if (!frame) return;
+    const auto original = composerDraftRead(*frame, frame->view, "sessionDraftIntent");
+    if (!frame->live()) return;
+    composerDraftWrite(*frame, frame->view, "sessionDraftIntent", QJSValue(QJSValue::NullValue));
+    if (!frame->live()) return;
+    bool restore = !original.toBool();
+    if (!restore) {
+        const auto id = composerDraftRead(*frame, original, "id");
+        if (!frame->live()) return;
+        restore = id.strictlyEquals(QJSValue(threadId)) &&
+            composerDraftFieldEqual(*frame, original, "text", frame->edit, "text") &&
+            composerDraftFieldEqual(*frame, original, "revision", frame->view, "textRevision");
+    }
+    if (restore && composerDraftEditorIdle(*frame)) composerDraftWrite(*frame, frame->edit, "text", QJSValue(text));
+    if (frame->live()) publishComposerDraft(*frame);
+}
+void ApplicationInfo::composerConversationClearRequested(QObject* composer, QObject* editor, const QString& intent) const {
+    const auto frame = composerDraftFrame(composer, editor);
+    if (frame) captureComposerDraft(*frame, "clearDraft", "intent", intent);
+}
+void ApplicationInfo::composerConversationClearCommitted(QObject* composer, QObject* editor, const QString& intent) const {
+    const auto frame = composerDraftFrame(composer, editor);
+    if (!frame) return;
+    const auto original = composerDraftRead(*frame, frame->view, "clearDraft");
+    if (!frame->live() || !original.toBool()) return;
+    const auto key = composerDraftRead(*frame, original, "intent");
+    if (!frame->live() || !key.strictlyEquals(QJSValue(intent))) return;
+    composerDraftWrite(*frame, frame->view, "clearDraft", QJSValue(QJSValue::NullValue));
+    if (composerDraftFieldEqual(*frame, original, "revision", frame->view, "textRevision") &&
+        composerDraftFieldEqual(*frame, original, "text", frame->edit, "text") && composerDraftEditorIdle(*frame))
+        composerDraftCall(*frame, frame->edit, "clear");
+}
+void ApplicationInfo::composerConversationRetired(QObject* composer) const {
+    const auto frame = composerDraftFrame(composer);
+    if (!frame) return;
+    incrementComposerDraftRevision(*frame, "draftOwnerRevision");
+    if (!frame->live()) return;
+    composerDraftWrite(*frame, frame->view, "submittedDrafts", frame->engine->newArray());
+    if (frame->live()) composerDraftWrite(*frame, frame->view, "workReportDraft", QJSValue(QJSValue::NullValue));
+}
+void ApplicationInfo::composerDraftEdited(QObject* composer, QObject* editor, bool publishText) const {
+    const auto frame = composerDraftFrame(composer, editor);
+    if (!frame) return;
+    incrementComposerDraftRevision(*frame, "textRevision");
+    if (publishText && frame->live()) publishComposerDraft(*frame);
 }
 
 bool ApplicationInfo::engineThreadsSelectable() const {

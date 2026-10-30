@@ -451,26 +451,11 @@ Rectangle {
     }
     Connections {
         target: composer.assistant
-        function onSessionSelectionStarted(threadId) {
-            composer.sessionDraftIntent={id:threadId,text:editor.text,revision:composer.textRevision};
-        }
-        function onSessionDraftRestored(threadId,text) {
-            const original=composer.sessionDraftIntent;
-            composer.sessionDraftIntent=null;
-            if((!original || original.id===threadId && original.text===editor.text && original.revision===composer.textRevision)
-                && !editor.inputMethodComposing && !editor.preeditText.length)editor.text=text;
-            composer.assistant.sessionDraft=editor.text;
-        }
-        function onConversationClearRequested(intent) {
-            composer.clearDraft={intent: intent, text: editor.text, revision: composer.textRevision};
-        }
-        function onConversationClearCommitted(intent) {
-            const draft=composer.clearDraft;
-            if(!draft || draft.intent!==intent)return;
-            composer.clearDraft=null;
-            if(draft.revision===composer.textRevision && draft.text===editor.text && !editor.inputMethodComposing && !editor.preeditText.length)editor.clear();
-        }
-        function onConversationRetired() { ++composer.draftOwnerRevision; composer.submittedDrafts = []; composer.workReportDraft = null; }
+        function onSessionSelectionStarted(threadId) { ApplicationInfo.composerSessionSelectionStarted(composer, editor, threadId); }
+        function onSessionDraftRestored(threadId,text) { ApplicationInfo.composerSessionDraftRestored(composer, editor, threadId, text); }
+        function onConversationClearRequested(intent) { ApplicationInfo.composerConversationClearRequested(composer, editor, intent); }
+        function onConversationClearCommitted(intent) { ApplicationInfo.composerConversationClearCommitted(composer, editor, intent); }
+        function onConversationRetired() { ApplicationInfo.composerConversationRetired(composer); }
         function onWorkReportFinished(receipt) { composer.finishWorkReport(receipt); }
     }
     Component.onCompleted: refreshFilePresentation()
@@ -620,9 +605,9 @@ Rectangle {
                 KeyNavigation.priority: KeyNavigation.BeforeItem
                 KeyNavigation.tab: addFilesButton
                 KeyNavigation.backtab: composer.previousFocusItem
-                onTextChanged: { ++composer.textRevision; composer.assistant.sessionDraft=editor.text; }
-                onPreeditTextChanged: ++composer.textRevision
-                onInputMethodComposingChanged: ++composer.textRevision
+                onTextChanged: ApplicationInfo.composerDraftEdited(composer, editor, true)
+                onPreeditTextChanged: ApplicationInfo.composerDraftEdited(composer, editor, false)
+                onInputMethodComposingChanged: ApplicationInfo.composerDraftEdited(composer, editor, false)
                 onSelectionStartChanged: composer.rememberSelection()
                 onSelectionEndChanged: composer.rememberSelection()
                 color: EaStyle.Colors.themeForeground
