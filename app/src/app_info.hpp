@@ -610,6 +610,26 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void searchAboutToShow() const;
     Q_INVOKABLE void searchAboutToHide() const;
     Q_INVOKABLE void searchOpened() const;
+    /// Form/filter/layout procedures retain existing project/scientific setters and compiled binding installers.
+    Q_INVOKABLE void descriptionPressed(const QJSValue& mouse) const;
+    Q_INVOKABLE void descriptionCommit(int field, const QJSValue& restoreBinding) const;
+    Q_INVOKABLE void parameterPickerChanged(int kind, bool chosen, const QJSValue& index) const;
+    Q_INVOKABLE void parameterShownGroupsFollow() const;
+    Q_INVOKABLE QJSValue atomWyckoffWidth() const;
+    Q_INVOKABLE QJSValue atomAdpIsoWidth() const;
+    Q_INVOKABLE void scientificSelectorChanged(const QJSValue& index, int kind, const QJSValue& restoreBinding) const;
+    Q_INVOKABLE void appearanceCommit(bool probability, const QJSValue& restoreBinding) const;
+    Q_INVOKABLE QJSValue spaceGroupNumberAdmitted(const QJSValue& text) const;
+    Q_INVOKABLE void spaceGroupNumberCommit(const QJSValue& text) const;
+    Q_INVOKABLE QJSValue reflectionShown(const QJSValue& uid, const QJSValue& value, bool residual) const;
+    Q_INVOKABLE void placeReflectionTable() const;
+    Q_INVOKABLE QJSValue exampleChoiceIndex(const QJSValue& model, const QJSValue& value) const;
+    Q_INVOKABLE void openProjectRow(bool recent, bool activate) const;
+    Q_INVOKABLE QJSValue projectDescriptionAdmitted(const QJSValue& value, bool title) const;
+    Q_INVOKABLE QJSValue projectJoinedPath(const QJSValue& folder, const QJSValue& name) const;
+    Q_INVOKABLE void projectDescriptionOpened() const;
+    Q_INVOKABLE void toolTipAboutToShow() const;
+    Q_INVOKABLE QJSValue styleScalePx(const QJSValue& size) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

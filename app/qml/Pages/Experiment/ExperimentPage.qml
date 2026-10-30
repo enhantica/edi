@@ -197,13 +197,7 @@ WorkflowPage {
                 // From the column's height and where the table starts in it, never from the table's own height, so a
                 // new row count cannot move the room it was taken from (a half-pixel rounding made it flicker).
                 // Set after the column has laid out: the table's place is read, not bound.
-                function place() {
-                    const column = page.extrasColumn;
-                    if (!column || !column.contentItem)
-                        return;
-                    const top = mapToItem(column.contentItem, 0, 0).y;
-                    spareHeight = Math.floor(column.height - top - EaStyle.Sizes.fontPixelSize);
-                }
+                function place() { ApplicationInfo.placeReflectionTable(); }
 
                 experiment: page.experiment
                 Component.onCompleted: Qt.callLater(place)

@@ -21,13 +21,7 @@ Column {
     readonly property real typeWidth: EaStyle.Sizes.fontPixelSize * 4.5
     // The WP column fits the widest position name ("48n") and the box's arrow; its list shows the coordinates too (the
     // owner, 2026-10-11).
-    readonly property real wyckoffWidth: {
-        let widest = 0;
-        const names = sites ? sites.wyckoffNames : [];
-        for (let i = 0; i < names.length; ++i)
-            widest = Math.max(widest, wyckoffMetrics.advanceWidth(names[i]));
-        return Math.ceil(Math.max(widest, wyckoffMetrics.advanceWidth("WP"))) + EaStyle.Sizes.fontPixelSize * 2.5;
-    }
+    readonly property real wyckoffWidth: ApplicationInfo.atomWyckoffWidth()
 
     FontMetrics {
         id: wyckoffMetrics
@@ -152,10 +146,7 @@ Column {
                             ]
                         }
                     }
-                    onActivated: index => {
-                        group.sites.setText(row.index, "typeSymbol", textAt(index));
-                        currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol));
-                    }
+                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 0, () => { currentIndex = Qt.binding(() => ApplicationInfo.elementSymbols.indexOf(row.typeSymbol)); })
                 }
             }
             ParameterCell {
@@ -190,10 +181,7 @@ Column {
                     listFontFamily: "Noto Sans"
                     currentIndex: letterIndex
                     displayText: letterIndex >= 0 ? group.sites.wyckoffNames[letterIndex] : row.wyckoffLetter
-                    onActivated: index => {
-                        group.sites.setText(row.index, "wyckoffLetter", group.sites.wyckoffLetters[index]);
-                        currentIndex = Qt.binding(() => letterIndex);
-                    }
+                    onActivated: index => ApplicationInfo.scientificSelectorChanged(index, 1, () => { currentIndex = Qt.binding(() => letterIndex); })
                 }
             }
             ParameterCell {

@@ -5,6 +5,7 @@
 // on the last one. The tooltip sits below its control, or above it where there is no room below: never over it.
 pragma ComponentBehavior: Bound
 import QtQuick
+import edi.app
 import QtQuick.Effects
 import QtQuick.Controls.Material.impl
 import QtQuick.Templates as T
@@ -42,12 +43,7 @@ T.ToolTip {
     x: parent ? (parent.width - implicitWidth) / 2 : 0
     y: parent ? parent.height + gap : 0
     // Below, unless the window has no room for it there; worked out as it opens, where the control is now.
-    onAboutToShow: {
-        if (!parent)
-            return;
-        const bottom = parent.mapToItem(null, 0, parent.height).y;
-        y = bottom + gap + implicitHeight <= parent.Window.height - margins ? parent.height + gap : -implicitHeight - gap;
-    }
+    onAboutToShow: ApplicationInfo.toolTipAboutToShow()
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset, contentWidth + leftPadding + rightPadding)
     implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset, contentHeight + topPadding + bottomPadding)
