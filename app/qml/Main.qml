@@ -239,19 +239,12 @@ EaComponents.ApplicationWindow {
     property bool pagesStarted: true
     readonly property var pageLoaders: [projectLoader, structureLoader, experimentLoader, analysisLoader, reportLoader]
     // The opening's progress, which the status bar shows until every page is built.
-    readonly property int pagesWanted: Session.hasProject ? pageLoaders.filter(loader => loader.wanted).length : 0
-    readonly property int pagesBuilt: Session.hasProject ? pageLoaders.filter(loader => loader.wanted && loader.status === Loader.Ready).length : 0
-    function pageTurn(loader) {
-        return pagesStarted && pageLoaders.slice(0, pageLoaders.indexOf(loader)).every(earlier => !earlier.wanted || earlier.status === Loader.Ready);
-    }
+    readonly property int pagesWanted: ApplicationInfo.workflowPagesCount(false)
+    readonly property int pagesBuilt: ApplicationInfo.workflowPagesCount(true)
+    function pageTurn(loader) { return ApplicationInfo.workflowPageTurn(loader); }
     Connections {
         target: Session
-        function onProjectAboutToChange() {
-            window.pagesStarted = false;
-            // A page past Project is rebuilt later; its tab is disabled meanwhile, so the window shows Project.
-            if (window.appBarCentralTabs.currentIndex > 1)
-                window.appBarCentralTabs.setCurrentIndex(1);
-        }
+        function onProjectAboutToChange() { ApplicationInfo.workflowProjectChanging(); }
         function onProjectChanged() {
             pagesStart.restart();
         }
@@ -273,16 +266,7 @@ EaComponents.ApplicationWindow {
         HoverHandler {
             id: tabBarHover
         }
-        readonly property WorkflowTabButton preparingTab: {
-            if (!tabBarHover.hovered)
-                return null;
-            for (const tab of [projectTab, structureTab, experimentTab, analysisTab, reportTab]) {
-                const point = tab.mapFromItem(tabBarOverlay, tabBarHover.point.position.x, tabBarHover.point.position.y);
-                if (tab.preparing && tab.contains(point))
-                    return tab;
-            }
-            return null;
-        }
+        readonly property WorkflowTabButton preparingTab: ApplicationInfo.workflowPreparingTab()
 
         // The app's own tooltip, as every other one (owner, 2026-10-25).
         EaElements.ToolTip {
@@ -406,40 +390,15 @@ EaComponents.ApplicationWindow {
     }
     Connections {
         target: Session.assistant
-        function onActionPageRequested(page, extra) {
-            const project = Session.project;
-            if (!project) return;
-            let target = null;
-            let destination = -1;
-            if (page === "analysis" && AppState.analysisPageEnabled) {
-                target = analysisLoader.item; destination = AppState.Page.Analysis;
-            } else if (page === "experiment" && AppState.experimentPageEnabled) {
-                target = experimentLoader.item; destination = AppState.Page.Experiment;
-            } else if (page === "structure" && AppState.structurePageEnabled) {
-                target = structureLoader.item; destination = AppState.Page.Structure;
-            }
-            if (!target || destination < 0) return;
-            AppState.open(destination);
-            if (Session.project === project && target === window.assistantWorkflowPage)
-                target.showSidebarTab(extra);
-        }
+        function onActionPageRequested(page, extra) { ApplicationInfo.windowAssistantAction(0, page, extra); }
         function onActionControlsRequested() { window.assistantManualPane = false; }
-        function onShowingActionsChanged() { if(!Session.assistant.showingActions)window.assistantManualPane = false; }
+        function onShowingActionsChanged() { ApplicationInfo.windowAssistantAction(1, undefined, undefined); }
         function onActionPointerShown() { assistantPointer.show(); }
         function onActionPointerMoved(position) { const local = assistantPointer.parent.mapFromItem(null, position.x, position.y); assistantPointer.move(local.x, local.y); }
         function onActionPointerPressed() { assistantPointer.click(); }
-        function onActionPointerHidden() {
-            if (Session.assistant.state !== "agent_active") assistantPointer.hide();
-        }
-        function onStateChanged() {
-            if (Session.assistant.state !== "agent_active") assistantPointer.hide();
-        }
-        function onActionManualTakeover() {
-            // Synchronous marker only: the sidebar is already exposed. Keep it
-            // so until the user explicitly chooses to reopen the assistant.
-            window.assistantManualTakeoverProject = Session.project;
-            window.assistantEmptyManualTakeover = Session.project === null;
-        }
+        function onActionPointerHidden() { ApplicationInfo.windowAssistantAction(2, undefined, undefined); }
+        function onStateChanged() { ApplicationInfo.windowAssistantAction(2, undefined, undefined); }
+        function onActionManualTakeover() { ApplicationInfo.windowAssistantAction(3, undefined, undefined); }
     }
     AppDialog {
         id: assistantDesktopOnlyDialog
@@ -604,7 +563,7 @@ EaComponents.ApplicationWindow {
                 id: unsavedText
                 anchors.verticalCenter: parent.verticalCenter
                 textFormat: Text.StyledText
-                text: qsTr("The current project <b>%1</b> has unsaved changes.").arg(Session.project !== null ? Session.project.name.replace(/&/g, "&amp;").replace(/</g, "&lt;") : "")
+                text: ApplicationInfo.windowUnsavedText()
             }
         }
     }
@@ -619,7 +578,7 @@ EaComponents.ApplicationWindow {
         property bool zip: false
         property bool copy: false
         readonly property Item nativeAcceptButton: opened ? standardButton(Dialog.Ok) : null
-        onOpened: if (nativeAcceptButton) nativeAcceptButton.objectName = "saveAs.accept"
+        onOpened: ApplicationInfo.windowSaveChoiceOpened()
         // A browser without the File System Access API writes no folder and moves no project onto the disk: a copy
         // as a .zip download is all it offers.
         readonly property bool diskWritable: !WebFiles.available || WebStorage.diskAccess
@@ -713,43 +672,19 @@ EaComponents.ApplicationWindow {
     // The browser's file access: an archive that could not be opened or a project not packed.
     Connections {
         target: WebFiles
-        function onFailed(request, message) {
-            webFilesError.message = message;
-            webFilesError.open();
-        }
+        function onFailed(request, message) { ApplicationInfo.windowFailure(0, message); }
     }
     // The web app's saves (edi ADR-0052 §9): where the project went, and what a failed write says.
     Connections {
         target: Session
         // The first save of a project into the browser's storage warns in a dialog, later ones in the short notice
         // (owner, 2026-10-25).
-        function onWebSaved(kind) {
-            if (kind !== "browser")
-                return;
-            if (browserSaved.warnedFor !== Session.project) {
-                browserSaved.warnedFor = Session.project;
-                browserSaved.kept = true;
-                browserSaved.open();
-            } else {
-                webNotice.show(qsTr("Saved in this browser only."));
-            }
-        }
-        function onWebStorageUnavailable() {
-            browserSaved.kept = false;
-            browserSaved.open();
-        }
+        function onWebSaved(kind) { ApplicationInfo.windowWebSaved(kind); }
+        function onWebStorageUnavailable() { ApplicationInfo.windowStorageUnavailable(); }
         // Handed to the browser, which may still ask whether to allow it: never "downloaded". Replacing the original
         // is said only for a project opened from a file (owner, 2026-10-25).
-        function onWebDownloaded(name, fromFile) {
-            let text = qsTr("%1 was handed to the browser to download.").arg(name);
-            if (fromFile)
-                text += " " + qsTr("To replace the original file, have the browser ask where to save downloads and choose that file.");
-            webNotice.show(text);
-        }
-        function onWebSaveFailed(message) {
-            webFilesError.message = message;
-            webFilesError.open();
-        }
+        function onWebDownloaded(name, fromFile) { ApplicationInfo.windowWebDownloaded(name, fromFile); }
+        function onWebSaveFailed(message) { ApplicationInfo.windowFailure(0, message); }
     }
     // Where a save into the browser's storage leaves the project: kept there, which the browser may clear, or, where it
     // keeps nothing, only in this tab. Save project as… is the way onto the disk.
@@ -764,15 +699,8 @@ EaComponents.ApplicationWindow {
         standardButtons: Dialog.Apply | Dialog.Ok
         contentWidth: AppSizes.messagesDialogContentWidth
         contentHeight: browserSavedRow.implicitHeight
-        Component.onCompleted: {
-            standardButton(Dialog.Apply).text = qsTr("Save project as…");
-            standardButton(Dialog.Apply).objectName = "webStorageWarning.saveAs";
-            standardButton(Dialog.Ok).objectName = "webStorageWarning.ok";
-        }
-        onApplied: {
-            close();
-            window.saveProjectAs();
-        }
+        Component.onCompleted: ApplicationInfo.windowBrowserWarningReady()
+        onApplied: ApplicationInfo.windowBrowserWarningApplied()
 
         Row {
             id: browserSavedRow
@@ -802,11 +730,7 @@ EaComponents.ApplicationWindow {
         id: webNotice
         objectName: "webNotice"
         property string text
-        function show(message) {
-            text = message;
-            open();
-            webNoticeTimer.restart();
-        }
+        function show(message) { ApplicationInfo.windowNotice(message); }
         parent: Overlay.overlay
         x: Math.round((parent.width - width) / 2)
         y: parent.height - height - EaStyle.Sizes.fontPixelSize * 3
@@ -931,32 +855,18 @@ EaComponents.ApplicationWindow {
     Connections {
         target: Session
         function onProjectChanged() { window.assistantEmptyManualTakeover = false; }
-        function onLoadFailed(message) {
-            refusal.title = qsTr("The project was not opened");
-            refusal.message = message;
-            refusal.open();
-        }
+        function onLoadFailed(message) { ApplicationInfo.windowFailure(1, message); }
     }
     Connections {
         target: Session.project
-        function onRefused(message) {
-            refusal.title = qsTr("The change was not made");
-            refusal.message = message;
-            refusal.open();
-        }
+        function onRefused(message) { ApplicationInfo.windowFailure(2, message); }
     }
     // The fit owner requests automatic presentation only for ordinary manual fits/scans.
     // Native assistant fits retain their result; the status bar can still open it explicitly.
     Connections {
         target: Session.project ? Session.project.fit : null
-        function onAutomaticResultsRequested() {
-            if (Preferences.showFitResults)
-                fitResults.open();
-        }
-        function onRefused(message) {
-            fitError.message = message;
-            fitError.open();
-        }
+        function onAutomaticResultsRequested() { ApplicationInfo.windowAutomaticResults(); }
+        function onRefused(message) { ApplicationInfo.windowFailure(3, message); }
     }
 
     // ADR-0031: the window's size and position, in logical pixels, in the store's Window group. Restored at start, after
@@ -983,14 +893,5 @@ EaComponents.ApplicationWindow {
     // The window takes its kept geometry as it is created, after the base's own settings have loaded; edi's
     // preferences go to the base once everything, the base's hidden dialog and its settings included, is complete
     // (Preferences.apply).
-    Component.onCompleted: {
-        // What Qt draws with, read in the first frame: reported at startup, shown in Develop, and it chooses how the
-        // Stacked view draws (edi ADR-0041).
-        RenderingInfo.observe(window);
-        restoreGeometry();
-        Qt.callLater(() => {
-            Preferences.apply();
-            RecentProjects.refresh();
-        });
-    }
+    Component.onCompleted: ApplicationInfo.windowCompleted()
 }

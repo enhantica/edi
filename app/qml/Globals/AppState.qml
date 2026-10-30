@@ -47,11 +47,7 @@ QtObject {
     // choices stay.
     property Connections patternViewReset: Connections {
         target: Session
-        function onProjectChanged() {
-            AppState.patternViewRanges = [NaN, NaN, NaN, NaN];
-            AppState.patternViewAxis = "";
-            AppState.scanZoom = {};
-        }
+        function onProjectChanged() { ApplicationInfo.resetPatternProjectView(); }
     }
 
     // The furthest page the user has opened with Start or Continue; an open project opens every page

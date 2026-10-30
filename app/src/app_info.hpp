@@ -648,6 +648,34 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue assistantSkillsIndex() const;
     Q_INVOKABLE void assistantSkillClicked() const;
     Q_INVOKABLE QJSValue nativeListProjection(int kind) const;
+    /// Window/page and original Create-intent procedures retain actual view tokens and native project authority.
+    Q_INVOKABLE QJSValue workflowPagesCount(bool built) const;
+    Q_INVOKABLE QJSValue workflowPageTurn(const QJSValue& loader) const;
+    Q_INVOKABLE void workflowProjectChanging() const;
+    Q_INVOKABLE QJSValue workflowPreparingTab() const;
+    Q_INVOKABLE void windowAssistantAction(int kind, const QJSValue& page, const QJSValue& extra) const;
+    Q_INVOKABLE void windowWebSaved(const QJSValue& kind) const;
+    Q_INVOKABLE void windowStorageUnavailable() const;
+    Q_INVOKABLE void windowWebDownloaded(const QJSValue& name, const QJSValue& fromFile) const;
+    Q_INVOKABLE void windowFailure(int kind, const QJSValue& message) const;
+    Q_INVOKABLE void windowBrowserWarningReady() const;
+    Q_INVOKABLE void windowBrowserWarningApplied() const;
+    Q_INVOKABLE void windowNotice(const QJSValue& message) const;
+    Q_INVOKABLE void windowAutomaticResults() const;
+    Q_INVOKABLE void windowCompleted() const;
+    Q_INVOKABLE void resetPatternProjectView() const;
+    Q_INVOKABLE QJSValue prepareAssistantCreate(const QJSValue& id) const;
+    Q_INVOKABLE QJSValue assistantCreateDialog(const QJSValue& id) const;
+    Q_INVOKABLE void retireAssistantCreate(const QJSValue& id, bool manual) const;
+    Q_INVOKABLE QJSValue createProjectNameError(const QJSValue& name) const;
+    Q_INVOKABLE QJSValue createProjectDefaults(const QJSValue& name, const QJSValue& description, const QJSValue& title) const;
+    Q_INVOKABLE void chooseCreateProject() const;
+    Q_INVOKABLE void createProjectClicked() const;
+    Q_INVOKABLE void createProjectDialogEvent(int kind) const;
+    Q_INVOKABLE void openProjectChoice() const;
+    Q_INVOKABLE void askOpenProjectChoice() const;
+    Q_INVOKABLE void windowSaveChoiceOpened() const;
+    Q_INVOKABLE QJSValue windowUnsavedText() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
