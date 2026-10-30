@@ -757,6 +757,49 @@ SceneDrawing drawing_of(const Value& value) {
     return drawing;
 }
 
+Value browser_mesh(const SharedSiteMesh& mesh) {
+    Array positions, normals, colours, triangles;
+    for (const SharedSiteVertex& vertex : mesh.vertices) {
+        for (double value : {vertex.position.x, vertex.position.y, vertex.position.z}) positions.push_back(renderer_number(value));
+        for (double value : {vertex.normal.x, vertex.normal.y, vertex.normal.z}) normals.push_back(renderer_number(value));
+        for (double value : {vertex.color.x, vertex.color.y, vertex.color.z}) colours.push_back(renderer_number(value));
+    }
+    for (std::uint32_t index : mesh.indices) triangles.emplace_back(static_cast<double>(index));
+    return Object{{"positions", std::move(positions)}, {"normals", std::move(normals)}, {"colours", std::move(colours)}, {"indices", std::move(triangles)}};
+}
+Value browser_structure(const ReportStructure& structure, const std::vector<SceneStyle>& style_table) {
+    const auto& scene = structure.scene; const auto& drawing = structure.drawing;
+    if (!scene.current || drawing.spheres.size() + drawing.shared.size() == 0) return Object{{"empty", true}};
+    const auto basis = shared_site_browser_basis(scene);
+    Object subsets;
+    for (const std::string subset : {"all", "asymmetric", "none"}) {
+        const auto visible = [&](std::size_t atom) { return subset == "all" || (subset == "asymmetric" && scene.atoms[atom].asymmetric); };
+        std::vector<SceneInstance> spheres, bonds; std::vector<std::size_t> shared; Array labels;
+        for (const SceneInstance& instance : drawing.spheres) if (visible(instance.atom)) spheres.push_back(instance);
+        for (std::size_t atom : drawing.shared) if (visible(atom)) shared.push_back(atom);
+        const std::size_t halves = std::min(drawing.cylinders.size(), 2 * scene.bonds.size());
+        for (std::size_t i = 0; i < halves; ++i) {
+            const SceneBond& bond = scene.bonds[i / 2]; if (visible(bond.atom_1) && visible(bond.atom_2)) bonds.push_back(drawing.cylinders[i]);
+        }
+        for (const SceneLabel& label : structure.labels) labels.emplace_back(visible(label.atom));
+        const auto mesh = shared_site_mesh(scene, shared, 32, 16, SharedSiteMeshProfile::Three160, basis);
+        subsets.emplace_back(subset, Object{{"spheres", instances_json(spheres)}, {"shared", browser_mesh(mesh)}, {"bonds", instances_json(bonds)}, {"labels", std::move(labels)}});
+    }
+    const std::size_t halves = std::min(drawing.cylinders.size(), 2 * scene.bonds.size());
+    const std::vector<SceneInstance> cell(drawing.cylinders.begin() + static_cast<std::ptrdiff_t>(halves), drawing.cylinders.end());
+    Object styles;
+    for (const SceneStyle& style : style_table) {
+        if (std::any_of(styles.begin(), styles.end(), [&](const auto& item) { return item.first == style.key; })) continue;
+        styles.emplace_back(style.key, Object{{"key", style.key}, {"light", style.light}, {"dark", style.dark}, {"value", style.value}});
+    }
+    const Object boolean_next{{"false", true}, {"true", false}}, boolean_pressed{{"false", false}, {"true", true}};
+    Object next{{"atoms", Object{{"all", scene.has_copies ? "asymmetric" : "none"}, {"asymmetric", "none"}, {"none", "all"}}}};
+    Object pressed{{"atoms", Object{{"all", true}, {"asymmetric", true}, {"none", false}}}};
+    for (const char* key : {"labels", "bonds", "cell", "axes"}) { next.emplace_back(key, boolean_next); pressed.emplace_back(key, boolean_pressed); }
+    return Object{{"empty", !scene.current || drawing.spheres.size() + drawing.shared.size() == 0}, {"subsets", std::move(subsets)}, {"cell", instances_json(cell)}, {"styles", std::move(styles)}, {"next", std::move(next)}, {"pressed", std::move(pressed)},
+        {"controls", Object{{"atoms", !scene.atoms.empty()}, {"labels", !scene.atoms.empty() && !structure.labels.empty()}, {"bonds", !scene.atoms.empty() && !scene.bonds.empty()}, {"atom_title", scene.has_copies ? "Atoms: all / asymmetric unit / none" : "Atoms: show / hide"}}}};
+}
+
 // --- the style tables
 
 Value pattern_styles_json(const std::vector<SeriesStyle>& table) {
@@ -865,6 +908,7 @@ void check_indices(const ReportModel& model) {
 }  // namespace
 
 std::string report_to_json(const ReportModel& model) {
+    check_indices(model);
     Array sections;
     for (ReportSection section : model.sections) {
         sections.emplace_back(report_section_name(section));
@@ -923,7 +967,7 @@ std::string report_to_json(const ReportModel& model) {
                                        {"view", view_json(structure.view)},
                                        {"drawing", drawing_json(structure.drawing)},
                                        {"along", std::move(along)},
-                                       {"labels", std::move(labels)}});
+                                       {"labels", std::move(labels)}, {"browser", browser_structure(structure, model.structure_styles)}});
     }
     Array experiments;
     for (const ReportExperiment& experiment : model.experiments) {
