@@ -69,6 +69,9 @@
 #include <QMetaMethod>
 #include <QMetaProperty>
 #include <QPointer>
+#include <QQmlError>
+#include <QScopeGuard>
+#include <cstdlib>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQmlComponent>
@@ -348,7 +351,39 @@ int main(int argc,char** argv) {
     }
     FixtureServices fixture; // Outlives all engines, QML, Session, VM and operation teardown.
     UrlObserver urls;
+    // Passive test-carrier receipt; never suppress Qt's original stderr warnings.
+    QFile qml_warning_log;
+    bool qml_warning_log_failed=false;
+    quint64 qml_warning_command=0;
+    QString qml_warning_operation, qml_warning_phase="startup";
+    int qml_warning_count=0;
+    QObject qml_warning_receiver;
+    const auto record_qml_warning=[&](const Object& entry) {
+        if(!codex_mode)return;
+        const auto bytes=encode(entry)+'\n';
+        if(!qml_warning_log.isOpen() || qml_warning_log.write(bytes)!=bytes.size() || !qml_warning_log.flush())
+            qml_warning_log_failed=true;
+    };
+    if(codex_mode) {
+        const QFileInfo config(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT"));
+        if(!config.isAbsolute() || !config.isFile())return EXIT_FAILURE;
+        qml_warning_log.setFileName(config.dir().filePath("qml-warning-events.jsonl"));
+        if(!qml_warning_log.open(QIODevice::WriteOnly|QIODevice::NewOnly))return EXIT_FAILURE;
+    }
     auto engine=std::make_unique<QQmlApplicationEngine>();
+    record_qml_warning(Object{{"event","capture_started"},{"format",1},
+        {"stderr_enabled",engine->outputWarningsToStandardError()}});
+    QObject::connect(engine.get(),&QQmlEngine::warnings,&qml_warning_receiver,[&](const QList<QQmlError>& errors) {
+        for(const auto& error:errors) {
+            const QPointer<QObject> object=error.object();
+            record_qml_warning(Object{{"event","warning"},{"ordinal",qml_warning_count++},
+                {"phase",qml_warning_phase},{"command_sequence",QString::number(qml_warning_command)},
+                {"operation",qml_warning_operation},{"url",error.url().toString()},
+                {"line",error.line()},{"column",error.column()},{"description",error.description()},
+                {"message_type",static_cast<int>(error.messageType())},{"rendered",error.toString()},
+                {"object_available",bool(object)},{"object_name",object?object->objectName():QString()}});
+        }
+    });
     auto owned=codex_mode ? std::make_unique<edi_app::Session>(nullptr)
                           : std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
     QPointer<edi_app::Session> observed=owned.get();
@@ -785,9 +820,12 @@ int main(int argc,char** argv) {
         child->closeWriteChannel();session_fault_facts["public_close_write_channel_invoked"]=true;
     };
     const auto execute_command=[&](const QByteArray& line) {
+        ++qml_warning_command;qml_warning_phase="command";qml_warning_operation="decode";
+        const auto qml_warning_boundary=qScopeGuard([&] {qml_warning_phase="between_commands";qml_warning_operation.clear();});
         try {
             auto input=decode(line).toObject();
             auto op=input["op"].toString();Object result;
+            qml_warning_operation=op;
             if((!observed || !window) && op!="inspect" && op!="destroy" && op!="session_fault_facts")throw std::runtime_error("the original Main owner has retired");
             if(op=="message_snapshot") {
                 e11_a2a_phase::requireDeclaredPhase();
@@ -2214,8 +2252,10 @@ int main(int argc,char** argv) {
     const int result=app.exec();
     input_ready.setEnabled(false);
     (void)::fcntl(STDIN_FILENO,F_SETFL,original_flags);
+    qml_warning_phase="teardown";qml_warning_operation.clear();
     engine.reset();
-    return result;
+    record_qml_warning(Object{{"event","capture_finished"},{"events",qml_warning_count},{"failed",qml_warning_log_failed}});
+    return qml_warning_log_failed && result==0 ? EXIT_FAILURE : result;
 #else
     std::fputs("Main test host requires POSIX stdin readiness; this platform is not qualified by this carrier\n",stderr);
     engine.reset();
