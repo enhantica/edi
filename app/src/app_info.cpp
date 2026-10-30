@@ -818,6 +818,7 @@ struct PanelUsageFrame {
     QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
     void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
 };
+QJSValue singleProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue evolutionProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue patternProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue sceneProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
@@ -2598,7 +2599,9 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     const auto argument = [&](uint index) {
         return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
     };
-    const auto result = callback->d()->operation >= 260
+    const auto result = callback->d()->operation >= 280
+        ? singleProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
+        : callback->d()->operation >= 260
         ? evolutionProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
         : callback->d()->operation >= 240
         ? patternProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
@@ -2983,7 +2986,8 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto updateCapture = [&](uint index, const QJSValue& value) {
             if (panelUsageReady(frame)) captures->set(frame.vm(), index, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), value)));
         };
-        result = callback->d()->operation >= 260 ? evolutionProcedureCallback(frame, callback->d()->operation, retained, argument)
+        result = callback->d()->operation >= 280 ? singleProcedureCallback(frame, callback->d()->operation, retained, argument)
+            : callback->d()->operation >= 260 ? evolutionProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 240 ? patternProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 220 ? sceneProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 200 ? reportProcedureCallback(frame, callback->d()->operation, retained, argument, updateCapture)
@@ -7496,8 +7500,8 @@ void ApplicationInfo::patternHoverRead(const QJSValue& pane, const QJSValue& are
     const auto y = panelUsageRead(f, area, "y"), atY = panelUsageRead(f, at, "y"); const auto vertical = panelUsageAdd(f, y, atY);
     panelUsageGlobalCall(f, "show", {text, horizontal, vertical});
 }
-void ApplicationInfo::patternHoverShow(const QJSValue& text, const QJSValue& atX, const QJSValue& atY) const {
-    const auto f = panelUsageEngine(this); projectWrite(f, "hoverText", "text", text);
+namespace {
+void chartHoverPosition(const PanelUsageFrame& f, const QJSValue& atX, const QJSValue& atY) {
     const auto first = panelUsageAdd(f, atX, assistantContextField(f, "chart", "em")), right = panelUsageAdd(f, first, panelUsageContextRead(f, "width"));
     QJSValue x;
     if (assistantRelation(f, right, assistantContextField(f, "chart", "width"), 3)) x = panelUsageAdd(f, atX, assistantContextField(f, "chart", "em"));
@@ -7510,6 +7514,11 @@ void ApplicationInfo::patternHoverShow(const QJSValue& text, const QJSValue& atX
         y = viewArithmetic(f, before, viewArithmetic(f, currentEm, QJSValue(0.5), 1), 0);
     } else y = panelUsageAdd(f, atY, assistantContextField(f, "chart", "em"));
     panelUsageContextWrite(f, "y", y);
+}
+} // namespace
+void ApplicationInfo::patternHoverShow(const QJSValue& text, const QJSValue& atX, const QJSValue& atY) const {
+    const auto f = panelUsageEngine(this); projectWrite(f, "hoverText", "text", text);
+    chartHoverPosition(f, atX, atY);
 }
 void ApplicationInfo::chartToolbarAction(int action) const {
     const auto f = panelUsageEngine(this);
@@ -7696,6 +7705,292 @@ void ApplicationInfo::evolutionDrawReportPoints() const {
 }
 void ApplicationInfo::evolutionReportChanged() const {
     const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "fromReport"))) panelUsageGlobalCall(f, "drawReportPoints");
+}
+
+namespace {
+QJSValue chartSpreadCall(const PanelUsageFrame& f, const QJSValue& receiver, const char* name, const QJSValue& values) {
+    if (!panelUsageReady(f)) return {};
+    QV4::Scope scope(f.vm()); QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), receiver));
+    QV4::ScopedString key(scope, f.vm()->newString(QString::fromLatin1(name))); QV4::ScopedValue function(scope, panelUsageGet(f, *object, key, true));
+    if (!panelUsageReady(f)) return {};
+    QV4::Value* args = scope.constructUndefined(2); args[0].setEmpty(); args[1] = QJSValuePrivate::convertToReturnedValue(f.vm(), values);
+    QV4::ScopedValue result(scope, QV4::Runtime::CallWithSpread::call(f.vm(), *function, *object, args, 2)); f.checked();
+    return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
+}
+QJSValue singleNamedExperiments(const PanelUsageFrame& f, bool explicitChart) {
+    const auto read = [&](const char* name) { return explicitChart ? assistantContextField(f, "chart", name) : panelUsageContextRead(f, name); };
+    if (panelUsageTruth(read("stacked"))) return read("stackedExperiments");
+    return panelUsageTruth(read("experiment")) ? assistantGeometryArray(f, {read("experiment")}) : controlEmptyArray(f);
+}
+QJSValue singleProcedureCallback(const PanelUsageFrame& f, uint operation,
+    const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
+    const auto value = arg(0);
+    if (operation == 280) {
+        if (!panelUsageTruth(value)) return value;
+        const auto model = panelUsageRead(f, value, "singleCrystalReflections"); if (!panelUsageTruth(model)) return model;
+        const auto hidden = panelUsageContextRead(f, "hiddenRows"); return panelUsageMemberCall(f, hidden, "includes", {panelUsageRead(f, value, "name")});
+    }
+    if (operation == 281) return panelUsageRead(f, value, "singleCrystalReflections");
+    if (operation == 282) return QJSValue(!panelUsageTruth(panelUsageMemberCall(f, panelUsageContextRead(f, "hiddenModels"), "includes", {value})));
+    if (operation == 283) return panelUsageRead(f, value, "calculatedShown");
+    if (operation == 284 || operation == 285) {
+        const bool squared = panelUsageTruth(panelUsageContextRead(f, "squared"));
+        return panelUsageRead(f, value, operation == 284 ? (squared ? "low" : "lowF") : (squared ? "high" : "highF"));
+    }
+    if (operation == 286) return panelUsageTruth(value) ? panelUsageRead(f, value, "name") : QJSValue(QStringLiteral(""));
+    if (operation == 287) {
+        const auto colors = panelUsageContextRead(f, "AppColors");
+        const auto index = panelUsageTruth(assistantContextField(f, "chart", "stacked")) ? arg(1) : QJSValue(0);
+        const auto dark = panelUsageRead(f, assistantContextField(f, "chart", "colors"), "isDarkPalette");
+        return numberString(f, panelUsageMemberCall(f, colors, "experiment", {index, dark}));
+    }
+    if (operation == 288) return QJSValue(!value.strictlyEquals(saved(0)));
+    return {};
+}
+void singleEmptyPoints(const PanelUsageFrame& f, const QJSValue& layer) {
+    const QJSValueList values{controlEmptyArray(f), controlEmptyArray(f), controlEmptyArray(f)};
+    panelUsageMemberCall(f, layer, "setPoints", values);
+}
+bool singleBoxIncreasing(const PanelUsageFrame& f, const QJSValue& box, bool spans) {
+    auto high = textIndex(f, box, QJSValue(1)), low = textIndex(f, box, QJSValue(0)); if (!assistantRelation(f, high, low, 1)) return false;
+    high = textIndex(f, box, QJSValue(3)); low = textIndex(f, box, QJSValue(2)); if (!assistantRelation(f, high, low, 1)) return false;
+    if (spans) {
+        high = textIndex(f, box, QJSValue(1)); low = textIndex(f, box, QJSValue(0)); if (!numberFinite(f, viewArithmetic(f, high, low, 0))) return false;
+        high = textIndex(f, box, QJSValue(3)); low = textIndex(f, box, QJSValue(2)); if (!numberFinite(f, viewArithmetic(f, high, low, 0))) return false;
+    }
+    return panelUsageReady(f);
+}
+bool singleStillIn(const PanelUsageFrame& f, const QJSValue& mouse, const char* name, const char* pressed) {
+    const auto distance = numberMath(f, "abs", [&] { const auto point = panelUsageRead(f, mouse, name), before = panelUsageContextRead(f, pressed); return QJSValueList{viewArithmetic(f, point, before, 0)}; });
+    const auto limit = viewArithmetic(f, assistantContextField(f, "chart", "em"), QJSValue(0.3), 1);
+    return assistantRelation(f, distance, limit, 0);
+}
+QJSValue singleWheelEnd(const PanelUsageFrame& f, const QJSValue& anchor, const QJSValue& factor, const char* axis, bool high) {
+    const auto edge = assistantContextField(f, axis, high ? "max" : "min");
+    const auto distance = high ? viewArithmetic(f, edge, anchor, 0) : viewArithmetic(f, anchor, edge, 0);
+    const auto scaled = viewArithmetic(f, distance, factor, 1);
+    return high ? panelUsageAdd(f, anchor, scaled) : viewArithmetic(f, anchor, scaled, 0);
+}
+} // namespace
+
+QJSValue ApplicationInfo::singleModels() const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageTruth(panelUsageContextRead(f, "stacked"))) return panelUsageTruth(panelUsageContextRead(f, "reflections")) ? assistantGeometryArray(f, {panelUsageContextRead(f, "reflections")}) : controlEmptyArray(f);
+    const auto out = controlEmptyArray(f);
+    panelUsageEach(f, panelUsageContextRead(f, "stackedExperiments"), [&](const QJSValue& shown) {
+        if (panelUsageTruth(shown) && panelUsageTruth(panelUsageRead(f, shown, "singleCrystalReflections"))) panelUsageMemberCall(f, out, "push", {panelUsageRead(f, shown, "singleCrystalReflections")});
+        return panelUsageReady(f);
+    }); return out;
+}
+QJSValue ApplicationInfo::singleHiddenModels() const {
+    const auto f = panelUsageEngine(this); const auto named = singleNamedExperiments(f, false);
+    const auto hidden = panelUsageMemberCall(f, named, "filter", {projectGuardedClosure(f, 280, 1)});
+    return panelUsageMemberCall(f, hidden, "map", {projectGuardedClosure(f, 281, 1)});
+}
+QJSValue ApplicationInfo::singleRangeModels() const {
+    const auto f = panelUsageEngine(this);
+    if (!assistantContextField(f, "Preferences", "chartHiddenRange").strictlyEquals(QJSValue(QStringLiteral("fit")))) return panelUsageContextRead(f, "models");
+    return panelUsageMemberCall(f, panelUsageContextRead(f, "models"), "filter", {projectGuardedClosure(f, 282, 1)});
+}
+QJSValue ApplicationInfo::singleCalculated() const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageTruth(panelUsageContextRead(f, "reportMode"))) return QJSValue(assistantRelation(f, panelUsageRead(f, assistantContextField(f, "reportData", "calc"), "length"), QJSValue(0), 1));
+    const auto revision = panelUsageContextRead(f, "revision"); Q_UNUSED(revision)
+    return panelUsageMemberCall(f, panelUsageContextRead(f, "models"), "some", {projectGuardedClosure(f, 283, 1)});
+}
+QJSValue ApplicationInfo::singleReportRange() const {
+    const auto f = panelUsageEngine(this); if (!panelUsageTruth(panelUsageContextRead(f, "reportMode"))) return assistantGeometryArray(f, {QJSValue(0), QJSValue(1)});
+    auto low = panelUsageContextRead(f, "Infinity"), high = numberNegate(f, panelUsageContextRead(f, "Infinity"));
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, assistantContextField(f, "reportData", "meas"), "length"), 0); ++i) {
+        QJSValueList values;
+        const auto first = textIndex(f, assistantContextField(f, "reportData", "meas"), QJSValue(i)), su = textIndex(f, assistantContextField(f, "reportData", "su"), QJSValue(i));
+        values.append(viewArithmetic(f, first, su, 0));
+        const auto second = textIndex(f, assistantContextField(f, "reportData", "meas"), QJSValue(i)), error = textIndex(f, assistantContextField(f, "reportData", "su"), QJSValue(i));
+        values.append(panelUsageAdd(f, second, error)); values.append(textIndex(f, assistantContextField(f, "reportData", "calc"), QJSValue(i)));
+        panelUsageEach(f, assistantGeometryArray(f, values), [&](const QJSValue& end) {
+            if (numberFinite(f, end)) { low = numberMath(f, "min", [&] { return QJSValueList{low, end}; }); high = numberMath(f, "max", [&] { return QJSValueList{high, end}; }); }
+            return panelUsageReady(f);
+        });
+    }
+    if (!assistantRelation(f, high, low, 1)) return assistantGeometryArray(f, {QJSValue(0), QJSValue(1)});
+    const auto pad = viewArithmetic(f, viewArithmetic(f, high, low, 0), QJSValue(0.05), 1);
+    const QJSValueList ends{numberMath(f, "min", [&] { return QJSValueList{QJSValue(0), viewArithmetic(f, low, pad, 0)}; }), panelUsageAdd(f, high, pad)};
+    return assistantGeometryArray(f, ends);
+}
+QJSValue ApplicationInfo::singleFullRange(bool high) const {
+    const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "reportMode"))) return textIndex(f, panelUsageContextRead(f, "reportRange"), QJSValue(high ? 1 : 0));
+    const auto revision = panelUsageContextRead(f, "revision"); Q_UNUSED(revision)
+    const auto shown = panelUsageMemberCall(f, panelUsageContextRead(f, "rangeModels"), "filter", {projectGuardedClosure(f, 283, 1)});
+    const auto values = panelUsageMemberCall(f, shown, "map", {projectGuardedClosure(f, high ? 285 : 284, 1)});
+    const auto finite = panelUsageMemberCall(f, values, "filter", {panelUsageContextRead(f, "isFinite")});
+    if (assistantRelation(f, panelUsageRead(f, finite, "length"), QJSValue(0), 1)) return chartSpreadCall(f, panelUsageContextRead(f, "Math"), high ? "max" : "min", finite);
+    return QJSValue(high ? 1 : 0);
+}
+void ApplicationInfo::singleUpdateLegend() const {
+    const auto f = panelUsageEngine(this); const auto named = singleNamedExperiments(f, true), rows = panelUsageContextRead(f, "legendRows");
+    QJSValueList args;
+    args.append(panelUsageMemberCall(f, named, "map", {projectGuardedClosure(f, 286, 1)}));
+    args.append(panelUsageMemberCall(f, named, "map", {projectGuardedClosure(f, 287, 2)}));
+    QJSValue selected(-1);
+    if (panelUsageTruth(assistantContextField(f, "chart", "stacked")) && !panelUsageTruth(assistantContextField(f, "Preferences", "chartHighlightSelected"))) selected = assistantContextField(f, "chart", "selectedIndex");
+    args.append(selected); args.append(assistantContextField(f, "chart", "hiddenRows")); panelUsageMemberCall(f, rows, "setRows", args);
+}
+void ApplicationInfo::singleToggleRow(const QJSValue& key) const {
+    const auto f = panelUsageEngine(this); const auto chart = panelUsageContextRead(f, "chart"); QJSValue rows;
+    if (panelUsageTruth(panelUsageMemberCall(f, assistantContextField(f, "chart", "hiddenRows"), "includes", {key})))
+        rows = panelUsageMemberCall(f, assistantContextField(f, "chart", "hiddenRows"), "filter", {panelUsageClosure(f, 288, {key}, 1)});
+    else rows = panelUsageMemberCall(f, assistantContextField(f, "chart", "hiddenRows"), "concat", {assistantGeometryArray(f, {key})});
+    assistantMemberWrite(f, chart, "hiddenRows", rows);
+    if (assistantContextField(f, "Preferences", "chartHiddenRange").strictlyEquals(QJSValue(QStringLiteral("fit")))) projectWrite(f, "chart", "zoom", controlEmptyArray(f));
+    projectInvoke(f, "chart", "updateLegend");
+}
+QJSValue ApplicationInfo::singlePart(const QJSValue& x, const QJSValue& y, const QJSValue& su, const QJSValue& used, const QJSValue& want) const {
+    const auto f = panelUsageEngine(this); const QJSValueList empty{controlEmptyArray(f), controlEmptyArray(f), controlEmptyArray(f)}; const auto out = assistantGeometryArray(f, empty);
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, x, "length"), 0); ++i) {
+        QJSValue take(true);
+        if (panelUsageTruth(used) && assistantRelation(f, QJSValue(i), panelUsageRead(f, used, "length"), 0)) take = textIndex(f, used, QJSValue(i));
+        if (take.strictlyEquals(want)) for (int column = 0; column < 3; ++column) {
+            const auto destination = textIndex(f, out, QJSValue(column)); const auto value = textIndex(f, column == 0 ? x : column == 1 ? y : su, QJSValue(i));
+            panelUsageMemberCall(f, destination, "push", {value});
+        }
+    }
+    return out;
+}
+void ApplicationInfo::singleDrawModel(const QJSValue& model, const QJSValue& usedLayer, const QJSValue& leftOutLayer) const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageTruth(model) || !panelUsageTruth(assistantContextField(f, "chart", "shown")) || !panelUsageTruth(panelUsageRead(f, model, "calculatedShown"))) { singleEmptyPoints(f, usedLayer); singleEmptyPoints(f, leftOutLayer); return; }
+    const auto x = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF");
+    const auto y = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
+    const auto su = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measuredSu" : "measuredFSu");
+    const auto used = panelUsageGlobalCall(f, "part", {x, y, su, panelUsageRead(f, model, "used"), QJSValue(true)});
+    const auto left = panelUsageGlobalCall(f, "part", {x, y, su, panelUsageRead(f, model, "used"), QJSValue(false)});
+    const QJSValueList kept{textIndex(f, used, QJSValue(0)), textIndex(f, used, QJSValue(1)), textIndex(f, used, QJSValue(2))}; panelUsageMemberCall(f, usedLayer, "setPoints", kept);
+    const QJSValueList dropped{textIndex(f, left, QJSValue(0)), textIndex(f, left, QJSValue(1)), textIndex(f, left, QJSValue(2))}; panelUsageMemberCall(f, leftOutLayer, "setPoints", dropped);
+}
+void ApplicationInfo::singleRedraw() const {
+    const auto f = panelUsageEngine(this); projectInvoke(f, "chart", "updateLegend");
+    if (panelUsageTruth(assistantContextField(f, "chart", "stacked"))) { projectInvoke(f, "chart", "redrawStacked"); return; }
+    if (panelUsageTruth(assistantContextField(f, "chart", "reportMode"))) {
+        if (panelUsageTruth(assistantContextField(f, "chart", "calculated"))) {
+            const auto layer = panelUsageContextRead(f, "layer"); const QJSValueList args{panelUsageRead(f, assistantContextField(f, "chart", "reportData"), "calc"), panelUsageRead(f, assistantContextField(f, "chart", "reportData"), "meas"), panelUsageRead(f, assistantContextField(f, "chart", "reportData"), "su")}; panelUsageMemberCall(f, layer, "setPoints", args);
+        } else singleEmptyPoints(f, panelUsageContextRead(f, "layer"));
+        singleEmptyPoints(f, panelUsageContextRead(f, "leftOutLayer")); return;
+    }
+    if (!panelUsageTruth(assistantContextField(f, "chart", "reflections")) || !panelUsageTruth(assistantContextField(f, "chart", "shown"))) return;
+    const auto chart = panelUsageContextRead(f, "chart"); const QJSValueList args{assistantContextField(f, "chart", "reflections"), panelUsageContextRead(f, "layer"), panelUsageContextRead(f, "leftOutLayer")}; panelUsageMemberCall(f, chart, "drawModel", args);
+}
+void ApplicationInfo::singleDrawDiagonal() const {
+    const auto f = panelUsageEngine(this);
+    const auto from = numberMath(f, "min", [&] { return QJSValueList{assistantContextField(f, "chart", "xLow"), assistantContextField(f, "chart", "yLow")}; });
+    const auto to = numberMath(f, "max", [&] { return QJSValueList{assistantContextField(f, "chart", "xHigh"), assistantContextField(f, "chart", "yHigh")}; });
+    projectInvoke(f, "diagonal", "clear"); projectInvoke(f, "diagonal", "append", {from, from}); projectInvoke(f, "diagonal", "append", {to, to});
+}
+void ApplicationInfo::singleStateChanged(int event) const {
+    const auto f = panelUsageEngine(this);
+    if (event == 0) { panelUsageContextWrite(f, "zoom", controlEmptyArray(f)); panelUsageGlobalCall(f, "redraw"); }
+    else if (event == 1) { panelUsageContextWrite(f, "hiddenRows", controlEmptyArray(f)); panelUsageGlobalCall(f, "updateLegend"); }
+    else if (event == 2) { if (!panelUsageTruth(assistantContextField(f, "chart", "stacked"))) { const auto preferences = panelUsageContextRead(f, "Preferences"); assistantMemberWrite(f, preferences, "patternLegendShown", panelUsageContextRead(f, "legendShown")); } }
+    else {
+        const auto preferences = panelUsageContextRead(f, "Preferences"); assistantMemberWrite(f, preferences, "chartHighlightSelected", QJSValue(!panelUsageTruth(assistantContextField(f, "Preferences", "chartHighlightSelected"))));
+    }
+}
+void ApplicationInfo::singleModelChanged(bool stacked) const {
+    const auto f = panelUsageEngine(this); const auto chart = panelUsageContextRead(f, "chart"); const auto previous = panelUsageNumber(f, assistantContextField(f, "chart", "revision"));
+    if (previous) assistantMemberWrite(f, chart, "revision", QJSValue(*previous + 1));
+    projectInvoke(f, stacked ? "stackedLayer" : "chart", "redraw");
+}
+void ApplicationInfo::singleQuantityChoice(const QJSValue& index) const {
+    const auto f = panelUsageEngine(this); projectWrite(f, "Preferences", "singleCrystalQuantity", QJSValue(index.strictlyEquals(QJSValue(0)) ? QStringLiteral("f_squared") : QStringLiteral("f")));
+}
+QJSValue ApplicationInfo::singleNearest(const QJSValue& px, const QJSValue& py) const {
+    const auto f = panelUsageEngine(this); const auto span = chartSpan(f, "axisX"); double best = -1, bestModel = -1;
+    const auto em = assistantContextField(f, "chart", "em"), other = assistantContextField(f, "chart", "em"); auto bestDistance = viewArithmetic(f, em, other, 1);
+    auto xs = controlEmptyArray(f), ys = controlEmptyArray(f);
+    for (double m = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(m), panelUsageRead(f, assistantContextField(f, "chart", "models"), "length"), 0); ++m) {
+        const auto model = textIndex(f, assistantContextField(f, "chart", "models"), QJSValue(m));
+        if (!panelUsageTruth(panelUsageRead(f, model, "calculatedShown")) || panelUsageTruth(panelUsageMemberCall(f, assistantContextField(f, "chart", "hiddenModels"), "includes", {model}))) continue;
+        const auto mx = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "calculated" : "calculatedF");
+        const auto my = panelUsageRead(f, model, panelUsageTruth(assistantContextField(f, "chart", "squared")) ? "measured" : "measuredF");
+        for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, mx, "length"), 0); ++i) {
+            const auto x = textIndex(f, mx, QJSValue(i)), xLow = assistantContextField(f, "axisX", "min");
+            const auto xShare = viewArithmetic(f, viewArithmetic(f, x, xLow, 0), span, 2);
+            const auto dx = viewArithmetic(f, viewArithmetic(f, xShare, assistantContextField(f, "plot", "width"), 1), px, 0);
+            const auto y = textIndex(f, my, QJSValue(i)), yLow = assistantContextField(f, "axisY", "min"); const auto yOffset = viewArithmetic(f, y, yLow, 0);
+            const auto yShare = viewArithmetic(f, yOffset, chartSpan(f, "axisY"), 2); const auto inverted = viewArithmetic(f, QJSValue(1), yShare, 0);
+            const auto dy = viewArithmetic(f, viewArithmetic(f, inverted, assistantContextField(f, "plot", "height"), 1), py, 0);
+            const auto horizontal = viewArithmetic(f, dx, dx, 1), vertical = viewArithmetic(f, dy, dy, 1); const auto distance = panelUsageAdd(f, horizontal, vertical);
+            if (numberFinite(f, distance) && assistantRelation(f, distance, bestDistance, 0)) { best = i; bestDistance = distance; bestModel = m; xs = mx; ys = my; }
+        }
+    }
+    if (best < 0) return consentNull();
+    auto hit = panelUsageLiteral(f); panelUsageWrite(f, hit.value, "model", QJSValue(bestModel)); panelUsageWrite(f, hit.value, "row", QJSValue(best));
+    panelUsageWrite(f, hit.value, "x", textIndex(f, xs, QJSValue(best))); panelUsageWrite(f, hit.value, "y", textIndex(f, ys, QJSValue(best))); return panelUsageComplete(f, hit);
+}
+void ApplicationInfo::singleHoverRead(const QJSValue& px, const QJSValue& py) const {
+    const auto f = panelUsageEngine(this); const auto hit = panelUsageGlobalCall(f, "nearest", {px, py}); if (hit.isNull()) { panelUsageGlobalCall(f, "hide"); return; }
+    const auto span = chartSpan(f, "axisX"); const auto models = assistantContextField(f, "chart", "models"); const auto model = textIndex(f, models, panelUsageRead(f, hit, "model"));
+    const QJSValueList args{panelUsageRead(f, hit, "row"), assistantContextField(f, "chart", "squared")}; const auto text = panelUsageMemberCall(f, model, "hoverText", args);
+    const auto label = panelUsageContextRead(f, "hoverText"); QJSValue readout = text;
+    if (panelUsageTruth(assistantContextField(f, "chart", "stacked"))) {
+        const auto experiments = assistantContextField(f, "chart", "stackedExperiments"), index = panelUsageRead(f, hit, "model");
+        const auto name = panelUsageRead(f, textIndex(f, experiments, index), "name"); const auto first = panelUsageAdd(f, QJSValue(QStringLiteral("<b>")), name);
+        const auto prefix = panelUsageAdd(f, first, QJSValue(QStringLiteral("</b><br>"))); readout = panelUsageAdd(f, prefix, text);
+    }
+    assistantMemberWrite(f, label, "text", readout);
+    const auto plotX = assistantContextField(f, "plot", "x"), x = panelUsageRead(f, hit, "x"), xLow = assistantContextField(f, "axisX", "min");
+    const auto xShare = viewArithmetic(f, viewArithmetic(f, x, xLow, 0), span, 2); const auto atX = panelUsageAdd(f, plotX, viewArithmetic(f, xShare, assistantContextField(f, "plot", "width"), 1));
+    const auto plotY = assistantContextField(f, "plot", "y"), y = panelUsageRead(f, hit, "y"), yLow = assistantContextField(f, "axisY", "min");
+    const auto yShare = viewArithmetic(f, viewArithmetic(f, y, yLow, 0), chartSpan(f, "axisY"), 2); const auto inverted = viewArithmetic(f, QJSValue(1), yShare, 0);
+    const auto atY = panelUsageAdd(f, plotY, viewArithmetic(f, inverted, assistantContextField(f, "plot", "height"), 1)); chartHoverPosition(f, atX, atY);
+}
+void ApplicationInfo::singlePointer(const QJSValue& mouse, int event) const {
+    const auto f = panelUsageEngine(this);
+    if (event == 0) {
+        const auto x = panelUsageRead(f, mouse, "x"); panelUsageContextWrite(f, "lastX", x); panelUsageContextWrite(f, "pressX", x);
+        const auto y = panelUsageRead(f, mouse, "y"); panelUsageContextWrite(f, "lastY", y); panelUsageContextWrite(f, "pressY", y); projectInvoke(f, "hoverLabel", "hide"); return;
+    }
+    if (event == 1) {
+        bool panning = panelUsageTruth(panelUsageContextRead(f, "pressed"));
+        if (panning) { const auto buttons = panelUsageContextRead(f, "pressedButtons"), left = assistantContextField(f, "Qt", "LeftButton"); panning = panelUsageTruth(chartBinary(f, buttons, left, false)); }
+        if (panning && assistantContextField(f, "Preferences", "patternPointerMode").strictlyEquals(QJSValue(QStringLiteral("pan")))) {
+            const auto x = panelUsageRead(f, mouse, "x"), beforeX = panelUsageContextRead(f, "lastX"); const auto xDistance = viewArithmetic(f, x, beforeX, 0);
+            const auto xShare = viewArithmetic(f, xDistance, panelUsageContextRead(f, "width"), 2), dx = viewArithmetic(f, xShare, chartSpan(f, "axisX"), 1);
+            const auto y = panelUsageRead(f, mouse, "y"), beforeY = panelUsageContextRead(f, "lastY"); const auto yDistance = viewArithmetic(f, y, beforeY, 0);
+            const auto yShare = viewArithmetic(f, yDistance, panelUsageContextRead(f, "height"), 2), dy = viewArithmetic(f, yShare, chartSpan(f, "axisY"), 1);
+            const auto chart = panelUsageContextRead(f, "chart");
+            const QJSValueList ends{viewArithmetic(f, assistantContextField(f, "axisX", "min"), dx, 0), viewArithmetic(f, assistantContextField(f, "axisX", "max"), dx, 0), panelUsageAdd(f, assistantContextField(f, "axisY", "min"), dy), panelUsageAdd(f, assistantContextField(f, "axisY", "max"), dy)};
+            assistantMemberWrite(f, chart, "zoom", assistantGeometryArray(f, ends)); panelUsageContextWrite(f, "lastX", panelUsageRead(f, mouse, "x")); panelUsageContextWrite(f, "lastY", panelUsageRead(f, mouse, "y"));
+        }
+        if (panelUsageTruth(assistantContextField(f, "Preferences", "patternHoverShown")) && !panelUsageTruth(panelUsageContextRead(f, "pressed"))) {
+            const auto label = panelUsageContextRead(f, "hoverLabel"); const QJSValueList args{panelUsageRead(f, mouse, "x"), panelUsageRead(f, mouse, "y")}; panelUsageMemberCall(f, label, "read", args);
+        } else projectInvoke(f, "hoverLabel", "hide"); return;
+    }
+    if (event == 2) {
+        const auto button = panelUsageRead(f, mouse, "button"), right = assistantContextField(f, "Qt", "RightButton");
+        if (button.strictlyEquals(right)) { projectWrite(f, "chart", "zoom", controlEmptyArray(f)); return; }
+        const bool still = singleStillIn(f, mouse, "x", "pressX") && singleStillIn(f, mouse, "y", "pressY");
+        if (still) {
+            const auto legend = panelUsageContextRead(f, "chartLegend"); const QJSValueList args{panelUsageContextRead(f, "pointer"), panelUsageRead(f, mouse, "x"), panelUsageRead(f, mouse, "y")};
+            if (panelUsageTruth(panelUsageMemberCall(f, legend, "toggleAt", args))) return;
+        }
+        if (panelUsageTruth(assistantContextField(f, "chart", "stacked")) && panelUsageTruth(assistantContextField(f, "chart", "project")) && still) {
+            const auto label = panelUsageContextRead(f, "hoverLabel"); const QJSValueList args{panelUsageRead(f, mouse, "x"), panelUsageRead(f, mouse, "y")}; const auto hit = panelUsageMemberCall(f, label, "nearest", args);
+            if (!hit.isNull()) { const auto project = assistantContextField(f, "chart", "project"); assistantMemberWrite(f, project, "currentExperimentIndex", panelUsageRead(f, hit, "model")); } return;
+        }
+        if (!assistantContextField(f, "Preferences", "patternPointerMode").strictlyEquals(QJSValue(QStringLiteral("zoom"))) || singleStillIn(f, mouse, "x", "pressX") || singleStillIn(f, mouse, "y", "pressY")) return;
+        QJSValueList ends;
+        for (const auto& operation : {std::array<const char*, 3>{"xAt", "min", "pressX"}, {"xAt", "max", "pressX"}, {"yAt", "max", "pressY"}, {"yAt", "min", "pressY"}}) {
+            const auto value = numberMath(f, operation[1], [&] { return QJSValueList{panelUsageContextRead(f, operation[2]), panelUsageRead(f, mouse, std::string_view(operation[0]) == "xAt" ? "x" : "y")}; });
+            ends.append(panelUsageGlobalCall(f, operation[0], {value}));
+        }
+        const auto box = assistantGeometryArray(f, ends); if (singleBoxIncreasing(f, box, true)) projectWrite(f, "chart", "zoom", box); return;
+    }
+    if (panelUsageRead(f, panelUsageRead(f, mouse, "angleDelta"), "y").strictlyEquals(QJSValue(0))) return;
+    const auto factor = numberMath(f, "pow", [&] { return QJSValueList{QJSValue(0.8), viewArithmetic(f, panelUsageRead(f, panelUsageRead(f, mouse, "angleDelta"), "y"), QJSValue(120), 2)}; });
+    const auto ax = panelUsageGlobalCall(f, "xAt", {panelUsageRead(f, mouse, "x")}), ay = panelUsageGlobalCall(f, "yAt", {panelUsageRead(f, mouse, "y")});
+    const QJSValueList ends{singleWheelEnd(f, ax, factor, "axisX", false), singleWheelEnd(f, ax, factor, "axisX", true), singleWheelEnd(f, ay, factor, "axisY", false), singleWheelEnd(f, ay, factor, "axisY", true)};
+    const auto box = assistantGeometryArray(f, ends);
+    if (panelUsageTruth(panelUsageMemberCall(f, box, "every", {panelUsageContextRead(f, "isFinite")})) && singleBoxIncreasing(f, box, false)) projectWrite(f, "chart", "zoom", box);
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {

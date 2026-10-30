@@ -32,21 +32,13 @@ Item {
     readonly property bool highlight: stacked && Preferences.chartHighlightSelected && selectedIndex >= 0
     readonly property SingleCrystalReflectionModel reflections: !stacked && experiment ? experiment.singleCrystalReflections : null
     // Every shown reflection model: the stacked experiments' or the one experiment's.
-    readonly property list<SingleCrystalReflectionModel> models: {
-        if (!stacked)
-            return reflections ? [reflections] : [];
-        const out = [];
-        for (const shown of stackedExperiments)
-            if (shown && shown.singleCrystalReflections)
-                out.push(shown.singleCrystalReflections);
-        return out;
-    }
+    readonly property list<SingleCrystalReflectionModel> models: ApplicationInfo.singleModels()
     // The experiments hidden by a click on their legend row (the owner, 2026-10-25), by name: kept while the app runs,
     // cleared when another project opens. Their reflection models; and the models the range is fitted to, which
     // leave the hidden ones out only when Preferences says hiding fits the range to the visible curves.
     property list<string> hiddenRows: []
-    readonly property var hiddenModels: (stacked ? stackedExperiments : experiment ? [experiment] : []).filter(shown => shown && shown.singleCrystalReflections && hiddenRows.includes(shown.name)).map(shown => shown.singleCrystalReflections)
-    readonly property list<SingleCrystalReflectionModel> rangeModels: Preferences.chartHiddenRange === "fit" ? models.filter(model => !hiddenModels.includes(model)) : models
+    readonly property var hiddenModels: ApplicationInfo.singleHiddenModels()
+    readonly property list<SingleCrystalReflectionModel> rangeModels: ApplicationInfo.singleRangeModels()
     // Bumped when any shown model's points change, so the bindings below read them again.
     property int revision: 0
     property FigureColors colors: FigureColors {}
@@ -56,30 +48,9 @@ Item {
     readonly property bool reportMode: reportData !== null
     // How faint the reflections the fit leaves out are drawn.
     readonly property real leftOutOpacity: 0.3
-    readonly property bool calculated: {
-        if (reportMode)
-            return reportData.calc.length > 0;
-        void revision;
-        return models.some(model => model.calculatedShown);
-    }
+    readonly property bool calculated: ApplicationInfo.singleCalculated()
     // The report's range: every bar end and every F²calc, padded as the app pads its own.
-    readonly property list<real> reportRange: {
-        if (!reportMode)
-            return [0, 1];
-        let low = Infinity, high = -Infinity;
-        for (let i = 0; i < reportData.meas.length; ++i) {
-            for (const end of [reportData.meas[i] - reportData.su[i], reportData.meas[i] + reportData.su[i], reportData.calc[i]]) {
-                if (isFinite(end)) {
-                    low = Math.min(low, end);
-                    high = Math.max(high, end);
-                }
-            }
-        }
-        if (!(high > low))
-            return [0, 1];
-        const pad = (high - low) * 0.05;
-        return [Math.min(0, low - pad), high + pad];
-    }
+    readonly property list<real> reportRange: ApplicationInfo.singleReportRange()
 
     readonly property real em: EaStyle.Sizes.fontPixelSize
     // The pattern chart's layout: the toolbar line a gap below the page's block selector row, centred over the plot,
@@ -99,34 +70,14 @@ Item {
     readonly property string measuredItem: squared ? "refln.intensity_meas" : "refln.f_meas"
     // The shown ranges, [xMin, xMax, yMin, yMax]; empty: every reflection, on one range for both axes.
     property list<real> zoom: []
-    readonly property real fullLow: {
-        if (reportMode)
-            return reportRange[0];
-        void revision;
-        const lows = rangeModels.filter(model => model.calculatedShown).map(model => squared ? model.low : model.lowF).filter(isFinite);
-        return lows.length > 0 ? Math.min(...lows) : 0;
-    }
-    readonly property real fullHigh: {
-        if (reportMode)
-            return reportRange[1];
-        void revision;
-        const highs = rangeModels.filter(model => model.calculatedShown).map(model => squared ? model.high : model.highF).filter(isFinite);
-        return highs.length > 0 ? Math.max(...highs) : 1;
-    }
+    readonly property real fullLow: ApplicationInfo.singleFullRange(false)
+    readonly property real fullHigh: ApplicationInfo.singleFullRange(true)
     // The legend: the Stacked chart's experiments, or the one experiment, each name in its points' colour.
     // Sets the legend: the experiments shown, each in its colour, and the selected one marked when the chart does not
     // highlight it.
-    function updateLegend() {
-        const named = chart.stacked ? chart.stackedExperiments : chart.experiment ? [chart.experiment] : [];
-        legendRows.setRows(named.map(shown => shown ? shown.name : ""), named.map((shown, index) => String(AppColors.experiment(chart.stacked ? index : 0, chart.colors.isDarkPalette))), chart.stacked && !Preferences.chartHighlightSelected ? chart.selectedIndex : -1, chart.hiddenRows);
-    }
+    function updateLegend() { ApplicationInfo.singleUpdateLegend(); }
     // Hides an experiment's reflections, or shows them again; with the range fitted to the visible ones, fits it once.
-    function toggleRow(key) {
-        chart.hiddenRows = chart.hiddenRows.includes(key) ? chart.hiddenRows.filter(row => row !== key) : chart.hiddenRows.concat([key]);
-        if (Preferences.chartHiddenRange === "fit")
-            chart.zoom = [];
-        chart.updateLegend();
-    }
+    function toggleRow(key) { ApplicationInfo.singleToggleRow(key); }
     ListedLegendModel {
         id: legendRows
     }
@@ -139,64 +90,17 @@ Item {
 
     // The points the fit uses (`want` true) or leaves out (false) of three parallel lists, by the model's `used`;
     // a report's points are all used.
-    function part(x, y, su, used, want) {
-        const out = [[], [], []];
-        for (let i = 0; i < x.length; ++i) {
-            if ((used && i < used.length ? used[i] : true) === want) {
-                out[0].push(x[i]);
-                out[1].push(y[i]);
-                out[2].push(su[i]);
-            }
-        }
-        return out;
-    }
+    function part(x, y, su, used, want) { return ApplicationInfo.singlePart(x, y, su, used, want); }
     // Draws a model's points on `usedLayer` and the ones its fit leaves out, dimmed, on `leftOutLayer`.
-    function drawModel(model, usedLayer, leftOutLayer) {
-        if (!model || !chart.shown || !model.calculatedShown) {
-            usedLayer.setPoints([], [], []);
-            leftOutLayer.setPoints([], [], []);
-            return;
-        }
-        const x = chart.squared ? model.calculated : model.calculatedF;
-        const y = chart.squared ? model.measured : model.measuredF;
-        const su = chart.squared ? model.measuredSu : model.measuredFSu;
-        const used = part(x, y, su, model.used, true);
-        const left = part(x, y, su, model.used, false);
-        usedLayer.setPoints(used[0], used[1], used[2]);
-        leftOutLayer.setPoints(left[0], left[1], left[2]);
-    }
+    function drawModel(model, usedLayer, leftOutLayer) { ApplicationInfo.singleDrawModel(model, usedLayer, leftOutLayer); }
 
     // Each Stacked layer draws its experiment again.
     signal redrawStacked
 
-    function redraw() {
-        chart.updateLegend();
-        if (chart.stacked) {
-            chart.redrawStacked();
-            return;
-        }
-        if (chart.reportMode) {
-            if (chart.calculated)
-                layer.setPoints(chart.reportData.calc, chart.reportData.meas, chart.reportData.su);
-            else
-                layer.setPoints([], [], []);
-            leftOutLayer.setPoints([], [], []);
-            return;
-        }
-        if (!chart.reflections || !chart.shown)
-            return;
-        // Points only once F²calc is calculated: a reflection is placed by it.
-        chart.drawModel(chart.reflections, layer, leftOutLayer);
-    }
+    function redraw() { ApplicationInfo.singleRedraw(); }
 
     // The y = x line across whatever both axes show.
-    function drawDiagonal() {
-        const from = Math.min(chart.xLow, chart.yLow);
-        const to = Math.max(chart.xHigh, chart.yHigh);
-        diagonal.clear();
-        diagonal.append(from, from);
-        diagonal.append(to, to);
-    }
+    function drawDiagonal() { ApplicationInfo.singleDrawDiagonal(); }
 
     onXLowChanged: drawDiagonal()
     onXHighChanged: drawDiagonal()
@@ -204,18 +108,12 @@ Item {
     onYHighChanged: drawDiagonal()
     Component.onCompleted: drawDiagonal()
     onShownChanged: redraw()
-    onSquaredChanged: {
-        zoom = [];
-        redraw();
-    }
+    onSquaredChanged: ApplicationInfo.singleStateChanged(0)
     onReflectionsChanged: redraw()
     onReportDataChanged: redraw()
     onStackedExperimentsChanged: redraw()
     onSelectedIndexChanged: chart.updateLegend()
-    onProjectChanged: {
-        hiddenRows = [];
-        updateLegend();
-    }
+    onProjectChanged: ApplicationInfo.singleStateChanged(1)
     Connections {
         target: Preferences
         function onChartHighlightSelectedChanged() {
@@ -224,10 +122,7 @@ Item {
     }
     Connections {
         target: chart.reflections
-        function onPointsChanged() {
-            chart.revision++;
-            chart.redraw();
-        }
+        function onPointsChanged() { ApplicationInfo.singleModelChanged(false); }
     }
 
     Rectangle {
@@ -266,7 +161,7 @@ Item {
             model: [qsTr("F²"), qsTr("F")]
             closedTexts: [qsTr("axes: F²"), qsTr("axes: F")]
             shownIndex: chart.squared ? 0 : 1
-            onActivated: index => Preferences.singleCrystalQuantity = index === 0 ? "f_squared" : "f"
+            onActivated: index => ApplicationInfo.singleQuantityChoice(index)
         }
         // The pattern chart's toolbar, without the included-range button, which has nothing to act on here; the
         // tooltip toggle and the zoom or move mode are the same remembered settings.
@@ -276,10 +171,7 @@ Item {
             // The legend starts shown on the Stacked chart and hidden on the Pattern chart, which follows the
             // pattern charts' remembered choice.
             legendShown: chart.stacked ? true : Preferences.patternLegendShown
-            onLegendShownChanged: {
-                if (!chart.stacked)
-                    Preferences.patternLegendShown = legendShown;
-            }
+            onLegendShownChanged: ApplicationInfo.singleStateChanged(2)
             includedRangeAvailable: false
             hoverShown: Preferences.patternHoverShown
             onHoverShownChanged: Preferences.patternHoverShown = hoverShown
@@ -295,7 +187,7 @@ Item {
             fontIcon: "highlighter"
             toolTip: qsTr("Highlight the selected dataset")
             checked: Preferences.chartHighlightSelected
-            onClicked: Preferences.chartHighlightSelected = !Preferences.chartHighlightSelected
+            onClicked: ApplicationInfo.singleStateChanged(3)
         }
         // A click on a button sets the toolbar's own value, which ends the bindings above; these follow the
         // remembered settings again whenever another chart changes them.
@@ -361,49 +253,8 @@ Item {
             hoverText.text = "";
         }
         // The reflection nearest the pointer, within about an em: its model's place and its row; null when none.
-        function nearest(px, py) {
-            const span = axisX.max - axisX.min;
-            let best = -1, bestDistance = chart.em * chart.em, bestModel = -1, xs = [], ys = [];
-            for (let m = 0; m < chart.models.length; ++m) {
-                const model = chart.models[m];
-                if (!model.calculatedShown || chart.hiddenModels.includes(model))
-                    continue;
-                const mx = chart.squared ? model.calculated : model.calculatedF;
-                const my = chart.squared ? model.measured : model.measuredF;
-                for (let i = 0; i < mx.length; ++i) {
-                    const dx = (mx[i] - axisX.min) / span * plot.width - px;
-                    const dy = (1 - (my[i] - axisY.min) / (axisY.max - axisY.min)) * plot.height - py;
-                    const distance = dx * dx + dy * dy;
-                    if (isFinite(distance) && distance < bestDistance) {
-                        best = i;
-                        bestDistance = distance;
-                        bestModel = m;
-                        xs = mx;
-                        ys = my;
-                    }
-                }
-            }
-            return best < 0 ? null : {
-                "model": bestModel,
-                "row": best,
-                "x": xs[best],
-                "y": ys[best]
-            };
-        }
-        function read(px, py) {
-            const hit = nearest(px, py);
-            if (hit === null) {
-                hide();
-                return;
-            }
-            const span = axisX.max - axisX.min;
-            const text = chart.models[hit.model].hoverText(hit.row, chart.squared);
-            hoverText.text = chart.stacked ? "<b>" + chart.stackedExperiments[hit.model].name + "</b><br>" + text : text;
-            const atX = plot.x + (hit.x - axisX.min) / span * plot.width;
-            const atY = plot.y + (1 - (hit.y - axisY.min) / (axisY.max - axisY.min)) * plot.height;
-            x = atX + chart.em + width <= chart.width ? atX + chart.em : atX - chart.em - width;
-            y = atY - height - chart.em * 0.5 >= 0 ? atY - height - chart.em * 0.5 : atY + chart.em;
-        }
+        function nearest(px, py) { return ApplicationInfo.singleNearest(px, py); }
+        function read(px, py) { ApplicationInfo.singleHoverRead(px, py); }
 
         objectName: "singleCrystal.hover"
         z: 2
@@ -518,10 +369,7 @@ Item {
                 Component.onCompleted: redraw()
                 Connections {
                     target: stackedLayer.model
-                    function onPointsChanged() {
-                        chart.revision++;
-                        stackedLayer.redraw();
-                    }
+                    function onPointsChanged() { ApplicationInfo.singleModelChanged(true); }
                 }
                 Connections {
                     target: chart
@@ -599,56 +447,11 @@ Item {
             enabled: !chart.reportMode
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             hoverEnabled: Preferences.patternHoverShown
-            onPressed: mouse => {
-                pressX = lastX = mouse.x;
-                pressY = lastY = mouse.y;
-                hoverLabel.hide();
-            }
-            onPositionChanged: mouse => {
-                if (pressed && (pressedButtons & Qt.LeftButton) && Preferences.patternPointerMode === "pan") {
-                    const dx = (mouse.x - lastX) / width * (axisX.max - axisX.min);
-                    const dy = (mouse.y - lastY) / height * (axisY.max - axisY.min);
-                    chart.zoom = [axisX.min - dx, axisX.max - dx, axisY.min + dy, axisY.max + dy];
-                    lastX = mouse.x;
-                    lastY = mouse.y;
-                }
-                if (Preferences.patternHoverShown && !pressed)
-                    hoverLabel.read(mouse.x, mouse.y);
-                else
-                    hoverLabel.hide();
-            }
+            onPressed: mouse => ApplicationInfo.singlePointer(mouse, 0)
+            onPositionChanged: mouse => ApplicationInfo.singlePointer(mouse, 1)
             onExited: hoverLabel.hide()
-            onReleased: mouse => {
-                if (mouse.button === Qt.RightButton) {
-                    chart.zoom = [];
-                    return;
-                }
-                const still = Math.abs(mouse.x - pressX) < chart.em * 0.3 && Math.abs(mouse.y - pressY) < chart.em * 0.3;
-                // A click, not a drag, on a legend row hides or shows its curve.
-                if (still && chartLegend.toggleAt(pointer, mouse.x, mouse.y))
-                    return;
-                // A click on the Stacked chart (not a drag) selects the experiment of the reflection under it.
-                if (chart.stacked && chart.project && still) {
-                    const hit = hoverLabel.nearest(mouse.x, mouse.y);
-                    if (hit !== null)
-                        chart.project.currentExperimentIndex = hit.model;
-                    return;
-                }
-                if (Preferences.patternPointerMode !== "zoom" || Math.abs(mouse.x - pressX) < chart.em * 0.3 || Math.abs(mouse.y - pressY) < chart.em * 0.3)
-                    return;
-                const box = [xAt(Math.min(pressX, mouse.x)), xAt(Math.max(pressX, mouse.x)), yAt(Math.max(pressY, mouse.y)), yAt(Math.min(pressY, mouse.y))];
-                if (box[1] > box[0] && box[3] > box[2] && isFinite(box[1] - box[0]) && isFinite(box[3] - box[2]))
-                    chart.zoom = box;
-            }
-            onWheel: wheel => {
-                if (wheel.angleDelta.y === 0)
-                    return;
-                const factor = Math.pow(0.8, wheel.angleDelta.y / 120);
-                const ax = xAt(wheel.x), ay = yAt(wheel.y);
-                const box = [ax - (ax - axisX.min) * factor, ax + (axisX.max - ax) * factor, ay - (ay - axisY.min) * factor, ay + (axisY.max - ay) * factor];
-                if (box.every(isFinite) && box[1] > box[0] && box[3] > box[2])
-                    chart.zoom = box;
-            }
+            onReleased: mouse => ApplicationInfo.singlePointer(mouse, 2)
+            onWheel: wheel => ApplicationInfo.singlePointer(wheel, 3)
 
             // The box being dragged, as the pattern chart draws it.
             Rectangle {

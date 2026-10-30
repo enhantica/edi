@@ -526,6 +526,25 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void evolutionResetZoom() const;
     Q_INVOKABLE void evolutionDrawReportPoints() const;
     Q_INVOKABLE void evolutionReportChanged() const;
+    /// Single-crystal chart procedures retain the reflection models and measured layers as authorities.
+    Q_INVOKABLE QJSValue singleModels() const;
+    Q_INVOKABLE QJSValue singleHiddenModels() const;
+    Q_INVOKABLE QJSValue singleRangeModels() const;
+    Q_INVOKABLE QJSValue singleCalculated() const;
+    Q_INVOKABLE QJSValue singleReportRange() const;
+    Q_INVOKABLE QJSValue singleFullRange(bool high) const;
+    Q_INVOKABLE void singleUpdateLegend() const;
+    Q_INVOKABLE void singleToggleRow(const QJSValue& key) const;
+    Q_INVOKABLE QJSValue singlePart(const QJSValue& x, const QJSValue& y, const QJSValue& su, const QJSValue& used, const QJSValue& want) const;
+    Q_INVOKABLE void singleDrawModel(const QJSValue& model, const QJSValue& usedLayer, const QJSValue& leftOutLayer) const;
+    Q_INVOKABLE void singleRedraw() const;
+    Q_INVOKABLE void singleDrawDiagonal() const;
+    Q_INVOKABLE void singleStateChanged(int event) const;
+    Q_INVOKABLE void singleModelChanged(bool stacked) const;
+    Q_INVOKABLE void singleQuantityChoice(const QJSValue& index) const;
+    Q_INVOKABLE QJSValue singleNearest(const QJSValue& px, const QJSValue& py) const;
+    Q_INVOKABLE void singleHoverRead(const QJSValue& px, const QJSValue& py) const;
+    Q_INVOKABLE void singlePointer(const QJSValue& mouse, int event) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
