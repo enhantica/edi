@@ -42,10 +42,7 @@ Control {
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 
-    onValueTextChanged: {
-        flashing = true;
-        flashEnd.restart();
-    }
+    onValueTextChanged: ApplicationInfo.finishUiEvent(1, undefined)
 
     Timer {
         id: flashEnd

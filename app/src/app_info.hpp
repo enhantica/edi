@@ -676,6 +676,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void askOpenProjectChoice() const;
     Q_INVOKABLE void windowSaveChoiceOpened() const;
     Q_INVOKABLE QJSValue windowUnsavedText() const;
+    /// Final guarded focus/refresh/sort/warning and visual-feedback event procedures.
+    Q_INVOKABLE void finishUiEvent(int kind, const QJSValue& value) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

@@ -9268,6 +9268,41 @@ QJSValue ApplicationInfo::windowUnsavedText() const {
     });
 }
 
+void ApplicationInfo::finishUiEvent(int kind, const QJSValue& value) const {
+    const auto f = panelUsageEngine(this);
+    if (kind == 0) { projectWrite(f, "control", "enterFlash", QJSValue(true)); projectInvoke(f, "enterFlashTimer", "start"); return; }
+    if (kind == 1) { panelUsageContextWrite(f, "flashing", QJSValue(true)); projectInvoke(f, "flashEnd", "restart"); return; }
+    if (kind == 2) {
+        if (!panelUsageTruth(panelUsageContextRead(f, "patternEnabled")) && panelUsageTruth(panelUsageContextRead(f, "patternShown"))) panelUsageGlobalCall(f, "showMainTab", {QJSValue(0)}); return;
+    }
+    if (kind == 3) { if (!panelUsageTruth(panelUsageContextRead(f, "scanMode"))) projectInvoke(f, "page", "showMainTab", {QJSValue(0)}); return; }
+    if (kind == 4) { if (panelUsageTruth(panelUsageContextRead(f, "parent"))) assistantMemberWrite(f, panelUsageContextRead(f, "parent"), "z", QJSValue(1)); return; }
+    if (kind == 5) {
+        if (panelUsageTruth(assistantContextField(f, "table", "sourceModel"))) { const auto model = assistantContextField(f, "table", "sourceModel"); panelUsageDeferredMemberCall(f, model, "sortBy", [&] { return QJSValueList{assistantContextField(f, "title", "role")}; }); } return;
+    }
+    if (kind == 6) { if (!panelUsageTruth(assistantContextField(f, "slider", "pressed"))) projectInvoke(f, "sliderRow", "updateLimits"); return; }
+    if (kind >= 7 && kind <= 9) {
+        if (panelUsageTruth(assistantContextField(f, "dialog", "messages"))) {
+            const auto messages = assistantContextField(f, "dialog", "messages");
+            if (kind == 9) panelUsageDeferredMemberCall(f, messages, "dismiss", [&] { return QJSValueList{assistantContextField(f, "row", "index")}; });
+            else panelUsageMemberCall(f, messages, kind == 7 ? "markViewed" : "dismissAll", {});
+        } return;
+    }
+    if (kind >= 10 && kind <= 12) {
+        if (panelUsageTruth(panelUsageContextRead(f, "activeFocus"))) {
+            if (kind == 11) { const auto group = panelUsageContextRead(f, "group"); assistantMemberWrite(f, group, "selected", assistantContextField(f, "row", "parameter")); }
+            else { const auto project = assistantContextField(f, "group", "project"); assistantMemberWrite(f, project, kind == 10 ? "currentStructureIndex" : "currentExperimentIndex", assistantContextField(f, "row", "index")); }
+        } return;
+    }
+    if (kind == 13 || kind == 14) {
+        const bool active = panelUsageTruth(panelUsageContextRead(f, kind == 13 ? "visible" : "collapsed"));
+        if (kind == 13 ? active : !active) projectInvoke(f, "RecentProjects", "refresh"); return;
+    }
+    if (kind == 15) {
+        const bool pattern = panelUsageTruth(assistantContextField(f, "page", "patternShown")); const auto project = assistantContextField(f, "page", "project"); assistantMemberWrite(f, project, pattern ? "currentExperimentIndex" : "currentStructureIndex", value);
+    }
+}
+
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
     return value.isString() ? edi_app::assistant_presentation::singleLineText(value.toString()) : QString();
 }

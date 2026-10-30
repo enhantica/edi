@@ -26,10 +26,7 @@ WorkflowPage {
     // Some experiment holds measured data: without any there is nothing to fit, and what only a fit uses is hidden.
     readonly property bool measured: project !== null && project.fit.measured
     // Leaving the scan modes hides Evolution: a page showing it goes back to the pattern.
-    onScanModeChanged: {
-        if (!scanMode)
-            page.showMainTab(0);
-    }
+    onScanModeChanged: ApplicationInfo.finishUiEvent(3, undefined)
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({

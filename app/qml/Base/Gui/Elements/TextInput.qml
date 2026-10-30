@@ -2,6 +2,7 @@
 // Pinned gui-components copy; the focused look (bold and the highlight colour) follows active focus alone, so a
 // field Tab leaves drops both together (upstream colours it by `focus`, which stays true in another focus scope).
 import QtQuick
+import edi.app
 import QtQuick.Templates as T
 import QtQuick.Controls
 import QtQuick.Controls.impl
@@ -68,10 +69,7 @@ T.TextField {
         color: 'transparent'
     }
 
-    onAccepted: {
-        control.enterFlash = true;
-        enterFlashTimer.start();
-    }
+    onAccepted: ApplicationInfo.finishUiEvent(0, undefined)
 
     // Visual feedback for the user that editing finish was accepted
     Timer {
@@ -95,10 +93,5 @@ T.TextField {
         acceptedDevices: PointerDevice.AllDevices
         blocking: false
         cursorShape: Qt.IBeamCursor
-        onHoveredChanged: {
-            if (hovered) {
-                //console.error(`${control} [TextInput.qml] hovered`)
-            }
-        }
     }
 }

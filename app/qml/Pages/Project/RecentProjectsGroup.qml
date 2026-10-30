@@ -13,10 +13,8 @@ EaElements.GroupBox {
     objectName: "group.recentProjects"
     title: qsTr("Recent projects")
     icon: "archive"
-    onVisibleChanged: if (visible)
-        RecentProjects.refresh()
-    onCollapsedChanged: if (!collapsed)
-        RecentProjects.refresh()
+    onVisibleChanged: ApplicationInfo.finishUiEvent(13, undefined)
+    onCollapsedChanged: ApplicationInfo.finishUiEvent(14, undefined)
 
     Column {
         DataTable {
