@@ -135,7 +135,7 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
             auto model = edi::empty_project("documentation-inputs", "");
             model.structures.push_back(edi::load_structure_file(structure_path.toStdString()));
             model.experiments.push_back(edi::load_experiment_file(experiment_path.toStdString()));
-            const auto& experiment = model.experiments.front();
+            const auto& experiment = *model.experiments.front();
             if (!experiment.data || !experiment.data->two_theta.get() ||
                 !experiment.instrument.setup_wavelength)
                 return refuse("CIF/data teaching currently requires a constant-wavelength powder example");
