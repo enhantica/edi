@@ -233,7 +233,7 @@ EaComponents.ApplicationWindow {
             id: assistantToggle
             KeyNavigation.tab: assistantPanel.visible && assistantPanel.shown ? assistantPanel.firstFocusItem : null
             objectName: "assistant.toggle"
-            readonly property bool assistantSelected: assistantPanel.shown
+            readonly property bool assistantSelected: ApplicationInfo.assistantAvailable && assistantPanel.shown
             fontIcon: assistantSelected ? "columns" : "robot"
             contentItem: Item {
                 implicitWidth: Math.max(assistantRobot.implicitWidth, assistantColumns.implicitWidth)
@@ -259,32 +259,14 @@ EaComponents.ApplicationWindow {
                     Accessible.ignored: true
                 }
             }
-            enabled: ApplicationInfo.assistantAvailable && window.assistantWorkflowPage !== null
+            enabled: !ApplicationInfo.assistantAvailable || window.assistantWorkflowPage !== null
             ToolTip.text: !ApplicationInfo.assistantAvailable ? ApplicationInfo.assistantUnavailableReason
                 : window.assistantWorkflowPage === null ? qsTr("Assistant is available on project workflow pages")
                 : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
-            Accessible.name: assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
+            Accessible.name: !ApplicationInfo.assistantAvailable ? qsTr("Desktop version required")
+                : assistantToggle.assistantSelected ? qsTr("Show project sidebar") : qsTr("Open assistant")
             Accessible.description: ApplicationInfo.assistantUnavailableReason
-            onClicked: {
-                if (!assistantToggle.enabled)
-                    return;
-                const show = !assistantPanel.shown;
-                if (!show) Session.assistant.dismissChatReveal();
-                if (show && !Session.assistant.requestAssistantPane(assistantToggle))return;
-                if (show && window.assistantManualTakeover) {
-                    window.assistantManualTakeoverProject = null;
-                    window.assistantEmptyManualTakeover = false;
-                }
-                if (show) {
-                    ++window.assistantFocusEpoch;
-                    window.assistantPreviousFocus = window.activeFocusItem;
-                    window.assistantPreviousPage = window.assistantCurrentPage;
-                    window.assistantPreviousHost = window.activeAssistantHost;
-                    window.assistantPreviousProject = Session.project;
-                }
-                window.assistantManualPane = show && Session.assistant.showingActions;
-                Preferences.assistantShown = show;
-            }
+            onClicked: ApplicationInfo.assistantToolbarActivated(window, assistantToggle, assistantPanel, Session, Preferences, assistantDesktopOnlyDialog)
         },
         EaElements.ToolButton {
             objectName: "appBar.button.preferences"
@@ -578,6 +560,25 @@ EaComponents.ApplicationWindow {
             window.assistantEmptyManualTakeover = Session.project === null;
         }
     }
+    AppDialog {
+        id: assistantDesktopOnlyDialog
+        objectName: "assistant.desktopOnly"
+        parent: Overlay.overlay
+        title: qsTr("Desktop version required")
+        standardButtons: Dialog.Ok
+        enterAccepts: true
+        contentWidth: AppSizes.messagesDialogContentWidth
+        contentHeight: assistantDesktopOnlyText.implicitHeight
+
+        EaElements.Label {
+            id: assistantDesktopOnlyText
+            objectName: "assistant.desktopOnly.message"
+            width: assistantDesktopOnlyDialog.contentWidth
+            wrapMode: Text.Wrap
+            text: ApplicationInfo.assistantUnavailableReason
+        }
+    }
+
     AssistantPanel {
         id: assistantPanel
         parent: assistantFallbackHost

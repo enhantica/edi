@@ -158,6 +158,8 @@ AppDialog {
             objectName: "preferences.tab.aiAssistance"
             fontIcon: "robot"
             text: qsTr("AI assistance")
+            enabled: ApplicationInfo.assistantAvailable
+            ToolTip.text: ApplicationInfo.assistantUnavailableReason
         }
         EaElements.AppBarTabButton {
             objectName: "preferences.tab.experimental"
