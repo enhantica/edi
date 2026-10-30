@@ -64,8 +64,11 @@
               setValue("excludedRegion.start." + index, region.start), setValue("excludedRegion.end." + index, region.end)),
             ["excludedRegions.list"]);
     });
+    shot("09-background-settings", "experiment", "Choose enough background anchors for this measurement",
+        ["sideBar.tab.extras", "reveal:group.background_estimate", "expand:group.background_estimate"].concat(
+          setValue("background_estimate.n_points", capture.backgroundPoints)), ["background_estimate.n_points"]);
     shot("09-background-estimate", "experiment", "Estimate a starting background from the measured pattern",
-        ["reveal:group.background", "expand:group.background", "reveal:background.estimate", "background.estimate"], ["background.rows", "background.estimate"]);
+        ["sideBar.tab.basic", "reveal:group.background", "expand:group.background", "reveal:background.estimate", "background.estimate"], ["background.rows", "background.estimate"]);
     shot("10-experiment-loaded", "experiment", "Inspect the starting pattern before choosing free parameters", [],
         ["workflow.experiment.mainContent", "workflow.experiment.manualSidebar"]);
     tabs("11-experiment", "experiment", "Experiment and measured data");
@@ -83,8 +86,8 @@
     shot("12-fit-profile", "analysis", "Add the peak widths and zero offset to the free set",
         freeKind("broad_gauss_").concat(freeKind("calib_twotheta_offset"), ["statusBar.fit.button", "wait-fit", "close-fit-results"]),
         ["workflow.analysis.mainContent", "group.parameters"]);
-    shot("12-run-refinement", "analysis", "Add background, coordinates and displacement parameters, then fit again",
-        freeKind("background").concat(freeKind("fract_"), freeKind("adp_"), ["statusBar.fit.button", "wait-fit", "close-fit-results"]), [], "", false);
+    shot("12-run-refinement", "analysis", "Add background and coordinates, then fit again; keep displacement parameters fixed",
+        freeKind("background").concat(freeKind("fract_"), ["statusBar.fit.button", "wait-fit", "close-fit-results"]), [], "", false);
     shot("12-save-refined", "analysis", "Keep the result of staged refinement",
         ["save-as:" + capture.checkpointDirectory + "/refined"], [], "", false);
     shot("12-correlations", "analysis", "Inspect correlations after the staged refinement",

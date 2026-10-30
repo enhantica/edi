@@ -175,6 +175,7 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
             context.setProperty("dataFile", data_output.fileName());
             context.setProperty("dataFileName", QFileInfo(data_name).fileName());
             context.setProperty("wavelength", experiment.instrument.setup_wavelength->value.get());
+            context.setProperty("backgroundPoints", static_cast<int>(experiment.background.size()));
             context.setProperty("profileType", QString::fromStdString(experiment.peak.type.value_or("cwl-tch-pseudo-voigt")));
             QJsonObject profile;
             for (const auto& category : edi::experiment_categories(experiment))
