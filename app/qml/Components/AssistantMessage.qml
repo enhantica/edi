@@ -31,124 +31,25 @@ Rectangle {
     readonly property string disclosureIdentity: rowId + "\n" + (payload && typeof payload.id === "string" ? payload.id : "")
     property var humanDetailsSnapshot: null
     property bool technicalCopied: false
-    onPayloadChanged: { technicalCopied = false; humanDetailsSnapshot = null; if (copyFeedback) copyFeedback.stop(); if (commandDisclosure && commandDisclosure.checked) refreshHumanDetails(); }
-    onTextChanged: { technicalCopied = false; if (copyFeedback) copyFeedback.stop(); }
-    onStatusChanged: { humanDetailsSnapshot = null; if (commandDisclosure && commandDisclosure.checked) refreshHumanDetails(); }
-    Timer { id: copyFeedback; interval: EaStyle.Times.introAnimation; onTriggered: row.technicalCopied = false }
-    function readHumanDetails() {
-        const component = row, original = row.assistant, id = row.rowId, kind = row.kind, status = row.status;
-        if (!original) return null;
-        const value = original.activityHumanDetails(id, kind, status);
-        return Qt.isQtObject(component) && component.assistant === original && component.rowId === id
-            && component.kind === kind && component.status === status && value.row_id === id
-            && value.kind === kind && value.status === status ? value : null;
-    }
-    function refreshHumanDetails() {
-        const detail = readHumanDetails();
-        if (commandDisclosure && commandDisclosure.checked) humanDetailsSnapshot = detail;
-    }
-    function fullHumanDescription(detail) {
-        if (!detail) return qsTr("This step's description is currently unavailable.");
-        const payload = detail.payload || {}, text = typeof detail.text === "string" ? detail.text : "";
-        const lines = [];
-        const add = value => { if (typeof value === "string" && value.trim().length && lines.indexOf(value) < 0) lines.push(value); };
-        const short = compactPresentation.caption;
-        const description = activityDescription(true, payload);
-        if (description.trim().length && ApplicationInfo.assistantSingleLineText(description) !== short) add(description);
-        // Only established human producers use row.text as a description.
-        // Generic/command activity text may contain shell or protocol bytes.
-        const humanRow = ["error", "plan", "question", "tool", "trial"].indexOf(kind) >= 0
-            || (decisionActivity && typeof payload.type === "undefined");
-        if (humanRow && ApplicationInfo.assistantSingleLineText(text) !== short) add(text);
-        if (!lines.some(line => ApplicationInfo.assistantSingleLineText(line).length > short.length)) {
-            if (payload && payload.type === "dynamicToolCall" && assistant)
-                add(assistant.nativeActionDescription(typeof payload.tool === "string" ? payload.tool : "", ""));
-            else if (payload && payload.type === "webSearch") add(qsTr("Find or read public sources relevant to the current task."));
-            else if (commandActivity) add(qsTr("Use the reported operation to support the current task."));
-            else add(qsTr("Carry out the requested assistant action for the current task."));
-        }
-        add(detail.provenance);
-        const outcome = payload && payload.nativeOutcome;
-        const message = outcome && typeof outcome.message === "string" ? outcome.message
-                      : payload && payload.error && typeof payload.error.message === "string" ? payload.error.message : "";
-        add(message);
-        if (humanRow && payload) add(payload.message);
-        const code = outcome && typeof outcome.action_error === "string" ? outcome.action_error
-                   : outcome && typeof outcome.code === "string" ? outcome.code
-                   : payload && typeof payload.code === "string" ? payload.code : "";
-        if (!message.trim().length && code === "project_required" && assistant)
-            add(assistant.nativeActionDescription(payload && typeof payload.tool === "string" ? payload.tool : "", code));
-        return lines.join("\n");
-    }
-    function humanActivityText(detail) {
-        const short = compactPresentation.caption, full = fullHumanDescription(detail);
-        return short === full ? full : short + "\n" + full;
-    }
-    function copyActivity() {
-        const component = row, identity = row.disclosureIdentity, original = row.payload, owner = row.assistant;
-        const originalText = row.text, originalKind = row.kind, originalStatus = row.status;
-        const detail = row.readHumanDetails();
-        if (!detail) return;
-        const human = row.humanActivityText(detail);
-        const current = () => Qt.isQtObject(component) && component.disclosureIdentity === identity
-            && component.payload === original && component.assistant === owner && component.text === originalText
-            && component.kind === originalKind && component.status === originalStatus;
-        try {
-            let literal = human;
-            if (Preferences.assistantCopyTechnicalDetails) {
-                const technical = owner.activityTechnicalDetails(row.rowId, originalKind, originalStatus);
-                if (!technical.length || !current()) return;
-                literal += "\n\n" + technical;
-            }
-            if (typeof literal !== "string" || !current()) return;
-            ApplicationInfo.copyText(literal);
-            if (!current()) return;
-            component.technicalCopied = true;
-            copyFeedback.restart();
-        } catch (error) { if (current()) component.technicalCopied = false; }
-    }
-    function copyUserText() {
-        const component = row, identity = row.disclosureIdentity, original = row.text;
-        const originalPayload = row.payload, owner = row.assistant;
-        const current = () => Qt.isQtObject(component) && component.kind === "user"
-            && component.status === "completed" && component.disclosureIdentity === identity
-            && component.text === original && component.payload === originalPayload && component.assistant === owner;
-        try {
-            if (!current()) return;
-            ApplicationInfo.copyText(original);
-            if (!current()) return;
-            component.technicalCopied = true;
-            copyFeedback.restart();
-        } catch (error) { if (current()) component.technicalCopied = false; }
+    property alias detailsDisclosure: commandDisclosure
+    property alias detailsBody: body
+    property alias detailsEditor: humanDetails
+    property alias detailsFeedback: copyFeedback
+    onPayloadChanged: ApplicationInfo.assistantMessageChanged(row, "payload")
+    onTextChanged: ApplicationInfo.assistantMessageChanged(row, "text")
+    onStatusChanged: ApplicationInfo.assistantMessageChanged(row, "status")
+    Timer {
+        id: copyFeedback
+        interval: EaStyle.Times.introAnimation
+        onTriggered: ApplicationInfo.assistantMessageClearFeedback(row, false)
     }
     signal detailsChanging()
     signal reportRequested(string sourceRowId, string link)
-    function resetDetails() {
-        technicalCopied = false;
-        humanDetailsSnapshot = null;
-        if (copyFeedback) copyFeedback.stop();
-        if (commandDisclosure) commandDisclosure.checked = false;
-        if (body) body.deselect();
-        if (humanDetails) humanDetails.deselect();
-    }
-    onDisclosureIdentityChanged: resetDetails()
-    onCommandActivityChanged: resetDetails()
-    onSummarizedActivityChanged: resetDetails()
-    ListView.onPooled: resetDetails()
-    ListView.onReused: resetDetails()
-    function activityDescription(full, source) {
-        const payload = source || row.payload;
-        if (!payload || typeof payload !== "object") return "";
-        const supplied = typeof payload.purpose === "string" ? payload.purpose
-                       : typeof payload.description === "string" ? payload.description
-                       : payload.arguments && typeof payload.arguments.purpose === "string" ? payload.arguments.purpose : "";
-        if (payload.type === "dynamicToolCall" && (supplied === "Edi native action"
-                || supplied === "Edi native action: " + payload.tool)) return ApplicationInfo.assistantNativeActivityCaption(row.payload, row.assistant);
-        if (supplied.trim().length) return full ? supplied : ApplicationInfo.assistantSingleLineText(supplied);
-        if (payload.type === "webSearch") return ApplicationInfo.assistantWebSearchCaption(payload);
-        if (!commandActivity) return "";
-        return typeof payload.commandDescription === "string" ? payload.commandDescription : "";
-    }
+    onDisclosureIdentityChanged: ApplicationInfo.assistantMessageReset(row)
+    onCommandActivityChanged: ApplicationInfo.assistantMessageReset(row)
+    onSummarizedActivityChanged: ApplicationInfo.assistantMessageReset(row)
+    ListView.onPooled: ApplicationInfo.assistantMessageReset(row)
+    ListView.onReused: ApplicationInfo.assistantMessageReset(row)
     color: "transparent"
     function sentFileLabel(file) {
         return qsTr("%1 (%2)%3").arg(file.name).arg(ApplicationInfo.fileSizeKilobytes(file.bytes))
@@ -222,7 +123,7 @@ Rectangle {
         }
         ToolTip.text: row.technicalCopied ? qsTr("Copied") : qsTr("Copy sent message")
         Accessible.name: ToolTip.text
-        onClicked: if (userHistoryHover.overHistory || activeFocus) row.copyUserText()
+        onClicked: ApplicationInfo.assistantCopyUserText(row, userHistoryHover.overHistory || activeFocus)
     }
     component LiteralDetails: TextEdit {
         property string fieldName: ""
@@ -369,10 +270,7 @@ Rectangle {
                 Accessible.checked: checked
                 Accessible.description: checked ? qsTr("Hide activity details") : qsTr("Show activity details")
                 onPressed: row.detailsChanging()
-                onCheckedChanged: {
-                    if (checked) row.refreshHumanDetails();
-                    else row.humanDetailsSnapshot = null;
-                }
+                onCheckedChanged: ApplicationInfo.assistantMessageDisclosureChanged(row, checked)
             }
             EaElements.ToolButton {
                 id: activityCopy
@@ -396,7 +294,7 @@ Rectangle {
                 }
                 ToolTip.text: row.technicalCopied ? qsTr("Copied") : qsTr("Copy step")
                 Accessible.name: ToolTip.text
-                onClicked: if (activityHeaderHover.hovered || activeFocus) row.copyActivity()
+                onClicked: ApplicationInfo.assistantCopyActivity(row, Preferences.assistantCopyTechnicalDetails, activityHeaderHover.hovered || activeFocus)
             }
         }
         Rectangle {
@@ -411,7 +309,8 @@ Rectangle {
                 x: AppSizes.unit
                 y: AppSizes.unit * 0.75
                 width: Math.max(0, parent.width - AppSizes.unit * 2)
-                text: visible ? row.fullHumanDescription(row.humanDetailsSnapshot) : ""
+                text: visible ? ApplicationInfo.assistantActivityDescription(row.humanDetailsSnapshot,
+                    row.kind, row.compactPresentation, row.payload, row.assistant) : ""
                 textFormat: TextEdit.PlainText
                 readOnly: true
                 selectByMouse: true
