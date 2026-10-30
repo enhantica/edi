@@ -4604,3 +4604,31 @@ The temporary boundary diagnostic is removed completely. The source correction
 requires a freshly bound actual native comparison, all previously unreached body,
 refresh, Copy/reset and unit suffixes, plus malformed/plain-carrier noninterference
 coverage. Source review or a diagnostic run alone does not qualify this correction.
+
+
+### Opaque snapshot metadata across compiled QML calls
+
+The first owner remains the existing HumanActivitySnapshot publication and
+ApplicationInfo description formatter. RetainJSObjects preserves nontraversal in
+the formatter, but cannot recover a carrier already lost before native entry.
+Actual generated AssistantMessage description code uses QVariant argument frames.
+Pinned Qt6.11.2 coerces those frames before invoking the QJSValue signature; its
+VariantObject path can fail to construct that argument, leaving undefined. The
+actual formatter diagnostic observed null/undefined arguments, while a later row
+observation retained the native type. That later state does not prove the timing
+of a particular call.
+
+Give the existing native snapshot an empty Q_GADGET metaobject. Qt can then carry
+it as a value-type wrapper through the compiled QVariant-to-QJSValue coercion.
+The header already participates in the existing QML module's automoc sources.
+No Q_PROPERTY, QML element/value-type name, invokable, QObject, instance field,
+store or global conversion callback is added. C++ fields and canonical identity
+remain internal; exact metatype admission and RetainJSObjects remain unchanged.
+This deliberately changes Qt value metadata, without exposing the payload.
+
+The production source removes every temporary formatter diagnostic. Source
+analysis identifies the conversion defect and supports this correction; actual
+full display/refresh/copy/privacy and malformed-carrier qualification still must
+compare the rebuilt application. Keep all original expectations and reached or
+unreached suffixes; neither a bounded diagnostic nor passing direct unit calls
+qualifies compiled real UI transport.

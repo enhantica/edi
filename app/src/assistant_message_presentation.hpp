@@ -166,7 +166,10 @@ inline bool nonblankLiteral(const QString& value) {
     for (const QChar unit : value) if (!isMessageTrimWhitespace(unit)) return true;
     return false;
 }
+// Opaque value metadata preserves the native carrier through QVariant-based QML calls.
 struct HumanActivitySnapshot {
+    Q_GADGET
+public:
     QJsonObject payload;
     QString text, provenance;
     QString rowId, kind, status;
