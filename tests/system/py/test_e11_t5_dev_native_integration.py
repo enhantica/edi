@@ -4647,9 +4647,57 @@ def _rows_values(actor, model, row):
 
 
 def _rows_history_file(actor):
-    paths = list(Path(actor.last['test_storage']).rglob('assistant/history.json'))
-    assert len(paths) == 1, 'Canonical history has one actual run-owned normal app-storage owner'
-    return paths[0]
+    # Original connected sessions write their own asynchronous archive; legacy
+    # history.json remains legitimate for a restored projectless startup owner.
+    # Choose by actual row identity/state, never by the expected opaque marker.
+    facts = {'observations': []}
+    facts_path = actor.folder / 'rows-current-archive-observations.json'
+    def retain(stage):
+        observation = {'stage': stage, 'candidates': []}
+        facts['observations'].append(observation)
+        # _archive_candidates proves the normal Qt-owned root belongs to this
+        # exact run before any archive bytes are read.
+        for index, path in enumerate(_archive_candidates(actor)):
+            entry = {'source': str(path)}
+            observation['candidates'].append(entry)
+            try:
+                raw = path.read_bytes()
+            except OSError as error:
+                entry.update(available=False, error_class=type(error).__name__, errno=error.errno)
+            else:
+                copied = actor.folder / ('rows-current-archive-' + stage + '-' + str(index) + '.json')
+                copied.write_bytes(raw)
+                entry.update(available=True, captured=str(copied), bytes=len(raw),
+                             sha256=hashlib.sha256(raw).hexdigest())
+        facts_path.write_text(json.dumps(facts, indent=2))
+        try:
+            observation['public_archive_state'] = qml(actor, '(function(){const a=Session.assistant;'
+                'return {state:a.state,clearing:a.cachedHistoryClearing,error:a.cachedHistoryError,'
+                'lastError:a.lastError,receipt:a.workReportReceipt};})()')
+        except Exception as error:
+            observation['state_observation_error'] = type(error).__name__ + ': ' + str(error)
+        facts_path.write_text(json.dumps(facts, indent=2))
+    retain('before')
+    try:
+        copied, _rows, receipt = _capture_genuine_archive(actor, 'rows-current-owner')
+    except BaseException:
+        retain('failed')
+        raise
+    source = Path(receipt['source'])
+    facts['selected'] = receipt
+    retain('ready')
+    raw = source.read_bytes()
+    selected_copy = actor.folder / 'rows-current-archive-selected-source.json'
+    selected_copy.write_bytes(raw)
+    facts['selected_read'] = {'source': str(source), 'captured': str(selected_copy),
+        'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest(),
+        'matches_genuine_capture': raw == copied.read_bytes()}
+    facts_path.write_text(json.dumps(facts, indent=2))
+    assert facts['selected_read']['matches_genuine_capture'], (
+        'Current source bytes equal the genuine identity-matched durable archive capture')
+    # Return the real canonical file, not the captured fixture: callers retain
+    # their exact subsequent source-byte immutability and restore assertions.
+    return source
 
 
 def _rows_research(identity, *, opaque='', held=None):
@@ -4905,88 +4953,119 @@ def test_actual_long_history_virtualizes_lazy_details_and_restores_exact_origina
     # Many independently framed actual items, one large backend result only.
     actor = main_actor([[_rows_research('history-' + str(i), opaque=opaque if i == 47 else '')
                          for i in range(96)]])
+    _session_configure(actor, session_fixture={'threads': [], 'page_size': 12, 'items_page_size': 2},
+                       observe_context_continuity=True)
     actor.connect()
     actor.request('Read the finite public references and retain their actual outcomes.')
     _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] >= 98)
-    original = _rows_history_file(actor).read_bytes()
+    original_history = _rows_history_file(actor)
+    original = original_history.read_bytes()
     history_copy = actor.folder / 'original-history-for-restore.json'
     history_copy.write_bytes(original)
-    # No manufactured rows or alternate store: source is the first real run's
-    # original durable file, installed before the next ordinary Session ctor.
-    monkeypatch.setenv('EDI_TEST_ASSISTANT_RESTORE_HISTORY', str(history_copy))
-    restored = main_actor([[]])
-    witness = restored.last['history_restore']
-    assert witness['exact_copy'] and witness['sha256'] == hashlib.sha256(original).hexdigest(), (
-        'Restart uses byte-exact genuine original history before constructing its ordinary Session')
-    assert Path(witness['destination']).read_bytes() == original, (
-        'History restore does not synthesize rows or rewrite canonical backend bytes')
-    _rows_wait(restored, lambda value: value['count'] >= 98)
-    count = _rows_probe(restored)['count']
-    view = control_expression('assistant.messages')
-    observed = []
-    for position in (0, count // 2, count - 1):
-        started = time.monotonic()
+    # Genuine current view authority comes from the original saved settings,
+    # application identity, exact cache-relative paths and persisted peer state.
+    # Cache bytes alone cannot select a nonempty sessionThread in a fresh owner.
+    relative = str(original_history.relative_to(Path(actor.last['test_settings']['app_local_data'])))
+    original_thread = _session_state(actor)['inputs'][0]['threadId']
+    manifest = _capture_exact_cache_manifest(actor, 'long-history-current')
+    manifest_rows = json.loads(manifest.read_bytes())['files']
+    captured = [row for row in manifest_rows if row['relative'] == relative]
+    assert len(captured) == 1 and captured[0]['sha256'] == hashlib.sha256(original).hexdigest(), (
+        'The genuine full-cache manifest carries the exact current original archive without rewriting its path or bytes')
+    sources = _finish_genuine_restart_sources(actor, manifest)
+    restored = _start_exact_original_fixture_restart(tmp_path, monkeypatch, sources, [])
+    try:
+        copied = [row for row in restored.last['cache_restore']['files'] if row['relative'] == relative]
+        (restored.folder / 'long-history-restart-owner-binding.json').write_text(json.dumps({
+            'original_thread': original_thread, 'original_relative': relative,
+            'original_archive_sha256': hashlib.sha256(original).hexdigest(),
+            'genuine_restart_sources': sources, 'cache_restore': restored.last['cache_restore'],
+            'settings_restore': restored.last['settings_restore'], 'selected_cache': copied}, indent=2))
+        assert len(copied) == 1 and copied[0]['original_source'] == str(original_history), (
+            'The actual restarted constructor consumes the same genuine original current-archive identity')
+        witness = copied[0]
+        assert witness['exact_copy'] and witness['sha256'] == hashlib.sha256(original).hexdigest(), (
+            'Restart uses byte-exact genuine original history before constructing its ordinary Session')
+        assert Path(witness['destination']).read_bytes() == original, (
+            'History restore does not synthesize rows or rewrite canonical backend bytes')
+        _rows_wait(restored, lambda value: value['count'] >= 98)
+        startup_wire = _session_wire(restored)
+        (restored.folder / 'long-history-preconnect-visible-boundary.json').write_text(json.dumps({
+            'original_thread': original_thread, 'visible': _rows_probe(restored),
+            'startup_wire': startup_wire, 'explicit_connect_called': False}, indent=2))
+        assert not any(row.get('method') in ('thread/start', 'turn/start') for row in startup_wire), (
+            'Original cached-view population appears without creating a substitute conversation or sending another turn')
+        assert all(row['params']['threadId'] == original_thread for row in startup_wire
+                   if row.get('method') == 'thread/resume'), 'Any ordinary automatic resume retains the genuine original thread'
+        count = _rows_probe(restored)['count']
+        view = control_expression('assistant.messages')
+        observed = []
+        for position in (0, count // 2, count - 1):
+            started = time.monotonic()
+            restored.command('evaluate', expression='(function(){const v=' + view
+                             + ';v.positionViewAtIndex(' + str(position) + ',ListView.Center);})()')
+            metrics = _rows_view_metrics(restored)
+            assert metrics and metrics['rows'], 'Ordinary actual ListView realizes reached rows for its current viewport'
+            heights = [row['height'] for row in metrics['rows'] if row['height'] > 0]
+            assert heights, 'Virtualization witness has real nonempty row geometry'
+            # Conservative two boundary delegates plus normal cache on both sides;
+            # this is a fixture geometry bound, not a production history quota.
+            bound = int((metrics['height'] + 2 * metrics['cache']) / min(heights)) + 4
+            assert len(metrics['rows']) <= bound and len(metrics['rows']) < count // 2, (
+                'Actual rendered delegates remain viewport/cache bounded rather than proportional to history length')
+            assert all(not detail['loaded'] for row in metrics['rows'] for detail in row['details']), (
+                'Collapsed and reused actual delegates do not retain full human detail snapshots')
+            observed.append({'target': position, 'elapsed_seconds': time.monotonic() - started,
+                             'geometric_bound': bound, **metrics})
+        # One currently realized genuine activity control, never a virtual row
+        # fabricated solely to make input succeed.
         restored.command('evaluate', expression='(function(){const v=' + view
-                         + ';v.positionViewAtIndex(' + str(position) + ',ListView.Center);})()')
+                         + ';v.positionViewAtIndex(48,ListView.Center);})()')
         metrics = _rows_view_metrics(restored)
-        assert metrics and metrics['rows'], 'Ordinary actual ListView realizes reached rows for its current viewport'
-        heights = [row['height'] for row in metrics['rows'] if row['height'] > 0]
-        assert heights, 'Virtualization witness has real nonempty row geometry'
-        # Conservative two boundary delegates plus normal cache on both sides;
-        # this is a fixture geometry bound, not a production history quota.
-        bound = int((metrics['height'] + 2 * metrics['cache']) / min(heights)) + 4
-        assert len(metrics['rows']) <= bound and len(metrics['rows']) < count // 2, (
-            'Actual rendered delegates remain viewport/cache bounded rather than proportional to history length')
-        assert all(not detail['loaded'] for row in metrics['rows'] for detail in row['details']), (
-            'Collapsed and reused actual delegates do not retain full human detail snapshots')
-        observed.append({'target': position, 'elapsed_seconds': time.monotonic() - started,
-                         'geometric_bound': bound, **metrics})
-    # One currently realized genuine activity control, never a virtual row
-    # fabricated solely to make input succeed.
-    restored.command('evaluate', expression='(function(){const v=' + view
-                     + ';v.positionViewAtIndex(48,ListView.Center);})()')
-    metrics = _rows_view_metrics(restored)
-    candidates = []
-    for row in metrics['rows']:
-        value = _rows_read(restored, row['index'], 'kind')['scalar']
-        if value == 'activity':
-            candidates.append(row)
-    assert candidates, 'The ordinary scroll genuinely realizes an activity before physical expansion'
-    chosen = next(row for row in candidates if row['index'] == 48)
-    click = restored.command('message_input', row_id=chosen['id'],
-                             name='assistant.activity.toggle', action='click')['reply']
-    assert click['reached'] and click['same_row_after'] and click['same_window_after'], (
-        'Expansion input is delivered to the exact original realized activity in the current Main window')
-    expanded = _rows_view_metrics(restored)
-    assert any(d['id'] == chosen['id'] and d['loaded'] for row in expanded['rows'] for d in row['details']), (
-        'Only explicit original-row expansion resolves its full human description')
-    restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='hover')
-    default_copy = restored.command('message_input', row_id=chosen['id'],
-                                    name='assistant.activity.copy', action='click')['reply']
-    assert qml(restored, 'Preferences.assistantCopyTechnicalDetails') is False, (
-        'Technical Copy remains opt-in with the original preference default false')
-    assert default_copy['reached'] and default_copy['clipboard'] and marker not in default_copy['clipboard'], (
-        'Default genuine Copy publishes human descriptions without opaque technical evidence')
-    restored.command('click', name='appBar.button.preferences')
-    restored.command('click', name='preferences.tab.aiAssistance')
-    restored.command('click', name='preferences.ai.copyTechnicalDetails')
-    assert qml(restored, 'Preferences.assistantCopyTechnicalDetails') is True, (
-        'Only the original explicit AI preference enables technical Copy')
-    restored.command('manual_key', key='escape')
-    restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='hover')
-    technical = restored.command('message_input', row_id=chosen['id'],
-                                 name='assistant.activity.copy', action='click')['reply']
-    assert technical['reached'] and technical['clipboard'].startswith(default_copy['clipboard'] + '\n\n') and opaque in technical['clipboard'], (
-        'Explicit opted-in original-row Copy includes unchanged full technical evidence and human descriptions')
-    restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='click')
-    collapsed = _rows_view_metrics(restored)
-    assert all(not d['loaded'] for row in collapsed['rows'] for d in row['details']), (
-        'Collapsing releases the original lazy detail snapshot before later reuse')
-    assert _rows_history_file(restored).read_bytes() == original, (
-        'Ordinary scrolling/expansion/default Copy leaves full canonical original history unchanged')
-    (restored.folder / 'restore-scroll-measurements.json').write_text(json.dumps({
-        'source_sha256': hashlib.sha256(original).hexdigest(), 'source_bytes': len(original),
-        'restored_count': count, 'positions': observed}, indent=2))
+        candidates = []
+        for row in metrics['rows']:
+            value = _rows_read(restored, row['index'], 'kind')['scalar']
+            if value == 'activity':
+                candidates.append(row)
+        assert candidates, 'The ordinary scroll genuinely realizes an activity before physical expansion'
+        chosen = next(row for row in candidates if row['index'] == 48)
+        click = restored.command('message_input', row_id=chosen['id'],
+                                 name='assistant.activity.toggle', action='click')['reply']
+        assert click['reached'] and click['same_row_after'] and click['same_window_after'], (
+            'Expansion input is delivered to the exact original realized activity in the current Main window')
+        expanded = _rows_view_metrics(restored)
+        assert any(d['id'] == chosen['id'] and d['loaded'] for row in expanded['rows'] for d in row['details']), (
+            'Only explicit original-row expansion resolves its full human description')
+        restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='hover')
+        default_copy = restored.command('message_input', row_id=chosen['id'],
+                                        name='assistant.activity.copy', action='click')['reply']
+        assert qml(restored, 'Preferences.assistantCopyTechnicalDetails') is False, (
+            'Technical Copy remains opt-in with the original preference default false')
+        assert default_copy['reached'] and default_copy['clipboard'] and marker not in default_copy['clipboard'], (
+            'Default genuine Copy publishes human descriptions without opaque technical evidence')
+        restored.command('click', name='appBar.button.preferences')
+        restored.command('click', name='preferences.tab.aiAssistance')
+        restored.command('click', name='preferences.ai.copyTechnicalDetails')
+        assert qml(restored, 'Preferences.assistantCopyTechnicalDetails') is True, (
+            'Only the original explicit AI preference enables technical Copy')
+        restored.command('manual_key', key='escape')
+        restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='hover')
+        technical = restored.command('message_input', row_id=chosen['id'],
+                                     name='assistant.activity.copy', action='click')['reply']
+        assert technical['reached'] and technical['clipboard'].startswith(default_copy['clipboard'] + '\n\n') and opaque in technical['clipboard'], (
+            'Explicit opted-in original-row Copy includes unchanged full technical evidence and human descriptions')
+        restored.command('message_input', row_id=chosen['id'], name='assistant.activity.toggle', action='click')
+        collapsed = _rows_view_metrics(restored)
+        assert all(not d['loaded'] for row in collapsed['rows'] for d in row['details']), (
+            'Collapsing releases the original lazy detail snapshot before later reuse')
+        assert _rows_history_file(restored).read_bytes() == original, (
+            'Ordinary scrolling/expansion/default Copy leaves full canonical original history unchanged')
+        (restored.folder / 'restore-scroll-measurements.json').write_text(json.dumps({
+            'source_sha256': hashlib.sha256(original).hexdigest(), 'source_bytes': len(original),
+            'restored_count': count, 'positions': observed}, indent=2))
+
+    finally:
+        _close_explicit_restart_actor(restored)
 
 
 def _attachment_rows(actor):
