@@ -40,6 +40,7 @@
 #include <cmath>
 #include <functional>
 #include <initializer_list>
+#include <iterator>
 #include <optional>
 #include <string_view>
 
@@ -818,6 +819,7 @@ struct PanelUsageFrame {
     QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
     void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
 };
+QJSValue scanProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue singleProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue evolutionProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue patternProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
@@ -2599,7 +2601,9 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     const auto argument = [&](uint index) {
         return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
     };
-    const auto result = callback->d()->operation >= 280
+    const auto result = callback->d()->operation >= 300
+        ? scanProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
+        : callback->d()->operation >= 280
         ? singleProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
         : callback->d()->operation >= 260
         ? evolutionProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
@@ -2986,7 +2990,8 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto updateCapture = [&](uint index, const QJSValue& value) {
             if (panelUsageReady(frame)) captures->set(frame.vm(), index, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), value)));
         };
-        result = callback->d()->operation >= 280 ? singleProcedureCallback(frame, callback->d()->operation, retained, argument)
+        result = callback->d()->operation >= 300 ? scanProcedureCallback(frame, callback->d()->operation, retained, argument)
+            : callback->d()->operation >= 280 ? singleProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 260 ? evolutionProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 240 ? patternProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 220 ? sceneProcedureCallback(frame, callback->d()->operation, retained, argument)
@@ -7535,16 +7540,18 @@ void ApplicationInfo::renewPatternChart() const {
 }
 
 namespace {
-QJSValue evolutionProcedureCallback(const PanelUsageFrame& f, uint operation,
-    const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>& arg) {
-    const auto value = arg(0);
-    if (operation == 260) return QJSValue(panelUsageRead(f, value, "key").strictlyEquals(QJSValue(QStringLiteral("meas.0"))));
-    if (operation == 261) {
+QJSValue chartCapitalisedValue(const PanelUsageFrame& f, const QJSValue& value) {
         if (!assistantRelation(f, panelUsageRead(f, value, "length"), QJSValue(0), 1)) return value;
         const auto first = panelUsageMemberCall(f, value, "charAt", {QJSValue(0)});
         const auto upper = panelUsageMemberCall(f, first, "toUpperCase");
         return panelUsageAdd(f, upper, panelUsageMemberCall(f, value, "slice", {QJSValue(1)}));
-    }
+
+}
+QJSValue evolutionProcedureCallback(const PanelUsageFrame& f, uint operation,
+    const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>& arg) {
+    const auto value = arg(0);
+    if (operation == 260) return QJSValue(panelUsageRead(f, value, "key").strictlyEquals(QJSValue(QStringLiteral("meas.0"))));
+    if (operation == 261) return chartCapitalisedValue(f, value);
     if (operation == 262) {
         const auto text = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("EvolutionChart", "x: %1")))});
         return panelUsageMemberCall(f, text, "arg", {value});
@@ -7991,6 +7998,203 @@ void ApplicationInfo::singlePointer(const QJSValue& mouse, int event) const {
     const QJSValueList ends{singleWheelEnd(f, ax, factor, "axisX", false), singleWheelEnd(f, ax, factor, "axisX", true), singleWheelEnd(f, ay, factor, "axisY", false), singleWheelEnd(f, ay, factor, "axisY", true)};
     const auto box = assistantGeometryArray(f, ends);
     if (panelUsageTruth(panelUsageMemberCall(f, box, "every", {panelUsageContextRead(f, "isFinite")})) && singleBoxIncreasing(f, box, false)) projectWrite(f, "chart", "zoom", box);
+}
+
+namespace {
+QJSValue scanProcedureCallback(const PanelUsageFrame& f, uint operation,
+    const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>& arg) {
+    const auto value = arg(0);
+    if (operation == 305) return projectInvoke(f, "chart", "capitalised", {value});
+    if (operation == 300 && panelUsageTruth(panelUsageMemberCall(f, value, "startsWith", {QJSValue(QStringLiteral("x: "))}))) return value;
+    const char* source = operation == 300 ? QT_TRANSLATE_NOOP("ScanViewChart", "x: %1") : operation == 301 ? QT_TRANSLATE_NOOP("ScanViewChart", "y: %1")
+        : operation == 302 ? QT_TRANSLATE_NOOP("ScanViewChart", "%1: %2") : operation == 303 ? QT_TRANSLATE_NOOP("ScanViewChart", "spacing: %1") : QT_TRANSLATE_NOOP("ScanViewChart", "direction: %1");
+    auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(source))});
+    if (operation == 302) format = panelUsageMemberCall(f, format, "arg", {panelUsageContextRead(f, "axis")});
+    return panelUsageMemberCall(f, format, "arg", {value});
+}
+QJSValue scanAtShare(const PanelUsageFrame& f, const QJSValue& share, bool vertical) {
+    const char* axis = vertical ? "axisY" : "axisX"; const auto start = assistantContextField(f, axis, vertical ? "max" : "min");
+    const auto scaled = viewArithmetic(f, share, chartSpan(f, axis), 1);
+    return vertical ? viewArithmetic(f, start, scaled, 0) : panelUsageAdd(f, start, scaled);
+}
+void scanWant(const PanelUsageFrame& f) {
+    if (panelUsageTruth(panelUsageContextRead(f, "shown")) && !panelUsageContextRead(f, "scan").isNull()) {
+        const auto scan = panelUsageContextRead(f, "scan"); assistantMemberWrite(f, scan, "wanted", QJSValue(true));
+    }
+}
+} // namespace
+
+QJSValue ApplicationInfo::scanStackedPalette() const {
+    const auto f = panelUsageEngine(this); const auto stored = !assistantContextField(f, "Preferences", "scanStackedPalette").strictlyEquals(QJSValue(QStringLiteral("")))
+        ? assistantContextField(f, "Preferences", "scanStackedPalette") : assistantContextField(f, "Preferences", "colourScheme");
+    if (assistantRelation(f, panelUsageMemberCall(f, panelUsageContextRead(f, "stackedChoices"), "indexOf", {stored}), QJSValue(0), 2)) return stored;
+    const auto actor = panelUsageContextRead(f, "ApplicationInfo"); return panelUsageMemberCall(f, actor, "colourSchemeOrDefault", {assistantContextField(f, "Preferences", "colourScheme")});
+}
+QJSValue ApplicationInfo::chartCapitalised(const QJSValue& text) const { const auto f = panelUsageEngine(this); return chartCapitalisedValue(f, text); }
+void ApplicationInfo::scanSetZoom(const QJSValue& x, const QJSValue& y) const {
+    const auto f = panelUsageEngine(this); panelUsageContextWrite(f, "settingZoom", QJSValue(true)); panelUsageContextWrite(f, "zoomX", x); panelUsageContextWrite(f, "zoomY", y);
+    panelUsageContextWrite(f, "settingZoom", QJSValue(false)); panelUsageGlobalCall(f, "publishZoom");
+}
+void ApplicationInfo::scanResetZoom() const {
+    const auto f = panelUsageEngine(this); const QJSValueList args{controlEmptyArray(f), controlEmptyArray(f)}; panelUsageGlobalCall(f, "setZoom", args);
+}
+void ApplicationInfo::scanPublishZoom() const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageTruth(panelUsageContextRead(f, "shown")) || panelUsageTruth(panelUsageContextRead(f, "settingZoom"))) return;
+    const auto object = panelUsageContextRead(f, "Object"), empty = panelUsageComplete(f, panelUsageLiteral(f)); const auto source = assistantContextField(f, "AppState", "scanZoom");
+    const auto next = panelUsageMemberCall(f, object, "assign", {empty, source}), mode = panelUsageContextRead(f, "mode");
+    auto range = panelUsageLiteral(f); panelUsageWrite(f, range.value, "x", panelUsageContextRead(f, "zoomX")); panelUsageWrite(f, range.value, "y", panelUsageContextRead(f, "zoomY"));
+    textIndexWrite(f, next, mode, panelUsageComplete(f, range)); projectWrite(f, "AppState", "scanZoom", next);
+}
+void ApplicationInfo::scanViewLifecycle(int event) const {
+    const auto f = panelUsageEngine(this);
+    if (event == 0) {
+        if (panelUsageTruth(panelUsageContextRead(f, "shown"))) {
+            const auto zoom = panelUsageContextRead(f, "sharedZoom"); const QJSValueList args{panelUsageRead(f, zoom, "x"), panelUsageRead(f, zoom, "y")}; panelUsageGlobalCall(f, "setZoom", args);
+        }
+        scanWant(f);
+    } else if (event == 1) { scanWant(f); panelUsageGlobalCall(f, "reportShown"); }
+    else if (event == 2) { panelUsageGlobalCall(f, "resetZoom"); scanWant(f); }
+    else {
+        const auto previous = panelUsageContextRead(f, "presentedTo");
+        if (!previous.isNull() && !previous.isUndefined()) panelUsageMemberCall(f, previous, "setScanViewShown", {panelUsageContextRead(f, "chart"), QJSValue(false)});
+        panelUsageContextWrite(f, "presentedTo", consentNull());
+    }
+}
+void ApplicationInfo::scanReportShown() const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageContextRead(f, "presentedTo").isNull()) {
+        bool retire = !panelUsageTruth(panelUsageContextRead(f, "presenting"));
+        if (!retire) { const auto previous = panelUsageContextRead(f, "presentedTo"), project = panelUsageContextRead(f, "project"); retire = !previous.strictlyEquals(project); }
+        if (retire) {
+            const auto previous = panelUsageContextRead(f, "presentedTo"); panelUsageMemberCall(f, previous, "setScanViewShown", {panelUsageContextRead(f, "chart"), QJSValue(false)});
+            panelUsageContextWrite(f, "presentedTo", consentNull());
+        }
+    }
+    if (panelUsageTruth(panelUsageContextRead(f, "presenting")) && panelUsageContextRead(f, "presentedTo").isNull()) {
+        const auto project = panelUsageContextRead(f, "project"); panelUsageMemberCall(f, project, "setScanViewShown", {panelUsageContextRead(f, "chart"), QJSValue(true)});
+        panelUsageContextWrite(f, "presentedTo", panelUsageContextRead(f, "project"));
+    }
+}
+void ApplicationInfo::scanPointer(const QJSValue& mouse, int event) const {
+    const auto f = panelUsageEngine(this);
+    if (event == 0) {
+        const auto top = numberMath(f, "max", [&] { return QJSValueList{QJSValue(1), assistantContextField(f, "layer", "stackTop")}; });
+        const auto high = assistantContextField(f, "chart", "yMax"), low = assistantContextField(f, "chart", "yMin"); const auto span = viewArithmetic(f, high, low, 0);
+        if (!assistantContextField(f, "chart", "mode").strictlyEquals(QJSValue(QStringLiteral("stacked"))) || panelUsageRead(f, panelUsageRead(f, mouse, "angleDelta"), "y").strictlyEquals(QJSValue(0))
+            || !assistantRelation(f, span, QJSValue(0), 1) || assistantRelation(f, span, top, 2)) { assistantMemberWrite(f, mouse, "accepted", QJSValue(false)); return; }
+        const auto from = numberMath(f, "max", [&] {
+            return QJSValueList{QJSValue(0), numberMath(f, "min", [&] {
+                const auto first = viewArithmetic(f, top, span, 0), start = assistantContextField(f, "chart", "yMin");
+                const auto delta = viewArithmetic(f, panelUsageRead(f, panelUsageRead(f, mouse, "angleDelta"), "y"), QJSValue(120), 2);
+                const auto movement = viewArithmetic(f, viewArithmetic(f, delta, span, 1), QJSValue(0.2), 1);
+                return QJSValueList{first, panelUsageAdd(f, start, movement)};
+            })};
+        });
+        const auto chart = panelUsageContextRead(f, "chart"), x = assistantContextField(f, "chart", "zoomX");
+        const auto y = assistantGeometryArray(f, {from, panelUsageAdd(f, from, span)}); panelUsageMemberCall(f, chart, "setZoom", {x, y}); return;
+    }
+    if (event == 1) {
+        const auto button = panelUsageRead(f, mouse, "button"), right = assistantContextField(f, "Qt", "RightButton"); if (button.strictlyEquals(right)) return;
+        const auto qt = panelUsageContextRead(f, "Qt"); const QJSValueList args{panelUsageRead(f, mouse, "x"), panelUsageRead(f, mouse, "y")};
+        panelUsageContextWrite(f, "start", panelUsageMemberCall(f, qt, "point", args)); projectWrite(f, "zoomBox", "width", QJSValue(0)); projectWrite(f, "zoomBox", "height", QJSValue(0)); return;
+    }
+    if (event == 2) {
+        const auto buttons = panelUsageRead(f, mouse, "buttons"), left = assistantContextField(f, "Qt", "LeftButton");
+        if (!panelUsageTruth(chartBinary(f, buttons, left, false))) {
+            QJSValue hovered(-1);
+            if (!assistantContextField(f, "chart", "scan").isNull()) {
+                const auto layer = panelUsageContextRead(f, "layer"); const auto x = chartCoordinateValue(f, [&] { return panelUsageRead(f, mouse, "x"); }, false);
+                const auto y = chartCoordinateValue(f, [&] { return panelUsageRead(f, mouse, "y"); }, true); hovered = panelUsageMemberCall(f, layer, "datasetNear", {x, y});
+            }
+            panelUsageContextWrite(f, "hovered", hovered); return;
+        }
+        const auto x = numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), numberMath(f, "min", [&] { return QJSValueList{panelUsageContextRead(f, "width"), panelUsageRead(f, mouse, "x")}; })}; });
+        const auto y = numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), numberMath(f, "min", [&] { return QJSValueList{panelUsageContextRead(f, "height"), panelUsageRead(f, mouse, "y")}; })}; });
+        const auto horizontal = panelUsageContextRead(f, "zoomBox");
+        assistantMemberWrite(f, horizontal, "x", numberMath(f, "min", [&] { return QJSValueList{panelUsageRead(f, panelUsageContextRead(f, "start"), "x"), x}; }));
+        const auto vertical = panelUsageContextRead(f, "zoomBox");
+        assistantMemberWrite(f, vertical, "y", numberMath(f, "min", [&] { return QJSValueList{panelUsageRead(f, panelUsageContextRead(f, "start"), "y"), y}; }));
+        const auto width = panelUsageContextRead(f, "zoomBox");
+        assistantMemberWrite(f, width, "width", numberMath(f, "abs", [&] { return QJSValueList{viewArithmetic(f, x, panelUsageRead(f, panelUsageContextRead(f, "start"), "x"), 0)}; }));
+        const auto height = panelUsageContextRead(f, "zoomBox");
+        assistantMemberWrite(f, height, "height", numberMath(f, "abs", [&] { return QJSValueList{viewArithmetic(f, y, panelUsageRead(f, panelUsageContextRead(f, "start"), "y"), 0)}; }));
+        const auto box = panelUsageContextRead(f, "zoomBox"); const bool visible = assistantRelation(f, assistantContextField(f, "zoomBox", "width"), QJSValue(4), 1) || assistantRelation(f, assistantContextField(f, "zoomBox", "height"), QJSValue(4), 1);
+        assistantMemberWrite(f, box, "visible", QJSValue(visible)); return;
+    }
+    const auto button = panelUsageRead(f, mouse, "button"), right = assistantContextField(f, "Qt", "RightButton"); if (button.strictlyEquals(right)) { projectInvoke(f, "chart", "resetZoom"); return; }
+    if (!panelUsageTruth(assistantContextField(f, "zoomBox", "visible"))) {
+        const auto legend = panelUsageContextRead(f, "stackedLegend"); const QJSValueList args{panelUsageContextRead(f, "pointer"), panelUsageRead(f, mouse, "x"), panelUsageRead(f, mouse, "y")};
+        if (panelUsageTruth(panelUsageMemberCall(f, legend, "toggleAt", args))) return;
+    }
+    if (panelUsageTruth(assistantContextField(f, "zoomBox", "visible"))) {
+        projectWrite(f, "zoomBox", "visible", QJSValue(false));
+        if (assistantRelation(f, assistantContextField(f, "zoomBox", "width"), QJSValue(4), 1) && assistantRelation(f, assistantContextField(f, "zoomBox", "height"), QJSValue(4), 1)) {
+            const auto chart = panelUsageContextRead(f, "chart");
+            const auto firstX = viewArithmetic(f, assistantContextField(f, "zoomBox", "x"), panelUsageContextRead(f, "width"), 2); const auto lowX = scanAtShare(f, firstX, false);
+            const auto x = assistantContextField(f, "zoomBox", "x"), w = assistantContextField(f, "zoomBox", "width"); const auto lastX = viewArithmetic(f, panelUsageAdd(f, x, w), panelUsageContextRead(f, "width"), 2);
+            const auto xRange = assistantGeometryArray(f, {lowX, scanAtShare(f, lastX, false)});
+            const auto y = assistantContextField(f, "zoomBox", "y"), h = assistantContextField(f, "zoomBox", "height"); const auto firstY = viewArithmetic(f, panelUsageAdd(f, y, h), panelUsageContextRead(f, "height"), 2); const auto lowY = scanAtShare(f, firstY, true);
+            const auto lastY = viewArithmetic(f, assistantContextField(f, "zoomBox", "y"), panelUsageContextRead(f, "height"), 2); const auto yRange = assistantGeometryArray(f, {lowY, scanAtShare(f, lastY, true)});
+            panelUsageMemberCall(f, chart, "setZoom", {xRange, yRange});
+        }
+        return;
+    }
+    if (assistantContextField(f, "chart", "scan").isNull() || assistantContextField(f, "chart", "project").isNull()) return;
+    const auto layer = panelUsageContextRead(f, "layer"), mouseX = panelUsageRead(f, mouse, "x"); const auto xShare = viewArithmetic(f, mouseX, panelUsageContextRead(f, "width"), 2); const auto x = scanAtShare(f, xShare, false);
+    const auto mouseY = panelUsageRead(f, mouse, "y"); const auto yShare = viewArithmetic(f, mouseY, panelUsageContextRead(f, "height"), 2), y = scanAtShare(f, yShare, true);
+    const auto dataset = panelUsageMemberCall(f, layer, "datasetNear", {x, y});
+    if (assistantRelation(f, dataset, QJSValue(0), 2)) assistantMemberWrite(f, assistantContextField(f, "chart", "project"), "currentExperimentIndex", dataset);
+}
+QJSValue ApplicationInfo::scanIntensityCounts(const QJSValue& value) const {
+    const auto f = panelUsageEngine(this); const auto scale = assistantContextField(f, "Preferences", "patternYScale");
+    if (scale.strictlyEquals(QJSValue(QStringLiteral("log")))) return numberPower(f, [&] { return value; });
+    if (scale.strictlyEquals(QJSValue(QStringLiteral("sqrt")))) {
+        const auto sign = numberMath(f, "sign", [&] { return QJSValueList{value}; }); const auto first = viewArithmetic(f, sign, value, 1); return viewArithmetic(f, first, value, 1);
+    }
+    return value;
+}
+QJSValue ApplicationInfo::scanIntensityText(const QJSValue& value) const {
+    const auto f = panelUsageEngine(this); const auto counts = panelUsageGlobalCall(f, "intensityCounts", {value});
+    if (!numberFinite(f, counts)) return QJSValue(QStringLiteral("")); if (counts.strictlyEquals(QJSValue(0))) return QJSValue(QStringLiteral("0"));
+    return numberReplaceExponent(f, projectInvoke(f, "NumberText", "exponent", {counts, QJSValue(2)}));
+}
+void ApplicationInfo::scanLegendToggle(const QJSValue& key) const {
+    const auto f = panelUsageEngine(this); if (!key.strictlyEquals(QJSValue(QStringLiteral("")))) {
+        const auto layer = panelUsageContextRead(f, "layer"); panelUsageMemberCall(f, layer, "toggleHidden", {panelUsageGlobalCall(f, "Number", {key})});
+    }
+}
+QJSValue ApplicationInfo::scanRowEntries() const {
+    const auto f = panelUsageEngine(this); QJSValue input;
+    if (panelUsageTruth(panelUsageContextRead(f, "hasValue"))) {
+        const auto title = panelUsageRead(f, assistantContextField(f, "chart", "scan"), "valueTitle"), order = panelUsageContextRead(f, "order"); input = assistantGeometryArray(f, {title, order});
+    } else input = assistantGeometryArray(f, {panelUsageContextRead(f, "order")});
+    return panelUsageMemberCall(f, input, "map", {projectGuardedClosure(f, 305, 1)});
+}
+QJSValue ApplicationInfo::scanClosedTexts(int kind) const {
+    const auto f = panelUsageEngine(this); const auto source = kind == 3 ? assistantContextField(f, "ApplicationInfo", "stackedSpacingTitles") : kind == 4 ? assistantContextField(f, "ApplicationInfo", "scanMapDirectionTitles") : panelUsageContextRead(f, "entries");
+    return panelUsageMemberCall(f, source, "map", {projectGuardedClosure(f, uint(300 + kind), 1)});
+}
+void ApplicationInfo::scanChoice(const QJSValue& index, int kind) const {
+    const auto f = panelUsageEngine(this);
+    if (kind == 0) {
+        if (panelUsageTruth(assistantContextField(f, "chart", "project")) && panelUsageTruth(panelUsageContextRead(f, "nativeOffered"))) assistantMemberWrite(f, assistantContextField(f, "chart", "project"), "patternDSpacing", QJSValue(index.strictlyEquals(QJSValue(1))));
+    } else if (kind == 1) {
+        if (panelUsageTruth(assistantContextField(f, "chart", "project")) && panelUsageTruth(panelUsageRead(f, assistantContextField(f, "chart", "project"), "evolution"))) {
+            const auto evolution = panelUsageRead(f, assistantContextField(f, "chart", "project"), "evolution"); assistantMemberWrite(f, evolution, "xMode", panelUsageTruth(panelUsageContextRead(f, "hasValue")) ? index : QJSValue(1));
+        }
+    } else if (kind == 2 || kind == 4) {
+        const auto preferences = panelUsageContextRead(f, "Preferences"); const auto choices = kind == 2 ? panelUsageContextRead(f, "tokens") : assistantContextField(f, "chart", "mapChoices");
+        assistantMemberWrite(f, preferences, kind == 2 ? "patternYScale" : "scanMapColours", textIndex(f, choices, index));
+    } else if (panelUsageTruth(assistantContextField(f, "chart", "project"))) {
+        const auto project = assistantContextField(f, "chart", "project"), choices = panelUsageContextRead(f, kind == 3 ? "steps" : "directions");
+        assistantMemberWrite(f, project, kind == 3 ? "stackedSpacing" : "mapDirection", textIndex(f, choices, index));
+    }
+}
+void ApplicationInfo::scanToggle(int kind) const {
+    const auto f = panelUsageEngine(this); const char* names[] = {"scanStackedLegendShown", "patternHoverShown", "scanStackedReversed", "scanMapSmooth", "chartIncludedOnly", "chartSubtractBackground", "chartHighlightSelected"};
+    if (kind < 0 || kind >= int(std::size(names))) return;
+    const auto preferences = panelUsageContextRead(f, "Preferences"); assistantMemberWrite(f, preferences, names[kind], QJSValue(!panelUsageTruth(assistantContextField(f, "Preferences", names[kind]))));
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {
