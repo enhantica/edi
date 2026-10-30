@@ -25,7 +25,7 @@ ToolbarComboBox {
         return ApplicationInfo.scanMapInverted(map, box.direction, box.chartBackground, box.dark);
     }
 
-    model: maps.map(map => ApplicationInfo.scanColourTitle(map))
+    model: ApplicationInfo.colourMapTitles()
     // Room for the bar before the name, in the closed box (its label's padding, which its width counts) and in the
     // list.
     readonly property real leadingSpace: barWidth + barGap

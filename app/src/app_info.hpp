@@ -389,6 +389,30 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE bool tableRevealRow(int index) const;
     Q_INVOKABLE bool tableRevealItem(const QJSValue& item) const;
     Q_INVOKABLE void tableKeyPressed(const QJSValue& event) const;
+    /// Shared control procedures retain the original QML state, layout and native model owners.
+    Q_INVOKABLE QJSValue toolbarUnits() const;
+    Q_INVOKABLE QJSValue toolbarMeasure() const;
+    Q_INVOKABLE QJSValue toolbarIsComboBox(const QJSValue& unit) const;
+    Q_INVOKABLE QJSValue toolbarGroupOf(const QJSValue& unit) const;
+    Q_INVOKABLE QJSValue toolbarBoxGap(const QJSValue& before, const QJSValue& unit) const;
+    Q_INVOKABLE QJSValue toolbarRowWidth(const QJSValue& row, const QJSValue& gap, bool boxes) const;
+    Q_INVOKABLE void toolbarLayout() const;
+    Q_INVOKABLE QJSValue iconElidedIndex() const;
+    Q_INVOKABLE QJSValue iconNaturalWidth(const QJSValue& segment, const QJSValue& piece) const;
+    Q_INVOKABLE QJSValue iconFixedWidth(const QJSValue& segment) const;
+    Q_INVOKABLE QJSValue iconOtherWidth() const;
+    Q_INVOKABLE QJSValue sidebarIsOpen(const QJSValue& key, const QJSValue& group) const;
+    Q_INVOKABLE void sidebarSetOpen(const QJSValue& key, const QJSValue& open, const QJSValue& group) const;
+    Q_INVOKABLE QJSValue sidebarEdge(const QJSValue& group, bool last) const;
+    Q_INVOKABLE QJSValue sidebarOrderedChildren(const QJSValue& parent) const;
+    Q_INVOKABLE QJSValue sidebarShownGroups(const QJSValue& group) const;
+    Q_INVOKABLE QJSValue statusKeysFit() const;
+    Q_INVOKABLE QJSValue statusRoomFor() const;
+    Q_INVOKABLE QJSValue statusMeasuredWidth(bool compact) const;
+    Q_INVOKABLE QJSValue statusWidthWith(const QJSValue& itemWidth, bool buttons) const;
+    Q_INVOKABLE QJSValue statusFitValues() const;
+    Q_INVOKABLE QJSValue statusProgressText() const;
+    Q_INVOKABLE QJSValue colourMapTitles() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

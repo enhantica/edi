@@ -816,6 +816,7 @@ struct PanelUsageFrame {
     QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
     void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
 };
+QJSValue controlProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue tableProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue assistantUiCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue remainingProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
@@ -2590,7 +2591,9 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     const auto argument = [&](uint index) {
         return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
     };
-    const auto result = callback->d()->operation >= 120
+    const auto result = callback->d()->operation >= 160
+        ? controlProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
+        : callback->d()->operation >= 120
         ? tableProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
         : callback->d()->operation >= 80
         ? assistantUiCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
@@ -2960,7 +2963,8 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto argument = [&](uint index) {
             return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
         };
-        result = callback->d()->operation >= 120 ? tableProcedureCallback(frame, callback->d()->operation, retained, argument)
+        result = callback->d()->operation >= 160 ? controlProcedureCallback(frame, callback->d()->operation, retained, argument)
+            : callback->d()->operation >= 120 ? tableProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 80 ? assistantUiCallback(frame, callback->d()->operation, retained, argument)
             : remainingProcedureCallback(frame, callback->d()->operation, retained, argument);
     } else if (callback->d()->operation >= 40) {
@@ -5814,6 +5818,349 @@ void ApplicationInfo::tableKeyPressed(const QJSValue& event) const {
     projectWrite(f, "table", "currentIndex", row); projectInvoke(f, "table", "positionViewAtIndex", {row, assistantContextField(f, "ListView", "Contain")});
     if (panelUsageTruth(assistantContextField(f, "table", "selectable"))) projectInvoke(f, "table", "selectWithModifiers", {row, assistantContextField(f, "Qt", "NoModifier")});
     projectInvoke(f, "table", "rowActivated", {row}); assistantMemberWrite(f, event, "accepted", QJSValue(true));
+}
+
+namespace {
+QJSValue controlProcedureCallback(const PanelUsageFrame& f, uint operation,
+    const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
+    const auto unit = arg(0);
+    if (operation == 160 || operation == 174) return panelUsageRead(f, unit, operation == 160 ? "visible" : "shown");
+    if (operation == 161) {
+        const auto width = panelUsageRead(f, unit, "width");
+        return panelUsageAdd(f, width, panelUsageGlobalCall(f, "groupOf", {unit}));
+    }
+    if (operation == 162 || operation == 163) {
+        const auto first = panelUsageAdd(f, arg(0), panelUsageRead(f, arg(1), "width"));
+        QJSValue gap(0);
+        if (assistantRelation(f, arg(2), QJSValue(0), 1)) {
+            if (operation == 162) gap = saved(0);
+            else {
+                const auto previous = textIndex(f, saved(0), viewArithmetic(f, arg(2), QJSValue(1), 0));
+                gap = panelUsageGlobalCall(f, "boxGap", {previous, arg(1)});
+            }
+        }
+        return panelUsageAdd(f, first, gap);
+    }
+    if (operation == 164 || operation == 165) {
+        const auto result = panelUsageGlobalCall(f, "isComboBox", {unit});
+        return operation == 164 ? result : QJSValue(!panelUsageTruth(result));
+    }
+    if (operation == 166) {
+        if (!assistantRelation(f, arg(1), QJSValue(0), 1)) return QJSValue(0);
+        const auto previous = textIndex(f, saved(0), viewArithmetic(f, arg(1), QJSValue(1), 0));
+        return panelUsageGlobalCall(f, "boxGap", {previous, unit});
+    }
+    if (operation == 167 || operation == 168) {
+        if (assistantRelation(f, arg(1), QJSValue(0), 1)) return panelUsageContextRead(f, "spacing");
+        if (operation == 167 && assistantRelation(f, panelUsageRead(f, saved(0), "length"), QJSValue(0), 1))
+            return panelUsageContextRead(f, "groupSpacing");
+        return QJSValue(0);
+    }
+    if (operation == 169) {
+        const auto first = panelUsageAdd(f, arg(0), panelUsageRead(f, arg(1), "width"));
+        const auto gaps = panelUsageRead(f, saved(0), "gaps");
+        return panelUsageAdd(f, first, textIndex(f, gaps, arg(2)));
+    }
+    if (operation == 170) return QJSValue(panelUsageRead(f, unit, "elides").strictlyEquals(QJSValue(true)));
+    if (operation == 171) {
+        const auto method = tableTypeof(f, panelUsageRead(f, unit, "itemAt"));
+        if (!method.strictlyEquals(QJSValue(QStringLiteral("function")))) return QJSValue(false);
+        return QJSValue(tableTypeof(f, panelUsageRead(f, unit, "count")).strictlyEquals(QJSValue(QStringLiteral("number"))));
+    }
+    if (operation == 172 || operation == 173) return panelUsageRead(f, unit, operation == 172 ? "labelledWidth" : "compactWidth");
+    if (operation == 175) return panelUsageRead(f, unit, "valueText");
+    if (operation == 177) return projectInvoke(f, "ApplicationInfo", "scanColourTitle", {unit});
+    if (operation == 176) return QJSValue(!unit.strictlyEquals(QJSValue(QStringLiteral(""))));
+    return {};
+}
+QJSValue controlEmptyArray(const PanelUsageFrame& f) { return assistantGeometryArray(f, {}); }
+QJSValue controlStylePixel(const PanelUsageFrame& f) {
+    const auto style = panelUsageContextRead(f, "EaStyle");
+    return panelUsageRead(f, panelUsageRead(f, style, "Sizes"), "fontPixelSize");
+}
+QJSValue controlMath(const PanelUsageFrame& f, const char* name, const QJSValueList& arguments) {
+    return panelUsageMemberCall(f, panelUsageContextRead(f, "Math"), name, arguments);
+}
+QJSValue controlRow(const PanelUsageFrame& f, const QJSValue& units, const QJSValue& gaps) {
+    auto row = panelUsageLiteral(f); panelUsageWrite(f, row.value, "units", units); panelUsageWrite(f, row.value, "gaps", gaps);
+    return panelUsageComplete(f, row);
+}
+} // namespace
+
+QJSValue ApplicationInfo::toolbarUnits() const {
+    const auto f = panelUsageEngine(this); const auto array = tableArrayFrom(f, panelUsageContextRead(f, "children"));
+    return panelUsageMemberCall(f, array, "filter", {projectGuardedClosure(f, 160, 1)});
+}
+QJSValue ApplicationInfo::toolbarMeasure() const {
+    const auto f = panelUsageEngine(this); QJSValueList values;
+    for (const char* name : {"centre", "leftEdge", "rightEdge"}) values.append(panelUsageContextRead(f, name));
+    const auto prefix = assistantGeometryArray(f, values);
+    const auto units = panelUsageContextRead(f, "units");
+    const auto widths = panelUsageMemberCall(f, units, "map", {projectGuardedClosure(f, 161, 1)});
+    const auto measured = panelUsageMemberCall(f, prefix, "concat", {widths});
+    return panelUsageMemberCall(f, measured, "join", {QJSValue(QStringLiteral(","))});
+}
+QJSValue ApplicationInfo::toolbarIsComboBox(const QJSValue& unit) const {
+    const auto f = panelUsageEngine(this); return QJSValue(!panelUsageRead(f, unit, "closedTexts").isUndefined());
+}
+QJSValue ApplicationInfo::toolbarGroupOf(const QJSValue& unit) const {
+    const auto f = panelUsageEngine(this); return tableNullish(panelUsageRead(f, unit, "toolbarGroup"), QJSValue(QStringLiteral("")));
+}
+QJSValue ApplicationInfo::toolbarBoxGap(const QJSValue& before, const QJSValue& unit) const {
+    const auto f = panelUsageEngine(this); const auto first = panelUsageGlobalCall(f, "groupOf", {before});
+    const auto second = panelUsageGlobalCall(f, "groupOf", {unit});
+    return panelUsageContextRead(f, first.strictlyEquals(second) ? "spacing" : "groupSpacing");
+}
+QJSValue ApplicationInfo::toolbarRowWidth(const QJSValue& row, const QJSValue& gap, bool boxes) const {
+    const auto f = panelUsageEngine(this);
+    return panelUsageMemberCall(f, row, "reduce", {tableCallback(f, boxes ? 163 : 162, {boxes ? row : gap}, 3), QJSValue(0)});
+}
+void ApplicationInfo::toolbarLayout() const {
+    const auto f = panelUsageEngine(this);
+    const auto boxes = panelUsageMemberCall(f, panelUsageContextRead(f, "units"), "filter", {tableCallback(f, 164, {}, 1)});
+    const auto buttons = panelUsageMemberCall(f, panelUsageContextRead(f, "units"), "filter", {tableCallback(f, 165, {}, 1)});
+    const auto right = panelUsageContextRead(f, "rightEdge"), left = panelUsageContextRead(f, "leftEdge");
+    const auto room = viewArithmetic(f, right, left, 0); const auto rows = controlEmptyArray(f);
+    const auto boxesWidth = panelUsageGlobalCall(f, "boxesWidth", {boxes});
+    const auto buttonsWidth = panelUsageGlobalCall(f, "widthOf", {buttons, panelUsageContextRead(f, "spacing")});
+    const auto first = panelUsageAdd(f, boxesWidth, buttonsWidth);
+    QJSValue gap(0);
+    if (assistantRelation(f, panelUsageRead(f, boxes, "length"), QJSValue(0), 1)
+        && assistantRelation(f, panelUsageRead(f, buttons, "length"), QJSValue(0), 1)) gap = panelUsageContextRead(f, "groupSpacing");
+    const auto together = panelUsageAdd(f, first, gap);
+    if (assistantRelation(f, together, room, 3)) {
+        const auto units = panelUsageMemberCall(f, boxes, "concat", {buttons});
+        const auto boxGaps = panelUsageMemberCall(f, boxes, "map", {tableCallback(f, 166, {boxes}, 2)});
+        const auto buttonGaps = panelUsageMemberCall(f, buttons, "map", {tableCallback(f, 167, {boxes}, 2)});
+        const auto gaps = panelUsageMemberCall(f, boxGaps, "concat", {buttonGaps});
+        panelUsageMemberCall(f, rows, "push", {controlRow(f, units, gaps)});
+    } else {
+        QJSValue row = consentNull();
+        panelUsageEach(f, boxes, [&](const QJSValue& box) {
+            bool newRow = row.isNull();
+            if (!newRow) {
+                const auto units = panelUsageRead(f, row, "units");
+                const auto extended = panelUsageMemberCall(f, units, "concat", {assistantGeometryArray(f, {box})});
+                newRow = assistantRelation(f, panelUsageGlobalCall(f, "boxesWidth", {extended}), room, 1);
+            }
+            if (newRow) {
+                const auto units = controlEmptyArray(f), gaps = controlEmptyArray(f); row = controlRow(f, units, gaps);
+                panelUsageMemberCall(f, rows, "push", {row});
+            }
+            const auto gaps = panelUsageRead(f, row, "gaps"); QJSValue before(0);
+            if (assistantRelation(f, panelUsageRead(f, panelUsageRead(f, row, "units"), "length"), QJSValue(0), 1)) {
+                const auto units = panelUsageRead(f, row, "units");
+                const auto length = panelUsageRead(f, panelUsageRead(f, row, "units"), "length");
+                before = panelUsageGlobalCall(f, "boxGap", {textIndex(f, units, viewArithmetic(f, length, QJSValue(1), 0)), box});
+            }
+            panelUsageMemberCall(f, gaps, "push", {before});
+            panelUsageMemberCall(f, panelUsageRead(f, row, "units"), "push", {box});
+            return panelUsageReady(f);
+        });
+        if (assistantRelation(f, panelUsageRead(f, buttons, "length"), QJSValue(0), 1)) {
+            const auto gaps = panelUsageMemberCall(f, buttons, "map", {tableCallback(f, 168, {}, 2)});
+            panelUsageMemberCall(f, rows, "push", {controlRow(f, buttons, gaps)});
+        }
+    }
+    QJSValue top(0);
+    panelUsageEach(f, rows, [&](const QJSValue& each) {
+        const auto widthNow = panelUsageMemberCall(f, panelUsageRead(f, each, "units"), "reduce", {tableCallback(f, 169, {each}, 3), QJSValue(0)});
+        const auto rounding = panelUsageContextRead(f, "Math");
+        const auto maximizing = panelUsageContextRead(f, "Math");
+        const auto leftEdge = panelUsageContextRead(f, "leftEdge");
+        const auto minimizing = panelUsageContextRead(f, "Math");
+        const auto end = viewArithmetic(f, panelUsageContextRead(f, "rightEdge"), widthNow, 0);
+        const auto middle = viewArithmetic(f, panelUsageContextRead(f, "centre"), viewArithmetic(f, widthNow, QJSValue(2), 2), 0);
+        const auto minimum = panelUsageMemberCall(f, minimizing, "min", {end, middle});
+        const auto maximum = panelUsageMemberCall(f, maximizing, "max", {leftEdge, minimum});
+        auto x = panelUsageMemberCall(f, rounding, "round", {maximum});
+        for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, panelUsageRead(f, each, "units"), "length"), 0); ++i) {
+            x = panelUsageAdd(f, x, textIndex(f, panelUsageRead(f, each, "gaps"), QJSValue(i)));
+            assistantMemberWrite(f, textIndex(f, panelUsageRead(f, each, "units"), QJSValue(i)), "x", x);
+            assistantMemberWrite(f, textIndex(f, panelUsageRead(f, each, "units"), QJSValue(i)), "y", top);
+            x = panelUsageAdd(f, x, panelUsageRead(f, textIndex(f, panelUsageRead(f, each, "units"), QJSValue(i)), "width"));
+        }
+        const auto control = assistantContextField(f, "AppSizes", "toolbarControlSize");
+        const auto spacing = assistantContextField(f, "AppSizes", "toolbarSpacing");
+        top = panelUsageAdd(f, top, panelUsageAdd(f, control, spacing)); return panelUsageReady(f);
+    });
+    panelUsageContextWrite(f, "lineCount", panelUsageRead(f, rows, "length"));
+    const auto height = viewArithmetic(f, top, assistantContextField(f, "AppSizes", "toolbarSpacing"), 0);
+    panelUsageContextWrite(f, "implicitHeight", controlMath(f, "max", {QJSValue(0), height}));
+}
+QJSValue ApplicationInfo::iconElidedIndex() const {
+    const auto f = panelUsageEngine(this); const auto segments = panelUsageContextRead(f, "segments");
+    const auto marked = panelUsageMemberCall(f, segments, "findIndex", {projectGuardedClosure(f, 170, 1)});
+    return assistantRelation(f, marked, QJSValue(0), 2) ? marked : viewArithmetic(f, panelUsageRead(f, panelUsageContextRead(f, "segments"), "length"), QJSValue(1), 0);
+}
+QJSValue ApplicationInfo::iconNaturalWidth(const QJSValue& segment, const QJSValue& piece) const {
+    const auto f = panelUsageEngine(this); const auto fixed = panelUsageGlobalCall(f, "fixedWidth", {segment});
+    return !fixed.isUndefined() ? fixed : panelUsageRead(f, piece, "implicitWidth");
+}
+QJSValue ApplicationInfo::iconFixedWidth(const QJSValue& segment) const {
+    const auto f = panelUsageEngine(this);
+    const auto mark = panelUsageTruth(segment) ? tableNullish(panelUsageRead(f, segment, "mark"), QJSValue(QStringLiteral(""))) : QJSValue(QStringLiteral(""));
+    if (panelUsageTruth(segment) && panelUsageTruth(panelUsageRead(f, segment, "slot"))) return viewArithmetic(f, panelUsageContextRead(f, "pixelSize"), QJSValue(1.15), 1);
+    if (mark.strictlyEquals(QJSValue(QStringLiteral("dash")))) return viewArithmetic(f, panelUsageContextRead(f, "pixelSize"), QJSValue(1.2), 1);
+    if (!mark.strictlyEquals(QJSValue(QStringLiteral("")))) return viewArithmetic(f, panelUsageContextRead(f, "pixelSize"), QJSValue(0.6), 1);
+    return {};
+}
+QJSValue ApplicationInfo::iconOtherWidth() const {
+    const auto f = panelUsageEngine(this); QJSValue width(0);
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), assistantContextField(f, "pieces", "count"), 0); ++i) {
+        const auto piece = projectInvoke(f, "pieces", "itemAt", {QJSValue(i)});
+        if (!QJSValue(i).strictlyEquals(panelUsageContextRead(f, "elidedIndex"))) {
+            QJSValue extra(0);
+            if (panelUsageTruth(piece)) {
+                const auto segments = panelUsageContextRead(f, "segments");
+                const auto natural = projectInvoke(f, "line", "naturalWidth", {textIndex(f, segments, QJSValue(i)), piece});
+                extra = panelUsageAdd(f, natural, panelUsageContextRead(f, "spacing"));
+            }
+            width = panelUsageAdd(f, width, extra);
+        }
+    }
+    return width;
+}
+QJSValue ApplicationInfo::sidebarIsOpen(const QJSValue& key, const QJSValue& group) const {
+    const auto f = panelUsageEngine(this);
+    if (!textIndex(f, panelUsageContextRead(f, "openStates"), key).isUndefined())
+        return QJSValue(textIndex(f, panelUsageContextRead(f, "openStates"), key).strictlyEquals(QJSValue(true)));
+    return panelUsageGlobalCall(f, "defaultOpen", {group});
+}
+void ApplicationInfo::sidebarSetOpen(const QJSValue& key, const QJSValue& open, const QJSValue& group) const {
+    const auto f = panelUsageEngine(this);
+    if (textIndex(f, panelUsageContextRead(f, "openStates"), key).isUndefined() && !group.isUndefined()
+        && open.strictlyEquals(panelUsageGlobalCall(f, "defaultOpen", {group}))) return;
+    textIndexWrite(f, panelUsageContextRead(f, "openStates"), key, open);
+}
+QJSValue ApplicationInfo::sidebarEdge(const QJSValue& group, bool last) const {
+    const auto f = panelUsageEngine(this); const auto shown = panelUsageGlobalCall(f, "shownGroups", {group});
+    if (!assistantRelation(f, panelUsageRead(f, shown, "length"), QJSValue(0), 1)) return QJSValue(false);
+    const auto index = last ? viewArithmetic(f, panelUsageRead(f, shown, "length"), QJSValue(1), 0) : QJSValue(0);
+    return QJSValue(textIndex(f, shown, index).strictlyEquals(group));
+}
+QJSValue ApplicationInfo::sidebarOrderedChildren(const QJSValue& parent) const {
+    const auto f = panelUsageEngine(this); const auto children = controlEmptyArray(f);
+    for (double i = 0; panelUsageReady(f) && panelUsageTruth(parent)
+        && assistantRelation(f, QJSValue(i), panelUsageRead(f, panelUsageRead(f, parent, "children"), "length"), 0); ++i)
+        panelUsageMemberCall(f, children, "push", {textIndex(f, panelUsageRead(f, parent, "children"), QJSValue(i))});
+    const auto repeaters = panelUsageMemberCall(f, children, "filter", {projectGuardedClosure(f, 171, 1)});
+    const auto repeated = controlEmptyArray(f);
+    panelUsageEach(f, repeaters, [&](const QJSValue& repeater) {
+        for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, repeater, "count"), 0); ++i)
+            panelUsageMemberCall(f, repeated, "push", {panelUsageMemberCall(f, repeater, "itemAt", {QJSValue(i)})});
+        return panelUsageReady(f);
+    });
+    const auto ordered = controlEmptyArray(f);
+    panelUsageEach(f, children, [&](const QJSValue& child) {
+        if (panelUsageTruth(panelUsageMemberCall(f, repeaters, "includes", {child}))) {
+            for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, child, "count"), 0); ++i) {
+                if (!panelUsageMemberCall(f, child, "itemAt", {QJSValue(i)}).isNull())
+                    panelUsageMemberCall(f, ordered, "push", {panelUsageMemberCall(f, child, "itemAt", {QJSValue(i)})});
+            }
+        } else if (!panelUsageTruth(panelUsageMemberCall(f, repeated, "includes", {child}))) panelUsageMemberCall(f, ordered, "push", {child});
+        return panelUsageReady(f);
+    });
+    return ordered;
+}
+QJSValue ApplicationInfo::sidebarShownGroups(const QJSValue& group) const {
+    const auto f = panelUsageEngine(this);
+    const auto siblings = panelUsageGlobalCall(f, "orderedChildren", {panelUsageTruth(group) ? panelUsageRead(f, group, "parent") : consentNull()});
+    const auto shown = controlEmptyArray(f);
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, siblings, "length"), 0); ++i) {
+        const auto sibling = textIndex(f, siblings, QJSValue(i));
+        if (!tableTypeof(f, panelUsageRead(f, sibling, "collapsible")).strictlyEquals(QJSValue(QStringLiteral("undefined")))
+            && (tableTypeof(f, panelUsageRead(f, sibling, "listed")).strictlyEquals(QJSValue(QStringLiteral("undefined")))
+                || panelUsageTruth(panelUsageRead(f, sibling, "listed")))) panelUsageMemberCall(f, shown, "push", {sibling});
+    }
+    return shown;
+}
+QJSValue ApplicationInfo::statusKeysFit() const {
+    const auto f = panelUsageEngine(this); QJSValue width(0); double shown = 0;
+    panelUsageEach(f, panelUsageContextRead(f, "items"), [&](const QJSValue& item) {
+        if (panelUsageTruth(panelUsageRead(f, item, "shown"))) { width = panelUsageAdd(f, width, panelUsageRead(f, item, "labelledWidth")); ++shown; }
+        return panelUsageReady(f);
+    });
+    const auto spacing = viewArithmetic(f, controlStylePixel(f), QJSValue(1.2), 1); QJSValue fitWidth(0);
+    if (panelUsageTruth(assistantContextField(f, "fitArea", "visible"))) fitWidth = panelUsageAdd(f, assistantContextField(f, "fitArea", "labelledWidth"), spacing);
+    else if (panelUsageTruth(assistantContextField(f, "openingProgress", "visible"))) fitWidth = panelUsageAdd(f, assistantContextField(f, "openingProgress", "width"), spacing);
+    const auto spaces = viewArithmetic(f, controlMath(f, "max", {QJSValue(0), QJSValue(shown - 1)}), spacing, 1);
+    const auto first = panelUsageAdd(f, panelUsageAdd(f, width, spaces), fitWidth); QJSValue assistantWidth(0);
+    if (panelUsageTruth(assistantContextField(f, "assistantGroup", "visible"))) assistantWidth = panelUsageAdd(f, assistantContextField(f, "assistantGroup", "width"), spacing);
+    const auto total = panelUsageAdd(f, first, assistantWidth);
+    const auto barWidth = assistantContextField(f, "bar", "width");
+    const auto margin = viewArithmetic(f, QJSValue(2), controlStylePixel(f), 1);
+    return QJSValue(assistantRelation(f, total, viewArithmetic(f, barWidth, margin, 0), 3));
+}
+QJSValue ApplicationInfo::statusRoomFor() const {
+    const auto f = panelUsageEngine(this); const auto spacing = viewArithmetic(f, controlStylePixel(f), QJSValue(1.2), 1);
+    const auto barWidth = assistantContextField(f, "bar", "width");
+    const auto margin = viewArithmetic(f, QJSValue(2), controlStylePixel(f), 1); auto available = viewArithmetic(f, barWidth, margin, 0);
+    QJSValue assistantWidth(0);
+    if (panelUsageTruth(assistantContextField(f, "assistantGroup", "visible"))) assistantWidth = panelUsageAdd(f, assistantContextField(f, "assistantGroup", "width"), spacing);
+    available = viewArithmetic(f, available, assistantWidth, 0); QJSValue fitWidth(0);
+    if (panelUsageTruth(assistantContextField(f, "fitArea", "visible"))) fitWidth = panelUsageAdd(f, assistantContextField(f, "fitArea", "compactWidth"), spacing);
+    else if (panelUsageTruth(assistantContextField(f, "openingProgress", "visible"))) fitWidth = panelUsageAdd(f, assistantContextField(f, "openingProgress", "width"), spacing);
+    available = viewArithmetic(f, available, fitWidth, 0); QJSValue width(0);
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageRead(f, panelUsageContextRead(f, "items"), "length"), 0); ++i) {
+        if (!panelUsageTruth(panelUsageRead(f, textIndex(f, panelUsageContextRead(f, "items"), QJSValue(i)), "shown"))) continue;
+        const auto gap = assistantRelation(f, width, QJSValue(0), 1) ? spacing : QJSValue(0);
+        const auto measured = panelUsageRead(f, textIndex(f, panelUsageContextRead(f, "items"), QJSValue(i)), "compactWidth");
+        width = panelUsageAdd(f, width, panelUsageAdd(f, gap, measured));
+        if (assistantRelation(f, width, available, 1)) return QJSValue(i);
+    }
+    return panelUsageRead(f, panelUsageContextRead(f, "items"), "length");
+}
+QJSValue ApplicationInfo::statusMeasuredWidth(bool compact) const {
+    const auto f = panelUsageEngine(this);
+    return panelUsageGlobalCall(f, "widthWith", {projectGuardedClosure(f, compact ? 173 : 172, 1)});
+}
+QJSValue ApplicationInfo::statusWidthWith(const QJSValue& itemWidth, bool buttons) const {
+    const auto f = panelUsageEngine(this); QJSValue width = buttons ? QJSValue(0) : assistantContextField(f, "rule", "width");
+    double shown = buttons ? 0 : 1;
+    panelUsageEach(f, panelUsageContextRead(f, buttons ? "buttons" : "items"), [&](const QJSValue& item) {
+        if (panelUsageTruth(panelUsageRead(f, item, "shown"))) {
+            width = panelUsageAdd(f, width, projectCall(f, itemWidth, {item})); ++shown;
+        }
+        return panelUsageReady(f);
+    });
+    if (!buttons) {
+        const auto showing = panelUsageContextRead(f, "showing"), progress = panelUsageContextRead(f, "progress");
+        panelUsageEach(f, assistantGeometryArray(f, {showing, progress}), [&](const QJSValue& extra) {
+            if (panelUsageTruth(panelUsageRead(f, extra, "visible"))) { width = panelUsageAdd(f, width, panelUsageRead(f, extra, "width")); ++shown; }
+            return panelUsageReady(f);
+        });
+        if (panelUsageTruth(assistantContextField(f, "fitButtons", "visible"))) {
+            width = panelUsageAdd(f, width, projectInvoke(f, "fitButtons", "widthWith", {itemWidth})); ++shown;
+        }
+    }
+    const auto count = buttons ? controlMath(f, "max", {QJSValue(0), QJSValue(shown - 1)}) : QJSValue(shown - 1);
+    const auto spaces = viewArithmetic(f, count, panelUsageContextRead(f, "spacing"), 1);
+    return panelUsageAdd(f, width, spaces);
+}
+QJSValue ApplicationInfo::statusFitValues() const {
+    const auto f = panelUsageEngine(this); const auto items = assistantContextField(f, "fitArea", "items");
+    const auto tail = panelUsageMemberCall(f, items, "slice", {QJSValue(1)});
+    const auto shown = panelUsageMemberCall(f, tail, "filter", {projectGuardedClosure(f, 174, 1)});
+    const auto values = panelUsageMemberCall(f, shown, "map", {projectGuardedClosure(f, 175, 1)});
+    return panelUsageMemberCall(f, values, "join", {QJSValue(QStringLiteral(" "))});
+}
+QJSValue ApplicationInfo::statusProgressText() const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageTruth(assistantContextField(f, "fitArea", "scanning"))) return panelUsageRead(f, assistantContextField(f, "bar", "fit"), "scanText");
+    const auto fitting = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("StatusBar", "fitting")))}); QJSValue iterations(QStringLiteral(""));
+    if (panelUsageTruth(assistantContextField(f, "bar", "fit"))
+        && !panelUsageRead(f, assistantContextField(f, "bar", "fit"), "iterations").strictlyEquals(QJSValue(QStringLiteral("")))) {
+        const auto format = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("StatusBar", "it %1")))});
+        iterations = panelUsageMemberCall(f, format, "arg", {panelUsageRead(f, assistantContextField(f, "bar", "fit"), "iterations")});
+    }
+    const auto texts = assistantGeometryArray(f, {fitting, iterations});
+    const auto parts = panelUsageMemberCall(f, texts, "filter", {projectGuardedClosure(f, 176, 1)});
+    return panelUsageMemberCall(f, parts, "join", {assistantContextField(f, "FitOutcomes", "separator")});
+}
+QJSValue ApplicationInfo::colourMapTitles() const {
+    const auto f = panelUsageEngine(this);
+    return panelUsageMemberCall(f, panelUsageContextRead(f, "maps"), "map", {projectGuardedClosure(f, 177, 1)});
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {

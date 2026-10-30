@@ -35,34 +35,10 @@ EaElements.StatusBar {
     // any window size, font and value; the base's row margins and spacing are its own.
     readonly property list<StatusBarItem> items: [warningsItem, projectItem, structuresItem, experimentsItem, calculatorItem, minimizerItem, parametersItem]
     readonly property FitViewModel fit: project ? project.fit : null
-    readonly property bool keysFit: {
-        let width = 0;
-        let shown = 0;
-        for (const item of items) {
-            if (item.shown) {
-                width += item.labelledWidth;
-                shown += 1;
-            }
-        }
-        const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const fitWidth = fitArea.visible ? fitArea.labelledWidth + spacing : openingProgress.visible ? openingProgress.width + spacing : 0;
-        return width + Math.max(0, shown - 1) * spacing + fitWidth + (assistantGroup.visible ? assistantGroup.width + spacing : 0) <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
-    }
+    readonly property bool keysFit: ApplicationInfo.statusKeysFit()
     // How many of the items, in their order, fit beside the fit area with their icons and values only: the
     // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
-    readonly property int roomFor: {
-        const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (assistantGroup.visible ? assistantGroup.width + spacing : 0) - (fitArea.visible ? fitArea.compactWidth + spacing : openingProgress.visible ? openingProgress.width + spacing : 0);
-        let width = 0;
-        for (let i = 0; i < items.length; ++i) {
-            if (!items[i].shown)
-                continue;
-            width += (width > 0 ? spacing : 0) + items[i].compactWidth;
-            if (width > available)
-                return i;
-        }
-        return items.length;
-    }
+    readonly property int roomFor: ApplicationInfo.statusRoomFor()
 
     StatusBarItem {
         id: warningsItem
@@ -282,30 +258,10 @@ EaElements.StatusBar {
         readonly property string scanShownFile: bar.fit !== null ? bar.fit.scanShownFile : ""
         readonly property list<FitStatusItem> items: [statusItem, filesItem, okItem, failedItem, iterationsItem, timeItem, etaItem, chiItem]
         // The area's width with every key shown and with none: what the bar measures, whatever it shows now.
-        readonly property real labelledWidth: widthWith(item => item.labelledWidth)
-        readonly property real compactWidth: widthWith(item => item.compactWidth)
+        readonly property real labelledWidth: ApplicationInfo.statusMeasuredWidth(false)
+        readonly property real compactWidth: ApplicationInfo.statusMeasuredWidth(true)
 
-        function widthWith(itemWidth) {
-            let width = rule.width;
-            let shown = 1;
-            for (const item of items) {
-                if (item.shown) {
-                    width += itemWidth(item);
-                    shown += 1;
-                }
-            }
-            for (const extra of [showing, progress]) {
-                if (extra.visible) {
-                    width += extra.width;
-                    shown += 1;
-                }
-            }
-            if (fitButtons.visible) {
-                width += fitButtons.widthWith(itemWidth);
-                shown += 1;
-            }
-            return width + (shown - 1) * spacing;
-        }
+        function widthWith(itemWidth) { return ApplicationInfo.statusWidthWith(itemWidth, false); }
 
         Rectangle {
             id: rule
@@ -341,7 +297,7 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             spacing: fitArea.spacing
             // The values shown, for what reads them.
-            readonly property string text: fitArea.items.slice(1).filter(item => item.shown).map(item => item.valueText).join(" ")
+            readonly property string text: ApplicationInfo.statusFitValues()
 
             FitStatusItem {
                 id: filesItem
@@ -437,7 +393,7 @@ EaElements.StatusBar {
             indeterminate: bar.fit === null || !bar.fit.scanning
             fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
-            text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
+            text: ApplicationInfo.statusProgressText()
         }
         // Last, at the bar's right end whatever the area's width (the owner, 2026-10-26): Reset and Follow in a scan
         // project, then the Fit button in the corner. Fitting is run from here only; Reset and Follow give up their words
@@ -448,17 +404,7 @@ EaElements.StatusBar {
             readonly property bool scanMode: bar.fit !== null && bar.fit.scanMode
             readonly property list<FitStatusItem> buttons: [resetButton, followButton, fitButton]
 
-            function widthWith(itemWidth) {
-                let width = 0;
-                let shown = 0;
-                for (const button of buttons) {
-                    if (button.shown) {
-                        width += itemWidth(button);
-                        shown += 1;
-                    }
-                }
-                return width + Math.max(0, shown - 1) * spacing;
-            }
+            function widthWith(itemWidth) { return ApplicationInfo.statusWidthWith(itemWidth, true); }
 
             objectName: "statusBar.fit.buttons"
             visible: AppState.analysisPageEnabled
