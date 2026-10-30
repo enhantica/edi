@@ -180,6 +180,34 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void connectionAccepted() const;
     Q_INVOKABLE void connectionUpdateAcceptButton() const;
     Q_INVOKABLE void connectionResetOffer(bool refresh, bool retired) const;
+    /// Common desktop/browser project transactions; Session retains canonical project ownership.
+    Q_INVOKABLE void afterProjectChanges(const QJSValue& action, const QJSValue& abandoned) const;
+    Q_INVOKABLE void openWorkflowPage(const QJSValue& page) const;
+    Q_INVOKABLE void resetWorkflow() const;
+    Q_INVOKABLE void saveCurrentProject() const;
+    Q_INVOKABLE void saveCurrentProjectAs(const QJSValue& intent) const;
+    Q_INVOKABLE QJSValue finishProjectSaveAs(const QJSValue& target, const QJSValue& zip, const QJSValue& copy) const;
+    Q_INVOKABLE void cancelProjectSaveAs() const;
+    Q_INVOKABLE void projectWindowClosing(const QJSValue& close) const;
+    Q_INVOKABLE void projectChangesQuestion(const QJSValue& action, const QJSValue& abandoned) const;
+    Q_INVOKABLE void unsavedProjectOpened() const;
+    Q_INVOKABLE void abandonUnsavedProjectAction() const;
+    Q_INVOKABLE void acceptUnsavedProject() const;
+    Q_INVOKABLE void projectWebSaveFinished(const QJSValue& saved) const;
+    Q_INVOKABLE void discardUnsavedProject() const;
+    Q_INVOKABLE void prepareProjectSaveChoice() const;
+    Q_INVOKABLE void acceptProjectSaveChoice() const;
+    Q_INVOKABLE void openProjectSavePicker(const QJSValue& target) const;
+    Q_INVOKABLE void acceptProjectSavePicker(bool zip) const;
+    Q_INVOKABLE void dropProject(const QJSValue& drop) const;
+    Q_INVOKABLE bool prepareProjectCreation(const QJSValue& intent) const;
+    Q_INVOKABLE bool projectCreationSaveCurrent(const QJSValue& intent, const QJSValue& control) const;
+    Q_INVOKABLE bool chooseProjectCreationSave(const QJSValue& intent, const QJSValue& control) const;
+    Q_INVOKABLE void finishProjectCreationGuard(const QJSValue& intent) const;
+    Q_INVOKABLE QJSValue createProjectFromIntent(const QJSValue& values, const QJSValue& intent) const;
+    Q_INVOKABLE bool showProjectReport(const QJSValue& project) const;
+    Q_INVOKABLE void restoreSessionProject(const QJSValue& thread, const QJSValue& location, const QJSValue& intent) const;
+    Q_INVOKABLE void resetProjectAfterChanges() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
