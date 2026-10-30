@@ -24,21 +24,13 @@ EaElements.ComboBox {
     // box always shows the kept choice, and a refused one goes back.
     property int shownIndex: 0
     currentIndex: shownIndex
-    onActivated: Qt.callLater(() => box.currentIndex = Qt.binding(() => box.shownIndex))
+    onActivated: ApplicationInfo.queueToolbarBinding(() => box.currentIndex = Qt.binding(() => box.shownIndex))
     // What the closed box shows for each entry (an axis box's "y: linear"), when it differs from the list's entry.
     property var closedTexts: []
     // The base's rich-text label leaves Qt's widest-text policy nothing to measure, so the entries, and the closed
     // texts, are measured here. advanceWidth() is a call the binding cannot follow, so the binding reads the font too,
     // and measures again once the style's font has loaded; before that it measured a wider fallback font.
-    readonly property real widestEntry: {
-        if (!metrics.font.family)
-            return 0;
-        let widest = 0;
-        const entries = (box.model || []).concat(box.closedTexts);
-        for (let i = 0; i < entries.length; ++i)
-            widest = Math.max(widest, metrics.advanceWidth(String(entries[i])));
-        return Math.ceil(widest);
-    }
+    readonly property real widestEntry: ApplicationInfo.toolbarWidestEntry()
 
     displayText: box.closedTexts.length > box.currentIndex && box.currentIndex >= 0 ? box.closedTexts[box.currentIndex] : box.currentText
 

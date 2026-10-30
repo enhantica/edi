@@ -20,37 +20,16 @@ Column {
     // Bumped by every change of the rows' values, so a renamed block reads again.
     property int revision: 0
     // The rows shown, -1 for the "…" between the two ends.
-    readonly property var shown: {
-        const rows = [];
-        if (count <= 11) {
-            for (let row = 0; row < count; ++row)
-                rows.push(row);
-            return rows;
-        }
-        for (let row = 0; row < 5; ++row)
-            rows.push(row);
-        rows.push(-1);
-        for (let row = count - 5; row < count; ++row)
-            rows.push(row);
-        return rows;
-    }
+    readonly property var shown: ApplicationInfo.blockNamesShown()
 
     // A block's line: a structure's label is already "name · name.edi"; an experiment's data file is its `file`.
-    function line(row: int): string {
-        if (names.revision < 0 || !names.blocks || row < 0)
-            return "";
-        if (names.blockKind === "experiment")
-            return names.blocks.text(row, "name") + " · " + names.blocks.text(row, "file");
-        return names.blocks.text(row, "label");
-    }
+    function line(row: int): string { return ApplicationInfo.blockNamesLine(row); }
 
     spacing: EaStyle.Sizes.fontPixelSize * 0.25
 
     Connections {
         target: names.blocks
-        function onDataChanged() {
-            ++names.revision;
-        }
+        function onDataChanged() { ApplicationInfo.blockNamesChanged(); }
     }
 
     Repeater {

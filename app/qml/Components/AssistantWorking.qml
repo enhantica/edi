@@ -13,13 +13,11 @@ EaElements.Label {
     readonly property bool working: assistant !== null && assistant.state === "agent_active"
     visible: presented && working
     clip: true
-    text: elapsedSeconds < 60
-        ? qsTr("%1s · Agent working...").arg(elapsedSeconds)
-        : qsTr("%1m %2s · Agent working...").arg(Math.floor(elapsedSeconds / 60)).arg(elapsedSeconds % 60)
+    text: ApplicationInfo.workingText()
     textFormat: Text.PlainText
     color: EaStyle.Colors.themeAccent
     Accessible.name: text
-    property int variant: Math.floor(Math.random() * 3)
+    property int variant: ApplicationInfo.workingInitialVariant()
     property double workingSince: 0
     property int elapsedSeconds: 0
     property double rotationStartedAt: 0
@@ -44,66 +42,24 @@ EaElements.Label {
         renderType: workStatus.renderType
         text: "H"
     }
-    onWorkingChanged: {
-        workingSince = working ? Date.now() : 0
-        elapsedSeconds = 0
-    }
-    onAnimatingChanged: if (!animating && peakSwitch.running) {
-        peakSwitch.stop()
-        changeVariant()
-    }
-    Component.onCompleted: {
-        if (working)
-            workingSince = Date.now()
-        scheduleVariantChange()
-    }
-    function scheduleVariantChange() {
-        variantSwitchDeadline = Date.now() + 60000
-        variantCadence.interval = 30000 + Math.floor(Math.random() * 28001)
-        variantCadence.start()
-    }
-    function changeVariant() {
-        const wasLinear = variant === 0
-        variant = (variant + 1 + Math.floor(Math.random() * 2)) % 3
-        if (animating && wasLinear !== (variant === 0))
-            rotationAnimator.restart()
-        scheduleVariantChange()
-    }
+    onWorkingChanged: ApplicationInfo.workingStateChanged(0)
+    onAnimatingChanged: ApplicationInfo.workingStateChanged(1)
+    Component.onCompleted: ApplicationInfo.workingStateChanged(2)
+    function scheduleVariantChange() { ApplicationInfo.workingScheduleVariant(); }
+    function changeVariant() { ApplicationInfo.workingChangeVariant(); }
     Timer {
         interval: 1000
         repeat: true
         running: workStatus.working
-        onTriggered: workStatus.elapsedSeconds = Math.max(0, Math.floor((Date.now() - workStatus.workingSince) / 1000))
+        onTriggered: ApplicationInfo.workingElapsed()
     }
     Timer {
         id: variantCadence
-        onTriggered: {
-            const now = Date.now()
-            if (workStatus.animating && workStatus.variant !== 0 && now < workStatus.variantSwitchDeadline) {
-                // OutInElastic is fastest at its cycle boundary; see ADR-0041.
-                const phase = ((now - workStatus.rotationStartedAt) % 2000 + 2000) % 2000
-                peakSwitch.interval = Math.max(1, Math.ceil(Math.min(2000 - phase, workStatus.variantSwitchDeadline - now)))
-                peakSwitch.start()
-            } else {
-                workStatus.changeVariant()
-            }
-        }
+        onTriggered: ApplicationInfo.workingCadence(false)
     }
     Timer {
         id: peakSwitch
-        onTriggered: {
-            const now = Date.now()
-            if (workStatus.animating && workStatus.variant !== 0 && now < workStatus.variantSwitchDeadline) {
-                const phase = ((now - workStatus.rotationStartedAt) % 2000 + 2000) % 2000
-                // Seek the next fast phase only until the fixed switch deadline.
-                if (phase > 32) {
-                    peakSwitch.interval = Math.max(1, Math.ceil(Math.min(2000 - phase, workStatus.variantSwitchDeadline - now)))
-                    peakSwitch.start()
-                    return
-                }
-            }
-            workStatus.changeVariant()
-        }
+        onTriggered: ApplicationInfo.workingCadence(true)
     }
     Item {
         width: workStatus.rotationExtent
@@ -154,10 +110,9 @@ EaElements.Label {
     RotationAnimator {
         id: rotationAnimator
         target: workGlyph
-        onStarted: workStatus.rotationStartedAt = Date.now()
+        onStarted: ApplicationInfo.workingAnimation(true)
         running: workStatus.animating
-        onStopped: if (!workStatus.animating)
-            workGlyph.rotation = 0
+        onStopped: ApplicationInfo.workingAnimation(false)
         loops: Animation.Infinite
         from: 0
         to: workStatus.variant === 0 ? 360 : 360 * 6
