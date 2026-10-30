@@ -4939,7 +4939,8 @@ def _rows_view_metrics(actor):
         'const rows=Array.from(v.contentItem.children).filter(x=>typeof x.rowId==="string");'
         'function details(x){if(typeof x.humanDetailsSnapshot!=="undefined")return '
         '[{id:x.rowId,loaded:x.humanDetailsSnapshot!==null}];'
-        'return Array.from(x.children||[]).flatMap(details);}'
+        'const children=Array.from(x.children||[]),out=[];for(let i=0;i<children.length;++i){'
+        'const nested=details(children[i]);for(let j=0;j<nested.length;++j)out.push(nested[j]);}return out;}'
         'return {count:v.count,height:v.height,cache:v.cacheBuffer,contentY:v.contentY,'
         'rows:rows.map(x=>({id:x.rowId,index:x.index,height:x.height,visible:x.visible,'
         'details:details(x)}))};})()')
