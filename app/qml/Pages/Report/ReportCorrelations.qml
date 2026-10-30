@@ -20,23 +20,12 @@ Item {
     readonly property var values: correlations && correlations.values ? correlations.values : []
     readonly property int count: labels.length
     readonly property real cell: EaStyle.Sizes.fontPixelSize * 3.2
-    readonly property real labelWidth: {
-        metrics.font;  // measured again when the font changes (a font that loads late)
-        let widest = 0;
-        for (const label of labels)
-            widest = Math.max(widest, metrics.advanceWidth((labels.indexOf(label) + 1) + "  " + label));
-        return Math.ceil(widest) + EaStyle.Sizes.fontPixelSize;
-    }
+    readonly property real labelWidth: ApplicationInfo.reportCorrelationLabelWidth()
     // diffraction-lib's colour scale, as the Correlations tab's (CorrelationChart).
     readonly property color negativeColor: "#d73027"
     readonly property color positiveColor: "#4575b4"
 
-    function cellColor(value) {
-        const background = EaStyle.Colors.chartBackground;
-        const end = value < 0 ? negativeColor : positiveColor;
-        const share = Math.min(1, Math.abs(value));
-        return Qt.rgba(background.r + (end.r - background.r) * share, background.g + (end.g - background.g) * share, background.b + (end.b - background.b) * share, 1);
-    }
+    function cellColor(value) { return ApplicationInfo.reportCorrelationColor(value); }
 
     width: labelWidth + count * cell
     height: count > 0 ? (count + 1) * cell : empty.implicitHeight

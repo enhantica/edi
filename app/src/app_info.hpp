@@ -453,6 +453,25 @@ class ApplicationInfo : public QObject {
     /// NumberText presentation; project uncertainty formatting remains ProjectViewModel/core-owned.
     Q_INVOKABLE QJSValue numberPresentation(NumberOperation operation, const QJSValue& value, const QJSValue& second,
                                           const QJSValue& third, const QJSValue& fourth) const;
+    /// Report preview/export procedures retain ReportViewModel as data and publication authority.
+    Q_INVOKABLE void saveReportPreview() const;
+    Q_INVOKABLE QJSValue savedReportRow(const QJSValue& format) const;
+    Q_INVOKABLE void reportExportFailure(const QJSValue& message) const;
+    Q_INVOKABLE void reportExportChanged(int event) const;
+    Q_INVOKABLE QJSValue reportChartsIncluded() const;
+    Q_INVOKABLE QJSValue reportSection(const QJSValue& name, bool numbered) const;
+    Q_INVOKABLE QJSValue reportKeyValues(const QJSValue& rows) const;
+    Q_INVOKABLE void reportGrabFigures(const QJSValue& done) const;
+    Q_INVOKABLE void reportCaptureStart(const QJSValue& jobs, const QJSValue& done) const;
+    Q_INVOKABLE void reportCaptureAll() const;
+    Q_INVOKABLE void reportCaptureFrame() const;
+    Q_INVOKABLE QJSValue reportTableDotWidth() const;
+    Q_INVOKABLE QJSValue reportTableSplit(const QJSValue& text) const;
+    Q_INVOKABLE QJSValue reportTableLayout() const;
+    Q_INVOKABLE QJSValue reportTableWidth() const;
+    Q_INVOKABLE void reportTableRowsChanged() const;
+    Q_INVOKABLE QJSValue reportCorrelationLabelWidth() const;
+    Q_INVOKABLE QJSValue reportCorrelationColor(const QJSValue& value) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

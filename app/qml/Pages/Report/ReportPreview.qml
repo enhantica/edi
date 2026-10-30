@@ -30,11 +30,9 @@ Flickable {
     // The reference's sizes and margins are in points over its 10.04 pt body.
     readonly property real pt: em / 10.04
     // The figures (the structure views and the pattern charts), unless Contents leaves the charts out.
-    readonly property bool charts: (model.contents ?? []).some(item => item.key === "charts" && item.included)
+    readonly property bool charts: ApplicationInfo.reportChartsIncluded()
 
-    function shown(name) {
-        return sections.indexOf(name) >= 0;
-    }
+    function shown(name) { return ApplicationInfo.reportSection(name, false); }
 
     // The Text tab's background, under the scrolling content (the owner, 2026-10-21).
     Rectangle {
@@ -47,46 +45,10 @@ Flickable {
     // (structure-0, pattern-1, ...). They are copies of the preview's figures in the light colours, as a PDF is for
     // print, made outside the view, given a few frames to draw, then grabbed and removed. `done` gets the images once
     // every grab has answered; a figure that cannot be grabbed is left out.
-    function grabFigures(done) {
-        const jobs = [];
-        for (const [records, kind, component] of [[structureRecords, "structure", printStructure], [experimentRecords, "pattern", printPattern], [evolutionRecords, "evolution", printEvolution]]) {
-            for (let i = 0; i < records.count; ++i) {
-                const record = records.itemAt(i);
-                const shown = record ? (kind === "evolution" ? record : record.figureItem) : null;
-                if (!shown || shown.width <= 0 || shown.height <= 0)
-                    continue;
-                const properties = {
-                    "width": shown.width,
-                    "height": shown.height
-                };
-                // A single crystal's chart draws its own data from the model (edi ADR-0049).
-                const crystal = kind === "pattern" ? record.modelData.single_crystal ?? null : null;
-                if (kind === "evolution") {
-                    properties.reportSeries = record.reportSeries;
-                    properties.reportStyles = preview.model.pattern_styles ?? [];
-                } else if (crystal)
-                    properties.reportData = crystal;
-                else
-                    properties.report = preview.report;
-                if (kind !== "evolution" && !crystal)
-                    properties[kind === "structure" ? "reportStructure" : "reportExperiment"] = record.modelData.id;
-                const copy = (crystal ? printSingleCrystal : component).createObject(printFigures, properties);
-                if (copy)
-                    jobs.push({
-                        "item": copy,
-                        "name": `${kind}-${i}`
-                    });
-            }
-        }
-        printFigures.start(jobs, done);
-    }
-    function number(section) {
-        return sections.indexOf(section) + 1;
-    }
+    function grabFigures(done) { ApplicationInfo.reportGrabFigures(done); }
+    function number(section) { return ApplicationInfo.reportSection(section, true); }
     // A key-value table's rows from the model's rows, each value followed by its units after a space (90 deg, 3.88 Å).
-    function keyValues(rows) {
-        return (rows ?? []).map(row => [row.label, !row.units ? row.text : row.text + " " + row.units]);
-    }
+    function keyValues(rows) { return ApplicationInfo.reportKeyValues(rows); }
 
     contentHeight: column.implicitHeight + 2 * AppSizes.reportPadding
     clip: true
@@ -280,39 +242,9 @@ Flickable {
         property var done: null
         property int frames: 0
 
-        function start(jobs, done) {
-            if (jobs.length === 0) {
-                done({});
-                return;
-            }
-            printFigures.jobs = jobs;
-            printFigures.done = done;
-            printFigures.frames = 0;
-            Window.window.update();
-        }
+        function start(jobs, done) { ApplicationInfo.reportCaptureStart(jobs, done); }
         // Grabs every copy, removes them all once the last grab has answered and hands the images on.
-        function grabAll() {
-            const jobs = printFigures.jobs;
-            const done = printFigures.done;
-            printFigures.jobs = [];
-            const figures = {};
-            let left = jobs.length;
-            const finish = () => {
-                if (--left > 0)
-                    return;
-                for (const job of jobs)
-                    job.item.destroy();
-                done(figures);
-            };
-            for (const job of jobs) {
-                const asked = job.item.grabToImage(result => {
-                    figures[job.name] = result.image;
-                    finish();
-                }, Qt.size(job.item.width * 2, job.item.height * 2));
-                if (!asked)
-                    finish();
-            }
-        }
+        function grabAll() { ApplicationInfo.reportCaptureAll(); }
 
         x: -width - AppSizes.reportPadding
         width: column.width
@@ -321,12 +253,7 @@ Flickable {
         // Three drawn frames after the copies are made, so the charts and the 3D views have drawn.
         Connections {
             target: printFigures.jobs.length > 0 ? printFigures.Window.window : null
-            function onFrameSwapped() {
-                if (++printFigures.frames < 3)
-                    printFigures.Window.window.update();
-                else
-                    printFigures.grabAll();
-            }
+            function onFrameSwapped() { ApplicationInfo.reportCaptureFrame(); }
         }
     }
 
