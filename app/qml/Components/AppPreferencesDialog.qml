@@ -67,34 +67,16 @@ AppDialog {
     }
 
     // Every item under `item` that `wanted` accepts.
-    function itemsUnder(item, wanted) {
-        let found = [];
-        for (const child of item.children) {
-            if (wanted(child))
-                found.push(child);
-            found = found.concat(itemsUnder(child, wanted));
-        }
-        return found;
-    }
+    function itemsUnder(item, wanted) { return ApplicationInfo.preferenceItemsUnder(item, wanted); }
     // The width a box needs for its longest item: its paddings, its text's own and its arrow, which the box draws inside
     // its content.
-    function boxNeed(box) {
-        let widest = 0;
-        for (let i = 0; i < box.count; ++i)
-            widest = Math.max(widest, boxMetrics.advanceWidth(box.textAt(i)));
-        // Read the FIRST control's natural scalar measurements, not deferred
-        // indicator/content Items whose creation can ask for this width again.
-        const contentInsets = Math.max(0, box.implicitContentWidth - boxMetrics.advanceWidth(box.displayText));
-        return Math.ceil(widest + 2 * box.padding + box.spacing + 2 * box.implicitIndicatorWidth + contentInsets);
-    }
+    function boxNeed(box) { return ApplicationInfo.preferenceBoxNeed(box); }
     // The width a button needs for its text with an em at each side (its content reports no width of its own).
-    function buttonNeed(button) {
-        return Math.ceil(boxMetrics.advanceWidth(button.text) + 2 * EaStyle.Sizes.fontPixelSize);
-    }
+    function buttonNeed(button) { return ApplicationInfo.preferenceButtonNeed(button); }
 
-    readonly property var rowItems: pages.contentChildren.reduce((all, page) => all.concat(itemsUnder(page, item => item.rowLabel === true || item.rowBox === true || item.rowButton === true)), [])
-    readonly property real labelWidth: rowItems.reduce((widest, item) => item.rowLabel === true ? Math.max(widest, item.implicitWidth) : widest, 0)
-    readonly property real controlWidth: rowItems.reduce((widest, item) => Math.max(widest, item.rowBox === true ? boxNeed(item) : item.rowButton === true ? buttonNeed(item) : 0), 0)
+    readonly property var rowItems: ApplicationInfo.preferenceRowItems()
+    readonly property real labelWidth: ApplicationInfo.preferenceRowWidth(false)
+    readonly property real controlWidth: ApplicationInfo.preferenceRowWidth(true)
     readonly property real stackSpacing: EaStyle.Sizes.fontPixelSize * 0.5
     readonly property real rowHeight: themeBox.implicitHeight
     // A label's line, centred on a control's height.
@@ -118,7 +100,7 @@ AppDialog {
 
     contentWidth: Math.max(bar.implicitWidth, pages.leftPadding + pages.rightPadding + labelWidth + EaStyle.Sizes.fontPixelSize + controlWidth)
     // As tall as the tallest tab's rows need, so no tab's last row is cut (the owner, 2026-10-13).
-    contentHeight: bar.implicitHeight + pages.topPadding + pages.bottomPadding + pages.contentChildren.reduce((tallest, page) => Math.max(tallest, page.implicitHeight), 0)
+    contentHeight: ApplicationInfo.preferenceContentHeight()
 
     EaElements.TabBar {
         id: bar

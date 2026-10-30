@@ -30,7 +30,7 @@ EaElements.ParamComboBox {
     signal selected(string token)
     property var editorLife: ({ alive: true })
     property var activation: null
-    Component.onDestruction: editorLife.alive = false
+    Component.onDestruction: ApplicationInfo.editorDestroyed()
 
     // Shares the row's width with its siblings at the input spacing, as ParamTextField does (the base's
     // ParamComboBox assumes a wider gap).
@@ -61,24 +61,5 @@ EaElements.ParamComboBox {
     // Its title as every field's: left, inset as a combo box's, ending in "…" (edi ADR-0017 §5).
     Component.onCompleted: FieldTitles.align(selector)
 
-    onActivated: index => {
-        const life = editorLife;
-        const originalOwner = Session.project;
-        const originalOptions = options;
-        const original = ({});
-        activation = original;
-        const current = () => life.alive && selector.activation === original && Session.project === originalOwner && selector.options === originalOptions;
-        if (!current() || originalOptions === null) return;
-        const chosen = originalOptions.tokenAt(index);
-        if (!current()) return;
-        if (chosen !== token) {
-            selected(chosen);
-            if (!current()) return;
-            const message = originalOwner ? originalOwner.lastError : "";
-            if (!current()) return;
-            refusal = message;
-            if (!current()) return;
-        }
-        currentIndex = Qt.binding(() => options ? options.indexOf(selector.token) : -1);
-    }
+    onActivated: index => ApplicationInfo.activateSelector(index, () => { currentIndex = Qt.binding(() => options ? options.indexOf(selector.token) : -1); })
 }

@@ -36,10 +36,7 @@ EaElements.GroupBox {
             sourceModel: group.project ? group.project.structures : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentStructureIndex : -1
-            onRowActivated: row => {
-                if (group.project)
-                    group.project.currentStructureIndex = row;
-            }
+            onRowActivated: row => ApplicationInfo.activateFormBlock(row, true)
 
             columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
@@ -115,14 +112,7 @@ EaElements.GroupBox {
                 fontIcon: "upload"
                 text: qsTr("Load structure from file")
                 // In the browser the files come through the page (edi ADR-0023).
-                onClicked: {
-                    if (WebFiles.available) {
-                        group.webRequestProject = group.project;
-                        group.webRequest = WebFiles.openFiles(".cif,.edi", false);
-                    } else {
-                        loadDialog.open();
-                    }
-                }
+                onClicked: ApplicationInfo.loadFormFiles(false)
             }
             EaElements.SideBarButton {
                 objectName: "structures.create"
@@ -151,58 +141,16 @@ EaElements.GroupBox {
     }
 
     property var pickerLife: ({ alive: true })
-    Component.onDestruction: pickerLife.alive = false
+    Component.onDestruction: ApplicationInfo.formPickerDestroyed()
     property int webRequest: 0
     property var webIntent: null
-    function chooseStructure() {
-        const life = pickerLife;
-        const originalProject = project;
-        if (!life.alive || project !== originalProject || Session.project !== originalProject) return false;
-        if (project === null || Session.project !== project || webIntent !== null || loadDialog.intent !== null || loadDialog.visible) return false;
-        const original = { project: project };
-        if (WebFiles.available) {
-            webIntent = original;
-            if (!life.alive || webIntent !== original) return false;
-            if (project !== original.project || Session.project !== original.project) { webIntent = null; return false; }
-            const request = WebFiles.openFiles(".edi,.cif", false);
-            if (!life.alive || webIntent !== original) return false;
-            if (request === 0 || project !== original.project || Session.project !== original.project) { webIntent = null; return false; }
-            webRequest = request;
-        } else {
-            loadDialog.intent = original;
-            if (!life.alive || loadDialog.intent !== original) return false;
-            if (project !== original.project || Session.project !== original.project) { loadDialog.intent = null; return false; }
-            loadDialog.open();
-        }
-        return true;
-    }
-    function takeWebIntent(request) {
-        if (request !== webRequest || webIntent === null) return null;
-        const life = pickerLife;
-        const original = webIntent;
-        webRequest = 0;
-        if (!life.alive || webIntent !== original) return null;
-        webIntent = null; // Consume before any scientific callback or reentry.
-        if (!life.alive || webIntent !== null || project !== original.project || Session.project !== original.project) return null;
-        return original;
-    }
+    function chooseStructure() { return ApplicationInfo.chooseStructureFile(); }
+    function takeWebIntent(request) { return ApplicationInfo.takeStructureWebIntent(request); }
     Connections {
         target: WebFiles
-        function onFilesOpened(request, files) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            if (group.project !== null && group.project === group.webRequestProject)
-                group.project.loadStructure(files[0]);
-        }
-        function onFailed(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
-        }
-        function onCancelled(request) {
-            if (request === group.webRequest)
-                group.webRequest = 0;
-        }
+        function onFilesOpened(request, files) { ApplicationInfo.formFilesOpened(request, files, false); }
+        function onFailed(request) { ApplicationInfo.formFilesCancelled(request, false); }
+        function onCancelled(request) { ApplicationInfo.formFilesCancelled(request, false); }
     }
 
     FileDialog {

@@ -57,71 +57,24 @@ EaComponents.ContentPage {
     property bool blockCurrentTemplate: false
     signal blockActivated(int index)
 
-    function showSidebarTab(extra) {
-        const index = extra ? 1 : 0;
-        if (index < sideBar.tabs.length && sideBar.tabs[index].enabled)
-            sideBar.tabs[index].checked = true;
-    }
+    function showSidebarTab(extra) { ApplicationInfo.showWorkflowSidebarTab(extra); }
 
     // Shows one of the main area's tabs (the base's tab bar is the main content's first child).
     // The main area's shown tab.
     readonly property int mainTabIndex: mainContent.children.length > 0 ? mainContent.children[0].currentIndex : 0
 
-    function showMainTab(index) {
-        mainContent.children[0].currentIndex = index;
-    }
+    function showMainTab(index) { ApplicationInfo.showWorkflowMainTab(index); }
 
     // The base's fade above Continue, in the sidebar's colour, reads as a shadow over the Text tab's text view,
     // which runs under the Continue pill (edi ADR-0017 §7): hidden on that tab. The base
     // names it nowhere, so it is found as the SideBar's child with a gradient.
-    Component.onCompleted: {
-        sideBar.parent.objectName = "workflow." + page.pageName + ".sidebarHost";
-        mainContent.parent.objectName = "workflow." + page.pageName + ".mainContent";
-        for (let i = 0; i < sideBar.children.length; ++i) {
-            const child = sideBar.children[i];
-            if (child.gradient)
-                child.visible = Qt.binding(() => page.continueShown && !textLoader.SwipeView.isCurrentItem);
-        }
-        page.placeSideBar();
-        sideBar.continueButton.anchors.bottomMargin = Qt.binding(() => EaStyle.Sizes.fontPixelSize);
-    }
+    Component.onCompleted: ApplicationInfo.workflowCompleted(child => { child.visible = Qt.binding(() => page.continueShown && !textLoader.SwipeView.isCurrentItem); }, () => { sideBar.continueButton.anchors.bottomMargin = Qt.binding(() => EaStyle.Sizes.fontPixelSize); })
 
     // The sidebar on the side the preferences set (Preferences.sideBarSide; edi ADR-0017 §12), live. The base's
     // ContentPage anchors its sidebar container to the right and the main area to its left, with the sidebar's
     // border on its left edge, and names none of them; they are reached as the parents of the main content and
     // the sidebar, and only their anchors change — nothing is mirrored, so text, icons and number order stay.
-    function placeSideBar() {
-        const main = mainContent.parent;
-        const side = sideBar.parent;
-        if (!main || !side)
-            return;
-        const left = Preferences.sideBarOnLeft;
-        side.anchors.left = undefined;
-        side.anchors.right = undefined;
-        main.anchors.left = undefined;
-        main.anchors.right = undefined;
-        if (left) {
-            side.anchors.left = page.left;
-            main.anchors.left = side.right;
-            main.anchors.right = page.right;
-        } else {
-            side.anchors.right = page.right;
-            main.anchors.left = page.left;
-            main.anchors.right = side.left;
-        }
-        // The sidebar's border stays on its edge towards the main area.
-        for (let i = 0; i < side.children.length; ++i) {
-            const border = side.children[i];
-            if (border !== sideBar && border.width === EaStyle.Sizes.borderThickness) {
-                border.anchors.left = undefined;
-                border.anchors.right = undefined;
-                if (left)
-                    border.anchors.right = side.right;
-                else
-                    border.anchors.left = side.left;
-            }
-        }
-    }
+    function placeSideBar() { ApplicationInfo.placeWorkflowSidebar(); }
 
     Connections {
         target: Preferences
@@ -136,10 +89,7 @@ EaComponents.ContentPage {
     // The Text tab's edit is not yet applied: its loader stays active until the user discards it. Set from the tab's
     // signal, so the loader's `active` never reads its own item.
     property bool textDirty: false
-    onCurrentChanged: {
-        if (current)
-            page.pageIndex = EaGlobals.Vars.appBarCurrentIndex;
-    }
+    onCurrentChanged: ApplicationInfo.workflowCurrentChanged()
     Binding {
         target: textLoader.item
         property: "shown"
@@ -155,14 +105,8 @@ EaComponents.ContentPage {
     Connections {
         target: textLoader.item
         ignoreUnknownSignals: true
-        function onDirtyChanged() {
-            page.textDirty = textLoader.item.dirty;
-        }
-        function onStayRequested() {
-            if (page.pageIndex >= 0)
-                EaGlobals.Vars.appBarCurrentIndex = page.pageIndex;
-            textTabButton.TabBar.tabBar.currentIndex = textTabButton.TabBar.index;
-        }
+        function onDirtyChanged() { ApplicationInfo.workflowDirtyChanged(); }
+        function onStayRequested() { ApplicationInfo.workflowStayRequested(); }
         function onBlockRequested(index) {
             page.blockActivated(index);
         }
