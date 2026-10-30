@@ -34,3 +34,9 @@ Exercise the actual native workflow, including project creation, separate import
 The source-matched app at `eb945aa8fb5964658daeab4a5bdc488b653e3bf3` completed the bundled default walkthrough. Its manifest records 23 captured images at 1480 by 800 and explicit skips for disabled modes. The fit state is success; every Analysis and Report image has no running fit and no open results popup. The preview importer validated this complete bundle before publication.
 
 Manual capture entry point and import instructions: [app/docs/README.md](../../../app/docs/README.md). The CI documentation build validates committed captures; native GUI capture itself is not yet scheduled in CI.
+
+## Configurable fixture and how-to scenes
+
+The schema-2 script declares one `EXAMPLE_ID` and a `build(capture)` factory. The native host resolves that id against the bundled catalogue, supplies its title and input filenames, and retains the separate inputs and data dependencies with hashes. It excludes `project.edi`; the workflow still creates its own project and imports the inputs. The initial template requires one structure and one experiment and measured data; a multi-block fixture refuses explicitly instead of silently dropping blocks.
+
+Named `guide-*` scenes cover project file choices, structural symmetry/cell/sites, experiment data/instrument/profile/background/exclusions/links, analysis modes/minimizer/constraints, and report contents/formats/export status. The two native file-choice content columns gain stable names. These guide scenes supplement the complete page/sidebar inventory and drive the relevant UI controls through the original DemoDriver executor.

@@ -205,6 +205,7 @@ EaElements.GroupBox {
 
         Column {
             id: openChoiceColumn
+            objectName: "project.openChoice"
 
             ChoiceRadioButton {
                 objectName: "open.folder"

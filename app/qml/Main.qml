@@ -853,6 +853,7 @@ EaComponents.ApplicationWindow {
 
         Column {
             id: saveAsChoiceColumn
+            objectName: "project.saveChoice"
 
             // Folder and Zip archive: one group, rows closer than the usual spacing, no heading (owner, 2026-10-25).
             // A disabled button takes no hover, so its tooltip comes from the item around it.

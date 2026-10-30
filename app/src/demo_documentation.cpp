@@ -9,6 +9,7 @@
 #include <QJsonDocument>
 #include <QKeyEvent>
 #include <QKeySequence>
+#include <QMap>
 #include <QQmlEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -56,39 +57,76 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
     if (!loaded_files_.isValid() || !output_dir_.mkpath("inputs"))
         return refuse("cannot create the documentation workspace");
     QJSEngine engine;
-    auto context = engine.newObject();
-    context.setProperty("projectDirectory", loaded_files_.filePath("pd-neut-cwl_y2o3-spodi"));
-    const QString example = "pd-neut-cwl_y2o3-spodi";
-    for (const auto& part : {QString("structure"), QString("experiment")}) {
-        const auto relative = part == "structure" ? QString("structures/y2o3.edi") : QString("experiments/spodi.edi");
-        QFile input(":/edi/examples/" + example + "/project/" + relative);
-        const auto filename = "inputs/" + QFileInfo(relative).fileName();
-        const auto target = output_dir_.absoluteFilePath(filename);
-        QFile output(target);
-        if (!input.open(QIODevice::ReadOnly) || !output.open(QIODevice::WriteOnly | QIODevice::Truncate))
-            return refuse("cannot copy the walkthrough " + part + " input");
-        const auto bytes = input.readAll();
-        if (output.write(bytes) != bytes.size() || !output.flush()) return refuse("cannot write " + target);
-        output.close();
-        context.setProperty(part + "File", target);
-        documentation_inputs_[part] = QJsonObject{{"file", filename}, {"sha256", digest(target)}};
-    }
-    engine.globalObject().setProperty("capture", context);
     QFile script(path);
     if (!script.open(QIODevice::ReadOnly)) return refuse("cannot open documentation script " + path);
     const auto bytes = script.readAll();
-    const auto value = engine.evaluate(QString::fromUtf8(bytes), path);
-    if (value.isError())
-        return refuse(QString("documentation script line %1: %2").arg(value.property("lineNumber").toInt()).arg(value.toString()));
-    if (!value.isObject() || value.isArray()) return refuse("documentation script must return a plan object");
-    const auto plan = QJsonObject::fromVariantMap(value.toVariant().toMap());
-    if (plan.value("schema").toInt() != 1 || plan.value("example").toString() != example ||
-        !plan.value("steps").isArray() || plan.value("steps").toArray().isEmpty())
-        return refuse("documentation script requires schema 1, the Y2O3 example, and nonempty steps");
+    const auto declaration = engine.evaluate(QString::fromUtf8(bytes), path);
+    if (declaration.isError()) return refuse("documentation script: " + declaration.toString());
+    const auto example = declaration.property("example").toString();
+    const QRegularExpression safe_example("^[a-z0-9][a-z0-9_-]*$");
+    if (declaration.property("schema").toInt() != 2 || !safe_example.match(example).hasMatch() ||
+        !declaration.property("build").isCallable())
+        return refuse("documentation script requires schema 2, an example id and a build(capture) function");
+    QFile catalogue(":/edi/examples/metadata.json");
+    if (!catalogue.open(QIODevice::ReadOnly)) return refuse("cannot read the bundled example catalogue");
+    const auto metadata = QJsonDocument::fromJson(catalogue.readAll()).object().value("examples").toObject().value(example).toObject();
+    if (metadata.isEmpty()) return refuse("unknown documentation example: " + example);
+    const auto values = metadata.value("values").toObject();
+    if (values.value("purpose").toArray().first().toString() != "refinement")
+        return refuse("the refinement walkthrough requires an example with measured data");
+    const auto base = ":/edi/examples/" + example + "/project";
+    const auto structures = QDir(base + "/structures").entryList({"*.edi"}, QDir::Files);
+    const auto experiments = QDir(base + "/experiments").entryList({"*.edi"}, QDir::Files);
+    if (structures.size() != 1 || experiments.size() != 1)
+        return refuse("this walkthrough requires one structure and one experiment; adapt its import steps for a multi-block example");
+    documentation_example_ = example;
+    documentation_fixture_ = metadata;
+    documentation_fixture_["id"] = example;
+    auto context = engine.newObject();
+    context.setProperty("projectDirectory", loaded_files_.filePath(example));
+    QStringList samples;
+    for (const auto& sample : metadata.value("samples").toArray()) samples.append(sample.toString());
+    context.setProperty("name", example.left(30));
+    context.setProperty("title", samples.join(" + ") + " · " + metadata.value("origin").toString());
+    context.setProperty("description", metadata.value("detail").toString());
+    context.setProperty("fixture", engine.toScriptValue(metadata.toVariantMap()));
+    const QMap<QString, QString> selected{{"structure", "structures/" + structures.first()},
+                                        {"experiment", "experiments/" + experiments.first()}};
+    std::function<bool(const QString&)> copy_inputs = [&](const QString& relative) {
+        const QDir directory(base + "/" + relative);
+        for (const auto& entry : directory.entryInfoList(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name)) {
+            const auto name = relative.isEmpty() ? entry.fileName() : relative + "/" + entry.fileName();
+            if (name == "project.edi") continue;
+            if (entry.isDir()) { if (!copy_inputs(name)) return false; continue; }
+            const auto filename = "inputs/" + name;
+            const auto target = output_dir_.absoluteFilePath(filename);
+            if (!output_dir_.mkpath(QFileInfo(filename).path())) return false;
+            QFile input(base + "/" + name), output(target);
+            if (!input.open(QIODevice::ReadOnly) || !output.open(QIODevice::WriteOnly | QIODevice::Truncate)) return false;
+            const auto content = input.readAll();
+            if (output.write(content) != content.size() || !output.flush()) return false;
+            output.close();
+            const QJsonObject artifact{{"file", filename}, {"sha256", digest(target)}};
+            const auto part = selected.key(name);
+            if (part.isEmpty()) documentation_dependencies_.append(artifact);
+            else {
+                documentation_inputs_[part] = artifact;
+                context.setProperty(part + "File", target);
+                context.setProperty(part + "FileName", QFileInfo(name).fileName());
+            }
+        }
+        return true;
+    };
+    if (!copy_inputs({})) return refuse("cannot copy the separate example inputs and their data dependencies");
+    const auto step_values = declaration.property("build").call({context});
+    if (step_values.isError()) return refuse("documentation plan: " + step_values.toString());
+    if (!step_values.isArray() || step_values.property("length").toInt() == 0)
+        return refuse("build(capture) must return a nonempty steps array");
+    const auto entries = QJsonArray::fromVariantList(step_values.toVariant().toList());
     std::vector<Step> loaded;
     QSet<QString> names;
     const QRegularExpression safe_name("^[a-z0-9][a-z0-9_-]*$");
-    for (const auto& entry : plan.value("steps").toArray()) {
+    for (const auto& entry : entries) {
         if (!entry.isObject()) return refuse("a documentation step is not an object");
         const auto object = entry.toObject();
         Step step;
@@ -268,7 +306,7 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
 
 bool DemoDriver::saveDocumentationManifest(const QString& status, const QString& error) {
     return write_json(output_dir_.filePath("manifest.json"),
-        QJsonObject{{"schema", 1}, {"status", status}, {"error", error}, {"example", "pd-neut-cwl_y2o3-spodi"},
+        QJsonObject{{"schema", 1}, {"status", status}, {"error", error}, {"example", documentation_example_}, {"fixture", documentation_fixture_}, {"dependencies", documentation_dependencies_},
             {"source_revision", QString::fromLatin1(edi::build_commit())},
             {"binary_sha256", digest(QCoreApplication::applicationFilePath())},
             {"gui_components_revision", EDI_APP_GUI_COMMIT}, {"script_sha256", documentation_script_},
