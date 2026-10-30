@@ -133,3 +133,10 @@ all geometry and visibility branches, web availability, current setter/reentry o
 settings writer/readback, using actual window/Settings/Qt identities. This source-only extraction is
 not a build, runtime, platform, full migration or task-acceptance claim. The unrelated external
 ai-assistant-on-dev workstream is not copied or changed and still requires eventual reconciliation.
+
+
+## Native preference and shared view procedures
+
+ApplicationInfo executes Preferences' reset, application, legacy-palette reconciliation and immediate settings writes, extending its existing settings/thread owner. The original property order, stored keys and synchronization calls remain; no second preference store or new default is introduced. The preferences dialog's recursive row discovery, reduce callbacks and natural sizing run on the same VM with original method/receiver/coercion behavior. Shared field-title and workflow layout loops, anchor changes, tab selection and completion sequencing execute in the same existing native UI owner. QML keeps visual declarations and bindings.
+
+Qt.binding requires its actual compiled QML expression function. Existing entries therefore retain only inline binding-installation callbacks, invoked by native procedures at the original points. These callbacks contain no admission, validation, selection or layout decision logic. No JavaScript source is evaluated and no replacement QML helper contains the moved procedures. Desktop and WebAssembly compilation and complete input/layout/persistence/runtime checks remain required after migration.

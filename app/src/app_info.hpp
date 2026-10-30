@@ -250,6 +250,44 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue derivedBackgroundValue(const QJSValue& value) const;
     Q_INVOKABLE void parameterCellRefit() const;
     Q_INVOKABLE QJSValue parameterCellScaledPixelSize() const;
+    /// Remaining form, picker, preference and shared view procedures on the current QML engine.
+    Q_INVOKABLE void loadFormFiles(bool experiments) const;
+    Q_INVOKABLE bool chooseStructureFile() const;
+    Q_INVOKABLE QJSValue takeStructureWebIntent(const QJSValue& request) const;
+    Q_INVOKABLE void chooseExperimentData(const QJSValue& experiment) const;
+    Q_INVOKABLE void formFilesOpened(const QJSValue& request, const QJSValue& files, bool experiments) const;
+    Q_INVOKABLE void formFilesCancelled(const QJSValue& request, bool experiments) const;
+    Q_INVOKABLE void acceptExperimentDataFile() const;
+    Q_INVOKABLE void formPickerDestroyed() const;
+    Q_INVOKABLE bool sameExperimentGesture(const QJSValue& point) const;
+    Q_INVOKABLE void discardExperimentGesture(const QJSValue& point) const;
+    Q_INVOKABLE void experimentGrabChanged(const QJSValue& transition, const QJSValue& point) const;
+    Q_INVOKABLE void experimentGestureCancelled(const QJSValue& point) const;
+    Q_INVOKABLE void experimentGestureTapped(const QJSValue& point) const;
+    Q_INVOKABLE void activateFormBlock(const QJSValue& row, bool structure) const;
+    Q_INVOKABLE void rejectExperimentDataFile() const;
+    Q_INVOKABLE void commitValueField(const QJSValue& restoreBinding) const;
+    Q_INVOKABLE void activateSelector(const QJSValue& index, const QJSValue& restoreBinding) const;
+    Q_INVOKABLE void resetPreferences() const;
+    Q_INVOKABLE void applyPreferences() const;
+    Q_INVOKABLE void preferencesColourChanged() const;
+    Q_INVOKABLE void preferencesStackedPaletteChanged() const;
+    Q_INVOKABLE void preferencesLegacyPaletteChanged() const;
+    Q_INVOKABLE void persistPreference(int kind) const;
+    Q_INVOKABLE QJSValue preferenceItemsUnder(const QJSValue& item, const QJSValue& wanted) const;
+    Q_INVOKABLE QJSValue preferenceBoxNeed(const QJSValue& box) const;
+    Q_INVOKABLE QJSValue preferenceButtonNeed(const QJSValue& button) const;
+    Q_INVOKABLE QJSValue preferenceRowItems() const;
+    Q_INVOKABLE QJSValue preferenceRowWidth(bool controls) const;
+    Q_INVOKABLE QJSValue preferenceContentHeight() const;
+    Q_INVOKABLE void alignFieldTitle(const QJSValue& field, const QJSValue& installMargin, const QJSValue& installWidth) const;
+    Q_INVOKABLE void showWorkflowSidebarTab(const QJSValue& extra) const;
+    Q_INVOKABLE void showWorkflowMainTab(const QJSValue& index) const;
+    Q_INVOKABLE void placeWorkflowSidebar() const;
+    Q_INVOKABLE void workflowCompleted(const QJSValue& installShadow, const QJSValue& installContinueMargin) const;
+    Q_INVOKABLE void workflowCurrentChanged() const;
+    Q_INVOKABLE void workflowDirtyChanged() const;
+    Q_INVOKABLE void workflowStayRequested() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

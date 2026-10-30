@@ -63,40 +63,7 @@ QtObject {
     property string newReportLibraries: "online"
 
     // ADR-0031 §5: every preference back to its default, as Preferences' Reset does; the open project is untouched.
-    function resetToDefaults() {
-        preferences.assistantWidth = AppSizes.assistantDefaultWidth;
-        preferences.toolTips = true;
-        preferences.autoCollapse = true;
-        preferences.sideBarSide = "Right";
-        preferences.engineThreads = 0;
-        preferences.scanPatternUpdates = 2;
-        preferences.analysisShowNotMeasured = true;
-        preferences.analysisShowBySymmetry = false;
-        preferences.analysisShowByConstraint = false;
-        preferences.analysisShowFixedSettings = false;
-        preferences.showFitResults = true;
-        preferences.scanRenderer = "auto";
-        preferences.newProjectSuRule = "iucr_99";
-        preferences.newReportLibraries = "online";
-        preferences.colourScheme = "earth";
-        preferences.patternYScale = "linear";
-        preferences.structureCurves = true;
-        preferences.patternLegendShown = false;
-        preferences.patternHoverShown = true;
-        preferences.patternMeasuredStyle = "band";
-        preferences.patternPointerMode = "zoom";
-        preferences.scanStackedPalette = "";
-        preferences.scanMapColours = "blue-red";
-        preferences.scanMapSmooth = true;
-        preferences.scanStackedReversed = false;
-        preferences.scanStackedLegendShown = false;
-        preferences.chartIncludedOnly = false;
-        preferences.chartSubtractBackground = false;
-        preferences.singleCrystalQuantity = "f_squared";
-        preferences.chartHighlightSelected = true;
-        preferences.chartHiddenRange = "keep";
-        preferences.textShow = "editable";
-    }
+    function resetToDefaults() { ApplicationInfo.resetPreferences(); }
 
     property Settings settings: Settings {
         location: EaGlobals.Vars.settingsFile
@@ -255,62 +222,22 @@ QtObject {
     onToolTipsChanged: EaGlobals.Vars.showToolTips = toolTips
     // A stored palette no longer offered becomes the one it reads as, so the chosen palette and the one drawn agree
     // and the settings file keeps the one shown.
-    onColourSchemeChanged: {
-        const offered = ApplicationInfo.colourSchemeOrDefault(colourScheme);
-        if (offered !== colourScheme) {
-            colourScheme = offered;
-        }
-    }
+    onColourSchemeChanged: ApplicationInfo.preferencesColourChanged()
     // A stored Stacked choice no longer offered (an earlier palette's token) follows the palette again, so the Stacked
     // lines and the choice Preferences shows agree (the owner's report, 2026-10-27).
-    onScanStackedPaletteChanged: {
-        const offered = Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps));
-        if (scanStackedPalette !== "" && offered.indexOf(scanStackedPalette) < 0) {
-            scanStackedPalette = "";
-        }
-    }
-    onPatternColourSchemeChanged: {
-        if (patternColourScheme !== "") {
-            colourScheme = ApplicationInfo.colourSchemeOrDefault(patternColourScheme);
-            patternColourScheme = "";
-        }
-    }
+    onScanStackedPaletteChanged: ApplicationInfo.preferencesStackedPaletteChanged()
+    onPatternColourSchemeChanged: ApplicationInfo.preferencesLegacyPaletteChanged()
     onAutoCollapseChanged: EaGlobals.Vars.autoCollapseSideBarGroups = autoCollapse
-    onEngineThreadsChanged: {
-        ApplicationInfo.setEngineThreads(engineThreads);
-        // Saved at once rather than on the Settings' own schedule: a browser reload or a restart soon after the
-        // change must find it.
-        developSettings.setValue("engineThreads", engineThreads);
-        developSettings.sync();
-        ApplicationInfo.storeSettings();
-    }
+    onEngineThreadsChanged: ApplicationInfo.persistPreference(0)
     // Saved at once too: a restart or a new window soon after the toggle must find it, and no write is left pending
     // for the settings' own schedule when the window closes.
-    onChartIncludedOnlyChanged: {
-        chartSettings.setValue("includedOnly", chartIncludedOnly);
-        chartSettings.sync();
-        ApplicationInfo.storeSettings();
-    }
+    onChartIncludedOnlyChanged: ApplicationInfo.persistPreference(1)
 
     // Saved at once too: the renderer choice is read by the next start, which may follow at once.
-    onScanRendererChanged: {
-        scanViewSettings.setValue("renderer", scanRenderer);
-        scanViewSettings.sync();
-        ApplicationInfo.storeSettings();
-    }
+    onScanRendererChanged: ApplicationInfo.persistPreference(2)
 
     // Saved at once too: no write of an earlier choice is left pending to land over what is read next.
-    onScanPatternUpdatesChanged: {
-        analysisSettings.setValue("scanPatternUpdates", scanPatternUpdates);
-        analysisSettings.sync();
-        ApplicationInfo.storeSettings();
-    }
+    onScanPatternUpdatesChanged: ApplicationInfo.persistPreference(3)
 
-    function apply() {
-        EaGlobals.Vars.showToolTips = preferences.toolTips;
-        EaGlobals.Vars.autoCollapseSideBarGroups = preferences.autoCollapse;
-        ApplicationInfo.setEngineThreads(preferences.engineThreads);
-        EaGlobals.Vars.checkUpdateOnAppStart = false;
-        EaStyle.Sizes.defaultScale = 100;
-    }
+    function apply() { ApplicationInfo.applyPreferences(); }
 }

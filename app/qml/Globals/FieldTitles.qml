@@ -2,6 +2,7 @@
 pragma Singleton
 
 import QtQuick
+import edi.app
 
 import EasyApplication.Gui.Elements as EaElements
 
@@ -19,18 +20,5 @@ QtObject {
     property EaElements.ComboBox probe: EaElements.ComboBox {}
     readonly property real inset: titles.probe.contentItemLabel ? titles.probe.contentItemLabel.leftPadding : 0
 
-    function align(field) {
-        for (let i = 0; i < field.children.length; ++i) {
-            const child = field.children[i];
-            if (child.text !== undefined && child.elide !== undefined && child.text === field.shortPrettyName && child.text !== "") {
-                child.anchors.right = undefined;
-                child.anchors.left = field.left;
-                child.anchors.leftMargin = Qt.binding(() => titles.inset);
-                child.rightPadding = 0;
-                child.width = Qt.binding(() => field.width - titles.inset);
-                child.elide = Text.ElideRight;
-                return;
-            }
-        }
-    }
+    function align(field) { ApplicationInfo.alignFieldTitle(field, child => { child.anchors.leftMargin = Qt.binding(() => titles.inset); }, child => { child.width = Qt.binding(() => field.width - titles.inset); }); }
 }
