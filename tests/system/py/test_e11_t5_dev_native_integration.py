@@ -5231,7 +5231,7 @@ def test_lazy_command_human_details_preserve_first_supported_meanings_without_te
         actor.command('evaluate', expression='(function(){const v=' + view
                       + ';v.positionViewAtIndex(' + str(index) + ',ListView.Center);})()')
         response = actor.command('message_input', row_id=current['id'],
-                                  name='assistant.activity.toggle', action='click')['reply']
+                                  name='assistant.command.toggle', action='click')['reply']
         assert response['reached'] and response['same_row_after'], (
             'Known command description is expanded through its exact original realized Qt activity control')
         expression = '(function seek(x){if(x.rowId===' + json.dumps(current['id']) + '\
@@ -5244,7 +5244,7 @@ for(const c of (x.children||[])){const r=seek(c);if(r)return r;}return null;})(c
             'Lazy full-human expansion preserves the FIRST known skill/read/list/search/declared-purpose meaning')
         assert hidden not in '\n'.join(displayed) and 'opaque unread technical script' not in '\n'.join(displayed), (
             'Human expansion never displays raw command/output trees as a substitute for the missing description')
-        actor.command('message_input', row_id=current['id'], name='assistant.activity.toggle', action='hover')
+        actor.command('message_input', row_id=current['id'], name='assistant.command.toggle', action='hover')
         copied = actor.command('message_input', row_id=current['id'], name='assistant.activity.copy', action='click')['reply']
         assert copied['reached'] and expected in copied['clipboard'] and hidden not in copied['clipboard'], (
             'Default original-row Copy retains the useful human command meaning without technical output')
@@ -5253,7 +5253,7 @@ for(const c of (x.children||[])){const r=seek(c);if(r)return r;}return null;})(c
         original = json.loads(technical)
         assert original['payload']['command'] == command and original['payload']['aggregatedOutput'] == hidden, (
             'Explicit exact-row technical lookup still retains immutable original command/output evidence')
-        actor.command('message_input', row_id=current['id'], name='assistant.activity.toggle', action='click')
+        actor.command('message_input', row_id=current['id'], name='assistant.command.toggle', action='click')
         observed.append({'fixture': identity, 'row_id': current['id'], 'human': displayed,
                          'default_copy': copied['clipboard']})
     (actor.folder / 'command-human-compatibility.json').write_text(json.dumps(observed, indent=2))
@@ -12309,3 +12309,325 @@ def test_original_settings_no_rpc_default_cannot_adopt_delayed_prior_receipt(mai
                 'Diagnostic observation and delayed reply do not retry settings or submit an invented task')
     finally:
         artifact.write_text(json.dumps(facts, indent=2))
+
+def _a2b_original_row_scene(actor, row):
+    # Read the realized original component, never call its presentation helpers
+    # or manufacture an admitted humanDetailsSnapshot/canonical row.
+    identity = json.dumps(row['id'])
+    value = qml(actor, '(function(){const roots=' + _whole_window_objects_expression()
+        + '.filter(x=>x.rowId===' + identity + '&&typeof x.disclosureIdentity==="string"'
+        '&&typeof x.humanDetailsSnapshot!=="undefined");'
+        'if(roots.length!==1)throw Error("Exactly one original realized AssistantMessage is required");'
+        'const r=roots[0],items=[];function walk(x){items.push(x);'
+        'Array.from(x.children||[]).forEach(walk);}walk(r);'
+        'const toggles=items.filter(x=>x.objectName==="assistant.activity.toggle"'
+        '||x.objectName==="assistant.command.toggle");'
+        'const details=items.filter(x=>x.objectName==="assistant.activity.details");'
+        'if(toggles.length!==1||details.length!==1)throw Error("Original disclosure controls must be unique");'
+        'const s=r.humanDetailsSnapshot;return {row_id:r.rowId,kind:r.kind,status:r.status,'
+        'current_owner:r.assistant===Session.assistant,same_window:r.Window.window===window,identity:r.disclosureIdentity,'
+        'checked:toggles[0].checked,toggle_name:toggles[0].objectName,'
+        'body:details[0].text,body_visible:details[0].visible,snapshot_null:s===null,'
+        'snapshot:null};})()')
+
+    observed = actor.command('message_snapshot', row_id=row['id'])['reply']
+    assert {key: observed[key] for key in ('row_id', 'kind', 'status', 'current_owner')} == {
+        'row_id': row['id'], 'kind': row['kind'], 'status': row['status'], 'current_owner': True}, (
+        'The explicit-phase snapshot probe observes the exact actual current row and original assistant owner')
+    assert observed['is_null'] is value['snapshot_null'], (
+        'Typed snapshot absence agrees with the actual original component null binding without transport guesses')
+    value['snapshot'] = None if observed['is_null'] else observed['snapshot']
+    return value
+
+
+def _a2b_original_copy_observer(actor, row):
+    # Observe the real UI feedback signal so equal old clipboard bytes cannot
+    # substitute for the original onClicked -> copyActivity path. No setter,
+    # input or canonical producer is installed by this passive observer.
+    marker = 'independent.a2b.copy.' + row['id']
+    expression = '(function(){const roots=' + _whole_window_objects_expression() \
+        + '.filter(x=>x.rowId===' + json.dumps(row['id']) \
+        + '&&typeof x.disclosureIdentity==="string"&&typeof x.technicalCopied!=="undefined");' \
+        'if(roots.length!==1)throw Error("Original copy feedback owner must be unique");' \
+        'const r=roots[0];if(!r.technicalCopiedChanged||typeof r.technicalCopiedChanged.connect!=="function")' \
+        'throw Error("Original copied-feedback notification is not exposed");const m=Qt.createQmlObject(\'import QtQuick; QtObject {' \
+        'property var original;property var callback;property var events:[];}\',contentItem);' \
+        'm.objectName=' + json.dumps(marker) + ';m.original=r;' \
+        'm.callback=function(){m.events=m.events.concat([{copied:r.technicalCopied,' \
+        'row_id:r.rowId,kind:r.kind,status:r.status,identity:r.disclosureIdentity,' \
+        'current_owner:r.assistant===Session.assistant}]);};' \
+        'r.technicalCopiedChanged.connect(m.callback);return !r.technicalCopied;})()'
+    assert qml(actor, expression) is True, (
+        'A genuine current realized row starts with uncopied feedback before passive copy observation')
+    return marker
+
+
+def _a2b_original_copy_events(actor, marker):
+    return qml(actor, '(function(){const matches=' + _whole_window_objects_expression()
+        + '.filter(x=>x.objectName===' + json.dumps(marker) + ');'
+        'if(matches.length!==1)throw Error("The original passive copy observer must remain unique");'
+        'return matches[0].events;})()')
+
+
+def _a2b_remove_copy_observer(actor, marker):
+    if getattr(actor, '_stream_unusable', None):
+        return
+    qml(actor, '(function(){const matches=' + _whole_window_objects_expression()
+        + '.filter(x=>x.objectName===' + json.dumps(marker) + ');'
+        'if(matches.length!==1)throw Error("The original copy observer owner was lost");'
+        'const m=matches[0];if(Qt.isQtObject(m.original))'
+        'm.original.technicalCopiedChanged.disconnect(m.callback);m.destroy();return true;})()')
+
+
+def _a2b_press_original_disclosure(actor, row, scene):
+    result = actor.command('message_input', row_id=row['id'],
+                           name=scene['toggle_name'], action='click')['reply']
+    assert result['reached'] and result['same_row_after'] and result['same_window_after'], (
+        'A2b expansion/collapse uses one exact original realized row and genuine exposed Qt control')
+    return result
+
+
+def _a2b_copy_original_human(actor, row, scene, marker, expected):
+    entry_events = _a2b_original_copy_events(actor, marker)
+    def original_uncopied(_observation):
+        state = qml(actor, '(function(){const matches=' + _whole_window_objects_expression()
+            + '.filter(x=>x.objectName===' + json.dumps(marker) + ');'
+            'if(matches.length!==1||!Qt.isQtObject(matches[0].original))'
+            'throw Error("The original feedback owner must remain live and unique");'
+            'const r=matches[0].original;return {copied:r.technicalCopied,'
+            'row_id:r.rowId,kind:r.kind,status:r.status,identity:r.disclosureIdentity,'
+            'current_owner:r.assistant===Session.assistant};})()')
+        assert {key: state[key] for key in ('row_id', 'kind', 'status', 'identity', 'current_owner')} == {
+            'row_id': row['id'], 'kind': row['kind'], 'status': row['status'],
+            'identity': scene['identity'], 'current_owner': True}, (
+            'Waiting for original copy reset retains the exact live row, status, identity and current owner')
+        assert state['copied'] is True or state['copied'] is False, (
+            'The observed original copy-feedback flag retains its genuine boolean type')
+        return state['copied'] is False
+    actor.until(original_uncopied)
+    ready_events = _a2b_original_copy_events(actor, marker)
+    assert ready_events[:len(entry_events)] == entry_events, (
+        'Waiting for the existing original reset preserves every prior actual copy-feedback event')
+    last_true = next((index for index in reversed(range(len(ready_events)))
+                      if ready_events[index]['copied']), None)
+    if last_true is not None:
+        resets = [event for event in ready_events[last_true + 1:] if event['copied'] is False]
+        assert resets and all(event['row_id'] == row['id'] and event['kind'] == row['kind']
+                              and event['identity'] == scene['identity'] and event['current_owner']
+                              for event in resets), (
+            'A repeated physical Copy follows an actually observed false transition of the same original owner')
+    before = _a2b_original_copy_events(actor, marker)
+    hovered = actor.command('message_input', row_id=row['id'],
+                            name=scene['toggle_name'], action='hover')['reply']
+    assert hovered['reached'] and hovered['same_row_after'] and hovered['same_window_after'], (
+        'The exact original activity header is genuinely hovered before its ordinary Copy control')
+    copied = actor.command('message_input', row_id=row['id'],
+                           name='assistant.activity.copy', action='click')['reply']
+    events = _a2b_original_copy_events(actor, marker)
+    assert events[:len(before)] == before, (
+        'Passive observation preserves the immutable earlier actual copy-feedback events')
+    new_feedback = [event for event in events[len(before):] if event['copied']]
+    assert copied['reached'] and copied['same_row_after'] and copied['same_window_after'], (
+        'Default Copy physically reaches the exact current realized row in its original window')
+    assert new_feedback == [{'copied': True, 'row_id': row['id'], 'kind': row['kind'],
+                             'status': row['status'], 'identity': scene['identity'],
+                             'current_owner': True}], (
+        'Exactly one fresh actual copy-feedback transition belongs to this original owner and status')
+    assert copied['clipboard'] == expected, (
+        'The ordinary clipboard contains exactly the independent human caption/body bytes, without technical suffix')
+    return {'physical': copied, 'feedback': new_feedback}
+
+
+def _a2b_finish_observation(actor, marker, facts, name, *, failed):
+    errors = []
+    if getattr(actor, '_stream_unusable', None):
+        facts['observer_suffix_unreached'] = 'Original command stream retired; no diagnostic command was replayed'
+    else:
+        try:
+            facts['copy_events'] = _a2b_original_copy_events(actor, marker)
+        except Exception as error:
+            errors.append({'stage': 'copy-observation', 'type': type(error).__name__, 'message': str(error)})
+        try:
+            _a2b_remove_copy_observer(actor, marker)
+        except Exception as error:
+            errors.append({'stage': 'observer-removal', 'type': type(error).__name__, 'message': str(error)})
+    facts['observation_errors'] = errors
+    (actor.folder / name).write_text(json.dumps(facts, ensure_ascii=False, indent=2))
+    if errors and not failed:
+        raise AssertionError('Mandatory original A2b observation/cleanup failed; complete facts: ' + str(actor.folder / name))
+
+
+def _a2b_original_wire_item(actor, canonical, started, completed):
+    emitted = list(map(json.loads, actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()))
+    events = [event for event in emitted if event.get('method') in ('item/started', 'item/completed')
+              and event['params']['item']['id'] == completed['id']]
+    assert [event['method'] for event in events] == ['item/started', 'item/completed'] \
+        and events[0]['params']['item'] == started and events[1]['params']['item'] == completed, (
+        'The positive presentation row comes from the original peer actual emitted item pair, not a fabricated canonical fixture')
+    assert all(event['params']['threadId'] == canonical['sessionThread']
+               and event['params']['turnId'] == canonical['sessionTurn'] for event in events), (
+        'The exact canonical row belongs to the same original emitted thread/turn and immutable item ID')
+    terminal = [event for event in emitted if event.get('method') == 'turn/completed'
+                and event['params']['threadId'] == canonical['sessionThread']
+                and event['params']['turn']['id'] == canonical['sessionTurn']]
+    assert len(terminal) == 1 and terminal[0]['params']['turn']['status'] == 'completed', (
+        'The genuine submitted turn reaches one exact original terminal before settled-row copy characterization')
+    return {'item_events': events, 'turn_terminal': terminal}
+
+
+@pytest.mark.parametrize('meaning', ['typed_read', 'literal_purpose'])
+def test_original_a2b_admitted_command_body_and_default_copy(main_actor, meaning):
+    # Expected text is a literal human contract, not a formatter invocation or
+    # a native output-generated golden. Original protocol bytes are separate.
+    opaque = 'RAW-OUTPUT-MUST-STAY-TECHNICAL-9c590b'
+    if meaning == 'typed_read':
+        command = 'cat /approved/counts.xye'
+        actions = [{'type': 'read', 'command': command,
+                    'name': 'counts.xye', 'path': '/approved/counts.xye'}]
+        expected_body = 'Read counts.xye'
+        expected_copy = 'Read files\nRead counts.xye'
+    else:
+        purpose = '  Inspect α\u0301 / μ fields 🔬  '
+        command = '# Edi purpose: ' + purpose + '\nOPAQUE-SCRIPT-MUST-STAY-TECHNICAL'
+        actions = [{'type': 'unknown', 'command': command}]
+        expected_body = purpose
+        expected_copy = 'Ran command\n  Inspect α\u0301 / μ fields 🔬  '
+    original = {'type': 'commandExecution', 'id': 'a2b-' + meaning,
+                'pluginId': None, 'scriptPath': None, 'command': command,
+                'cwd': '/replaced-by-actual-acknowledged-workspace', 'processId': None,
+                'source': 'agent', 'status': 'inProgress', 'commandActions': actions,
+                'aggregatedOutput': None, 'exitCode': None, 'durationMs': None}
+    actor = main_actor([[]])
+    actor.connect()
+    starts = [event for event in map(json.loads, actor.trace.read_text().splitlines())
+              if event.get('method') == 'thread/start']
+    assert starts, 'The command carrier has a genuine acknowledged original runtime workspace'
+    original['cwd'] = starts[-1]['params']['cwd']
+    completed = {**original, 'status': 'completed', 'aggregatedOutput': opaque,
+                 'exitCode': 0, 'durationMs': 1}
+    actor.configure_turns([[_protocol_item('item/started', original),
+                            _protocol_item('item/completed', completed)]])
+    actor.request('Read the supplied reference without scientific changes.')
+    _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] == 3)
+    rows = [_rows_values(actor, 'messages', index) for index in range(3)]
+    activities = [row for row in rows if row['kind'] == 'activity']
+    assert len(activities) == 1 and activities[0]['status'] == 'completed', (
+        'Exactly one genuine completed command activity is admitted alongside its user and final assistant rows')
+    row = activities[0]
+    cold = _a2b_original_row_scene(actor, row)
+    assert cold['current_owner'] and cold['same_window'] and cold['row_id'] == row['id'] \
+        and cold['status'] == 'completed', (
+        'The body witness belongs to the actual current public row and original Assistant owner')
+    assert cold['toggle_name'] == 'assistant.command.toggle' and not cold['checked'] \
+        and cold['snapshot_null'] and cold['body'] == '' and not cold['body_visible'], (
+        'A genuine collapsed command row begins with no retained human detail and no displayed full body')
+    assert qml(actor, 'Preferences.assistantCopyTechnicalDetails') is False, (
+        'The original ordinary copy preference is genuinely human-only before exercising Copy')
+    marker = _a2b_original_copy_observer(actor, row)
+    facts = {'cold': cold}
+    try:
+        _a2b_press_original_disclosure(actor, row, cold)
+        expanded = _a2b_original_row_scene(actor, row)
+        facts['expanded'] = expanded
+        assert expanded['checked'] and expanded['body_visible'] and expanded['body'] == expected_body, (
+            'The actual TextEdit body preserves the independent exact human command meaning and literal Unicode/spacing')
+        assert expanded['snapshot'] == {'row_id': row['id'], 'kind': row['kind'], 'status': row['status']}, (
+            'Expanded details are admitted by the genuine original exact-row/kind/status canonical getter')
+        technical_args = ','.join(json.dumps(row[key]) for key in ('id', 'kind', 'status'))
+        technical = qml(actor, 'Session.assistant.activityTechnicalDetails(' + technical_args + ')')
+        canonical = json.loads(technical)
+        assert canonical['id'] == row['id'] and canonical['kind'] == row['kind'] \
+            and canonical['status'] == row['status'] and canonical['payload']['id'] == completed['id'] \
+            and canonical['payload']['command'] == command and canonical['payload']['aggregatedOutput'] == opaque, (
+            'Actual canonical technical bytes remain retained separately from the human-only body')
+        facts['wire'] = _a2b_original_wire_item(actor, canonical, original, completed)
+        facts['copy'] = _a2b_copy_original_human(actor, row, expanded, marker, expected_copy)
+        _a2b_press_original_disclosure(actor, row, expanded)
+        collapsed = _a2b_original_row_scene(actor, row)
+        facts['collapsed'] = collapsed
+        assert not collapsed['checked'] and collapsed['snapshot_null'] \
+            and collapsed['body'] == '' and not collapsed['body_visible'], (
+            'Ordinary collapse clears the exact original lazy body and retained human snapshot')
+        _a2b_press_original_disclosure(actor, row, collapsed)
+        reopened = _a2b_original_row_scene(actor, row)
+        assert reopened['checked'] and reopened['body'] == expected_body and reopened['snapshot'] == expanded['snapshot'], (
+            'Genuine re-expansion reacquires the same actual admitted row without technical leakage or stale identity')
+        assert qml(actor, 'Session.assistant.activityTechnicalDetails(' + technical_args + ')') == technical, (
+            'Physical expansion/copy/collapse/re-expansion preserves the complete original technical canonical row')
+    finally:
+        _a2b_finish_observation(actor, marker, facts, 'a2b-original-command-consumption.json',
+                                failed=sys.exc_info()[0] is not None)
+
+
+def test_original_a2b_expanded_web_completion_refreshes_body_and_default_copy(main_actor):
+    actor = main_actor([[]])
+    release = actor.folder / 'release-original-a2b-web'
+    spec = _rows_research('a2b-web-status', opaque='OPAQUE-WEB-RESULT-ONLY-798c', held=release)
+    spec['research']['query'] = 'Ignored outer fallback'
+    spec['research']['action'] = {'type': 'search', 'query': '  α\t μ\n🔬  ', 'queries': None}
+    actor.connect()
+    actor.configure_turns([[spec]])
+    actor.request('Read this public reference without scientific changes.')
+    _rows_wait(actor, lambda value: value['state'] != 'idle' and value['count'] == 2)
+    rows = [_rows_values(actor, 'messages', index) for index in range(2)]
+    activities = [row for row in rows if row['kind'] == 'activity']
+    assert len(activities) == 1 and activities[0]['status'] == 'in_progress', (
+        'The original held official web carrier reaches an actually pending same-row activity before its completion')
+    row = activities[0]
+    cold = _a2b_original_row_scene(actor, row)
+    assert cold['current_owner'] and cold['same_window'] and not cold['checked'] \
+        and cold['snapshot_null'] and cold['body'] == '', (
+        'The genuinely pending original web row is cold before physical disclosure')
+    assert qml(actor, 'Preferences.assistantCopyTechnicalDetails') is False, (
+        'Web copy uses the original default human-only preference')
+    marker = _a2b_original_copy_observer(actor, row)
+    facts = {'cold': cold}
+    try:
+        _a2b_press_original_disclosure(actor, row, cold)
+        pending = _a2b_original_row_scene(actor, row)
+        facts['pending'] = pending
+        fallback = 'Find or read public sources relevant to the current task.'
+        assert pending['checked'] and pending['body_visible'] and pending['body'] == fallback, (
+            'An actually pending empty web action displays the independent human fallback, never raw query/result bytes')
+        facts['pending_copy'] = _a2b_copy_original_human(
+            actor, row, pending, marker, 'Search the web\n' + fallback)
+        pending_args = ','.join(json.dumps(row[key]) for key in ('id', 'kind', 'status'))
+        release.touch()
+        _rows_wait(actor, lambda value: value['state'] == 'idle' and value['count'] == 3)
+        after = [_rows_values(actor, 'messages', index) for index in range(3)]
+        matching = [value for value in after if value['id'] == row['id']]
+        assert len(matching) == 1 and matching[0]['kind'] == row['kind'] and matching[0]['status'] == 'completed', (
+            'The genuine delayed completion updates the same original public activity rather than replacing it')
+        row = matching[0]
+        assert qml(actor, 'Session.assistant.activityHumanDetails(' + pending_args + ')') == {} \
+            and qml(actor, 'Session.assistant.activityTechnicalDetails(' + pending_args + ')') == '', (
+            'The genuine older pending row/status cannot read current completed human or technical details')
+        settled = _a2b_original_row_scene(actor, row)
+        facts['settled'] = settled
+        assert settled['identity'] == pending['identity'] and settled['current_owner'] \
+            and settled['same_window'] and settled['checked'], (
+            'Actual expanded disclosure ownership persists across the original same-item status/payload notification')
+        assert settled['snapshot'] == {'row_id': row['id'], 'kind': 'activity', 'status': 'completed'} \
+            and settled['body_visible'] and settled['body'] == 'Search the web for α μ 🔬', (
+            'The expanded real TextEdit refreshes to the current completed human action with exact single-line normalization')
+        facts['settled_copy'] = _a2b_copy_original_human(
+            actor, row, settled, marker, 'Search the web\nSearch the web for α μ 🔬')
+        _a2b_press_original_disclosure(actor, row, settled)
+        closed = _a2b_original_row_scene(actor, row)
+        facts['closed'] = closed
+        assert not closed['checked'] and closed['snapshot_null'] and closed['body'] == '' and not closed['body_visible'], (
+            'Actual completion does not defeat the original collapse/lazy-clear boundary')
+        args = ','.join(json.dumps(row[key]) for key in ('id', 'kind', 'status'))
+        technical = json.loads(qml(actor, 'Session.assistant.activityTechnicalDetails(' + args + ')'))
+        assert technical['id'] == row['id'] and technical['status'] == 'completed' \
+            and technical['payload']['id'] == spec['call_id'] \
+            and technical['payload']['query'] == 'Ignored outer fallback' \
+            and technical['payload']['action'] == spec['research']['action'] \
+            and technical['payload']['results'] == spec['research']['results'], (
+            'The exact original outer query, whitespace-bearing action and opaque results remain technically retrievable')
+        completed = {'type': 'webSearch', 'id': spec['call_id'], **spec['research']}
+        started = {**completed, 'query': '', 'action': None, 'results': None}
+        facts['wire'] = _a2b_original_wire_item(actor, technical, started, completed)
+    finally:
+        _a2b_finish_observation(actor, marker, facts, 'a2b-original-web-consumption.json',
+                                failed=sys.exc_info()[0] is not None)
