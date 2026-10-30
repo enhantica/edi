@@ -35,7 +35,6 @@
 #include <QtGlobal>
 #include <algorithm>
 #include <cmath>
-#include <cstdio> // Temporary boundary diagnostic; remove after diagnosis.
 #include <optional>
 #include <string_view>
 
@@ -971,97 +970,32 @@ using HumanSnapshot = edi_app::assistant_presentation::HumanActivitySnapshot;
 HumanSnapshot snapshotFrom(const edi_app::AssistantViewModel::PreparedActivityRead& detail) {
     return {detail.payload, detail.text.toString(), detail.provenance, detail.rowId, detail.kind, detail.status};
 }
-// Temporary diagnostic: no content, object identity, extra script reads or error clearing.
-// Stack-local to the actual expanded-description invocation; Copy keeps the default null observer.
-enum class HumanDescriptionDiagnosticStage : unsigned {
-    Entry, TranslationBinding, SnapshotWrapper, SnapshotMetaType,
-    PreparationCall, PrepareEntry, CaptionRead, CaptionString, CommandRead, CommandBool,
-    DecisionRead, DecisionBool, NativePlaceholder, NativeCaption, NativeCaptionPresent,
-    DescriptionLines, NativeDescription, NativeErrorDescription, PrepareExit,
-    FullDescription, Exit
-};
-enum class HumanDescriptionDiagnosticOutcome : unsigned {
-    Begin, Pass, Refused, Unready, CppException, Success
-};
-struct HumanDescriptionDiagnosticTrace {
-    HumanDescriptionDiagnosticStage stage = HumanDescriptionDiagnosticStage::Entry;
-    void outcome(HumanDescriptionDiagnosticOutcome result) const noexcept {
-        std::fprintf(stderr, "EDI_B2_DIAG stage=%u outcome=%u\n",
-            static_cast<unsigned>(stage), static_cast<unsigned>(result));
-    }
-    void begin(HumanDescriptionDiagnosticStage next) noexcept {
-        stage = next;
-        outcome(HumanDescriptionDiagnosticOutcome::Begin);
-    }
-};
-void humanDescriptionDiagnosticBegin(HumanDescriptionDiagnosticTrace* trace,
-                                     HumanDescriptionDiagnosticStage stage) noexcept {
-    if (trace) trace->begin(stage);
-}
-void humanDescriptionDiagnosticOutcome(HumanDescriptionDiagnosticTrace* trace,
-                                       HumanDescriptionDiagnosticOutcome outcome) noexcept {
-    if (trace) trace->outcome(outcome);
-}
 std::optional<edi_app::assistant_presentation::HumanActivityInput> prepareHumanPresentation(
     const QPointer<QJSEngine>& engine, const HumanSnapshot& snapshot, const QString& kind,
-    const QJSValue& compact, const QJSValue& payload, const QPointer<edi_app::AssistantViewModel>& owner,
-    HumanDescriptionDiagnosticTrace* diagnostic = nullptr) {
+    const QJSValue& compact, const QJSValue& payload, const QPointer<edi_app::AssistantViewModel>& owner) {
     using namespace edi_app::assistant_presentation;
-    using Stage = HumanDescriptionDiagnosticStage;
-    using Outcome = HumanDescriptionDiagnosticOutcome;
-    const auto begin = [&](Stage stage) { humanDescriptionDiagnosticBegin(diagnostic, stage); };
-    const auto result = [&](Outcome outcome) { humanDescriptionDiagnosticOutcome(diagnostic, outcome); };
-    begin(Stage::PrepareEntry);
-    if (!messageScriptReady(engine)) { result(Outcome::Unready); return std::nullopt; }
-    result(Outcome::Pass);
+    if (!messageScriptReady(engine)) return std::nullopt;
     HumanActivityInput input;
     input.kind = kind; input.payload = snapshot.payload; input.text = snapshot.text; input.provenance = snapshot.provenance;
-    begin(Stage::CaptionRead);
     const auto caption = messageScriptProperty(engine, compact, QStringLiteral("caption"));
-    if (!messageScriptReady(engine)) { result(Outcome::Unready); return std::nullopt; }
-    result(Outcome::Pass);
-    begin(Stage::CaptionString);
-    if (!caption.isString()) { result(Outcome::Refused); return std::nullopt; }
-    result(Outcome::Pass);
+    if (!messageScriptReady(engine) || !caption.isString()) return std::nullopt;
     input.caption = caption.toString();
-    begin(Stage::CommandRead);
     const auto command = messageScriptProperty(engine, compact, QStringLiteral("commandActivity"));
-    if (!messageScriptReady(engine)) { result(Outcome::Unready); return std::nullopt; }
-    result(Outcome::Pass);
-    begin(Stage::CommandBool);
-    if (!command.isBool()) { result(Outcome::Refused); return std::nullopt; }
-    result(Outcome::Pass);
+    if (!messageScriptReady(engine) || !command.isBool()) return std::nullopt;
     input.commandActivity = command.toBool();
-    begin(Stage::DecisionRead);
     const auto decision = messageScriptProperty(engine, compact, QStringLiteral("decisionActivity"));
-    if (!messageScriptReady(engine)) { result(Outcome::Unready); return std::nullopt; }
-    result(Outcome::Pass);
-    begin(Stage::DecisionBool);
-    if (!decision.isBool()) { result(Outcome::Refused); return std::nullopt; }
-    result(Outcome::Pass);
+    if (!messageScriptReady(engine) || !decision.isBool()) return std::nullopt;
     input.decisionActivity = decision.toBool();
-    begin(Stage::NativePlaceholder);
     if (nativeDescriptionPlaceholder(input)) {
-        begin(Stage::NativeCaption);
         input.nativeLabel = messageNativeCaption(engine, payload, owner);
-        if (!messageScriptReady(engine)) { result(Outcome::Unready); return std::nullopt; }
-        result(Outcome::Pass);
-        begin(Stage::NativeCaptionPresent);
-        if (!input.nativeLabel) { result(Outcome::Refused); return std::nullopt; }
-        result(Outcome::Pass);
+        if (!messageScriptReady(engine) || !input.nativeLabel) return std::nullopt;
     }
-    begin(Stage::DescriptionLines);
     const auto lines = humanDescriptionLines(input);
-    begin(Stage::NativeDescription);
     if (needsHumanFallback(input, lines) && input.payload.value("type") == "dynamicToolCall" && owner)
         input.nativeDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QString());
-    begin(Stage::NativeErrorDescription);
     if (!nonblankLiteral(humanOutcomeMessage(input)) && humanOutcomeCode(input) == "project_required" && owner)
         input.nativeErrorDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QStringLiteral("project_required"));
-    begin(Stage::PrepareExit);
-    if (!messageScriptReady(engine)) { result(Outcome::Unready); return std::nullopt; }
-    result(Outcome::Pass);
-    return std::optional<HumanActivityInput>(std::move(input));
+    return messageScriptReady(engine) ? std::optional<HumanActivityInput>(std::move(input)) : std::nullopt;
 }
 void clearHumanSnapshot(const MessageView& view) {
     if (view.current()) messageScriptWrite(view.engine, view.component,
@@ -1092,37 +1026,19 @@ void refreshExpandedHumanSnapshot(const MessageView& view) {
 QString ApplicationInfo::assistantActivityDescription(const QJSValue& snapshot, const QString& kind,
     const QJSValue& compact, const QJSValue& payload, QObject* assistant) const {
     using namespace edi_app::assistant_presentation;
-    using Stage = HumanDescriptionDiagnosticStage;
-    using Outcome = HumanDescriptionDiagnosticOutcome;
-    HumanDescriptionDiagnosticTrace diagnostic;
-    diagnostic.begin(Stage::Entry);
     const QPointer<QJSEngine> engine(qjsEngine(this));
-    if (!messageScriptReady(engine)) { diagnostic.outcome(Outcome::Unready); return {}; }
-    diagnostic.outcome(Outcome::Pass);
-    diagnostic.begin(Stage::TranslationBinding);
+    if (!messageScriptReady(engine)) return {};
     if (auto* qml = qobject_cast<QQmlEngine*>(engine.data())) qml->markCurrentFunctionAsTranslationBinding();
     const auto unavailable = [] { return messageText(
         QT_TRANSLATE_NOOP("AssistantMessage", "This step's description is currently unavailable.")); };
     try {
-        diagnostic.begin(Stage::SnapshotWrapper);
-        if (!snapshot.isVariant()) { diagnostic.outcome(Outcome::Refused); return unavailable(); }
-        diagnostic.outcome(Outcome::Pass);
-        diagnostic.begin(Stage::SnapshotMetaType);
-        const auto value = snapshot.toVariant();
-        if (value.metaType() != QMetaType::fromType<HumanSnapshot>()) {
-            diagnostic.outcome(Outcome::Refused); return unavailable();
-        }
-        diagnostic.outcome(Outcome::Pass);
-        diagnostic.begin(Stage::PreparationCall);
+        // Retain JavaScript objects without traversing them; accept only the exact native snapshot below.
+        const auto value = snapshot.toVariant(QJSValue::RetainJSObjects);
+        if (value.metaType() != QMetaType::fromType<HumanSnapshot>()) return unavailable();
         const auto input = prepareHumanPresentation(engine, value.value<HumanSnapshot>(), kind, compact, payload,
-            qobject_cast<edi_app::AssistantViewModel*>(assistant), &diagnostic);
-        if (!input) return unavailable();
-        diagnostic.begin(Stage::FullDescription);
-        const auto description = fullHumanDescription(*input, humanDescriptionLines(*input));
-        diagnostic.begin(Stage::Exit);
-        diagnostic.outcome(Outcome::Success);
-        return description;
-    } catch (...) { diagnostic.outcome(Outcome::CppException); return unavailable(); }
+            qobject_cast<edi_app::AssistantViewModel*>(assistant));
+        return input ? fullHumanDescription(*input, humanDescriptionLines(*input)) : unavailable();
+    } catch (...) { return unavailable(); }
 }
 
 void ApplicationInfo::assistantCopyActivity(const QJSValue& component, bool includeTechnical, bool offered) const {

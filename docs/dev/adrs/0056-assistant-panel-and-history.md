@@ -4579,3 +4579,28 @@ the same captured values, preserving its identical original envelope after the m
 no public QML map/API, controller/store, lookup, refresh event, guard or copy-timing change. An
 independent test-owned exact-metatype probe can observe the actual stored scalar identity through
 the normal QVariant representation without a production compatibility or injection entrypoint.
+
+
+### Opaque human-description conversion at the native display boundary
+
+The first implementation is the existing lazy HumanActivitySnapshot publication and
+ApplicationInfo full-description formatter above. The snapshot remains an opaque
+registered native value with stored canonical identity; no public map or duplicate
+canonical authority is introduced. The actual native display comparison reached
+isVariant refusal despite a retained exact native snapshot at the row observation
+boundary. A wrapper predicate is therefore insufficient admission for this call.
+
+The formatter converts with QJSValue::RetainJSObjects and then requires the exact
+HumanActivitySnapshot metatype. Generic JavaScript objects remain QJSValue carriers
+rather than recursively enumerated maps or lists; they fail exact-type admission.
+There is no structural fallback, QVariant coercion, serialization or getter-driven
+reconstruction of a snapshot. Recognized Qt native wrappers use Qt's native-value
+conversion. This is not a claim that every foreign native wrapper is free of its
+own reference-load behavior. Snapshot provenance/identity, original engine/error
+guards, compact prerequisites, literal formatting, lazy invalidation, currentness
+and native Copy read timing remain unchanged.
+
+The temporary boundary diagnostic is removed completely. The source correction
+requires a freshly bound actual native comparison, all previously unreached body,
+refresh, Copy/reset and unit suffixes, plus malformed/plain-carrier noninterference
+coverage. Source review or a diagnostic run alone does not qualify this correction.
