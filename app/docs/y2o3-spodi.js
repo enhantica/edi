@@ -70,7 +70,7 @@
         ["workflow.experiment.mainContent", "workflow.experiment.manualSidebar"]);
     tabs("11-experiment", "experiment", "Experiment and measured data");
     function freeKind(name) {
-        return ["fill:parameters.nameFilter=" + name, "parameters.freeHeader", "parameters.freeHeader.free", "parameters.clearFilters"];
+        return ["reveal:parameters.nameFilter", "fill:parameters.nameFilter=" + name, "parameters.freeHeader", "parameters.freeHeader.free", "parameters.clearFilters"];
     }
     shot("12-analysis-choose", "analysis", "Begin with the scale and cell length; keep the other parameters fixed",
         ["appBar.tab.analysis", "sideBar.tab.basic", "parameters.clearFilters", "parameters.freeHeader", "parameters.freeHeader.fixed"].concat(freeKind("scale"), freeKind("length_a")),
