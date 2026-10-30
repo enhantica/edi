@@ -47,20 +47,14 @@ Item {
     // The colours (the owner, 2026-10-26): the Stacked lines take a palette's colours (by default the app's) or a
     // colour map's, and the Map a colour map, Blue-Red by default, both app settings. The Map's direction is the
     // project's (Auto by default), resolved in the theme the view is drawn in.
-    readonly property var stackedChoices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
+    readonly property var stackedChoices: ApplicationInfo.preferenceStackedChoices()
     readonly property var mapChoices: ApplicationInfo.scanColourMaps
-    readonly property string stackedPalette: {
-        const stored = Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme;
-        // A choice no longer offered follows the app's palette, as Preferences then shows it.
-        return stackedChoices.indexOf(stored) >= 0 ? stored : ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme);
-    }
+    readonly property string stackedPalette: ApplicationInfo.scanStackedPalette()
     readonly property string mapColours: mapChoices.indexOf(Preferences.scanMapColours) >= 0 ? Preferences.scanMapColours : "blue-red"
     readonly property string mapDirection: chart.project ? chart.project.mapDirection : "auto"
     // A chart selector's value as its box shows it: a capital first, after the lower-case prefix ("y: Datablock"); the
     // x box's symbols keep their case (the owner, 2026-10-27).
-    function capitalised(text: string): string {
-        return text.length > 0 ? text.charAt(0).toUpperCase() + text.slice(1) : text;
-    }
+    function capitalised(text: string): string { return ApplicationInfo.chartCapitalised(text); }
     // The plot area's colour: the chart's background, but black for the Map in the dark theme, so its low values (from
     // #181818 in Blue-Red) stand apart from empty areas as they do on white in the light theme (the owner, 2026-10-27).
     readonly property color plotBackground: mode === "map" && chart.colors.isDarkPalette ? "#000000" : chart.colors.chartBackground
@@ -75,32 +69,15 @@ Item {
     // The x and y ranges change together and are published once, so another page never takes up a new x with the
     // old y.
     property bool settingZoom: false
-    function setZoom(x, y) {
-        settingZoom = true;
-        zoomX = x;
-        zoomY = y;
-        settingZoom = false;
-        publishZoom();
-    }
-    function resetZoom() {
-        setZoom([], []);
-    }
+    function setZoom(x, y) { ApplicationInfo.scanSetZoom(x, y); }
+    function resetZoom() { ApplicationInfo.scanResetZoom(); }
     // The zoom is one per view across the pages (the owner, 2026-10-22): the shown chart writes it, and a chart
     // takes it up when it is shown.
     readonly property var sharedZoom: AppState.scanZoom[mode] ?? ({
             "x": [],
             "y": []
         })
-    function publishZoom() {
-        if (!shown || settingZoom)
-            return;
-        const next = Object.assign({}, AppState.scanZoom);
-        next[mode] = {
-            "x": zoomX,
-            "y": zoomY
-        };
-        AppState.scanZoom = next;
-    }
+    function publishZoom() { ApplicationInfo.scanPublishZoom(); }
     onZoomXChanged: publishZoom()
     onZoomYChanged: publishZoom()
     readonly property real xTitleHeight: Math.round(em * 1.7)
@@ -126,44 +103,17 @@ Item {
     objectName: "scanView." + mode
 
     // Shown once: the datasets are read from then on, for either view.
-    onShownChanged: {
-        if (shown) {
-            const zoom = sharedZoom;
-            setZoom(zoom.x, zoom.y);
-        }
-        if (shown && scan !== null)
-            scan.wanted = true;
-    }
-    Component.onCompleted: {
-        if (shown && scan !== null)
-            scan.wanted = true;
-        reportShown();
-    }
-    Component.onDestruction: {
-        presentedTo?.setScanViewShown(chart, false);
-        presentedTo = null;
-    }
+    onShownChanged: ApplicationInfo.scanViewLifecycle(0)
+    Component.onCompleted: ApplicationInfo.scanViewLifecycle(1)
+    Component.onDestruction: ApplicationInfo.scanViewLifecycle(3)
     // On screen, the view is where a scan whose every pattern is waited for shows each file, as the current dataset
     // (edi ADR-0029, 8): the project it told so.
     property ProjectViewModel presentedTo: null
     readonly property bool presenting: shown && project !== null
-    function reportShown() {
-        if (presentedTo !== null && (!presenting || presentedTo !== project)) {
-            presentedTo.setScanViewShown(chart, false);
-            presentedTo = null;
-        }
-        if (presenting && presentedTo === null) {
-            project.setScanViewShown(chart, true);
-            presentedTo = project;
-        }
-    }
+    function reportShown() { ApplicationInfo.scanReportShown(); }
     onPresentingChanged: reportShown()
     onProjectChanged: reportShown()
-    onScanChanged: {
-        resetZoom();
-        if (shown && scan !== null)
-            scan.wanted = true;
-    }
+    onScanChanged: ApplicationInfo.scanViewLifecycle(2)
     Connections {
         target: chart.scan
         function onXTitleChanged() {
@@ -414,61 +364,13 @@ Item {
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             // On Stacked the wheel scrolls through a stack taller than the plot (a fixed height), the shown range keeping
             // its height so each pattern keeps its own: up to the highest pattern's top, down to the lowest baseline.
-            onWheel: wheel => {
-                const top = Math.max(1, layer.stackTop);
-                const span = chart.yMax - chart.yMin;
-                if (chart.mode !== "stacked" || wheel.angleDelta.y === 0 || !(span > 0) || span >= top) {
-                    wheel.accepted = false;
-                    return;
-                }
-                const from = Math.max(0, Math.min(top - span, chart.yMin + wheel.angleDelta.y / 120 * span * 0.2));
-                chart.setZoom(chart.zoomX, [from, from + span]);
-            }
+            onWheel: wheel => ApplicationInfo.scanPointer(wheel, 0)
             hoverEnabled: true
             cursorShape: Qt.CrossCursor
             onExited: hovered = -1
-            onPressed: mouse => {
-                if (mouse.button === Qt.RightButton)
-                    return;
-                start = Qt.point(mouse.x, mouse.y);
-                zoomBox.width = 0;
-                zoomBox.height = 0;
-            }
-            onPositionChanged: mouse => {
-                if (!(mouse.buttons & Qt.LeftButton)) {
-                    hovered = chart.scan !== null ? layer.datasetNear(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min)) : -1;
-                    return;
-                }
-                const x = Math.max(0, Math.min(width, mouse.x)), y = Math.max(0, Math.min(height, mouse.y));
-                zoomBox.x = Math.min(start.x, x);
-                zoomBox.y = Math.min(start.y, y);
-                zoomBox.width = Math.abs(x - start.x);
-                zoomBox.height = Math.abs(y - start.y);
-                zoomBox.visible = zoomBox.width > 4 || zoomBox.height > 4;
-            }
-            onReleased: mouse => {
-                if (mouse.button === Qt.RightButton) {
-                    chart.resetZoom();
-                    return;
-                }
-                if (!zoomBox.visible && stackedLegend.toggleAt(pointer, mouse.x, mouse.y))
-                    return;
-                const atX = share => axisX.min + share * (axisX.max - axisX.min);
-                const atY = share => axisY.max - share * (axisY.max - axisY.min);
-                if (zoomBox.visible) {
-                    zoomBox.visible = false;
-                    if (zoomBox.width > 4 && zoomBox.height > 4) {
-                        chart.setZoom([atX(zoomBox.x / width), atX((zoomBox.x + zoomBox.width) / width)], [atY((zoomBox.y + zoomBox.height) / height), atY(zoomBox.y / height)]);
-                    }
-                    return;
-                }
-                if (chart.scan === null || chart.project === null)
-                    return;
-                // The stacked line nearest the click, or the map's band holding it (one placing: layer.rowOf).
-                const dataset = layer.datasetNear(atX(mouse.x / width), atY(mouse.y / height));
-                if (dataset >= 0)
-                    chart.project.currentExperimentIndex = dataset;
-            }
+            onPressed: mouse => ApplicationInfo.scanPointer(mouse, 1)
+            onPositionChanged: mouse => ApplicationInfo.scanPointer(mouse, 2)
+            onReleased: mouse => ApplicationInfo.scanPointer(mouse, 3)
 
             // The hovered dataset's read-out (the owner, 2026-10-27), as the pattern chart's: its icon and name in its
             // colour, then the intensity there; on Stacked by its curve, on the Map at the pointer. Right of and above
@@ -613,10 +515,7 @@ Item {
         entries: layer.legend
         toggles: true
         // The "more" line has no key: it hides nothing.
-        onToggled: key => {
-            if (key !== "")
-                layer.toggleHidden(Number(key));
-        }
+        onToggled: key => ApplicationInfo.scanLegendToggle(key)
     }
 
     // A map whose rows stand at their scan values keeps its numeric scale and labels no row; the shown dataset is still
@@ -702,15 +601,9 @@ Item {
     }
 
     // An end of the colour bar as an intensity: the y scale's value taken back to counts.
-    function intensityCounts(value: real): real {
-        const scale = Preferences.patternYScale;
-        return scale === "log" ? Math.pow(10, value) : scale === "sqrt" ? Math.sign(value) * value * value : value;
-    }
+    function intensityCounts(value: real): real { return ApplicationInfo.scanIntensityCounts(value); }
     // The ends in scientific notation with two significant digits, 1.4e4 (the owner, 2026-10-27).
-    function intensityText(value: real): string {
-        const counts = intensityCounts(value);
-        return !isFinite(counts) ? "" : counts === 0 ? "0" : NumberText.exponent(counts, 2).replace("e+", "e");
-    }
+    function intensityText(value: real): string { return ApplicationInfo.scanIntensityText(value); }
 
     EaElements.Label {
         objectName: "scanView." + chart.mode + ".title.y"
@@ -758,12 +651,9 @@ Item {
             readonly property string dEntry: qsTr("x: %1").arg(Session.optionLabel("pattern_chart.x_axis", "d_spacing"))
             readonly property var entries: nativeOffered ? [Session.label(chart.scan !== null && chart.scan.timeOfFlight ? "data.time_of_flight" : "data.two_theta"), dEntry] : [dEntry]
             model: entries
-            closedTexts: entries.map(text => text.startsWith("x: ") ? text : qsTr("x: %1").arg(text))
+            closedTexts: ApplicationInfo.scanClosedTexts(0)
             shownIndex: nativeOffered && chart.scan !== null && chart.scan.dShown ? 1 : 0
-            onActivated: index => {
-                if (chart.project && nativeOffered)
-                    chart.project.patternDSpacing = index === 1;
-            }
+            onActivated: index => ApplicationInfo.scanChoice(index, 0)
         }
         ToolbarComboBox {
             objectName: "scanView." + chart.mode + ".toolbar.rows"
@@ -774,14 +664,11 @@ Item {
             readonly property string order: chart.scan !== null ? chart.scan.orderName : qsTr("file")
             // Open with one entry too, so it shows how the rows are placed.
             toolTip: qsTr("Y axis: the rows' places")
-            readonly property var entries: (hasValue ? [chart.scan.valueTitle, order] : [order]).map(text => chart.capitalised(text))
+            readonly property var entries: ApplicationInfo.scanRowEntries()
             model: entries
-            closedTexts: entries.map(text => qsTr("y: %1").arg(text))
+            closedTexts: ApplicationInfo.scanClosedTexts(1)
             shownIndex: hasValue && !chart.scan.rowsByIndex ? 0 : entries.length - 1
-            onActivated: index => {
-                if (chart.project && chart.project.evolution)
-                    chart.project.evolution.xMode = hasValue ? index : 1;
-            }
+            onActivated: index => ApplicationInfo.scanChoice(index, 1)
         }
         ToolbarComboBox {
             objectName: "scanView." + chart.mode + ".toolbar.yscale"
@@ -791,9 +678,9 @@ Item {
             toolTip: qsTr("Z axis: the intensity scale, the pattern chart's y scale")
             readonly property var entries: [qsTr("Linear"), qsTr("Square root"), qsTr("Log")]
             model: entries
-            closedTexts: entries.map(text => qsTr("%1: %2").arg(axis).arg(text))
+            closedTexts: ApplicationInfo.scanClosedTexts(2)
             shownIndex: Math.max(0, tokens.indexOf(Preferences.patternYScale))
-            onActivated: index => Preferences.patternYScale = tokens[index]
+            onActivated: index => ApplicationInfo.scanChoice(index, 2)
         }
         // The Stacked patterns' spacing, from overlaid to fully separated, a group of its own after the axes; the
         // project keeps it (the owner, 2026-10-26).
@@ -805,12 +692,9 @@ Item {
             visible: chart.mode === "stacked"
             toolTip: qsTr("Spacing: from every pattern on one baseline to each in its own band")
             model: ApplicationInfo.stackedSpacingTitles
-            closedTexts: ApplicationInfo.stackedSpacingTitles.map(title => qsTr("spacing: %1").arg(title))
+            closedTexts: ApplicationInfo.scanClosedTexts(3)
             shownIndex: Math.max(0, steps.indexOf(chart.project ? chart.project.stackedSpacing : "wide"))
-            onActivated: index => {
-                if (chart.project)
-                    chart.project.stackedSpacing = steps[index];
-            }
+            onActivated: index => ApplicationInfo.scanChoice(index, 3)
         }
         // The Map's colour map, each with its colour bar, and its direction, a group of their own after the axes (the
         // owner, 2026-10-26).
@@ -824,7 +708,7 @@ Item {
             chartBackground: chart.plotBackground
             dark: chart.colors.isDarkPalette
             shownIndex: Math.max(0, chart.mapChoices.indexOf(chart.mapColours))
-            onActivated: index => Preferences.scanMapColours = chart.mapChoices[index]
+            onActivated: index => ApplicationInfo.scanChoice(index, 4)
         }
         ToolbarComboBox {
             readonly property var directions: ApplicationInfo.scanMapDirections
@@ -834,12 +718,9 @@ Item {
             visible: chart.mode === "map"
             toolTip: qsTr("Direction: Auto starts the map at the chart's background in either theme")
             model: ApplicationInfo.scanMapDirectionTitles
-            closedTexts: ApplicationInfo.scanMapDirectionTitles.map(title => qsTr("direction: %1").arg(title))
+            closedTexts: ApplicationInfo.scanClosedTexts(4)
             shownIndex: Math.max(0, directions.indexOf(chart.mapDirection))
-            onActivated: index => {
-                if (chart.project)
-                    chart.project.mapDirection = directions[index];
-            }
+            onActivated: index => ApplicationInfo.scanChoice(index, 5)
         }
         Row {
             id: buttons
@@ -853,7 +734,7 @@ Item {
                 fontIcon: "align-left"
                 toolTip: Preferences.scanStackedLegendShown ? qsTr("Hide legend") : qsTr("Show legend")
                 checked: Preferences.scanStackedLegendShown
-                onClicked: Preferences.scanStackedLegendShown = !Preferences.scanStackedLegendShown
+                onClicked: ApplicationInfo.scanToggle(0)
             }
             // Hover read-outs on or off: the pattern chart's button, in its place after the legend, and its one setting
             // (the owner, 2026-10-27).
@@ -862,7 +743,7 @@ Item {
                 fontIcon: "comment-alt"
                 toolTip: qsTr("Show coordinates tooltip on hover")
                 checked: Preferences.patternHoverShown
-                onClicked: Preferences.patternHoverShown = !Preferences.patternHoverShown
+                onClicked: ApplicationInfo.scanToggle(1)
             }
             // The Stacked colours in reverse order; the Map's direction is its own selector.
             ChartToolButton {
@@ -871,7 +752,7 @@ Item {
                 fontIcon: "exchange-alt"
                 toolTip: qsTr("Reverse the patterns' colours")
                 checked: Preferences.scanStackedReversed
-                onClicked: Preferences.scanStackedReversed = !Preferences.scanStackedReversed
+                onClicked: ApplicationInfo.scanToggle(2)
             }
             ChartToolButton {
                 objectName: "scanView.map.toolbar.smooth"
@@ -879,7 +760,7 @@ Item {
                 fontIcon: "water"
                 toolTip: Preferences.scanMapSmooth ? qsTr("Bands blend into each other at their edges: click for hard edges") : qsTr("Hard edges between the bands: click to blend them at their edges")
                 checked: Preferences.scanMapSmooth
-                onClicked: Preferences.scanMapSmooth = !Preferences.scanMapSmooth
+                onClicked: ApplicationInfo.scanToggle(3)
             }
             // Only the included range: the pattern chart's eraser button and its one app setting, so the three charts
             // switch together (the owner, 2026-10-22).
@@ -888,7 +769,7 @@ Item {
                 fontIcon: "eraser"
                 toolTip: qsTr("Show only the included range")
                 checked: Preferences.chartIncludedOnly
-                onClicked: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
+                onClicked: ApplicationInfo.scanToggle(4)
             }
             // Every pattern less its background, the pattern chart's button and app setting (the owner, 2026-10-26):
             // offered when some dataset has a background set, fitted or not.
@@ -898,7 +779,7 @@ Item {
                 fontIcon: "chart-area"
                 toolTip: available ? qsTr("Subtract each pattern's background") : qsTr("Subtract the background: no shown pattern has a background set")
                 checked: Preferences.chartSubtractBackground && available
-                onClicked: Preferences.chartSubtractBackground = !Preferences.chartSubtractBackground
+                onClicked: ApplicationInfo.scanToggle(5)
             }
             // The shown dataset on top and the others faded, or all alike with its row label in bold: the one app
             // setting single-crystal Stacked uses too.
@@ -907,7 +788,7 @@ Item {
                 fontIcon: "highlighter"
                 toolTip: qsTr("Highlight the selected dataset")
                 checked: Preferences.chartHighlightSelected
-                onClicked: Preferences.chartHighlightSelected = !Preferences.chartHighlightSelected
+                onClicked: ApplicationInfo.scanToggle(6)
             }
             ChartToolButton {
                 objectName: "scanView." + chart.mode + ".toolbar.zoom"

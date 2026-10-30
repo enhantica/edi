@@ -545,6 +545,22 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue singleNearest(const QJSValue& px, const QJSValue& py) const;
     Q_INVOKABLE void singleHoverRead(const QJSValue& px, const QJSValue& py) const;
     Q_INVOKABLE void singlePointer(const QJSValue& mouse, int event) const;
+    /// Scan view state/lifecycle and input procedures; ScanViewModel and ScanLayer own data and presentation.
+    Q_INVOKABLE QJSValue scanStackedPalette() const;
+    Q_INVOKABLE QJSValue chartCapitalised(const QJSValue& text) const;
+    Q_INVOKABLE void scanSetZoom(const QJSValue& x, const QJSValue& y) const;
+    Q_INVOKABLE void scanResetZoom() const;
+    Q_INVOKABLE void scanPublishZoom() const;
+    Q_INVOKABLE void scanViewLifecycle(int event) const;
+    Q_INVOKABLE void scanReportShown() const;
+    Q_INVOKABLE void scanPointer(const QJSValue& mouse, int event) const;
+    Q_INVOKABLE QJSValue scanIntensityCounts(const QJSValue& value) const;
+    Q_INVOKABLE QJSValue scanIntensityText(const QJSValue& value) const;
+    Q_INVOKABLE void scanLegendToggle(const QJSValue& key) const;
+    Q_INVOKABLE QJSValue scanRowEntries() const;
+    Q_INVOKABLE QJSValue scanClosedTexts(int kind) const;
+    Q_INVOKABLE void scanChoice(const QJSValue& index, int kind) const;
+    Q_INVOKABLE void scanToggle(int kind) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
