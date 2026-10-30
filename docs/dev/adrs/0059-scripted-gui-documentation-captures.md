@@ -46,3 +46,7 @@ Selector metadata also retains the current native option tokens, display labels 
 GUI icon names are captured from the visible control's `fontIcon`, `keyIcon` or string `icon` property. Documentation uses those actual Font Awesome 5 names alongside the native labels; controls without a GUI icon do not gain an invented one.
 
 Detail scenes expand the remaining project/experiment/analysis settings groups: uncertainty formatting, measured points and ranges, peak cutoff, pre-fit start values, parameter visibility and pattern-update policy during scans. They use the existing `panel` helper and do not add a second capture path.
+
+## Specialized reference runs
+
+A scan reference is a different user task from constructing the initial single-pattern example. A schema-2 plan may explicitly declare `workflow: "reference"`; only that mode can open its exact declared bundled example through the existing example loader. Arbitrary project paths and other example ids still refuse. The default remains `creation`, which refuses every whole-project load. The manifest carries this distinction so a documentation importer cannot substitute a reference for proof of the creation workflow. Scan captures also report total/fitted/failed counts and show the real enabled secondary views after fitting.

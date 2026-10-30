@@ -64,6 +64,10 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
     const auto declaration = engine.evaluate(QString::fromUtf8(bytes), path);
     if (declaration.isError()) return refuse("documentation script: " + declaration.toString());
     const auto example = declaration.property("example").toString();
+    const auto workflow_value = declaration.property("workflow");
+    const auto workflow = workflow_value.isUndefined() ? QStringLiteral("creation") : workflow_value.toString();
+    if (workflow != "creation" && workflow != "reference")
+        return refuse("documentation workflow must be creation or reference");
     const QRegularExpression safe_example("^[a-z0-9][a-z0-9_-]*$");
     if (declaration.property("schema").toInt() != 2 || !safe_example.match(example).hasMatch() ||
         !declaration.property("build").isCallable())
@@ -81,6 +85,7 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
     if (structures.size() != 1 || experiments.size() != 1)
         return refuse("this walkthrough requires one structure and one experiment; adapt its import steps for a multi-block example");
     documentation_example_ = example;
+    documentation_workflow_ = workflow;
     documentation_fixture_ = metadata;
     documentation_fixture_["id"] = example;
     auto context = engine.newObject();
@@ -162,6 +167,8 @@ bool DemoDriver::loadDocumentationScript(const QString& path, QString* error) {
 std::optional<bool> DemoDriver::documentationAction(const QString& action) {
     if (action.startsWith("examples.open.") || action.startsWith("open-cli-project:") ||
         action.startsWith("open-project:")) {
+        if (documentation_workflow_ == "reference" && action == "open-cli-project:" + documentation_example_)
+            return std::nullopt;
         fail("the documentation walkthrough must create its project and import separate inputs");
         return false;
     }
@@ -306,7 +313,9 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
         {"experiments", project ? project->experimentModels().size() : 0},
         {"fit_running", fit && fit->running()}, {"fit_results_open", results_open},
         {"fit_result_rows", fit ? fit->results()->rowCount() : 0},
-        {"fit_status", fit ? fit->status() : QString()}, {"fit_outcome", fit ? fit->outcome() : QString()}};
+        {"fit_status", fit ? fit->status() : QString()}, {"fit_outcome", fit ? fit->outcome() : QString()},
+        {"scan_total", fit ? fit->scanTotal() : 0}, {"scan_fitted", fit ? fit->scanFitted() : 0},
+        {"scan_failed", fit ? fit->scanFailed() : 0}};
     const auto filename = QFileInfo(path).fileName();
     QJsonObject metadata{{"schema", 1}, {"id", step.image}, {"description", step.description},
         {"image", filename}, {"image_sha256", digest(path)},
@@ -324,7 +333,7 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
 
 bool DemoDriver::saveDocumentationManifest(const QString& status, const QString& error) {
     return write_json(output_dir_.filePath("manifest.json"),
-        QJsonObject{{"schema", 1}, {"status", status}, {"error", error}, {"example", documentation_example_}, {"fixture", documentation_fixture_}, {"dependencies", documentation_dependencies_},
+        QJsonObject{{"schema", 1}, {"status", status}, {"error", error}, {"example", documentation_example_}, {"workflow", documentation_workflow_}, {"fixture", documentation_fixture_}, {"dependencies", documentation_dependencies_},
             {"source_revision", QString::fromLatin1(edi::build_commit())},
             {"binary_sha256", digest(QCoreApplication::applicationFilePath())},
             {"gui_components_revision", EDI_APP_GUI_COMMIT}, {"script_sha256", documentation_script_},

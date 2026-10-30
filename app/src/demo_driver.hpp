@@ -135,6 +135,7 @@ class DemoDriver : public QObject {
     bool documentation_skip_ = false;
     QString documentation_script_;
     QString documentation_example_;
+    QString documentation_workflow_;
     QJsonObject documentation_fixture_;
     QJsonArray documentation_dependencies_;
     QJsonArray documentation_scenes_;
