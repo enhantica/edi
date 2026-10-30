@@ -433,12 +433,6 @@ Rectangle {
             && editor.text === acknowledged.text && !editor.inputMethodComposing
             && editor.preeditText.length === 0) editor.clear();
     }
-    function refreshFilePresentation() {
-        let pending = 0;
-        for (let i = 0; i < assistant.selectedFiles.count; ++i)
-            if (assistant.selectedFiles.text(i, "pending") !== "false") ++pending;
-        pendingFileCount = pending;
-    }
     Connections {
         target: composer.assistant.messages
         function onCountChanged() { composer.acknowledgeVisiblePrompt(); }
@@ -446,8 +440,8 @@ Rectangle {
     }
     Connections {
         target: composer.assistant.selectedFiles
-        function onCountChanged() { ++composer.consentFileRevision; composer.refreshFilePresentation(); }
-        function onDataChanged() { ++composer.consentFileRevision; composer.refreshFilePresentation(); }
+        function onCountChanged() { ApplicationInfo.composerRefreshFilePresentation(composer, true); }
+        function onDataChanged() { ApplicationInfo.composerRefreshFilePresentation(composer, true); }
     }
     Connections {
         target: composer.assistant
@@ -458,7 +452,7 @@ Rectangle {
         function onConversationRetired() { ApplicationInfo.composerConversationRetired(composer); }
         function onWorkReportFinished(receipt) { composer.finishWorkReport(receipt); }
     }
-    Component.onCompleted: refreshFilePresentation()
+    Component.onCompleted: ApplicationInfo.composerRefreshFilePresentation(composer, false)
     implicitHeight: composerContent.implicitHeight + AppSizes.unit * 1.5
     color: EaStyle.Colors.contentBackground
     border.color: EaStyle.Colors.appBorder

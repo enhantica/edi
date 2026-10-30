@@ -4720,3 +4720,28 @@ refresh or selection point inside the unchanged native body. No nonnull guard, s
 stale-owner capture, changed expectation, new policy/store/controller or compatibility JavaScript
 is added. The previous private per-view-AVM dispatch candidates and their mechanical union remain
 historical unelected source; disjoint hashes did not clear this semantic entrance class.
+
+## Selected-file presentation keeps its original published-model scan
+
+FIRST AssistantViewModel::State owns selected_rows, file selection/admission and the selected_files
+RowTableModel projection. Its refresh_file_presentation publishes canonical pending flags. Composer
+only counts that already-published display model for pendingFileCount; it does not request another
+native projection refresh or change file admission. The public RowTableModel::text method keeps its
+original QVariant-to-QString conversion, followed by the strict literal string false comparison.
+
+The existing stable ApplicationInfo entrance borrows the actual Composer, without eagerly consuming
+its assistant/model in QML. Count and data changes each advance consentFileRevision before scanning;
+component completion scans without a revision increment. Each numeric loop condition rereads actual
+assistant, selectedFiles and count, and each text call separately rereads actual assistant/model and
+uses its real method receiver, index and pending role. The local numeric count is published only when
+the complete original scan succeeds. No snapshot, new canonical owner, cap, role filter, reset,
+coalescing, account/currentness guard, content read, timer, cache or compatibility JavaScript is added.
+
+Existing engine-backed managed reads/calls retain thrown values pending and the original earlier
+revision survives a later failure; a partial scan does not publish its local count. The existing
+Composer bridge's invocation-local control/thread/lifetime handling remains shared with draft edits.
+Error reporting must retain the actual QML forwarding/binding boundary, rather than substitute a bare
+native invocation or infer source positions/counts from output. Full same-dependency original/post
+controls over real selected-file notifications, revision/order/reentry, display state, errors and
+lifetime remain required before election. Broader accepted-input/admission/ACK/closure lifecycle and
+all other procedural QML remain in scope; this finite presentation extraction does not qualify them.
