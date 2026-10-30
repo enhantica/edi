@@ -54,8 +54,8 @@ Rectangle {
         choicePopup.intent=original;
         if(Qt.isQtObject(choicePopup) && choicePopup.intent===original && Qt.isQtObject(original.owner) && original.owner===composer.assistant && composer.choicesEnabled)choicePopup.open();
     }
-    onAssistantChanged: { closeChoices(); workReportBinding = ({}); workReportDraft = null; }
-    onChoicesEnabledChanged: { if (!choicesEnabled) closeChoices(); }
+    onAssistantChanged: ApplicationInfo.composerOwnerChanged()
+    onChoicesEnabledChanged: ApplicationInfo.composerChoicesEnabledChanged()
     Connections {
         target: composer.assistant
         function onConversationRetired() { composer.closeChoices(); }
@@ -336,47 +336,15 @@ Rectangle {
     property var submittedDrafts: []
     property var workReportDraft: null
     property var workReportBinding: ({})
-    readonly property bool localWorkReport: editor.text.trim() === "/work-report"
-    function finishWorkReport(receipt) {
-        const waiting = workReportDraft;
-        if (!waiting || receipt.id !== waiting.id || receipt.phase !== "terminal") return;
-        workReportDraft = null;
-        if ((receipt.disposition === "saved" || receipt.disposition === "saved_incomplete")
-                && !receipt.scope_retired && assistant === waiting.owner
-                && workReportBinding === waiting.binding && draftOwnerRevision === waiting.ownerRevision && textRevision === waiting.revision
-                && editor.text === waiting.text && !editor.inputMethodComposing && editor.preeditText.length === 0) editor.clear();
-    }
-    function submitWorkReport() {
-        if (!localWorkReport || editor.inputMethodComposing || editor.preeditText.length) return;
-        const owner = assistant, text = editor.text, revision = textRevision, ownerRevision = draftOwnerRevision, binding = workReportBinding;
-        const receipt = owner.captureWorkReport();
-        if (!Qt.isQtObject(composer) || !Qt.isQtObject(owner) || assistant !== owner
-                || draftOwnerRevision !== ownerRevision || workReportBinding !== binding) return;
-        if (receipt.id && receipt.phase === "accepted")
-            workReportDraft = {id:receipt.id,owner:owner,text:text,revision:revision,ownerRevision:ownerRevision,binding:binding};
-        else if (receipt.id) {
-            workReportDraft = {id:receipt.id,owner:owner,text:text,revision:revision,ownerRevision:ownerRevision,binding:binding};
-            finishWorkReport(receipt);
-        }
-    }
+    readonly property bool localWorkReport: ApplicationInfo.composerLocalWorkReport()
+    function finishWorkReport(receipt) { ApplicationInfo.composerFinishWorkReport(receipt); }
+    function submitWorkReport() { ApplicationInfo.composerSubmitWorkReport(); }
     property int draftOwnerRevision: 0
     property int consentFileRevision: 0
     property int pendingFileCount: 0
     readonly property bool canSteer: assistant.state === "agent_active"
-    readonly property bool hasDraft: editor.text.trim().length > 0 || pendingFileCount > 0
-    function chooseFiles() {
-        if (WebFiles.available || !assistant.connected || assistant.canCancel || nativeFiles.requestId.length) return;
-        const original=assistant;
-        const request=original.beginFileSelection(true);
-        if (!Qt.isQtObject(composer) || !Qt.isQtObject(original) || original!==composer.assistant || !original.connected || !request.length) {
-            if (Qt.isQtObject(original)) original.cancelFileSelection(request);
-            return;
-        }
-        const intent={owner:original,id:request};
-        nativeFiles.selection=intent;
-        if (Qt.isQtObject(nativeFiles) && nativeFiles.selection===intent) nativeFiles.open();
-        else if (Qt.isQtObject(original)) original.cancelFileSelection(request);
-    }
+    readonly property bool hasDraft: ApplicationInfo.composerHasDraft()
+    function chooseFiles() { ApplicationInfo.composerChooseFiles(); }
     FileDialog {
         id: nativeFiles
         objectName: "assistant.files.dialog"
@@ -385,31 +353,13 @@ Rectangle {
         readonly property var original: selection ? selection.owner : null
         title: qsTr("Add files to the assistant")
         fileMode: FileDialog.OpenFiles
-        onAccepted: {
-            const target=original; const request=requestId; const files=selectedFiles;
-            selection=null;
-            if (!Qt.isQtObject(target)) return;
-            if (Qt.isQtObject(composer) && target===composer.assistant && target.connected) target.addSelectedFiles(request,files);
-            else target.cancelFileSelection(request);
-        }
-        onRejected: {
-            const target=original; const request=requestId;
-            selection=null;
-            if (Qt.isQtObject(target)) target.cancelFileSelection(request);
-        }
-        Component.onDestruction: {
-            const target=original; const request=requestId;
-            selection=null;
-            if (Qt.isQtObject(target)) target.cancelFileSelection(request);
-        }
+        onAccepted: ApplicationInfo.composerAcceptFiles()
+        onRejected: ApplicationInfo.composerCancelFiles()
+        Component.onDestruction: ApplicationInfo.composerCancelFiles()
     }
     Connections {
         target: nativeFiles.original
-        function onFileSelectionRetired(requestId) {
-            if (nativeFiles.requestId!==requestId) return;
-            nativeFiles.selection=null;
-            if (Qt.isQtObject(nativeFiles) && nativeFiles.selection===null) nativeFiles.reject();
-        }
+        function onFileSelectionRetired(requestId) { ApplicationInfo.composerFileSelectionRetired(requestId); }
     }
     function acknowledgeVisiblePrompt() { ApplicationInfo.composerAcknowledgeVisiblePrompt(); }
     Connections {
@@ -436,22 +386,8 @@ Rectangle {
     color: EaStyle.Colors.contentBackground
     border.color: EaStyle.Colors.appBorder
     radius: AppSizes.unit
-    function rememberSelection() {
-        if (editor.activeFocus) {
-            savedSelectionStart = editor.selectionStart;
-            savedSelectionEnd = editor.selectionEnd;
-            selectionRevision = textRevision;
-        }
-    }
-    function focusEditor() {
-        if (!assistant.connected) return;
-        const restore = selectionRevision === textRevision;
-        const start = savedSelectionStart;
-        const end = savedSelectionEnd;
-        editor.forceActiveFocus();
-        if (restore)
-            editor.select(start, end);
-    }
+    function rememberSelection() { ApplicationInfo.composerRememberSelection(); }
+    function focusEditor() { ApplicationInfo.composerFocusEditor(); }
     function captureConsentDraft() { return ApplicationInfo.composerCaptureConsentDraft(); }
     function ownsConsentDraft(draft) { return ApplicationInfo.composerOwnsConsentDraft(draft); }
     function submitApprovedDraft(draft) { return ApplicationInfo.composerSubmitApprovedDraft(draft); }

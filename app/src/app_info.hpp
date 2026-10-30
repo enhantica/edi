@@ -288,6 +288,30 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void workflowCurrentChanged() const;
     Q_INVOKABLE void workflowDirtyChanged() const;
     Q_INVOKABLE void workflowStayRequested() const;
+    /// Existing text-tab transactions and remaining Composer input procedures.
+    Q_INVOKABLE void textTabShowBlock() const;
+    Q_INVOKABLE QJSValue textTabApplyTo(const QJSValue& source, const QString& text) const;
+    Q_INVOKABLE void textTabApplyEdit() const;
+    Q_INVOKABLE void textTabAskLeave(const QJSValue& apply, const QJSValue& leave, const QJSValue& drop, const QJSValue& stay) const;
+    Q_INVOKABLE void textTabSourceChanged() const;
+    Q_INVOKABLE void textTabChanged(int cause) const;
+    Q_INVOKABLE void textTabShowChoice(const QJSValue& index, const QJSValue& restoreBinding) const;
+    Q_INVOKABLE void textTabAnswer(const QString& name, const QJSValue& argument) const;
+    Q_INVOKABLE void textDiscardCompleted() const;
+    Q_INVOKABLE void textDiscardApplied() const;
+    Q_INVOKABLE void textDiscardDiscarded() const;
+    Q_INVOKABLE void composerRememberSelection() const;
+    Q_INVOKABLE void composerFocusEditor() const;
+    Q_INVOKABLE void composerFinishWorkReport(const QJSValue& receipt) const;
+    Q_INVOKABLE void composerSubmitWorkReport() const;
+    Q_INVOKABLE void composerChooseFiles() const;
+    Q_INVOKABLE void composerAcceptFiles() const;
+    Q_INVOKABLE void composerCancelFiles() const;
+    Q_INVOKABLE void composerFileSelectionRetired(const QJSValue& request) const;
+    Q_INVOKABLE void composerOwnerChanged() const;
+    Q_INVOKABLE void composerChoicesEnabledChanged() const;
+    Q_INVOKABLE bool composerLocalWorkReport() const;
+    Q_INVOKABLE bool composerHasDraft() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
