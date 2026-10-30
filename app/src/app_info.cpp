@@ -1103,14 +1103,14 @@ QJSValue panelUsageDeferredMemberCall(const PanelUsageFrame& frame, const QJSVal
     QV4::Scope scope(frame.vm());
     QV4::ScopedValue object(scope, QJSValuePrivate::convertToReturnedValue(frame.vm(), receiver));
     QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
-    QV4::ScopedValue callable(scope, panelUsageGet(frame, *object, key, true));
-    frame.checked();
-    if (!panelUsageReady(frame)) return {};
     const auto values = arguments();
     if (!panelUsageReady(frame)) return {};
     QV4::JSCallArguments call(scope, static_cast<int>(values.size()));
     *call.thisObject = *object;
     for (qsizetype i = 0; i < values.size(); ++i) call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), values[i]);
+    QV4::ScopedValue callable(scope, panelUsageGet(frame, *object, key, true));
+    frame.checked();
+    if (!panelUsageReady(frame)) return {};
     QV4::ScopedValue result(scope);
     if (const auto* function = callable->as<QV4::FunctionObject>()) result = function->call(call);
     else if (const auto* handler = callable->as<QV4::QmlSignalHandler>()) result = handler->call(call.thisObject, call.args, static_cast<int>(values.size()));
@@ -8542,6 +8542,160 @@ void ApplicationInfo::tableRowCompleted(const QJSValue& installOpacity) const {
         }); return panelUsageReady(f);
     });
     if (!panelUsageTruth(assistantContextField(f, "row", "highlightsHover")) && !hover.isNull()) assistantMemberWrite(f, hover, "enabled", QJSValue(false));
+}
+
+namespace {
+bool searchCurrent(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& pending,
+    const QJSValue& popup, const QJSValue& opening, const QJSValue& window, bool withWindow) {
+    if (!consentQtObject(f, component) || !consentQtObject(f, pending) || !consentQtObject(f, popup) || (withWindow && !consentQtObject(f, window))) return false;
+    if (!panelUsageTruth(opening) || !consentFieldEquals(f, pending, "opening", opening) || !consentFieldEquals(f, opening, "popup", popup)
+        || !consentFieldEquals(f, component, "popup", popup) || !panelUsageTruth(panelUsageRead(f, popup, "visible"))) return false;
+    if (withWindow) return panelUsageRead(f, panelUsageRead(f, component, "Window"), "window").strictlyEquals(window);
+    return true;
+}
+bool searchOpeningCurrent(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& pending,
+    const QJSValue& popup, const QJSValue& opening) {
+    return consentQtObject(f, component) && consentQtObject(f, pending) && consentQtObject(f, popup)
+        && consentFieldEquals(f, pending, "opening", opening) && consentFieldEquals(f, component, "popup", popup) && panelUsageTruth(panelUsageRead(f, popup, "visible"));
+}
+bool searchRequestCurrent(const PanelUsageFrame& f, const QJSValue& component, const QJSValue& pending,
+    const QJSValue& popup, const QJSValue& original, bool first) {
+    return consentQtObject(f, pending) && panelUsageRead(f, pending, "request").isNull() && consentFieldEquals(f, pending, "opening", original)
+        && (!first || panelUsageTruth(original)) && consentQtObject(f, component) && consentQtObject(f, popup)
+        && consentFieldEquals(f, component, "popup", popup) && panelUsageTruth(panelUsageRead(f, popup, "visible"));
+}
+QJSValue searchHeaderItem(const PanelUsageFrame& f, const QJSValue& popup) {
+    const auto list = chartAs(f, panelUsageRead(f, popup, "contentItem"), "ListView");
+    return list.isNull() || list.isUndefined() ? QJSValue() : panelUsageRead(f, list, "headerItem");
+}
+} // namespace
+
+void ApplicationInfo::searchPositionPopup(const QJSValue& opening) const {
+    const auto f = panelUsageEngine(this); const auto component = panelUsageContextRead(f, "control"), pending = panelUsageContextRead(f, "popupLayout"), popup = panelUsageRead(f, component, "popup");
+    const auto current = [&] { return searchCurrent(f, component, pending, popup, opening, QJSValue(), false); };
+    if (!current()) return; const auto list = chartAs(f, panelUsageRead(f, popup, "contentItem"), "ListView"); if (!panelUsageTruth(list)) return;
+    panelUsageMemberCall(f, list, "forceLayout");
+    if (!current() || !consentQtObject(f, list) || !consentFieldEquals(f, popup, "contentItem", list)) return;
+    const auto content = panelUsageRead(f, list, "contentHeight"), height = panelUsageRead(f, list, "height");
+    if (assistantRelation(f, content, height, 3)) panelUsageMemberCall(f, list, "positionViewAtBeginning");
+    else panelUsageDeferredMemberCall(f, list, "positionViewAtIndex", [&] {
+        return QJSValueList{numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), panelUsageRead(f, component, "currentIndex")}; }), assistantContextField(f, "ListView", "Contain")};
+    });
+}
+QJSValue ApplicationInfo::searchMeasuredWidth(bool optionsOnly) const {
+    const auto f = panelUsageEngine(this); QJSValue widest(0);
+    if (!optionsOnly) widest = panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageContextRead(f, "displayText")}; });
+    for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageContextRead(f, "count"), 0); ++index)
+        widest = numberMath(f, "max", [&] {
+            return QJSValueList{widest, panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageGlobalCall(f, "textAt", {QJSValue(index)})}; })};
+        });
+    if (optionsOnly) {
+        const auto measured = numberMath(f, "ceil", [&] { return QJSValueList{widest}; }); const auto pixels = panelUsageRead(f, panelUsageContextRead(f, "font"), "pixelSize");
+        return panelUsageAdd(f, measured, viewArithmetic(f, pixels, QJSValue(3), 1));
+    }
+    QJSValue label(0);
+    if (panelUsageTruth(panelUsageContextRead(f, "contentItemLabel"))) {
+        const auto left = assistantContextField(f, "contentItemLabel", "leftPadding"), right = assistantContextField(f, "contentItemLabel", "rightPadding"); label = panelUsageAdd(f, left, right);
+    }
+    QJSValue besides = label;
+    if (panelUsageTruth(panelUsageContextRead(f, "contentItem"))) {
+        const auto implicit = assistantContextField(f, "contentItem", "implicitWidth");
+        const auto measured = panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "optionMetrics"), "advanceWidth", [&] { return QJSValueList{panelUsageContextRead(f, "displayText")}; }); besides = viewArithmetic(f, implicit, measured, 0);
+    }
+    const auto fit = numberMath(f, "ceil", [&] {
+        const auto spacing = numberMath(f, "max", [&] { return QJSValueList{label, besides}; }); const auto first = panelUsageAdd(f, widest, spacing);
+        const auto pixels = panelUsageRead(f, panelUsageContextRead(f, "font"), "pixelSize"); return QJSValueList{panelUsageAdd(f, first, viewArithmetic(f, pixels, QJSValue(0.5), 1))};
+    }); const auto left = panelUsageAdd(f, fit, panelUsageContextRead(f, "leftPadding")); return panelUsageAdd(f, left, panelUsageContextRead(f, "rightPadding"));
+}
+QJSValue ApplicationInfo::searchAnyMatch() const {
+    const auto f = panelUsageEngine(this); if (panelUsageContextRead(f, "filter").strictlyEquals(QJSValue(QStringLiteral("")))) return QJSValue(true);
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageContextRead(f, "count"), 0); ++i)
+        if (panelUsageTruth(panelUsageGlobalCall(f, "matches", {panelUsageGlobalCall(f, "textAt", {QJSValue(i)})}))) return QJSValue(true);
+    return QJSValue(false);
+}
+QJSValue ApplicationInfo::searchFolded(const QJSValue& text) const {
+    const auto f = panelUsageEngine(this); const auto string = numberString(f, text), lowered = panelUsageMemberCall(f, string, "toLowerCase");
+    return panelUsageDeferredMemberCall(f, lowered, "replace", [&] { return QJSValueList{panelRegex(f, QStringLiteral("\\s+"), QV4::CompiledData::RegExp::RegExp_Global), QJSValue(QStringLiteral(""))}; });
+}
+void ApplicationInfo::searchPlacePopup(const QJSValue& opening) const {
+    const auto f = panelUsageEngine(this); const auto component = panelUsageContextRead(f, "control"), pending = panelUsageContextRead(f, "popupLayout"), popup = panelUsageRead(f, component, "popup");
+    const auto window = panelUsageRead(f, panelUsageRead(f, component, "Window"), "window"); const auto current = [&] { return searchCurrent(f, component, pending, popup, opening, window, true); };
+    if (!current()) return;
+    const auto left = panelUsageRead(f, panelUsageMemberCall(f, component, "mapToItem", {consentNull(), QJSValue(0), QJSValue(0)}), "x");
+    const auto horizontal = numberMath(f, "min", [&] {
+        const auto width = panelUsageRead(f, window, "width"), margin = numberMath(f, "max", [&] { return QJSValueList{QJSValue(0), panelUsageRead(f, popup, "rightMargin")}; });
+        const auto first = viewArithmetic(f, width, margin, 0), second = viewArithmetic(f, first, panelUsageRead(f, popup, "width"), 0); return QJSValueList{QJSValue(0), viewArithmetic(f, second, left, 0)};
+    }); assistantMemberWrite(f, popup, "x", horizontal); if (!current()) return;
+    const auto top = panelUsageRead(f, panelUsageMemberCall(f, component, "mapToItem", {consentNull(), QJSValue(0), QJSValue(0)}), "y");
+    const auto windowHeight = panelUsageRead(f, window, "height"), belowTop = viewArithmetic(f, windowHeight, top, 0);
+    const auto belowComponent = viewArithmetic(f, belowTop, panelUsageRead(f, component, "height"), 0), below = viewArithmetic(f, belowComponent, panelUsageRead(f, popup, "bottomMargin"), 0);
+    const auto above = viewArithmetic(f, top, panelUsageRead(f, popup, "topMargin"), 0); double entries = 0;
+    for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageRead(f, component, "count"), 0); ++index)
+        if (panelUsageTruth(panelUsageDeferredMemberCall(f, component, "matches", [&] { return QJSValueList{panelUsageMemberCall(f, component, "textAt", {QJSValue(index)})}; }))) ++entries;
+    const auto header = searchHeaderItem(f, popup); const auto style = panelUsageContextRead(f, "EaStyle"), pixels = panelUsageRead(f, panelUsageRead(f, style, "Sizes"), "comboBoxHeight");
+    const auto rows = viewArithmetic(f, QJSValue(entries), pixels, 1), headerHeight = panelUsageTruth(header) ? panelUsageRead(f, header, "height") : QJSValue(0);
+    const auto first = panelUsageAdd(f, rows, headerHeight), padded = panelUsageAdd(f, first, panelUsageRead(f, popup, "topPadding")); const auto wanted = panelUsageAdd(f, padded, panelUsageRead(f, popup, "bottomPadding"));
+    if (assistantRelation(f, below, wanted, 2) || assistantRelation(f, below, above, 2)) {
+        assistantMemberWrite(f, popup, "height", numberMath(f, "min", [&] { return QJSValueList{wanted, below}; })); if (!current()) return; assistantMemberWrite(f, popup, "y", panelUsageRead(f, component, "height"));
+    } else {
+        assistantMemberWrite(f, popup, "height", numberMath(f, "min", [&] { return QJSValueList{wanted, above}; })); if (!current()) return; assistantMemberWrite(f, popup, "y", numberNegate(f, panelUsageRead(f, popup, "height")));
+    }
+}
+QJSValue ApplicationInfo::searchMatches(const QJSValue& text) const {
+    const auto f = panelUsageEngine(this); if (panelUsageContextRead(f, "filter").strictlyEquals(QJSValue(QStringLiteral("")))) return QJSValue(true);
+    const auto folded = panelUsageMemberCall(f, panelUsageContextRead(f, "control"), "folded", {text});
+    return panelUsageDeferredMemberCall(f, folded, "includes", [&] { return QJSValueList{panelUsageContextRead(f, "filter")}; });
+}
+QJSValue ApplicationInfo::searchPickedIndex() const {
+    const auto f = panelUsageEngine(this); double first = -1;
+    for (double i = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(i), panelUsageContextRead(f, "count"), 0); ++i) {
+        const auto text = panelUsageGlobalCall(f, "textAt", {QJSValue(i)}), folded = panelUsageMemberCall(f, panelUsageContextRead(f, "control"), "folded", {text});
+        if (folded.strictlyEquals(panelUsageContextRead(f, "filter"))) return QJSValue(i);
+        if (first < 0 && panelUsageTruth(panelUsageGlobalCall(f, "matches", {text}))) first = i;
+    }
+    return QJSValue(first);
+}
+void ApplicationInfo::searchAccepted() const {
+    const auto f = panelUsageEngine(this); const auto index = projectInvoke(f, "control", "pickedIndex"); if (assistantRelation(f, index, QJSValue(0), 0)) return;
+    projectWrite(f, "control", "currentIndex", index); projectInvoke(f, "control", "activated", {index}); panelUsageMemberCall(f, assistantContextField(f, "control", "popup"), "close");
+}
+void ApplicationInfo::searchCompleted(const QJSValue& alignBinding, const QJSValue& modelBinding, const QJSValue& focusBinding) const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageTruth(assistantContextField(f, "control", "contentItemLabel"))) {
+        projectCall(f, alignBinding); if (panelUsageTruth(assistantContextField(f, "control", "inTable"))) assistantMemberWrite(f, assistantContextField(f, "control", "contentItemLabel"), "leftPadding", QJSValue(0));
+    }
+    const auto content = panelUsageRead(f, assistantContextField(f, "control", "popup"), "contentItem"); assistantMemberWrite(f, content, "header", panelUsageContextRead(f, "searchHeader")); projectCall(f, modelBinding);
+    const auto list = panelUsageRead(f, assistantContextField(f, "control", "popup"), "contentItem"); assistantMemberWrite(f, list, "headerPositioning", assistantContextField(f, "ListView", "OverlayHeader")); projectCall(f, focusBinding);
+}
+void ApplicationInfo::searchSchedule(const QJSValue& original) const {
+    const auto f = panelUsageEngine(this); const auto pending = panelUsageContextRead(f, "popupLayout"); if (!consentFieldEquals(f, pending, "opening", original)) return;
+    assistantMemberWrite(f, pending, "request", original);
+    if (consentQtObject(f, pending) && consentFieldEquals(f, pending, "opening", original) && consentFieldEquals(f, pending, "request", original)) panelUsageMemberCall(f, pending, "restart");
+}
+void ApplicationInfo::searchTriggered() const {
+    const auto f = panelUsageEngine(this); const auto pending = panelUsageContextRead(f, "popupLayout"), component = panelUsageContextRead(f, "control"), original = panelUsageContextRead(f, "request");
+    const auto popup = panelUsageTruth(original) ? panelUsageRead(f, original, "popup") : consentNull(); assistantMemberWrite(f, pending, "request", consentNull());
+    if (!searchRequestCurrent(f, component, pending, popup, original, true)) return; panelUsageMemberCall(f, component, "placePopup", {original});
+    if (!searchRequestCurrent(f, component, pending, popup, original, false)) return; panelUsageMemberCall(f, component, "positionPopup", {original});
+}
+void ApplicationInfo::searchAboutToShow() const {
+    const auto f = panelUsageEngine(this); const auto component = panelUsageContextRead(f, "control"), pending = panelUsageContextRead(f, "popupLayout"), popup = panelUsageRead(f, component, "popup");
+    const auto opening = chartRecord(f, {{"popup", popup}}); assistantMemberWrite(f, pending, "opening", opening);
+    if (!searchOpeningCurrent(f, component, pending, popup, opening)) return; const auto field = searchHeaderItem(f, popup); if (panelUsageTruth(field)) panelUsageMemberCall(f, field, "clear");
+    if (!searchOpeningCurrent(f, component, pending, popup, opening)) return; assistantMemberWrite(f, component, "searchText", QJSValue(QStringLiteral("")));
+    if (!searchOpeningCurrent(f, component, pending, popup, opening)) return; panelUsageMemberCall(f, component, "placePopup", {opening});
+    if (searchOpeningCurrent(f, component, pending, popup, opening)) panelUsageMemberCall(f, pending, "schedule", {opening});
+}
+void ApplicationInfo::searchAboutToHide() const {
+    const auto f = panelUsageEngine(this); const auto pending = panelUsageContextRead(f, "popupLayout"); assistantMemberWrite(f, pending, "opening", consentNull());
+    if (!consentQtObject(f, pending) || !panelUsageRead(f, pending, "opening").isNull()) return; assistantMemberWrite(f, pending, "request", consentNull());
+    if (consentQtObject(f, pending) && panelUsageRead(f, pending, "opening").isNull() && panelUsageRead(f, pending, "request").isNull()) panelUsageMemberCall(f, pending, "stop");
+}
+void ApplicationInfo::searchOpened() const {
+    const auto f = panelUsageEngine(this); const auto component = panelUsageContextRead(f, "control"), pending = panelUsageContextRead(f, "popupLayout"), popup = panelUsageRead(f, component, "popup"); const auto opening = panelUsageRead(f, pending, "opening");
+    if (!panelUsageTruth(opening) || !consentQtObject(f, popup) || !consentFieldEquals(f, opening, "popup", popup) || !panelUsageTruth(panelUsageRead(f, popup, "visible"))) return;
+    panelUsageMemberCall(f, component, "positionPopup", {opening}); if (!searchOpeningCurrent(f, component, pending, popup, opening)) return;
+    const auto field = searchHeaderItem(f, popup); if (panelUsageTruth(field) && panelUsageTruth(panelUsageRead(f, component, "searchable"))) panelUsageMemberCall(f, field, "focusField");
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {

@@ -595,6 +595,21 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void tableRowEditing() const;
     Q_INVOKABLE void tableRowActivated() const;
     Q_INVOKABLE void tableRowCompleted(const QJSValue& installOpacity) const;
+    /// Searchable popup filtering, geometry and existing opening/request lifecycle.
+    Q_INVOKABLE void searchPositionPopup(const QJSValue& opening) const;
+    Q_INVOKABLE QJSValue searchMeasuredWidth(bool optionsOnly) const;
+    Q_INVOKABLE QJSValue searchAnyMatch() const;
+    Q_INVOKABLE QJSValue searchFolded(const QJSValue& text) const;
+    Q_INVOKABLE void searchPlacePopup(const QJSValue& opening) const;
+    Q_INVOKABLE QJSValue searchMatches(const QJSValue& text) const;
+    Q_INVOKABLE QJSValue searchPickedIndex() const;
+    Q_INVOKABLE void searchAccepted() const;
+    Q_INVOKABLE void searchCompleted(const QJSValue& alignBinding, const QJSValue& modelBinding, const QJSValue& focusBinding) const;
+    Q_INVOKABLE void searchSchedule(const QJSValue& original) const;
+    Q_INVOKABLE void searchTriggered() const;
+    Q_INVOKABLE void searchAboutToShow() const;
+    Q_INVOKABLE void searchAboutToHide() const;
+    Q_INVOKABLE void searchOpened() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

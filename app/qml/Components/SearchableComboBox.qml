@@ -30,40 +30,11 @@ EaElements.ComboBox {
     property int horizontalAlignment: Text.AlignHCenter
     property int searchThreshold: 10
     // Filters start with their current selection; a fully visible list starts at its first option.
-    function positionPopup(opening) {
-        const component = control, pending = popupLayout, popup = component.popup;
-        const current = () => Qt.isQtObject(component) && Qt.isQtObject(pending) && Qt.isQtObject(popup)
-            && opening && pending.opening === opening && opening.popup === popup
-            && component.popup === popup && popup.visible;
-        if (!current()) return;
-        const list = popup.contentItem as ListView;
-        if (!list)
-            return;
-        list.forceLayout();
-        if (!current() || !Qt.isQtObject(list) || popup.contentItem !== list) return;
-        if (list.contentHeight <= list.height)
-            list.positionViewAtBeginning();
-        else
-            list.positionViewAtIndex(Math.max(0, component.currentIndex), ListView.Contain);
-    }
+    function positionPopup(opening) { ApplicationInfo.searchPositionPopup(opening); }
     // In a table, as wide as its widest option (or what it shows), a small gap and the arrow, the arrow right after
     // the text (the owner, 2026-10-27); a wider column keeps the space after it.
-    readonly property real fittedWidth: {
-        let widest = optionMetrics.advanceWidth(displayText);
-        for (let index = 0; index < count; ++index)
-            widest = Math.max(widest, optionMetrics.advanceWidth(textAt(index)));
-        // What the shown content draws besides its text: the label's padding, or an icon before the text.
-        const label = contentItemLabel ? contentItemLabel.leftPadding + contentItemLabel.rightPadding : 0;
-        const besides = contentItem ? contentItem.implicitWidth - optionMetrics.advanceWidth(displayText) : label;
-        // A small gap keeps the text off the arrow.
-        return Math.ceil(widest + Math.max(label, besides) + font.pixelSize * 0.5) + leftPadding + rightPadding;
-    }
-    readonly property real optionWidth: {
-        let widest = 0;
-        for (let index = 0; index < count; ++index)
-            widest = Math.max(widest, optionMetrics.advanceWidth(textAt(index)));
-        return Math.ceil(widest) + font.pixelSize * 3;
-    }
+    readonly property real fittedWidth: ApplicationInfo.searchMeasuredWidth(false)
+    readonly property real optionWidth: ApplicationInfo.searchMeasuredWidth(true)
     FontMetrics {
         id: optionMetrics
         font.family: control.listFontFamily
@@ -77,70 +48,19 @@ EaElements.ComboBox {
     property string searchText: ""
     readonly property string filter: searchable ? control.folded(searchText) : ""
     // Some entry matches the search (true while there is none).
-    readonly property bool anyMatch: {
-        if (filter === "")
-            return true;
-        for (let i = 0; i < count; ++i) {
-            if (matches(textAt(i)))
-                return true;
-        }
-        return false;
-    }
+    readonly property bool anyMatch: ApplicationInfo.searchAnyMatch()
 
     // The form a search compares: lower case, without spaces ("P 1 21/c 1" and "p121/c1" are one).
-    function folded(text) {
-        return String(text).toLowerCase().replace(/\s+/g, "");
-    }
+    function folded(text) { return ApplicationInfo.searchFolded(text); }
     // The list opens below the box, or above it where there is more room, never over it, so the box keeps
     // showing its value while one searches; it is as tall as its entries or the room allows, and keeps that
     // height while a search shortens it. A list wider than the box is moved left where it would pass the
     // window's right edge.
-    function placePopup(opening) {
-        const component = control, pending = popupLayout, popup = component.popup;
-        const window = component.Window.window;
-        const current = () => Qt.isQtObject(component) && Qt.isQtObject(pending) && Qt.isQtObject(popup) && Qt.isQtObject(window)
-            && opening && pending.opening === opening && opening.popup === popup
-            && component.popup === popup && popup.visible && component.Window.window === window;
-        if (!current())
-            return;
-        const left = component.mapToItem(null, 0, 0).x;
-        popup.x = Math.min(0, window.width - Math.max(0, popup.rightMargin) - popup.width - left);
-        if (!current()) return;
-        const top = component.mapToItem(null, 0, 0).y;
-        const below = window.height - top - component.height - popup.bottomMargin;
-        const above = top - popup.topMargin;
-        let entries = 0;
-        for (let index = 0; index < component.count; ++index)
-            if (component.matches(component.textAt(index)))
-                entries++;
-        const header = (popup.contentItem as ListView)?.headerItem;
-        const wanted = entries * EaStyle.Sizes.comboBoxHeight + (header ? header.height : 0) + popup.topPadding + popup.bottomPadding;
-        if (below >= wanted || below >= above) {
-            popup.height = Math.min(wanted, below);
-            if (!current()) return;
-            popup.y = component.height;
-        } else {
-            popup.height = Math.min(wanted, above);
-            if (!current()) return;
-            popup.y = -popup.height;
-        }
-    }
+    function placePopup(opening) { ApplicationInfo.searchPlacePopup(opening); }
     // Whether an entry's text matches the search.
-    function matches(text) {
-        return filter === "" || control.folded(text).includes(filter);
-    }
+    function matches(text) { return ApplicationInfo.searchMatches(text); }
     // The entry Enter picks: the one spelled as typed, else the first that matches; -1 when none does.
-    function pickedIndex() {
-        let first = -1;
-        for (let i = 0; i < count; ++i) {
-            const text = textAt(i);
-            if (control.folded(text) === filter)
-                return i;
-            if (first < 0 && matches(text))
-                first = i;
-        }
-        return first;
-    }
+    function pickedIndex() { return ApplicationInfo.searchPickedIndex(); }
 
     borderColor: inTable ? "transparent" : _borderColor()
     backgroundColor: inTable ? "transparent" : _backgroundColor()
@@ -206,98 +126,28 @@ EaElements.ComboBox {
                 // Red while the text matches no entry, until it does.
                 warned: !control.anyMatch
                 onTextChanged: control.searchText = text
-                onAccepted: {
-                    const index = control.pickedIndex();
-                    if (index < 0)
-                        return;
-                    control.currentIndex = index;
-                    control.activated(index);
-                    control.popup.close();
-                }
+                onAccepted: ApplicationInfo.searchAccepted()
             }
         }
     }
 
-    Component.onCompleted: {
-        if (control.contentItemLabel) {
-            control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
-            // In a table the shown value starts where its column's header does (the owner, 2026-10-24); the list keeps
-            // its own padding.
-            if (control.inTable)
-                control.contentItemLabel.leftPadding = 0;
-        }
-        control.popup.contentItem.header = searchHeader;
-        // The list holds its entries only while it shows: a closed one sized to the window kept a screenful of
-        // entries, and every change of the model's rows (a scan's Reset relabels all its datasets) laid them out again.
-        control.popup.contentItem.model = Qt.binding(() => control.popup.visible ? control.delegateModel : null);
-        // The field stays at the top while the list scrolls: a long list opens at its current entry.
-        control.popup.contentItem.headerPositioning = ListView.OverlayHeader;
-        // The field takes the keyboard while the list is open.
-        control.popup.focus = Qt.binding(() => control.searchable);
-    }
+    Component.onCompleted: ApplicationInfo.searchCompleted(
+        () => { control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft); },
+        () => { control.popup.contentItem.model = Qt.binding(() => control.popup.visible ? control.delegateModel : null); },
+        () => { control.popup.focus = Qt.binding(() => control.searchable); })
 
     Timer {
         id: popupLayout
         interval: 0
         property var opening: null
         property var request: null
-        function schedule(original) {
-            const pending = popupLayout;
-            if (pending.opening !== original) return;
-            pending.request = original;
-            if (Qt.isQtObject(pending) && pending.opening === original && pending.request === original) pending.restart();
-        }
-        onTriggered: {
-            const pending = popupLayout, component = control, original = request;
-            const popup = original ? original.popup : null;
-            pending.request = null;
-            if (!Qt.isQtObject(pending) || pending.request !== null || pending.opening !== original
-                || !original || !Qt.isQtObject(component) || !Qt.isQtObject(popup)
-                || component.popup !== popup || !popup.visible) return;
-            component.placePopup(original);
-            if (!Qt.isQtObject(pending) || pending.request !== null || pending.opening !== original
-                || !Qt.isQtObject(component) || !Qt.isQtObject(popup) || component.popup !== popup || !popup.visible) return;
-            component.positionPopup(original);
-        }
+        function schedule(original) { ApplicationInfo.searchSchedule(original); }
+        onTriggered: ApplicationInfo.searchTriggered()
     }
     Connections {
         target: control.popup
-        function onAboutToShow() {
-            const component = control, pending = popupLayout, popup = component.popup;
-            const opening = { popup: popup };
-            pending.opening = opening;
-            if (!Qt.isQtObject(component) || !Qt.isQtObject(pending) || !Qt.isQtObject(popup)
-                || pending.opening !== opening || component.popup !== popup || !popup.visible) return;
-            const field = (popup.contentItem as ListView)?.headerItem;
-            if (field)
-                field.clear();
-            if (!Qt.isQtObject(component) || !Qt.isQtObject(pending) || !Qt.isQtObject(popup)
-                || pending.opening !== opening || component.popup !== popup || !popup.visible) return;
-            component.searchText = "";
-            if (!Qt.isQtObject(component) || !Qt.isQtObject(pending) || !Qt.isQtObject(popup)
-                || pending.opening !== opening || component.popup !== popup || !popup.visible) return;
-            component.placePopup(opening);
-            if (Qt.isQtObject(component) && Qt.isQtObject(pending) && Qt.isQtObject(popup)
-                && pending.opening === opening && component.popup === popup && popup.visible)
-                pending.schedule(opening);
-        }
-        function onAboutToHide() {
-            const pending = popupLayout;
-            pending.opening = null;
-            if (!Qt.isQtObject(pending) || pending.opening !== null) return;
-            pending.request = null;
-            if (Qt.isQtObject(pending) && pending.opening === null && pending.request === null) pending.stop();
-        }
-        function onOpened() {
-            const component = control, pending = popupLayout, popup = component.popup;
-            const opening = pending.opening;
-            if (!opening || !Qt.isQtObject(popup) || opening.popup !== popup || !popup.visible) return;
-            component.positionPopup(opening);
-            if (!Qt.isQtObject(component) || !Qt.isQtObject(pending) || !Qt.isQtObject(popup)
-                || pending.opening !== opening || component.popup !== popup || !popup.visible) return;
-            const field = (popup.contentItem as ListView)?.headerItem;
-            if (field && component.searchable)
-                field.focusField();
-        }
+        function onAboutToShow() { ApplicationInfo.searchAboutToShow(); }
+        function onAboutToHide() { ApplicationInfo.searchAboutToHide(); }
+        function onOpened() { ApplicationInfo.searchOpened(); }
     }
 }
