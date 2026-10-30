@@ -57,6 +57,9 @@ class ApplicationInfo : public QObject {
     Q_PROPERTY(QString assistantUnavailableReason READ assistantUnavailableReason CONSTANT)
 
    public:
+    enum EditorKind { ParameterFieldEditor, ParameterCellEditor, TextCellEditor };
+    Q_ENUM(EditorKind)
+
     explicit ApplicationInfo(QObject* parent = nullptr);
 
     QString name() const { return QStringLiteral("EasyDiffraction"); }
@@ -208,6 +211,45 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE bool showProjectReport(const QJSValue& project) const;
     Q_INVOKABLE void restoreSessionProject(const QJSValue& thread, const QJSValue& location, const QJSValue& intent) const;
     Q_INVOKABLE void resetProjectAfterChanges() const;
+    /// Existing editor and scientific-form procedures; model writes retain their original backend/Undo owner.
+    Q_INVOKABLE void editorRefreshCleanText() const;
+    Q_INVOKABLE void editorRememberDraft(EditorKind kind) const;
+    Q_INVOKABLE void editorBeginAssistantEdit(EditorKind kind) const;
+    Q_INVOKABLE void editorAllowAssistantCommit(EditorKind kind) const;
+    Q_INVOKABLE void parameterEditorReset() const;
+    Q_INVOKABLE void editorCancelAssistantEdit(EditorKind kind) const;
+    Q_INVOKABLE void editorEscape(EditorKind kind, const QJSValue& event) const;
+    Q_INVOKABLE void editorCommit(EditorKind kind) const;
+    Q_INVOKABLE void parameterEditorFocusChanged(EditorKind kind) const;
+    Q_INVOKABLE void editorRetireOwner() const;
+    Q_INVOKABLE void editorDestroyed() const;
+    Q_INVOKABLE void parameterEditorItemChanged(EditorKind kind) const;
+    Q_INVOKABLE void editorValueChanged(EditorKind kind) const;
+    Q_INVOKABLE void parameterEditorFitToggled(const QJSValue& checked) const;
+    Q_INVOKABLE void editorTextChanged() const;
+    Q_INVOKABLE void editorCompositionChanged(EditorKind kind) const;
+    Q_INVOKABLE void parameterEditorCompleted() const;
+    Q_INVOKABLE QJSValue typedInputRefusal(const QString& text, const QString& accepts) const;
+    Q_INVOKABLE QJSValue parameterFreeRows(bool fittable) const;
+    Q_INVOKABLE QJSValue parameterFreeCount() const;
+    Q_INVOKABLE void applyParametersFree(const QJSValue& free) const;
+    Q_INVOKABLE void parameterMenuMembershipChanged() const;
+    Q_INVOKABLE void ensureParameterSelection() const;
+    Q_INVOKABLE void parameterSelectionChanged(bool projectChanged) const;
+    Q_INVOKABLE void updateParameterSliderLimits() const;
+    Q_INVOKABLE void parameterSliderPressed(bool destroying) const;
+    Q_INVOKABLE QJSValue parameterBound(const QJSValue& value) const;
+    Q_INVOKABLE QJSValue formShownValue(const QJSValue& uid, const QJSValue& value, bool omitNaN) const;
+    Q_INVOKABLE QJSValue measuredRangeIncrement(const QJSValue& summary) const;
+    Q_INVOKABLE QJSValue instrumentWavelengthBand(const QJSValue& low, const QJSValue& high) const;
+    Q_INVOKABLE void chooseExperimentType(const QJSValue& axis, const QJSValue& token) const;
+    Q_INVOKABLE void chooseBackgroundType(const QJSValue& token) const;
+    Q_INVOKABLE void applyGeneratedCategory(int row, const QString& name, const QString& value) const;
+    Q_INVOKABLE QJSValue parameterSegments(const QJSValue& entry, bool category) const;
+    Q_INVOKABLE QJSValue parameterDatablockColor(const QJSValue& kind, const QJSValue& name) const;
+    Q_INVOKABLE QJSValue derivedBackgroundValue(const QJSValue& value) const;
+    Q_INVOKABLE void parameterCellRefit() const;
+    Q_INVOKABLE QJSValue parameterCellScaledPixelSize() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

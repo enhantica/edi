@@ -22,9 +22,7 @@ DataTable {
     readonly property string positionItem: timeOfFlight ? "refln.time_of_flight" : "refln.two_theta"
 
     // A reflection's values, each in its item's display format.
-    function shown(uid, value) {
-        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
-    }
+    function shown(uid, value) { return ApplicationInfo.formShownValue(uid, value, true); }
 
     objectName: "reflections.list"
     defaultInfoText: qsTr("No reflections")

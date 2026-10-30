@@ -21,12 +21,7 @@ Column {
     readonly property bool singleCrystalTimeOfFlight: experiment !== null && experiment.sampleForm === ExperimentViewModel.SingleCrystal && experiment.beamMode === ExperimentViewModel.TimeOfFlight
     readonly property SingleCrystalReflectionModel reflections: experiment ? experiment.singleCrystalReflections : null
 
-    function band(low, high) {
-        if (isNaN(low) || isNaN(high))
-            return "";
-        const shown = value => Session.display("refln.wavelength", value);
-        return low === high ? shown(low) : `${shown(low)}–${shown(high)}`;
-    }
+    function band(low, high) { return ApplicationInfo.instrumentWavelengthBand(low, high); }
 
     spacing: AppSizes.groupContentSpacing
 

@@ -18,9 +18,7 @@ DataTable {
     property AnalysisViewModel analysis: null
 
     // A start value or error in its item's display format; the model keeps it whole.
-    function shown(uid, value) {
-        return value === undefined ? "" : Session.display(uid, value);
-    }
+    function shown(uid, value) { return ApplicationInfo.formShownValue(uid, value, false); }
 
     objectName: "fitStart.list"
     defaultInfoText: qsTr("No fit start state")

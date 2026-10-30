@@ -2935,7 +2935,9 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
     if (!panelUsageReady(frame)) return QV4::Encode::undefined();
     const QJSValue value = count ? QJSValuePrivate::fromReturnedValue(arguments[0].asReturnedValue()) : QJSValue();
     QJSValue result;
-    if (callback->d()->operation == 0) {
+    if (callback->d()->operation == 30) {
+        result = panelUsageRead(frame, value, "free");
+    } else if (callback->d()->operation == 0) {
         result = panelUsagePlanWord(frame, value);
     } else if (callback->d()->operation == 1) {
         const auto panel = panelUsageCapturedPanel(frame, callback->d()->panel);
@@ -2959,6 +2961,603 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         }
     }
     return QJSValuePrivate::convertToReturnedValue(frame.vm(), result);
+}
+
+namespace {
+struct EditorShape {
+    const char* id;
+    const char* translation;
+    bool parameter;
+    bool locked;
+};
+EditorShape editorShape(ApplicationInfo::EditorKind kind) {
+    if (kind == ApplicationInfo::ParameterFieldEditor) return {"field", "ParameterField", true, false};
+    if (kind == ApplicationInfo::ParameterCellEditor) return {"cell", "ParameterCell", true, true};
+    return {"cell", "TextCell", false, true};
+}
+QJSValue editorGet(const PanelUsageFrame& f, const char* name) { return panelUsageContextRead(f, name); }
+bool editorFlag(const PanelUsageFrame& f, const char* name) { return panelUsageTruth(editorGet(f, name)); }
+bool editorNull(const PanelUsageFrame& f, const char* name) { return editorGet(f, name).isNull(); }
+bool editorDraftIs(const PanelUsageFrame& f, const char* key, const QJSValue& expected) {
+    return consentFieldEquals(f, editorGet(f, "draft"), key, expected);
+}
+QJSValue editorText(const PanelUsageFrame& f, const EditorShape& shape, const char* text) {
+    if (!panelUsageReady(f)) return {};
+    if (auto* qml = qobject_cast<QQmlEngine*>(f.data())) qml->markCurrentFunctionAsTranslationBinding();
+    return QJSValue(QCoreApplication::translate(shape.translation, text));
+}
+bool editorLife(const PanelUsageFrame& f, const QJSValue& life) { return panelUsageTruth(panelUsageRead(f, life, "alive")); }
+bool editorOriginal(const PanelUsageFrame& f, const QJSValue& life, const QJSValue& original, const QJSValue& owner) {
+    return editorLife(f, life) && assistantSameName(f, original, "draft") && assistantSameName(f, owner, "ownerToken");
+}
+QJSValue editorRecord(const PanelUsageFrame& f, bool parameter, const QJSValue& owner, const char* kind) {
+    const auto literal = panelUsageLiteral(f);
+    panelUsageWrite(f, literal.value, "owner", owner);
+    if (parameter) panelUsageWrite(f, literal.value, "item", editorGet(f, "item"));
+    panelUsageWrite(f, literal.value, "kind", QJSValue(QString::fromLatin1(kind)));
+    return panelUsageComplete(f, literal);
+}
+// A JavaScript finally runs with the prior exception suspended, then restores
+// that exact value and trace unless the finally body throws its replacement.
+void editorFinally(const PanelUsageFrame& f, const std::function<void()>& body) {
+    if (!f) return;
+    QV4::Scope scope(f.vm());
+    const bool pending = f.vm()->hasException;
+    QV4::StackTrace trace;
+    QV4::ScopedValue exception(scope);
+    if (pending) exception = f.vm()->catchException(&trace);
+    body();
+    if (pending && !f.vm()->hasException) {
+        f.vm()->throwError(*exception);
+        f.vm()->exceptionStackTrace = std::move(trace);
+    }
+}
+struct EditorFinally {
+    const PanelUsageFrame& frame;
+    std::function<void()> release;
+    ~EditorFinally() { editorFinally(frame, release); }
+};
+} // namespace
+
+void ApplicationInfo::editorRefreshCleanText() const {
+    const auto f = panelUsageEngine(this);
+    if (!editorNull(f, "draft") || !editorNull(f, "commitInProgress") || editorFlag(f, "inputMethodComposing")
+        || editorFlag(f, "assistantEditing") || editorFlag(f, "assistantCommitReady") || !panelUsageReady(f)) return;
+    const auto value = editorGet(f, editorFlag(f, "activeFocus") ? "editText" : "value");
+    panelUsageContextWrite(f, "text", value);
+}
+void ApplicationInfo::editorRememberDraft(EditorKind kind) const {
+    const auto f = panelUsageEngine(this);
+    const auto shape = editorShape(kind);
+    if (editorFlag(f, "assistantEditing") && !editorNull(f, "draft")
+        && editorDraftIs(f, "kind", QJSValue(QStringLiteral("assistant")))) {
+        const auto owner = panelUsageRead(f, editorGet(f, "draft"), "owner");
+        if (assistantSameName(f, owner, "ownerToken")) return;
+    }
+    const auto life = editorGet(f, "editorLife");
+    const auto context = editorGet(f, "ownerToken");
+    const auto literal = panelUsageLiteral(f);
+    const auto owner = !editorNull(f, "draft") ? panelUsageRead(f, editorGet(f, "draft"), "owner") : editorGet(f, "ownerToken");
+    panelUsageWrite(f, literal.value, "owner", owner);
+    if (shape.parameter) {
+        const auto item = !editorNull(f, "draft") ? panelUsageRead(f, editorGet(f, "draft"), "item") : editorGet(f, "item");
+        panelUsageWrite(f, literal.value, "item", item);
+    }
+    panelUsageWrite(f, literal.value, "kind", QJSValue(QStringLiteral("manual")));
+    const auto original = panelUsageComplete(f, literal);
+    panelUsageContextWrite(f, "draft", original);
+    if (!editorOriginal(f, life, original, context)) return;
+    panelUsageContextWrite(f, "assistantCommitReady", QJSValue(false));
+    if (!editorOriginal(f, life, original, context)) return;
+    panelUsageContextWrite(f, "assistantEditing", QJSValue(false));
+}
+void ApplicationInfo::editorBeginAssistantEdit(EditorKind kind) const {
+    const auto f = panelUsageEngine(this);
+    if (!editorNull(f, "commitInProgress") || !editorNull(f, "draft") || editorFlag(f, "assistantManualDraft") || !panelUsageReady(f)) return;
+    const auto life = editorGet(f, "editorLife");
+    const auto owner = editorGet(f, "ownerToken");
+    const auto original = editorRecord(f, editorShape(kind).parameter, owner, "assistant");
+    panelUsageContextWrite(f, "draft", original);
+    const auto current = [&] { return editorLife(f, life) && assistantSameName(f, owner, "ownerToken") && assistantSameName(f, original, "draft"); };
+    if (!current()) return;
+    panelUsageContextWrite(f, "assistantEditing", QJSValue(true));
+    if (!current()) return;
+    panelUsageContextWrite(f, "assistantCommitReady", QJSValue(false));
+}
+void ApplicationInfo::editorAllowAssistantCommit(EditorKind kind) const {
+    const auto f = panelUsageEngine(this);
+    if (!editorNull(f, "commitInProgress") || editorFlag(f, "inputMethodComposing") || editorNull(f, "draft")
+        || !editorDraftIs(f, "kind", QJSValue(QStringLiteral("assistant")))) return;
+    const auto owner = panelUsageRead(f, editorGet(f, "draft"), "owner");
+    if (!assistantSameName(f, owner, "ownerToken")) return;
+    if (editorShape(kind).parameter) {
+        const auto item = panelUsageRead(f, editorGet(f, "draft"), "item");
+        if (!assistantSameName(f, item, "item")) return;
+    }
+    const auto life = editorGet(f, "editorLife");
+    const auto original = editorGet(f, "draft");
+    panelUsageContextWrite(f, "assistantCommitReady", QJSValue(true));
+    if (!editorLife(f, life) || !assistantSameName(f, original, "draft")) return;
+    const auto currentOwner = panelUsageRead(f, original, "owner");
+    if (!assistantSameName(f, currentOwner, "ownerToken")) return;
+    panelUsageContextWrite(f, "assistantEditing", QJSValue(false));
+}
+void ApplicationInfo::parameterEditorReset() const {
+    const auto f = panelUsageEngine(this);
+    if (!editorNull(f, "commitInProgress") || editorFlag(f, "inputMethodComposing") || !panelUsageReady(f)) return;
+    const auto life = editorGet(f, "editorLife");
+    const auto original = editorGet(f, "draft");
+    const auto context = editorGet(f, "ownerToken");
+    panelUsageContextWrite(f, "assistantCommitReady", QJSValue(false));
+    if (!editorOriginal(f, life, original, context)) return;
+    panelUsageContextWrite(f, "assistantEditing", QJSValue(false));
+    if (!editorOriginal(f, life, original, context)) return;
+    panelUsageContextWrite(f, "typedRefusal", QJSValue(QString{}));
+    if (!editorOriginal(f, life, original, context)) return;
+    panelUsageContextWrite(f, "draft", consentNull());
+}
+void ApplicationInfo::editorCancelAssistantEdit(EditorKind kind) const {
+    const auto f = panelUsageEngine(this);
+    const auto shape = editorShape(kind);
+    if (!shape.parameter && editorFlag(f, "inputMethodComposing")) return;
+    if (editorNull(f, "draft") || !editorDraftIs(f, "kind", QJSValue(QStringLiteral("assistant")))) return;
+    const auto owner = panelUsageRead(f, editorGet(f, "draft"), "owner");
+    if (!assistantSameName(f, owner, "ownerToken")) return;
+    if (shape.parameter) {
+        const auto item = panelUsageRead(f, editorGet(f, "draft"), "item");
+        if (assistantSameName(f, item, "item")) panelUsageGlobalCall(f, "resetEditorText", {});
+        return;
+    }
+    const auto life = editorGet(f, "editorLife");
+    const auto original = editorGet(f, "draft");
+    const auto current = [&] {
+        if (!editorLife(f, life) || !assistantSameName(f, original, "draft")) return false;
+        const auto actualOwner = panelUsageRead(f, original, "owner");
+        return assistantSameName(f, actualOwner, "ownerToken");
+    };
+    panelUsageContextWrite(f, "assistantCommitReady", QJSValue(false));
+    if (!current()) return;
+    panelUsageContextWrite(f, "assistantEditing", QJSValue(false));
+    if (!current()) return;
+    panelUsageContextWrite(f, "draft", consentNull());
+}
+void ApplicationInfo::editorEscape(EditorKind kind, const QJSValue& event) const {
+    const auto f = panelUsageEngine(this);
+    if (!editorNull(f, "commitInProgress") || editorFlag(f, "inputMethodComposing") || !panelUsageReady(f)) return;
+    if (editorShape(kind).parameter) {
+        assistantMemberWrite(f, event, "accepted", QJSValue(true));
+        panelUsageGlobalCall(f, "resetEditorText", {});
+        return;
+    }
+    const auto life = editorGet(f, "editorLife");
+    const auto original = editorGet(f, "draft");
+    const auto owner = editorGet(f, "ownerToken");
+    assistantMemberWrite(f, event, "accepted", QJSValue(true));
+    panelUsageContextWrite(f, "assistantCommitReady", QJSValue(false));
+    if (!editorOriginal(f, life, original, owner)) return;
+    panelUsageContextWrite(f, "assistantEditing", QJSValue(false));
+    if (!editorOriginal(f, life, original, owner)) return;
+    panelUsageContextWrite(f, "refusal", QJSValue(QString{}));
+    if (!editorOriginal(f, life, original, owner)) return;
+    panelUsageContextWrite(f, "draft", consentNull());
+}
+void ApplicationInfo::editorCommit(EditorKind kind) const {
+    const auto f = panelUsageEngine(this);
+    const auto shape = editorShape(kind);
+    if (!editorNull(f, "commitInProgress") || editorFlag(f, "inputMethodComposing")
+        || (shape.locked && editorFlag(f, "locked")) || !panelUsageReady(f)) return;
+    if (editorFlag(f, "assistantEditing")) { panelUsageGlobalCall(f, "cancelAssistantEdit", {}); return; }
+    if (editorNull(f, "draft") && !editorFlag(f, "assistantCommitReady")) return;
+    bool stale = editorNull(f, "draft");
+    if (!stale) {
+        const auto owner = panelUsageRead(f, editorGet(f, "draft"), "owner");
+        stale = !assistantSameName(f, owner, "ownerToken");
+    }
+    if (!stale && shape.parameter) {
+        const auto item = panelUsageRead(f, editorGet(f, "draft"), "item");
+        stale = !assistantSameName(f, item, "item") || editorNull(f, "item");
+    }
+    if (stale) {
+        const auto text = editorText(f, shape, shape.parameter
+            ? "This draft no longer belongs to the displayed parameter. Escape cancels it."
+            : "This draft belongs to a different row or project. Escape cancels it.");
+        panelUsageContextWrite(f, shape.parameter ? "typedRefusal" : "refusal", text);
+        return;
+    }
+    const auto life = editorGet(f, "editorLife");
+    const auto owner = editorGet(f, "ownerToken");
+    const auto project = editorGet(f, "editOwner");
+    const auto draft = editorGet(f, "draft");
+    const auto item = shape.parameter ? editorGet(f, "item") : QJSValue();
+    const auto text = editorGet(f, "text");
+    const auto accepts = !shape.parameter ? editorGet(f, "accepts") : QJSValue();
+    if (!panelUsageReady(f)) return;
+    const auto original = f->newObject();
+    const auto current = [&](bool clearing) {
+        if (!editorLife(f, life)) return false;
+        const auto component = editorGet(f, shape.id);
+        if (!consentFieldEquals(f, component, "ownerToken", owner)) return false;
+        const auto actual = editorGet(f, shape.id);
+        if (!consentFieldEquals(f, actual, "editOwner", project)) return false;
+        if (shape.parameter) {
+            const auto actualItem = editorGet(f, shape.id);
+            if (!consentFieldEquals(f, actualItem, "item", item)) return false;
+        }
+        const auto actualDraft = editorGet(f, shape.id);
+        if (!consentFieldEquals(f, actualDraft, "draft", clearing ? consentNull() : draft)) return false;
+        const auto actualCommit = editorGet(f, shape.id);
+        return consentFieldEquals(f, actualCommit, "commitInProgress", original);
+    };
+    panelUsageContextWrite(f, "commitInProgress", original);
+    if (!panelUsageReady(f)) return;
+    const EditorFinally release{f, [&] {
+        if (!editorLife(f, life)) return;
+        const auto component = editorGet(f, shape.id);
+        if (consentFieldEquals(f, component, "commitInProgress", original)) {
+            const auto actual = editorGet(f, shape.id);
+            assistantMemberWrite(f, actual, "commitInProgress", consentNull());
+        }
+    }};
+    if (!current(false)) return;
+    QJSValue message(QString{});
+    const auto shown = editorGet(f, shape.parameter ? "value" : "shown");
+    bool changed = !text.strictlyEquals(shown);
+    if (changed && shape.parameter) changed = !assistantSameName(f, text, "editText");
+    if (!panelUsageReady(f)) return;
+    if (changed) {
+        const auto typed = editorGet(f, "TypedInput");
+        message = panelUsageMemberCall(f, typed, "refusal", {text, shape.parameter ? QJSValue(QStringLiteral("number")) : accepts});
+        if (!current(false)) return;
+        if (message.strictlyEquals(QJSValue(QString{}))) {
+            if (shape.parameter) {
+                const auto number = panelUsageGlobalCall(f, "Number", {text});
+                assistantMemberWrite(f, item, "value", number);
+                if (!current(false)) return;
+                message = panelUsageRead(f, item, "lastError");
+            } else {
+                panelUsageGlobalCall(f, "committed", {text});
+                if (!current(false)) return;
+                message = panelUsageTruth(project) ? panelUsageRead(f, project, "lastError") : QJSValue(QString{});
+            }
+            if (!current(false)) return;
+        }
+    }
+    panelUsageContextWrite(f, "assistantCommitReady", QJSValue(false));
+    if (!current(false)) return;
+    panelUsageContextWrite(f, "assistantEditing", QJSValue(false));
+    if (!current(false)) return;
+    panelUsageContextWrite(f, "draft", consentNull());
+    if (!current(true)) return;
+    panelUsageContextWrite(f, shape.parameter ? "typedRefusal" : "refusal", message);
+}
+void ApplicationInfo::parameterEditorFocusChanged(EditorKind kind) const {
+    const auto f = panelUsageEngine(this);
+    if (editorFlag(f, "activeFocus")) { panelUsageGlobalCall(f, "refreshCleanText", {}); return; }
+    const auto life = editorGet(f, "editorLife");
+    const auto owner = editorGet(f, "ownerToken");
+    const auto project = editorGet(f, "editOwner");
+    const auto item = editorGet(f, "item");
+    panelUsageGlobalCall(f, "commit", {});
+    if (editorLife(f, life) && assistantSameName(f, owner, "ownerToken") && assistantSameName(f, project, "editOwner")
+        && assistantSameName(f, item, "item") && !editorFlag(f, "activeFocus") && editorNull(f, "draft")
+        && editorNull(f, "commitInProgress") && !editorFlag(f, "inputMethodComposing")) panelUsageContextWrite(f, "cursorPosition", QJSValue(0));
+    Q_UNUSED(kind);
+}
+void ApplicationInfo::editorRetireOwner() const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageReady(f)) panelUsageContextWrite(f, "ownerToken", f->newObject());
+}
+void ApplicationInfo::editorDestroyed() const {
+    const auto f = panelUsageEngine(this);
+    const auto life = editorGet(f, "editorLife");
+    assistantMemberWrite(f, life, "alive", QJSValue(false));
+}
+void ApplicationInfo::parameterEditorItemChanged(EditorKind kind) const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return;
+    panelUsageContextWrite(f, "ownerToken", f->newObject());
+    if (!editorNull(f, "draft")) panelUsageContextWrite(f, "typedRefusal", editorText(f, editorShape(kind), "This draft belongs to a different parameter. Escape cancels it."));
+    else panelUsageGlobalCall(f, "refreshCleanText", {});
+}
+void ApplicationInfo::editorValueChanged(EditorKind kind) const {
+    const auto f = panelUsageEngine(this);
+    if (editorNull(f, "draft") && editorNull(f, "commitInProgress") && !editorFlag(f, "inputMethodComposing"))
+        panelUsageContextWrite(f, editorShape(kind).parameter ? "typedRefusal" : "refusal", QJSValue(QString{}));
+}
+void ApplicationInfo::parameterEditorFitToggled(const QJSValue& checked) const {
+    const auto f = panelUsageEngine(this);
+    if (editorNull(f, "item")) return;
+    const auto item = editorGet(f, "item");
+    assistantMemberWrite(f, item, "free", checked);
+}
+void ApplicationInfo::editorTextChanged() const {
+    const auto f = panelUsageEngine(this);
+    if (!editorFlag(f, "activeFocus")) panelUsageContextWrite(f, "cursorPosition", QJSValue(0));
+}
+void ApplicationInfo::editorCompositionChanged(EditorKind) const {
+    const auto f = panelUsageEngine(this);
+    if (editorFlag(f, "inputMethodComposing")) panelUsageGlobalCall(f, "rememberManualDraft", {});
+}
+void ApplicationInfo::parameterEditorCompleted() const {
+    const auto f = panelUsageEngine(this);
+    const auto titles = panelUsageContextRead(f, "FieldTitles");
+    const auto field = panelUsageContextRead(f, "field");
+    panelUsageMemberCall(f, titles, "align", {field});
+    panelUsageContextWrite(f, "cursorPosition", QJSValue(0));
+}
+
+QJSValue ApplicationInfo::typedInputRefusal(const QString& text, const QString& accepts) const {
+    const auto f = panelUsageEngine(this);
+    if (accepts == QStringLiteral("text")) return QJSValue(QString{});
+    const auto trimmed = panelUsageMemberCall(f, QJSValue(text), "trim");
+    const auto number = trimmed.strictlyEquals(QJSValue(QString{})) ? QJSValue(qQNaN()) : panelUsageGlobalCall(f, "Number", {QJSValue(text)});
+    const auto finite = panelUsageGlobalCall(f, "isFinite", {number});
+    const auto translated = [&](const char* message) {
+        if (auto* qml = qobject_cast<QQmlEngine*>(f.data())) qml->markCurrentFunctionAsTranslationBinding();
+        const auto label = QJSValue(QCoreApplication::translate("TypedInput", message));
+        return panelUsageMemberCall(f, label, "arg", {QJSValue(text)});
+    };
+    if (!panelUsageReady(f)) return {};
+    if (!panelUsageTruth(finite)) return translated("'%1' is not a number");
+    if (accepts == QStringLiteral("integer")) {
+        const auto constructor = panelUsageContextRead(f, "Number");
+        if (!panelUsageTruth(panelUsageMemberCall(f, constructor, "isInteger", {number}))) return translated("'%1' is not a whole number");
+    }
+    return QJSValue(QString{});
+}
+QJSValue ApplicationInfo::parameterFreeRows(bool fittable) const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    const auto rows = f->newArray();
+    if (assistantContextField(f, "menu", "filter").isNull() || assistantContextField(f, "menu", "project").isNull()) return rows;
+    for (double index = 0; panelUsageReady(f); ++index) {
+        const auto filter = assistantContextField(f, "menu", "filter");
+        const auto count = panelUsageMemberCall(f, filter, "rowCount");
+        if (!assistantRelation(f, QJSValue(index), count, 0)) break;
+        const auto current = assistantContextField(f, "menu", "filter");
+        const auto parameter = panelUsageMemberCall(f, current, "parameterAt", {QJSValue(index)});
+        if (!parameter.isNull() && panelUsageTruth(panelUsageRead(f, parameter, fittable ? "fittable" : "free")))
+            panelUsageMemberCall(f, rows, "push", {parameter});
+    }
+    return rows;
+}
+QJSValue ApplicationInfo::parameterFreeCount() const {
+    const auto f = panelUsageEngine(this);
+    const auto shown = panelUsageContextRead(f, "shown");
+    const auto callback = panelUsageCallback(f, 30);
+    const auto rows = panelUsageMemberCall(f, shown, "filter", {callback});
+    return panelUsageRead(f, rows, "length");
+}
+void ApplicationInfo::applyParametersFree(const QJSValue& free) const {
+    const auto f = panelUsageEngine(this);
+    if (!assistantContextField(f, "menu", "project").isNull()) {
+        const auto project = assistantContextField(f, "menu", "project");
+        const auto rows = projectInvoke(f, "menu", panelUsageTruth(free) ? "fittableRows" : "freeRows");
+        panelUsageMemberCall(f, project, "setParametersFree", {rows, free});
+    }
+    projectInvoke(f, "menu", "close");
+}
+void ApplicationInfo::parameterMenuMembershipChanged() const {
+    const auto f = panelUsageEngine(this);
+    const auto current = assistantContextField(f, "menu", "membership");
+    const auto number = panelUsageNumber(f, current);
+    if (number) projectWrite(f, "menu", "membership", QJSValue(*number + 1));
+}
+void ApplicationInfo::ensureParameterSelection() const {
+    const auto f = panelUsageEngine(this);
+    bool replace = assistantContextField(f, "group", "selected").isNull();
+    if (!replace) {
+        const auto filter = panelUsageContextRead(f, "parameterFilter");
+        const auto selected = assistantContextField(f, "group", "selected");
+        replace = !panelUsageTruth(panelUsageMemberCall(f, filter, "shows", {selected}));
+    }
+    if (replace) {
+        const auto group = panelUsageContextRead(f, "group");
+        const auto parameter = projectInvoke(f, "parameterFilter", "parameterAt", {QJSValue(0)});
+        assistantMemberWrite(f, group, "selected", parameter);
+    }
+    const auto group = panelUsageContextRead(f, "group");
+    const auto filter = panelUsageContextRead(f, "parameterFilter");
+    const auto selected = assistantContextField(f, "group", "selected");
+    const auto row = panelUsageMemberCall(f, filter, "rowOf", {selected});
+    assistantMemberWrite(f, group, "selectedRow", row);
+}
+void ApplicationInfo::parameterSelectionChanged(bool projectChanged) const {
+    const auto f = panelUsageEngine(this);
+    if (projectChanged) {
+        projectWrite(f, "group", "selected", consentNull());
+        projectInvoke(f, "group", "ensureSelection");
+    } else {
+        const auto filter = panelUsageContextRead(f, "parameterFilter");
+        const auto selected = panelUsageContextRead(f, "selected");
+        panelUsageContextWrite(f, "selectedRow", panelUsageMemberCall(f, filter, "rowOf", {selected}));
+    }
+}
+void ApplicationInfo::updateParameterSliderLimits() const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageTruth(panelUsageContextRead(f, "selected"))) {
+        panelUsageContextWrite(f, "lower", QJSValue(0));
+        panelUsageContextWrite(f, "upper", QJSValue(1));
+        return;
+    }
+    const auto selected = panelUsageContextRead(f, "selected");
+    const auto span = panelUsageMemberCall(f, selected, "sliderHalfWidth");
+    const auto value = assistantContextField(f, "selected", "value");
+    const auto a = panelUsageNumber(f, value), b = panelUsageNumber(f, span);
+    if (!a || !b) return;
+    panelUsageContextWrite(f, "lower", QJSValue(*a - *b));
+    const auto actual = assistantContextField(f, "selected", "value");
+    panelUsageContextWrite(f, "upper", panelUsageAdd(f, actual, span));
+}
+void ApplicationInfo::parameterSliderPressed(bool destroying) const {
+    const auto f = panelUsageEngine(this);
+    if (destroying) {
+        if (panelUsageTruth(panelUsageContextRead(f, "pressed")) && panelUsageTruth(assistantContextField(f, "group", "project"))) {
+            const auto project = assistantContextField(f, "group", "project");
+            assistantMemberWrite(f, project, "adjusting", QJSValue(false));
+        }
+        return;
+    }
+    if (panelUsageTruth(assistantContextField(f, "group", "project"))) {
+        const auto project = assistantContextField(f, "group", "project");
+        const auto pressed = panelUsageContextRead(f, "pressed");
+        assistantMemberWrite(f, project, "adjusting", pressed);
+    }
+    if (!panelUsageTruth(panelUsageContextRead(f, "pressed"))) projectInvoke(f, "sliderRow", "updateLimits");
+}
+QJSValue ApplicationInfo::parameterBound(const QJSValue& value) const {
+    const auto f = panelUsageEngine(this);
+    if (value.strictlyEquals(QJSValue(qInf()))) return QJSValue(QStringLiteral("inf"));
+    if (value.strictlyEquals(QJSValue(-qInf()))) return QJSValue(QStringLiteral("-inf"));
+    return panelUsageGlobalCall(f, "String", {value});
+}
+QJSValue ApplicationInfo::formShownValue(const QJSValue& uid, const QJSValue& value, bool omitNaN) const {
+    const auto f = panelUsageEngine(this);
+    if (value.isUndefined()) return QJSValue(QString{});
+    if (omitNaN && panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {value}))) return QJSValue(QString{});
+    return projectInvoke(f, "Session", "display", {uid, value});
+}
+QJSValue ApplicationInfo::measuredRangeIncrement(const QJSValue& summary) const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageTruth(summary)) return QJSValue(QString{});
+    auto item = assistantContextField(f, "group", "rangeItem");
+    auto key = panelUsageAdd(f, item, QJSValue(QStringLiteral("_step")));
+    auto value = panelUsageRead(f, summary, "stepMinimum");
+    const auto smallest = projectInvoke(f, "Session", "display", {key, value});
+    item = assistantContextField(f, "group", "rangeItem");
+    key = panelUsageAdd(f, item, QJSValue(QStringLiteral("_step")));
+    value = panelUsageRead(f, summary, "stepMaximum");
+    const auto largest = projectInvoke(f, "Session", "display", {key, value});
+    if (smallest.strictlyEquals(largest)) return panelUsageRead(f, summary, "step");
+    return panelUsageAdd(f, panelUsageAdd(f, smallest, QJSValue(QStringLiteral("–"))), largest);
+}
+QJSValue ApplicationInfo::instrumentWavelengthBand(const QJSValue& low, const QJSValue& high) const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {low})) || panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {high}))) return QJSValue(QString{});
+    const auto first = projectInvoke(f, "Session", "display", {QJSValue(QStringLiteral("refln.wavelength")), low});
+    if (low.strictlyEquals(high)) return first;
+    const auto last = projectInvoke(f, "Session", "display", {QJSValue(QStringLiteral("refln.wavelength")), high});
+    return panelUsageAdd(f, panelUsageAdd(f, first, QJSValue(QStringLiteral("–"))), last);
+}
+void ApplicationInfo::chooseExperimentType(const QJSValue& axis, const QJSValue& token) const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageTruth(assistantContextField(f, "row", "project"))) return;
+    const auto project = assistantContextField(f, "row", "project");
+    const auto index = assistantContextField(f, "row", "experimentIndex");
+    panelUsageMemberCall(f, project, "setExperimentType", {index, axis, token});
+}
+void ApplicationInfo::chooseBackgroundType(const QJSValue& token) const {
+    const auto f = panelUsageEngine(this);
+    const bool line = assistantContextField(f, "experiment", "backgroundType").strictlyEquals(QJSValue(QStringLiteral("line-segment")));
+    const char* name = line ? "points" : "terms";
+    const auto rows = panelUsageTruth(panelUsageContextRead(f, name)) ? assistantContextField(f, name, "count") : QJSValue(0);
+    if (rows.strictlyEquals(QJSValue(0))) {
+        projectWrite(f, "experiment", "backgroundType", token);
+        return;
+    }
+    projectWrite(f, "typeQuestion", "token", token);
+    projectWrite(f, "typeQuestion", "rows", rows);
+    projectInvoke(f, "typeQuestion", "open");
+}
+void ApplicationInfo::applyGeneratedCategory(int row, const QString& name, const QString& value) const {
+    const auto f = panelUsageEngine(this);
+    const auto group = panelUsageContextRead(f, "group");
+    QJSValue refusal(QString{});
+    if (panelUsageTruth(assistantContextField(f, "Session", "project"))) {
+        const auto project = assistantContextField(f, "Session", "project");
+        const auto source = assistantContextField(f, "group", "source");
+        const auto file = panelUsageRead(f, source, "file");
+        const auto edited = projectInvoke(f, "data", "editedText", {QJSValue(row), QJSValue(name), QJSValue(value)});
+        refusal = panelUsageMemberCall(f, project, "applyText", {file, edited});
+    }
+    assistantMemberWrite(f, group, "refusal", refusal);
+}
+QJSValue ApplicationInfo::parameterSegments(const QJSValue& entry, bool category) const {
+    const auto f = panelUsageEngine(this);
+    if (!panelUsageReady(f)) return {};
+    if (!panelUsageTruth(entry)) return f->newArray();
+    const auto title = panelUsageLiteral(f);
+    panelUsageWrite(f, title.value, "text", panelUsageRead(f, entry, "title"));
+    if (category) panelUsageWrite(f, title.value, "bold", panelUsageRead(f, entry, "datablock"));
+    panelUsageWrite(f, title.value, "elides", QJSValue(true));
+    const auto text = panelUsageComplete(f, title);
+    const auto icon = panelUsageRead(f, entry, "icon");
+    if (icon.strictlyEquals(QJSValue(QString{}))) return assistantGeometryArray(f, {text});
+    const auto segment = panelUsageLiteral(f);
+    panelUsageWrite(f, segment.value, "icon", panelUsageRead(f, entry, "icon"));
+    QJSValue color;
+    if (category) {
+        const auto colors = assistantContextField(f, "EaStyle", "Colors");
+        color = panelUsageRead(f, colors, "themeForegroundMinor");
+    } else {
+        const auto group = panelUsageContextRead(f, "group");
+        const auto kind = panelUsageRead(f, entry, "blockKind");
+        const auto name = panelUsageRead(f, entry, "blockName");
+        color = panelUsageMemberCall(f, group, "datablockColor", {kind, name});
+    }
+    panelUsageWrite(f, segment.value, "color", color);
+    return assistantGeometryArray(f, {panelUsageComplete(f, segment), text});
+}
+QJSValue ApplicationInfo::parameterDatablockColor(const QJSValue& kind, const QJSValue& name) const {
+    const auto f = panelUsageEngine(this);
+    QJSValue blocks = consentNull();
+    if (panelUsageTruth(assistantContextField(f, "group", "project"))) {
+        const auto project = assistantContextField(f, "group", "project");
+        blocks = panelUsageRead(f, project, kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? "structures" : "experiments");
+    }
+    double place = 0;
+    for (double row = 0; panelUsageReady(f) && panelUsageTruth(blocks); ++row) {
+        if (!assistantRelation(f, QJSValue(row), panelUsageRead(f, blocks, "count"), 0)) break;
+        const auto actual = panelUsageMemberCall(f, blocks, "text", {QJSValue(row), QJSValue(QStringLiteral("name"))});
+        if (actual.strictlyEquals(name)) { place = row; break; }
+    }
+    const auto colors = panelUsageContextRead(f, "AppColors");
+    return panelUsageMemberCall(f, colors, kind.strictlyEquals(QJSValue(QStringLiteral("structure"))) ? "structure" : "experiment", {QJSValue(place)});
+}
+QJSValue ApplicationInfo::derivedBackgroundValue(const QJSValue& value) const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageTruth(panelUsageGlobalCall(f, "isNaN", {value})) || assistantRelation(f, value, QJSValue(0), 3)) return QJSValue(QString{});
+    const auto math = panelUsageContextRead(f, "Math");
+    const auto rounded = panelUsageMemberCall(f, math, "round", {value});
+    return panelUsageGlobalCall(f, "String", {rounded});
+}
+void ApplicationInfo::parameterCellRefit() const {
+    const auto f = panelUsageEngine(this);
+    const auto math = panelUsageContextRead(f, "Math");
+    const auto width = panelUsageNumber(f, panelUsageContextRead(f, "width"));
+    const auto implicit = panelUsageNumber(f, panelUsageContextRead(f, "implicitWidth"));
+    if (!width || !implicit) return;
+    const auto absolute = panelUsageMemberCall(f, math, "abs", {QJSValue(*width - *implicit)});
+    const auto sized = assistantRelation(f, absolute, QJSValue(0.5), 2);
+    bool full = panelUsageTruth(panelUsageContextRead(f, "fitDigits")) || !sized;
+    if (!full) full = panelUsageContextRead(f, "item").isNull();
+    QJSValue shown;
+    if (full) shown = panelUsageContextRead(f, "valueText");
+    else {
+        const auto formatter = panelUsageContextRead(f, "NumberText");
+        QJSValueList args;
+        for (const char* name : {"valueText", "room", "shownMetrics", "narrowText"}) args.append(panelUsageContextRead(f, name));
+        shown = panelUsageMemberCall(f, formatter, "fitted", args);
+    }
+    panelUsageContextWrite(f, "shownValue", shown);
+}
+QJSValue ApplicationInfo::parameterCellScaledPixelSize() const {
+    const auto f = panelUsageEngine(this);
+    const auto sizes = assistantContextField(f, "EaStyle", "Sizes");
+    const auto full = panelUsageRead(f, sizes, "fontPixelSize");
+    if (!panelUsageTruth(panelUsageContextRead(f, "fitDigits")) || assistantRelation(f, panelUsageContextRead(f, "room"), QJSValue(0), 3)) return full;
+    const auto metrics = panelUsageContextRead(f, "fullMetrics");
+    const auto text = panelUsageContextRead(f, "fullText");
+    const auto needed = panelUsageMemberCall(f, metrics, "advanceWidth", {text});
+    if (!assistantRelation(f, needed, panelUsageContextRead(f, "room"), 1)) return full;
+    const auto math = panelUsageContextRead(f, "Math");
+    const auto floorMath = panelUsageContextRead(f, "Math");
+    const auto a = panelUsageNumber(f, full);
+    const auto b = panelUsageNumber(f, panelUsageContextRead(f, "room"));
+    const auto c = panelUsageNumber(f, needed);
+    if (!a || !b || !c) return {};
+    const auto rounded = panelUsageMemberCall(f, floorMath, "floor", {QJSValue(*a * *b / *c)});
+    return panelUsageMemberCall(f, math, "max", {QJSValue(1), rounded});
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {

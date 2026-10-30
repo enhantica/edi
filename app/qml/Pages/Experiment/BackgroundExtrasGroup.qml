@@ -32,9 +32,7 @@ Column {
 
     // A blank field stays empty, so nothing it shows is ever saved as a setting; the value the estimate derives is
     // its placeholder, a whole number as the estimate's summary writes the width.
-    function derived(value: real): string {
-        return isNaN(value) || value <= 0 ? "" : String(Math.round(value));
-    }
+    function derived(value: real): string { return ApplicationInfo.derivedBackgroundValue(value); }
 
     spacing: AppSizes.groupContentSpacing
 
