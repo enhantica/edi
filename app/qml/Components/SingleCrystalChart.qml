@@ -135,14 +135,7 @@ Item {
     readonly property real yLow: zoom.length === 4 ? zoom[2] : fullLow
     readonly property real yHigh: zoom.length === 4 ? zoom[3] : fullHigh
 
-    function niceStep(span, count) {
-        if (!(span > 0))
-            return 1;
-        const raw = span / count;
-        const power = Math.pow(10, Math.floor(Math.log10(raw)));
-        const scaled = raw / power;
-        return (scaled < 1.5 ? 1 : scaled < 3.5 ? 2 : scaled < 7.5 ? 5 : 10) * power;
-    }
+    function niceStep(span, count) { return ApplicationInfo.chartNiceStep(span, count); }
 
     // The points the fit uses (`want` true) or leaves out (false) of three parallel lists, by the model's `used`;
     // a report's points are all used.
@@ -472,19 +465,7 @@ Item {
         height: view.plotArea.height
         clip: true
 
-        function ticks(axis: ValueAxis): list<real> {
-            const out = [];
-            const span = axis.max - axis.min;
-            if (!(axis.tickInterval > 0) || !(span > 0))
-                return out;
-            for (let i = Math.ceil(axis.min / axis.tickInterval - 1e-9); out.length < 64; ++i) {
-                const share = (i * axis.tickInterval - axis.min) / span;
-                if (share > 1 + 1e-9)
-                    break;
-                out.push(share);
-            }
-            return out;
-        }
+        function ticks(axis: ValueAxis): list<real> { return ApplicationInfo.chartGridShares(axis); }
 
         Repeater {
             model: plot.ticks(axisX)
@@ -609,12 +590,8 @@ Item {
             property real lastY: 0
             readonly property bool zooming: pressed && (pressedButtons & Qt.LeftButton) && Preferences.patternPointerMode === "zoom"
 
-            function xAt(px: real): real {
-                return axisX.min + px / width * (axisX.max - axisX.min);
-            }
-            function yAt(py: real): real {
-                return axisY.max - py / height * (axisY.max - axisY.min);
-            }
+            function xAt(px: real): real { return ApplicationInfo.chartCoordinate(px, false); }
+            function yAt(py: real): real { return ApplicationInfo.chartCoordinate(py, true); }
 
             objectName: "singleCrystal.pointer"
             anchors.fill: parent

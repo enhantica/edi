@@ -818,6 +818,7 @@ struct PanelUsageFrame {
     QV4::ExecutionEngine* vm() const { return pointer ? QJSEnginePrivate::get(pointer.data())->v4Engine.get() : nullptr; }
     void checked() const { if (pointer && vm()->isInterrupted.loadRelaxed()) interrupted = true; }
 };
+QJSValue evolutionProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue patternProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue sceneProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&);
 QJSValue reportProcedureCallback(const PanelUsageFrame&, uint, const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>&, const std::function<void(uint, const QJSValue&)>&);
@@ -2597,7 +2598,9 @@ QV4::ReturnedValue QV4::ApplicationProjectCallback::virtualCall(const FunctionOb
     const auto argument = [&](uint index) {
         return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
     };
-    const auto result = callback->d()->operation >= 240
+    const auto result = callback->d()->operation >= 260
+        ? evolutionProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
+        : callback->d()->operation >= 240
         ? patternProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
         : callback->d()->operation >= 220
         ? sceneProcedureCallback(frame, callback->d()->operation, [](uint) { return QJSValue(); }, argument)
@@ -2980,7 +2983,8 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         const auto updateCapture = [&](uint index, const QJSValue& value) {
             if (panelUsageReady(frame)) captures->set(frame.vm(), index, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), value)));
         };
-        result = callback->d()->operation >= 240 ? patternProcedureCallback(frame, callback->d()->operation, retained, argument)
+        result = callback->d()->operation >= 260 ? evolutionProcedureCallback(frame, callback->d()->operation, retained, argument)
+            : callback->d()->operation >= 240 ? patternProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 220 ? sceneProcedureCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 200 ? reportProcedureCallback(frame, callback->d()->operation, retained, argument, updateCapture)
             : callback->d()->operation >= 180 ? numberProcedureCallback(frame, callback->d()->operation, retained, argument)
@@ -7519,6 +7523,179 @@ void ApplicationInfo::renewPatternChart() const {
     const auto made = projectInvoke(f, "chartComponent", "createObject", {panelUsageContextRead(f, "holder")});
     assistantMemberWrite(f, holder, "chart", chartAs(f, made, "PatternChart"));
     if (panelUsageTruth(old)) { assistantMemberWrite(f, old, "visible", QJSValue(false)); panelUsageMemberCall(f, old, "destroy"); }
+}
+
+namespace {
+QJSValue evolutionProcedureCallback(const PanelUsageFrame& f, uint operation,
+    const std::function<QJSValue(uint)>&, const std::function<QJSValue(uint)>& arg) {
+    const auto value = arg(0);
+    if (operation == 260) return QJSValue(panelUsageRead(f, value, "key").strictlyEquals(QJSValue(QStringLiteral("meas.0"))));
+    if (operation == 261) {
+        if (!assistantRelation(f, panelUsageRead(f, value, "length"), QJSValue(0), 1)) return value;
+        const auto first = panelUsageMemberCall(f, value, "charAt", {QJSValue(0)});
+        const auto upper = panelUsageMemberCall(f, first, "toUpperCase");
+        return panelUsageAdd(f, upper, panelUsageMemberCall(f, value, "slice", {QJSValue(1)}));
+    }
+    if (operation == 262) {
+        const auto text = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("EvolutionChart", "x: %1")))});
+        return panelUsageMemberCall(f, text, "arg", {value});
+    }
+    if (operation == 263 || operation == 264) return panelUsageRead(f, value, operation == 263 ? "x" : "y");
+    if (numberType(f, panelUsageRead(f, value, "su"))) return panelUsageRead(f, value, "su");
+    return panelUsageContextRead(f, "NaN");
+}
+QJSValue chartSpan(const PanelUsageFrame& f, const char* axis) {
+    const auto high = assistantContextField(f, axis, "max"), low = assistantContextField(f, axis, "min");
+    return viewArithmetic(f, high, low, 0);
+}
+QJSValue chartCoordinateValue(const PanelUsageFrame& f, const std::function<QJSValue()>& position, bool vertical) {
+    const char* axis = vertical ? "axisY" : "axisX";
+    const auto start = assistantContextField(f, axis, vertical ? "max" : "min"), point = position();
+    const auto fraction = viewArithmetic(f, point, panelUsageContextRead(f, vertical ? "height" : "width"), 2);
+    const auto scaled = viewArithmetic(f, fraction, chartSpan(f, axis), 1);
+    return vertical ? viewArithmetic(f, start, scaled, 0) : panelUsageAdd(f, start, scaled);
+}
+bool evolutionMovedIn(const PanelUsageFrame& f, const QJSValue& mouse, const char* coordinate, const char* pressed) {
+    const auto distance = numberMath(f, "abs", [&] {
+        const auto point = panelUsageRead(f, mouse, coordinate), before = panelUsageContextRead(f, pressed);
+        return QJSValueList{viewArithmetic(f, point, before, 0)};
+    });
+    const auto limit = viewArithmetic(f, assistantContextField(f, "chart", "em"), QJSValue(0.3), 1);
+    return assistantRelation(f, distance, limit, 1);
+}
+QJSValue evolutionWheelEnd(const PanelUsageFrame& f, const QJSValue& anchor, const QJSValue& factor, bool right) {
+    const auto end = assistantContextField(f, "axisX", right ? "max" : "min");
+    const auto difference = right ? viewArithmetic(f, end, anchor, 0) : viewArithmetic(f, anchor, end, 0);
+    const auto scaled = viewArithmetic(f, difference, factor, 1);
+    return right ? panelUsageAdd(f, anchor, scaled) : viewArithmetic(f, anchor, scaled, 0);
+}
+} // namespace
+
+QJSValue ApplicationInfo::chartNiceStep(const QJSValue& span, const QJSValue& count) const {
+    const auto f = panelUsageEngine(this); if (!assistantRelation(f, span, QJSValue(0), 1)) return QJSValue(1);
+    const auto raw = viewArithmetic(f, span, count, 2);
+    const auto power = numberPower(f, [&] {
+        return numberMath(f, "floor", [&] { return QJSValueList{numberMath(f, "log10", [&] { return QJSValueList{raw}; })}; });
+    });
+    const auto scaled = viewArithmetic(f, raw, power, 2);
+    const QJSValue step(assistantRelation(f, scaled, QJSValue(1.5), 0) ? 1 : assistantRelation(f, scaled, QJSValue(3.5), 0) ? 2 : assistantRelation(f, scaled, QJSValue(7.5), 0) ? 5 : 10);
+    return viewArithmetic(f, step, power, 1);
+}
+QJSValue ApplicationInfo::chartGridShares(const QJSValue& axis) const {
+    const auto f = panelUsageEngine(this); const auto out = controlEmptyArray(f);
+    const auto high = panelUsageRead(f, axis, "max"), low = panelUsageRead(f, axis, "min"); const auto span = viewArithmetic(f, high, low, 0);
+    if (!assistantRelation(f, panelUsageRead(f, axis, "tickInterval"), QJSValue(0), 1) || !assistantRelation(f, span, QJSValue(0), 1)) return out;
+    auto index = numberMath(f, "ceil", [&] {
+        const auto lower = panelUsageRead(f, axis, "min"), interval = panelUsageRead(f, axis, "tickInterval");
+        return QJSValueList{viewArithmetic(f, viewArithmetic(f, lower, interval, 2), QJSValue(1e-9), 0)};
+    });
+    while (panelUsageReady(f) && assistantRelation(f, panelUsageRead(f, out, "length"), QJSValue(64), 0)) {
+        const auto point = viewArithmetic(f, index, panelUsageRead(f, axis, "tickInterval"), 1);
+        const auto share = viewArithmetic(f, viewArithmetic(f, point, panelUsageRead(f, axis, "min"), 0), span, 2);
+        if (assistantRelation(f, share, QJSValue(1 + 1e-9), 1)) break;
+        panelUsageMemberCall(f, out, "push", {share}); const auto current = panelUsageNumber(f, index); if (!current) return {};
+        index = QJSValue(*current + 1);
+    }
+    return out;
+}
+QJSValue ApplicationInfo::chartCoordinate(const QJSValue& position, bool vertical) const {
+    const auto f = panelUsageEngine(this); return chartCoordinateValue(f, [&] { return position; }, vertical);
+}
+QJSValue ApplicationInfo::evolutionMeasuredStyle() const {
+    const auto f = panelUsageEngine(this); const auto original = panelUsageContextRead(f, "reportStyles");
+    const auto styles = original.isNull() || original.isUndefined() ? controlEmptyArray(f) : original;
+    return tableNullish(panelUsageMemberCall(f, styles, "find", {projectGuardedClosure(f, 260, 1)}), consentNull());
+}
+QJSValue ApplicationInfo::evolutionReportRange() const {
+    const auto f = panelUsageEngine(this);
+    if (panelUsageRead(f, panelUsageContextRead(f, "reportPoints"), "length").strictlyEquals(QJSValue(0))) return assistantGeometryArray(f, {QJSValue(0), QJSValue(1), QJSValue(0), QJSValue(1)});
+    auto xMin = panelUsageContextRead(f, "Infinity"), xMax = numberNegate(f, panelUsageContextRead(f, "Infinity"));
+    auto yMin = panelUsageContextRead(f, "Infinity"), yMax = numberNegate(f, panelUsageContextRead(f, "Infinity"));
+    panelUsageEach(f, panelUsageContextRead(f, "reportPoints"), [&](const QJSValue& point) {
+        QJSValue su(0);
+        if (numberType(f, panelUsageRead(f, point, "su")) && numberFinite(f, panelUsageRead(f, point, "su"))) su = panelUsageRead(f, point, "su");
+        xMin = numberMath(f, "min", [&] { return QJSValueList{xMin, panelUsageRead(f, point, "x")}; });
+        xMax = numberMath(f, "max", [&] { return QJSValueList{xMax, panelUsageRead(f, point, "x")}; });
+        yMin = numberMath(f, "min", [&] { return QJSValueList{yMin, viewArithmetic(f, panelUsageRead(f, point, "y"), su, 0)}; });
+        yMax = numberMath(f, "max", [&] { return QJSValueList{yMax, panelUsageAdd(f, panelUsageRead(f, point, "y"), su)}; });
+        return panelUsageReady(f);
+    });
+    const auto xPad = numberMath(f, "max", [&] { return QJSValueList{viewArithmetic(f, viewArithmetic(f, xMax, xMin, 0), QJSValue(0.06), 1), QJSValue(0.5)}; });
+    const auto yPad = numberMath(f, "max", [&] {
+        const auto first = viewArithmetic(f, viewArithmetic(f, yMax, yMin, 0), QJSValue(0.16), 1);
+        const auto second = panelUsageAdd(f, viewArithmetic(f, numberAbs(f, yMax), QJSValue(1e-6), 1), QJSValue(1e-12));
+        return QJSValueList{first, second};
+    });
+    return assistantGeometryArray(f, {viewArithmetic(f, xMin, xPad, 0), panelUsageAdd(f, xMax, xPad), viewArithmetic(f, yMin, yPad, 0), panelUsageAdd(f, yMax, yPad)});
+}
+QJSValue ApplicationInfo::evolutionXEntries(bool closed) const {
+    const auto f = panelUsageEngine(this);
+    if (closed) return panelUsageMemberCall(f, panelUsageContextRead(f, "entries"), "map", {projectGuardedClosure(f, 262, 1)});
+    if (!panelUsageTruth(assistantContextField(f, "chart", "evolution"))) return controlEmptyArray(f);
+    const auto modes = panelUsageRead(f, assistantContextField(f, "chart", "evolution"), "xModes");
+    return panelUsageMemberCall(f, modes, "map", {projectGuardedClosure(f, 261, 1)});
+}
+QJSValue ApplicationInfo::evolutionMoved(const QJSValue& mouse) const {
+    const auto f = panelUsageEngine(this); return QJSValue(evolutionMovedIn(f, mouse, "x", "pressX") || evolutionMovedIn(f, mouse, "y", "pressY"));
+}
+void ApplicationInfo::evolutionPointer(const QJSValue& mouse, int event) const {
+    const auto f = panelUsageEngine(this);
+    if (event == 0) {
+        panelUsageContextWrite(f, "pressX", panelUsageRead(f, mouse, "x")); panelUsageContextWrite(f, "pressY", panelUsageRead(f, mouse, "y"));
+        const auto button = panelUsageRead(f, mouse, "button"), left = assistantContextField(f, "Qt", "LeftButton"); panelUsageContextWrite(f, "picking", QJSValue(button.strictlyEquals(left))); return;
+    }
+    if (event == 1) { if (panelUsageTruth(panelUsageGlobalCall(f, "moved", {mouse}))) panelUsageContextWrite(f, "picking", QJSValue(false)); return; }
+    if (event == 2) {
+        const auto button = panelUsageRead(f, mouse, "button"), right = assistantContextField(f, "Qt", "RightButton");
+        if (button.strictlyEquals(right)) { panelUsageContextWrite(f, "picking", QJSValue(false)); projectWrite(f, "chart", "zoom", controlEmptyArray(f)); }
+        else if (panelUsageTruth(panelUsageGlobalCall(f, "moved", {mouse}))) {
+            panelUsageContextWrite(f, "picking", QJSValue(false)); QJSValueList ends;
+            for (const auto& operation : {std::array<const char*, 3>{"min", "xAt", "pressX"}, {"max", "xAt", "pressX"}, {"min", "yAt", "pressY"}, {"max", "yAt", "pressY"}})
+                ends.append(numberMath(f, operation[0], [&] {
+                    const auto first = panelUsageGlobalCall(f, operation[1], {panelUsageContextRead(f, operation[2])});
+                    const auto second = panelUsageGlobalCall(f, operation[1], {panelUsageRead(f, mouse, std::string_view(operation[1]) == "xAt" ? "x" : "y")});
+                    return QJSValueList{first, second};
+                }));
+            const auto box = assistantGeometryArray(f, ends);
+            bool valid = evolutionMovedIn(f, mouse, "x", "pressX") && evolutionMovedIn(f, mouse, "y", "pressY");
+            if (valid) { const auto high = textIndex(f, box, QJSValue(1)), low = textIndex(f, box, QJSValue(0)); valid = assistantRelation(f, high, low, 1); }
+            if (valid) { const auto high = textIndex(f, box, QJSValue(3)), low = textIndex(f, box, QJSValue(2)); valid = assistantRelation(f, high, low, 1); }
+            if (valid) { const auto high = textIndex(f, box, QJSValue(1)), low = textIndex(f, box, QJSValue(0)); valid = numberFinite(f, viewArithmetic(f, high, low, 0)); }
+            if (valid) { const auto high = textIndex(f, box, QJSValue(3)), low = textIndex(f, box, QJSValue(2)); valid = numberFinite(f, viewArithmetic(f, high, low, 0)); }
+            if (valid) projectWrite(f, "chart", "zoom", box);
+        }
+        return;
+    }
+    if (event == 3) {
+        if (assistantContextField(f, "chart", "evolution").isNull()) return;
+        const auto reach = viewArithmetic(f, assistantContextField(f, "chart", "em"), QJSValue(0.6), 1), evolution = assistantContextField(f, "chart", "evolution");
+        QJSValueList args;
+        args.append(chartCoordinateValue(f, [&] { return panelUsageRead(f, mouse, "x"); }, false));
+        args.append(chartCoordinateValue(f, [&] { return panelUsageRead(f, mouse, "y"); }, true));
+        const auto xReach = viewArithmetic(f, reach, panelUsageContextRead(f, "width"), 2); args.append(viewArithmetic(f, xReach, chartSpan(f, "axisX"), 1));
+        const auto yReach = viewArithmetic(f, reach, panelUsageContextRead(f, "height"), 2); args.append(viewArithmetic(f, yReach, chartSpan(f, "axisY"), 1));
+        const auto dataset = panelUsageMemberCall(f, evolution, "datasetAt", args);
+        if (assistantRelation(f, dataset, QJSValue(0), 2)) assistantMemberWrite(f, assistantContextField(f, "chart", "project"), "currentExperimentIndex", dataset); return;
+    }
+    if (panelUsageRead(f, panelUsageRead(f, mouse, "angleDelta"), "y").strictlyEquals(QJSValue(0))) return;
+    const auto anchor = panelUsageGlobalCall(f, "xAt", {panelUsageRead(f, mouse, "x")});
+    const auto factor = numberMath(f, "pow", [&] { return QJSValueList{QJSValue(0.8), viewArithmetic(f, panelUsageRead(f, panelUsageRead(f, mouse, "angleDelta"), "y"), QJSValue(120), 2)}; });
+    const auto left = evolutionWheelEnd(f, anchor, factor, false), right = evolutionWheelEnd(f, anchor, factor, true);
+    bool valid = numberFinite(f, left) && numberFinite(f, right) && assistantRelation(f, right, left, 1) && numberFinite(f, viewArithmetic(f, right, left, 0));
+    if (valid) { const auto high = assistantContextField(f, "axisY", "max"), low = assistantContextField(f, "axisY", "min"); valid = assistantRelation(f, high, low, 1); }
+    if (valid) valid = numberFinite(f, chartSpan(f, "axisY"));
+    if (!valid) return;
+    const auto chart = panelUsageContextRead(f, "chart"); const QJSValueList ends{evolutionWheelEnd(f, anchor, factor, false), evolutionWheelEnd(f, anchor, factor, true), assistantContextField(f, "axisY", "min"), assistantContextField(f, "axisY", "max")};
+    assistantMemberWrite(f, chart, "zoom", assistantGeometryArray(f, ends));
+}
+void ApplicationInfo::evolutionResetZoom() const { const auto f = panelUsageEngine(this); projectWrite(f, "chart", "zoom", controlEmptyArray(f)); }
+void ApplicationInfo::evolutionDrawReportPoints() const {
+    const auto f = panelUsageEngine(this); const auto layer = panelUsageContextRead(f, "layer"); QJSValueList args;
+    for (uint operation : {263u, 264u, 265u}) args.append(panelUsageMemberCall(f, panelUsageContextRead(f, "reportPoints"), "map", {projectGuardedClosure(f, operation, 1)}));
+    panelUsageMemberCall(f, layer, "setPoints", args);
+}
+void ApplicationInfo::evolutionReportChanged() const {
+    const auto f = panelUsageEngine(this); if (panelUsageTruth(panelUsageContextRead(f, "fromReport"))) panelUsageGlobalCall(f, "drawReportPoints");
 }
 
 QString ApplicationInfo::assistantSingleLineText(const QJSValue& value) const {

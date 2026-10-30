@@ -514,6 +514,18 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void patternHoverShow(const QJSValue& text, const QJSValue& atX, const QJSValue& atY) const;
     Q_INVOKABLE void chartToolbarAction(int action) const;
     Q_INVOKABLE void renewPatternChart() const;
+    /// Evolution presentation and the common tick/coordinate rules; existing models own results and selection.
+    Q_INVOKABLE QJSValue chartNiceStep(const QJSValue& span, const QJSValue& count) const;
+    Q_INVOKABLE QJSValue chartGridShares(const QJSValue& axis) const;
+    Q_INVOKABLE QJSValue chartCoordinate(const QJSValue& position, bool vertical) const;
+    Q_INVOKABLE QJSValue evolutionMeasuredStyle() const;
+    Q_INVOKABLE QJSValue evolutionReportRange() const;
+    Q_INVOKABLE QJSValue evolutionXEntries(bool closed) const;
+    Q_INVOKABLE QJSValue evolutionMoved(const QJSValue& mouse) const;
+    Q_INVOKABLE void evolutionPointer(const QJSValue& mouse, int event) const;
+    Q_INVOKABLE void evolutionResetZoom() const;
+    Q_INVOKABLE void evolutionDrawReportPoints() const;
+    Q_INVOKABLE void evolutionReportChanged() const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.

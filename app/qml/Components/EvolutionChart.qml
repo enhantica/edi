@@ -31,7 +31,7 @@ Item {
     // The report model's pattern styles: a report's points take its measured row (`meas.0`), as the HTML report draws
     // them, never the app's colour scheme or project.
     property var reportStyles: []
-    readonly property var reportMeasured: (reportStyles ?? []).find(style => style.key === "meas.0") ?? null
+    readonly property var reportMeasured: ApplicationInfo.evolutionMeasuredStyle()
     // The theme's colours, or the light ones a PDF's copy is drawn in.
     property FigureColors colors: FigureColors {}
     readonly property EvolutionViewModel evolution: project && !fromReport ? project.evolution : null
@@ -53,21 +53,7 @@ Item {
     // Some dataset has its results: the axes, the titles and the points are drawn.
     readonly property bool fitted: fromReport ? reportPoints.length > 0 : evolution !== null && evolution.fitted
     // A report's ranges, with the margins the view model gives the tab's: [xMin, xMax, yMin, yMax].
-    readonly property var reportRange: {
-        if (reportPoints.length === 0)
-            return [0, 1, 0, 1];
-        let xMin = Infinity, xMax = -Infinity, yMin = Infinity, yMax = -Infinity;
-        for (const point of reportPoints) {
-            const su = typeof point.su === "number" && isFinite(point.su) ? point.su : 0;
-            xMin = Math.min(xMin, point.x);
-            xMax = Math.max(xMax, point.x);
-            yMin = Math.min(yMin, point.y - su);
-            yMax = Math.max(yMax, point.y + su);
-        }
-        const xPad = Math.max((xMax - xMin) * 0.06, 0.5);
-        const yPad = Math.max((yMax - yMin) * 0.16, Math.abs(yMax) * 1e-6 + 1e-12);
-        return [xMin - xPad, xMax + xPad, yMin - yPad, yMax + yPad];
-    }
+    readonly property var reportRange: ApplicationInfo.evolutionReportRange()
 
     // The tick labels in the app's label font and size, as the pattern chart's axes (the owner, 2026-10-22).
     Component {
@@ -116,14 +102,7 @@ Item {
     }
 
     // A round step giving about `count` ticks over a span: 1, 2 or 5 times a power of ten.
-    function niceStep(span, count) {
-        if (!(span > 0))
-            return 1;
-        const raw = span / count;
-        const power = Math.pow(10, Math.floor(Math.log10(raw)));
-        const scaled = raw / power;
-        return (scaled < 1.5 ? 1 : scaled < 3.5 ? 2 : scaled < 7.5 ? 5 : 10) * power;
-    }
+    function niceStep(span, count) { return ApplicationInfo.chartNiceStep(span, count); }
 
     Rectangle {
         anchors.fill: parent
@@ -141,9 +120,9 @@ Item {
         enabled: chart.evolution !== null && chart.evolution.xModes.length > 1 && chart.project.scanColumns.length > 0
         toolTip: qsTr("X axis")
         // Each value capitalised after the lower-case prefix (the owner, 2026-10-27).
-        readonly property var entries: chart.evolution ? chart.evolution.xModes.map(mode => mode.length > 0 ? mode.charAt(0).toUpperCase() + mode.slice(1) : mode) : []
+        readonly property var entries: ApplicationInfo.evolutionXEntries(false)
         model: entries
-        closedTexts: entries.map(mode => qsTr("x: %1").arg(mode))
+        closedTexts: ApplicationInfo.evolutionXEntries(true)
         shownIndex: chart.evolution ? chart.evolution.xMode : 0
         onActivated: index => chart.evolution.xMode = index
     }
@@ -229,19 +208,7 @@ Item {
         height: view.plotArea.height
         clip: true
 
-        function ticks(axis: ValueAxis): list<real> {
-            const out = [];
-            const span = axis.max - axis.min;
-            if (!(axis.tickInterval > 0) || !(span > 0))
-                return out;
-            for (let i = Math.ceil(axis.min / axis.tickInterval - 1e-9); out.length < 64; ++i) {
-                const share = (i * axis.tickInterval - axis.min) / span;
-                if (share > 1 + 1e-9)
-                    break;
-                out.push(share);
-            }
-            return out;
-        }
+        function ticks(axis: ValueAxis): list<real> { return ApplicationInfo.chartGridShares(axis); }
 
         Repeater {
             model: plot.ticks(axisX)
@@ -305,62 +272,20 @@ Item {
             property bool picking: true
             readonly property bool dragging: pressed && (pressedButtons & Qt.LeftButton) && (Math.abs(mouseX - pressX) > chart.em * 0.3 || Math.abs(mouseY - pressY) > chart.em * 0.3)
 
-            function xAt(px: real): real {
-                return axisX.min + px / width * (axisX.max - axisX.min);
-            }
-            function yAt(py: real): real {
-                return axisY.max - py / height * (axisY.max - axisY.min);
-            }
-            function moved(mouse): bool {
-                return Math.abs(mouse.x - pressX) > chart.em * 0.3 || Math.abs(mouse.y - pressY) > chart.em * 0.3;
-            }
+            function xAt(px: real): real { return ApplicationInfo.chartCoordinate(px, false); }
+            function yAt(py: real): real { return ApplicationInfo.chartCoordinate(py, true); }
+            function moved(mouse): bool { return ApplicationInfo.evolutionMoved(mouse); }
 
             objectName: "evolution.pointer"
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton | Qt.RightButton
             cursorShape: Qt.PointingHandCursor
-            onPressed: mouse => {
-                pressX = mouse.x;
-                pressY = mouse.y;
-                picking = mouse.button === Qt.LeftButton;
-            }
-            onPositionChanged: mouse => {
-                if (moved(mouse))
-                    picking = false;
-            }
+            onPressed: mouse => ApplicationInfo.evolutionPointer(mouse, 0)
+            onPositionChanged: mouse => ApplicationInfo.evolutionPointer(mouse, 1)
             // A zoom is taken only with increasing ends and finite spans on both axes.
-            onReleased: mouse => {
-                if (mouse.button === Qt.RightButton) {
-                    picking = false;
-                    chart.zoom = [];
-                } else if (moved(mouse)) {
-                    picking = false;
-                    const box = [Math.min(xAt(pressX), xAt(mouse.x)), Math.max(xAt(pressX), xAt(mouse.x)), Math.min(yAt(pressY), yAt(mouse.y)), Math.max(yAt(pressY), yAt(mouse.y))];
-                    if (Math.abs(mouse.x - pressX) > chart.em * 0.3 && Math.abs(mouse.y - pressY) > chart.em * 0.3 && box[1] > box[0] && box[3] > box[2] && isFinite(box[1] - box[0]) && isFinite(box[3] - box[2]))
-                        chart.zoom = box;
-                }
-            }
-            onClicked: mouse => {
-                if (chart.evolution === null)
-                    return;
-                const reach = chart.em * 0.6;
-                const dataset = chart.evolution.datasetAt(axisX.min + mouse.x / width * (axisX.max - axisX.min), axisY.max - mouse.y / height * (axisY.max - axisY.min), reach / width * (axisX.max - axisX.min), reach / height * (axisY.max - axisY.min));
-                if (dataset >= 0)
-                    chart.project.currentExperimentIndex = dataset;
-            }
-            onWheel: wheel => {
-                if (wheel.angleDelta.y === 0)
-                    return;
-                const anchor = xAt(wheel.x);
-                const factor = Math.pow(0.8, wheel.angleDelta.y / 120);
-                // Only a viewport whose ends are finite and increasing, with finite spans on both axes; otherwise the
-                // zoom stays as it was (a step that rounds both ends together, or one past the largest number).
-                const left = anchor - (anchor - axisX.min) * factor;
-                const right = anchor + (axisX.max - anchor) * factor;
-                if (!(isFinite(left) && isFinite(right) && right > left && isFinite(right - left) && axisY.max > axisY.min && isFinite(axisY.max - axisY.min)))
-                    return;
-                chart.zoom = [anchor - (anchor - axisX.min) * factor, anchor + (axisX.max - anchor) * factor, axisY.min, axisY.max];
-            }
+            onReleased: mouse => ApplicationInfo.evolutionPointer(mouse, 2)
+            onClicked: mouse => ApplicationInfo.evolutionPointer(mouse, 3)
+            onWheel: wheel => ApplicationInfo.evolutionPointer(wheel, 4)
 
             Binding {
                 target: chart.evolution
@@ -420,26 +345,14 @@ Item {
     // Another parameter or x axis is drawn at its whole range.
     Connections {
         target: chart.evolution
-        function onCurrentParameterChanged() {
-            chart.zoom = [];
-        }
-        function onXModeChanged() {
-            chart.zoom = [];
-        }
+        function onCurrentParameterChanged() { ApplicationInfo.evolutionResetZoom(); }
+        function onXModeChanged() { ApplicationInfo.evolutionResetZoom(); }
     }
     // A report's points go to the layer whenever its series changes, each with its s.u. bar (none without a finite
     // s.u.).
-    function drawReportPoints() {
-        layer.setPoints(reportPoints.map(point => point.x), reportPoints.map(point => point.y), reportPoints.map(point => typeof point.su === "number" ? point.su : NaN));
-    }
-    onReportPointsChanged: {
-        if (fromReport)
-            drawReportPoints();
-    }
-    Component.onCompleted: {
-        if (fromReport)
-            drawReportPoints();
-    }
+    function drawReportPoints() { ApplicationInfo.evolutionDrawReportPoints(); }
+    onReportPointsChanged: ApplicationInfo.evolutionReportChanged()
+    Component.onCompleted: ApplicationInfo.evolutionReportChanged()
 
     // The layer is the model's to fill while the tab is shown.
     Binding {
