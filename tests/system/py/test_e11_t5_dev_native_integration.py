@@ -4693,10 +4693,87 @@ def test_message_scalar_roles_keep_opaque_backend_and_announce_only_changed_rows
     (actor.folder / 'scalar-role-measurements.json').write_text(json.dumps(measurements, indent=2))
     # No universal allocation/clock guarantee: structural absence and measured
     # read times are separate facts, with no blanket machine-dependent threshold.
-    _rows_probe(actor, 'watch')
+    watch = _rows_probe(actor, 'watch', capture_cells=True)
     _rows_probe(actor, 'send', text='Read one further public reference.')
     _rows_wait(actor, lambda value: value['count'] > count and value['state'] != 'idle')
-    insertion = _rows_probe(actor, 'events', clear=True)['events']
+    insertion_observation = _rows_probe(actor, 'events', clear=True)
+    insertion = insertion_observation['events']
+    (actor.folder / 'scalar-role-insertion-raw.json').write_text(json.dumps({
+        'watch': watch, 'observation': insertion_observation}, indent=2))
+    def comparisons(sequence):
+        population = watch['count']
+        announced_state = [dict(row) for row in watch['initial_cells']]
+        empty_cell = watch['empty_cell']
+        result = []
+        for ordinal, event in enumerate(sequence):
+            kind = event.get('kind')
+            record = {'ordinal': ordinal, 'event': event, 'population_before': population,
+                      'actual_cells': [], 'announced_cells': [], 'errors': []}
+            errors = record['errors']
+            if event.get('observer_error'):
+                errors.append(event['observer_error'])
+            if event.get('announced_before') != announced_state:
+                errors.append('Independent replay must equal the measured prior announcement state')
+            first, last = event.get('first'), event.get('last')
+            numeric = type(first) is int and type(last) is int and type(population) is int
+            valid = numeric and 0 <= first <= last and (first <= population if kind == 'insert' else last < population)
+            if kind in ('insert', 'remove', 'move', 'dataChanged') and not valid:
+                errors.append('The entire event range must belong to its actual event-local population')
+            if kind == 'insert':
+                if valid:
+                    announced_state[first:first] = [{} for _ in range(last - first + 1)]
+                population = population + last - first + 1 if valid else None
+            elif kind == 'remove':
+                if valid:
+                    del announced_state[first:last + 1]
+                population = population - (last - first + 1) if valid else None
+            elif kind == 'reset':
+                errors.append('A reset cannot preserve the watched original identity population')
+                population = None
+            elif kind == 'dataChanged':
+                roles, available, changed = event.get('roles'), event.get('all_role_names'), event.get('changed_cells')
+                names_valid = isinstance(available, list) and bool(available) and all(isinstance(name, str) for name in available)
+                roles_valid = isinstance(roles, list) and bool(roles) and all(isinstance(role, str) and role in available for role in roles) if names_valid else False
+                if not names_valid or not roles_valid:
+                    errors.append('Every advertised role must name an actual public event-local role')
+                cells_valid = isinstance(changed, list)
+                if cells_valid:
+                    cells_valid = all(isinstance(cell, dict) and type(cell.get('row')) is int
+                        and type(population) is int and 0 <= cell['row'] < population
+                        and isinstance(cell.get('role'), str) and names_valid and cell['role'] in available
+                        for cell in changed)
+                if not cells_valid:
+                    errors.append('Actual changed cells must carry valid rows and public roles for this event')
+                measured = event.get('cells')
+                measured_valid = (isinstance(measured, list) and len(measured) == population
+                    and all(isinstance(row, dict) and set(row) == set(available)
+                        and all(isinstance(value, str) for value in row.values()) for row in measured)) if names_valid else False
+                if not measured_valid:
+                    errors.append('Every event retains all actual public role hashes for its complete population')
+                actual = {(row, role) for row, values in enumerate(measured) for role, value in values.items()
+                    if announced_state[row].get(role, empty_cell) != value} if measured_valid else set()
+                captured = {(cell['row'], cell['role']) for cell in changed} if cells_valid else set()
+                if captured != actual:
+                    errors.append('Probe changed cells must equal independently replayed announcement-relative changes')
+                announced = {(row, role) for row in range(first, last + 1) for role in roles} if valid and roles_valid else set()
+                if measured_valid:
+                    for row, role in announced:
+                        announced_state[row][role] = measured[row][role]
+                record['actual_cells'] = [{'row': row, 'role': role} for row, role in sorted(actual)]
+                record['announced_cells'] = [{'row': row, 'role': role} for row, role in sorted(announced)]
+                record['announced_subset_of_actual'] = announced <= actual
+            elif kind != 'move':
+                errors.append('Every observed event must have an understood population transition')
+                population = None
+            if event.get('announced_after') != announced_state:
+                errors.append('Only actual advertised cells or structural row shifts advance announcement state')
+            record['population_after'] = population
+            result.append(record)
+        return result, population
+    insertion_facts, insertion_population = comparisons(insertion)
+    (actor.folder / 'scalar-role-insertion-events.json').write_text(json.dumps({
+        'watch': watch, 'observation': insertion_observation,
+        'comparisons': insertion_facts, 'population_after': insertion_population}, indent=2))
     assert not any(event['kind'] in ('reset', 'move') for event in insertion), (
         'Appending an actual activity retains original Qt row identities and order')
     assert not any(event['kind'] == 'dataChanged' and event['first'] < count
@@ -4707,19 +4784,39 @@ def test_message_scalar_roles_keep_opaque_backend_and_announce_only_changed_rows
     release.touch()
     actor.command('refresh_usage')
     _rows_wait(actor, lambda value: value['state'] == 'idle')
+    completion_observation = _rows_probe(actor, 'stop')
+    events = completion_observation['events']
+    sequence = insertion + events
+    comparison_facts, final_population = comparisons(sequence)
+    completion_facts = {
+        'watch': watch, 'initial_values': initial, 'insertion_observation': insertion_observation,
+        'pending_count_sample': pending_count, 'pending_roles_sample': before,
+        'completion_observation': completion_observation, 'event_sequence': sequence,
+        'comparisons': comparison_facts, 'event_population_after': final_population,
+        'usage_before_release': usage_before_release,
+        'usage_requests_after_release': _session_wire(actor, 'account/rateLimits/read')}
+    facts_path = actor.folder / 'scalar-role-completion-events.json'
+    facts_path.write_text(json.dumps(completion_facts, indent=2))
+    final_observation = _rows_probe(actor)
+    after = [_rows_probe(actor, 'roles', row=i)['roles'] for i in range(final_observation['count'])]
+    final_values = [_rows_values(actor, 'messages', i) for i in range(final_observation['count'])]
+    completion_facts.update(final_observation=final_observation, final_roles=after, final_values=final_values)
+    facts_path.write_text(json.dumps(completion_facts, indent=2))
     assert len(_session_wire(actor, 'account/rateLimits/read')) > usage_before_release, (
         'The genuine held research release is serviced by the established account-read RPC before completion')
-    events = _rows_probe(actor, 'stop')['events']
-    after = [_rows_probe(actor, 'roles', row=i)['roles'] for i in range(pending_count)]
-    for event in events:
+    assert insertion_population == insertion_observation['count'] and final_population == completion_observation['count'], (
+        'Every structural event establishes the complete population at its own recorded observer boundary')
+    assert final_values[:count] == initial, (
+        'The entire original scalar-value and identity prefix stays unchanged through later insertion and completion')
+    for record in comparison_facts:
+        assert not record['errors'], (
+            'Every actual event range and role is valid in its complete event-local population; facts persisted before validation')
+        event = record['event']
         assert event['kind'] not in ('reset', 'move'), 'Completion preserves actual original model row identities'
         if event['kind'] == 'dataChanged':
             assert event['roles'], 'Actual changed-role notifications identify their changed public roles'
-            for index in range(event['first'], event['last'] + 1):
-                old = {role['name']: role['sha256'] for role in before[index]}
-                new = {role['name']: role['sha256'] for role in after[index]}
-                assert all(old.get(role) != new.get(role) for role in event['roles']), (
-                    'Unchanged scalar/technical presentation roles are not spuriously invalidated')
+            assert record['announced_subset_of_actual'], (
+                'Unchanged scalar/technical presentation roles are not spuriously invalidated')
     history = _rows_history_file(actor)
     raw = history.read_bytes()
     entries = list(objects(json.loads(raw)))
@@ -5290,17 +5387,26 @@ def test_sparse_interruption_notifies_only_original_changed_status_cells(main_ac
     assert activities[0][1]['status'] in ('pending', 'in_progress') and activities[1][1]['status'] == 'completed' \
         and activities[2][1]['status'] in ('pending', 'in_progress'), (
         'The reached original rows contain pending A, unchanged completed B, and pending C')
-    _rows_probe(actor, 'watch', capture_cells=True)
+    watch = _rows_probe(actor, 'watch', capture_cells=True)
     actor.gate.touch()
     actor.command('refresh_usage')
     actor.until(lambda value: bool(value['ui']['last_error']))
-    events = _rows_probe(actor, 'stop')['events']
+    observation = _rows_probe(actor, 'stop')
+    events = observation['events']
+    facts_path = actor.folder / 'sparse-interruption-signals.json'
+    facts = {'watch': watch, 'observation': observation, 'before': before,
+             'intentional_peer_eof': True, 'mixed_status_text_publication': 'not claimed'}
+    facts_path.write_text(json.dumps(facts, indent=2))
     after = [_rows_values(actor, 'messages', i) for i in range(len(before))]
+    facts['after'] = after
+    facts_path.write_text(json.dumps(facts, indent=2))
     assert after[activities[1][0]] == before[activities[1][0]], (
         'The completed middle activity remains byte/value-identical across real transport interruption')
     assert all(after[activities[i][0]]['status'] == 'interrupted' for i in (0, 2)), (
         'Both genuine pending endpoints reach the original single-publication interruption owner')
     signals = [event for event in events if event['kind'] == 'dataChanged']
+    assert not any(event.get('observer_error') for event in events), (
+        'The entire sparse observation obeys the original indexed-row announcement protocol')
     assert signals and all('changed_cells' in event for event in signals), (
         'Sparse witness retains actual signal-time independent before/after public cell hashes')
     for event in signals:
@@ -5309,9 +5415,8 @@ def test_sparse_interruption_notifies_only_original_changed_status_cells(main_ac
         announced = {(row, role) for row in range(event['first'], event['last'] + 1) for role in roles}
         assert announced <= actual, (
             'Original Rows never announces an unchanged intermediate row or an unchanged endpoint role')
-    (actor.folder / 'sparse-interruption-signals.json').write_text(json.dumps({
-        'before': before, 'after': after, 'signals': events,
-        'intentional_peer_eof': True, 'mixed_status_text_publication': 'not claimed'}, indent=2))
+    facts['signals'] = events
+    facts_path.write_text(json.dumps(facts, indent=2))
 
 
 def _draft_text(actor):

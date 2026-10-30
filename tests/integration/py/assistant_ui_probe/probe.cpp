@@ -377,16 +377,29 @@ int main(int argc,char** argv) {
     std::vector<QMetaObject::Connection> message_model_connections;
     bool capture_message_cells=false;
     Array message_model_cells;
+    // Hash the measured QVariant state as well as its JSON value: an absent
+    // original QJsonObject field (invalid QVariant) differs from JSON null.
+    auto message_cell_state=[](const QVariant& value) {
+        const auto json=QJsonValue::fromVariant(value);
+        return Object{{"valid",value.isValid()},{"null",value.isNull()},
+            {"type",QString::fromUtf8(value.typeName()?value.typeName():"")},
+            {"json_type",static_cast<int>(json.type())},{"value",json}};
+    };
+    auto message_cell_hash=[&](const QVariant& value) {
+        return QString::fromLatin1(QCryptographicHash::hash(encode(message_cell_state(value)),QCryptographicHash::Sha256).toHex());
+    };
+    // Original Rows::assign compares newly appended announced_ objects with
+    // QJsonObject{}.value(role), not with already-published visible_ values.
+    const auto empty_message_variant=Object{}.value(QString{}).toVariant();
+    const auto empty_message_cell=message_cell_hash(empty_message_variant);
     auto snapshot_message_cells=[&]() {
         Array rows;
         if(!message_model_watched)return rows;
         const auto roles=message_model_watched->roleNames();
         for(int row=0;row<message_model_watched->count();++row) {
             Object cells;
-            for(auto it=roles.cbegin();it!=roles.cend();++it) {
-                const auto encoded=encode(Object{{"value",QJsonValue::fromVariant(message_model_watched->data(message_model_watched->index(row),it.key()))}});
-                cells[QString::fromUtf8(it.value())]=QString::fromLatin1(QCryptographicHash::hash(encoded,QCryptographicHash::Sha256).toHex());
-            }
+            for(auto it=roles.cbegin();it!=roles.cend();++it)
+                cells[QString::fromUtf8(it.value())]=message_cell_hash(message_model_watched->data(message_model_watched->index(row),it.key()));
             rows.append(cells);
         }
         return rows;
@@ -842,6 +855,11 @@ int main(int argc,char** argv) {
                 auto role_number=[&](const QString& name) {for(auto it=role_names.cbegin();it!=role_names.cend();++it)if(it.value()==name.toUtf8())return it.key();return -1;};
                 if(mode=="watch") {
                     stop_message_model_watch();message_model_events=Array{};message_model_watched=model;capture_message_cells=input["capture_cells"].toBool();message_model_cells=capture_message_cells?snapshot_message_cells():Array{};
+                    if(capture_message_cells) {
+                        result["initial_cells"]=message_model_cells;
+                        result["empty_cell"]=empty_message_cell;
+                        result["empty_cell_state"]=message_cell_state(empty_message_variant);
+                    }
                     message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::dataChanged,&message_model_observer,
                         [&](const QModelIndex& first,const QModelIndex& last,const QList<int>& roles){
                             Array names,all;
@@ -851,20 +869,65 @@ int main(int argc,char** argv) {
                             Object event{{"kind","dataChanged"},{"first",first.row()},{"last",last.row()},{"roles",names},{"all_role_names",all}};
                             if(capture_message_cells) {
                                 const auto after=snapshot_message_cells();Array changed;
+                                event["cells"]=after;event["announced_before"]=message_model_cells;
                                 for(qsizetype row=0;row<after.size();++row) {
                                     const auto next=after[row].toObject();
                                     const auto before=row<message_model_cells.size()?message_model_cells[row].toObject():Object{};
                                     for(auto it=next.begin();it!=next.end();++it)
-                                        if(before.value(it.key())!=it.value())changed.append(Object{{"row",static_cast<int>(row)},{"role",it.key()}});
+                                        if(before.value(it.key()).toString(empty_message_cell)!=it.value().toString())
+                                            changed.append(Object{{"row",static_cast<int>(row)},{"role",it.key()}});
                                 }
-                                event["changed_cells"]=changed;message_model_cells=after;
+                                event["changed_cells"]=changed;
+                                // Public visible_ already contains all spans. Advance only
+                                // the cells this signal actually announces.
+                                if(first.row()>=0 && last.row()>=first.row() && last.row()<message_model_cells.size() && after.size()==message_model_cells.size()) {
+                                    for(int row=first.row();row<=last.row();++row) {
+                                        auto announced=message_model_cells[row].toObject();
+                                        const auto current=after[row].toObject();
+                                        if(roles.isEmpty())announced=current;
+                                        else for(const auto role:roles) {
+                                            const auto name=QString::fromUtf8(live.value(role,QByteArray::number(role)));
+                                            announced[name]=current.value(name);
+                                        }
+                                        message_model_cells[row]=announced;
+                                    }
+                                } else event["observer_error"]="invalid dataChanged population";
+                                event["announced_after"]=message_model_cells;
                             }
                             message_model_events.append(event);
                         }));
-                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsInserted,&message_model_observer,[&](const QModelIndex&,int first,int last){message_model_events.append(Object{{"kind","insert"},{"first",first},{"last",last}});if(capture_message_cells)message_model_cells=snapshot_message_cells();}));
-                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsRemoved,&message_model_observer,[&](const QModelIndex&,int first,int last){message_model_events.append(Object{{"kind","remove"},{"first",first},{"last",last}});if(capture_message_cells)message_model_cells=snapshot_message_cells();}));
-                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsMoved,&message_model_observer,[&](const QModelIndex&,int first,int last,const QModelIndex&,int destination){message_model_events.append(Object{{"kind","move"},{"first",first},{"last",last},{"destination",destination}});if(capture_message_cells)message_model_cells=snapshot_message_cells();}));
-                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::modelReset,&message_model_observer,[&]{message_model_events.append(Object{{"kind","reset"}});if(capture_message_cells)message_model_cells=snapshot_message_cells();}));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsInserted,&message_model_observer,[&](const QModelIndex&,int first,int last){
+                        Object event{{"kind","insert"},{"first",first},{"last",last}};
+                        if(capture_message_cells) {
+                            event["cells"]=snapshot_message_cells();event["announced_before"]=message_model_cells;
+                            if(first>=0 && last>=first && first<=message_model_cells.size())
+                                for(int row=first;row<=last;++row)message_model_cells.insert(row,Object{});
+                            else event["observer_error"]="invalid insertion population";
+                            event["announced_after"]=message_model_cells;
+                        }
+                        message_model_events.append(event);
+                    }));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsRemoved,&message_model_observer,[&](const QModelIndex&,int first,int last){
+                        Object event{{"kind","remove"},{"first",first},{"last",last}};
+                        if(capture_message_cells) {
+                            event["cells"]=snapshot_message_cells();event["announced_before"]=message_model_cells;
+                            if(first>=0 && last>=first && last<message_model_cells.size())
+                                for(int row=last;row>=first;--row)message_model_cells.removeAt(row);
+                            else event["observer_error"]="invalid removal population";
+                            event["announced_after"]=message_model_cells;
+                        }
+                        message_model_events.append(event);
+                    }));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::rowsMoved,&message_model_observer,[&](const QModelIndex&,int first,int last,const QModelIndex&,int destination){
+                        Object event{{"kind","move"},{"first",first},{"last",last},{"destination",destination}};
+                        if(capture_message_cells) {event["cells"]=snapshot_message_cells();event["observer_error"]="unexpected move in original indexed Rows";}
+                        message_model_events.append(event);
+                    }));
+                    message_model_connections.push_back(QObject::connect(model,&QAbstractItemModel::modelReset,&message_model_observer,[&]{
+                        Object event{{"kind","reset"}};
+                        if(capture_message_cells) {event["cells"]=snapshot_message_cells();event["observer_error"]="unexpected reset in original indexed Rows";}
+                        message_model_events.append(event);
+                    }));
                 } else if(mode=="events") {
                     result["events"]=message_model_events;
                     if(input["clear"].toBool())message_model_events=Array{};
