@@ -23,6 +23,7 @@
 #include "edi/version.hpp"
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
+#include "option_list_model.hpp"
 #include "session.hpp"
 
 namespace edi_app {
@@ -253,8 +254,20 @@ bool DemoDriver::saveDocumentationFrame(const QString& path, QString* error) {
                 } else {
                     auto label = item->property("text").toString();
                     if (label.isEmpty()) label = item->property("title").toString();
-                    items[name] = QJsonObject{{"bounds", rect_json(bounds)}, {"visible_bounds", rect_json(visible)},
+                    QJsonObject record{{"bounds", rect_json(bounds)}, {"visible_bounds", rect_json(visible)},
                         {"enabled", item->isEnabled()}, {"label", label.left(256)}};
+                    if (auto* options = item->property("options").value<OptionListModel*>()) {
+                        QJsonArray choices;
+                        for (int row = 0; row < options->rowCount(); ++row) {
+                            const auto index = options->index(row, 0);
+                            choices.append(QJsonObject{{"token", options->data(index, OptionListModel::TokenRole).toString()},
+                                {"label", options->data(index, OptionListModel::LabelRole).toString()}});
+                        }
+                        record["options"] = choices;
+                        record["selected"] = item->property("token").toString();
+                        record["uid"] = item->property("uid").toString();
+                    }
+                    items[name] = record;
                 }
             }
             for (auto* child : item->childItems()) visit(child);

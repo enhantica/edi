@@ -27,7 +27,7 @@
          "fill:createProject.description=" + capture.description,
          "fill:createProject.location=" + capture.projectDirectory],
         ["createProject.name", "createProject.title", "createProject.description", "createProject.location"]);
-    shot("04-project-created", "project", "Create the project", ["createProject.accept", "pin-time:2026-01-01T12:00:00"],
+    shot("04-project-created", "project", "Create the project", ["createProject.accept", "pin-time:01 Jan 2026 12:00:00"],
         ["workflow.project.mainContent", "workflow.project.manualSidebar"]);
     tabs("05-project", "project", "Project details and controls");
     shot("06-structure-import", "structure", "Load the structure into the empty project",
@@ -61,7 +61,7 @@
         ["appBar.tab.project", "sideBar.tab.basic", "reveal:group.getStarted", "expand:group.getStarted"],
         ["project.open", "project.saveAs"]);
     shot("guide-project-open", "project", "Choose a project folder or archive",
-        ["appBar.button.save", "project.open"], ["project.openChoice"]);
+        ["save-as:docs-saved-project", "project.open"], ["project.openChoice"]);
     shot("guide-project-save", "project", "Choose a save format or save a copy",
         ["key:Escape", "project.saveAs"], ["project.saveChoice"]);
     shot("guide-project-recent", "project", "Find recent projects",
@@ -85,6 +85,14 @@
     panel("guide-report-contents", "report", "basic", "group.reportContents", "Choose which sections appear in the report", ["group.reportContents"]);
     panel("guide-report-export", "report", "basic", "group.reportExport", "Choose report formats and export", ["report.writesHtml", "report.writesPdf", "report.writesCif", "report.save"]);
     shot("guide-report-saved", "report", "Review the saved report status", ["report.save"], ["group.reportExport"]);
+    panel("guide-structure-appearance", "structure", "extras", "group.appearance", "Choose the structure display", ["group.appearance"]);
+    panel("guide-structure-scattering", "structure", "extras", "group.scattering_length", "Inspect scattering-length settings", ["group.scattering_length"]);
+    panel("guide-experiment-absorption", "experiment", "extras", "group.absorption", "Inspect absorption settings", ["group.absorption"]);
+    panel("guide-experiment-orientation", "experiment", "extras", "group.preferred_orientation", "Inspect preferred-orientation settings", ["group.preferred_orientation"]);
+    panel("guide-experiment-scattering", "experiment", "extras", "group.scattering_source", "Inspect scattering data sources", ["group.scattering_source"]);
+    panel("guide-analysis-aliases", "analysis", "extras", "group.alias", "Inspect parameter aliases", ["group.alias"]);
+    shot("guide-analysis-correlations", "analysis", "Inspect correlations after fitting",
+        ["appBar.tab.analysis", "sideBar.tab.basic", "mainArea.analysis.tab.correlations"], ["workflow.analysis.mainContent"]);
     return steps;
     }};
 })();
