@@ -1463,6 +1463,36 @@ void ApplicationInfo::composerDraftEdited(QObject* composer, QObject* editor, bo
     if (publishText && frame->live()) publishComposerDraft(*frame);
 }
 
+void ApplicationInfo::composerRefreshFilePresentation(QObject* composer, bool advanceRevision) const {
+    const auto frame = composerDraftFrame(composer);
+    if (!frame) return;
+    if (advanceRevision) incrementComposerDraftRevision(*frame, "consentFileRevision");
+    double pending = 0;
+    for (double index = 0; frame->live(); index += 1) {
+        const auto owner = composerDraftRead(*frame, frame->view, "assistant");
+        const auto files = composerDraftRead(*frame, owner, "selectedFiles");
+        const auto count = composerDraftRead(*frame, files, "count");
+        if (!frame->live()) return;
+        const QJSManagedValue numericCount(count, frame->engine.data());
+        if (numericCount.engine() != frame->engine.data()) {
+            frame->engine->throwError(QJSValue::TypeError, QStringLiteral("Composer value belongs to another engine"));
+            return;
+        }
+        const double limit = numericCount.toNumber();
+        if (!frame->live()) return;
+        if (!(index < limit)) break;
+        const auto currentOwner = composerDraftRead(*frame, frame->view, "assistant");
+        const auto currentFiles = composerDraftRead(*frame, currentOwner, "selectedFiles");
+        const auto text = composerDraftRead(*frame, currentFiles, "text");
+        if (!frame->live()) return;
+        const auto marker = messageScriptCall(frame->engine, text, currentFiles,
+                                             {QJSValue(index), QJSValue(QStringLiteral("pending"))});
+        if (!frame->live()) return;
+        if (!marker.strictlyEquals(QJSValue(QStringLiteral("false")))) pending += 1;
+    }
+    if (frame->live()) composerDraftWrite(*frame, frame->view, "pendingFileCount", QJSValue(pending));
+}
+
 bool ApplicationInfo::engineThreadsSelectable() const {
     return std::string_view(edi::engine_threading().backend) != "serial";
 }

@@ -119,6 +119,9 @@ class ApplicationInfo : public QObject {
     /// Preserve original text/preedit/IME revision increments; text events also publish sessionDraft.
     /// Borrows actual QML-thread controls; preserves native int conversion; errors remain pending.
     Q_INVOKABLE void composerDraftEdited(QObject* composer, QObject* editor, bool publishText) const;
+    /// Refresh the selected-file pending display, advancing the revision only for file change events.
+    /// Borrows the actual Composer; selection and admission remain in AssistantViewModel.
+    Q_INVOKABLE void composerRefreshFilePresentation(QObject* composer, bool advanceRevision) const;
     /// Validate original history attachment metadata on the owning QML engine/thread.
     /// Returns a fresh array of original member references, or empty for invalid metadata.
     /// Preserves original array-like/property/call semantics; thrown JS values remain pending.
