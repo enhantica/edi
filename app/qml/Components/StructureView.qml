@@ -172,28 +172,10 @@ Rectangle {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
         preventStealing: view.report !== null
-        onPressed: mouse => {
-            pointer.last = Qt.point(mouse.x, mouse.y);
-            hover.text = "";
-        }
-        onPositionChanged: mouse => {
-            const dx = mouse.x - pointer.last.x;
-            const dy = mouse.y - pointer.last.y;
-            pointer.last = Qt.point(mouse.x, mouse.y);
-            if (mouse.buttons & Qt.LeftButton)
-                controller.rotateBy(dx, dy);
-            else if (mouse.buttons & Qt.RightButton)
-                controller.panBy(dx, dy);
-            else
-                hover.show(mouse.x, mouse.y);
-        }
+        onPressed: mouse => ApplicationInfo.structurePointer(mouse, 0)
+        onPositionChanged: mouse => ApplicationInfo.structurePointer(mouse, 1)
         onExited: hover.text = ""
-        onWheel: wheel => {
-            if (view.report)
-                wheel.accepted = false;
-            else
-                controller.zoomAt(wheel.x, wheel.y, wheel.angleDelta.y);
-        }
+        onWheel: wheel => ApplicationInfo.structurePointer(wheel, 2)
     }
 
     // The colour scheme and the toolbar, a toolbar group's spacing apart, in one line centred under the block
@@ -210,7 +192,7 @@ Rectangle {
             // The schemes' names as their authors spell them; the options keep diffraction-lib's tokens.
             model: ["Jmol", "VESTA"]
             shownIndex: view.options && view.options.colorScheme === "vesta" ? 1 : 0
-            onActivated: index => view.options.colorScheme = index === 1 ? "vesta" : "jmol"
+            onActivated: index => ApplicationInfo.structureColourChoice(index)
         }
         StructureToolbar {
             id: toolbar
@@ -226,12 +208,7 @@ Rectangle {
 
         property alias text: hoverLabel.text
 
-        function show(x, y) {
-            const result = view.view3d ? view.view3d.rayPick(controller.pickOrigin(x, y), controller.pickDirection(x, y)) : null;
-            hover.text = result ? structureScene.hoverText(result) : "";
-            hover.x = Math.min(x + view.margin, view.width - hover.width);
-            hover.y = Math.min(y + view.margin, view.height - hover.height);
-        }
+        function show(x, y) { ApplicationInfo.structureHoverShow(x, y); }
 
         objectName: "structure.view.hover"
         visible: text !== ""

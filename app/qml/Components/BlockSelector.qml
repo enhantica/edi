@@ -40,11 +40,7 @@ Row {
     property bool currentTemplate: false
 
     // A step to the previous or next block, as a pick in the box; no step past either end.
-    function step(offset) {
-        const next = row.blockIndex + offset;
-        if (next >= 0 && next < selector.count)
-            row.blockActivated(next);
-    }
+    function step(offset) { ApplicationInfo.stepBlock(offset); }
 
     width: EaStyle.Sizes.sideBarContentWidth
     // The gap between buttons in a chart toolbar group, between the box and each button (owner, 2026-10-05).
@@ -60,37 +56,7 @@ Row {
 
         // A block's line, in the Experiments table's column order: its number, its icon in its colour, its fit
         // outcome, its name and a scan's template mark, on one centre line (IconLine, §10).
-        function segments(index, name, nameColor, outcome, isTemplate) {
-            if (index < 0)
-                return [];
-            const slot = {
-                "icon": FitOutcomes.icon(outcome),
-                "color": FitOutcomes.color(outcome),
-                "ring": FitOutcomes.ring(outcome),
-                "slot": true
-            };
-            const number = {
-                "text": String(index + 1),
-                "color": EaStyle.Colors.themeForegroundMinor
-            };
-            const icon = {
-                "icon": ParameterNames.blockIcon(selector.blockKind),
-                "color": AppColors.block(selector.blockKind, index)
-            };
-            const label = {
-                "text": name,
-                "color": nameColor,
-                "elides": true,
-                "factors": true
-            };
-            const lead = row.outcomeRole !== "" ? [number, icon, slot] : [number, icon];
-            const tag = {
-                "text": Session.label("sequential_fit.template_file"),
-                "color": EaStyle.Colors.themeAccent
-            };
-            // The template mark follows the name, so the names line up across the rows.
-            return lead.concat(isTemplate ? [label, tag] : [label]);
-        }
+        function segments(index, name, nameColor, outcome, isTemplate) { return ApplicationInfo.blockSegments(index, name, nameColor, outcome, isTemplate); }
 
         objectName: row.objectName ? `${row.objectName}.box` : ""
         width: row.width - 2 * (up.width + row.spacing)
@@ -105,10 +71,7 @@ Row {
         onCountChanged: selector.currentIndex = Qt.binding(() => selector.blockIndex)
         // The choice goes to the one shared current index; the box then follows that index again, so every
         // selector over the same blocks shows the same one (edi ADR-0017 §7).
-        onActivated: index => {
-            row.blockActivated(index);
-            selector.currentIndex = Qt.binding(() => selector.blockIndex);
-        }
+        onActivated: index => ApplicationInfo.activateBlock(index, () => { selector.currentIndex = Qt.binding(() => selector.blockIndex); })
 
         // The shown block, as the base's content label places its text.
         contentItem: Item {
