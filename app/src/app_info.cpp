@@ -2,6 +2,7 @@
 #include "app_info.hpp"
 #include "assistant_message_presentation.hpp"
 #include "assistant_view_model.hpp"
+#include "web_files.hpp"
 
 #include "app_build_info.hpp"
 #include "engine_setup.hpp"
@@ -1436,6 +1437,82 @@ void ApplicationInfo::composerRefreshFilePresentation(QObject* composer, bool ad
     }
     if (frame->live()) composerDraftWrite(*frame, frame->view, "pendingFileCount", QJSValue(pending));
 }
+
+void ApplicationInfo::storeWindowGeometry(QObject* window, QObject* settings) const {
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    if (!messageScriptReady(engine) || engine->thread() != QThread::currentThread()) return;
+    const auto view = engine->newQObject(window);
+    const auto read = [&](const QJSValue& source, const char* name) {
+        return messageScriptProperty(engine, source, QString::fromLatin1(name));
+    };
+    const auto restored = read(view, "geometryRestored");
+    if (!messageScriptReady(engine) || !restored.toBool() || edi_app::WebFiles::available()) return;
+    auto visibility = read(view, "visibility");
+    if (!messageScriptReady(engine) || visibility.strictlyEquals(QJSValue(int(QWindow::Maximized)))) return;
+    visibility = read(view, "visibility");
+    if (!messageScriptReady(engine) || visibility.strictlyEquals(QJSValue(int(QWindow::FullScreen)))) return;
+    const auto target = engine->newQObject(settings);
+    for (const char* field : {"x", "y", "width", "height"}) {
+        const auto value = read(view, field);
+        if (!messageScriptReady(engine)) return;
+        messageScriptWrite(engine, target, QString::fromLatin1(field), value);
+        if (!messageScriptReady(engine)) return;
+    }
+}
+
+void ApplicationInfo::restoreWindowGeometry(QObject* window, QObject* settings) const {
+    const QPointer<QJSEngine> engine(qjsEngine(this));
+    if (!messageScriptReady(engine) || engine->thread() != QThread::currentThread()) return;
+    const auto view = engine->newQObject(window);
+    const auto kept = engine->newQObject(settings);
+    const auto read = [&](const QJSValue& source, const char* name) {
+        return messageScriptProperty(engine, source, QString::fromLatin1(name));
+    };
+    bool defaults = edi_app::WebFiles::available();
+    if (!defaults) {
+        const auto width = read(kept, "width");
+        if (!messageScriptReady(engine)) return;
+        defaults = width.toNumber() <= 0;
+        if (!defaults) {
+            const auto height = read(kept, "height");
+            if (!messageScriptReady(engine)) return;
+            defaults = height.toNumber() <= 0;
+        }
+    }
+    if (!messageScriptReady(engine)) return;
+    if (!defaults) {
+        for (const char* field : {"width", "height"}) {
+            const auto value = read(kept, field);
+            if (!messageScriptReady(engine)) return;
+            messageScriptWrite(engine, view, QString::fromLatin1(field), value);
+            if (!messageScriptReady(engine)) return;
+        }
+        const auto actor = engine->newQObject(const_cast<ApplicationInfo*>(this));
+        const auto placement = read(actor, "onScreenPosition");
+        if (!messageScriptReady(engine)) return;
+        const auto x = read(kept, "x");
+        if (!messageScriptReady(engine)) return;
+        const auto y = read(kept, "y");
+        if (!messageScriptReady(engine)) return;
+        const auto width = read(view, "width");
+        if (!messageScriptReady(engine)) return;
+        const auto height = read(view, "height");
+        if (!messageScriptReady(engine)) return;
+        const auto position = messageScriptCall(engine, placement, actor, {x, y, width, height});
+        if (!messageScriptReady(engine)) return;
+        for (const char* field : {"x", "y"}) {
+            const auto value = read(position, field);
+            if (!messageScriptReady(engine)) return;
+            messageScriptWrite(engine, view, QString::fromLatin1(field), value);
+            if (!messageScriptReady(engine)) return;
+        }
+    }
+    messageScriptWrite(engine, view, QStringLiteral("geometryRestored"), QJSValue(true));
+    if (!messageScriptReady(engine)) return;
+    const auto store = read(view, "storeGeometry");
+    if (messageScriptReady(engine)) messageScriptCall(engine, store, view, {});
+}
+
 
 bool ApplicationInfo::engineThreadsSelectable() const {
     return std::string_view(edi::engine_threading().backend) != "serial";
