@@ -75,6 +75,9 @@ build_kit() {
   kit="$QT/wasm_$flavour"
   wasm_check_emsdk_pin "$kit"
   out="$ROOT/build/wasm/$flavour"
+  # CMake and automoc need one physical graph path even through a build/wasm alias.
+  mkdir -p "$out"
+  out="$(cd "$out" && pwd -P)"
 
   key="crysta $SHA kit $EDI_WASM_QT/$flavour emsdk $EDI_WASM_EMSDK eigen $EDI_WASM_EIGEN_SHA256 fetched threads $threads"
   key+=" simd $simd sleef $simd require-simd ON"

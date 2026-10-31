@@ -162,3 +162,17 @@ and the shim's MIT licence. edi's source stays BSD 3-Clause.
 | QtWidgets' `QFileDialog::getOpenFileContent` / `saveFileContent` | Rejected: links QtWidgets into the browser build for two calls. |
 | IndexedDB (IDBFS) for the settings | Rejected: asynchronous, so the app would wait for it before loading QML; one local-storage key is synchronous. |
 | Emscripten's own zlib port for the archive | Rejected: Qt's archive classes are already linked. |
+
+
+### Physical paths for CMake graphs
+
+The normal WASM builder creates and resolves each kit's output directory with
+`pwd -P` before inspecting its native-build key or passing any graph/install path
+to CMake. A workspace may keep `build/wasm` on another filesystem through a
+symlink; CMake and automoc must use the same physical graph root when deriving
+source-header paths. Both kit modes, native-prefix identity keys, compiler flags,
+source selection and the logical output locations used by the packer stay the
+same. Existing caches are neither rewritten nor deleted to disguise another
+graph identity: a cache created with a different spelling may refuse a genuine
+reconfigure, which must be retained and handled explicitly. This path correction
+is not evidence of either kit compiling, linking or passing browser checks.
