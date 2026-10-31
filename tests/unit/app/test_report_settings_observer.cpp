@@ -219,9 +219,11 @@ public:
         return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
     }
     Q_INVOKABLE QVariantMap fileFacts(const QUrl& location, const QString& relative) const {
+        if (!localDirectory(location)) return {{"error", "An absolute local directory URL is required"}};
         QFile file(QDir(location.toLocalFile()).filePath(relative));
-        if (!file.open(QIODevice::ReadOnly)) return {};
+        if (!file.open(QIODevice::ReadOnly)) return {{"error", "The project file cannot be opened"}};
         const auto bytes = file.readAll();
+        if (file.error() != QFileDevice::NoError) return {{"error", "The project file cannot be read"}};
         return {{"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
                 {"bytes", bytes.size()}, {"modified", QFileInfo(file).lastModified().toMSecsSinceEpoch()}};
     }
