@@ -10,8 +10,7 @@ def main():
         json.dumps(
             {
                 'reference_kind': (
-                    'Approved map inventory, 2026-10-26; '
-                    'published RGB tables are independent'
+                    'Approved map inventory, 2026-10-26; published RGB tables are independent'
                 ),
                 'maps': ['blue-red', 'viridis', 'batlow', 'inferno', 'lapaz', 'greys'],
             },
