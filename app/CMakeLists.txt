@@ -105,6 +105,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
         qml/Components/ChartToolbar.qml
+        qml/Components/ColourMapBar.qml
+        qml/Components/ColourMapComboBox.qml
         qml/Components/IconCell.qml
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
@@ -113,6 +115,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
+        qml/Components/PaletteStrip.qml
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml

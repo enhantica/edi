@@ -10,10 +10,10 @@
 #include "edi/presentation.hpp"
 #include "edi/report_html.hpp"
 
-#include "../../fixtures/approved_palettes/assignments.hpp"
+#include "../../fixtures/chart_controls/bragg.hpp"
 
 TEST_CASE("Every structure count retains its approved Bragg colour") {
-    for (const auto& expected : approved_palette::cases) {
+    for (const auto& expected : figure_bragg::cases) {
         CAPTURE(expected.scheme);
         CAPTURE(expected.count);
         CAPTURE(expected.dark);
@@ -36,14 +36,14 @@ TEST_CASE("Every structure count retains its approved Bragg colour") {
             REQUIRE_MESSAGE(row != styles.end(), "Every per-structure series resolves a style beyond the categorical group");
             REQUIRE_MESSAGE(place < expected.colours.size(), "The presentation cannot invent extra structures");
             CHECK_MESSAGE((expected.dark ? row->dark : row->light) == expected.colours[place],
-                          "Each tick style equals the approved coordinate or independent whole-group Oklab gradient");
-            CHECK_MESSAGE(edi::structure_colour(*scheme, place, expected.count, expected.dark) == expected.colours[place],
-                          "Structure icons and tick styles share the independently expected count-aware assignment");
+                          "Each tick style equals its recorded shared-palette position or independent Oklab shade");
+            CHECK_MESSAGE(edi::figure_colour(*scheme, expected.positions[place], expected.palette_size, expected.dark) == expected.colours[place],
+                          "Structure icons and tick styles share the independently expected figure position");
             REQUIRE_MESSAGE(place < shown.bragg_labels.size(), "Every structure retains a row label alongside its ticks");
             CHECK_MESSAGE(shown.bragg_labels[place].style == series.style, "Row labels and ticks retain the same complete structure identity");
             ++place;
         }
-        CHECK_MESSAGE(place == source.phases.size(), "Every structure reaches the presentation at categorical and gradient counts");
+        CHECK_MESSAGE(place == source.phases.size(), "Every structure reaches the presentation before and after the eleven-colour boundary");
     }
 }
 

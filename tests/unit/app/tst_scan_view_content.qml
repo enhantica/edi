@@ -42,6 +42,7 @@ Rectangle {
         name: "ScanViewContent"
         when: windowShown
         property var chart
+        property var projectLocation
         property var applicationWindow
         property var preferencesDialog
         property var preferencesSelector
@@ -104,8 +105,9 @@ Rectangle {
             if (typeof Preferences.scanMapColours === "string")
                 Preferences.scanMapColours = "viridis";
             if (typeof Preferences.scanStackedPalette === "string")
-                Preferences.scanStackedPalette = "ediNatural";
+                Preferences.scanStackedPalette = "earth";
             const location = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/scan_template/project"));
+            projectLocation = location;
             Input.prepare(SettingsProof, location, mode === "stacked" && kind === "rows" ? "bounded-rows" : kind);
             verify(Session.openProject(location), "The scan actor opens a private real project with independent analytic datasets");
             compare(Session.project.experiments.count, 3, "Every analytic dataset appears in the real scan selector");
@@ -123,6 +125,12 @@ Rectangle {
             tryCompare(scan, "loaded", scan.count, 8000, "Every listed dataset finishes its asynchronous read");
             surface.Window.window.update();
             verify(waitForPolish(chart) && waitForRendering(chart), "The actual scan drawing has a completed frame");
+            if (chart.mode === "map") {
+                const direction = findChild(chart, "scanView.map.toolbar.direction");
+                verify(direction !== null, "The Map exposes its direction selector");
+                choose(direction, 1);
+                compare(direction.currentText, "Normal", "Fixed-table pixel witnesses explicitly choose Normal rather than theme-dependent Auto");
+            }
             const reverse = Render.descendants(chart).find(item => item.visible && typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip));
             if (reverse && reverse.checked) {
                 mouseClick(reverse, reverse.width / 2, reverse.height / 2);
@@ -138,9 +146,11 @@ Rectangle {
             }
         }
         function stackedAt(index, count, fraction) {
-            const offset = Preferences.scanStackedOffset / 100;
-            const height = Preferences.scanStackedSize === 0 ? 1 / (1 + (count - 1) * offset) : Preferences.scanStackedSize / 100;
-            return height * (index * offset + fraction);
+            const step = ["overlay", "close", "medium", "wide", "separate"].indexOf(Session.project.stackedSpacing);
+            const share = step / 4;
+            const height = 1 - share + share / count;
+            const baseline = count > 1 ? index * (1 - height) / (count - 1) : 0;
+            return baseline + height * fraction;
         }
         function selectionLabel(index) {
             const axes = named("axes"), coordinate = chart.mode === "stacked" ? stackedAt(index, chart.scan.count, 0) : chart.scan.rowOf(index);
@@ -152,7 +162,8 @@ Rectangle {
             compare(matches.length, 1, "Highlight off identifies exactly one shown label for the selected dataset");
             const label = matches[0];
             verify(label.segments.some(segment => segment.text && segment.bold === true), "The shown dataset's actual IconLine text segment is bold");
-            compare(String(label.textColor), String(Style.Colors.themeAccent), "The shown dataset's actual label uses the theme accent");
+            const selectedColour = chart.mode === "stacked" ? named("layer").colourOf(index) : Style.Colors.themeAccent;
+            compare(String(label.textColor), String(selectedColour), "The selected Stacked label keeps its dataset colour; the Map retains its selection accent");
             const text = Render.texts(label).find(item => item.font.family === Style.Fonts.ptSansBold.name && item.font.styleName === "Bold" && item.opacity > 0);
             verify(text !== undefined && Ui.rendered(text), "The selected label loads the real bold face in the visible plot");
             const root = Ui.windowRoot(chart.Window.window), at = text.mapToItem(root, 0, 0);
@@ -168,8 +179,8 @@ Rectangle {
             let drawn = false;
             for (let y = 0; y < text.height && !drawn; ++y)
                 for (let x = 0; x < text.width && !drawn; ++x)
-                    drawn = ink(frame.pixel(Math.floor(at.x + x), Math.floor(at.y + y)), Style.Colors.themeAccent, underlay.pixel(Math.floor(at.x + x), Math.floor(at.y + y)));
-            verify(drawn, "The selected label has actual accent ink inside its rendered text bounds");
+                    drawn = ink(frame.pixel(Math.floor(at.x + x), Math.floor(at.y + y)), selectedColour, underlay.pixel(Math.floor(at.x + x), Math.floor(at.y + y)));
+            verify(drawn, "The selected label has actual dataset or Map accent ink inside its rendered text bounds");
             compare(findChild(chart, "scanView." + chart.mode + ".current"), null, "The retired selection rectangle is absent from the actual scan chart");
             return label;
         }
@@ -322,7 +333,7 @@ Rectangle {
             ready(scan);
             exposeStack();
             const layer = named("layer"), axes = named("axes");
-            const colours = data.mode === "stacked" ? Approved.colours(SettingsProof, "ediNatural", "measured", 3, false) : ["#440154", "#21918c", "#fde725"];
+            const colours = data.mode === "stacked" ? [0, 1, 3].map(position => JSON.parse(SettingsProof.repoText("tests/fixtures/chart_controls/owner.json")).palettes[0].light[position]) : ["#440154", "#21918c", "#fde725"];
             for (let index = 0; index < 3; ++index) {
                 if (data.mode === "map") {
                     Session.project.currentExperimentIndex = (index + 1) % 3;
@@ -342,7 +353,7 @@ Rectangle {
                     };
                     present = present || ink(pixel, expected);
                 }
-                verify(present, "The actual " + data.mode + " view draws independently specified pattern " + index + " at its physical scan coordinate");
+                verify(present, "The actual " + data.mode + " view draws independently specified pattern " + index + " at its physical scan coordinate; expected=" + colours[index] + " actualColour=" + layer.colourOf(index));
             }
         }
         function test_scan_top_margin_data() {
@@ -515,30 +526,25 @@ Rectangle {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
             const choices = chart.mapChoices, selector = paletteSelector("map");
-            const schemes = Approved.reference(SettingsProof).schemes;
-            compare(choices.slice(0, 5).join(","), schemes.map(scheme => "ramp:" + scheme.id).join(","), "The Map toolbar offers all five Edi shades before every published colour map");
+            const roster = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/offered.json")).maps;
+            compare(Array.from(choices), roster, "Map offers the approved six maps, replacing the former five figure-palette ramps");
             const preferences = preferenceColour("Map");
             compare(Array.from({
-                length: 5
-            }, (_, index) => preferences.textAt(index)).join(","), Array.from({
-                length: 5
-            }, (_, index) => selector.textAt(index)).join(","), "The Preferences Map list has the same first five Edi shades in the same order");
+                length: preferences.count
+            }, (_, index) => preferences.textAt(index)), Array.from({
+                length: selector.count
+            }, (_, index) => selector.textAt(index)), "Preferences and the Map toolbar show the same complete ordered map list");
             keyClick(Qt.Key_Escape);
             tryCompare(preferencesDialog, "visible", false, 1000, "Actual Escape closes the Preferences observer before Map input");
-            const pattern = createTemporaryObject(patternReferenceFactory, surface, {
-                experiment: Session.project.currentExperiment
-            });
-            verify(pattern !== null, "The Map ramp reference is the actual Pattern plot background in the current theme");
-            for (let choice = 0; choice < 5; ++choice) {
-                choose(selector, choice);
-                const expected = [String(pattern.colors.chartBackground), schemes[choice].palette[data.dark ? "dark" : "light"].measured[0]];
-                const layer = named("layer"), frame = logicalImage(chart);
-                for (const index of [0, 1]) {
-                    const point = layer.mapToItem(chart, layer.width * (index ? 6.5 : .5) / 7, layer.height * .2);
-                    compare(String(frame.pixel(Math.round(point.x), Math.round(point.y))).toLowerCase(), expected[index].toLowerCase(), "Every Map shade ramp starts at the Pattern plot background and ends at its independently approved main experiment colour");
-                }
+            choose(selector, 0);
+            const expected = data.dark ? ["#181818", "#FC4F81"] : ["#FFFFFF", "#C8323C"];
+            const layer = named("layer"), frame = logicalImage(chart);
+            for (const index of [0, 1]) {
+                const point = layer.mapToItem(chart, layer.width * (index ? 6.5 : .5) / 7, layer.height * .2);
+                compare(String(frame.pixel(Math.round(point.x), Math.round(point.y))).toLowerCase(), expected[index].toLowerCase(), "Blue-Red retains both independently approved endpoint pixels in either theme");
             }
         }
+
         function test_stacked_schemes_and_line_width_data() {
             return [
                 {
@@ -630,13 +636,16 @@ Rectangle {
             verify(choices !== undefined && choices.length > 1, "The real view exposes its offered palette choices for independent source matching");
             const selector = paletteSelector(data.mode);
             verify(selector !== null, "The published-map observer uses the actual palette selector");
-            const categorical = Approved.reference(SettingsProof).schemes.map(row => row.id);
+            const categorical = ["earth", "classic", "soft", "natural", "colourBlindSafe"];
             let offered = 0;
             for (let index = 0; index < choices.length; ++index) {
                 const name = choices[index];
                 if (String(name).startsWith("ramp:") || categorical.includes(name))
                     continue;
-                const reference = references[name];
+                const reference = name === "blue-red" ? {
+                    license: "BSD-3-Clause",
+                    source: "Approved design, 2026-10-27"
+                } : references[name];
                 verify(reference !== undefined && reference.license && reference.source, "Every offered map has an independent published source and bundling licence, without a fixed whitelist: " + name);
                 ++offered;
                 if (offered <= data.first || offered > data.last)
@@ -648,7 +657,7 @@ Rectangle {
                     for (const [band, place] of [[1, 32], [3, 96], [5, 192]]) {
                         const point = layer.mapToItem(chart, layer.width * (band + 0.5) / 7, layer.height * 0.2);
                         const pixel = frame.pixel(Math.round(point.x), Math.round(point.y));
-                        const expected = reference.colours[place];
+                        const expected = mapSample(name, place, data.dark, references);
                         for (const [channel, offset] of [["r", 1], ["g", 3], ["b", 5]])
                             verify(Math.abs(Math.round(pixel[channel] * 255) - parseInt(expected.slice(offset, offset + 2), 16)) <= 1, "The actual Map retains a published interior intensity colour in both themes: " + name);
                     }
@@ -661,7 +670,7 @@ Rectangle {
                         const coordinate = stackedAt(row, 3, [0, 128, 255][row] / 255);
                         const py = (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                         const point = layer.mapToItem(chart, layer.width * 0.4, py);
-                        const colour = reference.colours[Math.round((0.1 + 0.8 * row / 2) * 255)];
+                        const colour = mapSample(name, Math.round((0.1 + 0.8 * row / 2) * 255), data.dark, references);
                         const expected = {
                             r: parseInt(colour.slice(1, 3), 16) / 255,
                             g: parseInt(colour.slice(3, 5), 16) / 255,
@@ -679,66 +688,69 @@ Rectangle {
             verify(offered > 1, "Both views offer multiple sourced maps beside the background ramps");
             compare(offered, data.count, "Separate map actors cover the entire independent map inventory");
         }
+        function mapSample(name, place, dark, references) {
+            if (name !== "blue-red")
+                return references[name].colours[place];
+            const stops = dark ? ["#181818", "#6AA6EA", "#FC4F81"] : ["#FFFFFF", "#3F7FBF", "#C8323C"];
+            const t = 2 * place / 255;
+            return t <= 1 ? Oklab.gradient(stops[0], stops[1], t) : Oklab.gradient(stops[1], stops[2], t - 1);
+        }
         function test_map_reverse_and_key_data() {
             const cases = [];
-            const count = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/offered.json")).maps.length + Approved.reference(SettingsProof).schemes.length;
+            const count = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/offered.json")).maps.length;
             for (const reverse of [false, true])
                 for (const dark of [false, true])
-                    for (let first = 0; first < count; first += 12)
-                        cases.push({
-                            tag: (reverse ? "reversed" : "forward") + (dark ? "-dark" : "-light") + "-part" + Math.floor(first / 12),
-                            reverse,
-                            dark,
-                            first,
-                            last: Math.min(first + 12, count),
-                            count
-                        });
+                    cases.push({
+                        tag: (reverse ? "reversed" : "forward") + (dark ? "-dark" : "-light") + "-part0",
+                        reverse,
+                        dark,
+                        count
+                    });
             return cases;
         }
         function test_map_reverse_and_key(data) {
             const scan = open("map");
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
-            const toggle = Render.descendants(chart).find(item => item.visible && typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip));
-            verify(toggle !== undefined && toggle.enabled, "The Map toolbar exposes an actual reverse switch");
+            const direction = findChild(chart, "scanView.map.toolbar.direction");
+            compare(Array.from({
+                length: direction.count
+            }, (_, i) => direction.textAt(i)), ["Auto", "Normal", "Inverted"], "The real selector exposes all three approved direction choices in order");
             const choices = chart.mapChoices;
-            compare(choices.length, data.count, "Every reversal part retains the complete independently recorded roster of maps and approved ramps");
+            const roster = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/offered.json")).maps;
+            compare(Array.from(choices), roster, "Direction actors retain exactly the approved six-map roster");
             const reference = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json"));
             const selector = findChild(chart, "scanView.map.toolbar.colourMap");
-            verify(selector !== null && choices !== undefined, "Reversal operates the real offered Map palette selector");
-            const pattern = createTemporaryObject(patternReferenceFactory, surface, {
-                experiment: Session.project.currentExperiment
-            });
-            verify(pattern !== null, "Reversed ramps use the actual Pattern plot background as their relational input");
-            const schemes = Approved.reference(SettingsProof).schemes;
-            const layer = named("layer");
-            const bar = named("colourBar.colours");
-            verify(bar !== undefined, "The reverse witness reaches the actual drawn quantitative colour key");
-            for (const requested of [!data.reverse, data.reverse]) {
-                if (toggle.checked !== requested)
-                    mouseClick(toggle, toggle.width / 2, toggle.height / 2);
-                tryCompare(toggle, "checked", requested, 1000, "Real pointer input changes the reverse choice in both directions");
-                for (let choice = data.first; choice < data.last; ++choice) {
+            const layer = named("layer"), bar = named("colourBar.colours");
+            verify(bar !== undefined, "The direction witness reaches the actual quantitative colour key");
+            for (const requested of [data.reverse ? 1 : 2, 0, data.reverse ? 2 : 1]) {
+                choose(direction, requested);
+                for (let choice = 0; choice < choices.length; ++choice) {
                     const name = choices[choice];
-                    const ramp = String(name).startsWith("ramp:");
-                    const scheme = ramp ? schemes.find(row => row.id === String(name).slice(5)) : null;
-                    verify(ramp ? scheme !== undefined : reference[name] !== undefined && reference[name].license, "Every offered reversible map has an independent published table/licence or approved ramp operands");
                     choose(selector, choice);
+                    const first = mapSample(name, 0, data.dark, reference), last = mapSample(name, 255, data.dark, reference);
+                    const bg = data.dark ? "#000000" : "#ffffff";
+                    const distance = colour => [1, 3, 5].reduce((sum, at) => sum + Math.pow(parseInt(colour.slice(at, at + 2), 16) - parseInt(bg.slice(at, at + 2), 16), 2), 0);
+                    const inverted = requested === 2 || (requested === 0 && distance(last) < distance(first));
                     const frame = logicalImage(chart);
                     for (const [band, index] of [[1, 32], [3, 96], [5, 192]]) {
-                        const place = requested ? 255 - index : index;
-                        const expected = ramp ? Oklab.gradient(String(pattern.colors.chartBackground), scheme.palette[data.dark ? "dark" : "light"].measured[0], place / 255) : reference[name].colours[place];
+                        const expected = mapSample(name, inverted ? 255 - index : index, data.dark, reference);
                         for (const [item, x, y] of [[layer, layer.width * (band + 0.5) / 7, layer.height * 0.2], [bar, bar.width / 2, (bar.height - 1) * (1 - index / 255)]]) {
                             const at = item.mapToItem(chart, x, y), pixel = frame.pixel(Math.round(at.x), Math.round(at.y));
                             for (const [channel, offset] of [["r", 1], ["g", 3], ["b", 5]])
-                                verify(Math.abs(Math.round(pixel[channel] * 255) - parseInt(expected.slice(offset, offset + 2), 16)) <= 1, "Forward and reversed image and key use the same independent interior table sample: " + name);
+                                verify(Math.abs(Math.round(pixel[channel] * 255) - parseInt(expected.slice(offset, offset + 2), 16)) <= 1, "Auto, Normal and Inverted image and key retain independent interior colours: " + name);
                         }
                     }
                 }
             }
-            const restored = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property bool checked:Preferences.scanMapReversed }');
-            verify(!restored.error, "A fresh production engine restores the reverse setting exercised by the actual Map control");
-            compare(restored.checked, data.reverse, "The reverse choice survives a fresh settings engine in both directions");
+            const saved = data.reverse ? "inverted" : "normal";
+            compare(Session.project.mapDirection, saved, "The project stores the selected direction name");
+            verify(Session.save(), "The direction choice saves through the actual project path");
+            chart.destroy();
+            chart = null;
+            Session.closeProject();
+            verify(Session.openProject(projectLocation), "A fresh project restores the direction choice");
+            compare(Session.project.mapDirection, saved, "Reopening restores the direction name rather than the resolved Boolean");
         }
         function interpolationToggle(root) {
             return Render.descendants(root).find(item => typeof item.checked === "boolean" && /smooth|stepp|interpol/i.test(String(item.objectName) + " " + item.toolTip));

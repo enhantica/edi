@@ -140,8 +140,10 @@ Item {
         visible: !chart.fromReport
         enabled: chart.evolution !== null && chart.evolution.xModes.length > 1 && chart.project.scanColumns.length > 0
         toolTip: qsTr("X axis")
-        model: chart.evolution ? chart.evolution.xModes : []
-        closedTexts: chart.evolution ? chart.evolution.xModes.map(mode => qsTr("x: %1").arg(mode)) : []
+        // Each value capitalised after the lower-case prefix (the owner, 2026-10-27).
+        readonly property var entries: chart.evolution ? chart.evolution.xModes.map(mode => mode.length > 0 ? mode.charAt(0).toUpperCase() + mode.slice(1) : mode) : []
+        model: entries
+        closedTexts: entries.map(mode => qsTr("x: %1").arg(mode))
         shownIndex: chart.evolution ? chart.evolution.xMode : 0
         onActivated: index => chart.evolution.xMode = index
     }

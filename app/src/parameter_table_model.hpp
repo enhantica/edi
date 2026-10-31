@@ -32,6 +32,8 @@ class ParameterTableModel : public RowTableModel {
     // the next sync.
     void setExperimentScope(const QString& experiment);
     void sync();
+    // A parameter's number in the table, from 1; 0 when it is not listed (ProjectViewModel::parameterNumber).
+    int numberOf(const ParameterItem* parameter) const;
 
    signals:
     void freeCountChanged();

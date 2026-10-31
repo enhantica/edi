@@ -10,7 +10,9 @@ import edi.app
 // and every button on the last line. Each line is centred between `leftEdge` and `rightEdge`, the span of the block
 // selector row above the chart, so the selector and every toolbar line share one centre (the owner, 2026-10-25). A child
 // with `closedTexts` (ToolbarComboBox) is a combobox; any other visible child is a button, or a row of them kept
-// whole.
+// whole. Comboboxes with a different `toolbarGroup` (a string, "" when not set) are a group's spacing apart, as the
+// comboboxes are from the buttons: the axes, the Stacked spacing and the Map's colours each a group (the owner,
+// 2026-10-26).
 Item {
     id: lines
 
@@ -23,39 +25,49 @@ Item {
     readonly property real groupSpacing: EaStyle.Sizes.fontPixelSize * 0.5 + 2 * AppSizes.toolbarSpacing
     // The controls shown, and every width the layout depends on.
     readonly property var units: Array.from(children).filter(child => child.visible)
-    readonly property string measure: [centre, leftEdge, rightEdge].concat(units.map(unit => unit.width)).join(",")
+    readonly property string measure: [centre, leftEdge, rightEdge].concat(units.map(unit => unit.width + groupOf(unit))).join(",")
     // How many lines the controls take.
     property int lineCount: 0
 
     function isComboBox(unit) {
         return unit.closedTexts !== undefined;
     }
+    function groupOf(unit) {
+        return unit.toolbarGroup ?? "";
+    }
+    // The gap before a combobox that follows `before` on a line.
+    function boxGap(before, unit) {
+        return groupOf(before) === groupOf(unit) ? spacing : groupSpacing;
+    }
     function widthOf(row, gap) {
         return row.reduce((sum, unit, index) => sum + unit.width + (index > 0 ? gap : 0), 0);
+    }
+    function boxesWidth(row) {
+        return row.reduce((sum, unit, index) => sum + unit.width + (index > 0 ? boxGap(row[index - 1], unit) : 0), 0);
     }
     function layout() {
         const boxes = units.filter(unit => isComboBox(unit));
         const buttons = units.filter(unit => !isComboBox(unit));
         const room = rightEdge - leftEdge;
         const rows = [];
-        const together = widthOf(boxes, spacing) + widthOf(buttons, spacing) + (boxes.length > 0 && buttons.length > 0 ? groupSpacing : 0);
+        const together = boxesWidth(boxes) + widthOf(buttons, spacing) + (boxes.length > 0 && buttons.length > 0 ? groupSpacing : 0);
         if (together <= room) {
             rows.push({
                 "units": boxes.concat(buttons),
-                "gaps": boxes.map((unit, index) => index > 0 ? spacing : 0).concat(buttons.map((unit, index) => index > 0 ? spacing : boxes.length > 0 ? groupSpacing : 0))
+                "gaps": boxes.map((unit, index) => index > 0 ? boxGap(boxes[index - 1], unit) : 0).concat(buttons.map((unit, index) => index > 0 ? spacing : boxes.length > 0 ? groupSpacing : 0))
             });
         } else {
             // As many comboboxes as fit on each line, then the buttons on their own.
             let row = null;
             for (const box of boxes) {
-                if (row === null || widthOf(row.units.concat([box]), spacing) > room) {
+                if (row === null || boxesWidth(row.units.concat([box])) > room) {
                     row = {
                         "units": [],
                         "gaps": []
                     };
                     rows.push(row);
                 }
-                row.gaps.push(row.units.length > 0 ? spacing : 0);
+                row.gaps.push(row.units.length > 0 ? boxGap(row.units[row.units.length - 1], box) : 0);
                 row.units.push(box);
             }
             if (buttons.length > 0)

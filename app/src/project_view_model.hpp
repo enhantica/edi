@@ -201,6 +201,23 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // ADR-0017 §16: the structure view's options, one object for the open project, shared by the toolbar, the
     // Appearance group and every structure's view; a new project starts at the defaults.
     Q_PROPERTY(edi_app::StructureViewOptions* structureViewOptions READ structureViewOptions CONSTANT)
+    // ADR-0038: the palette the project's experiments and structures take their colours from (a token of
+    // edi::colour_scheme_from_name, the app's Preferences), and each block's position in it (edi::colour_positions):
+    // kept while the block exists, a new block taking the next free one, a loaded project's experiments first. The
+    // count is one past the last position in use, at least 1.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
+    Q_PROPERTY(QList<int> experimentColourPositions READ experimentColourPositions NOTIFY
+                   experimentColourPositionsChanged)
+    Q_PROPERTY(QList<int> structureColourPositions READ structureColourPositions NOTIFY
+                   structureColourPositionsChanged)
+    Q_PROPERTY(int colourPositionCount READ colourPositionCount NOTIFY colourPositionCountChanged)
+    // ADR-0031, ADR-0041: the scan views' settings a project keeps (the owner, 2026-10-26), in the app's settings keyed
+    // by its folder as its selection is, so it reopens with them: the Stacked spacing (a name of
+    // edi::stacked_spacing_names, Wide when none is kept) and the Map's direction (a name of
+    // edi::scan_map_direction_names, Auto when none is kept; the choice, never the direction it resolves to). A project
+    // not saved yet keeps them from its first save.
+    Q_PROPERTY(QString stackedSpacing READ stackedSpacing WRITE setStackedSpacing NOTIFY stackedSpacingChanged)
+    Q_PROPERTY(QString mapDirection READ mapDirection WRITE setMapDirection NOTIFY mapDirectionChanged)
 
    public:
     ProjectViewModel(edi::Project project, QObject* parent);
@@ -300,6 +317,21 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool adjusting() const { return adjusting_; }
     void setAdjusting(bool adjusting);
     StructureViewOptions* structureViewOptions() const { return structure_view_options_; }
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
+    QList<int> experimentColourPositions() const { return experiment_colour_positions_; }
+    QList<int> structureColourPositions() const { return structure_colour_positions_; }
+    int colourPositionCount() const;
+    // The experiments' positions, then the structures'.
+    std::vector<std::size_t> colourPositions() const;
+    // A parameter's number in the Analysis table, from 1, by its unique name, as a correlation names it
+    // (`tb2ti2o7.atom_site.O1.fract_x`); 0 when the table does not list it. The correlation chart labels its ticks by
+    // these when the names are hidden (the owner, 2026-10-27).
+    Q_INVOKABLE int parameterNumber(const QString& uniqueName) const;
+    QString stackedSpacing() const { return stacked_spacing_; }
+    void setStackedSpacing(const QString& spacing);
+    QString mapDirection() const { return map_direction_; }
+    void setMapDirection(const QString& direction);
     const QList<StructureViewModel*>& structureModels() const { return structure_models_; }
     const QList<ExperimentViewModel*>& experimentModels() const { return experiment_models_; }
     const edi::Project& project() const { return *project_; }
@@ -476,6 +508,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void calculationStarted();
     void templateIndexChanged();
     void scanChanged();
+    void colourSchemeChanged();
+    void experimentColourPositionsChanged();
+    void structureColourPositionsChanged();
+    void colourPositionCountChanged();
+    // Any of the three changed: what the report and the experiments follow.
+    void colourPositionsChanged();
+    void stackedSpacingChanged();
+    void mapDirectionChanged();
     void calculationFinished();
 
    private:
@@ -614,8 +654,19 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void adoptScanFileResult(const std::string& file, const std::shared_ptr<const edi::ScanFileResult>& result);
     // The Correlations tab follows the last fit and the shown experiment.
     void syncCorrelations();
-    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's).
+    // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's) and the positions
+    // its chart's style table takes.
     void syncPatternColours();
+    // Every block's position in the palette, after the blocks or the palette changed.
+    void syncColourPositions();
+    QString colour_scheme_ = QStringLiteral("earth");
+    QHash<const QObject*, std::size_t> colour_positions_;  // by the block's view-model
+    QList<int> experiment_colour_positions_, structure_colour_positions_;
+    // The scan views' kept settings: read when the project opens, written when changed and at every save.
+    void restoreViewSettings();
+    void storeViewSettings() const;
+    QString stacked_spacing_ = QStringLiteral("wide");
+    QString map_direction_ = QStringLiteral("auto");
     QStringList scan_columns_;
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;

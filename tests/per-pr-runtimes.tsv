@@ -29,11 +29,10 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 18752
-# inventory_cpp = 396
-# inventory_measured = 16299
-# inventory_unmeasured = 2849
-
+# inventory_python = 18794
+# inventory_cpp = 395
+# inventory_measured = 16283
+# inventory_unmeasured = 2906
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[columns_fit_content:dark]
@@ -6443,11 +6442,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_newest_project_format.py
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background.1.coef]
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background.2.coef]
 0.000	tests/integration/py/test_newest_project_format.py::test_older_project_addresses_are_refused_with_their_name[fit-state-polynomial-bank.background[0]]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Edi Coast]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Edi Contrast]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Edi Garden]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Edi Natural]
-0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Edi Studio]
+0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Classic]
+0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Colour-blind safe]
+0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Earth]
+0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Natural]
+0.000	tests/integration/py/test_palette_published_sources.py::test_approved_palette_rows_keep_exact_coordinates_and_role_order[Soft]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#0055A0-False]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#808080-False]
 0.000	tests/integration/py/test_palette_published_sources.py::test_calc_hue_observer_reaches_independent_red_blue_and_neutral_controls[#EF9A9A-True]
@@ -6692,7 +6691,7 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_project_load_messages.py
 0.000	tests/integration/py/test_report_builder_seams.py::test_cw_d_axis_uses_bragg_law_and_ascending_points
 0.010	tests/integration/py/test_report_builder_seams.py::test_scan_evolution_keeps_extracted_x_numeric_su_and_core_text
 0.000	tests/integration/py/test_report_builder_seams.py::test_tof_d_axis_uses_linear_calibration_with_nonzero_offset
-UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_default_pattern_titles_are_coloured_segments_with_unstyled_separators
+0.010	tests/integration/py/test_report_chart_amendments.py::test_default_pattern_titles_are_coloured_segments_with_unstyled_separators
 0.000	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[False]
 0.000	tests/integration/py/test_report_chart_amendments.py::test_palette_rows_are_data_with_default_first_colour_and_valid_hex[True]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_chart_amendments.py::test_pattern_reliability_text_uses_percent_and_two_decimal_metrics
@@ -6808,11 +6807,11 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-as-iucr_99]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-iucr_19]
 UNMEASURED:failed-in-this-run	tests/integration/py/test_report_output_boundaries.py::test_successful_numeric_save_stays_inside_both_readers_finite_domain[zero-su-limit-save-iucr_99]
-0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediCoast]
-0.060	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediContrast]
-0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediGarden]
-0.089	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediNatural]
-0.050	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[ediStudio]
+0.030	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[classic]
+0.030	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[colourBlindSafe]
+0.026	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[earth]
+0.030	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[natural]
+0.030	tests/integration/py/test_report_palette_cardinality.py::test_captured_report_serializes_all_structure_styles_and_row_labels[soft]
 0.010	tests/integration/py/test_report_pdf_image_identity.py::test_pdf_image_identity_reaches_bytes_dimensions_and_alpha
 0.010	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-as-iucr_19]
 0.020	tests/integration/py/test_report_physical_domain.py::test_rounded_cell_must_remain_readable_or_refuse_before_publication[alpha-endpoint-dependent-save-as-iucr_99]
@@ -7088,34 +7087,11 @@ UNMEASURED:not-completed-in-this-run	tests/integration/py/test_scan_app_contract
 0.180	tests/integration/py/test_scan_extended_contract.py::test_selector_moves_to_main_tab_bar_once
 0.010	tests/integration/py/test_scan_extended_contract.py::test_user_page_and_scale_adr_document_approved_limits
 0.000	tests/integration/py/test_scan_extended_contract.py::test_working_copy_observer_rejects_copy_to_an_unrelated_destination
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[acton]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[batlow]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[blues]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-gouldian]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-l06]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-l08]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-l17]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[cet-l18]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[deep]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[dense]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[devon]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[gnbu]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[haline]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[ice]
+0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[greys]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[inferno]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[lajolla]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[lapaz]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[magma]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[oslo]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[plasma]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[pubu]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[purples]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[tempo]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[thermal]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[turbo]
 0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[viridis]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[ylgnbu]
-0.000	tests/integration/py/test_scan_map_sources.py::test_each_offered_map_equals_its_independent_published_table[ylorrd]
 0.000	tests/integration/py/test_scan_map_sources.py::test_light_ended_candidates_are_offered_without_fixing_their_names
 0.000	tests/integration/py/test_scan_map_sources.py::test_scan_retains_all_owner_selected_candidate_maps
 0.340	tests/integration/py/test_scan_notes_diagnostics.py::test_cli_accepts_valid_all_skipped_resume[False-human]
@@ -10607,6 +10583,71 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_check_escapes.py::t
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_a_converged_result_cannot_gain_materially_on_an_immediate_default_refit
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_descent_reaches_the_frozen_fast_descent_regression_witness
 UNMEASURED:failed-in-this-run	tests/system/py/test_catalogue_descent.py::test_default_variant_is_also_bound_to_the_independent_fullprof_reference
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_common_pool_and_earth_reservation:Classic]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_common_pool_and_earth_reservation:Colour-blind safe]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_common_pool_and_earth_reservation:Earth]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_common_pool_and_earth_reservation:Natural]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_common_pool_and_earth_reservation:Soft]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_element_scheme_names]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_element_two_to_one_and_scheme_titles]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_light_figure_is_independent_of_app_theme]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_map_direction_default_and_theme_following]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_no_background_disables_subtraction]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_pattern_subtracts_each_measured_point]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_preferences_strip_uses_shared_project_colours]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_saved_html_and_pdf_are_light:Classic]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_saved_html_and_pdf_are_light:Colour-blind safe]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_saved_html_and_pdf_are_light:Earth]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_saved_html_and_pdf_are_light:Natural]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_saved_html_and_pdf_are_light:Soft]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_short_legend_and_selection]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:1-0]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:1-1]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:1-2]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:1-3]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:1-4]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:162-0]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:162-1]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:162-2]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:162-3]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:162-4]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:3-0]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:3-1]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:3-2]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:3-3]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_geometry:3-4]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_spacing_survives_project_reopen]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_subtraction_uses_set_unfitted_background:Map]
+UNMEASURED:not-completed-in-this-run	tests/system/py/test_chart_control_app.py::test_real_chart_control_contract[test_subtraction_uses_set_unfitted_background:Stacked]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_blue_red_stops_and_nontrivial_oklab_interpolation[dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_blue_red_stops_and_nontrivial_oklab_interpolation[light]
+0.600	tests/system/py/test_chart_control_colours.py::test_element_adjustment_reaches_two_to_one_without_unneeded_movement[dark-jmol]
+0.600	tests/system/py/test_chart_control_colours.py::test_element_adjustment_reaches_two_to_one_without_unneeded_movement[dark-vesta]
+0.780	tests/system/py/test_chart_control_colours.py::test_element_adjustment_reaches_two_to_one_without_unneeded_movement[light-jmol]
+1.080	tests/system/py/test_chart_control_colours.py::test_element_adjustment_reaches_two_to_one_without_unneeded_movement[light-vesta]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_every_palette_retains_prefix_when_more_items_are_added
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_exact_palette_names_order_and_earth_default
+0.010	tests/system/py/test_chart_control_colours.py::test_hydrogen_and_carbon_are_distinct_in_light_tables
+0.000	tests/system/py/test_chart_control_colours.py::test_independent_colour_observer_controls
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_map_catalogue_has_only_the_six_named_choices
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Classic]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Colour-blind safe]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Earth]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Natural]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_one_assignment_function_reserves_only_earth_and_reuses_holes[Soft]
+0.000	tests/system/py/test_chart_control_colours.py::test_original_element_scheme_data_is_unchanged_for_three_dimensions
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_overflow_keeps_categorical_prefix_and_uses_first_two_colour_family[dark]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_overflow_keeps_categorical_prefix_and_uses_first_two_colour_family[light]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Classic]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Colour-blind safe]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Earth]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Natural]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[dark-Soft]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Classic]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Colour-blind safe]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Earth]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Natural]
+UNMEASURED:failed-in-this-run	tests/system/py/test_chart_control_colours.py::test_palette_coordinates_and_calc_match_owner_bytes[light-Soft]
 0.000	tests/system/py/test_chart_fonts.py::test_font_inventory_covers_every_chart_and_pane
 0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[correlations]
 0.000	tests/system/py/test_chart_fonts.py::test_ticks_and_axis_titles_share_the_app_font[evolution]
@@ -17564,8 +17605,7 @@ UNMEASURED:failed-in-this-run	tests/unit/cpp/test_report_integer_domain.cpp::Rep
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains existing presentation and drawing outputs at nontrivial seams
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report JSON retains hostile UTF8 text and encodes nonfinite values as null
 0.000	tests/unit/cpp/test_report_model_json.cpp::Report options retain section order and an explicitly fixed UTC timestamp
-0.010	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure count retains its approved Bragg colour
-0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure palette entry and wraparound retains its Bragg colour
+0.011	tests/unit/cpp/test_report_presentation_boundaries.cpp::Every structure count retains its approved Bragg colour
 0.002	tests/unit/cpp/test_report_presentation_boundaries.cpp::Static report borders every filled and empty correlation cell
 0.000	tests/unit/cpp/test_scan_visible_range.cpp::A resolved scan range retains its measured samples without a full-range envelope
 0.001	tests/unit/cpp/test_scan_visible_range.cpp::Visible scan columns retain every in-range minimum and maximum
@@ -19208,7 +19248,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 1.914	tests/integration/py/test_e04_t12_name_allowance.py
 # module-cost: 0.192	tests/integration/py/test_e09_t75_sdk_consumer.py
 # module-cost: 23.486	tests/integration/py/test_loaded_correlation_cache.py
-# module-cost: 0.044	tests/integration/py/test_report_palette_cardinality.py
+# module-cost: 0.024	tests/integration/py/test_report_palette_cardinality.py
 # module-cost: 1.555	tests/integration/py/test_scan_app_contract.py
 # module-cost: 0.277	tests/integration/py/test_scan_extended_contract.py
 # module-cost: 0.257	tests/integration/py/test_scan_notes_diagnostics.py
@@ -19227,6 +19267,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 0.011	tests/system/py/test_c34_t28_census_escapes.py
 # module-cost: 77.232	tests/system/py/test_c34_t28_native_retyping.py
 # module-cost: 1.059	tests/system/py/test_c34_t28_native_surface.py
+# module-cost: 3.771	tests/system/py/test_chart_control_colours.py
 # module-cost: 20.346	tests/system/py/test_chart_fonts.py
 # module-cost: 11.490	tests/system/py/test_chart_handover.py
 # module-cost: 3.683	tests/system/py/test_ci_native_modes.py

@@ -23,6 +23,7 @@
 #include <QUrl>
 #include <QtGlobal>
 #include <algorithm>
+#include <cmath>
 #include <string_view>
 
 #ifdef _OPENMP
@@ -171,9 +172,19 @@ namespace {
 edi::ColourScheme colour_scheme(const QString& name) { return edi::colour_scheme_or_default(name.toStdString()); }
 }  // namespace
 
-QColor ApplicationInfo::patternColour(const QString& scheme, int place, int count, bool dark) const {
-    return QColor(QString::fromStdString(edi::pattern_colour(colour_scheme(scheme), static_cast<std::size_t>(std::max(place, 0)),
-                                                             static_cast<std::size_t>(std::max(count, 1)), dark)));
+QColor ApplicationInfo::figureColour(const QString& scheme, int position, int count, bool dark) const {
+    return QColor(QString::fromStdString(edi::figure_colour(colour_scheme(scheme),
+                                                            static_cast<std::size_t>(std::max(position, 0)),
+                                                            static_cast<std::size_t>(std::max(count, 1)), dark)));
+}
+
+QColor ApplicationInfo::calculationColour(const QString& scheme, bool dark) const {
+    return QColor(
+        QString::fromStdString(edi::role_colour(colour_scheme(scheme), edi::ChartRole::TotalCalculation, dark)));
+}
+
+bool ApplicationInfo::reservesExperimentColours(const QString& scheme) const {
+    return edi::reserves_experiment_colours(colour_scheme(scheme));
 }
 
 QPoint ApplicationInfo::onScreenPosition(int x, int y, int width, int height) const {
@@ -189,11 +200,6 @@ QPoint ApplicationInfo::onScreenPosition(int x, int y, int width, int height) co
     }
     const QRect area = primary->availableGeometry();
     return {area.x() + std::max(0, (area.width() - width) / 2), area.y() + std::max(0, (area.height() - height) / 2)};
-}
-
-QColor ApplicationInfo::structureColour(const QString& scheme, int place, int count, bool dark) const {
-    return QColor(QString::fromStdString(edi::structure_colour(colour_scheme(scheme), static_cast<std::size_t>(std::max(place, 0)),
-                                                               static_cast<std::size_t>(std::max(count, 1)), dark)));
 }
 
 QStringList ApplicationInfo::colourSchemes() const {
@@ -228,28 +234,78 @@ QStringList ApplicationInfo::scanColourMaps() const {
 
 QString ApplicationInfo::scanColourMapOrDefault(const QString& name) const {
     const std::vector<std::string>& names = edi::scan_colour_map_names();
-    return std::find(names.begin(), names.end(), name.toStdString()) != names.end() ? name : QStringLiteral("viridis");
-}
-
-QStringList ApplicationInfo::scanColourRamps() const {
-    QStringList ramps;
-    for (const std::string_view name : edi::colour_scheme_names()) {
-        ramps.append(QStringLiteral("ramp:") + QString::fromUtf8(name.data(), static_cast<qsizetype>(name.size())));
-    }
-    return ramps;
+    return std::find(names.begin(), names.end(), name.toStdString()) != names.end() ? name : QStringLiteral("blue-red");
 }
 
 QString ApplicationInfo::scanColourTitle(const QString& choice) const {
-    if (choice.startsWith(QLatin1String("ramp:"))) {
-        const std::string_view title = edi::colour_scheme_title(colour_scheme(choice.mid(5)));
-        return tr("%1 shades").arg(QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size())));
-    }
     const std::optional<edi::ColourScheme> scheme = edi::colour_scheme_from_name(choice.toStdString());
     if (scheme) {
         const std::string_view title = edi::colour_scheme_title(*scheme);
         return QString::fromUtf8(title.data(), static_cast<qsizetype>(title.size()));
     }
     return QString::fromStdString(edi::scan_colour_map_title(choice.toStdString()));
+}
+
+QStringList ApplicationInfo::stackedSpacings() const {
+    QStringList names;
+    for (const std::string& name : edi::stacked_spacing_names()) {
+        names.append(QString::fromStdString(name));
+    }
+    return names;
+}
+
+QStringList ApplicationInfo::stackedSpacingTitles() const {
+    QStringList titles;
+    for (const std::string& name : edi::stacked_spacing_names()) {
+        titles.append(QString::fromStdString(edi::stacked_spacing_title(edi::stacked_spacing_or_default(name))));
+    }
+    return titles;
+}
+
+double ApplicationInfo::stackedSpacingShare(const QString& name) const {
+    return edi::stacked_spacing_share(edi::stacked_spacing_or_default(name.toStdString()));
+}
+
+QStringList ApplicationInfo::scanMapDirections() const {
+    QStringList names;
+    for (const std::string& name : edi::scan_map_direction_names()) {
+        names.append(QString::fromStdString(name));
+    }
+    return names;
+}
+
+QStringList ApplicationInfo::scanMapDirectionTitles() const {
+    QStringList titles;
+    for (const std::string& name : edi::scan_map_direction_names()) {
+        titles.append(QString::fromStdString(edi::scan_map_direction_title(edi::scan_map_direction_or_default(name))));
+    }
+    return titles;
+}
+
+QString ApplicationInfo::scanMapDirectionOrDefault(const QString& name) const {
+    const edi::ScanMapDirection direction = edi::scan_map_direction_or_default(name.toStdString());
+    return QString::fromStdString(edi::scan_map_direction_names()[static_cast<std::size_t>(direction)]);
+}
+
+bool ApplicationInfo::scanMapInverted(const QString& map, const QString& direction, const QColor& background,
+                                      bool dark) const {
+    return edi::scan_map_inverted(edi::scan_colour_map_or_default(map.toStdString()),
+                                  edi::scan_map_direction_or_default(direction.toStdString()),
+                                  background.name(QColor::HexRgb).toStdString(), dark);
+}
+
+QList<QColor> ApplicationInfo::scanColourStops(const QString& map, bool dark, bool inverted, int stops) const {
+    const std::vector<edi::ScanMapColour> table =
+        edi::scan_colour_map_table(edi::scan_colour_map_or_default(map.toStdString()), dark);
+    QList<QColor> out;
+    const int count = std::max(stops, 2);
+    for (int i = 0; i < count; ++i) {
+        const auto at = static_cast<std::size_t>(
+            std::lround(static_cast<double>(i) / (count - 1) * static_cast<double>(table.size() - 1)));
+        const edi::ScanMapColour& colour = table[inverted ? table.size() - 1 - at : at];
+        out.append(QColor(colour.r, colour.g, colour.b));
+    }
+    return out;
 }
 
 QColor ApplicationInfo::elementColor(const QString& typeSymbol, const QColor& fallback, const QString& scheme) const {

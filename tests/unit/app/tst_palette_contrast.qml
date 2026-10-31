@@ -7,6 +7,7 @@ import edi.app
 import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import "RenderedTable.js" as Render
+import "../../fixtures/scan_views/oklab.js" as FigureReference
 
 Rectangle {
     width: 1400
@@ -123,26 +124,26 @@ Rectangle {
             }
         }
         function test_approved_palette_assignment_data() {
+            const palettes = JSON.parse(SettingsProof.repoText("tests/fixtures/chart_controls/owner.json")).palettes;
+            const tokens = ["earth", "classic", "soft", "natural", "colourBlindSafe"];
             const rows = [];
-            for (const scheme of reference.schemes)
+            for (let index = 0; index < tokens.length; ++index)
                 for (const dark of [false, true])
                     rows.push({
-                        tag: scheme.id + (dark ? "-dark" : "-light"),
-                        scheme: scheme.id,
+                        tag: tokens[index] + (dark ? "-dark" : "-light"),
+                        scheme: tokens[index],
+                        palette: palettes[index],
                         dark
                     });
             return rows;
         }
         function test_approved_palette_assignment(data) {
-            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            for (const count of [1, 2, 5, 6, 17, 1001]) {
-                const expected = Approved.colours(SettingsProof, data.scheme, "measured", count, data.dark);
-                const structures = Approved.colours(SettingsProof, data.scheme, "structures", count, data.dark);
-                for (let place = 0; place < count; ++place) {
-                    compare(String(ApplicationInfo.patternColour(data.scheme, place, count, data.dark)).toLowerCase(), expected[place], "The measured API equals the independently approved categorical or Oklab assignment at every place");
-                    compare(String(ApplicationInfo.structureColour(data.scheme, place, count, data.dark)).toLowerCase(), structures[place], "The count-aware structure API equals the independently approved whole-group gradient at every place");
+            const colours = data.palette[data.dark ? "dark" : "light"];
+            for (const count of [1, 2, 5, 6, 11, 12, 17, 1001])
+                for (let position = 0; position < count; ++position) {
+                    const expected = position < 11 ? colours[position] : FigureReference.gradient(colours[0], colours[1], (position - 10) / (count - 10));
+                    compare(String(ApplicationInfo.figureColour(data.scheme, position, count, data.dark)).toLowerCase(), String(expected).toLowerCase(), "The unified figure API retains every recorded categorical position and its Oklab overflow shades");
                 }
-            }
         }
         function hue(colour) {
             const coordinates = oklab(colour);
