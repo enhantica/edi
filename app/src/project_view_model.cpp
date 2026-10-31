@@ -2604,10 +2604,6 @@ void ProjectViewModel::keepStructureView() {
 }
 
 QString ProjectViewModel::applyText(const QString& file, const QString& text) {
-    // A scan's datasets read their data from its files, which a project read from text does not carry.
-    if (scan_) {
-        return tr("A scan project is edited on its pages, not as text");
-    }
     // A category the dictionary does not hold is a mistake, which the reader would pass over.
     for (const std::string& id : edi::text_category_ids(text.toStdString())) {
         if (edi::category_label(id).empty()) {

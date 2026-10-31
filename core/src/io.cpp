@@ -3727,7 +3727,9 @@ std::vector<std::string> registered_peak_types() {
 // writes a project still being built too, and its values must still be adopted (edi ADR-0052).
 std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
 
-static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true) {
+// `data_root`, when given, is where a scan's data files are, for a project read from a scratch save of one.
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true,
+                                   const std::string& data_root = {}) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -4593,6 +4595,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
 
     project.path = directory;
     project.metadata.path = directory;
+    project.scan_data_root = data_root;
     // A declared template dataset must be one of the scan's files.
     if (!project.sequential_fit.template_file.empty()) {
         check_scan_template_file(project, project.sequential_fit.template_file);
@@ -5263,7 +5266,11 @@ namespace {
 // A save of the project into a fresh scratch directory, removed when this object goes.
 class ScratchSave {
    public:
-    explicit ScratchSave(const Project& project) {
+    // A read of the scratch save is as complete as the project (one still being built has no structure or experiment
+    // yet), and a scan's data files are read where the project's are.
+    explicit ScratchSave(const Project& project)
+        : whole_(!project.structures.empty() && !project.experiments.empty()),
+          data_root_(project.scan_data_root.empty() ? project.path : project.scan_data_root) {
         std::random_device random;
         for (int attempt = 0; root_.empty(); ++attempt) {
             const fs::path candidate =
@@ -5316,17 +5323,22 @@ class ScratchSave {
             return message;
         };
         try {
-            return load_project((root_ / "project").string(), [&on_warning, &local](const std::string& warning) {
-                if (on_warning) {
-                    on_warning(local(warning));
-                }
-            });
+            return load_project_folder(
+                (root_ / "project").string(),
+                [&on_warning, &local](const std::string& warning) {
+                    if (on_warning) {
+                        on_warning(local(warning));
+                    }
+                },
+                whole_, data_root_);
         } catch (const std::exception& refusal) {
             throw IoError(local(refusal.what()));
         }
     }
 
    private:
+    bool whole_;
+    std::string data_root_;
     fs::path root_;
 };
 
