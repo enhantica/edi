@@ -17,14 +17,19 @@ EaElements.GroupBox {
     // Which sidebar tab this group is in, and each category's content by id.
     property string shownTier: "Basic"
     property var contents: ({})
-    property Component fallback: null
+    // A category with no content of its own gets the group the app makes from the dictionary and the block's text.
+    property BlockText textSource: null
+    property Component fallback: generatedContent
+    // Whether the block holds measured data: a category only of use with it is hidden without (the owner, 2026-10-27).
+    property bool measured: true
 
     readonly property string categoryId: model.categoryId
     // The key its open or closed state is kept by, across the blocks the page shows.
     readonly property string openKey: `${shownTier}:${categoryId}`
 
     // A Basic category with an Extras part has a group in each tab; `contents` is the tab's own.
-    readonly property bool shown: model.tier === shownTier || (shownTier === "Extras" && model.extrasPart)
+    readonly property bool extrasPart: shownTier === "Extras" && model.tier !== "Extras" && model.extrasPart
+    readonly property bool shown: (model.tier === shownTier || extrasPart) && (measured || !(extrasPart ? model.extrasNeedsData : model.needsData))
     // Among the groups its tab lists (SideBarGroups).
     readonly property bool listed: shown
 
@@ -35,7 +40,7 @@ EaElements.GroupBox {
     collapsed: !SideBarGroups.isOpen(openKey, group)
     onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
-    title: model.isLoop ? `${model.title} (${model.itemCount})` : model.title
+    title: extrasPart && model.extrasTitle !== "" ? model.extrasTitle : model.isLoop ? `${model.title} (${model.itemCount})` : model.title
     icon: model.icon
 
     EaElements.ToolTip {
@@ -46,5 +51,13 @@ EaElements.GroupBox {
 
     Loader {
         sourceComponent: group.contents[group.categoryId] ?? group.fallback
+    }
+    Component {
+        id: generatedContent
+        GeneratedGroup {
+            // Read only while open: the text is a save of the project.
+            source: group.collapsed ? null : group.textSource
+            categoryId: group.categoryId
+        }
     }
 }

@@ -430,8 +430,9 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
       atom_site_adps_(new AtomSiteAdpListModel(structure, editor, registry, this)),
       scattering_lengths_(new ScatteringLengthListModel(structure, editor, this)),
       categories_(new CategoryListModel(this)),
-      text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this)) {
-    categories_->setCategories(edi::structure_categories(structure_));
+      text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this,
+                          [&structure] { return std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string(); })) {
+    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->text().toStdString(); });
     captureScene();
 }
 
@@ -463,7 +464,7 @@ void StructureViewModel::sync() {
     atom_sites_->sync();
     atom_site_adps_->sync();
     scattering_lengths_->sync();
-    categories_->setCategories(edi::structure_categories(structure_));
+    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->text().toStdString(); });
 }
 
 }  // namespace edi_app

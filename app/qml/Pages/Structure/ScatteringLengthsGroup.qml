@@ -25,7 +25,7 @@ Column {
         defaultInfoText: qsTr("No custom scattering lengths: the built-in table applies")
         sourceModel: group.lengths
 
-        columnWidths: [numberColumnWidth, textColumnWidth("typeSymbol", Session.label("scattering_length.type_symbol")), -1, AppSizes.iconColumnWidth]
+        columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {

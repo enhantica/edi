@@ -22,6 +22,8 @@ WorkflowPage {
     // A project of several single crystals: the Stacked tab draws all of them on one F²calc-against-F²meas chart, and
     // there is no Map.
     readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
+    // Whether the shown experiment holds measured data: what only works on it is hidden or disabled without.
+    readonly property bool measured: experiment !== null && !experiment.calculationOnly
 
     // Each category's content, by `.edi` category id.
     readonly property var contents: ({
@@ -43,7 +45,7 @@ WorkflowPage {
     // Extras shows the same categories, and the Extras part of those that have one.
     readonly property var extrasContents: Object.assign({}, contents, {
         "peak": peakExtrasContent,
-        "background": backgroundExtrasContent
+        "background_estimate": backgroundExtrasContent
     })
 
     pageName: "experiment"
@@ -115,8 +117,10 @@ WorkflowPage {
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.experiment ? page.experiment.text : null
                     shownTier: "Basic"
                     contents: page.contents
+                    measured: page.measured
                 }
             }
         }
@@ -132,8 +136,10 @@ WorkflowPage {
             Repeater {
                 model: page.experiment ? page.experiment.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.experiment ? page.experiment.text : null
                     shownTier: "Extras"
                     contents: page.extrasContents
+                    measured: page.measured
                 }
             }
         }

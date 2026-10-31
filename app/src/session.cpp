@@ -375,6 +375,19 @@ bool Session::save() {
     return true;
 }
 
+QString Session::writeBackReports() {
+    if (project_ == nullptr || archive_location_.isEmpty()) {
+        return {};
+    }
+    try {
+        edi::write_project_archive(project_->path().toStdString(), archive_location_.toStdString());
+    } catch (const std::exception& refusal) {
+        return tr("The reports were written, but %1 could not be rewritten: %2")
+            .arg(archive_location_, QString::fromUtf8(refusal.what()));
+    }
+    return {};
+}
+
 bool Session::saveAs(const QUrl& directory) {
     if (project_ == nullptr) {
         return false;

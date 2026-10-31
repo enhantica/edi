@@ -9,9 +9,9 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// Saving the report, the sidebar's top group (edi ADR-0036 §7): one row per format, its box and its report's path, the
-// interactive HTML with whether it embeds plotly.js and three.js (online by default) on its own row under it, then the
-// static PDF (A4, the preview's figures as images) and the CIF report (every item under its official CIF name); one
+// Saving the report, the sidebar's top group (edi ADR-0036 §7): one row per format in the sidebar's left half, its box
+// and its report's path, the interactive HTML with whether it embeds plotly.js and three.js (online by default) in the
+// right half of its row (the owner, 2026-10-27), then the static PDF (A4, the preview's figures as images) and the CIF report (every item under its official CIF name); one
 // Save report button below, which writes the ticked formats into the project's reports/ folder (in the browser it also
 // downloads them, one file or one zip).
 EaElements.GroupBox {
@@ -28,11 +28,20 @@ EaElements.GroupBox {
     // A save under way, from its start until its files are written or refused. The page keeps the report built and
     // the preview's figures drawn meanwhile, even when another page is shown: a PDF takes those figures.
     property bool saving: false
+    // A save asked for before the project had a place of its own, made once Save as gives it one.
+    property bool afterSaveAs: false
 
     // Writes the ticked formats; with the PDF ticked, once the preview's figures are grabbed. While the project
     // calculates, the report is not yet its outcome, so the save waits for it.
     function saveReport() {
         const report = group.report;
+        // A project that cannot be written back (an example, a read-only .zip) asks where to keep it first, as Save
+        // does; its report is saved once it has a place (the owner, 2026-10-27).
+        if (!group.inBrowser && Session.needsSaveAs) {
+            group.afterSaveAs = true;
+            AppState.saveAsRequested();
+            return;
+        }
         if (report.calculating) {
             group.savePending = true;
             return;
@@ -44,6 +53,11 @@ EaElements.GroupBox {
         const write = () => {
             try {
                 report.saveReport(EaStyle.Fonts.fontFamily);
+                const refusal = Session.writeBackReports();
+                if (refusal !== "") {
+                    saveError.message = refusal;
+                    saveError.open();
+                }
             } finally {
                 group.saving = false;
             }
@@ -61,6 +75,8 @@ EaElements.GroupBox {
     // In the browser Save report also downloads the files, and a saved file lasts until the page is reloaded.
     readonly property bool inBrowser: WebFiles.available
 
+    // The format rows take the sidebar's left half; the embed option the right half of the HTML row.
+    readonly property real halfWidth: (EaStyle.Sizes.sideBarContentWidth - EaStyle.Sizes.fontPixelSize) / 2
     // The format boxes share one width, so the path fields line up.
     readonly property real boxWidth: Math.max(htmlBox.implicitWidth, pdfBox.implicitWidth, cifBox.implicitWidth)
 
@@ -91,7 +107,7 @@ EaElements.GroupBox {
         readonly property bool shown: saved !== null && !(group.inBrowser && saved.state === "missing")
 
         objectName: "report.path." + format
-        width: EaStyle.Sizes.sideBarContentWidth - group.boxWidth - EaStyle.Sizes.fontPixelSize
+        width: group.halfWidth - group.boxWidth - EaStyle.Sizes.fontPixelSize
         readOnly: true
         horizontalAlignment: TextInput.AlignLeft
         enabled: box.enabled
@@ -132,17 +148,28 @@ EaElements.GroupBox {
                 format: "html"
                 box: htmlBox
             }
-        }
-        // Whether the HTML carries its chart libraries, on its own row under HTML.
-        EaElements.CheckBox {
-            objectName: "report.embedLibraries"
-            width: EaStyle.Sizes.sideBarContentWidth
-            leftPadding: 0
-            enabled: group.report !== null && group.report.writesHtml
-            text: qsTr("Embed the chart libraries in the HTML (works offline)")
-            checked: group.report ? group.report.embedLibraries : false
-            onToggled: group.report.embedLibraries = checked
-            ToolTip.text: qsTr("Include plotly.js and three.js in the HTML file, so the report opens offline")
+            // Whether the HTML carries its chart libraries, on one line: shortened, never wrapped, where the half
+            // is too narrow for the whole label.
+            EaElements.CheckBox {
+                id: embedBox
+
+                readonly property string longText: qsTr("Embed the chart libraries (works offline)")
+
+                anchors.verticalCenter: parent.verticalCenter
+                objectName: "report.embedLibraries"
+                width: group.halfWidth
+                leftPadding: 0
+                enabled: group.report !== null && group.report.writesHtml
+                text: embedMetrics.advanceWidth(longText) + embedBox.indicator.width + embedBox.spacing <= width ? longText : qsTr("Embed chart libraries (offline)")
+                checked: group.report ? group.report.embedLibraries : false
+                onToggled: group.report.embedLibraries = checked
+                ToolTip.text: qsTr("Include plotly.js and three.js in the HTML file, so the report opens offline")
+
+                FontMetrics {
+                    id: embedMetrics
+                    font: embedBox.font
+                }
+            }
         }
         Row {
             spacing: EaStyle.Sizes.fontPixelSize
@@ -194,12 +221,24 @@ EaElements.GroupBox {
             enabled: group.report !== null && !group.savePending && !group.saving && (group.report.writesHtml || group.report.writesPdf || group.report.writesCif)
             fontIcon: "download"
             text: qsTr("Save report")
-            ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder")
+            ToolTip.text: group.inBrowser ? qsTr("Download the ticked formats, one file or one zip of them") : qsTr("Write the ticked formats into the project's reports folder, inside its .zip when it is one")
             onClicked: group.saveReport()
         }
     }
 
     // A report that could not be saved says why, as a project that could not.
+    Connections {
+        target: Session
+        function onNeedsSaveAsChanged() {
+            if (group.afterSaveAs && !Session.needsSaveAs) {
+                group.afterSaveAs = false;
+                group.saveReport();
+            }
+        }
+        function onProjectChanged() {
+            group.afterSaveAs = false;
+        }
+    }
     Connections {
         target: group.report
         function onCalculatingChanged() {

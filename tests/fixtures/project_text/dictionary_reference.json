@@ -1,0 +1,3184 @@
+{
+  "categories": [
+    {
+      "id": "metadata",
+      "edi_name": "_metadata",
+      "title": "Project",
+      "loop": false,
+      "icon": "archive",
+      "order": 10,
+      "mark": "input"
+    },
+    {
+      "id": "edi",
+      "edi_name": "_edi",
+      "title": "File header",
+      "loop": false,
+      "icon": "file-code",
+      "order": 500,
+      "mark": "output"
+    },
+    {
+      "id": "su_format",
+      "edi_name": "_su_format",
+      "title": "Standard uncertainties",
+      "loop": false,
+      "icon": "balance-scale",
+      "order": 20,
+      "mark": "input"
+    },
+    {
+      "id": "report",
+      "edi_name": "_report",
+      "title": "Report",
+      "loop": false,
+      "icon": "file-alt",
+      "order": 30,
+      "mark": "input"
+    },
+    {
+      "id": "report_file",
+      "edi_name": "_report_file",
+      "title": "Saved report",
+      "loop_title": "Saved reports",
+      "loop": true,
+      "icon": "file",
+      "order": 510,
+      "mark": "output"
+    },
+    {
+      "id": "correlation_chart",
+      "edi_name": "_correlation_chart",
+      "title": "Correlation chart",
+      "loop": false,
+      "icon": "th",
+      "order": 40,
+      "mark": "input"
+    },
+    {
+      "id": "pattern_chart",
+      "edi_name": "_pattern_chart",
+      "title": "Pattern chart",
+      "loop": false,
+      "icon": "chart-line",
+      "order": 50,
+      "mark": "input"
+    },
+    {
+      "id": "space_group",
+      "edi_name": "_space_group",
+      "title": "Space group",
+      "loop": false,
+      "icon": "satellite",
+      "order": 100,
+      "mark": "input"
+    },
+    {
+      "id": "cell",
+      "edi_name": "_cell",
+      "title": "Cell",
+      "loop": false,
+      "icon": "cube",
+      "order": 110,
+      "mark": "input"
+    },
+    {
+      "id": "atom_site",
+      "edi_name": "_atom_site",
+      "title": "Atom site",
+      "loop_title": "Atom sites",
+      "loop": true,
+      "icon": "atom",
+      "order": 120,
+      "mark": "input"
+    },
+    {
+      "id": "atom_site_aniso",
+      "edi_name": "_atom_site_aniso",
+      "title": "Atomic displacement",
+      "loop_title": "Atomic displacement",
+      "loop": true,
+      "icon": "arrows-alt",
+      "order": 130,
+      "mark": "input"
+    },
+    {
+      "id": "scattering_length",
+      "edi_name": "_scattering_length",
+      "title": "Scattering length",
+      "loop_title": "Scattering lengths",
+      "loop": true,
+      "icon": "ruler",
+      "order": 140,
+      "mark": "input"
+    },
+    {
+      "id": "geom",
+      "edi_name": "_geom",
+      "title": "Bond settings",
+      "loop": false,
+      "icon": "ruler-combined",
+      "order": 150,
+      "mark": "input"
+    },
+    {
+      "id": "structure_view",
+      "edi_name": "_structure_view",
+      "title": "Appearance",
+      "loop": false,
+      "icon": "palette",
+      "order": 160,
+      "mark": "input"
+    },
+    {
+      "id": "space_group_symop",
+      "edi_name": "_space_group_symop",
+      "title": "Symmetry operator",
+      "loop_title": "Symmetry operators",
+      "loop": true,
+      "icon": "sync-alt",
+      "order": 520,
+      "mark": "output"
+    },
+    {
+      "id": "expanded_atom_site",
+      "edi_name": "_expanded_atom_site",
+      "title": "Atom in the cell",
+      "loop_title": "Atoms in the cell",
+      "loop": true,
+      "icon": "braille",
+      "order": 530,
+      "mark": "output"
+    },
+    {
+      "id": "geom_bond",
+      "edi_name": "_geom_bond",
+      "title": "Bond",
+      "loop_title": "Bonds",
+      "loop": true,
+      "icon": "grip-lines",
+      "order": 540,
+      "mark": "output"
+    },
+    {
+      "id": "atom_sites_cartn_transform",
+      "edi_name": "_atom_sites_cartn_transform",
+      "title": "Cartesian frame",
+      "loop": false,
+      "icon": "vector-square",
+      "order": 550,
+      "mark": "output"
+    },
+    {
+      "id": "experiment_type",
+      "edi_name": "_experiment_type",
+      "title": "Experiment type",
+      "loop": false,
+      "icon": "radiation",
+      "order": 200,
+      "mark": "input"
+    },
+    {
+      "id": "scattering_source",
+      "edi_name": "_scattering_source",
+      "title": "Scattering source",
+      "loop": false,
+      "icon": "atom",
+      "order": 320,
+      "mark": "input"
+    },
+    {
+      "id": "data_source",
+      "edi_name": "_data_source",
+      "title": "Data source",
+      "loop": false,
+      "icon": "file-import",
+      "order": 600,
+      "mark": "output"
+    },
+    {
+      "id": "data_range",
+      "edi_name": "_data_range",
+      "title": "Calculation range",
+      "loop": false,
+      "icon": "arrows-alt-h",
+      "order": 210,
+      "mark": "input"
+    },
+    {
+      "id": "data",
+      "edi_name": "_data",
+      "title": "Measured data point",
+      "loop_title": "Measured data",
+      "loop": true,
+      "icon": "arrows-alt-h",
+      "order": 610,
+      "mark": "output"
+    },
+    {
+      "id": "instrument",
+      "edi_name": "_instrument",
+      "title": "Instrument",
+      "loop": false,
+      "icon": "microscope",
+      "order": 240,
+      "mark": "input"
+    },
+    {
+      "id": "peak",
+      "edi_name": "_peak",
+      "title": "Peak profile",
+      "loop": false,
+      "icon": "shapes",
+      "order": 250,
+      "mark": "input"
+    },
+    {
+      "id": "background",
+      "edi_name": "_background",
+      "title": "Background",
+      "loop_title": "Background",
+      "loop": true,
+      "icon": "wave-square",
+      "order": 220,
+      "mark": "input"
+    },
+    {
+      "id": "background_estimate",
+      "edi_name": "_background_estimate",
+      "title": "Background estimation",
+      "loop": false,
+      "icon": "magic",
+      "order": 230,
+      "mark": "input"
+    },
+    {
+      "id": "absorption",
+      "edi_name": "_absorption",
+      "title": "Absorption",
+      "loop": false,
+      "icon": "tint",
+      "order": 290,
+      "mark": "input"
+    },
+    {
+      "id": "extinction",
+      "edi_name": "_extinction",
+      "title": "Extinction",
+      "loop": false,
+      "icon": "gem",
+      "order": 270,
+      "mark": "input"
+    },
+    {
+      "id": "reflns",
+      "edi_name": "_reflns",
+      "title": "Observed reflections",
+      "loop": false,
+      "icon": "filter",
+      "order": 310,
+      "mark": "input"
+    },
+    {
+      "id": "linked_structure",
+      "edi_name": "_linked_structure",
+      "title": "Linked structure",
+      "loop_title": "Linked structures",
+      "loop": true,
+      "icon": "layer-group",
+      "order": 280,
+      "mark": "input"
+    },
+    {
+      "id": "preferred_orientation",
+      "edi_name": "_preferred_orientation",
+      "title": "Preferred orientation",
+      "loop_title": "Preferred orientations",
+      "loop": true,
+      "icon": "compass",
+      "order": 300,
+      "mark": "input"
+    },
+    {
+      "id": "excluded_region",
+      "edi_name": "_excluded_region",
+      "title": "Excluded region",
+      "loop_title": "Excluded regions",
+      "loop": true,
+      "icon": "eraser",
+      "order": 260,
+      "mark": "input"
+    },
+    {
+      "id": "refln",
+      "edi_name": "_refln",
+      "title": "Reflection",
+      "loop_title": "Reflections",
+      "loop": true,
+      "icon": "list",
+      "order": 650,
+      "mark": "output"
+    },
+    {
+      "id": "refine_ls",
+      "edi_name": "_refine_ls",
+      "title": "Fitted reflections",
+      "loop": false,
+      "icon": "cut",
+      "order": 420,
+      "mark": "input"
+    },
+    {
+      "id": "joint_fit",
+      "edi_name": "_joint_fit",
+      "title": "Joint-fit weights",
+      "loop": false,
+      "icon": "link",
+      "order": 450,
+      "mark": "input"
+    },
+    {
+      "id": "fitting_mode",
+      "edi_name": "_fitting_mode",
+      "title": "Fitting mode",
+      "loop": false,
+      "icon": "sliders-h",
+      "order": 410,
+      "mark": "input"
+    },
+    {
+      "id": "minimizer",
+      "edi_name": "_minimizer",
+      "title": "Minimizer",
+      "loop": false,
+      "icon": "level-down-alt",
+      "order": 400,
+      "mark": "input"
+    },
+    {
+      "id": "alias",
+      "edi_name": "_alias",
+      "title": "Alias",
+      "loop_title": "Aliases",
+      "loop": true,
+      "icon": "tag",
+      "order": 430,
+      "mark": "input"
+    },
+    {
+      "id": "constraint",
+      "edi_name": "_constraint",
+      "title": "Constraint",
+      "loop_title": "Constraints",
+      "loop": true,
+      "icon": "equals",
+      "order": 440,
+      "mark": "input"
+    },
+    {
+      "id": "fit_parameter",
+      "edi_name": "_fit_parameter",
+      "title": "Fit start value",
+      "loop_title": "Fit start values",
+      "loop": true,
+      "icon": "history",
+      "order": 690,
+      "mark": "output"
+    },
+    {
+      "id": "fit_result",
+      "edi_name": "_fit_result",
+      "title": "Fit result",
+      "loop": false,
+      "icon": "check-circle",
+      "order": 700,
+      "mark": "output"
+    },
+    {
+      "id": "fit_result_bank",
+      "edi_name": "_fit_result_bank",
+      "title": "Experiment fit result",
+      "loop": false,
+      "icon": "check",
+      "order": 710,
+      "mark": "output"
+    },
+    {
+      "id": "fit_result_phase",
+      "edi_name": "_fit_result_phase",
+      "title": "Structure fit result",
+      "loop": false,
+      "icon": "check",
+      "order": 720,
+      "mark": "output"
+    },
+    {
+      "id": "fit_parameter_correlation",
+      "edi_name": "_fit_parameter_correlation",
+      "title": "Correlation",
+      "loop_title": "Correlations",
+      "loop": true,
+      "icon": "th-large",
+      "order": 730,
+      "mark": "output"
+    },
+    {
+      "id": "sequential_fit",
+      "edi_name": "_sequential_fit",
+      "title": "Sequential fit",
+      "loop": false,
+      "icon": "list-ol",
+      "order": 460,
+      "mark": "input"
+    },
+    {
+      "id": "sequential_fit_extract",
+      "edi_name": "_sequential_fit_extract",
+      "title": "Scan extraction rule",
+      "loop_title": "Scan extraction rules",
+      "loop": true,
+      "icon": "filter",
+      "order": 470,
+      "mark": "input"
+    },
+    {
+      "id": "data_calc",
+      "edi_name": "_data_calc",
+      "title": "Calculated point",
+      "loop_title": "Calculated pattern",
+      "loop": true,
+      "icon": "chart-area",
+      "order": 620,
+      "mark": "output"
+    },
+    {
+      "id": "pd_calc",
+      "edi_name": "_pd_calc",
+      "title": "Structure curve",
+      "loop_title": "Structure curves",
+      "loop": true,
+      "icon": "chart-area",
+      "order": 640,
+      "mark": "output"
+    },
+    {
+      "id": "pd_calc_overall",
+      "edi_name": "_pd_calc_overall",
+      "title": "Structure curves",
+      "loop": false,
+      "icon": "chart-area",
+      "order": 630,
+      "mark": "output"
+    },
+    {
+      "id": "pd_block",
+      "edi_name": "_pd_block",
+      "title": "Report block",
+      "loop": false,
+      "icon": "file-code",
+      "order": 740,
+      "mark": "output"
+    },
+    {
+      "id": "calculator",
+      "edi_name": "_calculator",
+      "title": "Calculator",
+      "loop": false,
+      "icon": "calculator",
+      "order": 330,
+      "mark": "input"
+    }
+  ],
+  "items": [
+    {
+      "uid": "cell.length_a",
+      "category": "cell",
+      "display_name": "a",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "cell.length_b",
+      "category": "cell",
+      "display_name": "b",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "cell.length_c",
+      "category": "cell",
+      "display_name": "c",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "cell.angle_alpha",
+      "category": "cell",
+      "display_name": "α",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "cell.angle_beta",
+      "category": "cell",
+      "display_name": "β",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "cell.angle_gamma",
+      "category": "cell",
+      "display_name": "γ",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site.id",
+      "category": "atom_site",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_site.type_symbol",
+      "category": "atom_site",
+      "display_name": "type",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_site.wyckoff_letter",
+      "category": "atom_site",
+      "display_name": "WP",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_site.adp_type",
+      "category": "atom_site",
+      "display_name": "ADP type",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "Biso",
+          "display_name": "B iso"
+        },
+        {
+          "token": "Uiso",
+          "display_name": "U iso"
+        },
+        {
+          "token": "Bani",
+          "display_name": "B aniso"
+        },
+        {
+          "token": "Uani",
+          "display_name": "U aniso"
+        },
+        {
+          "token": "beta",
+          "display_name": "β"
+        }
+      ]
+    },
+    {
+      "uid": "atom_site.fract_x",
+      "category": "atom_site",
+      "display_name": "x",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site.fract_y",
+      "category": "atom_site",
+      "display_name": "y",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site.fract_z",
+      "category": "atom_site",
+      "display_name": "z",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site.occupancy",
+      "category": "atom_site",
+      "display_name": "occ",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site.adp_iso",
+      "category": "atom_site",
+      "display_name": "iso/eq",
+      "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_aniso.id",
+      "category": "atom_site_aniso",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "atom_site_aniso.adp_11",
+      "category": "atom_site_aniso",
+      "display_name": "11",
+      "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_aniso.adp_22",
+      "category": "atom_site_aniso",
+      "display_name": "22",
+      "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_aniso.adp_33",
+      "category": "atom_site_aniso",
+      "display_name": "33",
+      "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_aniso.adp_12",
+      "category": "atom_site_aniso",
+      "display_name": "12",
+      "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_aniso.adp_13",
+      "category": "atom_site_aniso",
+      "display_name": "13",
+      "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_site_aniso.adp_23",
+      "category": "atom_site_aniso",
+      "display_name": "23",
+      "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.rise_alpha_0",
+      "category": "peak",
+      "display_name": "α₀",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.rise_alpha_1",
+      "category": "peak",
+      "display_name": "α₁",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.decay_beta_0",
+      "category": "peak",
+      "display_name": "β₀",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.decay_beta_1",
+      "category": "peak",
+      "display_name": "β₁",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_gauss_sigma_0",
+      "category": "peak",
+      "display_name": "σ₀²",
+      "display_units": "µs²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_gauss_sigma_1",
+      "category": "peak",
+      "display_name": "σ₁²",
+      "display_units": "µs²/Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_gauss_sigma_2",
+      "category": "peak",
+      "display_name": "σ₂²",
+      "display_units": "µs²/Å⁴",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_gauss_size",
+      "category": "peak",
+      "display_name": "size G",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_gauss_strain",
+      "category": "peak",
+      "display_name": "strain G",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_lorentz_gamma_0",
+      "category": "peak",
+      "display_name": "γ₀",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_lorentz_gamma_1",
+      "category": "peak",
+      "display_name": "γ₁",
+      "display_units": "µs/Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_lorentz_gamma_2",
+      "category": "peak",
+      "display_name": "γ₂",
+      "display_units": "µs/Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_lorentz_size",
+      "category": "peak",
+      "display_name": "size L",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_lorentz_strain",
+      "category": "peak",
+      "display_name": "strain L",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_gauss_u",
+      "category": "peak",
+      "display_name": "U",
+      "display_units": "deg²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_gauss_v",
+      "category": "peak",
+      "display_name": "V",
+      "display_units": "deg²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_gauss_w",
+      "category": "peak",
+      "display_name": "W",
+      "display_units": "deg²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_lorentz_x",
+      "category": "peak",
+      "display_name": "X",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.broad_lorentz_y",
+      "category": "peak",
+      "display_name": "Y",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.mixing_eta_0",
+      "category": "peak",
+      "display_name": "Eta0",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.mixing_eta_1",
+      "category": "peak",
+      "display_name": "Eta1",
+      "display_units": "1/deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.asym_fcj_1",
+      "category": "peak",
+      "display_name": "S/L",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.asym_fcj_2",
+      "category": "peak",
+      "display_name": "D/L",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.asym_beba_a0",
+      "category": "peak",
+      "display_name": "A₀",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.asym_beba_b0",
+      "category": "peak",
+      "display_name": "B₀",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.asym_beba_a1",
+      "category": "peak",
+      "display_name": "A₁",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.asym_beba_b1",
+      "category": "peak",
+      "display_name": "B₁",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.asym_beba_limit",
+      "category": "peak",
+      "display_name": "AsyLim",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.calib_d_to_tof_offset",
+      "category": "instrument",
+      "display_name": "TOF offset",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.calib_d_to_tof_linear",
+      "category": "instrument",
+      "display_name": "TOF linear",
+      "display_units": "µs/Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.calib_d_to_tof_quadratic",
+      "category": "instrument",
+      "display_name": "TOF quadratic",
+      "display_units": "µs/Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.calib_d_to_tof_reciprocal",
+      "category": "instrument",
+      "display_name": "TOF reciprocal",
+      "display_units": "µs·Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.calib_twotheta_offset",
+      "category": "instrument",
+      "display_name": "2θ offset",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.setup_wavelength",
+      "category": "instrument",
+      "display_name": "Wavelength",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.calib_sample_displacement",
+      "category": "instrument",
+      "display_name": "Sample displacement",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.calib_sample_transparency",
+      "category": "instrument",
+      "display_name": "Sample transparency",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.setup_polarization_coefficient",
+      "category": "instrument",
+      "display_name": "Polarization coefficient",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.setup_monochromator_twotheta",
+      "category": "instrument",
+      "display_name": "Monochromator 2θ",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.setup_wavelength_2",
+      "category": "instrument",
+      "display_name": "Wavelength 2",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "instrument.setup_wavelength_2_to_1_ratio",
+      "category": "instrument",
+      "display_name": "Intensity ratio 2/1",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "absorption.abscor1",
+      "category": "absorption",
+      "display_name": "ABSCOR1",
+      "display_units": "Å⁻¹",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "absorption.abscor2",
+      "category": "absorption",
+      "display_name": "ABSCOR2",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "absorption.mu_r",
+      "category": "absorption",
+      "display_name": "μR",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.domain_radius",
+      "category": "extinction",
+      "display_name": "Domain radius",
+      "display_units": "μm",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.mosaic_spread",
+      "category": "extinction",
+      "display_name": "Mosaic spread",
+      "display_units": "rad⁻¹",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.crystal_radius",
+      "category": "extinction",
+      "display_name": "Crystal radius",
+      "display_units": "mm",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.coefficient",
+      "category": "extinction",
+      "display_name": "Extinction coefficient",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.coefficient_11",
+      "category": "extinction",
+      "display_name": "x11",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.coefficient_22",
+      "category": "extinction",
+      "display_name": "x22",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.coefficient_33",
+      "category": "extinction",
+      "display_name": "x33",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.coefficient_12",
+      "category": "extinction",
+      "display_name": "x12",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.coefficient_13",
+      "category": "extinction",
+      "display_name": "x13",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "extinction.coefficient_23",
+      "category": "extinction",
+      "display_name": "x23",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "preferred_orientation.march_r",
+      "category": "preferred_orientation",
+      "display_name": "r",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "preferred_orientation.march_random_fract",
+      "category": "preferred_orientation",
+      "display_name": "f rand",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "linked_structure.scale",
+      "category": "linked_structure",
+      "display_name": "scale",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background.intensity",
+      "category": "background",
+      "display_name": "intensity",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background.position",
+      "category": "background",
+      "display_name": "position",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background.coef",
+      "category": "background",
+      "display_name": "coefficient",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background.order",
+      "category": "background",
+      "display_name": "order",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background.origin",
+      "category": "background",
+      "display_name": "origin",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background.x_min",
+      "category": "background",
+      "display_name": "x min",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background.x_max",
+      "category": "background",
+      "display_name": "x max",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "metadata.name",
+      "category": "metadata",
+      "display_name": "name",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "metadata.title",
+      "category": "metadata",
+      "display_name": "title",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "metadata.description",
+      "category": "metadata",
+      "display_name": "description",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "metadata.authors",
+      "category": "metadata",
+      "display_name": "authors",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "metadata.path",
+      "category": "metadata",
+      "display_name": "location",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "metadata.created",
+      "category": "metadata",
+      "display_name": "created",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "metadata.last_modified",
+      "category": "metadata",
+      "display_name": "last modified",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "metadata.timestamp",
+      "category": "metadata",
+      "display_name": "timestamp",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "edi.schema_version",
+      "category": "edi",
+      "display_name": "schema version",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "su_format.rule",
+      "category": "su_format",
+      "display_name": "rule",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "iucr_19",
+          "display_name": "IUCr recommendation: 1 digit, or 2 from 10 to 19"
+        },
+        {
+          "token": "iucr_99",
+          "display_name": "Always 2 digits, 10 to 99"
+        }
+      ]
+    },
+    {
+      "uid": "report.html",
+      "category": "report",
+      "display_name": "HTML",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "report.pdf",
+      "category": "report",
+      "display_name": "PDF",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "report.cif",
+      "category": "report",
+      "display_name": "CIF",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "report.html_offline",
+      "category": "report",
+      "display_name": "embed chart libraries",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "report.excluded",
+      "category": "report",
+      "display_name": "excluded",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "report_file.format",
+      "category": "report_file",
+      "display_name": "format",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "html",
+          "display_name": "HTML"
+        },
+        {
+          "token": "pdf",
+          "display_name": "PDF"
+        },
+        {
+          "token": "cif",
+          "display_name": "CIF"
+        }
+      ]
+    },
+    {
+      "uid": "report_file.name",
+      "category": "report_file",
+      "display_name": "file",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "report_file.saved",
+      "category": "report_file",
+      "display_name": "saved",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "report_file.project_last_modified",
+      "category": "report_file",
+      "display_name": "project saved",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "report_file.digest",
+      "category": "report_file",
+      "display_name": "digest",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "correlation_chart.threshold",
+      "category": "correlation_chart",
+      "display_name": "threshold",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "pattern_chart.x_axis",
+      "category": "pattern_chart",
+      "display_name": "x-axis",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "native",
+          "display_name": "Measured axis"
+        },
+        {
+          "token": "d_spacing",
+          "display_name": "d-spacing"
+        }
+      ]
+    },
+    {
+      "uid": "space_group.name_h_m",
+      "category": "space_group",
+      "display_name": "name",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group.coord_system_code",
+      "category": "space_group",
+      "display_name": "code",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "space_group.it_number",
+      "category": "space_group",
+      "display_name": "number",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "geom.min_bond_distance_cutoff",
+      "category": "geom",
+      "display_name": "minimum distance",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "geom.bond_distance_inc",
+      "category": "geom",
+      "display_name": "tolerance",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "structure_view.atom_view",
+      "category": "structure_view",
+      "display_name": "atoms as",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "covalent",
+          "display_name": "Covalent radius"
+        },
+        {
+          "token": "vdw",
+          "display_name": "Van der Waals radius"
+        },
+        {
+          "token": "ionic",
+          "display_name": "Ionic radius"
+        },
+        {
+          "token": "adp",
+          "display_name": "Displacement"
+        }
+      ]
+    },
+    {
+      "uid": "structure_view.colour_scheme",
+      "category": "structure_view",
+      "display_name": "colours",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "jmol",
+          "display_name": "Jmol"
+        },
+        {
+          "token": "vesta",
+          "display_name": "VESTA"
+        }
+      ]
+    },
+    {
+      "uid": "structure_view.atom_scale",
+      "category": "structure_view",
+      "display_name": "atom scale",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "structure_view.adp_probability",
+      "category": "structure_view",
+      "display_name": "probability",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "structure_view.labels",
+      "category": "structure_view",
+      "display_name": "labels",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "structure_view.atoms",
+      "category": "structure_view",
+      "display_name": "atoms shown",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "all",
+          "display_name": "All"
+        },
+        {
+          "token": "asymmetric",
+          "display_name": "Asymmetric unit"
+        },
+        {
+          "token": "none",
+          "display_name": "None"
+        }
+      ]
+    },
+    {
+      "uid": "structure_view.bonds",
+      "category": "structure_view",
+      "display_name": "bonds",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "structure_view.cell",
+      "category": "structure_view",
+      "display_name": "cell",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "structure_view.axes",
+      "category": "structure_view",
+      "display_name": "axes",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "scattering_length.type_symbol",
+      "category": "scattering_length",
+      "display_name": "type",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "scattering_length.length_fm",
+      "category": "scattering_length",
+      "display_name": "b",
+      "display_units": "fm",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "space_group_symop.operation_xyz",
+      "category": "space_group_symop",
+      "display_name": "operation",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.atom_site_id",
+      "category": "expanded_atom_site",
+      "display_name": "site",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.site_symmetry",
+      "category": "expanded_atom_site",
+      "display_name": "symmetry",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.fract_x",
+      "category": "expanded_atom_site",
+      "display_name": "x",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.fract_y",
+      "category": "expanded_atom_site",
+      "display_name": "y",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.fract_z",
+      "category": "expanded_atom_site",
+      "display_name": "z",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.cartn_x",
+      "category": "expanded_atom_site",
+      "display_name": "X",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.cartn_y",
+      "category": "expanded_atom_site",
+      "display_name": "Y",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.cartn_z",
+      "category": "expanded_atom_site",
+      "display_name": "Z",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.occupancy",
+      "category": "expanded_atom_site",
+      "display_name": "occ",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.u_iso",
+      "category": "expanded_atom_site",
+      "display_name": "U iso",
+      "display_units": "Å²",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "expanded_atom_site.cluster_id",
+      "category": "expanded_atom_site",
+      "display_name": "cluster",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "geom_bond.expanded_atom_site_id_1",
+      "category": "geom_bond",
+      "display_name": "atom 1",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "geom_bond.expanded_atom_site_id_2",
+      "category": "geom_bond",
+      "display_name": "atom 2",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "geom_bond.atom_site_label_1",
+      "category": "geom_bond",
+      "display_name": "site 1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "geom_bond.atom_site_label_2",
+      "category": "geom_bond",
+      "display_name": "site 2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "geom_bond.site_symmetry_1",
+      "category": "geom_bond",
+      "display_name": "symmetry 1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "geom_bond.site_symmetry_2",
+      "category": "geom_bond",
+      "display_name": "symmetry 2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "geom_bond.distance",
+      "category": "geom_bond",
+      "display_name": "distance",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_11",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₁₁",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_12",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₁₂",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_13",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₁₃",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_21",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₂₁",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_22",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₂₂",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_23",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₂₃",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_31",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₃₁",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_32",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₃₂",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.mat_33",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "M₃₃",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "atom_sites_cartn_transform.axes",
+      "category": "atom_sites_cartn_transform",
+      "display_name": "axes",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "experiment_type.beam_mode",
+      "category": "experiment_type",
+      "display_name": "beam mode",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "constant wavelength",
+          "display_name": "Constant wavelength"
+        },
+        {
+          "token": "time-of-flight",
+          "display_name": "Time-of-flight"
+        }
+      ]
+    },
+    {
+      "uid": "experiment_type.sample_form",
+      "category": "experiment_type",
+      "display_name": "sample form",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "powder",
+          "display_name": "Powder"
+        },
+        {
+          "token": "single crystal",
+          "display_name": "Single crystal"
+        }
+      ]
+    },
+    {
+      "uid": "experiment_type.radiation_probe",
+      "category": "experiment_type",
+      "display_name": "probe",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "neutron",
+          "display_name": "Neutron"
+        },
+        {
+          "token": "xray",
+          "display_name": "X-ray"
+        }
+      ]
+    },
+    {
+      "uid": "experiment_type.scattering_type",
+      "category": "experiment_type",
+      "display_name": "scattering type",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "bragg",
+          "display_name": "Bragg"
+        },
+        {
+          "token": "total",
+          "display_name": "Total"
+        }
+      ]
+    },
+    {
+      "uid": "scattering_source.xray_form_factor",
+      "category": "scattering_source",
+      "display_name": "X-ray form factors",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "wk1995",
+          "display_name": "Waasmaier & Kirfel (1995)"
+        },
+        {
+          "token": "it1992",
+          "display_name": "International Tables C (1992)"
+        }
+      ]
+    },
+    {
+      "uid": "scattering_source.xray_dispersion",
+      "category": "scattering_source",
+      "display_name": "X-ray dispersion",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "cromer-liberman",
+          "display_name": "Cromer & Liberman"
+        },
+        {
+          "token": "sasaki1989",
+          "display_name": "Sasaki (1989)"
+        },
+        {
+          "token": "it1992",
+          "display_name": "International Tables C (1992)"
+        },
+        {
+          "token": "none",
+          "display_name": "None"
+        }
+      ]
+    },
+    {
+      "uid": "scattering_source.neutron_scattering_length",
+      "category": "scattering_source",
+      "display_name": "neutron scattering lengths",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "rauch2003ext",
+          "display_name": "Rauch & Waschkowski (2003)"
+        },
+        {
+          "token": "sears1992",
+          "display_name": "Sears (1992)"
+        }
+      ]
+    },
+    {
+      "uid": "data_source.file_name",
+      "category": "data_source",
+      "display_name": "data file",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "data_range.two_theta_min",
+      "category": "data_range",
+      "display_name": "min",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data_range.two_theta_max",
+      "category": "data_range",
+      "display_name": "max",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data_range.two_theta_step",
+      "category": "data_range",
+      "display_name": "step",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data_range.two_theta",
+      "category": "data_range",
+      "display_name": "2θ",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data_range.time_of_flight_min",
+      "category": "data_range",
+      "display_name": "min",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data_range.time_of_flight_max",
+      "category": "data_range",
+      "display_name": "max",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data_range.time_of_flight_step",
+      "category": "data_range",
+      "display_name": "step",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data_range.time_of_flight",
+      "category": "data_range",
+      "display_name": "TOF",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data.two_theta",
+      "category": "data",
+      "display_name": "2θ",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data.time_of_flight",
+      "category": "data",
+      "display_name": "TOF",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data.intensity_meas",
+      "category": "data",
+      "display_name": "meas",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data.intensity_meas_su",
+      "category": "data",
+      "display_name": "s.u.",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data.d_spacing",
+      "category": "data",
+      "display_name": "d",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data.intensity_calc",
+      "category": "data",
+      "display_name": "calc",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data.intensity_bkg",
+      "category": "data",
+      "display_name": "bkg",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "data.calc_status",
+      "category": "data",
+      "display_name": "status",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "incl",
+          "display_name": "Included"
+        },
+        {
+          "token": "excl",
+          "display_name": "Excluded"
+        }
+      ]
+    },
+    {
+      "uid": "data_calc.point_id",
+      "category": "data_calc",
+      "display_name": "point",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "pd_calc.component_intensities_net",
+      "category": "pd_calc",
+      "display_name": "structure calc",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "pd_calc_overall.component_presentation_order",
+      "category": "pd_calc_overall",
+      "display_name": "structure order",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "pd_block.id",
+      "category": "pd_block",
+      "display_name": "block",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "instrument.setup_twotheta_bank",
+      "category": "instrument",
+      "display_name": "2θ bank",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "peak.type",
+      "category": "peak",
+      "display_name": "profile",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "cwl-gaussian",
+          "display_name": "Gaussian"
+        },
+        {
+          "token": "cwl-lorentzian",
+          "display_name": "Lorentzian"
+        },
+        {
+          "token": "cwl-pseudo-voigt",
+          "display_name": "Pseudo-Voigt"
+        },
+        {
+          "token": "cwl-pseudo-voigt-berar-baldinozzi",
+          "display_name": "Pseudo-Voigt + Bérar-Baldinozzi asymmetry"
+        },
+        {
+          "token": "cwl-tch-pseudo-voigt",
+          "display_name": "Thompson-Cox-Hastings pseudo-Voigt (TCH)"
+        },
+        {
+          "token": "cwl-tch-pseudo-voigt-fcj",
+          "display_name": "Thompson-Cox-Hastings pseudo-Voigt (TCH) + Finger-Cox-Jephcoat asymmetry (FCJ)"
+        },
+        {
+          "token": "tof-jorgensen",
+          "display_name": "Jorgensen"
+        },
+        {
+          "token": "tof-jorgensen-von-dreele",
+          "display_name": "Jorgensen-Von Dreele"
+        },
+        {
+          "token": "tof-pseudo-voigt",
+          "display_name": "Pseudo-Voigt"
+        }
+      ]
+    },
+    {
+      "uid": "peak.cutoff_fwhm",
+      "category": "peak",
+      "display_name": "cutoff (FWHM)",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background.type",
+      "category": "background",
+      "display_name": "type",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "line-segment",
+          "display_name": "Line segment"
+        },
+        {
+          "token": "chebyshev",
+          "display_name": "Chebyshev"
+        },
+        {
+          "token": "polynomial",
+          "display_name": "Polynomial"
+        }
+      ]
+    },
+    {
+      "uid": "background.id",
+      "category": "background",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "background_estimate.mode",
+      "category": "background_estimate",
+      "display_name": "estimation mode",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "manual",
+          "display_name": "Manual"
+        },
+        {
+          "token": "auto",
+          "display_name": "Auto"
+        }
+      ]
+    },
+    {
+      "uid": "background_estimate.method",
+      "category": "background_estimate",
+      "display_name": "method",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "auto",
+          "display_name": "Auto"
+        },
+        {
+          "token": "snip",
+          "display_name": "SNIP"
+        },
+        {
+          "token": "arpls",
+          "display_name": "arPLS"
+        },
+        {
+          "token": "fabc",
+          "display_name": "FABC"
+        }
+      ]
+    },
+    {
+      "uid": "background_estimate.width",
+      "category": "background_estimate",
+      "display_name": "peak width",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background_estimate.smoothness",
+      "category": "background_estimate",
+      "display_name": "smoothness",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background_estimate.n_points",
+      "category": "background_estimate",
+      "display_name": "points",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "background_estimate.tolerance",
+      "category": "background_estimate",
+      "display_name": "tolerance",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "background_estimate.in_peaks",
+      "category": "background_estimate",
+      "display_name": "points in peaks",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "move",
+          "display_name": "Move"
+        },
+        {
+          "token": "drop",
+          "display_name": "Drop"
+        }
+      ]
+    },
+    {
+      "uid": "background_estimate.use_model",
+      "category": "background_estimate",
+      "display_name": "calculated peaks",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "auto",
+          "display_name": "Auto"
+        },
+        {
+          "token": "subtract",
+          "display_name": "Subtract"
+        },
+        {
+          "token": "ignore",
+          "display_name": "Ignore"
+        }
+      ]
+    },
+    {
+      "uid": "background_estimate.max_terms",
+      "category": "background_estimate",
+      "display_name": "max terms",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "background_estimate.inputs_digest",
+      "category": "background_estimate",
+      "display_name": "inputs digest",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "background_estimate.points_digest",
+      "category": "background_estimate",
+      "display_name": "points digest",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "absorption.type",
+      "category": "absorption",
+      "display_name": "type",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "none",
+          "display_name": "None"
+        },
+        {
+          "token": "cylinder-hewat",
+          "display_name": "Cylinder (Hewat)"
+        },
+        {
+          "token": "cylinder-lobanov",
+          "display_name": "Cylinder (Lobanov)"
+        }
+      ]
+    },
+    {
+      "uid": "extinction.type",
+      "category": "extinction",
+      "display_name": "type",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "none",
+          "display_name": "None"
+        },
+        {
+          "token": "becker-coppens-type-1",
+          "display_name": "Isotropic Becker-Coppens type I"
+        },
+        {
+          "token": "becker-coppens-type-2",
+          "display_name": "Isotropic Becker-Coppens type II"
+        },
+        {
+          "token": "becker-coppens-mixed",
+          "display_name": "Isotropic Becker-Coppens mixed"
+        },
+        {
+          "token": "larson-isotropic",
+          "display_name": "Isotropic Larson"
+        },
+        {
+          "token": "larson-anisotropic",
+          "display_name": "Anisotropic Larson"
+        }
+      ]
+    },
+    {
+      "uid": "extinction.mosaic_distribution",
+      "category": "extinction",
+      "display_name": "mosaic distribution",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "gaussian",
+          "display_name": "Gaussian"
+        },
+        {
+          "token": "lorentzian",
+          "display_name": "Lorentzian"
+        }
+      ]
+    },
+    {
+      "uid": "reflns.threshold_sigma",
+      "category": "reflns",
+      "display_name": "observed above (su)",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "reflns.threshold_basis",
+      "category": "reflns",
+      "display_name": "on",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "intensity",
+          "display_name": "I"
+        },
+        {
+          "token": "amplitude",
+          "display_name": "F"
+        }
+      ]
+    },
+    {
+      "uid": "reflns.threshold_expression",
+      "category": "reflns",
+      "display_name": "threshold",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "refine_ls.threshold_sigma",
+      "category": "refine_ls",
+      "display_name": "fit reflections above (su)",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "linked_structure.structure_id",
+      "category": "linked_structure",
+      "display_name": "structure",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "linked_structure.enabled",
+      "category": "linked_structure",
+      "display_name": "enabled",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "linked_structure.weight_fraction",
+      "category": "linked_structure",
+      "display_name": "weight fraction",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "preferred_orientation.structure_id",
+      "category": "preferred_orientation",
+      "display_name": "structure",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "preferred_orientation.index_h",
+      "category": "preferred_orientation",
+      "display_name": "h",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "preferred_orientation.index_k",
+      "category": "preferred_orientation",
+      "display_name": "k",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "preferred_orientation.index_l",
+      "category": "preferred_orientation",
+      "display_name": "l",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "excluded_region.id",
+      "category": "excluded_region",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "excluded_region.start",
+      "category": "excluded_region",
+      "display_name": "start",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "excluded_region.end",
+      "category": "excluded_region",
+      "display_name": "end",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.structure_id",
+      "category": "refln",
+      "display_name": "structure",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "refln.d_spacing",
+      "category": "refln",
+      "display_name": "d",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.sin_theta_over_lambda",
+      "category": "refln",
+      "display_name": "sin θ/λ",
+      "display_units": "1/Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.index_h",
+      "category": "refln",
+      "display_name": "h",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "refln.index_k",
+      "category": "refln",
+      "display_name": "k",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "refln.index_l",
+      "category": "refln",
+      "display_name": "l",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "refln.f_calc",
+      "category": "refln",
+      "display_name": "F calc",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.f_meas",
+      "category": "refln",
+      "display_name": "F meas",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.f_squared_calc",
+      "category": "refln",
+      "display_name": "F² calc",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.intensity_meas",
+      "category": "refln",
+      "display_name": "F² meas",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.intensity_meas_su",
+      "category": "refln",
+      "display_name": "s.u.",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.intensity_calc",
+      "category": "refln",
+      "display_name": "F² calc",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.wavelength",
+      "category": "refln",
+      "display_name": "λ",
+      "display_units": "Å",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.two_theta",
+      "category": "refln",
+      "display_name": "2θ",
+      "display_units": "deg",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "refln.time_of_flight",
+      "category": "refln",
+      "display_name": "TOF",
+      "display_units": "µs",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "joint_fit.weight",
+      "category": "joint_fit",
+      "display_name": "weight",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fitting_mode.type",
+      "category": "fitting_mode",
+      "display_name": "mode",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "single",
+          "display_name": "Single experiment"
+        },
+        {
+          "token": "joint",
+          "display_name": "Joint: all experiments at once"
+        },
+        {
+          "token": "sequential",
+          "display_name": "Sequential: each from the previous"
+        },
+        {
+          "token": "independent",
+          "display_name": "Independent: each from the same start"
+        }
+      ]
+    },
+    {
+      "uid": "minimizer.type",
+      "category": "minimizer",
+      "display_name": "minimizer",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "crysta",
+          "display_name": "crysta"
+        }
+      ]
+    },
+    {
+      "uid": "minimizer.max_iterations",
+      "category": "minimizer",
+      "display_name": "max iterations",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "minimizer.descent",
+      "category": "minimizer",
+      "display_name": "descent",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "ladder",
+          "display_name": "Ladder"
+        },
+        {
+          "token": "fast_descent",
+          "display_name": "Fast descent"
+        },
+        {
+          "token": "fast_descent_linear_snap",
+          "display_name": "Fast descent with linear snap"
+        },
+        {
+          "token": "fast_descent_guarded_linear_snap",
+          "display_name": "Fast descent with guarded linear snap"
+        },
+        {
+          "token": "multistart_prune",
+          "display_name": "Multi-start with pruning"
+        }
+      ]
+    },
+    {
+      "uid": "minimizer.chi_square_tolerance",
+      "category": "minimizer",
+      "display_name": "tolerance",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "alias.id",
+      "category": "alias",
+      "display_name": "alias",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "alias.parameter_unique_name",
+      "category": "alias",
+      "display_name": "parameter",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "constraint.id",
+      "category": "constraint",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "constraint.expression",
+      "category": "constraint",
+      "display_name": "expression",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "constraint.enabled",
+      "category": "constraint",
+      "display_name": "enabled",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter.id",
+      "category": "fit_parameter",
+      "display_name": "parameter",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter.start_value",
+      "category": "fit_parameter",
+      "display_name": "start value",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter.start_uncertainty",
+      "category": "fit_parameter",
+      "display_name": "start error",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter.start_tied",
+      "category": "fit_parameter",
+      "display_name": "start tied",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "fit_result.result_kind",
+      "category": "fit_result",
+      "display_name": "kind",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_result.success",
+      "category": "fit_result",
+      "display_name": "success",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "fit_result.message",
+      "category": "fit_result",
+      "display_name": "message",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_result.iterations",
+      "category": "fit_result",
+      "display_name": "iterations",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "fit_result.fitting_time",
+      "category": "fit_result",
+      "display_name": "time",
+      "display_units": "s",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.reduced_chi_square",
+      "category": "fit_result",
+      "display_name": "reduced χ²",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.objective_name",
+      "category": "fit_result",
+      "display_name": "objective",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_result.objective_value",
+      "category": "fit_result",
+      "display_name": "objective value",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.n_data_points",
+      "category": "fit_result",
+      "display_name": "points",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "fit_result.n_parameters",
+      "category": "fit_result",
+      "display_name": "parameters",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "fit_result.n_free_parameters",
+      "category": "fit_result",
+      "display_name": "free parameters",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "fit_result.degrees_of_freedom",
+      "category": "fit_result",
+      "display_name": "degrees of freedom",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "fit_result.covariance_available",
+      "category": "fit_result",
+      "display_name": "covariance",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "fit_result.exit_reason",
+      "category": "fit_result",
+      "display_name": "exit reason",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_result.prof_wr_factor",
+      "category": "fit_result",
+      "display_name": "Rwp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.prof_r_factor",
+      "category": "fit_result",
+      "display_name": "Rp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.prof_wr_expected",
+      "category": "fit_result",
+      "display_name": "Rexp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.prof_cr_factor",
+      "category": "fit_result",
+      "display_name": "cRp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.prof_cwr_factor",
+      "category": "fit_result",
+      "display_name": "cRwp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result.profile_function",
+      "category": "fit_result",
+      "display_name": "profile",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_result.background_function",
+      "category": "fit_result",
+      "display_name": "background",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_result.descent",
+      "category": "fit_result",
+      "display_name": "descent",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.n_data_points",
+      "category": "fit_result_bank",
+      "display_name": "points",
+      "display_units": "",
+      "dtype": "int",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.prof_r_factor",
+      "category": "fit_result_bank",
+      "display_name": "Rp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.prof_wr_factor",
+      "category": "fit_result_bank",
+      "display_name": "Rwp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.prof_wr_expected",
+      "category": "fit_result_bank",
+      "display_name": "Rexp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.prof_cr_factor",
+      "category": "fit_result_bank",
+      "display_name": "cRp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.prof_cwr_factor",
+      "category": "fit_result_bank",
+      "display_name": "cRwp",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_bank.chi_square",
+      "category": "fit_result_bank",
+      "display_name": "reduced χ²",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_phase.bragg_r_factor",
+      "category": "fit_result_phase",
+      "display_name": "R Bragg",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_result_phase.f_r_factor",
+      "category": "fit_result_phase",
+      "display_name": "R F",
+      "display_units": "%",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter_correlation.id",
+      "category": "fit_parameter_correlation",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter_correlation.source_kind",
+      "category": "fit_parameter_correlation",
+      "display_name": "source",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter_correlation.parameter_unique_name_i",
+      "category": "fit_parameter_correlation",
+      "display_name": "parameter 1",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter_correlation.parameter_unique_name_j",
+      "category": "fit_parameter_correlation",
+      "display_name": "parameter 2",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter_correlation.correlation",
+      "category": "fit_parameter_correlation",
+      "display_name": "correlation",
+      "display_units": "",
+      "dtype": "float",
+      "options": []
+    },
+    {
+      "uid": "fit_parameter_correlation.file_path",
+      "category": "fit_parameter_correlation",
+      "display_name": "file",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit.data_dir",
+      "category": "sequential_fit",
+      "display_name": "data directory",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit.file_pattern",
+      "category": "sequential_fit",
+      "display_name": "files",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit.reverse",
+      "category": "sequential_fit",
+      "display_name": "reverse",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit.template_file",
+      "category": "sequential_fit",
+      "display_name": "template",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit_extract.id",
+      "category": "sequential_fit_extract",
+      "display_name": "id",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit_extract.target",
+      "category": "sequential_fit_extract",
+      "display_name": "target",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit_extract.pattern",
+      "category": "sequential_fit_extract",
+      "display_name": "pattern",
+      "display_units": "",
+      "dtype": "string",
+      "options": []
+    },
+    {
+      "uid": "sequential_fit_extract.required",
+      "category": "sequential_fit_extract",
+      "display_name": "required",
+      "display_units": "",
+      "dtype": "bool",
+      "options": []
+    },
+    {
+      "uid": "calculator.type",
+      "category": "calculator",
+      "display_name": "calculator",
+      "display_units": "",
+      "dtype": "enum",
+      "options": [
+        {
+          "token": "crysta",
+          "display_name": "crysta"
+        }
+      ]
+    }
+  ],
+  "source": {
+    "revision": "2518a263eca73b7aa73599a86997e68f142f1431",
+    "path": "data/dictionary/parameters.yaml",
+    "sha256": "b0005ad92f4ba79be1ec9872122786ab2d3d28edd88ec36777bb0277d1d81840"
+  }
+}

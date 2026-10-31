@@ -56,6 +56,8 @@ qt_add_qml_module(edi_app_module
         src/parameter_registry.hpp src/parameter_registry.cpp
         src/option_list_model.hpp src/option_list_model.cpp
         src/block_text.hpp src/block_text.cpp
+        src/edi_text_highlighter.hpp src/edi_text_highlighter.cpp
+        src/generated_category.hpp src/generated_category.cpp
         src/category_list_model.hpp src/category_list_model.cpp
         src/structure_view_model.hpp src/structure_view_model.cpp
         src/structure_view_options.hpp src/structure_view_options.cpp
@@ -92,6 +94,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/BlockSelector.qml
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
+        qml/Components/ComboCell.qml
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
@@ -130,6 +133,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/StructureView.qml
         qml/Components/TableRow.qml
         qml/Components/TextCell.qml
+        qml/Components/GeneratedGroup.qml
+        qml/Components/MultiLineField.qml
         qml/Components/TextTab.qml
         qml/Components/ToolbarComboBox.qml
         qml/Components/ToolbarLines.qml

@@ -43,6 +43,16 @@ WorkflowPage {
             StandardUncertaintiesGroup {
                 project: page.project
             }
+            // The rest of `project.edi`, each category in a group made from the dictionary; the standard
+            // uncertainties have theirs above, the report's settings theirs on the Report page.
+            Repeater {
+                model: page.project ? page.project.categories : null
+                delegate: CategoryGroup {
+                    shownTier: "Extras"
+                    textSource: page.project ? page.project.metadataText : null
+                    visible: shown && categoryId !== "su_format" && categoryId !== "report"
+                }
+            }
         }
     }
     textItem: Component {

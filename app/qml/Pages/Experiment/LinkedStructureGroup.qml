@@ -33,7 +33,7 @@ Column {
         defaultInfoText: qsTr("No linked structure")
         sourceModel: group.rows
 
-        columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, EaStyle.Sizes.fontPixelSize * 8, EaStyle.Sizes.fontPixelSize * 8, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
+        columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, -1, -1, AppSizes.iconColumnWidth, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -87,14 +87,10 @@ Column {
             // The structure, picked from the project's structures as the aliases table picks a parameter. A link to a
             // structure the project does not hold (an experiment loaded from another project) shows that name in red
             // until another is picked; nothing is calculated for the experiment meanwhile.
-            Item {
-                property int horizontalAlignment: Text.AlignLeft
-                height: parent.height
+            ComboCell {
                 SearchableComboBox {
                     readonly property bool missing: group.rows !== null && group.rows.structureNames.indexOf(row.structureId) < 0
 
-                    width: Math.min(parent.width, implicitWidth)
-                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
                     inTable: true
                     horizontalAlignment: Text.AlignLeft
                     anchors.verticalCenter: parent.verticalCenter
@@ -114,7 +110,7 @@ Column {
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
                 objectName: `linkedStructure.scale.${row.index}`
-                enabled: row.model.enabled
+                enabled: row.model.enabled && refinable
                 item: row.model.scale
             }
             // Read-only, as a parameter the scales imply: the dictionary's weight fraction, rounded by its s.u. under the

@@ -41,7 +41,7 @@ EaElements.GroupBox {
                     group.project.currentStructureIndex = row;
             }
 
-            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {

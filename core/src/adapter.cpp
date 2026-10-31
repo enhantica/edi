@@ -197,6 +197,8 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                  // A calculation of this structure (a fit's quality) reads the declared
                                  // scattering lengths from it, as the fit reads them from select_scattering.
                                  built.scattering_lengths_fm = s.scattering_lengths_fm;
+                                 // How the view shows it, saved with it.
+                                 built.view = s.view;
                                  // The bond cutoffs cross presence-faithfully, so crysta's
                                  // writer saves a declared `_geom` and no other.
                                  built.geom.min_bond_distance_cutoff =

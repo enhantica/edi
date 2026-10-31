@@ -26,6 +26,7 @@
 
 #include "analysis_view_model.hpp"
 #include "block_text.hpp"
+#include "category_list_model.hpp"
 #include "edi/edit.hpp"
 #include "edi/live_preview.hpp"
 #include "edi/background_estimate.hpp"
@@ -158,6 +159,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Start fitting, its progress and its result.
     Q_PROPERTY(edi_app::FitViewModel* fit READ fit CONSTANT)
     Q_PROPERTY(edi_app::BlockText* metadataText READ metadataText CONSTANT)
+    // `project.edi`'s categories with no designed group, each with a group made from the dictionary on the Project
+    // page's Extras (CategoryListModel).
+    Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
     // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0036 §7).
     Q_PROPERTY(edi_app::BlockText* reportText READ reportText CONSTANT)
     Q_PROPERTY(edi_app::BlockText* projectText READ projectText CONSTANT)
@@ -275,6 +279,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     AnalysisViewModel* analysis() const { return analysis_; }
     FitViewModel* fit() const { return fit_; }
     BlockText* metadataText() const { return metadata_text_; }
+    CategoryListModel* categories() const { return categories_; }
     BlockText* reportText() const { return report_text_; }
     BlockText* projectText() const { return project_text_; }
     ReportViewModel* report() const { return report_; }
@@ -369,6 +374,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     QString rename_experiment(edi::Project& project, edi::ExperimentBase& experiment, const std::string& name) override;
     bool canUndo() const { return can_undo_; }
     Q_INVOKABLE void undo();
+    // A Text tab's apply (edi ADR-0017 §7): the project file `file` replaced by `text`, read as opening the project
+    // reads it, on a copy (edi::project_with_file_text); the read project replaces this one in one Undo step. The
+    // refusal, with nothing changed, or empty.
+    Q_INVOKABLE QString applyText(const QString& file, const QString& text);
 
     // , the fit's three owner-thread steps (FitViewModel): the project took a fit's result — every view
     // publishes it, the pattern included, in one step; a frame of a running fit is drawn; the patterns go back
@@ -557,9 +566,13 @@ class ProjectViewModel : public QObject, public ProjectEditor {
         decltype(edi::FitResultRecord::scan_results) results_before;
         decltype(edi::FitResultRecord::scan_results) results_after;
     };
+    // A Text tab's apply: the project as it was.
+    struct AppliedText {
+        std::shared_ptr<const edi::Project> before;
+    };
     using UndoRecord = std::variant<std::monostate, edi::RelationsUndo, AddedExperiments, ScanRun, LoadedData,
                                     edi::StructuresUndo, FreeFlags, PointIds, BackgroundPoints, BlockName,
-                                    edi::ReportSettingsState>;
+                                    edi::ReportSettingsState, AppliedText>;
     // An experiment replaced by Load data, a type change or their undo: the undo records follow it.
     void experimentReplaced(const edi::ExperimentBase* before, const edi::ExperimentBase* after);
     // Each experiment view's Load data… state: every experiment but a scan's.
@@ -593,6 +606,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     bool can_undo_ = false;
     void syncUndo();
     BlockText* metadata_text_;
+    CategoryListModel* categories_ = nullptr;
+    void syncCategories();
+    // The Structure view's options are the shown structure's: set from it when it is shown, saved to it on a change.
+    void showStructureView();
+    void keepStructureView();
+    bool showing_view_ = false;
     BlockText* report_text_ = nullptr;
     BlockText* project_text_;
     ReportViewModel* report_;
