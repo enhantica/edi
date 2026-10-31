@@ -52,7 +52,11 @@ def run_actor(tmp_path, function):
             '-input',
             str(ROOT / 'tests/unit/app/tst_dictionary_display.qml'),
             *(
-                [function, 'DictionaryDisplay::test_instrument_selectors']
+                [
+                    function,
+                    'DictionaryDisplay::test_instrument_selectors',
+                    'DictionaryDisplay::test_description_load_state',
+                ]
                 if function == 'DictionaryDisplay::test_page:experiment'
                 else [function]
             ),
