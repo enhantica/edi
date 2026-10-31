@@ -229,10 +229,15 @@ TestCase {
         verify(empty.every(item => !item.visible), "Without an enabled Analysis page the status Fit shortcut is hidden");
         open("single");
         compare(Session.project.fit.outcome, "", "The initial visibility witness has no previous fit result");
-        for (const page of [0, 1, 2, 3, 4, 5]) {
+        const bar = appWindow.statusBar;
+        verify(bar !== null && !bar.assistantStatusNeeded, "The actual Home-hidden contrast has no independent assistant status demand");
+        AppState.open(0);
+        verify(waitForPolish(appWindow.contentItem), "Page navigation settles before status shortcut visibility is inspected");
+        verify(AppState.analysisPageEnabled && !bar.visible && !shortcut().visible, "Home retains its declared hidden footer despite an available Analysis page");
+        for (const page of [1, 2, 3, 4, 5]) {
             AppState.open(page);
             verify(waitForPolish(appWindow.contentItem), "Page navigation settles before status shortcut visibility is inspected");
-            verify(AppState.analysisPageEnabled && shortcut().visible, "The status Fit shortcut remains visible on every page whenever Analysis is enabled, even before the first fit");
+            verify(AppState.analysisPageEnabled && shortcut().visible, "The status Fit shortcut remains visible on every workflow page whenever Analysis is enabled, even before the first fit");
         }
         Session.closeProject();
         const remaining = View.descendants(area()).filter(item => typeof item.clicked === "function" && (item.text === "Fit" || item.keyText === "Fit" || item.valueText === "Fit"));
