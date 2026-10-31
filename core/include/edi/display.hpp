@@ -76,11 +76,16 @@ bool category_is_output(std::string_view id);
 /// Whether the program writes an item of an input category (the project's times and location), so no user edits
 /// it: `_metadata.created`, for example.
 bool item_is_set_by_program(std::string_view tag);
-/// A block's `.edi` text with only its input categories, as the Text tab's Editable shows it.
-std::string input_categories_text(const std::string& text);
-/// An edit of input_categories_text(full) with the output categories of `full` after it, so an apply keeps the
-/// measured data and the results the edit did not show.
-std::string with_output_categories(const std::string& edited, const std::string& full);
+/// The input categories of an experiment the user may not edit now, shown as its outputs are: its type once it holds
+/// measured data, powder, single crystal or a scan's (the owner, 2026-10-27).
+std::vector<std::string> fixed_categories(const ExperimentBase& experiment);
+/// A block's `.edi` text with only its input categories, as the Text tab's Editable shows it; `fixed` names input
+/// categories shown with the outputs instead (fixed_categories).
+std::string input_categories_text(const std::string& text, const std::vector<std::string>& fixed = {});
+/// An edit of input_categories_text(full, fixed) with the output and fixed categories of `full` after it, so an apply
+/// keeps the measured data, the results and the fixed categories the edit did not show.
+std::string with_output_categories(const std::string& edited, const std::string& full,
+                                   const std::vector<std::string>& fixed = {});
 /// One category as a block's text holds it, for a group the app makes from the dictionary: its item names and its
 /// values as written (quotes removed), a row per loop row, or one row for single items.
 struct TextCategory {

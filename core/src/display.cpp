@@ -174,7 +174,7 @@ std::string category_of(const std::string& line) {
     return line.substr(1, end == std::string::npos ? std::string::npos : end - 1);
 }
 
-TextUnits text_units(const std::string& text) {
+TextUnits text_units(const std::string& text, const std::vector<std::string>& fixed = {}) {
     TextUnits out;
     std::istringstream in(text);
     std::vector<std::string> lines;
@@ -219,15 +219,8 @@ TextUnits text_units(const std::string& text) {
         in_text_field = line.starts_with(';');
         out.units.back().lines.push_back(line);
     }
-    // An experiment's type is fixed once it holds measured data (the owner, 2026-10-27): its items are then not
-    // the user's to edit.
-    const bool measured = std::any_of(out.units.begin(), out.units.end(), [](const TextUnit& unit) {
-        return std::find(unit.lines.begin(), unit.lines.end(), "_data.intensity_meas") != unit.lines.end();
-    });
-    if (measured) {
-        for (TextUnit& unit : out.units) {
-            unit.output = unit.output || unit.id == "experiment_type";
-        }
+    for (TextUnit& unit : out.units) {
+        unit.output = unit.output || std::find(fixed.begin(), fixed.end(), unit.id) != fixed.end();
     }
     return out;
 }
@@ -428,8 +421,12 @@ std::string with_text_value(const std::string& text, std::string_view id, std::s
     return out;
 }
 
-std::string input_categories_text(const std::string& text) {
-    const TextUnits split = text_units(text);
+std::vector<std::string> fixed_categories(const ExperimentBase& experiment) {
+    return experiment.calculation_only ? std::vector<std::string>{} : std::vector<std::string>{"experiment_type"};
+}
+
+std::string input_categories_text(const std::string& text, const std::vector<std::string>& fixed) {
+    const TextUnits split = text_units(text, fixed);
     std::string out;
     for (const std::string& line : split.head) {
         out.append(line).push_back('\n');
@@ -438,12 +435,13 @@ std::string input_categories_text(const std::string& text) {
     return out;
 }
 
-std::string with_output_categories(const std::string& edited, const std::string& full) {
+std::string with_output_categories(const std::string& edited, const std::string& full,
+                                   const std::vector<std::string>& fixed) {
     std::string out = edited;
     if (!out.empty() && !out.ends_with('\n')) {
         out.push_back('\n');
     }
-    append_units(out, text_units(full), true);
+    append_units(out, text_units(full, fixed), true);
     return out;
 }
 

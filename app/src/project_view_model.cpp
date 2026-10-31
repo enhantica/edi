@@ -2649,6 +2649,20 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     if (names(read->structures) != names(project_->structures) || names(read->experiments) != names(project_->experiments)) {
         return tr("A block's name is changed on its page, not in the text");
     }
+    // An experiment's fixed categories keep their values, whichever surface wrote the text (edi::fixed_categories).
+    for (std::size_t index = 0; index < project_->experiments.size(); ++index) {
+        const edi::ExperimentBase& held = *project_->experiments[index];
+        const edi::ExperimentType& was = held.experiment_type;
+        const edi::ExperimentType& now = read->experiments[index]->experiment_type;
+        const bool fixed = !edi::fixed_categories(held).empty();
+        if (fixed && (was.effective_sample_form() != now.effective_sample_form() ||
+                      was.effective_beam_mode() != now.effective_beam_mode() ||
+                      was.effective_radiation_probe() != now.effective_radiation_probe() ||
+                      was.effective_scattering_type() != now.effective_scattering_type())) {
+            return tr("The type of experiment '%1' is fixed once it holds measured data")
+                .arg(QString::fromStdString(held.name.value()));
+        }
+    }
     auto before = std::make_shared<const edi::Project>(*project_);
     const QString error = apply(edi::Edit::replace_project(*project_, std::move(*read)), true);
     if (!error.isEmpty()) {

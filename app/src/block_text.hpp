@@ -7,6 +7,7 @@
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace edi_app {
 
@@ -28,7 +29,9 @@ class BlockText : public QObject {
    public:
     using Source = std::function<std::string()>;  // throws the writer's refusal
     using File = std::function<std::string()>;
-    BlockText(Source source, QObject* parent, File file = {});
+    // The block's input categories the user may not edit now (edi::fixed_categories), shown as its outputs are.
+    using Fixed = std::function<std::vector<std::string>()>;
+    BlockText(Source source, QObject* parent, File file = {}, Fixed fixed = {});
 
     QString text() const;
     QString error() const;
@@ -52,6 +55,7 @@ class BlockText : public QObject {
 
     Source source_;
     File file_;
+    Fixed fixed_;
     mutable bool valid_ = false;
     mutable QString text_;
     mutable QString error_;

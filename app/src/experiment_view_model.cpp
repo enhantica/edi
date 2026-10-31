@@ -108,7 +108,8 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       measured_range_(new RangeViewModel(experiment, this)),
       pattern_(new PatternModel(experiment, this)),
       text_(new BlockText([saved, &experiment] { return saved(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); }, this,
-                          [&experiment] { return std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string(); })) {
+                          [&experiment] { return std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string(); },
+                          [&experiment] { return edi::fixed_categories(experiment); })) {
     capturePattern();  // the measured data shows before the first calculation is published
     // The options follow the experiment's type, which is read-only, so they are set once.
     const edi::BeamModeEnum mode = experiment_.effective_beam_mode();
