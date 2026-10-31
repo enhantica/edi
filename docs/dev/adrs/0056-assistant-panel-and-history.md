@@ -4918,3 +4918,39 @@ Primary prior art: Qt 6.11.2 `qv4engine.cpp` `newString`/`newIdentifier`, instal
 `qv4string_p.h` `propertyKey`/`toPropertyKey`, `qv4object_p.h` `get(StringOrSymbol*)`,
 `qv4qobjectwrapper.cpp` `getQmlProperty`, and `qv4internalclass.cpp`/`qv4internalclass_p.h`
 `PropertyHashData`/`lookup`. Actual sidebar and full UI/runtime verification remain required.
+
+
+### Deferred table work belongs to its actual QObject
+
+The first table implementation is DataTable's `columnFitLife` scheduling token and TableRow's
+cell-width/children signal callbacks. The token is a retained script object; its `alive` field
+does not prove that the table QObject or its QML context still exists. A callback that only
+checks that field can later resolve a null `table` id. The row signal callbacks had the same
+missing boundary: their retained table wrapper can outlive its QObject, then a signal from
+remaining cells reads `fitColumns` on that retired wrapper. This is a common lifecycle defect
+also observed before the procedure migration, not a reason to suppress delayed warnings.
+
+Queued fit callbacks now retain their actual table alongside the existing token. Before
+reading the token or any table/context member, the callback inspects that retained native
+QObject wrapper and its captured QML scope owner with QPointer and QQmlData, refusing a
+deleted or deletion-queued owner or an invalidated QQmlContextData. These are native state
+checks, with no context-name lookup. It rechecks both owners after token reads and queued-state
+publication, then invokes that same retained table rather than looking up an id in a retired scope. This bookkeeping does not
+retain the QObject or introduce a replacement table/model authority.
+
+Both row signal callback forms retain the same token and apply the same owner check before
+member/context access and after `applyWidths`, which may reenter teardown. The existing
+`Qt.callLater(table.fitColumns)` method remains the queued row action; its identity and Qt's
+per-function coalescing are retained. Qt 6.11.2's delayed queue itself guards QObject methods
+and JavaScript functions with an immediate QML scope against deleted/deletion-queued owners.
+The native closure scheduled by DataTable is not one of those automatically guarded function
+representations, so it must perform its own explicit captured-owner check.
+
+The destruction-only stored-property reads, connection disabling, row detachment, virtual
+member dispatch and identifier normalization repairs remain intact. Live fitting, width
+assignment, pending exceptions and reentry keep their existing operations. The owner-file
+strict warning gate and normal UI/teardown suites must verify the repair; no warning budget
+or numerical expectation is changed. Primary prior art: Qt 6.11.2
+`src/qml/qml/qqmldelayedcallqueue.cpp` `addUniquelyAndExecuteLater`/`execute`, and the installed
+`qv4qobjectwrapper_p.h`/`qv4qmlcontext_p.h`/`qqmldata_p.h`/`qqmlcontextdata_p.h`
+native wrapper, guarded scope, deletion-state and context-validity interfaces.
