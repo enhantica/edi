@@ -67,9 +67,21 @@ TestCase {
             compare(group.title, reference.loop ? reference.loop_title : reference.title,
                     "Every rendered category title follows its dictionary source");
             const categoryName = new RegExp(reference.edi_name + "(?![\\w.])");
-            verify([group].concat(Review.descendants(group)).some(item =>
-                       typeof item.mapToItem === "function" && item.ToolTip && categoryName.test(item.ToolTip.text)),
-                   "Every rendered group title has its category in a tooltip");
+            const pending = [group];
+            const seen = new Set();
+            let tooltip = null;
+            while (pending.length) {
+                const item = pending.pop();
+                if (!item || seen.has(item)) continue;
+                seen.add(item);
+                if (item.parent === group.titleArea && typeof item.open === "function" && typeof item.text === "string")
+                    tooltip = item;
+                for (const child of item.data || []) pending.push(child);
+                for (const child of item.children || []) pending.push(child);
+                if (item.contentItem) pending.push(item.contentItem);
+            }
+            verify(tooltip !== null && categoryName.test(tooltip.text),
+                   "Every rendered category title has its category in its title-area tooltip");
         }
         for (const field of shown.filter(item => item.item && typeof item.label === "string")) {
             const uid = String(field.item.category) + "." + String(field.item.name);
