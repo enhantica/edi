@@ -171,7 +171,7 @@ def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
         for path in sorted(project.rglob('*')):
             if path.is_file():
                 digest.update(path.relative_to(project).as_posix().encode() + b'\0')
-                digest.update(path.read_bytes())
+                digest.update(pre_catalogue_bytes(path))
         assert digest.hexdigest() == record['project_sha256'], (
             'Browser catalogue parity: every native regression pin binds its current input bytes'
         )
