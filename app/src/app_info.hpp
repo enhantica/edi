@@ -80,7 +80,8 @@ class ApplicationInfo : public QObject {
         NumberNarrowParameter,
         NumberFitted,
         NumberOwnUncertainty,
-        NumberExponent
+        NumberExponent,
+        NumberWrittenNarrow
     };
     Q_ENUM(NumberOperation)
     enum FitOutcomeOperation { FitIcon, FitRing, FitWord, FitMeaning, FitColor, FitTextColor };
@@ -239,6 +240,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void resetProjectAfterChanges() const;
     /// Existing editor and scientific-form procedures; model writes retain their original backend/Undo owner.
     Q_INVOKABLE void editorRefreshCleanText() const;
+    Q_INVOKABLE void parameterFieldRefreshCleanText() const;
     Q_INVOKABLE void editorRememberDraft(EditorKind kind) const;
     Q_INVOKABLE void editorBeginAssistantEdit(EditorKind kind) const;
     Q_INVOKABLE void editorAllowAssistantCommit(EditorKind kind) const;
@@ -275,6 +277,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue parameterDatablockColor(const QJSValue& kind, const QJSValue& name) const;
     Q_INVOKABLE QJSValue derivedBackgroundValue(const QJSValue& value) const;
     Q_INVOKABLE void parameterCellRefit() const;
+    Q_INVOKABLE void parameterFieldRefit() const;
     Q_INVOKABLE QJSValue parameterCellScaledPixelSize() const;
     /// Remaining form, picker, preference and shared view procedures on the current QML engine.
     Q_INVOKABLE void loadFormFiles(bool experiments) const;

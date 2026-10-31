@@ -88,3 +88,35 @@ exception list must stay short and reasoned; a new entry is a decision, not a fi
 FIRST ParameterRegistry::refreshSpelling and ParameterItem::refreshFileText already combine save_spelling(project), written_exactly and file_text(parameter, project.su_rule, exact). Assistant inspection reuses the resulting published fileValue/fileSu pair, not another invocation of save_spelling/file_text. The registry binds its existing whole publication to the exact original project/work stamps, rule and calculated-source identities; it remains unavailable during publication, failed/stale completion or a successor publication. No second numeric value/SU store or formatter is introduced.
 
 Current canonical path/pointer/raw-value/SU/free/dependence and displayed raw fields must match before optional file_value/file_su are attached. An absent displayed SU maps to null; an engaged native zero remains the zero string. Raw numeric uncertainty remains independent of whether a fixed/constrained parameter's file spelling carries it. No inspection-time rounded-copy calculation, project Save, mutation, adoption or additional uncertainty estimate occurs.
+
+
+### Written value/SU precision is shared by fields and table cells
+
+The first number fitting owner is NumberText's native ApplicationInfo formatter, with
+ParameterItem's published fileValue/fileSu pair from the existing display bridge. Narrowing
+that pair must preserve the project's uncertainty-significant last digit. Generic compact
+formatting may drop a whole token's trailing zeros when no precision is supplied; that
+no-SU default cannot be applied to a positive-SU pair. The shared written-narrow operation
+uses the existing decimal parser, SU rule/count and compact formatter. Explicit decimal
+precision and nonzero exact digits form a lower bound, so an exact/symmetry spelling is
+never truncated to the ordinary SU rule. Already-exponent/fraction tokens keep their
+existing spelling; absent/zero SU does not invent a precision. A signed zero with positive
+SU retains its sign and the SU's last digit in scientific form. This is display-only: no
+new numeric rounding, file write, model value/SU/free change or additional estimate occurs.
+
+Both ParameterCell and ParameterField use that same operation and existing measured fitting
+procedure. The field's canonical value/menu and full edit token remain file-authoritative;
+only its idle text selects the fitted display. The original clean-text/draft/IME/assistant
+guards remain around text writes, and a full token is shown on hover when its display is
+narrow or clipped. No-op edits still start from the complete original token. Table-cell
+fitDigits scaling retains its original path. Both controls retain clipping without an
+ellipsis when even the full significant scientific text exceeds the available room; they
+do not discard a digit or change a model value to force a visual fit.
+
+The prior implementation in both controls is owned by this correction, even where original
+and migrated builds showed the same defect. The retired generic TableViewParameter menu
+is not the application parameter cell and is not changed; the active ListViewParameter
+titles/units and ParamTextField injection seam remain intact. Independent cases must retain
+positive/zero/missing SU, signed/zero/exponent/exact spellings, rule changes, narrow/wide
+transitions, full menu/edit/hover values and all draft/IME/current-owner controls. No source
+change or current output by itself qualifies those obligations.

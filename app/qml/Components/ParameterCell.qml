@@ -67,7 +67,7 @@ EaComponents.ListViewParameter {
     // Its scientific form: the written token's own digits, every one of them (NumberText.compact); without one, digits
     // that follow the uncertainty and the project's rule when the plain text does not change (9e5 or 9.0e5 for
     // 900000 ± 200000).
-    readonly property string narrowText: item === null || fitDigits ? "" : written ? NumberText.compact(item.fileValue) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits)
+    readonly property string narrowText: item === null || fitDigits ? "" : written ? NumberText.writtenNarrow(item.fileValue, item.fileSu) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits)
     // Set from the changes it follows rather than bound, and only once the table has given the cell its column's width:
     // until then the cell is as wide as its own text, which fits, and following that width back to the text would loop.
     property string shownValue: valueText

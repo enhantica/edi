@@ -58,18 +58,35 @@ EaElements.ParamTextField {
         "units": item.displayUnits
     } : ({})
 
+    // Canonical value/menu/edit text stays the native file token. Only the idle
+    // renderer fits its spelling, through the same backend as a table cell.
+    readonly property string valueText: value
+    readonly property string narrowText: item === null ? "" : written ? NumberText.writtenNarrow(item.fileValue, item.fileSu) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0)
+    readonly property real room: width - leftPadding - rightPadding
+    property string shownValue: valueText
+    readonly property FontMetrics shownMetrics: FontMetrics {
+        font: field.font
+    }
+    function refit() {
+        ApplicationInfo.parameterFieldRefit();
+    }
+    onRoomChanged: refit()
+    onValueTextChanged: refit()
+    onNarrowTextChanged: refit()
+    onFontChanged: refit()
+
     // The value as edited: the same text, so a field left as it was changes nothing.
     readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
 
-    // A value wider than the field shows from its start and clips at the end, without an ellipsis, as a table
-    // cell does; it is shown in full while edited.
+    // A value too wide uses the same significant-digit scientific spelling as a
+    // table cell; the full native token remains the edit/menu/hover value.
     onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterFieldEditor)
     onTextChanged: ApplicationInfo.editorTextChanged()
     Component.onCompleted: ApplicationInfo.parameterEditorCompleted()
 
     warned: warningText !== ""
     // The warning, else the item's label and `.edi` name (edi ADR-0051).
-    ToolTip.text: warningText !== "" ? warningText : item !== null ? item.toolTip : ""
+    ToolTip.text: warningText !== "" ? warningText : !activeFocus && (shownValue !== valueText || contentWidth > room) ? valueText : item !== null ? item.toolTip : ""
     ToolTip.visible: ToolTip.text !== "" && !warned && hovered && EaGlobals.Vars.showToolTips
     WarningToolTip {
         text: field.warningText
@@ -100,12 +117,12 @@ EaElements.ParamTextField {
     Binding {
         target: field
         property: "text"
-        value: field.activeFocus ? field.editText : field.value
+        value: field.activeFocus ? field.editText : field.shownValue
         when: field.draft === null && !field.assistantEditing && !field.assistantCommitReady && field.commitInProgress === null && !field.inputMethodComposing
         restoreMode: Binding.RestoreNone
     }
     function refreshCleanText() {
-        ApplicationInfo.editorRefreshCleanText();
+        ApplicationInfo.parameterFieldRefreshCleanText();
     }
     function rememberManualDraft() {
         ApplicationInfo.editorRememberDraft(ApplicationInfo.ParameterFieldEditor);

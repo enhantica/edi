@@ -3121,12 +3121,19 @@ struct EditorFinally {
 };
 } // namespace
 
-void ApplicationInfo::editorRefreshCleanText() const {
-    const auto f = panelUsageEngine(this);
+namespace {
+void refreshEditorDisplay(const PanelUsageFrame& f, const char* idleValue) {
     if (!editorNull(f, "draft") || !editorNull(f, "commitInProgress") || editorFlag(f, "inputMethodComposing")
         || editorFlag(f, "assistantEditing") || editorFlag(f, "assistantCommitReady") || !panelUsageReady(f)) return;
-    const auto value = editorGet(f, editorFlag(f, "activeFocus") ? "editText" : "value");
+    const auto value = editorGet(f, editorFlag(f, "activeFocus") ? "editText" : idleValue);
     panelUsageContextWrite(f, "text", value);
+}
+} // namespace
+void ApplicationInfo::editorRefreshCleanText() const {
+    refreshEditorDisplay(panelUsageEngine(this), "value");
+}
+void ApplicationInfo::parameterFieldRefreshCleanText() const {
+    refreshEditorDisplay(panelUsageEngine(this), "shownValue");
 }
 void ApplicationInfo::editorRememberDraft(EditorKind kind) const {
     const auto f = panelUsageEngine(this);
@@ -3386,6 +3393,7 @@ void ApplicationInfo::parameterEditorCompleted() const {
     const auto field = panelUsageContextRead(f, "field");
     panelUsageMemberCall(f, titles, "align", {field});
     panelUsageContextWrite(f, "cursorPosition", QJSValue(0));
+    parameterFieldRefit();
 }
 
 QJSValue ApplicationInfo::typedInputRefusal(const QString& text, const QString& accepts) const {
@@ -3623,15 +3631,24 @@ QJSValue ApplicationInfo::derivedBackgroundValue(const QJSValue& value) const {
     const auto rounded = panelUsageMemberCall(f, math, "round", {value});
     return panelUsageGlobalCall(f, "String", {rounded});
 }
-void ApplicationInfo::parameterCellRefit() const {
-    const auto f = panelUsageEngine(this);
+namespace {
+void parameterTextRefit(const PanelUsageFrame& f, bool scalable) {
+    QObject* scopeObject = nullptr;
+    if (f.qmlScope) scopeObject = f.qmlScope->qml()->scopeObject;
+    const QPointer<QObject> owner(scopeObject);
+    const auto current = [&] {
+        if (!panelUsageReady(f) || !owner || QQmlData::wasDeleted(owner.data()) || !f.context || !f.context->isValid()) return false;
+        const auto* data = QQmlData::get(owner.data());
+        return data && !data->isQueuedForDeletion;
+    };
+    if (!current()) return;
     const auto math = panelUsageContextRead(f, "Math");
     const auto width = panelUsageNumber(f, panelUsageContextRead(f, "width"));
     const auto implicit = panelUsageNumber(f, panelUsageContextRead(f, "implicitWidth"));
     if (!width || !implicit) return;
     const auto absolute = panelUsageMemberCall(f, math, "abs", {QJSValue(*width - *implicit)});
     const auto sized = assistantRelation(f, absolute, QJSValue(0.5), 2);
-    bool full = panelUsageTruth(panelUsageContextRead(f, "fitDigits")) || !sized;
+    bool full = (scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits"))) || !sized;
     if (!full) full = panelUsageContextRead(f, "item").isNull();
     QJSValue shown;
     if (full) shown = panelUsageContextRead(f, "valueText");
@@ -3641,7 +3658,14 @@ void ApplicationInfo::parameterCellRefit() const {
         for (const char* name : {"valueText", "room", "shownMetrics", "narrowText"}) args.append(panelUsageContextRead(f, name));
         shown = panelUsageMemberCall(f, formatter, "fitted", args);
     }
-    panelUsageContextWrite(f, "shownValue", shown);
+    if (current()) panelUsageContextWrite(f, "shownValue", shown);
+}
+} // namespace
+void ApplicationInfo::parameterCellRefit() const {
+    parameterTextRefit(panelUsageEngine(this), true);
+}
+void ApplicationInfo::parameterFieldRefit() const {
+    parameterTextRefit(panelUsageEngine(this), false);
 }
 QJSValue ApplicationInfo::parameterCellScaledPixelSize() const {
     const auto f = panelUsageEngine(this);
@@ -6471,6 +6495,14 @@ QJSValue numberReplaceExponent(const PanelUsageFrame& f, const QJSValue& value) 
     return panelUsageMemberCall(f, value, "replace", {QJSValue(QStringLiteral("e+")), QJSValue(QStringLiteral("e"))});
 }
 QJSValue numberRegex(const PanelUsageFrame& f, const char* pattern) { return panelRegex(f, QString::fromLatin1(pattern)); }
+QJSValue numberRuledDigitCount(const PanelUsageFrame& f, const QJSValue& number,
+    const QJSValue& uncertainty, const QJSValue& count) {
+    const auto numberPower = panelUsageRead(f, number, "power");
+    const auto uncertaintyPower = panelUsageRead(f, uncertainty, "power");
+    const auto last = panelUsageAdd(f, viewArithmetic(f, uncertaintyPower, count, 0), QJSValue(1));
+    const auto digits = panelUsageAdd(f, viewArithmetic(f, numberPower, last, 0), QJSValue(1));
+    return assistantRelation(f, digits, QJSValue(1), 2) ? digits : count;
+}
 QJSValue numberProcedureCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
     const auto tick = arg(0), power = saved(0), decimals = saved(1);
@@ -6704,10 +6736,7 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
         const auto number = named("decimal", {value}), uncertainty = named("decimal", {second});
         if (number.isNull() || uncertainty.isNull()) return QJSValue(0);
         const auto count = named("suDigits", {second});
-        const auto numberPower = read(number, "power");
-        const auto uncertaintyPower = read(uncertainty, "power");
-        const auto digits = add(sub(numberPower, add(sub(uncertaintyPower, count), QJSValue(1))), QJSValue(1));
-        return relation(digits, QJSValue(1), 2) ? digits : count;
+        return numberRuledDigitCount(f, number, uncertainty, count);
     }
     if (operation == NumberNarrowParameter) {
         const auto text = named("parameter", {value, second, third}); if (panelUsageTruth(named("scientific", {value}))) return text;
@@ -6723,6 +6752,39 @@ QJSValue ApplicationInfo::numberPresentation(NumberOperation operation, const QJ
             return QJSValueList{QJSValue(1), add(sub(power, place), QJSValue(1))};
         });
         return named("compact", {text, digits});
+    }
+    if (operation == NumberWrittenNarrow) {
+        // The native FileText SU is decimal. Missing/zero/negative SU does not
+        // invent a precision; non-decimal/exponent/exact-fraction values retain
+        // the existing compact formatter's unchanged-token fallback.
+        const auto uncertainty = named("decimal", {second});
+        if (uncertainty.isNull() || read(uncertainty, "sign").strictlyEquals(QJSValue(QStringLiteral("-"))))
+            return named("compact", {value});
+        const auto essentialDigits = [&](const QJSValue& number) {
+            auto digits = read(number, "digits");
+            if (panelUsageTruth(read(number, "whole"))) digits = call(digits, "replace", {numberRegex(f, "0+$"), empty});
+            return read(digits, "length");
+        };
+        // Exact spellings may carry more SU/value digits than the usual rule.
+        // Never truncate those authoritative digits when adding significant zeros.
+        const auto ruleCount = named("suDigits", {second});
+        const auto suCount = numberMath(f, "max", [&] { return QJSValueList{ruleCount, essentialDigits(uncertainty)}; });
+        const auto number = named("decimal", {value});
+        if (number.isNull()) {
+            const auto zero = call(numberRegex(f, R"(^([+-]?)(?:0+(?:\.(0*))?|\.(0+))$)"), "exec", {value});
+            if (!panelUsageTruth(zero)) return named("compact", {value});
+            const auto sign = textIndex(f, zero, QJSValue(1));
+            const auto fractional = tableNullish(textIndex(f, zero, QJSValue(2)), textIndex(f, zero, QJSValue(3)));
+            const auto count = fractional.isUndefined() ? suCount : numberMath(f, "max", [&] {
+                return QJSValueList{suCount, add(add(read(uncertainty, "power"), read(fractional, "length")), QJSValue(1))};
+            });
+            const auto fraction = relation(count, QJSValue(1), 1)
+                ? add(dot, call(zeroText, "repeat", {sub(count, QJSValue(1))})) : empty;
+            return add(add(add(add(sign, zeroText), fraction), e), read(uncertainty, "power"));
+        }
+        const auto ruled = numberRuledDigitCount(f, number, uncertainty, suCount);
+        const auto count = numberMath(f, "max", [&] { return QJSValueList{ruled, essentialDigits(number)}; });
+        return named("compact", {value, count});
     }
     if (operation == NumberFitted) {
         if (!relation(second, QJSValue(0), 1) || relation(call(third, "advanceWidth", {value}), second, 3)) return value;
