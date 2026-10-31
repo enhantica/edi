@@ -210,13 +210,13 @@ Item {
         function test_scheme_and_library_defaults_persist_without_changing_an_open_project() {
             verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), "A real project supplies the modified-state control");
             const modified = Session.project.modified;
-            verify(typeof Approved.getSchemes(Preferences).structures === "string" && typeof Approved.getSchemes(Preferences).patterns === "string" && typeof Preferences.newReportLibraries === "string", "Preferences exposes independent Structures/Patterns choices and the declared library default");
-            Approved.setSchemes(Preferences, "ediContrast");
+            verify(typeof Approved.getScheme(Preferences) === "string" && typeof Preferences.newReportLibraries === "string", "Preferences exposes the shared figure palette and the declared library default");
+            Approved.setScheme(Preferences, "colourBlindSafe");
             Preferences.newReportLibraries = "embedded";
-            tryVerify(() => SettingsProof.value(location, "Appearance", "structureColourScheme") === "ediContrast" && SettingsProof.value(location, "Appearance", "patternColourScheme") === "ediContrast" && SettingsProof.value(location, "Projects", "newReportLibraries") === "embedded", 2000, "Changing the actual Preferences properties writes both tokens to their declared store groups");
-            const restored = SettingsProof.restart(Approved.freshSchemesCode());
+            tryVerify(() => SettingsProof.value(location, "Appearance", "colourScheme") === "colourBlindSafe" && SettingsProof.value(location, "Projects", "newReportLibraries") === "embedded", 2000, "Changing the actual Preferences properties writes the palette token to their declared store groups");
+            const restored = SettingsProof.restart(Approved.freshSchemeCode());
             verify(!restored.error, "A fresh configured QML engine reloads the actual Preferences singleton");
-            compare(restored.schemes, JSON.stringify(["ediContrast", "ediContrast"]), "A fresh engine restores the colour scheme from Appearance");
+            compare(restored.scheme, "colourBlindSafe", "A fresh engine restores the colour scheme from Appearance");
             compare(restored.libraries, "embedded", "A fresh engine restores the new-report libraries default from Projects");
             compare(Session.project.modified, modified, "Changing application defaults never modifies the open project");
         }

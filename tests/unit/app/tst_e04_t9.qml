@@ -103,9 +103,7 @@ TestCase {
         return Math.max(...points.filter(p => isFinite(p.y)).map(p => p.y));
     }
     function approvedPalette() {
-        const catalogue = JSON.parse(Probe.readFile("tests/fixtures/approved_palettes/colours.json")).palettes;
-        const normalize = name => name.toLowerCase().replace(/[^a-z]/g, "").replace(/^edi/, "");
-        const palette = catalogue.find(row => normalize(row.name) === normalize(Approved.getSchemes(Preferences).patterns));
+        const palette = Approved.reference(Probe).schemes.find(row => row.id === Approved.getScheme(Preferences)).palette;
         verify(palette !== undefined, "The chart expectation comes from the independently approved palette coordinates");
         return palette;
     }
