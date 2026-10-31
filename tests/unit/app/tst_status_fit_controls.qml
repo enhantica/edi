@@ -383,35 +383,41 @@ TestCase {
         tryVerify(() => colorsMatch(item.valueColor, oldInk) && colorsMatch(item.iconColor, oldIcon) && glyphs.some(glyph => colorsMatch(glyph.color, oldIcon)), 1500, "Leaving a secondary status action restores its normal caption and visible icon colours");
     }
     function test_button_style(data) {
-        open("single");
-        Session.project.fit.start();
-        finish();
-        dialogs().forEach(dialog => dialog.close());
-        EaStyle.Colors.theme = data.tag === "light" ? EaStyle.Colors.Themes.LightTheme : EaStyle.Colors.Themes.DarkTheme;
-        const button = shortcut(), status = findChild(appWindow, "statusBar.fit.outcome");
-        verify(status !== null && status.visible, "A real fit provides its outcome button beside the status Fit shortcut");
-        mouseMove(appWindow.contentItem, 1, 1);
-        const fill = bodyFrame(button, 0), outcome = bodyFrame(status, 1);
-        const idleChannel = data.tag === "light" ? 0 : 1;
-        tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "The enabled status Fit background is pure black in light mode and pure white in dark mode");
-        tryVerify(() => data.tag === "light" ? paintedLuminance(outcome) > paintedLuminance(fill) : paintedLuminance(outcome) < paintedLuminance(fill), 1500, "The drawn outcome button has a lighter light-mode background and an inverse dark-mode hierarchy after overlay compositing");
-        fuzzyCompare(fill.height, outcome.height - 2, 1, "Fit and outcome buttons have equal bodies after the explicit outer outline");
-        fuzzyCompare(fill.radius, outcome.radius - 1, .5, "Fit and outcome buttons have equal body rounding inside the explicit outer outline");
-        verify(fill.radius > 0, "The status Fit button has rounded corners");
-        const label = View.textItems(button).filter(item => item.text === "Fit");
-        compare(label.length, 1, "The status shortcut renders the white or inverse Fit caption");
-        const ink = data.tag === "light" ? Qt.rgba(1, 1, 1, 1) : Qt.rgba(0, 0, 0, 1);
-        tryVerify(() => colorsMatch(label[0].color, ink), 1500, "The enabled Fit caption is pure white in light mode and pure black in dark mode");
-        const glyphs = View.textItems(button).filter(item => item.text !== "Fit");
-        verify(glyphs.length > 0 && glyphs.some(item => colorsMatch(item.color, ink)), "The status Fit icon uses the same pure white or black ink as its caption");
-        mouseMove(button, button.width / 2, button.height / 2, 0);
-        tryVerify(() => colorsMatch(paintedColor(fill), EaStyle.Colors.themeAccent), 1500, "Hovering enabled Fit changes its rendered background to the app accent blue");
-        compare(label[0].color, ink, "Fit keeps its inverted caption ink on the blue hover background");
-        verify(glyphs.some(item => colorsMatch(item.color, ink)), "Fit keeps its inverted icon ink on the blue hover background");
-        mouseMove(appWindow.contentItem, 1, 1, 0);
-        tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "Leaving Fit restores its pure black or white background");
-        normalButtonStyle(status, data.tag === "light", true);
-        rightmostFitAction();
+        const originalToolTips = EaGlobals.Vars.showToolTips;
+        EaGlobals.Vars.showToolTips = false;
+        try {
+            open("single");
+            Session.project.fit.start();
+            finish();
+            dialogs().forEach(dialog => dialog.close());
+            EaStyle.Colors.theme = data.tag === "light" ? EaStyle.Colors.Themes.LightTheme : EaStyle.Colors.Themes.DarkTheme;
+            const button = shortcut(), status = findChild(appWindow, "statusBar.fit.outcome");
+            verify(status !== null && status.visible, "A real fit provides its outcome button beside the status Fit shortcut");
+            mouseMove(appWindow.contentItem, 1, 1);
+            const fill = bodyFrame(button, 0), outcome = bodyFrame(status, 1);
+            const idleChannel = data.tag === "light" ? 0 : 1;
+            tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "The enabled status Fit background is pure black in light mode and pure white in dark mode");
+            tryVerify(() => data.tag === "light" ? paintedLuminance(outcome) > paintedLuminance(fill) : paintedLuminance(outcome) < paintedLuminance(fill), 1500, "The drawn outcome button has a lighter light-mode background and an inverse dark-mode hierarchy after overlay compositing");
+            fuzzyCompare(fill.height, outcome.height - 2, 1, "Fit and outcome buttons have equal bodies after the explicit outer outline");
+            fuzzyCompare(fill.radius, outcome.radius - 1, .5, "Fit and outcome buttons have equal body rounding inside the explicit outer outline");
+            verify(fill.radius > 0, "The status Fit button has rounded corners");
+            const label = View.textItems(button).filter(item => item.text === "Fit");
+            compare(label.length, 1, "The status shortcut renders the white or inverse Fit caption");
+            const ink = data.tag === "light" ? Qt.rgba(1, 1, 1, 1) : Qt.rgba(0, 0, 0, 1);
+            tryVerify(() => colorsMatch(label[0].color, ink), 1500, "The enabled Fit caption is pure white in light mode and pure black in dark mode");
+            const glyphs = View.textItems(button).filter(item => item.text !== "Fit");
+            verify(glyphs.length > 0 && glyphs.some(item => colorsMatch(item.color, ink)), "The status Fit icon uses the same pure white or black ink as its caption");
+            mouseMove(button, button.width / 2, button.height / 2, 0);
+            tryVerify(() => colorsMatch(paintedColor(fill), EaStyle.Colors.themeAccent), 1500, "Hovering enabled Fit changes its rendered background to the app accent blue");
+            compare(label[0].color, ink, "Fit keeps its inverted caption ink on the blue hover background");
+            verify(glyphs.some(item => colorsMatch(item.color, ink)), "Fit keeps its inverted icon ink on the blue hover background");
+            mouseMove(appWindow.contentItem, 1, 1, 0);
+            tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "Leaving Fit restores its pure black or white background");
+            normalButtonStyle(status, data.tag === "light", true);
+            rightmostFitAction();
+        } finally {
+            EaGlobals.Vars.showToolTips = originalToolTips;
+        }
     }
     function footerGeometryReady(requestedWidth) {
         const group = findChild(appWindow, "statusBar.fit");
@@ -548,26 +554,32 @@ TestCase {
         ];
     }
     function test_disabled_style(data) {
-        open("scan");
-        Session.project.fit.start();
-        finish();
-        dialogs().forEach(dialog => dialog.close());
-        EaStyle.Colors.theme = data.tag === "light" ? EaStyle.Colors.Themes.LightTheme : EaStyle.Colors.Themes.DarkTheme;
-        const button = shortcut(), follow = scanControl("follow");
-        verify(!Session.project.fit.available && !actionable(button) && !actionable(follow), "A completed scan disables Fit and Follow for the muted-style witness");
-        mouseMove(appWindow.contentItem, 1, 1);
-        const fill = rectangle(button), other = rectangle(follow);
-        tryVerify(() => {
-            const a = paintedColor(fill), b = paintedColor(other);
-            return Math.abs(a.r - b.r) <= 1 / 255 && Math.abs(a.g - b.g) <= 1 / 255 && Math.abs(a.b - b.b) <= 1 / 255;
-        }, 1500, "Disabled Fit has the same rendered background as disabled Follow in each theme");
-        const label = View.textItems(button).find(item => item.text === caption(button));
-        verify(label !== undefined, "Disabled Fit retains its caption while secondary controls may compact to icons");
-        tryCompare(label, "color", follow.valueColor, 1500, "Disabled Fit uses Follow's normal caption colour");
-        tryCompare(button, "iconColor", follow.iconColor, 1500, "Disabled Fit uses Follow's normal icon colour");
-        normalButtonStyle(button, data.tag === "light", false);
-        normalButtonStyle(follow, data.tag === "light", false);
-        normalButtonStyle(scanControl("reset"), data.tag === "light", true);
+        const originalToolTips = EaGlobals.Vars.showToolTips;
+        EaGlobals.Vars.showToolTips = false;
+        try {
+            open("scan");
+            Session.project.fit.start();
+            finish();
+            dialogs().forEach(dialog => dialog.close());
+            EaStyle.Colors.theme = data.tag === "light" ? EaStyle.Colors.Themes.LightTheme : EaStyle.Colors.Themes.DarkTheme;
+            const button = shortcut(), follow = scanControl("follow");
+            verify(!Session.project.fit.available && !actionable(button) && !actionable(follow), "A completed scan disables Fit and Follow for the muted-style witness");
+            mouseMove(appWindow.contentItem, 1, 1);
+            const fill = rectangle(button), other = rectangle(follow);
+            tryVerify(() => {
+                const a = paintedColor(fill), b = paintedColor(other);
+                return Math.abs(a.r - b.r) <= 1 / 255 && Math.abs(a.g - b.g) <= 1 / 255 && Math.abs(a.b - b.b) <= 1 / 255;
+            }, 1500, "Disabled Fit has the same rendered background as disabled Follow in each theme");
+            const label = View.textItems(button).find(item => item.text === caption(button));
+            verify(label !== undefined, "Disabled Fit retains its caption while secondary controls may compact to icons");
+            tryCompare(label, "color", follow.valueColor, 1500, "Disabled Fit uses Follow's normal caption colour");
+            tryCompare(button, "iconColor", follow.iconColor, 1500, "Disabled Fit uses Follow's normal icon colour");
+            normalButtonStyle(button, data.tag === "light", false);
+            normalButtonStyle(follow, data.tag === "light", false);
+            normalButtonStyle(scanControl("reset"), data.tag === "light", true);
+        } finally {
+            EaGlobals.Vars.showToolTips = originalToolTips;
+        }
     }
     function test_fit_tooltip_data() {
         return [
