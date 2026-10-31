@@ -48,8 +48,10 @@ TestCase {
         try {
             verify(Session.openProject(Qt.resolvedUrl("../../fixtures/table_display")), "The source is a genuine independently declared project");
             const source = SettingsProof.childUrl(owned, "source.zip");
-            verify(Session.saveAs(source), "The ordinary app publishes a real source archive: " + Session.lastError);
+            verify(Session.saveProjectAs(source, true, false), "The ordinary app publishes a real source archive: " + Session.lastError);
             Session.closeProject();
+            const sourceFacts = SettingsProof.fileFacts(owned, "source.zip");
+            verify(sourceFacts.exists === true && sourceFacts.regular === true && sourceFacts.readable === true && sourceFacts.bytes > 0, "The explicit ZIP route publishes an actual nonempty regular readable archive");
             const original = SettingsProof.projectArchiveBytes(source);
             verify(original.length > 0, "The archive positive is actual saved bytes");
             const copied = SettingsProof.copyProjectArchive(source);
