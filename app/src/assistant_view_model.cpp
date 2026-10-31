@@ -1937,6 +1937,22 @@ struct AssistantViewModel::State {
             (generic_thread.isEmpty() || generic_thread==viewed.thread) &&
             generic_native.value("account").toObject().value("email")==viewed.email && !generic_clear_pending;
     }
+    bool retained_viewed_conversation() const {
+        if (!generic_mode || generic_retiring || generic_revoke_pending || generic_clear_pending || generic_context_pending
+            || !generic_resuming || !resume_checkpoint || !viewed_session
+            || generic_native.value("accountEpoch").toString() != QString::number(usage_epoch)) return false;
+        const auto& saved = *resume_checkpoint;
+        const auto& viewed = *viewed_session;
+        // Same verified view and approved scope; this grants no transport/input readiness.
+        return saved.share_approved && viewed_session_current(viewed)
+            && saved.thread == viewed.thread && saved.email == viewed.email
+            && saved.generation == generation && saved.project == project && saved.has_project == bool(project)
+            && !saved.workspace.isEmpty() && saved.workspace == generic_workspace
+            && saved.disclosure && saved.disclosure->account == usage_epoch
+            && saved.disclosure->project == project && saved.disclosure->has_project == bool(project)
+            && saved.disclosure->model == viewed.model
+            && same_disclosure(saved.disclosure, approved_scope);
+    }
     void capture_viewed_session() {
         if(!generic_authenticated || generic_retiring || !generic_durable || generic_thread.isEmpty() ||
             history_session!=generic_thread || !controller || !owned_session(session_metadata.value(generic_thread)))return;
@@ -15785,6 +15801,7 @@ struct AssistantViewModel::State {
             };
             if (!property("state", &AssistantViewModel::state, &AssistantViewModel::stateChanged)) return;
             if (!property("connected", &AssistantViewModel::connected, &AssistantViewModel::connectedChanged)) return;
+            if (!property("conversationAvailable", &AssistantViewModel::conversationAvailable, &AssistantViewModel::conversationAvailableChanged)) return;
             if (!property("connectionLabel", &AssistantViewModel::connectionLabel, &AssistantViewModel::connectionLabelChanged)) return;
             if (!property("account", &AssistantViewModel::account, &AssistantViewModel::accountChanged)) return;
             if (!property("selectedModel", &AssistantViewModel::selectedModel, &AssistantViewModel::selectedModelChanged)) return;
@@ -17288,6 +17305,14 @@ bool AssistantViewModel::connected() const {
     if (state_->generic_mode) return state_->generic_authenticated && !state_->generic_retiring && state_->native.value("status") == "ready";
 #endif
     return state_->native.value("status") == "ready";
+}
+bool AssistantViewModel::conversationAvailable() const {
+    if (connected()) return true;
+#ifndef __EMSCRIPTEN__
+    return state_->retained_viewed_conversation();
+#else
+    return false;
+#endif
 }
 QString AssistantViewModel::connectionLabel() const { return state() == "connecting" ? tr("Connecting to ChatGPT…") : connected() ? state_->native.value("label").toString() : tr("Connect ChatGPT"); }
 RowTableModel* AssistantViewModel::models() const { return &state_->models; }
