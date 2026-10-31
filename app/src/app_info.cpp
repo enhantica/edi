@@ -854,19 +854,6 @@ QV4::ReturnedValue panelUsageGet(const PanelUsageFrame& frame, const QV4::Value&
                 | (forCall ? QV4::QObjectWrapper::NoFlag : QV4::QObjectWrapper::AttachMethods));
             return wrapper->getQmlProperty(frame.context, name, flags, nullptr);
         }
-        if (object->vtable()->type != QV4::Managed::Type_ProxyObject
-            && object->vtable()->resolveLookupGetter == QV4::Object::staticVTable()->resolveLookupGetter) {
-            const auto index = object->internalClass()->findValueOrGetter(name->toPropertyKey());
-            if (index.isValid()) return QV4::Object::getValue(&value, *object->d()->propertyData(index.index), index.attrs);
-            QV4::Lookup lookup{};
-            lookup.resolveProtoGetter(name->toPropertyKey(), object->d()->prototype());
-            if (lookup.call == QV4::Lookup::Call::GetterProto) return lookup.protoLookup.data->asReturnedValue();
-            if (lookup.call == QV4::Lookup::Call::GetterProtoAccessor) {
-                QV4::ScopedValue getter(scope, *lookup.protoLookup.data);
-                const auto* function = getter->as<QV4::FunctionObject>();
-                return function ? function->call(&value, nullptr, 0) : QV4::Encode::undefined();
-            }
-        }
         return object->get(name, nullptr, &value);
     }
     if (value.isString() && name->toQString() == QStringLiteral("length"))
@@ -875,17 +862,11 @@ QV4::ReturnedValue panelUsageGet(const PanelUsageFrame& frame, const QV4::Value&
     if (value.isBoolean()) prototype = vm->booleanPrototype();
     else if (value.isNumber()) prototype = vm->numberPrototype();
     else prototype = static_cast<const QV4::Managed&>(value).internalClass()->prototype;
-    QV4::Lookup lookup{};
-    lookup.resolveProtoGetter(name->toPropertyKey(), prototype->d());
-    if (lookup.call == QV4::Lookup::Call::GetterProto)
-        return lookup.protoLookup.data->asReturnedValue();
-    if (lookup.call == QV4::Lookup::Call::GetterProtoAccessor) {
-        QV4::ScopedValue getter(scope, *lookup.protoLookup.data);
-        const auto* function = getter->as<QV4::FunctionObject>();
-        return function ? function->call(&value, nullptr, 0) : QV4::Encode::undefined();
+    if (value.isString() && name->toPropertyKey().isArrayIndex()) {
+        QV4::ScopedObject boxed(scope, value.toObject(vm));
+        return boxed ? boxed->get(name, nullptr, &value) : QV4::Encode::undefined();
     }
-    QV4::ScopedObject boxed(scope, value.toObject(vm));
-    return boxed ? boxed->get(name) : QV4::Encode::undefined();
+    return prototype ? prototype->get(name, nullptr, &value) : QV4::Encode::undefined();
 }
 QJSValue panelUsageRead(const PanelUsageFrame& frame, const QJSValue& source, const char* name) {
     if (!panelUsageReady(frame)) return {};
