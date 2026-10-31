@@ -304,8 +304,8 @@ and `stepMaximum`.
   Editable. Leaving an unapplied edit (another block, page or Show choice) asks "Discard changes?": Apply applies it
   as ✓ does and leaves, a refused apply staying on the text; Don't apply drops it; Cancel keeps it and returns to it.
   ✓ is red with a white check while enabled, and Show and ✓ float over the text's top right. One category's items
-  follow each other without blank lines, one blank line between categories. A scan project is edited on its pages
-  only.
+  follow each other without blank lines, one blank line between categories. A scan project's text applies too: an
+  edit reaches its template as a page's edit does, and a changed scan declaration lists and reads the scan again.
 - **Continue is a pill** (the owner, 2026-09-29), on every page and tab that shows it: the base button's own
   background (`themeBackground`, hovered `themeBackgroundHovered1`) and 1-px border (`appBarComboBoxBorder`)
   shown, fully rounded ends (radius half its height, `sideBarButtonHeight`), as wide as its icon and text plus
@@ -441,11 +441,6 @@ one selected row, and the row's number in the first column, bold in the accent c
   experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app draws;
   ADR-0038), listed from the core, with the colour order under it (ADR-0038 §7); a stored earlier palette reads and
   is kept as its nearest new one;
-  **Sidebar — Left or Right** (the owner, 2026-09-29); Auto collapse. **The 1D plotting row is removed** (the owner,
-  2026-09-29): edi has no choice of chart library.
-- **Appearance**: Theme; **Colour scheme — Edi Natural (the default), Edi Coast, Edi Garden, Edi Studio or Edi
-  Contrast** (the experiments', structures' and chart roles' colours, §8, §15, in every chart, icon and report the app
-  draws; ADR-0038), listed from the core; a stored scheme no longer offered reads and is kept as the default;
   **Sidebar — Left or Right** (the owner, 2026-09-29); One sidebar group open at a time (the owner, 2026-10-27; it
   was Auto collapse). **The 1D plotting row is removed** (the owner, 2026-09-29): edi has no choice of chart library.
 - **Projects**: only the defaults a new project takes. New projects' uncertainties (the IUCr recommendation or
@@ -532,7 +527,9 @@ Saving is active:
 - **Every dialog sits on whole pixels** (`Components/AppDialog.qml`: About, Preferences, Messages and the
   save refusal; the base's project-description dialog is placed the same way where edi opens it). The base
   centres a dialog with a half, so one of odd height lay on a half pixel and its edges were drawn differently
-  on Linux and macOS (edi PR 97, the three-row Messages dialog); edi rounds the centred position.
+  on Linux and macOS (edi PR 97, the three-row Messages dialog); edi rounds the centred position. A closed dialog
+  that has no parent item yet stays at (0, 0); attaching a parent restores the same rounded
+  centring bindings. It is not opened, reparented or given a window merely to measure geometry.
 - **A click opens the Messages dialog**, the same dialog as About and Preferences (the base `Dialog`: title
   bar, padding, background without an outline, OK). **Width fixed**: 38 font units
   (`AppSizes.messagesDialogContentWidth`, about Preferences' width), whatever the messages. **Height fits the
@@ -1022,15 +1019,16 @@ project to one `accessibleAction` binding: a live action exposes its existing
 value text and tooltip as button name/description, and ignores its decorative or
 duplicate labels. Passive/unavailable items keep readable child text and no
 button role. Accessibility focusable/focused metadata explicitly follows that
-same availability, including true-to-false transitions; actual focus policy,
-Control.enabled, hover and tooltips are unchanged.
+same availability, including true-to-false transitions. Desktop focus remains
+on the original control; the web representation below reports its own actual
+focus. Control.enabled, hover and tooltips are unchanged.
 
 ApplicationInfo owns the exact Qt Accessible press-signal connection to one thin
 QML forwarding method on the SAME control. Availability changes first disconnect
 that route synchronously, reconnecting only while live; component destruction
 retires it too. This avoids both an always-connected no-op press action and a
 notifying QML Connections endpoint waiting for deferred deletion. Qt owns the
-connection lifetime, without a proxy item, retained connection map or new input
+connection lifetime without a retained connection map or new scientific input
 source. The original guarded `statusItemPress` bridge rechecks the actual owner,
 context, visible/enabled state and live `clickable` property before emitting its
 same `clicked` signal. The original pointer TapHandler and QML fit/start/cancel,
@@ -1042,6 +1040,47 @@ labels, fitting policy, geometry, colours, animations, clocks, scientific result
 or Undo. Source-defined action enumeration and focus metadata must be exercised
 through initial passive/unavailable, available, retired and reentrant states;
 a guarded native no-op alone is not evidence of truthful accessibility.
+
+#### Web status actions follow actual accessible-object lifetime
+
+Pinned Qt's web accessibility bridge creates its HTML button or generic element
+from the initial native role and caches it by interface. Later attached-role
+changes do not rebuild that element. A real available Fit action was therefore
+still exposed as generic after its initial passive state; changing the browser
+selector or press-connection spelling would not repair that representation.
+
+On WebAssembly only, the original FitStatusItem is ignored in the accessibility
+tree while a nonvisual Loader child exists exactly for its existing
+accessibleAction interval. That child has a fixed Button role before its first
+component-complete ObjectShow, with the original value text and tooltip. It fills
+the same full control rectangle but contributes no layout, painting, pointer or
+key handler. Its sole accessibility Press calls the existing guarded C++
+statusItemPress on the original control; the original native role/NoRole,
+connection retirement, physical TapHandler and scientific clicked path remain.
+Desktop creates no child and retains its original accessibility representation.
+
+Qt's accessible tree flattens ignored ancestors, so the sole child action remains
+reachable and passive labels remain readable. Loader retirement invalidates its
+own component context, detaches and hides the child before deferred deletion;
+normal Qt hide/destruction retires the browser node. There is no fake QObject
+destruction, manual interface/cache surgery, global Qt patch, new timer or
+helper flag. Name changes while actionable retain the same fixed-role child.
+Inactive/passive fit metrics instantiate no Button child and expose no new Press.
+
+Accessibility SetFocus truthfully focuses that web child and reports the child's
+actual activeFocus. It does not fake focus on the ignored outer control or force
+a focus hand-off. The first status controls have no focus-driven visual, keyboard or
+business consumer beyond their accessibility metadata. Public outer identity,
+physical input and native focus behavior remain; web assistive focus belongs to
+its sole platform representation. No nonfocusable shortcut conceals this choice.
+
+This shared lifetime covers outcome/results, Reset, Follow and
+Fit/Stop/Continue/Refit, including visibility, enabled and fit-availability changes.
+Passive fit statistics remain passive. Plain StatusBarItem's always-active
+Messages action is its separate existing path, not another dynamic-role owner;
+its pointer/layout behavior is unchanged. Independent actual focus, one-action,
+press, same-geometry, availability, reentry/retirement and both-kit web coverage
+are required; source repair is not final browser or scientific acceptance.
 
 ### 18. Creating experiments
 
