@@ -845,6 +845,7 @@ QV4::ReturnedValue panelUsageGet(const PanelUsageFrame& frame, const QV4::Value&
                                QV4::String* name, bool forCall = false) {
     auto* vm = frame.vm();
     QV4::Scope scope(vm);
+    name->toPropertyKey(); // Private QObject lookup requires an existing identifier key.
     if (value.isNullOrUndefined())
         return vm->throwTypeError(QStringLiteral("Cannot read property '%1' of %2")
             .arg(name->toQString(), value.toQStringNoThrow()));
@@ -918,6 +919,7 @@ QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::S
                                            QV4::Value* base, bool forCall = false) {
     auto* vm = frame.vm();
     QV4::Scope scope(vm);
+    name->toPropertyKey(); // Private QObject lookup requires an existing identifier key.
     QV4::Scoped<QV4::QmlContext> qml(scope, frame.qmlScope);
     auto context = frame.context;
     if (!qml) {
