@@ -26,6 +26,7 @@
 #include <QQuickWindow>
 #include <QQuickItem>
 #include <utility>
+#include <vector>
 #include <QPointer>
 #include <QQmlEngine>
 #include <QRegularExpression>
@@ -5525,6 +5526,60 @@ QJSValue tableMeasure(const PanelUsageFrame& f, const QJSValue& cell) {
     const auto callback = tableCallback(f, 130, {}, 2);
     return panelUsageMemberCall(f, children, "reduce", {callback, panelUsageRead(f, cell, "implicitWidth")});
 }
+// Only declared text cells participate in the text-column share cap. Numeric
+// editors retain their type even for missing/non-finite values; selector chrome
+// keeps its existing fittedWidth contract rather than becoming a text column.
+bool tableCappedTextCell(const PanelUsageFrame& f, const QJSValue& cell) {
+    const auto kind = panelUsageGlobalCall(f, "kindOf", {cell});
+    if (!kind.strictlyEquals(QJSValue(QStringLiteral("text")))) return false;
+    if (tableHas(f, cell, "accepts")) {
+        const auto accepts = panelUsageRead(f, cell, "accepts");
+        if (accepts.strictlyEquals(QJSValue(QStringLiteral("number")))
+            || accepts.strictlyEquals(QJSValue(QStringLiteral("integer")))) return false;
+    }
+    if (tableHas(f, cell, "fittedWidth")) return false;
+    bool selector = false;
+    panelUsageEach(f, tableArrayFrom(f, panelUsageRead(f, cell, "children")), [&](const QJSValue& child) {
+        if (tableHas(f, child, "fittedWidth")) { selector = true; return false; }
+        return panelUsageReady(f);
+    });
+    return panelUsageReady(f) && !selector;
+}
+QJSValue tableTextColumnCaps(const PanelUsageFrame& f) {
+    // This is a projection of current declared cells, not another column cache.
+    // A mixed column containing any non-text cell keeps its original allocation.
+    std::vector<int> kinds;
+    bool current = true;
+    panelUsageEach(f, assistantContextField(f, "contentItem", "children"), [&](const QJSValue& item) {
+        const auto cells = tableCellsOf(f, item);
+        if (!panelUsageTruth(cells) || panelUsageRead(f, cells, "length").strictlyEquals(QJSValue(0))
+            || assistantSameName(f, item, "headerItem")) return panelUsageReady(f);
+        const auto first = textIndex(f, cells, QJSValue(0));
+        if (!consentQtObject(f, first)) { current = false; return false; }
+        const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {panelUsageRead(f, first, "parent")});
+        for (double index = 0; panelUsageReady(f)
+             && assistantRelation(f, QJSValue(index), panelUsageRead(f, cells, "length"), 0); ++index) {
+            if (!panelUsageTruth(projectCall(f, owns))) { current = false; return false; }
+            const bool text = tableCappedTextCell(f, textIndex(f, cells, QJSValue(index)));
+            if (!panelUsageReady(f) || !panelUsageTruth(projectCall(f, owns))) { current = false; return false; }
+            const auto slot = static_cast<std::size_t>(index);
+            if (kinds.size() <= slot) kinds.resize(slot + 1);
+            kinds[slot] = !text || kinds[slot] == 2 ? 2 : 1;
+        }
+        return panelUsageReady(f);
+    });
+    if (!current || !panelUsageReady(f)) return {};
+    const auto caps = panelUsageLiteral(f, static_cast<int>(kinds.size()));
+    for (std::size_t index = 0; index < kinds.size() && panelUsageReady(f); ++index)
+        textIndexWrite(f, caps.value, QJSValue(static_cast<double>(index)), QJSValue(kinds[index] == 1));
+    return panelUsageComplete(f, caps);
+}
+QJSValue tableTextMeasurement(const PanelUsageFrame& f, const QJSValue& width,
+    const QJSValue& index, const QJSValue& caps, const QJSValue& limit) {
+    if (!panelUsageTruth(textIndex(f, caps, index))) return width;
+    const auto math = panelUsageContextRead(f, "Math");
+    return panelUsageMemberCall(f, math, "min", {width, limit});
+}
 void tableApplyWidthsNow(const PanelUsageFrame& f, const QJSValue& row) {
     const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {row}); const auto array = panelUsageContextRead(f, "Array");
     const auto cells = panelUsageMemberCall(f, array, "from", {panelUsageRead(f, row, "children")});
@@ -5559,17 +5614,20 @@ QJSValue tableProcedureCallback(const PanelUsageFrame& f, uint operation,
         const auto sum = arg(0), width = arg(1), index = arg(2); bool include;
         if (operation == 124) include = assistantRelation(f, width, QJSValue(0), 1) && !panelUsageTruth(textIndex(f, saved(0), index));
         else include = panelUsageTruth(textIndex(f, saved(0), index));
-        return panelUsageAdd(f, sum, include ? width : QJSValue(0));
+        const auto measured = include && operation == 125
+            ? tableTextMeasurement(f, width, index, saved(1), saved(2)) : width;
+        return panelUsageAdd(f, sum, include ? measured : QJSValue(0));
     }
     if (operation == 126) {
         const auto width = arg(0), index = arg(1);
         if (!panelUsageTruth(textIndex(f, saved(0), index))) return width;
         const auto math = panelUsageContextRead(f, "Math");
-        const auto measured = textIndex(f, saved(1), index);
+        const auto measured = tableTextMeasurement(f, textIndex(f, saved(1), index), index, saved(5), saved(6));
         auto sum = panelUsageAdd(f, viewArithmetic(f, measured, saved(2), 1), saved(3));
         const auto spreadColumns = panelUsageContextRead(f, "spreadColumns");
         const auto extra = panelUsageTruth(panelUsageMemberCall(f, spreadColumns, "includes", {index})) ? saved(4) : QJSValue(0);
-        return panelUsageMemberCall(f, math, "floor", {panelUsageAdd(f, sum, extra)});
+        const auto rounded = panelUsageMemberCall(f, math, "floor", {panelUsageAdd(f, sum, extra)});
+        return tableTextMeasurement(f, rounded, index, saved(5), saved(7));
     }
     if (operation == 127) return panelUsageAdd(f, arg(0), arg(1));
     if (operation == 130) {
@@ -5658,8 +5716,8 @@ void ApplicationInfo::tablePadForFiller(const QJSValue& cell, const QJSValue& co
 }
 QJSValue ApplicationInfo::tableCellKind(const QJSValue& cell) const {
     const auto f = panelUsageEngine(this);
-    if (tableHas(f, cell, "checked") && tableHas(f, cell, "horizontalAlignment")) return QJSValue(QStringLiteral("check"));
     if (tableHas(f, cell, "ring") || tableHas(f, cell, "fontIcon")) return QJSValue(QStringLiteral("icon"));
+    if (tableHas(f, cell, "checked") && tableHas(f, cell, "horizontalAlignment")) return QJSValue(QStringLiteral("check"));
     if (tableHas(f, cell, "number") || tableHas(f, cell, "columnAlignment") || tableHas(f, cell, "item")
         || (tableHas(f, cell, "numeric") && panelUsageTruth(panelUsageRead(f, cell, "numeric")))) return QJSValue(QStringLiteral("number"));
     return QJSValue(QStringLiteral("text"));
@@ -5692,7 +5750,16 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
     const auto fitting = panelUsageRead(f, filtered, "length");
     columns = panelUsageContextRead(f, "columns");
     const auto fixed = panelUsageMemberCall(f, columns, "reduce", {tableCallback(f, 124, {fits}, 3), QJSValue(0)});
-    const auto texts = panelUsageMemberCall(f, fitted, "reduce", {tableCallback(f, 125, {fits}, 3), QJSValue(0)});
+    const auto caps = tableTextColumnCaps(f);
+    if (!panelUsageReady(f)) return {};
+    if (caps.isUndefined()) return columns;
+    const auto capMath = panelUsageContextRead(f, "Math");
+    const auto cap = panelUsageMemberCall(f, capMath, "max", {QJSValue(0),
+        viewArithmetic(f, panelUsageContextRead(f, "width"), panelUsageContextRead(f, "maximumTextColumnShare"), 1)});
+    const auto limitMath = panelUsageContextRead(f, "Math");
+    const auto textLimit = panelUsageMemberCall(f, limitMath, "max", {QJSValue(0),
+        viewArithmetic(f, cap, panelUsageContextRead(f, "autoColumnPadding"), 0)});
+    const auto texts = panelUsageMemberCall(f, fitted, "reduce", {tableCallback(f, 125, {fits, caps, textLimit}, 3), QJSValue(0)});
     const auto gaps = viewArithmetic(f, panelUsageRead(f, panelUsageContextRead(f, "columns"), "length"), QJSValue(1), 0);
     auto room = viewArithmetic(f, panelUsageContextRead(f, "width"), fixed, 0);
     auto sizes = assistantContextField(f, "EaStyle", "Sizes");
@@ -5721,7 +5788,7 @@ QJSValue ApplicationInfo::tableColumnWidths() const {
         spread = viewArithmetic(f, maximum, panelUsageRead(f, panelUsageContextRead(f, "spreadColumns"), "length"), 2);
     }
     columns = panelUsageContextRead(f, "columns");
-    const auto widths = panelUsageMemberCall(f, columns, "map", {tableCallback(f, 126, {fits, fitted, scale, margin, spread}, 2)});
+    const auto widths = panelUsageMemberCall(f, columns, "map", {tableCallback(f, 126, {fits, fitted, scale, margin, spread, caps, textLimit, cap}, 2)});
     if (assistantRelation(f, panelUsageContextRead(f, "fillerIndex"), QJSValue(0), 2)) {
         const auto used = panelUsageMemberCall(f, widths, "reduce", {tableCallback(f, 127, {}, 2), QJSValue(0)});
         const auto math = panelUsageContextRead(f, "Math"); auto spare = panelUsageContextRead(f, "width");
