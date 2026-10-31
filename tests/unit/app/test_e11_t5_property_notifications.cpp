@@ -144,7 +144,7 @@ QString categoryText(const QString& value) {
 }
 }  // namespace
 
-class PropertyNotificationProof final : public QObject {
+class PropertyNotificationProof : public QObject {
     Q_OBJECT
     QPointer<edi_app::ExperimentViewModel> retiredExperiment_;
     QPointer<edi_app::ProjectViewModel> retiredProject_;

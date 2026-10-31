@@ -5,7 +5,6 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
-#include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -164,12 +163,19 @@ TEST_CASE("Native report HTML preserves arbitrary style keys alongside every ori
     REQUIRE_MESSAGE(restored.structure_styles.size() == original.size() + 4,
                     "No old or authored style record is discarded");
     const auto html = edi::report_html(restored);
-    const std::regex model_script(
-        R"(<script[^>]*id=["']edi-report-model["'][^>]*>([\s\S]*?)</script>)");
-    std::smatch embedded;
-    REQUIRE_MESSAGE(std::regex_search(html, embedded, model_script),
+    // Public native writer boundary: fixed opener and escaped JSON, then closing script.
+    const std::string opener = "<script type=\"application/json\" id=\"edi-report-model\">";
+    const std::string closer = "</script>\n";
+    const auto opening = html.find(opener);
+    REQUIRE_MESSAGE(opening != std::string::npos,
                     "The native-generated HTML supplies its actual embedded model");
-    const auto payload = edi::json::parse(embedded[1].str());
+    const auto beginning = opening + opener.size();
+    REQUIRE_MESSAGE(html.find(opener, beginning) == std::string::npos,
+                    "The actual native model script is unambiguous");
+    const auto ending = html.find(closer, beginning);
+    REQUIRE_MESSAGE(ending != std::string::npos,
+                    "The actual native model script has its declared closing delimiter");
+    const auto payload = edi::json::parse(html.substr(beginning, ending - beginning));
     const auto raw = edi::json::parse(encoded);
     CHECK_MESSAGE(edi::json::write(payload.at("structure_styles")) ==
                       edi::json::write(raw.at("structure_styles")),
