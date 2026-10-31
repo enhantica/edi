@@ -34,6 +34,7 @@ Item {
         id: recentGroup
         RecentProjectsGroup {
             width: 950
+            collapsed: false
         }
     }
     TestCase {
@@ -61,10 +62,12 @@ Item {
             if (glyph !== "") {
                 const ink = visible.find(item => item.text === glyph);
                 verify(ink !== undefined, "The requested glyph is actually drawn by the cell");
+                tryCompare(ink, "color", colour, 2000, "The actual glyph settles through its declared colour Behavior");
                 compare(ink.color, colour, "The actual glyph ink has the state colour");
             } else {
                 const circle = Render.descendants(cell).find(item => item.visible && item.radius > 0 && item.border && item.border.width > 0);
                 verify(circle !== undefined, "The unfitted hollow circle is actually drawn");
+                tryVerify(() => Qt.colorEqual(circle.border.color, colour), 2000, "The hollow circle settles to its declared neutral colour");
                 compare(circle.border.color, colour, "The hollow circle has the neutral status colour");
             }
         }
@@ -113,7 +116,11 @@ Item {
             verify(waitForPolish(table), "The measured status delegate completes actual layout");
             const delegate = table.itemAtIndex(0);
             const cells = Render.cells(delegate);
-            compare(cells.length, 9, "The measured-data row retains its status column");
+            const baseColumnCount = 9;
+            const declaredPhaseCount = 1;
+            compare(Session.project.structures.count, declaredPhaseCount, "The independently named input declares one structure");
+            compare(table.componentNames.length, declaredPhaseCount, "Each declared structure has its appended component column");
+            compare(cells.length, baseColumnCount + declaredPhaseCount, "The measured row retains all base columns and its declared structure component");
             const cell = cells[8];
             const states = [
                 {
@@ -173,17 +180,20 @@ Item {
                 if (cell.ring) {
                     const circle = Render.descendants(cell).find(item => item.visible && item.radius > 0 && item.border && item.border.width > 0);
                     verify(circle !== undefined, "The pending calculation circle is actually visible");
+                    tryVerify(() => Qt.colorEqual(circle.border.color, cell.iconColor), 2000, "The pending ring settles to its current declared neutral ink");
                     compare(String(circle.border.color), String(cell.iconColor), "The pending ring has the actual neutral status ink");
                 } else {
                     verify(ink !== undefined, "The calculation glyph is actually visible");
+                    tryCompare(ink, "color", cell.iconColor, 2000, "The calculation glyph settles through its declared colour Behavior");
                     compare(String(ink.color), String(cell.iconColor), "Calculation ink follows the state instead of remaining successful green");
                 }
             }
         }
         function test_recent_availability_updates_the_existing_cell() {
             supplied.append({
-                name: "supplied project",
+                label: "supplied project",
                 path: "/independent/project",
+                inBrowser: false,
                 available: true
             });
             const group = createTemporaryObject(recentGroup, surface);
@@ -202,6 +212,7 @@ Item {
                 verify(available ? String(cell.iconColor) === String(colour) : [String(colour), String(Style.Colors.orange)].includes(String(cell.iconColor)), "Found is green and Missing is red or amber");
                 const ink = Render.texts(cell).find(item => item.text === cell.icon);
                 verify(ink !== undefined, "The availability glyph is actually rendered");
+                tryCompare(ink, "color", cell.iconColor, 2000, "The availability glyph settles through its declared colour Behavior");
                 compare(String(ink.color), String(cell.iconColor), "The actual availability ink uses the specified state colour");
             }
         }
