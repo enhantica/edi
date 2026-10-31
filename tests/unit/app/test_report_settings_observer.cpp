@@ -50,6 +50,12 @@
 #include <QtQml/qqml.h>
 #include "engine_setup.hpp"
 
+#include <QPointer>
+#include <QQmlIncubationController>
+#include <QQmlIncubator>
+#include <QScopeGuard>
+#include <initializer_list>
+
 namespace {
 QMutex report_console_mutex;
 QVariantList report_console_messages;
@@ -656,6 +662,148 @@ public:
         settings.beginGroup(group);
         settings.setValue(key, value);
         settings.sync();
+    }
+    Q_INVOKABLE QVariantMap incubationOwnership(QObject* context, bool destroyFirst) const {
+        auto* caller = qmlEngine(context);
+        auto* original = caller ? caller->incubationController() : nullptr;
+        auto* originalObject = dynamic_cast<QObject*>(original);
+        if (!caller || !original || !originalObject)
+            return {{"error", "The existing configured caller/controller is unavailable"}};
+        QPointer<QQmlEngine> callerGuard(caller);
+        QPointer<QObject> originalGuard(originalObject);
+        bool restored = false;
+        const auto restoreCaller = [&] {
+            if (restored) return;
+            if (callerGuard && originalGuard) {
+                // Test cleanup only, AFTER all measured engines/jobs are gone.
+                // Force a real setter transition even if the old forward field
+                // still aliases the shared controller whose private link moved.
+                callerGuard->setIncubationController(nullptr);
+                callerGuard->setIncubationController(original);
+            }
+            restored = true;
+        };
+        const auto callerCleanup = qScopeGuard(restoreCaller);
+        QVariantMap facts;
+        try {
+            struct Job {
+                QQmlComponent component;
+                QQmlIncubator incubation{QQmlIncubator::Asynchronous};
+                bool started = false;
+                int queued = 0;
+                explicit Job(QQmlEngine& engine) : component(&engine) {
+                    component.setData("import QtQml; QtObject { property int answer: 6 * 7 }",
+                                      QUrl("file:///actual-configured-incubation.qml"));
+                    if (component.isReady()) component.create(incubation, engine.rootContext());
+                    started = incubation.isLoading();
+                    if (auto* controller = engine.incubationController())
+                        queued = controller->incubatingObjectCount();
+                }
+                ~Job() {
+                    QObject* ready = incubation.object();
+                    incubation.clear();  // Aborts pending work; does not delete Ready objects.
+                    delete ready;
+                }
+                QVariantMap snapshot() const {
+                    QStringList errors;
+                    for (const auto& error : component.errors()) errors.append(error.toString());
+                    for (const auto& error : incubation.errors()) errors.append(error.toString());
+                    auto* object = incubation.object();
+                    return {{"started_loading", started},
+                            {"queued_at_start", queued},
+                            {"status", int(incubation.status())},
+                            {"ready", incubation.isReady()},
+                            {"answer", object ? object->property("answer") : QVariant{}},
+                            {"errors", errors}};
+                }
+            };
+            const auto waitJobs = [](std::initializer_list<Job*> jobs) {
+                QElapsedTimer deadline;
+                deadline.start();
+                for (;;) {
+                    bool pending = false;
+                    for (const auto* job : jobs) pending = pending || job->incubation.isLoading();
+                    if (!pending || deadline.elapsed() >= 5000) return;
+                    QTest::qWait(10);  // Existing restart carrier's bound/event-loop primitive.
+                }
+            };
+            const auto belongsTo = [](const QObject* object, const QObject* engine) {
+                for (auto* current = object; current; current = current->parent())
+                    if (current == engine) return true;
+                return false;
+            };
+            auto first = std::make_unique<QQmlEngine>();
+            edi_app::configure_engine(*first);
+            auto* a = first->incubationController();
+            QPointer<QObject> aObject(dynamic_cast<QObject*>(a));
+            facts["a_present"] = a != nullptr;
+            facts["a_engine_owned"] = aObject && belongsTo(aObject, first.get());
+            auto beforeB = std::make_unique<Job>(*first);
+            auto second = std::make_unique<QQmlEngine>();
+            edi_app::configure_engine(*second);
+            auto* b = second->incubationController();
+            QPointer<QObject> bObject(dynamic_cast<QObject*>(b));
+            facts["b_present"] = b != nullptr;
+            const bool distinct = a && b && a != b;
+            facts["distinct_controllers"] = distinct;
+            facts["a_forward_after_b"] = first->incubationController() == a;
+            facts["b_engine_owned"] = bObject && belongsTo(bObject, second.get());
+            const bool independent =
+                distinct && aObject && bObject && belongsTo(aObject, first.get()) &&
+                belongsTo(bObject, second.get()) && first->incubationController() == a &&
+                second->incubationController() == b;
+            facts["independent_live_ownership"] = independent;
+            auto duringB = std::make_unique<Job>(*first);
+            auto bWork = std::make_unique<Job>(*second);
+            waitJobs({beforeB.get(), duringB.get(), bWork.get()});
+            facts["a_queued_before_b"] = beforeB->snapshot();
+            facts["a_work_with_b"] = duringB->snapshot();
+            facts["b_work"] = bWork->snapshot();
+            beforeB.reset();
+            duringB.reset();
+            bWork.reset();
+            auto& survivor = destroyFirst ? second : first;
+            auto& victim = destroyFirst ? first : second;
+            auto* survivingController = destroyFirst ? b : a;
+            QPointer<QObject> survivingObject = destroyFirst ? bObject : aObject;
+            QPointer<QObject> victimObject = destroyFirst ? aObject : bObject;
+            victim.reset();
+            facts["destroyed_engine_controller_deleted"] = victimObject.isNull();
+            facts["survivor_controller_alive"] = !survivingObject.isNull();
+            facts["survivor_forward_after_destroy"] =
+                survivor->incubationController() == survivingController;
+            facts["survivor_owner_after_destroy"] =
+                survivingObject && belongsTo(survivingObject, survivor.get());
+            if (survivingController && survivingObject &&
+                survivor->incubationController() == survivingController) {
+                auto afterDestroy = std::make_unique<Job>(*survivor);
+                waitJobs({afterDestroy.get()});
+                facts["survivor_work_after_destroy"] = afterDestroy->snapshot();
+                afterDestroy.reset();
+                survivor->setIncubationController(nullptr);
+                facts["explicit_detach_forward_null"] =
+                    survivor->incubationController() == nullptr;
+                facts["detached_owner_still_alive"] = !survivingObject.isNull();
+                // No controller.engine() getter is queried, here or anywhere else.
+                facts["detached_count"] = survivingController->incubatingObjectCount();
+                survivor->setIncubationController(survivingController);
+                facts["explicit_reattach_forward"] =
+                    survivor->incubationController() == survivingController;
+                auto reattached = std::make_unique<Job>(*survivor);
+                waitJobs({reattached.get()});
+                facts["reattached_work"] = reattached->snapshot();
+                reattached.reset();
+            }
+            survivor.reset();
+            facts["both_controller_lifetimes_ended"] = aObject.isNull() && bObject.isNull();
+            // No getter is called on either destroyed measured engine/controller.
+        } catch (const std::exception& error) {
+            facts["error"] = QString::fromUtf8(error.what());
+        }
+        restoreCaller();
+        facts["caller_restored"] =
+            callerGuard && originalGuard && callerGuard->incubationController() == original;
+        return facts;
     }
     Q_INVOKABLE QVariantMap restart(const QString& source) const {
         QQmlEngine engine;
