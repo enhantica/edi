@@ -211,8 +211,17 @@ EaElements.ComboBox {
             control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
             // In a table the shown value starts where its column's header does (the owner, 2026-10-24); the list keeps
             // its own padding.
-            if (control.inTable)
+            if (control.inTable) {
                 control.contentItemLabel.leftPadding = 0;
+                control.contentItemLabel.rightPadding = 0;
+            }
+        }
+        // In a table the value starts at the box's left edge, where its cell puts its header's text, and the arrow sits
+        // in the padding kept for it: the base draws it over the end of the text's room (the owner, 2026-10-27).
+        if (control.inTable) {
+            control.leftPadding = 0;
+            if (control.indicator)
+                control.indicator.x = Qt.binding(() => control.width - control.indicator.width - control.padding);
         }
         control.popup.contentItem.header = searchHeader;
         // The list holds its entries only while it shows: a closed one sized to the window kept a screenful of

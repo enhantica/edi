@@ -43,7 +43,9 @@ EaComponents.ListView {
     // columns fit the rows measured since the content last changed: scrolling only ever widens a column, for a wider
     // row, and never moves one back and forth (the owner, 2026-10-27).
     cacheBuffer: 0
-    readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
+    // The row-number column fits the widest number in the bold the current row's number takes, measured again when
+    // the font changes (a web font arriving after the first layout).
+    readonly property real numberColumnWidth: modelRevision >= 0 ? Math.ceil(boldMetrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2 : 0
     property int modelRevision: 0
     // The one column rule (ADR-0029; the owner, 2026-10-24 and 2026-10-27). The row-number column and every flex
     // column (-1) fit their header and their widest cell, each with the same margin, so every two neighbours sit as
@@ -92,8 +94,13 @@ EaComponents.ListView {
     // Each padded cell's own paddings and alignment kind, by cell.
     property var basePaddings: new Map()
     property var cellKinds: new Map()
+    // The columns whose right-aligned values are followed by a combo box or by the row buttons: they keep a font size
+    // more after their values (the owner, 2026-10-27: "WP is too close to z. Occ too close to buttons"). A value's
+    // units column stays beside it.
+    property var wideEdges: []
     // A cell's padding: its own, a spacing more on the side it aligns to, so a right-aligned number and a
-    // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it.
+    // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it. A
+    // check box, which centres itself in its room, is pushed to the right edge by its left padding.
     function padForFiller(cell, column) {
         if (!("rightPadding" in cell) || "keepsAlignment" in cell)
             return;
@@ -105,16 +112,28 @@ EaComponents.ListView {
         const base = basePaddings.get(cell);
         const kind = cellKinds.get(cell) ?? "";
         const gap = EaStyle.Sizes.tableColumnSpacing;
-        cell.leftPadding = base.left + (kind === "text" ? gap : 0);
-        cell.rightPadding = base.right + (kind === "number" || kind === "check" ? gap : 0) + (column === fillerIndex ? fillerWidth : 0);
+        const right = kind === "number" || kind === "check";
+        cell.rightPadding = base.right + (right ? gap : 0) + (right && wideEdges[column] ? EaStyle.Sizes.fontPixelSize : 0) + (column === fillerIndex ? fillerWidth : 0);
+        if (kind === "check" && cell.indicator) {
+            // Set, not bound: the box's implicit width follows its padding, and its column's width its implicit one.
+            cell.leftPadding = Math.max(base.left, cell.width - cell.rightPadding - cell.indicator.width);
+            if (!checkCells.has(cell)) {
+                checkCells.add(cell);
+                cell.widthChanged.connect(() => table.padForFiller(cell, column));
+            }
+        } else {
+            cell.leftPadding = base.left + (kind === "text" ? gap : 0);
+        }
     }
-    // A cell's kind, which sets how it aligns: a number, an icon or button, or text.
+    property var checkCells: new Set()
+    // A cell's kind, which sets how it aligns: a number, an icon or button, or text. A row button is checkable too, so
+    // it is told from a check box by its icon first.
     function kindOf(cell) {
-        if ("checked" in cell && "horizontalAlignment" in cell)
-            return "check";
         if ("ring" in cell || "fontIcon" in cell)
             return "icon";
-        if ("number" in cell || "columnAlignment" in cell || "item" in cell || ("numeric" in cell && cell.numeric))
+        if ("checked" in cell && "horizontalAlignment" in cell)
+            return "check";
+        if ("number" in cell || "columnAlignment" in cell || "item" in cell || "parameter" in cell || ("numeric" in cell && cell.numeric))
             return "number";
         return "text";
     }
@@ -138,7 +157,8 @@ EaComponents.ListView {
         // included.
         const control = child => "fittedWidth" in child ? child.fittedWidth : child.implicitWidth ?? 0;
         const held = cell => Array.from(cell.children).reduce((widest, child) => Math.max(widest, control(child)), cell.implicitWidth);
-        const measure = cell => "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : held(cell);
+        // A check box by its box and its own paddings, never the padding that pushes it right.
+        const measure = cell => cellKinds.get(cell) === "check" && cell.indicator ? (basePaddings.get(cell)?.left ?? 0) + cell.indicator.width + cell.rightPadding : "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : padded(cell, held(cell));
         // The cells of a row's inner Row, in column order, the filler left out.
         const cellsOf = row => {
             const first = row && row.contentRowData ? Array.from(row.contentRowData).find(cell => cell instanceof Item) : null;
@@ -152,7 +172,13 @@ EaComponents.ListView {
             const cells = cellsOf(item);
             if (!cells || item === headerItem)
                 continue;
-            kinds = kinds ?? cells.map(cell => kindOf(cell));
+            if (!kinds) {
+                kinds = cells.map(cell => kindOf(cell));
+                const rightAligned = kind => kind === "number" || kind === "check";
+                const edges = kinds.map((kind, i) => i > 0 && i + 1 < kinds.length && rightAligned(kind) && (kinds[i + 1] === "icon" || "fills" in cells[i + 1]));
+                if (JSON.stringify(edges) !== JSON.stringify(wideEdges))
+                    wideEdges = edges;
+            }
             for (let i = 0; i < cells.length && i < widths.length; ++i) {
                 if (i > 0 && kinds[i])
                     alignCell(cells[i], kinds[i]);
@@ -257,6 +283,13 @@ EaComponents.ListView {
         id: metrics
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
+        onFontChanged: table.remeasure()
+    }
+    FontMetrics {
+        id: boldMetrics
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        font.bold: true
         onFontChanged: table.remeasure()
     }
     Connections {

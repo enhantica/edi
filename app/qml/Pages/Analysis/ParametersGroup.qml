@@ -28,12 +28,16 @@ EaElements.GroupBox {
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
     property int selectedRow: -1
     property real tableViewportHeight: 0
-    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11).
+    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11),
+    // and a font size more before the title, so it keeps clear of "max" (the owner, 2026-10-27).
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
+    // The arrow ends where the right-aligned check boxes do: a check box's own padding and the table's spacing before
+    // the column's edge (DataTable.padForFiller).
+    readonly property real freeInset: 0.5 * EaStyle.Sizes.fontPixelSize + EaStyle.Sizes.tableColumnSpacing
     // The free title's word and arrow share one colour, each with the labels' own colour transition.
     property bool freeTitleHovered: false
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth) + AppSizes.fieldSpacing * 2
+    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize
 
     TextMetrics {
         id: freeTitleText
@@ -380,8 +384,8 @@ EaElements.GroupBox {
                     text: qsTr("max")
                 }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
-                // filters show, as one Undo step (the owner, 2026-10-11). The word and the arrow end at the column's
-                // right, over the right-aligned checkboxes; its menu opens centred, so the title is as wide as itself.
+                // filters show, as one Undo step (the owner, 2026-10-11). The arrow ends where the right-aligned check
+                // boxes do; its menu opens centred, so the title is as wide as itself.
                 EaComponents.ListViewLabel {
                     id: freeTitle
                     // Laid out here, not by the table's alignment rule.
@@ -389,7 +393,7 @@ EaElements.GroupBox {
                     objectName: "parameters.freeHeader"
                     visible: group.measured
                     horizontalAlignment: Text.AlignRight
-                    rightPadding: freeArrow.width + group.freeGap
+                    rightPadding: freeArrow.width + group.freeGap + group.freeInset
                     color: group.freeTitleColor
                     text: qsTr("free")
 

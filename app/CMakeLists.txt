@@ -94,6 +94,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/BlockSelector.qml
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
+        qml/Components/ComboCell.qml
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml

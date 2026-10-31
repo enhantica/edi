@@ -148,3 +148,10 @@ per structure is an empty cell on a row without a curve), and a row or header wh
 since the base centres each row. Atom sites, atomic displacements and the Analysis parameters keep layouts of their
 own: equal columns for the first two; for the parameters the name in full, then value and s.u. at three tenths of
 the rest each and min and max at two tenths, with free at the right.
+
+Alignment and gaps (the owner, 2026-10-27 and 2026-10-31). Numbers and check boxes are right-aligned under
+right-aligned headers, text left-aligned, icons centred; each takes one table spacing more on the side it aligns to.
+A number followed by a combo box or by the row buttons keeps a font size more after it. A combo box sits in a
+`ComboCell`, padded as a text cell, so its shown value starts at its header's left edge; in a table its arrow sits
+in the box's own right padding, never over the text. The row-number column fits the widest row number in the bold
+of the current row. A row button is checkable, so the table tells it from a check box by its icon.
