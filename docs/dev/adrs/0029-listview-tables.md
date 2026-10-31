@@ -247,3 +247,29 @@ header implicit-width callback's synchronous sizing edge needs its actual active
 stack before changing the shared deferred table lifecycle. The three-spacing
 margin, natural chrome, identifier cap, equal/spread/custom Analysis distribution,
 last filler and fixed action columns are unchanged.
+
+## One Escape owner for editable text cells
+
+FIRST gui-components `ListViewTextInput` releases focus on Escape; `TextCell`
+adds a draft-cancellation policy. Separate handlers on the same attached Keys
+signal are not a virtual override: event acceptance does not stop another handler
+on that signal, and focus loss may synchronously emit editingFinished before the
+manual draft is cancelled. `ParameterCell` does not inherit that base handler.
+
+Use the existing app-owned Base replacement mechanism for this one pinned text
+component, preserving its appearance and default input behavior. Its sole Escape
+handler dispatches through a named cancellation method on the actual control.
+Ordinary consumers keep the original native focus-false then event-accepted order;
+`TextCell` overrides the method with its existing native cancellation owner and
+removes the competing attached handler. Native TextCell cancellation clears the
+original draft and resumes clean display before releasing focus, rechecking the
+original lifetime, empty draft and owner token before that final effect. A
+replacement/reentrant draft or ongoing composition/commit is not blurred.
+
+The base's existing cursor-on-focus/text changes use the same native cursor
+procedure as other editors. Font, height, alignment, colors, hover, tooltip,
+selection and all other base bindings retain their pinned source. Clean-text
+Binding, manual/assistant draft admission, IME, refusal, ordinary Return and
+intentional focus-loss commit remain their existing owners. ParameterField and
+ParameterCell paths are unchanged; no vendor pin, key filter/proxy, global store,
+new editor state, retry or scientific setter is introduced.
