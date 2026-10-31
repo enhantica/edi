@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Window
 import QtTest
 import ReportAcceptance 1.0
 import "ExampleProjects.js" as Examples
@@ -123,7 +124,7 @@ Item {
                 project: Session.project
             });
             verify(group !== null, "The declared scan opens its actual experiment table");
-            verify(waitForPolish(group), "The scan table completes layout");
+            verify(surface.Window.window !== null && waitForPolish(surface.Window.window), "The scan table completes layout");
             const marker = Ui.find(group, "experiments.template." + Session.project.templateIndex);
             verify(marker !== null, "The template dataset has its visible marker");
             const siblings = marker.parent.children;
