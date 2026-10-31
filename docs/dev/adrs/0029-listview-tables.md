@@ -332,3 +332,44 @@ makes it an icon cell. Genuine checkboxes without fontIcon/ring keep the check
 alignment and inset. No glyph-clipping cause is claimed by this classification
 repair. Both corrections use the shared native table owner; no procedural QML,
 timer, state, model, scientific write or vendor change is added.
+
+
+## Natural measurements exclude the cell's actual filler padding
+
+FIRST DataTable owns natural fittedWidths and the last data column's spare right
+padding. Spare is not natural demand. Header normalization previously subtracted
+current fillerWidth only at current fillerIndex, although an earlier fit applied
+the measured header padding. Column publication can change spare or move its
+index before the queued fit. Body normalization also read current spare after an
+observable padding write. Combining those different states can enter spare into
+a cached raw maximum, or subtract spare that was never in the measured cell.
+
+The existing basePaddings record now includes the right-padding baseline owned
+by padForFiller: intrinsic right padding plus its kind's alignment inset, without
+spare. It is published before the right-padding setter's synchronous callbacks.
+Normalization subtracts the actual current rightPadding minus that baseline,
+not the requested filler or current global projection. An unpadded cell has no
+baseline and no subtraction. A former filler retains its actual delta until its
+next padding write; zero, changed and moved filler indices need no special case.
+A nested padding write supersedes the baseline before its callbacks, and an
+outer return does not overwrite it. Rejection or normalization of the numeric
+padding assignment is not reported as application of the requested spare: the
+measurement still reads actual padding. Existing row/cell ownership checks remain
+before left and right writes, and an existing pending exception stops publication.
+
+This is intrinsic chrome bookkeeping in the existing cell record, not a second
+width cache or model. Visible virtualized rows remain the samples; fittedWidths
+retains raw header/content/scroll maxima and refit semantics. Cell-kind insets,
+three-spacing margin, text cap, fixed actions, equal/spread/custom Analysis
+layouts, held-text/numeric/selector measurement, final spare allocation, queued
+header publication and lifetime checks retain their existing owners. There is no
+new timer, queue, QML procedure, global width latch or category-specific rule.
+
+Source order proves the mixed-projection hazard, not causation of any particular
+runtime width failure. Independent verification must exercise spare growth and
+shrink before the queued fit, moved filler index, equal/spread transitions with
+old padding still present, initial/replaced headers, text/held-text/numeric final
+cells, nested padding/projection changes, unchanged-width fits, visible scrolling
+samples and table/row retirement. Arbitrary independently owned padding setters
+are not a new supported table-cell type; padForFiller continues to own the real
+padding of the same declared native cells.
