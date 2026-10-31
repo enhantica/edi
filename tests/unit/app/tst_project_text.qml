@@ -194,7 +194,7 @@ Item {
             tryCompare(Session.project, "calculating", false, 5000, "The calculated-data witness finishes its real model calculation");
             const editor = openText(Session.project.currentExperiment), apply = applyButton(), show = showChoice();
             const reference = proof.dictionary();
-            verify(reference.categories && reference.categories.length > 0, "The filter reference reads the selected SDK YAML independently");
+            verify(reference.categories && reference.categories.length > 0, "The filter reference reads the captured dictionary YAML independently");
             const editableCategories = new Set((editor.text.match(/^_[A-Za-z0-9_]+\./gm) ?? []).map(tag => tag.slice(1, -1)));
             verify(!/_data\.intensity_meas\b/.test(editor.text), "Editable omits measured output categories");
             choose(show, 1);

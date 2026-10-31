@@ -8,9 +8,9 @@ from pathlib import Path
 
 import edi
 import pytest
-import yaml
 
-from tests.conftest import crysta_reference_source, tree_bytes_with_normalized_project_metadata
+from tests.conftest import tree_bytes_with_normalized_project_metadata
+from tests.fixtures.project_text.dictionary_reference import reference
 from tests.fixtures.project_text.generate import classic_zip, project
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -24,12 +24,11 @@ PROJECTS = [
 
 
 def category_metadata():
-    source = crysta_reference_source() / 'data/dictionary/parameters.yaml'
-    rows = yaml.safe_load(source.read_text())['categories']
+    rows = reference()['categories']
     result = {}
     for row in rows:
         values = [value for value in row.values() if type(value) is int]
-        assert len(values) == 1, 'The pinned dictionary declares each category presentation number'
+        assert len(values) == 1, 'The independent dictionary reference declares each category presentation number'
         result[row['edi_name']] = (values[0], len(result))
     return result
 
