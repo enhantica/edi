@@ -508,7 +508,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   })()`);
   const progressBefore = await beginFitProgress(evaluate);
   const fitStarted = await evaluate('performance.now()');
-  await click(/^Start fitting$/);
+  await click(/^Fit$/, 'button', 'statusBar.fit.button');
 
   // Qt wasm leaves dialog DOM elements closed; observe the actual native summary instead.
   const outcome=await waitControlGeometry(evaluate,frame,'fit.results.value.0',{enabled:false});
@@ -659,7 +659,7 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
   assert.equal(roundtrip.status, 0,
     'reopened project must retain every saved value(s.u.) and fit byte, with derived fields equal to the native written-model calculation: ' + roundtrip.stderr);
   await writeFile(join(output, `${mode}-reopen-roundtrip.json`), JSON.stringify({before,after},null,2));
-  await click(/^Analysis$/); await waitAX(/^Start fitting$/); await shot('reopened');
+  await click(/^Analysis$/); await waitAX(/^Fit$/, true, 'button'); await controlPointer(evaluate, 'statusBar.fit.button'); await shot('reopened');
   }
   if (!exampleOnly && !reopenControl && fileRequestCase !== 'none') {
     const inputs = join(scratch,'routing');
