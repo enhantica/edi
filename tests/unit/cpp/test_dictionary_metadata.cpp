@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include "edi/fittability.hpp"
+
 #include "../../fixtures/dictionary_display/metadata_reference.hpp"
 
 #if __has_include("edi/display.hpp")
@@ -24,6 +26,16 @@ TEST_CASE("The core metadata bridge retains every dictionary label unit and file
         CHECK_MESSAGE(!edi::description(row.uid).empty(),
                       "Every core item has a dictionary description");
     }
+    edi::Project project;
+    project.experiments.emplace_back(edi::BraggPdExperiment{});
+    edi::refresh_fittability(project);
+    const auto& angle = project.experiment().instrument.setup_twotheta_bank;
+    CHECK_MESSAGE(edi::is_descriptor("instrument.setup_twotheta_bank"),
+                  "The dictionary bridge classifies numerical item-backed bank angles as descriptors");
+    CHECK_MESSAGE(angle.fit_blocker == edi::FitBlocker::Descriptor,
+                  "The core marks item-backed descriptors even without a runtime fit slot");
+    CHECK_MESSAGE(angle.fit_reason == "a descriptor, never fitted",
+                  "The core descriptor mark carries the one shared refusal reason");
     for (const auto& row : kCategoryCases) {
         CHECK_MESSAGE(edi::category_label(row.id) == (row.loop ? row.loop_title : row.title),
                       "Every group title uses its dictionary singular or loop title");

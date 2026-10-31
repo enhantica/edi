@@ -25,6 +25,22 @@ TestCase {
         target: Session.project ? Session.project.fit : null
         signalName: "runningChanged"
     }
+    SignalSpy {
+        id: keyboardSpy
+        signalName: "clicked"
+    }
+    function keyAction(item, key, available) {
+        verify(item !== null, "Keyboard input reaches an existing production status action");
+        appWindow.requestActivate();
+        item.forceActiveFocus(Qt.TabFocusReason);
+        if (available)
+            verify(item.activeFocus, "An available status action accepts keyboard focus");
+        keyboardSpy.target = item;
+        keyboardSpy.clear();
+        verify(SettingsProof.key(item, key), "The activation key is delivered to the real application window");
+        compare(keyboardSpy.count, available ? 1 : 0, "Space and Enter use the status action's same clicked signal as pointer input and respect availability");
+        keyboardSpy.target = null;
+    }
     function init() {
         Session.closeProject();
         savedBooleans = {};
@@ -203,6 +219,9 @@ TestCase {
         runningSpy.clear();
         click(button);
         compare(runningSpy.count, 0, "Clicking an unavailable status shortcut cannot start a worker");
+        keyAction(button, Qt.Key_Space, false);
+        keyAction(button, Qt.Key_Return, false);
+        compare(runningSpy.count, 0, "Keyboard input on unavailable Fit cannot start a worker");
     }
     function test_status_start() {
         open("single");
@@ -211,8 +230,8 @@ TestCase {
         verify(actionable(button) && Session.project.fit.available, "An idle status action follows the model availability");
         AppState.open(AppState.Page.Structure);
         runningSpy.clear();
-        click(button);
-        verify(runningSpy.count > 0, "The status shortcut starts the actual worker while another page is selected");
+        keyAction(button, Qt.Key_Space, true);
+        verify(runningSpy.count > 0, "The focused status shortcut starts the same actual worker from another page");
         finish();
     }
     function test_continue_matches_analysis() {
@@ -234,7 +253,7 @@ TestCase {
         verify(Session.project.fit.continuable, "The physical resume witness reaches the real resumable state");
         fitState("Continue");
         verify(actionable(shortcut()), "The resumable scan enables the status Continue action");
-        click(shortcut());
+        keyAction(shortcut(), Qt.Key_Return, true);
         finish();
         compare(Session.project.fit.scanFitted, 2, "Status Fit continues the partial scan through the newly added measured dataset");
         fitState("Fit");
@@ -262,7 +281,7 @@ TestCase {
         verify(progress !== null && progress.visible, "The running position witness includes the actual fit progress bar");
         rightmostFitAction();
         verify(actionable(button), "The running status action stays available to stop the worker on either page");
-        click(button);
+        keyAction(button, data.tag === "status" ? Qt.Key_Space : Qt.Key_Return, true);
         finish();
         compare(Session.project.fit.outcome, "stopped", "The status action stops the actual fit worker from Analysis and other pages");
         fitState(Session.project.fit.continuable ? "Continue" : "Fit");
@@ -379,6 +398,12 @@ TestCase {
         compare(reset !== null && reset.visible, isScan, "Reset is shown only for sequential and independent scans");
         compare(follow !== null && follow.visible, isScan, "Follow is shown only for sequential and independent scans");
         verify(!actionable(follow), "Follow cannot be activated before a scan runs");
+        if (isScan) {
+            const before = Session.project.fit.following;
+            keyAction(follow, Qt.Key_Space, false);
+            keyAction(follow, Qt.Key_Return, false);
+            compare(Session.project.fit.following, before, "Unavailable Follow ignores activation keys");
+        }
         if (!isScan)
             return;
         verify(reset.mapToItem(area(), reset.width, 0).x <= follow.mapToItem(area(), 0, 0).x && follow.mapToItem(area(), follow.width, 0).x <= button.mapToItem(area(), 0, 0).x, "The scan actions are ordered Reset, Follow, Fit at the right end");
@@ -405,7 +430,7 @@ TestCase {
         Session.project.fit.start();
         verify(Session.project.fit.scanning && actionable(follow), "Follow becomes available while the actual scan runs");
         const previous = Session.project.fit.following;
-        click(follow);
+        keyAction(follow, data.tag === "scan" ? Qt.Key_Space : Qt.Key_Return, true);
         compare(Session.project.fit.following, !previous, "Actual status Follow input toggles the running scan's model");
         click(follow);
         compare(Session.project.fit.following, previous, "A second Follow click restores the real following state");
@@ -419,9 +444,12 @@ TestCase {
             dialogs().forEach(dialog => dialog.close());
         }
         verify(Session.project.fit.canReset && actionable(reset), "Retained real scan results enable Reset");
-        click(reset);
+        keyAction(reset, data.tag === "scan" ? Qt.Key_Return : Qt.Key_Space, true);
         compare(Session.project.fit.scanFitted, 0, "Actual status Reset input clears the scan's fitted datasets");
         verify(!Session.project.fit.canReset && !actionable(reset), "Reset becomes unavailable after its own results are cleared");
+        keyAction(reset, Qt.Key_Space, false);
+        keyAction(reset, Qt.Key_Return, false);
+        compare(Session.project.fit.scanFitted, 0, "Unavailable Reset cannot change the cleared result set");
     }
     function test_disabled_style_data() {
         return [
@@ -625,7 +653,7 @@ TestCase {
         const before = outdatedScan(data.tag);
         const outcome = findChild(appWindow, "statusBar.fit.outcome");
         verify(outcome !== null && outcome.visible && actionable(outcome), "Previous outdated results retain their real window-opening action");
-        click(outcome);
+        keyAction(outcome, data.tag === "sequential" ? Qt.Key_Space : Qt.Key_Return, true);
         tryVerify(() => dialogs().length === 1, 1000, "The Outdated outcome opens the retained results window");
         const dialog = dialogs()[0];
         const banner = View.textItems(dialog.contentItem).find(item => item.visible && item.text === "These results are from before your parameter changes. Fit again to update them.");
@@ -647,8 +675,8 @@ TestCase {
         fitState("Refit");
         verify(Session.project.fit.available && actionable(shortcut()), "Outdated completed scans enable Refit without Reset");
         runningSpy.clear();
-        click(shortcut());
-        verify(runningSpy.count > 0, "Actual Refit pointer input starts the worker");
+        keyAction(shortcut(), data.tag === "sequential" ? Qt.Key_Space : Qt.Key_Return, true);
+        verify(runningSpy.count > 0, "Actual Refit key input starts the same worker as pointer input");
         finish();
         compare(Session.project.fit.scanFitted, 2, "Refit processes every scan file again rather than continuing after the last result");
         verify(!Session.project.fit.outOfDate, "A full Refit clears the outdated state");

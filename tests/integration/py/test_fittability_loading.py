@@ -131,6 +131,32 @@ def test_descriptor_python_refusal_uses_shared_reason(api, tmp_path, case):
     parameter.free = False
     assert not parameter.free, 'Clearing a descriptor flag is always accepted'
 
+    if case == 'limit':
+        root = Path(__file__).resolve().parents[3]
+        source = root / 'docs/user/cli/pd-neut-tof_diamond-dream_basic/project'
+        attached = api.Project.load(source)
+        text = (source / 'experiments/dream.edi').read_text()
+        standalone = api.ExperimentFactory.from_cif_str(text)
+        failures = []
+        owners = [('project', attached.experiments[0]), ('standalone', standalone)]
+        for owner, experiment in owners:
+            angle = experiment.instrument.setup_twotheta_bank
+            before = angle.value
+            try:
+                angle.free = True
+            except ValueError as error:
+                if DESCRIPTOR not in str(error) or 'setup_twotheta_bank' not in str(error):
+                    failures.append(owner + ': wrong descriptor refusal: ' + str(error))
+            else:
+                failures.append(owner + ': descriptor assignment admitted')
+            if angle.value != before:
+                failures.append(owner + ': refusing a flag changed the angle')
+            angle.free = False
+        assert not failures, (
+            'Item-backed bank-angle descriptors refuse public free writes with the shared '
+            'reason for both project-held and standalone experiments: ' + '; '.join(failures)
+        )
+
 
 def test_nonruntime_background_position_still_refuses_brackets(api, tmp_path):
     root = materialize(tmp_path / 'plain', single=False)
