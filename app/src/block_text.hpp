@@ -21,9 +21,9 @@ class BlockText : public QObject {
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
     // The project file the text is, relative to the project folder, which a Text tab's apply replaces
     // (ProjectViewModel::applyText); empty for a text no apply writes. A rename changes it with the text.
-    Q_PROPERTY(QString file READ file NOTIFY textChanged)
+    Q_PROPERTY(QString file READ file NOTIFY fileChanged)
     // The text with only its input categories (the Text tab's Editable).
-    Q_PROPERTY(QString inputText READ inputText NOTIFY textChanged)
+    Q_PROPERTY(QString inputText READ inputText NOTIFY inputTextChanged)
 
    public:
     using Source = std::function<std::string()>;  // throws the writer's refusal
@@ -44,6 +44,8 @@ class BlockText : public QObject {
    signals:
     void textChanged();
     void errorChanged();
+    void fileChanged();
+    void inputTextChanged();
 
    private:
     void compute() const;

@@ -37,17 +37,24 @@ QString BlockText::error() const {
 void BlockText::invalidate() {
     valid_ = false;
     if (!isSignalConnected(QMetaMethod::fromSignal(&BlockText::textChanged)) &&
-        !isSignalConnected(QMetaMethod::fromSignal(&BlockText::errorChanged))) {
+        !isSignalConnected(QMetaMethod::fromSignal(&BlockText::errorChanged)) &&
+        !isSignalConnected(QMetaMethod::fromSignal(&BlockText::fileChanged)) &&
+        !isSignalConnected(QMetaMethod::fromSignal(&BlockText::inputTextChanged))) {
         return;
     }
     const QString text = text_;
     const QString error = error_;
+    const QString file = this->file();
     compute();
     if (text_ != text) {
         emit textChanged();
+        emit inputTextChanged();
     }
     if (error_ != error) {
         emit errorChanged();
+    }
+    if (this->file() != file) {
+        emit fileChanged();
     }
 }
 

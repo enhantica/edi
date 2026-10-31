@@ -60,7 +60,13 @@ void GeneratedCategory::read() {
         }
         rows_.append(QVariant(values));
     }
-    emit changed();
+    emit loopChanged();
+    emit outputChanged();
+    emit namesChanged();
+    emit labelsChanged();
+    emit unitsChanged();
+    emit setByProgramChanged();
+    emit rowsChanged();
 }
 
 QString GeneratedCategory::editedText(int row, const QString& name, const QString& value) const {
