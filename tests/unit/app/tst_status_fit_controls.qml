@@ -4,6 +4,7 @@ import QtTest
 import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
+import StatusAccessibilityAcceptance 1.0
 import EasyApplication.Gui.Globals as EaGlobals
 import EasyApplication.Gui.Style as EaStyle
 import "UiInteraction.js" as Ui
@@ -25,6 +26,43 @@ TestCase {
         target: Session.project ? Session.project.fit : null
         signalName: "runningChanged"
     }
+    SignalSpy {
+        id: clickedSpy
+        signalName: "clicked"
+    }
+    function accessibleAction(item, expected) {
+        compare(item.focusPolicy, Qt.NoFocus, "The actual status action retains original Control keyboard policy");
+        compare(item.Accessible.role, Accessible.Button, "The actual clickable status consumer declares Button");
+        const facts = StatusAccessibilityProof.observe(item);
+        verify(facts.valid && facts.button && facts.press && facts.focusable && !facts.disabled && !facts.invisible,
+            "The actual current status consumer advertises a live native Press action");
+        compare(facts.name, expected, "Its native accessible name is the exact current caption");
+        compare(facts.description, item.ToolTip.text, "Its native description is the actual current tooltip");
+        return facts.id;
+    }
+    function pressAction(item) {
+        const id = accessibleAction(item, caption(item));
+        clickedSpy.target = item;
+        verify(clickedSpy.valid, "The accessible route observes the original actual clicked signal");
+        clickedSpy.clear();
+        const attempt = StatusAccessibilityProof.press(id);
+        verify(attempt.valid && attempt.attempted, "Assistive activation reaches the actual Qt action interface");
+        compare(clickedSpy.count, 1, "One accessible activation invokes the original clicked handler exactly once");
+    }
+    function passiveAction(item) {
+        compare(item.Accessible.role, Accessible.NoRole, "Unavailable status consumers retain ordinary Control semantics");
+        verify(item.enabled, "Unavailability does not disable the original hover/tooltip Control");
+        compare(item.Accessible.focusable, false, "Unavailable roots retire Button's sticky focusable metadata");
+        const facts = StatusAccessibilityProof.observe(item);
+        verify(facts.valid && !facts.button && !facts.press && !facts.focusable,
+            "An unavailable root advertises no Press, including through Qt's connected-signal discovery");
+        clickedSpy.target = item;
+        verify(clickedSpy.valid, "The unavailable-door witness observes actual clicked publication");
+        clickedSpy.clear();
+        const attempt = StatusAccessibilityProof.press(facts.id);
+        verify(attempt.valid && attempt.attempted, "The negative attempts the real cached Qt action despite no advertisement");
+        compare(clickedSpy.count, 0, "The unavailable consumer cannot dispatch its original business action");
+    }
     function init() {
         Session.closeProject();
         savedBooleans = {};
@@ -41,6 +79,7 @@ TestCase {
         verify(waitForRendering(appWindow.contentItem), "The fit-control window renders before pointer input");
     }
     function cleanup() {
+        clickedSpy.target = null;
         if (Session.project && Session.project.fit.running) {
             Session.project.fit.cancel();
             tryVerify(() => !Session.project.fit.running, 10000, "The real worker stops before its application window is destroyed");
@@ -109,6 +148,10 @@ TestCase {
     function fitState(shortText) {
         compare(caption(shortcut()), shortText, "The status Fit control names the actual idle, continuing or running state");
         compare(icon(shortcut()), shortText === "Stop" ? "stop-circle" : "play-circle", "Start and Continue use play, and the running action uses stop");
+        if (shortcut().clickable)
+            accessibleAction(shortcut(), shortText);
+        else
+            passiveAction(shortcut());
     }
     function sidebarFitActions() {
         return View.descendants(Ui.page(appWindow)).filter(item => ["fitting.start", "fitting.reset", "fitting.follow"].includes(item.objectName) || (typeof item.clicked === "function" && /^(Start fitting|Continue fitting|Stop fitting|Follow|Reset fits)$/.test(item.text)));
@@ -203,6 +246,8 @@ TestCase {
         runningSpy.clear();
         click(button);
         compare(runningSpy.count, 0, "Clicking an unavailable status shortcut cannot start a worker");
+        passiveAction(button);
+        compare(runningSpy.count, 0, "The actual unavailable accessible route also cannot start the worker");
     }
     function test_status_start() {
         open("single");
@@ -364,7 +409,8 @@ TestCase {
                     tag: kind
                 }));
     }
-    function test_scan_controls(data) {
+    function test_scan_controls(data, viaAccessibility = false) {
+        const activate = viaAccessibility ? pressAction : click;
         const isScan = data.tag === "scan" || data.tag === "independent";
         open(data.tag === "single" || data.tag === "joint" ? "single" : "scan");
         if (data.tag === "joint") {
@@ -405,23 +451,38 @@ TestCase {
         Session.project.fit.start();
         verify(Session.project.fit.scanning && actionable(follow), "Follow becomes available while the actual scan runs");
         const previous = Session.project.fit.following;
-        click(follow);
+        activate(follow);
         compare(Session.project.fit.following, !previous, "Actual status Follow input toggles the running scan's model");
-        click(follow);
+        activate(follow);
         compare(Session.project.fit.following, previous, "A second Follow click restores the real following state");
-        click(button);
+        activate(button);
         finish();
         dialogs().forEach(dialog => dialog.close());
         verify(!actionable(follow), "Follow becomes unavailable when the scan stops");
+        if (viaAccessibility)
+            passiveAction(follow);
         if (!Session.project.fit.canReset) {
             Session.project.fit.start();
             finish();
             dialogs().forEach(dialog => dialog.close());
         }
         verify(Session.project.fit.canReset && actionable(reset), "Retained real scan results enable Reset");
-        click(reset);
+        if (viaAccessibility) {
+            const outcome = findChild(appWindow, "statusBar.fit.outcome");
+            verify(outcome !== null && outcome.visible && outcome.clickable,
+                "Real retained scan results expose the shared outcome action");
+            pressAction(outcome);
+            tryVerify(() => dialogs().length === 1, 1000,
+                "Accessible outcome activation opens the same retained results window");
+            dialogs().forEach(dialog => dialog.close());
+        }
+        activate(reset);
         compare(Session.project.fit.scanFitted, 0, "Actual status Reset input clears the scan's fitted datasets");
         verify(!Session.project.fit.canReset && !actionable(reset), "Reset becomes unavailable after its own results are cleared");
+        if (viaAccessibility) {
+            passiveAction(reset);
+            compare(Session.project.fit.scanFitted, 0, "Unavailable Reset Press leaves the cleared real result population unchanged");
+        }
     }
     function test_disabled_style_data() {
         return [
@@ -686,4 +747,20 @@ TestCase {
         finish();
         compare(dialogs().length, 1, "The existing default completion route opens the actual results window for single and scan fits");
     }
+    function test_accessible_status_start() {
+        open("single");
+        fitState("Fit");
+        verify(Session.project.fit.available, "The real independently measured project admits fitting");
+        runningSpy.clear();
+        pressAction(shortcut());
+        verify(runningSpy.count > 0, "Accessible Fit starts the same actual worker through clicked");
+        finish();
+    }
+    function test_accessible_scan_controls_data() {
+        return [{tag: "scan"}, {tag: "independent"}];
+    }
+    function test_accessible_scan_controls(data) {
+        test_scan_controls(data, true);
+    }
+
 }
