@@ -5525,6 +5525,17 @@ QJSValue tableMeasure(const PanelUsageFrame& f, const QJSValue& cell) {
     const auto callback = tableCallback(f, 130, {}, 2);
     return panelUsageMemberCall(f, children, "reduce", {callback, panelUsageRead(f, cell, "implicitWidth")});
 }
+void tableApplyWidthsNow(const PanelUsageFrame& f, const QJSValue& row) {
+    const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {row}); const auto array = panelUsageContextRead(f, "Array");
+    const auto cells = panelUsageMemberCall(f, array, "from", {panelUsageRead(f, row, "children")});
+    for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageRead(f, cells, "length"), 0); ++index) {
+        if (!panelUsageTruth(projectCall(f, owns))) return;
+        const auto widths = panelUsageContextRead(f, "resolvedColumnWidths");
+        if (assistantRelation(f, QJSValue(index), panelUsageRead(f, widths, "length"), 2)) return;
+        const auto cell = textIndex(f, cells, QJSValue(index)); const auto width = textIndex(f, widths, QJSValue(index));
+        if (!panelUsageTruth(projectCall(f, owns))) return; assistantMemberWrite(f, cell, "width", width);
+    }
+}
 QJSValue tableProcedureCallback(const PanelUsageFrame& f, uint operation,
     const std::function<QJSValue(uint)>& saved, const std::function<QJSValue(uint)>& arg) {
     if (operation == 121) return QJSValue(false);
@@ -5615,15 +5626,14 @@ QJSValue ApplicationInfo::tableColumnRowOwner(const QJSValue& row) const {
 void ApplicationInfo::tableApplyWidths(const QJSValue& row) const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife");
     if (!tableAlive(f, life) || !consentQtObject(f, row)) return;
-    const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {row}); const auto array = panelUsageContextRead(f, "Array");
-    const auto cells = panelUsageMemberCall(f, array, "from", {panelUsageRead(f, row, "children")});
-    for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageRead(f, cells, "length"), 0); ++index) {
-        if (!panelUsageTruth(projectCall(f, owns))) return;
-        const auto widths = panelUsageContextRead(f, "resolvedColumnWidths");
-        if (assistantRelation(f, QJSValue(index), panelUsageRead(f, widths, "length"), 2)) return;
-        const auto cell = textIndex(f, cells, QJSValue(index)); const auto width = textIndex(f, widths, QJSValue(index));
-        if (!panelUsageTruth(projectCall(f, owns))) return; assistantMemberWrite(f, cell, "width", width);
+    const auto header = panelUsageContextRead(f, "headerItem");
+    if (panelUsageTruth(header) && consentFieldEquals(f, row, "parent", header)) {
+        // A header width can change its implicit width while resolved widths notify.
+        // Finish that binding update before writing back through the existing fit queue.
+        panelUsageGlobalCall(f, "scheduleFitColumns", {});
+        return;
     }
+    tableApplyWidthsNow(f, row);
 }
 void ApplicationInfo::tablePadForFiller(const QJSValue& cell, const QJSValue& column) const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife");
@@ -5733,7 +5743,13 @@ void ApplicationInfo::tableFitColumns() const {
     if (panelUsageTruth(panelUsageContextRead(f, "headerItem")) && panelUsageTruth(assistantContextField(f, "headerItem", "implicitColumnWidths"))) {
         const auto widths = assistantContextField(f, "headerItem", "implicitColumnWidths"); header = panelUsageMemberCall(f, widths, "filter", {tableCallback(f, 132, {}, 2)});
     } else if (panelUsageReady(f)) header = f->newArray();
-    const auto headerCells = tableCellsOf(f, panelUsageContextRead(f, "headerItem"));
+    const auto headerOwner = panelUsageContextRead(f, "headerItem");
+    const auto headerCells = tableCellsOf(f, headerOwner);
+    QJSValue headerRow;
+    if (panelUsageTruth(headerCells) && panelUsageTruth(panelUsageRead(f, headerCells, "length"))) {
+        const auto first = textIndex(f, headerCells, QJSValue(0));
+        if (consentQtObject(f, first)) headerRow = panelUsageRead(f, first, "parent");
+    }
     const auto headerWidths = panelUsageTruth(headerCells) ? panelUsageMemberCall(f, headerCells, "map", {tableCallback(f, 133, {}, 2)}) : header;
     const auto widths = panelUsageMemberCall(f, panelUsageContextRead(f, "columns"), "map", {tableCallback(f, 134, {headerWidths}, 2)});
     QJSValue kinds = consentNull(); bool complete = true;
@@ -5776,6 +5792,12 @@ void ApplicationInfo::tableFitColumns() const {
     auto json = panelUsageContextRead(f, "JSON"); const auto before = panelUsageMemberCall(f, json, "stringify", {widths});
     json = panelUsageContextRead(f, "JSON"); const auto after = panelUsageMemberCall(f, json, "stringify", {panelUsageContextRead(f, "fittedWidths")});
     if (!before.strictlyEquals(after)) panelUsageContextWrite(f, "fittedWidths", widths);
+    // The resolved-width notification only queues this header; write after it returns.
+    // Keep sizing a newly created header even when the numeric widths did not change.
+    if (!editorLife(f, life) || !consentQtObject(f, headerRow)
+        || !headerOwner.strictlyEquals(panelUsageContextRead(f, "headerItem"))
+        || !consentFieldEquals(f, headerRow, "parent", headerOwner)) return;
+    tableApplyWidthsNow(f, headerRow);
 }
 void ApplicationInfo::tableRefit() const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); if (!tableAlive(f, life)) return;

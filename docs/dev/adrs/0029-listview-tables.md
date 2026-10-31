@@ -273,3 +273,33 @@ Binding, manual/assistant draft admission, IME, refusal, ordinary Return and
 intentional focus-loss commit remain their existing owners. ParameterField and
 ParameterCell paths are unchanged; no vendor pin, key filter/proxy, global store,
 new editor state, retry or scientific setter is introduced.
+
+## Header width publication follows the existing fit queue
+
+FIRST gui-components ListView resolves column widths while reading the header's
+implicitColumnWidths, including when declared widths are already positive. Its
+ListViewHeader then calls DataTable.applyWidths from the resolved-width change
+signal. A Label width assignment can synchronously change that same implicit
+measurement and reenter the still-active resolved-width binding. The active
+native/QML warning stack identifies this header signal path, not an unrelated
+header-implicit callback.
+
+ApplicationInfo now routes the current header row's width requests through the
+existing coalesced scheduleFitColumns queue. Ordinary delegate rows retain their
+synchronous sequential width distribution. The fitting pass first finishes its
+normal measurement, alignment, padding and fittedWidths publication, then applies
+resolved widths to its retained header row after the publication's signal handlers
+return. This final application also runs when the numeric fitted widths are equal,
+so a newly created header is sized without relying on a changed-value signal.
+The retained header identity, row parent and original table lifetime must still
+match before this final write; original row/model/revision/cell checks remain
+around every assignment. Retirement invalidates the existing queued callback.
+
+This changes the header write's scheduling boundary to break the demonstrated
+read/write cycle. It introduces no timer, second queue, model cache or ignored
+warning. Natural chrome plus the three-spacing margin, ID cap, equal/spread/custom
+Analysis distribution, filler, fixed action widths, model/font refits and original
+scroll-only widening remain unchanged. Header completion, implicit-width changes,
+resolved-width changes, dynamic header children, reentrant replacement and table
+retirement exercise this one shared header entrance; desktop/browser compilation
+and strict normal table-owner verification remain required after source review.
