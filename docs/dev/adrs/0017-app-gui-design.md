@@ -1004,6 +1004,35 @@ refuses to write its bank rows into it.
 - **Undo** is the app bar's Undo arrow: enabled while the model holds a fit's start state (after a finished or
   stopped fit), it restores the pre-fit state (`undo_fit`, one level) and clears the fit area.
 
+#### Status-action accessibility
+
+FIRST `FitStatusItem` owns the status-bar outcome and Fit/Continue/Refit/Stop,
+Reset and Follow controls. Effective clickability, visibility and enabled state
+project to one `accessibleAction` binding: a live action exposes its existing
+value text and tooltip as button name/description, and ignores its decorative or
+duplicate labels. Passive/unavailable items keep readable child text and no
+button role. Accessibility focusable/focused metadata explicitly follows that
+same availability, including true-to-false transitions; actual focus policy,
+Control.enabled, hover and tooltips are unchanged.
+
+ApplicationInfo owns the exact Qt Accessible press-signal connection to one thin
+QML forwarding method on the SAME control. Availability changes first disconnect
+that route synchronously, reconnecting only while live; component destruction
+retires it too. This avoids both an always-connected no-op press action and a
+notifying QML Connections endpoint waiting for deferred deletion. Qt owns the
+connection lifetime, without a proxy item, retained connection map or new input
+source. The original guarded `statusItemPress` bridge rechecks the actual owner,
+context, visible/enabled state and live `clickable` property before emitting its
+same `clicked` signal. The original pointer TapHandler and QML fit/start/cancel,
+reset/follow/results handlers remain unchanged.
+
+This extends the FIRST custom Accessible role/name/native-press pattern in
+ExamplesGroup. It does not restore the retired Start fitting group or change
+labels, fitting policy, geometry, colours, animations, clocks, scientific results
+or Undo. Source-defined action enumeration and focus metadata must be exercised
+through initial passive/unavailable, available, retired and reentrant states;
+a guarded native no-op alone is not evidence of truthful accessibility.
+
 ### 18. Creating experiments
 
 (the owner, 2026-10-05)

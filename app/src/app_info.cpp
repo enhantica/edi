@@ -22,6 +22,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLocale>
+#include <QMetaMethod>
 #include <QQuickWindow>
 #include <QQuickItem>
 #include <utility>
@@ -6214,6 +6215,41 @@ QJSValue ApplicationInfo::sidebarShownGroups(const QJSValue& group) const {
                 || panelUsageTruth(panelUsageRead(f, sibling, "listed")))) panelUsageMemberCall(f, shown, "push", {sibling});
     }
     return shown;
+}
+void ApplicationInfo::statusItemActionChanged(QObject* control, QObject* accessible, bool live) const {
+    const QPointer<QQuickItem> item(qobject_cast<QQuickItem*>(control));
+    const QPointer<QObject> attached(accessible);
+    if (!item || !attached || attached->parent() != item || QThread::currentThread() != item->thread() ||
+        QThread::currentThread() != attached->thread()) return;
+    const int signalIndex = attached->metaObject()->indexOfSignal("pressAction()");
+    const int methodIndex = item->metaObject()->indexOfMethod("pressAccessibleAction()");
+    if (signalIndex < 0 || methodIndex < 0) return;
+    const auto signal = attached->metaObject()->method(signalIndex);
+    const auto method = item->metaObject()->method(methodIndex);
+    // Retire this exact route immediately, including inside its own signal delivery.
+    QObject::disconnect(attached.data(), signal, item.data(), method);
+    if (!live || QQmlData::wasDeleted(item.data()) || !item->isVisible() || !item->isEnabled()) return;
+    const auto* data = QQmlData::get(item.data());
+    if (!data || data->isQueuedForDeletion || !data->context || !data->context->isValid()) return;
+    // These declared bools are stored meta-object reads, not binding-flushing script lookups.
+    const auto action = item->property("accessibleAction"), clickable = item->property("clickable");
+    if (action.metaType().id() != QMetaType::Bool || clickable.metaType().id() != QMetaType::Bool ||
+        !action.toBool() || !clickable.toBool()) return;
+    QObject::connect(attached.data(), signal, item.data(), method, Qt::DirectConnection);
+}
+void ApplicationInfo::statusItemPress(QObject* control) const {
+    const auto f = panelUsageEngine(this);
+    const QPointer<QQuickItem> item(qobject_cast<QQuickItem*>(control));
+    const auto current = [&] {
+        if (!panelUsageReady(f) || !item || QThread::currentThread() != item->thread() ||
+            QQmlData::wasDeleted(item.data()) || !f.context || !f.context->isValid()) return false;
+        const auto* data = QQmlData::get(item.data());
+        return data && !data->isQueuedForDeletion && item->isVisible() && item->isEnabled();
+    };
+    if (!current()) return;
+    const auto target = f->newQObject(item.data());
+    if (!panelUsageTruth(panelUsageRead(f, target, "clickable")) || !current()) return;
+    panelUsageMemberCall(f, target, "clicked", {});
 }
 QJSValue ApplicationInfo::statusKeysFit() const {
     const auto f = panelUsageEngine(this); QJSValue width(0); double shown = 0;
