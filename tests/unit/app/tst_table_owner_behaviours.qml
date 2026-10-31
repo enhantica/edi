@@ -128,7 +128,7 @@ TestCase {
         for (let i = 0; i < index; ++i)
             verify(SettingsProof.key(picker, Qt.Key_Down), "The category picker receives each next-entry key");
         verify(SettingsProof.key(picker, Qt.Key_Return), "The category picker receives the activation key");
-        tryVerify(() => table.count > 0 && table.count < total, 2000, "Activating the real category choice narrows the visible table");
+        tryVerify(() => table.count > 0 && table.count < total && !picker.popup.visible && !picker.popup.opened, 2000, "Activating the real category choice narrows the visible table and completes its popup closure before the next click");
         const rows = Probe.rows(table.model);
         verify(rows.every(row => row.category === "atom_site" && ["fract_x", "fract_y", "fract_z"].includes(row.name)), "The visible rows contain only the independently declared coordinate family");
         table.forceLayout();
@@ -141,8 +141,22 @@ TestCase {
     }
     function assertBetaDelegateAlignment(body, expected) {
         compare(body.length, expected.length, "Every rendered Analysis row retains all Beta columns");
-        for (let j = 0; j < expected.length; ++j)
-            tryCompare(body[j], "horizontalAlignment", expected[j], 2000, "The rendered Analysis column follows the settled Beta alignment reference: " + j);
+        for (let j = 0; j < expected.length; ++j) {
+            if (j === 7)
+                assertFreeIndicatorAlignment(body[j], expected[j]);
+            else
+                tryCompare(body[j], "horizontalAlignment", expected[j], 2000, "The rendered Analysis column follows the settled Beta alignment reference: " + j);
+        }
+    }
+    function assertFreeIndicatorAlignment(wrapper, expected) {
+        const boxes = Render.descendants(wrapper).filter(item => item.parent === wrapper && /^parameters[.]free[.][0-9]+$/.test(item.objectName) && typeof item.checked === "boolean" && item.indicator);
+        compare(boxes.length, 1, "The free column owns exactly one actual checkbox, not just wrapper alignment metadata");
+        const box = boxes[0], indicator = box.indicator;
+        compare(box.text, "", "The free flag is the FIRST textless centered indicator consumer");
+        tryVerify(() => wrapper.visible && wrapper.width > 0 && wrapper.height > 0 && box.visible && indicator.visible && box.horizontalAlignment === expected && box.x === 0 && box.y === 0 && box.width === wrapper.width && box.height === wrapper.height && indicator.width > 0 && indicator.height > 0 && !isPolishScheduled(appWindow), 2000, "The actual checkbox fills its settled column and retains the declared centered policy");
+        const center = indicator.mapToItem(wrapper, indicator.width / 2, indicator.height / 2);
+        fuzzyCompare(center.x, wrapper.width / 2, 0.01, "The actual free indicator ink is horizontally centered in its column");
+        fuzzyCompare(center.y, wrapper.height / 2, 0.01, "The actual free indicator ink is vertically centered in its row");
     }
     function test_analysis_alignment_units_and_available_height() {
         open();
@@ -302,10 +316,19 @@ TestCase {
             tryVerify(() => Probe.cursorShape(button) !== Qt.PointingHandCursor, 2000, "Leaving the real chart button clears its pointing-hand cursor");
         }
     }
-    function markerAfterName(root) {
+    function markerAfterName(root, requireWrapperShadow = false) {
         const text = actualText(root);
-        const marker = text.find(item => item.text === "template");
-        const label = text.find(item => item.text.includes("pattern.dat"));
+        const markers = text.filter(item => item.text === "template" && Number.isFinite(item.contentWidth));
+        compare(markers.length, 1, "The actual selector entry has one rendered template marker");
+        const marker = markers[0];
+        const labels = text.filter(item => item.parent === marker.parent && item.text.includes("pattern.dat") && Number.isFinite(item.contentWidth) && item.contentWidth > 0 && item.font && Number.isFinite(item.font.pixelSize));
+        compare(labels.length, 1, "The SAME marker row owns one finite filename metrics label; missing or ambiguous ownership refuses");
+        const label = labels[0];
+        if (requireWrapperShadow) {
+            const wrappers = text.filter(item => item.text.includes("pattern.dat") && !Number.isFinite(item.contentWidth) && Render.descendants(item).includes(label));
+            compare(wrappers.length, 1, "The reached popup has a same-text MenuItem shadow without filename metrics");
+            verify(wrappers[0] !== label, "The actual wrapper shadow cannot substitute for the uniquely owned filename ink");
+        }
         verify(marker !== undefined && label !== undefined, "The actual selector line displays the supplied filename and template marker");
         const markerX = marker.mapToItem(root, 0, 0).x, end = label.mapToItem(root, label.contentWidth, 0).x;
         verify(markerX >= end && markerX - end <= label.font.pixelSize, "The actual selector marker immediately follows the filename");
@@ -339,7 +362,7 @@ TestCase {
         tryCompare(selector.popup, "opened", true, 2000, "The actual selector popup finishes opening before text geometry is inspected");
         verify(waitForPolish(selector.popup.contentItem), "The actual selector popup finishes its text layout");
         verify(waitForRendering(selector.popup.contentItem), "The actual selector popup renders its settled text geometry");
-        markerAfterName(selector.popup.contentItem);
+        markerAfterName(selector.popup.contentItem, true);
         selector.popup.close();
     }
     function test_example_description_has_visible_identity_facets_and_detail() {

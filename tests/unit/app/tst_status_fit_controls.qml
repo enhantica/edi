@@ -134,8 +134,23 @@ TestCase {
     function caption(item) {
         return typeof item.valueText === "string" ? item.valueText : item.text;
     }
+    function windowLayoutReady(requestedHeight) {
+        const group = area();
+        const bar = group.parent, container = bar ? bar.parent : null;
+        const host = container ? container.parent : null;
+        if (!host || host.parent !== appWindow.contentItem)
+            return false;
+        // FIRST ApplicationWindow appContainer fills the padded Window content;
+        // its statusBarContainer is bottom-anchored. Sidebar/page height is not
+        // equated to the full Window: the app/status bars remain their owners.
+        return appWindow.height === requestedHeight && appWindow.header === null && appWindow.footer === null && appWindow.menuBar === null && appWindow.contentItem.height === Math.max(0, requestedHeight - appWindow.topPadding - appWindow.bottomPadding) && host.height === appWindow.contentItem.height && container.y + container.height === host.height && bar.height === container.height && group.width === group.implicitWidth && !isPolishScheduled(appWindow);
+    }
     function rightmostFitAction() {
-        verify(waitForPolish(appWindow.contentItem), "The status bar finishes layout before the Fit action's position is checked");
+        const requestedHeight = appWindow.height, requestedWidth = appWindow.width;
+        // QtTest's existing waitForPolish default is 5000ms. One combined
+        // owning-Window/Row boundary replaces that same budget, not a new wait.
+        tryVerify(() => footerGeometryReady(requestedWidth) && windowLayoutReady(requestedHeight), 5000, "The actual Window, footer host and fit Row settle before the unchanged Fit ordering checks");
+        verify(!windowLayoutReady(requestedHeight + 1), "A polished Window cannot satisfy a different requested resize");
         const group = area(), button = shortcut();
         const left = button.mapToItem(group, 0, 0).x;
         for (const item of group.children) {
@@ -625,8 +640,9 @@ TestCase {
         const table = findChild(Ui.page(appWindow), "parameters.list"), slider = findChild(Ui.page(appWindow), "parameters.slider");
         verify(table !== null && slider !== null && Ui.exposed(slider), "The expanded parameter table retains its visible value slider");
         const initial = table.height;
-        appWindow.height += 160;
-        verify(waitForPolish(appWindow.contentItem), "Sidebar resizing finishes before checking table growth");
+        const requestedHeight = appWindow.height + 160;
+        appWindow.height = requestedHeight;
+        tryVerify(() => windowLayoutReady(requestedHeight), 5000, "The SAME original polish budget admits actual Window/content/footer propagation before sidebar growth");
         verify(table.height > initial + 100, "The table consumes the new sidebar height instead of leaving the old fit-button space");
         verify(slider.mapToItem(appWindow.contentItem, 0, slider.height).y <= appWindow.contentItem.height, "The value slider remains within the resized application viewport");
         const rows = View.descendants(table).filter(item => /^parameters.row.[0-9]+$/.test(item.objectName));
