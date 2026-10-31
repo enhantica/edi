@@ -7,11 +7,16 @@
 #include <QList>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QtQml/qqmlregistration.h>
 #include <functional>
 
 class QQmlEngine;
 class QJSEngine;
+
+#if defined(Q_OS_WASM)
+namespace emscripten { class val; }
+#endif
 
 namespace edi_app {
 
@@ -122,6 +127,11 @@ class WebStorage : public QObject {
 
     // A job's answer, from the page's script, as its JSON text.
     static void answered(int job, const QString& json);
+#if defined(Q_OS_WASM)
+    // Native persistence policy over the browser's actual values; not a QML API.
+    static emscripten::val policy(int operation, const emscripten::val& arguments);
+    static void serialFinished(int job);
+#endif
 
    signals:
     void placesChanged();
@@ -136,6 +146,11 @@ class WebStorage : public QObject {
     int begin(Answer answer);
     void finish(int job, const QString& json);
 
+#if defined(Q_OS_WASM)
+    void queueSerial(int job, const QString& key);
+    QHash<QString, QList<int>> serial_jobs_;
+    QHash<QString, QStringList> loaded_files_;
+#endif
     QHash<int, Reply> jobs_;
     int last_ = 0;
     WebPlaceListModel* places_;
