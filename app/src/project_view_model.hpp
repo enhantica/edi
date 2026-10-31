@@ -220,7 +220,9 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     Q_PROPERTY(QString mapDirection READ mapDirection WRITE setMapDirection NOTIFY mapDirectionChanged)
 
    public:
-    ProjectViewModel(edi::Project project, QObject* parent);
+    // `colourScheme` is the palette the blocks first take their positions in: the one selected when the project opens,
+    // so an opened project's positions are those of that palette (ADR-0038).
+    ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme = QStringLiteral("earth"));
     ~ProjectViewModel() override;
 
     QString name() const;

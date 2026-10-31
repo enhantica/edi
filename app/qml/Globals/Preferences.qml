@@ -195,8 +195,14 @@ QtObject {
         value: preferences.scanPatternUpdates
         when: Session.project !== null
     }
-    // The open project's blocks take their positions in the palette, and the report's charts its colours, bound here
-    // with the open project, not on the Report page, which loads only once reached.
+    // A project opens with its blocks' positions in the selected palette; the open project's blocks keep theirs when
+    // the palette changes, and the report's charts take its colours, bound here with the open project, not on the
+    // Report page, which loads only once reached.
+    property Binding sessionColours: Binding {
+        target: Session
+        property: "colourScheme"
+        value: preferences.colourScheme
+    }
     property Binding projectColours: Binding {
         target: Session.project
         property: "colourScheme"

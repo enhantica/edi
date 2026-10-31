@@ -41,9 +41,9 @@ colours early. The owner chose, by eye, five palettes of eleven colours each tha
    position while it exists; a new one takes the lowest free position its kind may take, so removing a block frees its
    colour for the next. In Earth a structure never takes position 0 or 1, which are kept for experiments; in the other
    four palettes any item takes any position. A project opened, with no positions yet, gives them to its experiments in
-   their order and then to its structures. Positions 0 to 10 take the palette's colours; a position p past them takes
-   a shade between its first two colours, mixed in Oklab (Björn Ottosson, 2020), at t = (p - 10) / (n - 10) where n is
-   one past the last position the project uses, so no shade repeats either end. `edi::colour_positions` and
+   their order and then to its structures, in the palette selected as it opens. Positions 0 to 10 take the palette's
+   colours; a position p past them takes a shade between its first two colours, mixed in Oklab (Björn Ottosson, 2020),
+   at t = (p - 10) / (n - 10) where n is one past the last position the project uses, so no shade repeats either end. `edi::colour_positions` and
    `edi::figure_colour` are the only implementation.
 4. **One colour per block.** An experiment's measured curve, icon and report figures, and a structure's Bragg ticks,
    icon and curve, all take the colour at its position. A scan's datasets take, in order, the positions the project's

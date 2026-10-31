@@ -597,7 +597,7 @@ bool Session::createProject(const QString& name, const QString& description, con
             project.su_rule = suRule.toStdString();
         }
         project.report_html_offline = reportLibraries;
-        created = new ProjectViewModel(std::move(project), this);
+        created = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));
         return false;
@@ -691,7 +691,7 @@ bool Session::open(const QString& directory, const QString& example) {
         for (const std::string& warning : edi::take_engine_warnings()) {
             warnings.append(QString::fromStdString(warning));
         }
-        opened = new ProjectViewModel(std::move(project), this);
+        opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
         return false;
@@ -727,13 +727,20 @@ bool Session::openCopy(const QString& source, const QString& target, const QStri
         for (const std::string& warning : edi::take_engine_warnings()) {
             warnings.append(QString::fromStdString(warning));
         }
-        opened = new ProjectViewModel(std::move(project), this);
+        opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         setLastError(QString::fromUtf8(refusal.what()));  // the open project stays as it was
         return false;
     }
     replaceProject(opened, warnings, example);
     return true;
+}
+
+void Session::setColourScheme(const QString& scheme) {
+    if (scheme != colour_scheme_) {
+        colour_scheme_ = scheme;
+        emit colourSchemeChanged();
+    }
 }
 
 void Session::setOpenedArchive(const QString& name) {

@@ -175,7 +175,7 @@ std::unique_ptr<edi::Project> opened(edi::Project project) {
 
 }  // namespace
 
-ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
+ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme)
     : QObject(parent),
       project_(opened(std::move(project))),
       registry_(new ParameterRegistry(*this, this)),
@@ -186,7 +186,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
       metadata_text_(nullptr),
       project_text_(nullptr),
       report_(nullptr),
-      structure_view_options_(new StructureViewOptions(this)) {
+      structure_view_options_(new StructureViewOptions(this)),
+      colour_scheme_(colourScheme) {
     const edi::Project& model = *project_;
     completeSymmetry();
     registry_->rebuild(*project_);

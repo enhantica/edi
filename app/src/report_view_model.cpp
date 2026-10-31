@@ -27,7 +27,8 @@
 
 namespace edi_app {
 
-ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : QObject(parent), project_(project) {
+ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent)
+    : QObject(parent), project_(project), colour_scheme_(project.colourScheme()) {
     // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
     // end rebuilds from the outcome. A fit's end is announced by the project once the fit has published.
     connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
