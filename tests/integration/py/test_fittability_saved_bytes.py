@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import corpus_case_dir
 from tests.fixtures.fittability.saved_reference import fingerprints, fit_snapshot, snapshot, staged
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -87,47 +88,54 @@ def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
 @pytest.mark.parametrize('case', tuple(REFERENCE['fit_projects']))
 @pytest.mark.parametrize('rule', ['iucr_19', 'iucr_99'])
 def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
-    actual = fit_snapshot(importlib.import_module(API), ROOT / case, tmp_path, rule)
-    # Recovered from saves matching saved-main.json's hashes, not a new fit baseline.
-    # Restore only fitted numbers after checking relative 5e-9 and absolute 5e-10 bounds.
+    actual = fit_snapshot(
+        importlib.import_module(API),
+        corpus_case_dir('single-crystal-page-cwl-tbti-isotropic-extinction') / 'project',
+        tmp_path,
+        rule,
+    )
+
+    def pinned(relative, prefix):
+        matches = [
+            line[len(prefix) :].split()
+            for line in REFERENCE['fitted_tokens'][rule][relative]
+            if line.startswith(prefix)
+        ]
+        assert len(matches) == 1, 'The frozen main save contains exactly one fitted numeric row'
+        return [token.encode() for token in matches[0]]
+
     analysis = (tmp_path / 'saved/analysis/analysis.edi').read_bytes()
-    for name, pin in {
-        'reduced_chi_square': b'76.80145036893185',
-        'objective_value': b'16742.716180427145',
-        'prof_r_factor': b'0.18182356390860746',
-        'prof_wr_factor': b'0.22351577829044506',
-        'prof_wr_expected': b'0.02550489119771386',
-        'prof_cr_factor': b'0.18182356390860746',
-        'prof_cwr_factor': b'0.22351577829044506',
-    }.items():
-        analysis = _pin_fitted_line(analysis, b'_fit_result.' + name.encode() + b' ', [pin])
-    analysis = _pin_fitted_line(
-        analysis,
-        b'heidi 220 ',
-        [
-            b'0.22351577829044506',
-            b'16742.716180427145',
-            b'0.18182356390860746',
-            b'0.02550489119771386',
-            b'0.18182356390860746',
-            b'0.22351577829044506',
-        ],
-    )
-    analysis = _pin_fitted_line(
-        analysis,
-        b'1 deterministic heidi.linked_structure.tb2ti2o7.scale heidi.extinction.domain_radius ',
-        [b'0.83'],
-    )
+    for name in (
+        'reduced_chi_square',
+        'objective_value',
+        'prof_r_factor',
+        'prof_wr_factor',
+        'prof_wr_expected',
+        'prof_cr_factor',
+        'prof_cwr_factor',
+    ):
+        prefix = '_fit_result.' + name + ' '
+        analysis = _pin_fitted_line(
+            analysis, prefix.encode(), pinned('analysis/analysis.edi', prefix)
+        )
+    for prefix in (
+        'experiment 220 ',
+        (
+            '1 deterministic experiment.linked_structure.structure.scale '
+            'experiment.extinction.domain_radius '
+        ),
+    ):
+        analysis = _pin_fitted_line(
+            analysis, prefix.encode(), pinned('analysis/analysis.edi', prefix)
+        )
     analysis = re.sub(rb'(?m)^(_fit_result.fitting_time[ \t]+)[^\r\n]+', rb'\1<CLOCK>', analysis)
     actual['analysis/analysis.edi'] = hashlib.sha256(analysis).hexdigest()
-    experiment = (tmp_path / 'saved/experiments/heidi.edi').read_bytes()
-    for prefix, pin in {
-        b'_extinction.domain_radius ': b'17(3)' if rule == 'iucr_19' else b'16.5(23)',
-        b'_extinction.crystal_radius ': b'0.017(3)' if rule == 'iucr_19' else b'0.0165(23)',
-        b'tb2ti2o7 ': b'3.68(11)',
-    }.items():
-        experiment = _pin_fitted_line(experiment, prefix, [pin])
-    actual['experiments/heidi.edi'] = hashlib.sha256(experiment).hexdigest()
+    experiment = (tmp_path / 'saved/experiments/experiment.edi').read_bytes()
+    for prefix in ('_extinction.domain_radius ', '_extinction.crystal_radius ', 'structure '):
+        experiment = _pin_fitted_line(
+            experiment, prefix.encode(), pinned('experiments/experiment.edi', prefix)
+        )
+    actual['experiments/experiment.edi'] = hashlib.sha256(experiment).hexdigest()
     assert actual == REFERENCE['fit_projects'][case][rule], (
         'The fitted crystal-radius regression preserves every saved path and non-fitted byte '
         'under both s.u. rules, with only checked fitted numbers and clocks normalized'

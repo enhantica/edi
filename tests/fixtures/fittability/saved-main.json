@@ -1,5 +1,8 @@
 {
   "excluded": {
+    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project": "Removed from the main project corpus",
+    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project": "Removed from the main project corpus",
+    "docs/user/cli/sc-neut-tof_taurine_fit/project": "Removed from the main project corpus",
     "tests/fixtures/background_estimate/projects/ids-chebyshev-explicit": "ValueError: The input marks a dependent free",
     "tests/fixtures/background_estimate/projects/ids-polynomial-explicit": "ValueError: The input marks a dependent free",
     "tests/fixtures/background_estimate/projects/lifecycle-saved-auto": "IoError: experiment 'hrpt': its background points or terms differ from the estimate while background_estimate.mode is auto; set background_estimate.mode to manual to keep them, or estimate again",
@@ -20,17 +23,81 @@
   "fit_projects": {
     "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project": {
       "iucr_19": {
-        "analysis/analysis.edi": "0b13bbca64670b6a8b1ed5ea5f51d15960466c4978f5d576ca75fa6549847482",
-        "experiments/heidi.edi": "25fdf40b6f7ff4644eaca71ce8158f34cbcae7457f4ebaf801676af3667b44f4",
-        "project.edi": "316137f5552ab0d81656712bce178d9e9fb064f9920e9d8c0076ab90927c7f3d",
-        "structures/tb2ti2o7.edi": "5820ebfc21cdfa0eb06e0c67a49bd02f84a908e1db9e1882f8b52dfe0ff82b2f"
+        "analysis/analysis.edi": "7dc940a1d0b214ff07dc65d78adb3996ce16d2d4e7024524d8794df2d2726c96",
+        "experiments/experiment.edi": "d0fc5b15482e978523e053715f69d757026f9ecfb451559358dd1c53e8b0fea6",
+        "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
+        "structures/structure.edi": "066fb118f044969f3b354fbcdefcc52ee05c36cc2538e6fb3b02316ea7ab3aa4"
       },
       "iucr_99": {
-        "analysis/analysis.edi": "0b13bbca64670b6a8b1ed5ea5f51d15960466c4978f5d576ca75fa6549847482",
-        "experiments/heidi.edi": "8f4f38819c50ed5f2e95dc67af8e70d1e4dcd3926fbbecdf3972c3313a1d10ff",
-        "project.edi": "1f32742b591538081d6f87a7f137a397bab7443235b5e6d93f3ca7091f7d31b9",
-        "structures/tb2ti2o7.edi": "5820ebfc21cdfa0eb06e0c67a49bd02f84a908e1db9e1882f8b52dfe0ff82b2f"
+        "analysis/analysis.edi": "c50d4879d3f5565640d2c6a5de5ef00b08dd0ac0353f5371f756d98c463f772c",
+        "experiments/experiment.edi": "299cbf2204d0935db9f11bdaeac1b9c3b4184e5b15c34af9aba3bb884a947b15",
+        "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
+        "structures/structure.edi": "066fb118f044969f3b354fbcdefcc52ee05c36cc2538e6fb3b02316ea7ab3aa4"
       }
+    }
+  },
+  "fitted_tokens": {
+    "iucr_19": {
+      "analysis/analysis.edi": [
+        "_fit_result.result_kind deterministic",
+        "_fit_result.success true",
+        "_fit_result.message done",
+        "_fit_result.iterations 5",
+        "_fit_result.reduced_chi_square 76.8395",
+        "_fit_result.objective_name chi_square",
+        "_fit_result.objective_value 16751",
+        "_fit_result.n_data_points 220",
+        "_fit_result.n_parameters 38",
+        "_fit_result.n_free_parameters 2",
+        "_fit_result.degrees_of_freedom 218",
+        "_fit_result.covariance_available true",
+        "_fit_result.exit_reason done",
+        "_fit_result.prof_r_factor 0.181359",
+        "_fit_result.prof_wr_factor 0.223571",
+        "_fit_result.prof_wr_expected 0.0255049",
+        "_fit_result.prof_cr_factor 0.181359",
+        "_fit_result.prof_cwr_factor 0.223571",
+        "_fit_result.background_function line-segment",
+        "_fit_result.descent ladder",
+        "experiment 220 0.223571 16751 0.181359 0.0255049 0.181359 0.223571",
+        "1 deterministic experiment.linked_structure.structure.scale experiment.extinction.domain_radius 0.83"
+      ],
+      "experiments/experiment.edi": [
+        "_extinction.domain_radius 17(3)",
+        "_extinction.crystal_radius 0.017(3)",
+        "structure 3.68(11)"
+      ]
+    },
+    "iucr_99": {
+      "analysis/analysis.edi": [
+        "_fit_result.result_kind deterministic",
+        "_fit_result.success true",
+        "_fit_result.message done",
+        "_fit_result.iterations 5",
+        "_fit_result.reduced_chi_square 76.7942",
+        "_fit_result.objective_name chi_square",
+        "_fit_result.objective_value 16741.1",
+        "_fit_result.n_data_points 220",
+        "_fit_result.n_parameters 38",
+        "_fit_result.n_free_parameters 2",
+        "_fit_result.degrees_of_freedom 218",
+        "_fit_result.covariance_available true",
+        "_fit_result.exit_reason done",
+        "_fit_result.prof_r_factor 0.181768",
+        "_fit_result.prof_wr_factor 0.223505",
+        "_fit_result.prof_wr_expected 0.0255049",
+        "_fit_result.prof_cr_factor 0.181768",
+        "_fit_result.prof_cwr_factor 0.223505",
+        "_fit_result.background_function line-segment",
+        "_fit_result.descent ladder",
+        "experiment 220 0.223505 16741.1 0.181768 0.0255049 0.181768 0.223505",
+        "1 deterministic experiment.linked_structure.structure.scale experiment.extinction.domain_radius 0.83"
+      ],
+      "experiments/experiment.edi": [
+        "_extinction.domain_radius 16.6(23)",
+        "_extinction.crystal_radius 0.0166(23)",
+        "structure 3.68(11)"
+      ]
     }
   },
   "kind": "regression pin from main",
@@ -1071,21 +1138,21 @@
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project": {
       "iucr_19": {
         "analysis/analysis.edi": "966011409bb44bda83694020613921d62becc544820b160100799edd419dda67",
-        "experiments/d20.edi": "bd9bcc1370e5cb534a86ed5e03a0842305b3a2fe473bfd894d3e4b1088de174f",
+        "experiments/d20.edi": "e93ea755a32f5796834eb665979941f9603471a42f681b0c79e8693976477ef4",
         "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
         "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
         "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
         "project.edi": "44df8a68d044df39cf08b62b96dfec77cf49faec44e611550da4105f4ae4a3ab",
-        "structures/cosio.edi": "22af31886bdebab7852b8f751ed5365dd732c327e06d4c2c62cf8ef8d20bb779"
+        "structures/cosio.edi": "442d9f36e51b28ab6c6f7387086eca318a93357e5ab9ead200e70b3452bbe8ae"
       },
       "iucr_99": {
         "analysis/analysis.edi": "966011409bb44bda83694020613921d62becc544820b160100799edd419dda67",
-        "experiments/d20.edi": "bd9bcc1370e5cb534a86ed5e03a0842305b3a2fe473bfd894d3e4b1088de174f",
+        "experiments/d20.edi": "e93ea755a32f5796834eb665979941f9603471a42f681b0c79e8693976477ef4",
         "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
         "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
         "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
         "project.edi": "6c3c9215fcb7aed383357aff82d32ca12efc672344839ce80e44a68a58464171",
-        "structures/cosio.edi": "22af31886bdebab7852b8f751ed5365dd732c327e06d4c2c62cf8ef8d20bb779"
+        "structures/cosio.edi": "442d9f36e51b28ab6c6f7387086eca318a93357e5ab9ead200e70b3452bbe8ae"
       }
     },
     "docs/user/cli/pd-neut-cwl_cosio-d20_scan/project": {
@@ -1416,32 +1483,32 @@
       "iucr_19": {
         "README.md": "f2b368872a35479d45e6b82b862d6bf8b1937f03584ffabdce8ab3e4f1f8c66e",
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/d20.edi": "303053e7e19a09376ce0d08530aafb0b9c3ee61ddff23ec41562729716342a16",
+        "experiments/d20.edi": "972561de0b4a5877b037ebd4346070b36c40de9b961b76b607fe23197e21db43",
         "project.edi": "653dd3b438e40c0900f29c39ef430c8fabfbcfe0a20158e59e5fa6783f9ffa38",
-        "structures/cosio.edi": "797b52b21a07eb2458b469297ab54534f741f2eed7cd6e7b84df61a88957e7f0"
+        "structures/cosio.edi": "5fbd9ae0e69ed434c72cfa9f5a774d2b95d87414edc244a5d5b16c33b1a312af"
       },
       "iucr_99": {
         "README.md": "f2b368872a35479d45e6b82b862d6bf8b1937f03584ffabdce8ab3e4f1f8c66e",
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/d20.edi": "303053e7e19a09376ce0d08530aafb0b9c3ee61ddff23ec41562729716342a16",
+        "experiments/d20.edi": "972561de0b4a5877b037ebd4346070b36c40de9b961b76b607fe23197e21db43",
         "project.edi": "5f0a53e5fb022038d934049c064f2af4ec7b07a4e6620b3d0423d72f3051ca07",
-        "structures/cosio.edi": "797b52b21a07eb2458b469297ab54534f741f2eed7cd6e7b84df61a88957e7f0"
+        "structures/cosio.edi": "5fbd9ae0e69ed434c72cfa9f5a774d2b95d87414edc244a5d5b16c33b1a312af"
       }
     },
     "docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project": {
       "iucr_19": {
         "README.md": "3adf6b1388a517b219ceca97f796d6bcdde3f21e67dba081503b3b08e978dfc0",
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/d20.edi": "3c783f7f76e4574ea7d1919398b19903073a5379da068e13fbf62875b31684cc",
+        "experiments/d20.edi": "545de2485cf9866fe12dcfa742919ecbe461a074404f84dfa1d2e334970d01b3",
         "project.edi": "0f34c3aa432a444af7f74cbe575d38375861ef0772838cbd7923673fc4771eb3",
-        "structures/cosio.edi": "797b52b21a07eb2458b469297ab54534f741f2eed7cd6e7b84df61a88957e7f0"
+        "structures/cosio.edi": "5fbd9ae0e69ed434c72cfa9f5a774d2b95d87414edc244a5d5b16c33b1a312af"
       },
       "iucr_99": {
         "README.md": "3adf6b1388a517b219ceca97f796d6bcdde3f21e67dba081503b3b08e978dfc0",
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/d20.edi": "3c783f7f76e4574ea7d1919398b19903073a5379da068e13fbf62875b31684cc",
+        "experiments/d20.edi": "545de2485cf9866fe12dcfa742919ecbe461a074404f84dfa1d2e334970d01b3",
         "project.edi": "6eb414feb67b583f07167feade3ee7052e4c79d229f397c080df0ec048a827d2",
-        "structures/cosio.edi": "797b52b21a07eb2458b469297ab54534f741f2eed7cd6e7b84df61a88957e7f0"
+        "structures/cosio.edi": "5fbd9ae0e69ed434c72cfa9f5a774d2b95d87414edc244a5d5b16c33b1a312af"
       }
     },
     "docs/user/cli/pd-neut-cwl_hs-hrpt/project": {
@@ -1463,41 +1530,41 @@
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
         "experiments/echidna.edi": "79a95b5100eb14e1aeb9fcd56cbdc865d98d45c873abf426cd44308fdd0f39f8",
         "project.edi": "b01faef278aa57e54ad81711d038d37433bdab5994e6878689d1829a786f045d",
-        "structures/lab6.edi": "22d37b5f39b97b33751f897ef66196c380cccec8b6ec166382c4db920550e80e"
+        "structures/lab6.edi": "2ecbd7190ad9a1f1b47841b67c8ee3abb83a409c4483e03e4a2d8da72a8257e4"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
         "experiments/echidna.edi": "79a95b5100eb14e1aeb9fcd56cbdc865d98d45c873abf426cd44308fdd0f39f8",
         "project.edi": "c95aa65342e06dd73f81103074b12a778bd86c2a8eb95d84a18a2f698e2b40b2",
-        "structures/lab6.edi": "22d37b5f39b97b33751f897ef66196c380cccec8b6ec166382c4db920550e80e"
+        "structures/lab6.edi": "2ecbd7190ad9a1f1b47841b67c8ee3abb83a409c4483e03e4a2d8da72a8257e4"
       }
     },
     "docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project": {
       "iucr_19": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/echidna.edi": "0e5aeefbd1d98441c237d6d6206326fe46fa3a4f97ea203e92975ae7da0ca895",
+        "experiments/echidna.edi": "0c54a3808395de541a3c3656dc492e6abecfc9e011c28169307152559cec3679",
         "project.edi": "58de753621876a72dfe607ec4b9077dec8ea15db16ff0a84286b138c3d9d14bc",
-        "structures/lab6.edi": "438cf9b8fb7aeb84c92f1d8ff181792df786290616a3f1c8966b5390fcfbbbae"
+        "structures/lab6.edi": "a745c7cfc180d8addee361ed9e05c4082fcec88e66a647a6c5cc6e4d37c63cec"
       },
       "iucr_99": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/echidna.edi": "0e5aeefbd1d98441c237d6d6206326fe46fa3a4f97ea203e92975ae7da0ca895",
+        "experiments/echidna.edi": "0c54a3808395de541a3c3656dc492e6abecfc9e011c28169307152559cec3679",
         "project.edi": "07ba7fb80761f2667eedfcbd42cf1c5c06b22556b3c0012fd18bc9566c2ad853",
-        "structures/lab6.edi": "438cf9b8fb7aeb84c92f1d8ff181792df786290616a3f1c8966b5390fcfbbbae"
+        "structures/lab6.edi": "a745c7cfc180d8addee361ed9e05c4082fcec88e66a647a6c5cc6e4d37c63cec"
       }
     },
     "docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/echidna.edi": "4ff3e1164f99e1922c000a448ac3c07846d46d8e4b375672157cff9b5f961875",
+        "experiments/echidna.edi": "dd749768e7f2ce34e5c8838ae139d002c5d8def2e9dc65e83852bd3588eca092",
         "project.edi": "007e9e85d1c086f8b31790975ebdcdfc8c7d2ce0bfe67bbdae936e7d14f5d0f0",
-        "structures/lab6.edi": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d"
+        "structures/lab6.edi": "84d95fe347757312356b8bcc2640a26f7dfc0048bb443cac3825d584c932a1a8"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/echidna.edi": "4ff3e1164f99e1922c000a448ac3c07846d46d8e4b375672157cff9b5f961875",
+        "experiments/echidna.edi": "dd749768e7f2ce34e5c8838ae139d002c5d8def2e9dc65e83852bd3588eca092",
         "project.edi": "6cad3e4479738ddfe28bd0949720a41fcb539aab7fc4a336b484ccf9e4f4490a",
-        "structures/lab6.edi": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d"
+        "structures/lab6.edi": "84d95fe347757312356b8bcc2640a26f7dfc0048bb443cac3825d584c932a1a8"
       }
     },
     "docs/user/cli/pd-neut-cwl_lbco-hrpt/project": {
@@ -1565,27 +1632,27 @@
         "analysis/analysis.edi": "20d7e1782ddf7db4e43d346a78c73ed8cbe1a4b05880c4604c3e9e45ab2ca8ff",
         "experiments/echidna.edi": "3632abe13db27685f3a5ad6172bdbd6f04cfe40367ddef9a127b3677d32ceb60",
         "project.edi": "430be3f49b1d2f540c0a2e1d0fb4320b9dbd666175f9f20732273f6ef56737b5",
-        "structures/lmo.edi": "bc639a96060b796369cc6b64b76a988f0813f267f33b2b29cbc959c4ba4c97a0"
+        "structures/lmo.edi": "85dc6794256de42a2893361aa232082bd8cfee03c41a835dcf8e2ec073698a0c"
       },
       "iucr_99": {
         "analysis/analysis.edi": "20d7e1782ddf7db4e43d346a78c73ed8cbe1a4b05880c4604c3e9e45ab2ca8ff",
         "experiments/echidna.edi": "3632abe13db27685f3a5ad6172bdbd6f04cfe40367ddef9a127b3677d32ceb60",
         "project.edi": "6b317197db6a18508ebf8b4af5c5d7b45818787cd5ea7220762910f13fbff05d",
-        "structures/lmo.edi": "bc639a96060b796369cc6b64b76a988f0813f267f33b2b29cbc959c4ba4c97a0"
+        "structures/lmo.edi": "85dc6794256de42a2893361aa232082bd8cfee03c41a835dcf8e2ec073698a0c"
       }
     },
     "docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/d1a.edi": "8d6b86f61690a58882759a4bacf1aae55d910b888e71995ca2806250fa46bbef",
+        "experiments/d1a.edi": "a43b633d106315776e1bdf8e0c887407857495477678a05c0642c3e378b09872",
         "project.edi": "2bac5a8de29e182a09c8a879fde25bc6404f273b3edf0f085857441e5d6c7457",
-        "structures/pbso4.edi": "d14b19ea6dc7f6f3a129fa5fb3538f7413fc3cb727950c2f70fb9e2e6e3f2520"
+        "structures/pbso4.edi": "6569dd1bc1c999cdf0dd2986dd2401259ed54d124851322ae30d1962bd84ff41"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/d1a.edi": "8d6b86f61690a58882759a4bacf1aae55d910b888e71995ca2806250fa46bbef",
+        "experiments/d1a.edi": "a43b633d106315776e1bdf8e0c887407857495477678a05c0642c3e378b09872",
         "project.edi": "d2c839497efcac754f1a67821f95ba77885313a7812174e2385957232c6ddda9",
-        "structures/pbso4.edi": "d14b19ea6dc7f6f3a129fa5fb3538f7413fc3cb727950c2f70fb9e2e6e3f2520"
+        "structures/pbso4.edi": "6569dd1bc1c999cdf0dd2986dd2401259ed54d124851322ae30d1962bd84ff41"
       }
     },
     "docs/user/cli/pd-neut-cwl_y2o3-spodi/project": {
@@ -1593,27 +1660,27 @@
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
         "experiments/spodi.edi": "113553ca123ee5030f1b76335ef514a42236517ed25b850fd0eb7817f6916977",
         "project.edi": "1aaca74f9e9481c663f1a801dda8f4a45bb0c46e4f965c5075bfc9b2bf168793",
-        "structures/y2o3.edi": "dd50d4ee45056628f84a0c686deb17fa843d45083035da9ebfeaff66d9d27408"
+        "structures/y2o3.edi": "bbea32df7e5299b8cf4a478df01dfd613bbb3f03919be3155d7df2834a953a28"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
         "experiments/spodi.edi": "113553ca123ee5030f1b76335ef514a42236517ed25b850fd0eb7817f6916977",
         "project.edi": "94107c69bba7b8f1dd8526835d5716b67d984ceba6ebc70937cef9b39defb4e9",
-        "structures/y2o3.edi": "dd50d4ee45056628f84a0c686deb17fa843d45083035da9ebfeaff66d9d27408"
+        "structures/y2o3.edi": "bbea32df7e5299b8cf4a478df01dfd613bbb3f03919be3155d7df2834a953a28"
       }
     },
     "docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/y2o3.edi": "662287caffc306e0fb7297a0aafe8537a39dcb669bb185e3017f5d6bd9bec194",
+        "experiments/y2o3.edi": "a6ece2de5cea4ef5ddc8cdeb3606c9888d14a95ff01bb281875d15ee77762864",
         "project.edi": "b8771be458f3863bcf05f76c9c38cdb48e90cf96988a9718d768c85b67144d47",
-        "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382"
+        "structures/y2o3.edi": "cef40526868e5c12e13e5d5749f93623ca0d27d3f30541842216014de85cdb47"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/y2o3.edi": "662287caffc306e0fb7297a0aafe8537a39dcb669bb185e3017f5d6bd9bec194",
+        "experiments/y2o3.edi": "a6ece2de5cea4ef5ddc8cdeb3606c9888d14a95ff01bb281875d15ee77762864",
         "project.edi": "7c1e5a7e4d864d37b45684032075accddc6babcdfc5486f2ae7d72633e01f22e",
-        "structures/y2o3.edi": "dcacdbe2ddd6490b390aa7b4b36eeaf7e09d43b62f6b31b25a52121ffa295382"
+        "structures/y2o3.edi": "cef40526868e5c12e13e5d5749f93623ca0d27d3f30541842216014de85cdb47"
       }
     },
     "docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project": {
@@ -1635,29 +1702,29 @@
     "docs/user/cli/pd-neut-cwl_yap-spodi_3k/project": {
       "iucr_19": {
         "analysis/analysis.edi": "2dacede100aef3da665a1012a58737b05f64e50cc4c49739a2377b6949aebc78",
-        "experiments/spodi.edi": "95a0e7e735d6603f025f13602748b42b46d9f83fbf9a96c0cfa09fb93ef5a8a4",
+        "experiments/spodi.edi": "64803efbb8af8559bc55342bf0c820da0816e0fde93e978dc036c5a653cd52b9",
         "project.edi": "5bacc0c03bbe3590a5ba2772b9157d38f18bd8bf7e29891ed6db04b78c4d447d",
-        "structures/Al2O3.edi": "4cf6c004095a627356a253028d331accceb22aa36cc36d67b4fddae11f66672e",
-        "structures/YAlO3.edi": "e3bf6c094d89fdfb1fbb93b3ce9c374dcee743140b13a50165e46ede25626eb5"
+        "structures/Al2O3.edi": "011f17a0522b179b7cfa15d644d70fc24c4d8209cc60d9c778ccd012e0a09b81",
+        "structures/YAlO3.edi": "52ab07dc384c0fde51c08f5baaf0342483bbf366c2fee9254bf2aa38d8572ecd"
       },
       "iucr_99": {
         "analysis/analysis.edi": "2dacede100aef3da665a1012a58737b05f64e50cc4c49739a2377b6949aebc78",
-        "experiments/spodi.edi": "95a0e7e735d6603f025f13602748b42b46d9f83fbf9a96c0cfa09fb93ef5a8a4",
+        "experiments/spodi.edi": "64803efbb8af8559bc55342bf0c820da0816e0fde93e978dc036c5a653cd52b9",
         "project.edi": "56eabb3f1442705b672ca171bb3aa1a07a9f35c6c9585aeaa666b86b77ebd396",
-        "structures/Al2O3.edi": "4cf6c004095a627356a253028d331accceb22aa36cc36d67b4fddae11f66672e",
-        "structures/YAlO3.edi": "e3bf6c094d89fdfb1fbb93b3ce9c374dcee743140b13a50165e46ede25626eb5"
+        "structures/Al2O3.edi": "011f17a0522b179b7cfa15d644d70fc24c4d8209cc60d9c778ccd012e0a09b81",
+        "structures/YAlO3.edi": "52ab07dc384c0fde51c08f5baaf0342483bbf366c2fee9254bf2aa38d8572ecd"
       }
     },
     "docs/user/cli/pd-neut-tof_cecoal-polaris/project": {
       "iucr_19": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/polaris.edi": "e736763c3bae0c40a4cccefbc40324d046a240b5dcd26773b4e41d72c9dbb0b8",
+        "experiments/polaris.edi": "67ef99ea27c41f62eca4386fe944ef88a65e8958ae6f6e04d86b54be30be82fe",
         "project.edi": "4126526f7e217253e68632eb2721f44cd7395f04daba65d1bed75b317a31aaf1",
         "structures/cecoal.edi": "a2144fe0d9180a65e6be330f7d7da65f531ac9bb9ac3be17874e2e9cd74df55d"
       },
       "iucr_99": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/polaris.edi": "e736763c3bae0c40a4cccefbc40324d046a240b5dcd26773b4e41d72c9dbb0b8",
+        "experiments/polaris.edi": "67ef99ea27c41f62eca4386fe944ef88a65e8958ae6f6e04d86b54be30be82fe",
         "project.edi": "674d30934dba0d572417dfa582c45ef3b8057b06532b0efde96c344d06dbe71c",
         "structures/cecoal.edi": "a2144fe0d9180a65e6be330f7d7da65f531ac9bb9ac3be17874e2e9cd74df55d"
       }
@@ -1665,15 +1732,15 @@
     "docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project": {
       "iucr_19": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/polaris.edi": "e22e41bd281ee3f13cf2d79be695fc75920d6d2383759f354a017dde0d5b57bd",
+        "experiments/polaris.edi": "6fc2bb53710e4216e452d37b4b4464adddfa9a927c9e6ef180d79984746109fb",
         "project.edi": "ae5bbfaff4bfa648653f5ceccaa4088affb61dbdfac1a5a6f41a707c640d80cb",
-        "structures/cecoal.edi": "65260b82b6611d0f16b6fb79e72d11e324eef97bc21ea9f484deb7b4fbdab68e"
+        "structures/cecoal.edi": "0ab4a853ea6a50c4f78f3c16d17573d4dfcaddf2a250bf62fb711ddd8e22ec47"
       },
       "iucr_99": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/polaris.edi": "e22e41bd281ee3f13cf2d79be695fc75920d6d2383759f354a017dde0d5b57bd",
+        "experiments/polaris.edi": "6fc2bb53710e4216e452d37b4b4464adddfa9a927c9e6ef180d79984746109fb",
         "project.edi": "a4c597d888c29052f69735ceb2c0fdf55106d43ba28880c8102518ec0229a1e9",
-        "structures/cecoal.edi": "65260b82b6611d0f16b6fb79e72d11e324eef97bc21ea9f484deb7b4fbdab68e"
+        "structures/cecoal.edi": "0ab4a853ea6a50c4f78f3c16d17573d4dfcaddf2a250bf62fb711ddd8e22ec47"
       }
     },
     "docs/user/cli/pd-neut-tof_ceo2-pearl/project": {
@@ -1681,39 +1748,39 @@
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
         "experiments/pearl.edi": "8fba3a26d3bb108a528502239e21fbbe1559b0d75fca331cb0f42052002a729d",
         "project.edi": "b3236fc21ee8f39780b15fceb8571dd9db188e862f03b19490b0736e74d6c118",
-        "structures/ceo2.edi": "49338fc5121d28322298e89d7f5d1186b872688bc446d18379088f81a5b5f1a6"
+        "structures/ceo2.edi": "39e011b4330f9110887761995d6fc67805a8a04317fad6597380d90e87afd527"
       },
       "iucr_99": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
         "experiments/pearl.edi": "8fba3a26d3bb108a528502239e21fbbe1559b0d75fca331cb0f42052002a729d",
         "project.edi": "eb359eb23b4c4c18769bc5796b1ed95c3cab530c59b72b2dadf01ec581e94ef2",
-        "structures/ceo2.edi": "49338fc5121d28322298e89d7f5d1186b872688bc446d18379088f81a5b5f1a6"
+        "structures/ceo2.edi": "39e011b4330f9110887761995d6fc67805a8a04317fad6597380d90e87afd527"
       }
     },
     "docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project": {
       "iucr_19": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/pearl.edi": "dcfbd87eab18dc00b7085b2e763d9fc49dd9a77a02868884b827ea8ef33a5dc1",
+        "experiments/pearl.edi": "c73125f7c3e4e11fb378b1cbad1e19efd1ccbe491cdd363607eb79e4db0a6a2b",
         "project.edi": "42506c84c68e5c32bdb486dbefa086170b998aacb81b20213b16dcc0f31eaf8f",
-        "structures/ceo2.edi": "c61951e14235a879604c70f80f15dc02ee4c65496497e250e9ea462de7e0eedd"
+        "structures/ceo2.edi": "def940714068fe03f3079aa46624ad0f383edbd2d31cb68c7a87d6e2a16d74af"
       },
       "iucr_99": {
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/pearl.edi": "dcfbd87eab18dc00b7085b2e763d9fc49dd9a77a02868884b827ea8ef33a5dc1",
+        "experiments/pearl.edi": "c73125f7c3e4e11fb378b1cbad1e19efd1ccbe491cdd363607eb79e4db0a6a2b",
         "project.edi": "58323c39f5880299e738e9bc7358cbdbf28c5a85ae91f031b3e9fda6dc15d71b",
-        "structures/ceo2.edi": "c61951e14235a879604c70f80f15dc02ee4c65496497e250e9ea462de7e0eedd"
+        "structures/ceo2.edi": "def940714068fe03f3079aa46624ad0f383edbd2d31cb68c7a87d6e2a16d74af"
       }
     },
     "docs/user/cli/pd-neut-tof_diamond-dream_basic/project": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/dream.edi": "b359f0ad29ebac31ed081405cbc980dced5a9801138d583e0520ad0395caa3e3",
+        "experiments/dream.edi": "1505e17866889682d95d52746c9c46fd94817370d280e4f38e997808e1422aa0",
         "project.edi": "ebb776c95e4af7fa525111c96d830dcf8932f6c22a294d4215f9cbdceaf47a17",
         "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/dream.edi": "b359f0ad29ebac31ed081405cbc980dced5a9801138d583e0520ad0395caa3e3",
+        "experiments/dream.edi": "1505e17866889682d95d52746c9c46fd94817370d280e4f38e997808e1422aa0",
         "project.edi": "8141ea72e9a787241196a8197343cd4fbb5a04a55cd0acf814e500cc20f76750",
         "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613"
       }
@@ -1721,13 +1788,13 @@
     "docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project": {
       "iucr_19": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/dream.edi": "c6a1c11f70906bc8e3dbb4f9ab36fabc39c0b90a4debd4bc178465a17389cd1d",
+        "experiments/dream.edi": "9cf0c6037d7b5a5cddfbd6a6bec8befaa5d6607a6f2bf6ab737dd3d6693e6c50",
         "project.edi": "9c16f9f3591d83a6469a7298e4cca88eb29c9dae0ff2a2c66b12ac7458328bc4",
         "structures/diamond.edi": "0c89317fcecaa7331dee6dc125ed49a8856f9b59e5f41b5d0c4beee73b586bdd"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/dream.edi": "c6a1c11f70906bc8e3dbb4f9ab36fabc39c0b90a4debd4bc178465a17389cd1d",
+        "experiments/dream.edi": "9cf0c6037d7b5a5cddfbd6a6bec8befaa5d6607a6f2bf6ab737dd3d6693e6c50",
         "project.edi": "ec6b50db34179e40fba55c3ededb6fab431afe028db6575fb84156d2d11d8e31",
         "structures/diamond.edi": "0c89317fcecaa7331dee6dc125ed49a8856f9b59e5f41b5d0c4beee73b586bdd"
       }
@@ -1735,13 +1802,13 @@
     "docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project": {
       "iucr_19": {
         "analysis/analysis.edi": "4022174baf572bde6167b071a54bcb8e197fa5d58b39c370f89045691ce4afdf",
-        "experiments/beer.edi": "67d5b74403dbca17cbd4e0b710a2c0763a809a3c17f11c9842b4ab091d645ec2",
+        "experiments/beer.edi": "c1db5974c92199876a012280b03436f3d97252e2a06ca796de58044b13666dc7",
         "project.edi": "97c9902c731027b7214449fde8d2ad0201e5dea75811413e3461d0fceac8123f",
         "structures/fe.edi": "9ee23e6fff7c5eb544677380a5c3176ee7425e3e790cbe7b50dca77472a16c29"
       },
       "iucr_99": {
         "analysis/analysis.edi": "4022174baf572bde6167b071a54bcb8e197fa5d58b39c370f89045691ce4afdf",
-        "experiments/beer.edi": "67d5b74403dbca17cbd4e0b710a2c0763a809a3c17f11c9842b4ab091d645ec2",
+        "experiments/beer.edi": "c1db5974c92199876a012280b03436f3d97252e2a06ca796de58044b13666dc7",
         "project.edi": "d150d7710ecddc2f9be3bd85ddb03d436d95da764c90074f9c571a46251f1873",
         "structures/fe.edi": "9ee23e6fff7c5eb544677380a5c3176ee7425e3e790cbe7b50dca77472a16c29"
       }
@@ -1749,16 +1816,16 @@
     "docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project": {
       "iucr_19": {
         "analysis/analysis.edi": "c2768345fad994eaf5abb548fe5089f63bed51f8788b2958ca6a971ee59391b8",
-        "experiments/expt_n2.edi": "1113b66598ea12975931ce8c2dd798818c3d1706798a10f954ee858bd593bcaa",
-        "experiments/expt_s2.edi": "26acba0f8941b1d26e0f76cf2e2a8915bd957d7fa5a2594a9390c3743044478b",
+        "experiments/expt_n2.edi": "e83e62b8a920f234e299aec3aa0cc9a5d52315abc571b2bd46f88ba376515869",
+        "experiments/expt_s2.edi": "f9de4cd1b2f8b0a1b6e8ce71e2fa31d0ee5ed823a3bccb5cc1e8c2c6eae6c9ef",
         "project.edi": "d8922195931a23f8020bf1436e638b272d0a4c2e2dbc28d529a2ccec25f839ce",
         "structures/austenite.edi": "1b5dce10fcb7270ac0f1105b628f9340ef9b433776265068200fc5477ee563ad",
         "structures/ferrite.edi": "9d7fcfd95b410695c8e798b451211a9247caaa5d18f7795b7ad21aef443e1481"
       },
       "iucr_99": {
         "analysis/analysis.edi": "c2768345fad994eaf5abb548fe5089f63bed51f8788b2958ca6a971ee59391b8",
-        "experiments/expt_n2.edi": "1113b66598ea12975931ce8c2dd798818c3d1706798a10f954ee858bd593bcaa",
-        "experiments/expt_s2.edi": "26acba0f8941b1d26e0f76cf2e2a8915bd957d7fa5a2594a9390c3743044478b",
+        "experiments/expt_n2.edi": "e83e62b8a920f234e299aec3aa0cc9a5d52315abc571b2bd46f88ba376515869",
+        "experiments/expt_s2.edi": "f9de4cd1b2f8b0a1b6e8ce71e2fa31d0ee5ed823a3bccb5cc1e8c2c6eae6c9ef",
         "project.edi": "5a99d9e0bfa46d62c3b085fe6e3a4e3e7763e877f0c1fd741d67b1a82de1e0c7",
         "structures/austenite.edi": "1b5dce10fcb7270ac0f1105b628f9340ef9b433776265068200fc5477ee563ad",
         "structures/ferrite.edi": "9d7fcfd95b410695c8e798b451211a9247caaa5d18f7795b7ad21aef443e1481"
@@ -1767,16 +1834,16 @@
     "docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project": {
       "iucr_19": {
         "analysis/analysis.edi": "4f287a7934de70378b8c6b8bef138b4a8c3d8ada69850e297b835ec925a6a594",
-        "experiments/expt_n2.edi": "972cd511fdf9567a8097ffcd6e6f2a12a4d6c5b902bf29b1bfb0d01f2e9f8a3e",
-        "experiments/expt_s2.edi": "286ef4a169482ef1be5b926c8d833450924f40d0a0c3e11676b0c190097a2b03",
+        "experiments/expt_n2.edi": "01aa347376b435792d90b560163953da10630c559ea783ba3b4fb5b22750c676",
+        "experiments/expt_s2.edi": "d97c40f32902663f8070ea79590b4c6fdf6696e1b568f8c77e6be8e3db3fdc18",
         "project.edi": "cd8bbfd31ed0d61b7fcb39bffbf0780f5b21bc4fbea9d1c7071aa1c6efa64a0d",
         "structures/austenite.edi": "532b1bd63b4a41fb36225012406f9515e27dd7ebba29ff91e172c2d71d91ed55",
         "structures/ferrite.edi": "4fabbab797e18d37e967d38828382fe83de7c1628ba7eb6a16de5380abb6de97"
       },
       "iucr_99": {
         "analysis/analysis.edi": "4f287a7934de70378b8c6b8bef138b4a8c3d8ada69850e297b835ec925a6a594",
-        "experiments/expt_n2.edi": "972cd511fdf9567a8097ffcd6e6f2a12a4d6c5b902bf29b1bfb0d01f2e9f8a3e",
-        "experiments/expt_s2.edi": "286ef4a169482ef1be5b926c8d833450924f40d0a0c3e11676b0c190097a2b03",
+        "experiments/expt_n2.edi": "01aa347376b435792d90b560163953da10630c559ea783ba3b4fb5b22750c676",
+        "experiments/expt_s2.edi": "d97c40f32902663f8070ea79590b4c6fdf6696e1b568f8c77e6be8e3db3fdc18",
         "project.edi": "ce0bab06fbff261ebd914063f2f023478f1436dbb115b3a9ce153a4736737a31",
         "structures/austenite.edi": "532b1bd63b4a41fb36225012406f9515e27dd7ebba29ff91e172c2d71d91ed55",
         "structures/ferrite.edi": "4fabbab797e18d37e967d38828382fe83de7c1628ba7eb6a16de5380abb6de97"
@@ -1785,14 +1852,14 @@
     "docs/user/cli/pd-neut-tof_lbco-si-mcstas/project": {
       "iucr_19": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/mcstas.edi": "e80287f972c278f7b31d2da4d801cc9beefe45a7c003fc8fe9a221335f20bdf0",
+        "experiments/mcstas.edi": "e6d7991a84d76ec3a624e844aeed2d4391887c6d4e7ddea14a5fd629beb41d4a",
         "project.edi": "41ae8293bb6a6fee49845669678f81c4711a59dbe887722cbc9df1b07c67eb07",
         "structures/lbco.edi": "b0e5b35e77b59259fa736bfb72286476bdd2479698f5dfb551d7639496fe8eb6",
         "structures/si.edi": "19e40204988d31b87853ac070e03eb40d8c84869e3dc1c34ec5e985dd3b744c5"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/mcstas.edi": "e80287f972c278f7b31d2da4d801cc9beefe45a7c003fc8fe9a221335f20bdf0",
+        "experiments/mcstas.edi": "e6d7991a84d76ec3a624e844aeed2d4391887c6d4e7ddea14a5fd629beb41d4a",
         "project.edi": "87835df0fd2e54d51aa3627de5e2562faba67f2aea64a61c11b4875f8ba4b1ae",
         "structures/lbco.edi": "b0e5b35e77b59259fa736bfb72286476bdd2479698f5dfb551d7639496fe8eb6",
         "structures/si.edi": "19e40204988d31b87853ac070e03eb40d8c84869e3dc1c34ec5e985dd3b744c5"
@@ -1802,18 +1869,18 @@
       "iucr_19": {
         "README.md": "02c8b3920c69ddcdde97cf7b0c06f4e799773cb67187b3708fcedbb4320310bc",
         "analysis/analysis.edi": "851f29e2e3958b19c31696ae78bd3e7c5e2c99cdc8ea265a5715f6d5de48ec49",
-        "experiments/wish_4_7.edi": "e098dbfe4cd03d1b48545cc900c07a78ecac38b284fc09a959c0d762b4a61bae",
-        "experiments/wish_5_6.edi": "3f250656d252546231fa988370c27074826c1d9adb58d1a51119f47ef71aa592",
+        "experiments/wish_4_7.edi": "9317c959b720698296d8e6dc37652ef1662638fa7a1ac79d6340f32ac86499f6",
+        "experiments/wish_5_6.edi": "cd5f14268bde075886c2541b08a710e28f0d7aa3075ea2addeb92b77cd99f0e6",
         "project.edi": "281d1c9d1431514107e5e75702d99c6303f17a8822b5ce850db90d8f9ba4342e",
-        "structures/ncaf.edi": "24007a9a904b93855df4a8e18287ead98826627486d35a20a739f2debf8df067"
+        "structures/ncaf.edi": "6428315de5973d31a3ad3da45931b373ec592a5859fa52978412f8357bc05f22"
       },
       "iucr_99": {
         "README.md": "02c8b3920c69ddcdde97cf7b0c06f4e799773cb67187b3708fcedbb4320310bc",
         "analysis/analysis.edi": "851f29e2e3958b19c31696ae78bd3e7c5e2c99cdc8ea265a5715f6d5de48ec49",
-        "experiments/wish_4_7.edi": "e098dbfe4cd03d1b48545cc900c07a78ecac38b284fc09a959c0d762b4a61bae",
-        "experiments/wish_5_6.edi": "3f250656d252546231fa988370c27074826c1d9adb58d1a51119f47ef71aa592",
+        "experiments/wish_4_7.edi": "9317c959b720698296d8e6dc37652ef1662638fa7a1ac79d6340f32ac86499f6",
+        "experiments/wish_5_6.edi": "cd5f14268bde075886c2541b08a710e28f0d7aa3075ea2addeb92b77cd99f0e6",
         "project.edi": "3b3fac93f46d8bc7fbed4171ccc147d5b4334a388a9b5aa583c2ba081962cb53",
-        "structures/ncaf.edi": "24007a9a904b93855df4a8e18287ead98826627486d35a20a739f2debf8df067"
+        "structures/ncaf.edi": "6428315de5973d31a3ad3da45931b373ec592a5859fa52978412f8357bc05f22"
       }
     },
     "docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project": {
@@ -1823,7 +1890,7 @@
         "experiments/wish_4_7.edi": "fcdbaeb2ad13d7a7a4282ec485c24211b10685115a59dfd14c86add0c6a3f2c3",
         "experiments/wish_5_6.edi": "e171eadddcaff879e1af6f0b99c8593289f47560627879cfcd4b31e2c07ce719",
         "project.edi": "b5e111455e46857f87ab5aa36f7ef1ca8d5a982c03fbf23e3971b2a55de1bee7",
-        "structures/ncaf.edi": "bcf8c5d5b89119671d70326e338c0de39f5f40c61b5cbd67e35eaef5c36f4036"
+        "structures/ncaf.edi": "90ea112f37908c99c9675b85b198c0c47ff45fef4bba266085ecadc856b04fd8"
       },
       "iucr_99": {
         "analysis/analysis.edi": "a92ff6a4dab31015df35866d7dcd51e8b7176ebaa836c8ed1739998d03e24d03",
@@ -1831,51 +1898,51 @@
         "experiments/wish_4_7.edi": "fcdbaeb2ad13d7a7a4282ec485c24211b10685115a59dfd14c86add0c6a3f2c3",
         "experiments/wish_5_6.edi": "e171eadddcaff879e1af6f0b99c8593289f47560627879cfcd4b31e2c07ce719",
         "project.edi": "042aa68a84fa69596ad0faec32703d1770e3b6135b3e31c9793fec8b0f8b789f",
-        "structures/ncaf.edi": "bcf8c5d5b89119671d70326e338c0de39f5f40c61b5cbd67e35eaef5c36f4036"
+        "structures/ncaf.edi": "90ea112f37908c99c9675b85b198c0c47ff45fef4bba266085ecadc856b04fd8"
       }
     },
     "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project": {
       "iucr_19": {
         "analysis/analysis.edi": "8894e2315e7d8c9f1c3c28b4691a208bd925518e6c8b65df80b0d4b70b1b5dc2",
-        "experiments/wish_1_10.edi": "682aec4a7b365b4b9e8c67e345f1b896b8ee3c1eb7cb325490d371ea3ec8f4d8",
+        "experiments/wish_1_10.edi": "cd08ae07e8ff71a2df70cf9965ef74971edb1308e643c9f82a97c12ba64e1222",
         "experiments/wish_2_9.edi": "97b649c4cabc4004f4fb697e656ada7acc3d3983d1d9ce6baea1c56354ade646",
         "experiments/wish_3_8.edi": "99424e3814a8c855d5535ebc2a1a82b9e5329b547ab45fdd8834b188e73f898e",
         "experiments/wish_4_7.edi": "97d51319127d0d6ccfbf3611631014fd8dcbb06ce7a547b270cde6c3b2a25a8d",
         "experiments/wish_5_6.edi": "1b5389063cd8bb936be42717f3b5110461a2c5748bc0b42b05aa3ca718741a95",
         "project.edi": "bf89fe639135e1015bda5c0234db835e551f6c3f879da1abfb4d1ac7aecfe6f5",
-        "structures/ncaf.edi": "bcf8c5d5b89119671d70326e338c0de39f5f40c61b5cbd67e35eaef5c36f4036"
+        "structures/ncaf.edi": "90ea112f37908c99c9675b85b198c0c47ff45fef4bba266085ecadc856b04fd8"
       },
       "iucr_99": {
         "analysis/analysis.edi": "8894e2315e7d8c9f1c3c28b4691a208bd925518e6c8b65df80b0d4b70b1b5dc2",
-        "experiments/wish_1_10.edi": "682aec4a7b365b4b9e8c67e345f1b896b8ee3c1eb7cb325490d371ea3ec8f4d8",
+        "experiments/wish_1_10.edi": "cd08ae07e8ff71a2df70cf9965ef74971edb1308e643c9f82a97c12ba64e1222",
         "experiments/wish_2_9.edi": "97b649c4cabc4004f4fb697e656ada7acc3d3983d1d9ce6baea1c56354ade646",
         "experiments/wish_3_8.edi": "99424e3814a8c855d5535ebc2a1a82b9e5329b547ab45fdd8834b188e73f898e",
         "experiments/wish_4_7.edi": "97d51319127d0d6ccfbf3611631014fd8dcbb06ce7a547b270cde6c3b2a25a8d",
         "experiments/wish_5_6.edi": "1b5389063cd8bb936be42717f3b5110461a2c5748bc0b42b05aa3ca718741a95",
         "project.edi": "0a3378f73b8b15788b957ded58a7c4da685a4f60e7e85e92b66461a26a1ccc95",
-        "structures/ncaf.edi": "bcf8c5d5b89119671d70326e338c0de39f5f40c61b5cbd67e35eaef5c36f4036"
+        "structures/ncaf.edi": "90ea112f37908c99c9675b85b198c0c47ff45fef4bba266085ecadc856b04fd8"
       }
     },
     "docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project": {
       "iucr_19": {
         "analysis/analysis.edi": "8894e2315e7d8c9f1c3c28b4691a208bd925518e6c8b65df80b0d4b70b1b5dc2",
-        "experiments/wish_1_10.edi": "fe158e16fda12400f4ee8bd6b894ab773f5aaad776b4a4a46092bf6345ff083f",
+        "experiments/wish_1_10.edi": "48521deeb7d57c6f8ad4dc17d6d17a751c7d8e8ddaa4d8ba2da5bad6f8f6864b",
         "experiments/wish_2_9.edi": "d1bfb0dfcb42c83f0e093b952a7057e7b0d3b3178b4a8738ffdbe208afda74b6",
         "experiments/wish_3_8.edi": "0497263cb777c48cfe6d5fa08c482c7ab80cbd87a513ab70e0082836f14c1415",
         "experiments/wish_4_7.edi": "6e092f2e90d94adeb9ff6df03e6f589344ee0250d2e1cf15bd92ae8af3223a48",
         "experiments/wish_5_6.edi": "ff493299ba6c1f809bae22b1441ecc1de4269ecec9110559fad6192110cee93f",
         "project.edi": "219b8fde9a83e05385a4eeefcd570ad443f9c62131c4e3ec570356337eff6654",
-        "structures/ncaf.edi": "070af8bdd5d614946b001cbe51002a70d99e2ca601f34797d72e1ff24d47c48f"
+        "structures/ncaf.edi": "6e50b1ef22e834e513af8eb8cb067c663256559126eb9fe4f9e5c87e6f6f1275"
       },
       "iucr_99": {
         "analysis/analysis.edi": "8894e2315e7d8c9f1c3c28b4691a208bd925518e6c8b65df80b0d4b70b1b5dc2",
-        "experiments/wish_1_10.edi": "fe158e16fda12400f4ee8bd6b894ab773f5aaad776b4a4a46092bf6345ff083f",
+        "experiments/wish_1_10.edi": "48521deeb7d57c6f8ad4dc17d6d17a751c7d8e8ddaa4d8ba2da5bad6f8f6864b",
         "experiments/wish_2_9.edi": "d1bfb0dfcb42c83f0e093b952a7057e7b0d3b3178b4a8738ffdbe208afda74b6",
         "experiments/wish_3_8.edi": "0497263cb777c48cfe6d5fa08c482c7ab80cbd87a513ab70e0082836f14c1415",
         "experiments/wish_4_7.edi": "6e092f2e90d94adeb9ff6df03e6f589344ee0250d2e1cf15bd92ae8af3223a48",
         "experiments/wish_5_6.edi": "ff493299ba6c1f809bae22b1441ecc1de4269ecec9110559fad6192110cee93f",
         "project.edi": "b7c70fcd253c212d44f3e14d8146e96327f0d7b87df7b473a1a3478bacf12fa7",
-        "structures/ncaf.edi": "070af8bdd5d614946b001cbe51002a70d99e2ca601f34797d72e1ff24d47c48f"
+        "structures/ncaf.edi": "6e50b1ef22e834e513af8eb8cb067c663256559126eb9fe4f9e5c87e6f6f1275"
       }
     },
     "docs/user/cli/pd-neut-tof_ncaf-wish/project": {
@@ -1887,7 +1954,7 @@
         "experiments/wish_4_7.edi": "e5723b2fff4eda7695979eec8b7feb68396c83b6b12d3afa65188c53710d5c2c",
         "experiments/wish_5_6.edi": "8530bd2c83a077a7bee4e97276d0c3c49ebb506a54281dbcd030d431c68e5cc3",
         "project.edi": "8bebb32e431f09cf8fdf4c8102fcb122f62695952529dc5036f48edec2f93ba1",
-        "structures/ncaf.edi": "e5b69abe02127399026fc43cca24eaadec89cc72c134a0a3bd7cba1186eebea4"
+        "structures/ncaf.edi": "ed83de33f7e90292816b72c10d23370c216f63fc216fbca9c9e6dfd705642694"
       },
       "iucr_99": {
         "analysis/analysis.edi": "1e5bf4f36a252cf78a4bdd5e54d47fd8bc4671e3b453e1b04d5e2be4361fcd9e",
@@ -1897,7 +1964,7 @@
         "experiments/wish_4_7.edi": "e5723b2fff4eda7695979eec8b7feb68396c83b6b12d3afa65188c53710d5c2c",
         "experiments/wish_5_6.edi": "8530bd2c83a077a7bee4e97276d0c3c49ebb506a54281dbcd030d431c68e5cc3",
         "project.edi": "8ca0c547b44ee4ff87d1f00145e9b4cf5504743eb91d05987ca4618c2be633d7",
-        "structures/ncaf.edi": "e5b69abe02127399026fc43cca24eaadec89cc72c134a0a3bd7cba1186eebea4"
+        "structures/ncaf.edi": "ed83de33f7e90292816b72c10d23370c216f63fc216fbca9c9e6dfd705642694"
       }
     },
     "docs/user/cli/pd-neut-tof_si-sepd/project": {
@@ -1918,32 +1985,32 @@
       "iucr_19": {
         "README.md": "f61406e653cd0e0886b02ba303c5d1265d1991b5762e18a6e9d5b7064ddd7775",
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/sepd.edi": "886b3b553e87910a8b3ebbd1e6ef9a562e7fce87a5370d8b00fed6353c543bbc",
+        "experiments/sepd.edi": "f88d1b65dcbac7327a5359dd2e40ab51bd5becf826222fdd0c42910eb2e73609",
         "project.edi": "21cbd035a9e552325f1f107bfcf07a12b013894d3d7001cf9ce1333f13797906",
-        "structures/si.edi": "84b9ea2ef2ff0b98d6e87be20832eeab8f20f5d8e6729cc233e1fcb3e1ce3397"
+        "structures/si.edi": "0b10b54b6c55c3c397122e3a8692a0b6e74cfe8e98e50819368c0998bd422793"
       },
       "iucr_99": {
         "README.md": "f61406e653cd0e0886b02ba303c5d1265d1991b5762e18a6e9d5b7064ddd7775",
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/sepd.edi": "886b3b553e87910a8b3ebbd1e6ef9a562e7fce87a5370d8b00fed6353c543bbc",
+        "experiments/sepd.edi": "f88d1b65dcbac7327a5359dd2e40ab51bd5becf826222fdd0c42910eb2e73609",
         "project.edi": "0c5c61124e22361b64b98835c185ea3cc19773357d8b47eaba4e3bd86d30d31a",
-        "structures/si.edi": "84b9ea2ef2ff0b98d6e87be20832eeab8f20f5d8e6729cc233e1fcb3e1ce3397"
+        "structures/si.edi": "0b10b54b6c55c3c397122e3a8692a0b6e74cfe8e98e50819368c0998bd422793"
       }
     },
     "docs/user/cli/pd-neut-tof_si-sepd_start-5/project": {
       "iucr_19": {
         "README.md": "510d812ce6c8f958e43d7875a93719b81551a315b137532b72241c28fab1f3db",
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/sepd.edi": "3fb7e04f3279ea90055ce6b781166d493e0b005ef1465120bde80c168d2a5fe0",
+        "experiments/sepd.edi": "3143c9f3ec43a3904de3d40fab336cf27eeac2a2404132cb9c5aa0e54a100577",
         "project.edi": "27edeeb2da25b8ec26f5f8263fdc7844df2490a4e7b360db89f0c08600430a7e",
-        "structures/si.edi": "84b9ea2ef2ff0b98d6e87be20832eeab8f20f5d8e6729cc233e1fcb3e1ce3397"
+        "structures/si.edi": "0b10b54b6c55c3c397122e3a8692a0b6e74cfe8e98e50819368c0998bd422793"
       },
       "iucr_99": {
         "README.md": "510d812ce6c8f958e43d7875a93719b81551a315b137532b72241c28fab1f3db",
         "analysis/analysis.edi": "2935149c074a2030b65a35cc77c3c4351c0cbef842146098be040308e48fe72a",
-        "experiments/sepd.edi": "3fb7e04f3279ea90055ce6b781166d493e0b005ef1465120bde80c168d2a5fe0",
+        "experiments/sepd.edi": "3143c9f3ec43a3904de3d40fab336cf27eeac2a2404132cb9c5aa0e54a100577",
         "project.edi": "b3476c3b216d2b3eaa2acfbefb56fa874ec9369727121b04c9a025835cb4ecc5",
-        "structures/si.edi": "84b9ea2ef2ff0b98d6e87be20832eeab8f20f5d8e6729cc233e1fcb3e1ce3397"
+        "structures/si.edi": "0b10b54b6c55c3c397122e3a8692a0b6e74cfe8e98e50819368c0998bd422793"
       }
     },
     "docs/user/cli/pd-neut-tof_si_simulation/project": {
@@ -1964,14 +2031,14 @@
       "iucr_19": {
         "analysis/analysis.edi": "94049a24064f2612acb9f0014c238a67a1325d4ea74a820d8115eafd0e668be8",
         "experiments/d1a.edi": "85caa0e1716aa3b5cccec045fb1198edd6d481dce6cc35fd3ce6ebfa41665d66",
-        "experiments/lab.edi": "9d2b90ec20672cae1d12228708ca29a91b951bd161d5458852a6dd18270a7c00",
+        "experiments/lab.edi": "ab0bc8b977364435abe0438b052b13169691f4cd88c9bd7f737fd01ccb732ab4",
         "project.edi": "ddcfbfea9725adcd3874fe37b848c50ad6258fd586562b465ec7eeac605a7083",
         "structures/pbso4.edi": "42a0b82e662eac0413d70215f61d2aeaa8256bd5ca628cdada2b094223dc1401"
       },
       "iucr_99": {
         "analysis/analysis.edi": "94049a24064f2612acb9f0014c238a67a1325d4ea74a820d8115eafd0e668be8",
         "experiments/d1a.edi": "85caa0e1716aa3b5cccec045fb1198edd6d481dce6cc35fd3ce6ebfa41665d66",
-        "experiments/lab.edi": "9d2b90ec20672cae1d12228708ca29a91b951bd161d5458852a6dd18270a7c00",
+        "experiments/lab.edi": "ab0bc8b977364435abe0438b052b13169691f4cd88c9bd7f737fd01ccb732ab4",
         "project.edi": "24aa1448504d03c5a2f9e369611d281ba354fe0b83225453c4ab5586fbe7c035",
         "structures/pbso4.edi": "42a0b82e662eac0413d70215f61d2aeaa8256bd5ca628cdada2b094223dc1401"
       }
@@ -2070,7 +2137,7 @@
         "project.edi": "2299fcdeddac18dacfd414c2f5b582b04ae02672b392bfe67e77e224c0df1f6c",
         "structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
         "structures/alpo4_p63mc.edi": "789ef6b59fe9032899176ae06138ed2b3d7bb462d61a66cd10aa38837f5f16b4",
-        "structures/latp.edi": "d8a30db1ba8d8f29853e6457fff09de2b401b78544fb04d9d480ac49a1cf354c"
+        "structures/latp.edi": "28e1e7657962902e5a5a4ef27339b6cc0b46f88445d4a47a835e2f35d8888d1d"
       },
       "iucr_99": {
         "analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
@@ -2151,7 +2218,7 @@
         "project.edi": "06f8aba1f0b6ccdce196e451e6e2d1158db3c336358265f63ede80225bea9d49",
         "structures/alpo4_c2221.edi": "5bcc576c82da91e6c65344e89e44df568e5261fca97a8d2965196da04875aafa",
         "structures/alpo4_p63mc.edi": "16c901dbdf63d047326c25eb0846fdfc9ca869446a45c1656ff2482cb8580398",
-        "structures/latp.edi": "34b010b54aafd2d6749af4161f4f0d6fc5da06064477789754c2806d93829d4a"
+        "structures/latp.edi": "c8a48ebfe7c5fa11157117ea034ccf629ef8e1fa31263e8b63725edae833f7c0"
       }
     },
     "docs/user/cli/pd-xray-cwl_latp_scan-4f/project": {
@@ -2165,7 +2232,7 @@
         "project.edi": "0a76184c855fed97495f5af060388af6e5c4a0977bc04d988068d72002741e7d",
         "structures/alpo4_c2221.edi": "b42662d5570b1a08f3b1df6451af8ff1f5c6e69ea3b40bd78f39dd2b181c5306",
         "structures/alpo4_p63mc.edi": "789ef6b59fe9032899176ae06138ed2b3d7bb462d61a66cd10aa38837f5f16b4",
-        "structures/latp.edi": "d8a30db1ba8d8f29853e6457fff09de2b401b78544fb04d9d480ac49a1cf354c"
+        "structures/latp.edi": "28e1e7657962902e5a5a4ef27339b6cc0b46f88445d4a47a835e2f35d8888d1d"
       },
       "iucr_99": {
         "analysis/analysis.edi": "54e3863bd8ff2eda1080f5784b54d828a2bb6050903a9c9d86b2421f1f8deba3",
@@ -2177,19 +2244,19 @@
         "project.edi": "ef048a1505e5b03e0bd1871523dcb2247ebb034376ee8fc36e54e5f96709c33e",
         "structures/alpo4_c2221.edi": "5bcc576c82da91e6c65344e89e44df568e5261fca97a8d2965196da04875aafa",
         "structures/alpo4_p63mc.edi": "16c901dbdf63d047326c25eb0846fdfc9ca869446a45c1656ff2482cb8580398",
-        "structures/latp.edi": "34b010b54aafd2d6749af4161f4f0d6fc5da06064477789754c2806d93829d4a"
+        "structures/latp.edi": "c8a48ebfe7c5fa11157117ea034ccf629ef8e1fa31263e8b63725edae833f7c0"
       }
     },
     "docs/user/cli/pd-xray-cwl_lif_single/project": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/cu_ka.edi": "3c9471e1eaa590c93a82e4ff02b153bf7e4e32260d54ca2240039302614b85ef",
+        "experiments/cu_ka.edi": "87a987a6743c8a0b963a637951dcefc9382458650d17fe110d5787882a8ff950",
         "project.edi": "aee628029a051f786b3cc5c05676a41e9cadb4dc69067a4eea19585fb372d474",
         "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/cu_ka.edi": "3c9471e1eaa590c93a82e4ff02b153bf7e4e32260d54ca2240039302614b85ef",
+        "experiments/cu_ka.edi": "87a987a6743c8a0b963a637951dcefc9382458650d17fe110d5787882a8ff950",
         "project.edi": "4176a5b2b44634ee9a5ae59d200c405b8283ce6f9b512331f19870d3264e6c24",
         "structures/lif.edi": "b68e864053c85ea3bb0e7a14b37131c7319cd2cd047b89d4dc4d8b30ff4033fe"
       }
@@ -2197,13 +2264,13 @@
     "docs/user/cli/pd-xray-cwl_nacl_simulation/project": {
       "iucr_19": {
         "analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
-        "experiments/lab.edi": "3258596ecdb738751cefcd6dbe42e528ca85a44fa9b40486198cf9ef31b80655",
+        "experiments/lab.edi": "2892b16ed4536016ad04336c9ca8be7fc1bf543e00c9dd389ce2697410ebb20e",
         "project.edi": "5279d34d29cc75c9ad6a90bdbe36bb9fcde773d06cf0e4b1c4a68552cc6c3aba",
         "structures/nacl.edi": "e98da4a700a6a40a98fc068675f2b56ecb9c30ead6a28e2f99b14ececbdce354"
       },
       "iucr_99": {
         "analysis/analysis.edi": "1e59c0da22d1a5246a031013c7dc61ac906ee4aa6c1cc4c72b321be27c9480d3",
-        "experiments/lab.edi": "3258596ecdb738751cefcd6dbe42e528ca85a44fa9b40486198cf9ef31b80655",
+        "experiments/lab.edi": "2892b16ed4536016ad04336c9ca8be7fc1bf543e00c9dd389ce2697410ebb20e",
         "project.edi": "92c93bfa5119e8404a981566e16e0ee88b243ef0d68b64d2dab6249752fad954",
         "structures/nacl.edi": "e98da4a700a6a40a98fc068675f2b56ecb9c30ead6a28e2f99b14ececbdce354"
       }
@@ -2211,13 +2278,13 @@
     "docs/user/cli/pd-xray-cwl_pbso4-lab/project": {
       "iucr_19": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/lab.edi": "453c7732a4759ed29ce9a47c4eee94d2342f256cfd198df7a822919c7ed0b5fb",
+        "experiments/lab.edi": "30c7777b5e8b624bd4e5586271ff7a788f2395154884c5b1c9717674b1899edc",
         "project.edi": "055c915c71736d65a264999a781b37b957df3b6f6dae69c6df405785f324f02b",
         "structures/pbso4.edi": "42a0b82e662eac0413d70215f61d2aeaa8256bd5ca628cdada2b094223dc1401"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/lab.edi": "453c7732a4759ed29ce9a47c4eee94d2342f256cfd198df7a822919c7ed0b5fb",
+        "experiments/lab.edi": "30c7777b5e8b624bd4e5586271ff7a788f2395154884c5b1c9717674b1899edc",
         "project.edi": "dd1e71b4bac4b2c9a96d52ec7831d6b1cf890261834138b2d75b182f54665025",
         "structures/pbso4.edi": "42a0b82e662eac0413d70215f61d2aeaa8256bd5ca628cdada2b094223dc1401"
       }
@@ -2225,15 +2292,15 @@
     "docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/pbsox.edi": "17f36958fce05cbf5f1c46a7e0a223374a93736a8c209c1cb216c82e3410a791",
+        "experiments/pbsox.edi": "87b3b9a26102e384c3bc12e5dcd8036abe72ff6b57ac406c514cb398ef2f2a84",
         "project.edi": "69d5661785e41ff369eaf9de3aa5d35217694a5b99763a6fc3347b9cc1d47efa",
-        "structures/pbso4.edi": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401"
+        "structures/pbso4.edi": "a14c0c79a3ee3e34c1a11e47249ee305ad7f73c3ac708bd5f4f97a64a9587760"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/pbsox.edi": "17f36958fce05cbf5f1c46a7e0a223374a93736a8c209c1cb216c82e3410a791",
+        "experiments/pbsox.edi": "87b3b9a26102e384c3bc12e5dcd8036abe72ff6b57ac406c514cb398ef2f2a84",
         "project.edi": "7f13e6e3b01c90b7a4f3784f8de15d5dcab1b50b6e891eb150834c938b4af6bf",
-        "structures/pbso4.edi": "177c342c60fd3a0b087cb542e5aa7c31209fda745816cd21fd512fab0a780401"
+        "structures/pbso4.edi": "a14c0c79a3ee3e34c1a11e47249ee305ad7f73c3ac708bd5f4f97a64a9587760"
       }
     },
     "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project": {
@@ -2241,27 +2308,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/pr2nio4.edi": "f46766cc6784c097c10fa90a1763ee630032c49e3630a34eef2beab7d8554ca7",
         "project.edi": "56e7e252206e34330f1ba569ca9c3c5220ebff7b063c3fa4244e6e2629f5777c",
-        "structures/pr2nio4.edi": "64af91993e56618578bb56ec2b22e9914ed51121c78cac32ba06f8af2ff601ed"
+        "structures/pr2nio4.edi": "77d2c807974c8c75efd7881cbd6385bbfe84bb9dc7ae0489859ef89197b39fb1"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/pr2nio4.edi": "f46766cc6784c097c10fa90a1763ee630032c49e3630a34eef2beab7d8554ca7",
         "project.edi": "c1c7de9a7ad619d7ef2af9dacd899aef950c8f0186a7e41e35bc64c4a435ed2c",
-        "structures/pr2nio4.edi": "64af91993e56618578bb56ec2b22e9914ed51121c78cac32ba06f8af2ff601ed"
-      }
-    },
-    "docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project": {
-      "iucr_19": {
-        "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/llb_5c2.edi": "ed6383986f5ce59be9f6c7f13c96178775ca5821ccbd9707bad26c58078d09c4",
-        "project.edi": "473b9ba5cd038d09665bb0ae916c12175bdad2c271b3c8b25ba9baec3dd6fd2e",
-        "structures/pr2nio4.edi": "d06d4e9f28e08e2e3f73f41a6e9af327d833661ed745260fed2baa3af1573703"
-      },
-      "iucr_99": {
-        "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/llb_5c2.edi": "ed6383986f5ce59be9f6c7f13c96178775ca5821ccbd9707bad26c58078d09c4",
-        "project.edi": "708f6e30246b99da1429206c1f740e95df92d932915a2275066f05bec11ed8e5",
-        "structures/pr2nio4.edi": "d06d4e9f28e08e2e3f73f41a6e9af327d833661ed745260fed2baa3af1573703"
+        "structures/pr2nio4.edi": "77d2c807974c8c75efd7881cbd6385bbfe84bb9dc7ae0489859ef89197b39fb1"
       }
     },
     "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project": {
@@ -2269,13 +2322,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/heidi.edi": "931f908709a0c86dbdc82d2b67e6cbd80170a948c40314cfd9ed2709d93db333",
         "project.edi": "62f5473e19209c46e082e3335ec7c11b272f9ff92b27dde0128249cfa21801c5",
-        "structures/tb2ti2o7.edi": "d720c69b3ae44d8522e4e8b1be3a28e396ea62a89619933546990ef88b8aa812"
+        "structures/tb2ti2o7.edi": "1d478e3300eff0917b44b9a32c4f0ced1ecd618022fcf213b98515258dcc2297"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/heidi.edi": "931f908709a0c86dbdc82d2b67e6cbd80170a948c40314cfd9ed2709d93db333",
         "project.edi": "d831a5c134225692efc6e0f971be3fc11b45c3c714065f40223e1b7d1cd91189",
-        "structures/tb2ti2o7.edi": "d720c69b3ae44d8522e4e8b1be3a28e396ea62a89619933546990ef88b8aa812"
+        "structures/tb2ti2o7.edi": "1d478e3300eff0917b44b9a32c4f0ced1ecd618022fcf213b98515258dcc2297"
       }
     },
     "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project": {
@@ -2292,30 +2345,16 @@
         "structures/tb2ti2o7.edi": "b147d4eca1758115ce8a8c083b398efa881381aaee5f47db3fac00b879faa28e"
       }
     },
-    "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project": {
-      "iucr_19": {
-        "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/heidi.edi": "83d055394bed5e3e403a9c7fef9758e71101330a81749bda12d44c8967d1438a",
-        "project.edi": "dd64535f02c6b71ebef73416466dee331b637041e6a75fb1fedb6771b6729c9a",
-        "structures/tb2ti2o7.edi": "bac63013ec64afdd3fadf39a8b68c1d17bd903fd49a2c9c2c872c441966c02ab"
-      },
-      "iucr_99": {
-        "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/heidi.edi": "83d055394bed5e3e403a9c7fef9758e71101330a81749bda12d44c8967d1438a",
-        "project.edi": "6f2ceabc2b9b4e0bf57c0425251fbf539f7e0957bd65550e85a204fc32df6a15",
-        "structures/tb2ti2o7.edi": "bac63013ec64afdd3fadf39a8b68c1d17bd903fd49a2c9c2c872c441966c02ab"
-      }
-    },
     "docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project": {
       "iucr_19": {
         "analysis/analysis.edi": "852d422e39691a94fa368c7fe4d425a3899e96606c0b3757824973ba68d0e845",
-        "experiments/heidi.edi": "378511b52bc9464ed2ae3833ce6bf3bb83a00f77e6b8898a80fbae8b89c1596d",
+        "experiments/heidi.edi": "40f52cc685a7f11f750da1dbc10b9909c80a60e83533a5a5d7106678ddfbe32e",
         "project.edi": "316137f5552ab0d81656712bce178d9e9fb064f9920e9d8c0076ab90927c7f3d",
         "structures/tb2ti2o7.edi": "b147d4eca1758115ce8a8c083b398efa881381aaee5f47db3fac00b879faa28e"
       },
       "iucr_99": {
         "analysis/analysis.edi": "852d422e39691a94fa368c7fe4d425a3899e96606c0b3757824973ba68d0e845",
-        "experiments/heidi.edi": "378511b52bc9464ed2ae3833ce6bf3bb83a00f77e6b8898a80fbae8b89c1596d",
+        "experiments/heidi.edi": "40f52cc685a7f11f750da1dbc10b9909c80a60e83533a5a5d7106678ddfbe32e",
         "project.edi": "1f32742b591538081d6f87a7f137a397bab7443235b5e6d93f3ca7091f7d31b9",
         "structures/tb2ti2o7.edi": "b147d4eca1758115ce8a8c083b398efa881381aaee5f47db3fac00b879faa28e"
       }
@@ -2325,37 +2364,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/senju.edi": "aa198fd94dca7ccf1278b291a854203645347bbc68f80a0e34e2b0fc6272f55a",
         "project.edi": "54a936e07eb1c575f887b02dbb2c5cdfd29e618a22c96be9ea1f9a12ef21b1c4",
-        "structures/taurine.edi": "983c5d0fd0b5d4d0a744e3a02f02f2acb96b35253c77d4c532ab7e265b84f7ba"
+        "structures/taurine.edi": "ea53a470fc65cd83b4621d2b04c14fb20af2a79be0a35d34aa5888c953701886"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/senju.edi": "aa198fd94dca7ccf1278b291a854203645347bbc68f80a0e34e2b0fc6272f55a",
         "project.edi": "af8915985ab9ea0e01e4b031d2bfb0b591ccaef846a35291e67fd4e0c8169f1c",
-        "structures/taurine.edi": "983c5d0fd0b5d4d0a744e3a02f02f2acb96b35253c77d4c532ab7e265b84f7ba"
-      }
-    },
-    "docs/user/cli/sc-neut-tof_taurine_fit/project": {
-      "iucr_19": {
-        "analysis/analysis.edi": "9eae73f709e80320a3550de0c95c358647435b7f3cd3798a44793e5381b74bd6",
-        "experiments/senju_1.edi": "e7a3411ff6303944c856234081771d7580ea6ea7c20a4f4e462650a3beffd8cc",
-        "experiments/senju_2.edi": "19100d34c28ea17cd7b742063ecdcd0278a25238c3e0c5a337be38c6d8298e47",
-        "experiments/senju_3.edi": "3385bdfa86b452be20fddba7977b713bfd926b549ab5bbf928163aebeefe3e26",
-        "experiments/senju_4.edi": "dee6edf832020b0ab88fdfd1721d8fad5d193fc5444f79d9be455931b5692a9b",
-        "experiments/senju_5.edi": "4a8945d7e5c0f2b3f053cf823e1e1db0c47308dd7c92f2047be2effe9d18401e",
-        "experiments/senju_6.edi": "7bc4e34b0496f5bec6da039b5df66a513fc5e2655539dfcb1273784dce183faa",
-        "project.edi": "cac7750c30b2bbb2eecbbd8a208f455dd416f47f5322415b59ff2cc17b7efe98",
-        "structures/taurine.edi": "3122f02816c01a383b3e9b46b14a1d9ee1260d86cd1d70ddcca0557f28ef758a"
-      },
-      "iucr_99": {
-        "analysis/analysis.edi": "9eae73f709e80320a3550de0c95c358647435b7f3cd3798a44793e5381b74bd6",
-        "experiments/senju_1.edi": "e7a3411ff6303944c856234081771d7580ea6ea7c20a4f4e462650a3beffd8cc",
-        "experiments/senju_2.edi": "19100d34c28ea17cd7b742063ecdcd0278a25238c3e0c5a337be38c6d8298e47",
-        "experiments/senju_3.edi": "3385bdfa86b452be20fddba7977b713bfd926b549ab5bbf928163aebeefe3e26",
-        "experiments/senju_4.edi": "dee6edf832020b0ab88fdfd1721d8fad5d193fc5444f79d9be455931b5692a9b",
-        "experiments/senju_5.edi": "4a8945d7e5c0f2b3f053cf823e1e1db0c47308dd7c92f2047be2effe9d18401e",
-        "experiments/senju_6.edi": "7bc4e34b0496f5bec6da039b5df66a513fc5e2655539dfcb1273784dce183faa",
-        "project.edi": "c462dc627dec3aa811a10eba6015e9743acb437c4c026972843224e80f5d75cf",
-        "structures/taurine.edi": "3122f02816c01a383b3e9b46b14a1d9ee1260d86cd1d70ddcca0557f28ef758a"
+        "structures/taurine.edi": "ea53a470fc65cd83b4621d2b04c14fb20af2a79be0a35d34aa5888c953701886"
       }
     },
     "tests/fixtures/adp_site_symmetry/gui/cubic": {
@@ -2363,13 +2378,13 @@
         "analysis/analysis.edi": "14fb91e0068a46ee0e8d3591c4e99bb77500303e91053e08282ed4fb8ba70174",
         "experiments/bank.edi": "1cb4cb86f8c7b53728565cf8bcc60d10c4cb6153e9e89da7f2e891bc12630cf0",
         "project.edi": "cec286b699cffb96408214bd8514a5119ff48b2177b6f0e633d019f311fd7709",
-        "structures/structure.edi": "0fcdf2f0dfeea6a5eaa6a10a40e9e21586cc94f640028527789b501a87248f6d"
+        "structures/structure.edi": "8802e83e7c265c9d44062ea06e58b6549301d3212f866b79f8209c586de10f77"
       },
       "iucr_99": {
         "analysis/analysis.edi": "14fb91e0068a46ee0e8d3591c4e99bb77500303e91053e08282ed4fb8ba70174",
         "experiments/bank.edi": "1cb4cb86f8c7b53728565cf8bcc60d10c4cb6153e9e89da7f2e891bc12630cf0",
         "project.edi": "587af7e61d99923b3d013b3bfcfa87798218ccc1bf54291d443e72a860576121",
-        "structures/structure.edi": "0fcdf2f0dfeea6a5eaa6a10a40e9e21586cc94f640028527789b501a87248f6d"
+        "structures/structure.edi": "8802e83e7c265c9d44062ea06e58b6549301d3212f866b79f8209c586de10f77"
       }
     },
     "tests/fixtures/adp_site_symmetry/gui/general": {
@@ -2377,13 +2392,13 @@
         "analysis/analysis.edi": "14fb91e0068a46ee0e8d3591c4e99bb77500303e91053e08282ed4fb8ba70174",
         "experiments/bank.edi": "1cb4cb86f8c7b53728565cf8bcc60d10c4cb6153e9e89da7f2e891bc12630cf0",
         "project.edi": "cec286b699cffb96408214bd8514a5119ff48b2177b6f0e633d019f311fd7709",
-        "structures/structure.edi": "9fa9fbc77a0e47b120198ed3a61484fa8c5e324d7a5a74572cb306fd45f5639e"
+        "structures/structure.edi": "cfdff1041cd8d3eeac6ff622b8132488c35d3568830d9abf133d54a8c2a5442a"
       },
       "iucr_99": {
         "analysis/analysis.edi": "14fb91e0068a46ee0e8d3591c4e99bb77500303e91053e08282ed4fb8ba70174",
         "experiments/bank.edi": "1cb4cb86f8c7b53728565cf8bcc60d10c4cb6153e9e89da7f2e891bc12630cf0",
         "project.edi": "587af7e61d99923b3d013b3bfcfa87798218ccc1bf54291d443e72a860576121",
-        "structures/structure.edi": "9fa9fbc77a0e47b120198ed3a61484fa8c5e324d7a5a74572cb306fd45f5639e"
+        "structures/structure.edi": "cfdff1041cd8d3eeac6ff622b8132488c35d3568830d9abf133d54a8c2a5442a"
       }
     },
     "tests/fixtures/adp_site_symmetry/gui/hexagonal": {
@@ -2391,13 +2406,13 @@
         "analysis/analysis.edi": "14fb91e0068a46ee0e8d3591c4e99bb77500303e91053e08282ed4fb8ba70174",
         "experiments/bank.edi": "1cb4cb86f8c7b53728565cf8bcc60d10c4cb6153e9e89da7f2e891bc12630cf0",
         "project.edi": "cec286b699cffb96408214bd8514a5119ff48b2177b6f0e633d019f311fd7709",
-        "structures/structure.edi": "1ba31b604f3743f97caa221ee2f5886b3c2b69c7fd0da17a030050661a61ca40"
+        "structures/structure.edi": "9b402fb301f224e063f617f2675ef306e9650026f41923ba8ed28faae1827d22"
       },
       "iucr_99": {
         "analysis/analysis.edi": "14fb91e0068a46ee0e8d3591c4e99bb77500303e91053e08282ed4fb8ba70174",
         "experiments/bank.edi": "1cb4cb86f8c7b53728565cf8bcc60d10c4cb6153e9e89da7f2e891bc12630cf0",
         "project.edi": "587af7e61d99923b3d013b3bfcfa87798218ccc1bf54291d443e72a860576121",
-        "structures/structure.edi": "1ba31b604f3743f97caa221ee2f5886b3c2b69c7fd0da17a030050661a61ca40"
+        "structures/structure.edi": "9b402fb301f224e063f617f2675ef306e9650026f41923ba8ed28faae1827d22"
       }
     },
     "tests/fixtures/adp_site_symmetry/gui/tetragonal": {
@@ -2405,20 +2420,20 @@
         "analysis/analysis.edi": "14fb91e0068a46ee0e8d3591c4e99bb77500303e91053e08282ed4fb8ba70174",
         "experiments/bank.edi": "1cb4cb86f8c7b53728565cf8bcc60d10c4cb6153e9e89da7f2e891bc12630cf0",
         "project.edi": "cec286b699cffb96408214bd8514a5119ff48b2177b6f0e633d019f311fd7709",
-        "structures/structure.edi": "4324787192a44433bd51dd6e9d784c980e8ac8d81e6a30c87ef4b52d56342082"
+        "structures/structure.edi": "bd6d4e72768c9da9f2541c10ee7380a9eb4ba0c5820d14482d19a7693c712b73"
       },
       "iucr_99": {
         "analysis/analysis.edi": "14fb91e0068a46ee0e8d3591c4e99bb77500303e91053e08282ed4fb8ba70174",
         "experiments/bank.edi": "1cb4cb86f8c7b53728565cf8bcc60d10c4cb6153e9e89da7f2e891bc12630cf0",
         "project.edi": "587af7e61d99923b3d013b3bfcfa87798218ccc1bf54291d443e72a860576121",
-        "structures/structure.edi": "4324787192a44433bd51dd6e9d784c980e8ac8d81e6a30c87ef4b52d56342082"
+        "structures/structure.edi": "bd6d4e72768c9da9f2541c10ee7380a9eb4ba0c5820d14482d19a7693c712b73"
       }
     },
     "tests/fixtures/analysis_filters/project": {
       "iucr_19": {
         "analysis/analysis.edi": "e4702e320005d9e0d31e78ea4b2c6e5267a119be8360f7480e30ac6edf6ad35f",
         "experiments/east.edi": "875852edf1ff2212c6347e40d85adedaf638f59ef9a9a57163fcbacc50287ccf",
-        "experiments/west.edi": "6b4756fc988742ac57e925fe5a003c5fa4f02b6c49b398640a873de1da20b40b",
+        "experiments/west.edi": "7388596be08c6991bc51df485cd2d3640b008a1898c98c3a24cab63064be428d",
         "project.edi": "d870d5d9f2887eef5f864ba10f49379e7e0b0451643da08e9a735e6d75756f2a",
         "structures/amber.edi": "301f924e2e5e739632944967b1fe84ff318ee8bf7e2b1d637b1ea96dc4d72592",
         "structures/violet.edi": "656d53d38793172f04f847a3aae5f371aea9b7cafea123efc527538266b27102"
@@ -2426,7 +2441,7 @@
       "iucr_99": {
         "analysis/analysis.edi": "e4702e320005d9e0d31e78ea4b2c6e5267a119be8360f7480e30ac6edf6ad35f",
         "experiments/east.edi": "875852edf1ff2212c6347e40d85adedaf638f59ef9a9a57163fcbacc50287ccf",
-        "experiments/west.edi": "6b4756fc988742ac57e925fe5a003c5fa4f02b6c49b398640a873de1da20b40b",
+        "experiments/west.edi": "7388596be08c6991bc51df485cd2d3640b008a1898c98c3a24cab63064be428d",
         "project.edi": "07971d33a4e30dfba43e9d26a2ebc4e70390b444864b217543e822bd42ef1c9b",
         "structures/amber.edi": "301f924e2e5e739632944967b1fe84ff318ee8bf7e2b1d637b1ea96dc4d72592",
         "structures/violet.edi": "656d53d38793172f04f847a3aae5f371aea9b7cafea123efc527538266b27102"
@@ -2449,15 +2464,15 @@
     "tests/fixtures/background_estimate/basis-loader/tof": {
       "iucr_19": {
         "analysis/analysis.edi": "b12cec3b2dff543a690e1e8466048ef5b465a84cbe7ccda420bdbfcd8eb10405",
-        "experiments/pearl.edi": "8cdd0a00a19006168663839c220a801384c3f432bf3959953ce0e9ba33ba01b3",
+        "experiments/pearl.edi": "90dbd856afcd5f1d6ef5d924d724fd535e7b7e5552a415bd03a569b12c87beaf",
         "project.edi": "c34219220a4740753d428ff0fe0f00620e8901976b33114407e15014ec53123d",
-        "structures/ceo2.edi": "f3ab7dbbe1a29c7c04b76251084840cecfa915981551d2344dbfc0e8aa8c360a"
+        "structures/ceo2.edi": "02160e31a7a481ce5d683e24fb1b8e6a1e90d2b77f6c3599a4ec7e79b86c4567"
       },
       "iucr_99": {
         "analysis/analysis.edi": "b12cec3b2dff543a690e1e8466048ef5b465a84cbe7ccda420bdbfcd8eb10405",
-        "experiments/pearl.edi": "8cdd0a00a19006168663839c220a801384c3f432bf3959953ce0e9ba33ba01b3",
+        "experiments/pearl.edi": "90dbd856afcd5f1d6ef5d924d724fd535e7b7e5552a415bd03a569b12c87beaf",
         "project.edi": "5cd2b857de54ece08330b51a156e394fa5b389cbe13a3d89326514c142bf4107",
-        "structures/ceo2.edi": "f3ab7dbbe1a29c7c04b76251084840cecfa915981551d2344dbfc0e8aa8c360a"
+        "structures/ceo2.edi": "02160e31a7a481ce5d683e24fb1b8e6a1e90d2b77f6c3599a4ec7e79b86c4567"
       }
     },
     "tests/fixtures/background_estimate/projects/auto-derived": {
@@ -2491,85 +2506,85 @@
     "tests/fixtures/background_estimate/projects/fitted-auto-chebyshev": {
       "iucr_19": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "b8bf75447cbaec657542a205b491aa76f43641b263944b09e7bcde1bf115027a",
+        "experiments/d20.edi": "98271f0945aa1639ed1c41efc033ec38d6240d6f24a95fc3e7318cc251755f4e",
         "project.edi": "2b579864de9c56a3700f2abcc3f40f6c357429f28ae0721a82974011d27018ac",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "b8bf75447cbaec657542a205b491aa76f43641b263944b09e7bcde1bf115027a",
+        "experiments/d20.edi": "98271f0945aa1639ed1c41efc033ec38d6240d6f24a95fc3e7318cc251755f4e",
         "project.edi": "ca958e2bbbadb735ed344fa6395ae62038d769c219ab2da3ec7592a4fa2195fa",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       }
     },
     "tests/fixtures/background_estimate/projects/fitted-auto-fast-chebyshev": {
       "iucr_19": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "efd72e3375852ba85de1df51a1abadb5a51679ef80b4126bbc9692b13c6411d9",
+        "experiments/d20.edi": "14ff01f467549476d71992dea6a3164d3f0d196a08c886aa43b4066157064b27",
         "project.edi": "2b579864de9c56a3700f2abcc3f40f6c357429f28ae0721a82974011d27018ac",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "efd72e3375852ba85de1df51a1abadb5a51679ef80b4126bbc9692b13c6411d9",
+        "experiments/d20.edi": "14ff01f467549476d71992dea6a3164d3f0d196a08c886aa43b4066157064b27",
         "project.edi": "ca958e2bbbadb735ed344fa6395ae62038d769c219ab2da3ec7592a4fa2195fa",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       }
     },
     "tests/fixtures/background_estimate/projects/fitted-auto-fast-line-segment": {
       "iucr_19": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "bce2471d8dc43657887e543cce3775a0f2e0cb0a40874677ca478c90a4c7bae1",
+        "experiments/d20.edi": "bbb8ecf30b78ca4f707aa3ebd38209e956b05918661cbcd1aeef16a6025e85c6",
         "project.edi": "2b579864de9c56a3700f2abcc3f40f6c357429f28ae0721a82974011d27018ac",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "bce2471d8dc43657887e543cce3775a0f2e0cb0a40874677ca478c90a4c7bae1",
+        "experiments/d20.edi": "bbb8ecf30b78ca4f707aa3ebd38209e956b05918661cbcd1aeef16a6025e85c6",
         "project.edi": "ca958e2bbbadb735ed344fa6395ae62038d769c219ab2da3ec7592a4fa2195fa",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       }
     },
     "tests/fixtures/background_estimate/projects/fitted-auto-fast-polynomial": {
       "iucr_19": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "fccf92736d1f9a4d57ed053163b222bf6d0dcab31487d264e740deb0c7739e1d",
+        "experiments/d20.edi": "9b5ead6e1bfc28ace7598348675aafb9e966ad549ab9ff0dc83f9b5630f4f210",
         "project.edi": "2b579864de9c56a3700f2abcc3f40f6c357429f28ae0721a82974011d27018ac",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "fccf92736d1f9a4d57ed053163b222bf6d0dcab31487d264e740deb0c7739e1d",
+        "experiments/d20.edi": "9b5ead6e1bfc28ace7598348675aafb9e966ad549ab9ff0dc83f9b5630f4f210",
         "project.edi": "ca958e2bbbadb735ed344fa6395ae62038d769c219ab2da3ec7592a4fa2195fa",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       }
     },
     "tests/fixtures/background_estimate/projects/fitted-auto-line-segment": {
       "iucr_19": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "ba026f0555870900df2b25bf1f3c8e96f735a41701914aed5d436359d321c890",
+        "experiments/d20.edi": "f35a6b3cbcd0d7ad1f4a748cfa1e64e04eccfe3e4c80e3f30dfd38203185b4c3",
         "project.edi": "2b579864de9c56a3700f2abcc3f40f6c357429f28ae0721a82974011d27018ac",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "ba026f0555870900df2b25bf1f3c8e96f735a41701914aed5d436359d321c890",
+        "experiments/d20.edi": "f35a6b3cbcd0d7ad1f4a748cfa1e64e04eccfe3e4c80e3f30dfd38203185b4c3",
         "project.edi": "ca958e2bbbadb735ed344fa6395ae62038d769c219ab2da3ec7592a4fa2195fa",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       }
     },
     "tests/fixtures/background_estimate/projects/fitted-auto-polynomial": {
       "iucr_19": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "caa4cef8512490c8b2fa55187088d478994cc9400e7690d773e8562c21c3c5ae",
+        "experiments/d20.edi": "9886b886a82016bd1c399d39ed8b2886572b7779bd83a906bc69297ccc6e6f21",
         "project.edi": "2b579864de9c56a3700f2abcc3f40f6c357429f28ae0721a82974011d27018ac",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0e4e5ff1148ea67b635a5982c2f3e696740bef8ec0fa42f0f1dc337de3054e63",
-        "experiments/d20.edi": "caa4cef8512490c8b2fa55187088d478994cc9400e7690d773e8562c21c3c5ae",
+        "experiments/d20.edi": "9886b886a82016bd1c399d39ed8b2886572b7779bd83a906bc69297ccc6e6f21",
         "project.edi": "ca958e2bbbadb735ed344fa6395ae62038d769c219ab2da3ec7592a4fa2195fa",
-        "structures/cosio.edi": "2cb8699922523031378985c5845a426cf9f43a55b2ac481a49dd9ee3ad413169"
+        "structures/cosio.edi": "bdddcffe63cceace7df802d2780c208d9d322923541ae7f82aee7e35724e652b"
       }
     },
     "tests/fixtures/background_estimate/projects/hrpt": {
@@ -2589,15 +2604,15 @@
     "tests/fixtures/background_estimate/projects/lifecycle-auto": {
       "iucr_19": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/hrpt.edi": "e0a14ac0c776c76f4a08c7f09fd169981ade6f5e799e5d088db010045ad5acda",
+        "experiments/hrpt.edi": "604ed67591dc84bd2b3ae169ac2bc7b4d9fe3f14395c665ecf791e2a60eb4c0a",
         "project.edi": "d44475d40db379e258d1c2dd42402e05b46d93166d4bd771d3a8e3389fbd4fa5",
-        "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+        "structures/lbco.edi": "d007c09e1cad9ec27516c93cfe3c8392b50437aea6daf3f0492b5ebd3b884ecf"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/hrpt.edi": "e0a14ac0c776c76f4a08c7f09fd169981ade6f5e799e5d088db010045ad5acda",
+        "experiments/hrpt.edi": "604ed67591dc84bd2b3ae169ac2bc7b4d9fe3f14395c665ecf791e2a60eb4c0a",
         "project.edi": "a59f72eee98b728f98b684d0c79dd7cd87b0f8187fec952536b11c9ffbc705ed",
-        "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+        "structures/lbco.edi": "d007c09e1cad9ec27516c93cfe3c8392b50437aea6daf3f0492b5ebd3b884ecf"
       }
     },
     "tests/fixtures/background_estimate/projects/lifecycle-excluded": {
@@ -2617,15 +2632,15 @@
     "tests/fixtures/background_estimate/projects/lifecycle-guided": {
       "iucr_19": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/hrpt.edi": "1e2fbb9b6198d55db0e2167efc524a3877c4d338eaf338f93cada2c276a3ad12",
+        "experiments/hrpt.edi": "8b7d956b36777a7f084cd0424ffdbc5948166d8022ec9a8b0d7686e2f125b972",
         "project.edi": "d44475d40db379e258d1c2dd42402e05b46d93166d4bd771d3a8e3389fbd4fa5",
-        "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+        "structures/lbco.edi": "d007c09e1cad9ec27516c93cfe3c8392b50437aea6daf3f0492b5ebd3b884ecf"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/hrpt.edi": "1e2fbb9b6198d55db0e2167efc524a3877c4d338eaf338f93cada2c276a3ad12",
+        "experiments/hrpt.edi": "8b7d956b36777a7f084cd0424ffdbc5948166d8022ec9a8b0d7686e2f125b972",
         "project.edi": "a59f72eee98b728f98b684d0c79dd7cd87b0f8187fec952536b11c9ffbc705ed",
-        "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+        "structures/lbco.edi": "d007c09e1cad9ec27516c93cfe3c8392b50437aea6daf3f0492b5ebd3b884ecf"
       }
     },
     "tests/fixtures/background_estimate/projects/lifecycle-model": {
@@ -2645,13 +2660,13 @@
     "tests/fixtures/background_estimate/projects/lifecycle-saved-placed": {
       "iucr_19": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/hrpt.edi": "1e2fbb9b6198d55db0e2167efc524a3877c4d338eaf338f93cada2c276a3ad12",
+        "experiments/hrpt.edi": "ef47f788d5ad0038b77b72722516fa26dc78bd8f59f5ea6c40fcc3886e9715df",
         "project.edi": "d44475d40db379e258d1c2dd42402e05b46d93166d4bd771d3a8e3389fbd4fa5",
         "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
       },
       "iucr_99": {
         "analysis/analysis.edi": "0b39f4149a1add41cea15157297fb548ce3f53588105aea9d92708526adf4014",
-        "experiments/hrpt.edi": "1e2fbb9b6198d55db0e2167efc524a3877c4d338eaf338f93cada2c276a3ad12",
+        "experiments/hrpt.edi": "ef47f788d5ad0038b77b72722516fa26dc78bd8f59f5ea6c40fcc3886e9715df",
         "project.edi": "a59f72eee98b728f98b684d0c79dd7cd87b0f8187fec952536b11c9ffbc705ed",
         "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
       }
@@ -2659,57 +2674,57 @@
     "tests/fixtures/background_estimate/projects/lifecycle-scan-independent": {
       "iucr_19": {
         "analysis/analysis.edi": "80864d29af5cd3c285e618d056c5d03e45517a50e315b78943e923dce5f71cae",
-        "experiments/hrpt.edi": "e79b168ee1d8150ec8776a7c6f4cc35420a91e612c63d6a8f336beef7ba53fe6",
+        "experiments/hrpt.edi": "b367395b27ddb2da53ae1732dc04a1a9a4d4b0983838b3b1db821f1d0dc47bb1",
         "experiments/scan/0.xy": "2bcfd34d98982276c84bf4f7be073226ab5d7e725348cb3be6f077945976b379",
         "experiments/scan/1.xy": "50e2ade8acf342343614146f183dcff1a271dc10f5007f03c3b850dacf1163be",
         "experiments/scan/2.xy": "1a284aec89b47c8c032eb3c2473014d6498ffbece7437fe040767d6943566317",
         "project.edi": "d44475d40db379e258d1c2dd42402e05b46d93166d4bd771d3a8e3389fbd4fa5",
-        "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+        "structures/lbco.edi": "d007c09e1cad9ec27516c93cfe3c8392b50437aea6daf3f0492b5ebd3b884ecf"
       },
       "iucr_99": {
         "analysis/analysis.edi": "80864d29af5cd3c285e618d056c5d03e45517a50e315b78943e923dce5f71cae",
-        "experiments/hrpt.edi": "e79b168ee1d8150ec8776a7c6f4cc35420a91e612c63d6a8f336beef7ba53fe6",
+        "experiments/hrpt.edi": "b367395b27ddb2da53ae1732dc04a1a9a4d4b0983838b3b1db821f1d0dc47bb1",
         "experiments/scan/0.xy": "2bcfd34d98982276c84bf4f7be073226ab5d7e725348cb3be6f077945976b379",
         "experiments/scan/1.xy": "50e2ade8acf342343614146f183dcff1a271dc10f5007f03c3b850dacf1163be",
         "experiments/scan/2.xy": "1a284aec89b47c8c032eb3c2473014d6498ffbece7437fe040767d6943566317",
         "project.edi": "a59f72eee98b728f98b684d0c79dd7cd87b0f8187fec952536b11c9ffbc705ed",
-        "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+        "structures/lbco.edi": "d007c09e1cad9ec27516c93cfe3c8392b50437aea6daf3f0492b5ebd3b884ecf"
       }
     },
     "tests/fixtures/background_estimate/projects/lifecycle-scan-sequential": {
       "iucr_19": {
         "analysis/analysis.edi": "a7492cf6d343cd5886b1cd1f61614d7ce4e070b6ead8258a14b4e8e33b385354",
-        "experiments/hrpt.edi": "e79b168ee1d8150ec8776a7c6f4cc35420a91e612c63d6a8f336beef7ba53fe6",
+        "experiments/hrpt.edi": "b367395b27ddb2da53ae1732dc04a1a9a4d4b0983838b3b1db821f1d0dc47bb1",
         "experiments/scan/0.xy": "2bcfd34d98982276c84bf4f7be073226ab5d7e725348cb3be6f077945976b379",
         "experiments/scan/1.xy": "50e2ade8acf342343614146f183dcff1a271dc10f5007f03c3b850dacf1163be",
         "experiments/scan/2.xy": "1a284aec89b47c8c032eb3c2473014d6498ffbece7437fe040767d6943566317",
         "project.edi": "d44475d40db379e258d1c2dd42402e05b46d93166d4bd771d3a8e3389fbd4fa5",
-        "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+        "structures/lbco.edi": "d007c09e1cad9ec27516c93cfe3c8392b50437aea6daf3f0492b5ebd3b884ecf"
       },
       "iucr_99": {
         "analysis/analysis.edi": "a7492cf6d343cd5886b1cd1f61614d7ce4e070b6ead8258a14b4e8e33b385354",
-        "experiments/hrpt.edi": "e79b168ee1d8150ec8776a7c6f4cc35420a91e612c63d6a8f336beef7ba53fe6",
+        "experiments/hrpt.edi": "b367395b27ddb2da53ae1732dc04a1a9a4d4b0983838b3b1db821f1d0dc47bb1",
         "experiments/scan/0.xy": "2bcfd34d98982276c84bf4f7be073226ab5d7e725348cb3be6f077945976b379",
         "experiments/scan/1.xy": "50e2ade8acf342343614146f183dcff1a271dc10f5007f03c3b850dacf1163be",
         "experiments/scan/2.xy": "1a284aec89b47c8c032eb3c2473014d6498ffbece7437fe040767d6943566317",
         "project.edi": "a59f72eee98b728f98b684d0c79dd7cd87b0f8187fec952536b11c9ffbc705ed",
-        "structures/lbco.edi": "0bbb3fd534993d642c27806ffdf40b14b4b47f1f6804dc7c72648b9e66278086"
+        "structures/lbco.edi": "d007c09e1cad9ec27516c93cfe3c8392b50437aea6daf3f0492b5ebd3b884ecf"
       }
     },
     "tests/fixtures/background_estimate/projects/readonly-chebyshev": {
       "iucr_19": {
         "analysis/analysis.edi": "7e939f56ef8cddb394e67527f21a7f7f81bd5a106e375b4981ce261209002e17",
-        "experiments/bank.edi": "65fa6d7f87b7136baf4506b7a7ac5d91cb712e31116e87efee71344551d3232a",
+        "experiments/bank.edi": "2f40ba5a614be9e83321d7ba3e528ba3d947d1360aa464dacad197c818659d87",
         "project.edi": "b2c5c4f46381b21b7c7690d86b76752add935b6096d442f0994a37f311eb808f",
-        "structures/phase.edi": "f4f2e3dee0cc2b77549a8dfe9eb6c2862b80eb459f88e6db79995b19ee3dcfef",
-        "structures/phase2.edi": "2e3c02aef12f08bd40fcc1e107138e5a41c2a08dbb5721eea58e2c257151429a"
+        "structures/phase.edi": "4d030e0e52daee13687d44a11e220b473dc2d6404470be9b8a6665fe425bbf6d",
+        "structures/phase2.edi": "36a2684b6043e7a1cb87b199f36e24be3d20f819e312b391b9933e7e85ba7b84"
       },
       "iucr_99": {
         "analysis/analysis.edi": "7e939f56ef8cddb394e67527f21a7f7f81bd5a106e375b4981ce261209002e17",
-        "experiments/bank.edi": "65fa6d7f87b7136baf4506b7a7ac5d91cb712e31116e87efee71344551d3232a",
+        "experiments/bank.edi": "2f40ba5a614be9e83321d7ba3e528ba3d947d1360aa464dacad197c818659d87",
         "project.edi": "a3bbb6e9636e31c05210916d7008ad27db263215875e5c144c240afaec863d8e",
-        "structures/phase.edi": "f4f2e3dee0cc2b77549a8dfe9eb6c2862b80eb459f88e6db79995b19ee3dcfef",
-        "structures/phase2.edi": "2e3c02aef12f08bd40fcc1e107138e5a41c2a08dbb5721eea58e2c257151429a"
+        "structures/phase.edi": "4d030e0e52daee13687d44a11e220b473dc2d6404470be9b8a6665fe425bbf6d",
+        "structures/phase2.edi": "36a2684b6043e7a1cb87b199f36e24be3d20f819e312b391b9933e7e85ba7b84"
       }
     },
     "tests/fixtures/background_estimate/projects/readonly-line-segment": {
@@ -2717,31 +2732,31 @@
         "analysis/analysis.edi": "7e939f56ef8cddb394e67527f21a7f7f81bd5a106e375b4981ce261209002e17",
         "experiments/bank.edi": "94da7dddae8dd58ee400c62f685a398e87f62c7800247465f82d3f8a683b4679",
         "project.edi": "b2c5c4f46381b21b7c7690d86b76752add935b6096d442f0994a37f311eb808f",
-        "structures/phase.edi": "f4f2e3dee0cc2b77549a8dfe9eb6c2862b80eb459f88e6db79995b19ee3dcfef",
-        "structures/phase2.edi": "2e3c02aef12f08bd40fcc1e107138e5a41c2a08dbb5721eea58e2c257151429a"
+        "structures/phase.edi": "4d030e0e52daee13687d44a11e220b473dc2d6404470be9b8a6665fe425bbf6d",
+        "structures/phase2.edi": "36a2684b6043e7a1cb87b199f36e24be3d20f819e312b391b9933e7e85ba7b84"
       },
       "iucr_99": {
         "analysis/analysis.edi": "7e939f56ef8cddb394e67527f21a7f7f81bd5a106e375b4981ce261209002e17",
         "experiments/bank.edi": "94da7dddae8dd58ee400c62f685a398e87f62c7800247465f82d3f8a683b4679",
         "project.edi": "a3bbb6e9636e31c05210916d7008ad27db263215875e5c144c240afaec863d8e",
-        "structures/phase.edi": "f4f2e3dee0cc2b77549a8dfe9eb6c2862b80eb459f88e6db79995b19ee3dcfef",
-        "structures/phase2.edi": "2e3c02aef12f08bd40fcc1e107138e5a41c2a08dbb5721eea58e2c257151429a"
+        "structures/phase.edi": "4d030e0e52daee13687d44a11e220b473dc2d6404470be9b8a6665fe425bbf6d",
+        "structures/phase2.edi": "36a2684b6043e7a1cb87b199f36e24be3d20f819e312b391b9933e7e85ba7b84"
       }
     },
     "tests/fixtures/background_estimate/projects/readonly-polynomial": {
       "iucr_19": {
         "analysis/analysis.edi": "7e939f56ef8cddb394e67527f21a7f7f81bd5a106e375b4981ce261209002e17",
-        "experiments/bank.edi": "a2aa8b2e659740a6daff586e7ff497f06df7e0305178ea2fa0d3ef495aa295fc",
+        "experiments/bank.edi": "35a56be6a40c83de9320f39c7a3dd6f82d9f5a03ce67ecfd8d84fba4a228973b",
         "project.edi": "b2c5c4f46381b21b7c7690d86b76752add935b6096d442f0994a37f311eb808f",
-        "structures/phase.edi": "f4f2e3dee0cc2b77549a8dfe9eb6c2862b80eb459f88e6db79995b19ee3dcfef",
-        "structures/phase2.edi": "2e3c02aef12f08bd40fcc1e107138e5a41c2a08dbb5721eea58e2c257151429a"
+        "structures/phase.edi": "4d030e0e52daee13687d44a11e220b473dc2d6404470be9b8a6665fe425bbf6d",
+        "structures/phase2.edi": "36a2684b6043e7a1cb87b199f36e24be3d20f819e312b391b9933e7e85ba7b84"
       },
       "iucr_99": {
         "analysis/analysis.edi": "7e939f56ef8cddb394e67527f21a7f7f81bd5a106e375b4981ce261209002e17",
-        "experiments/bank.edi": "a2aa8b2e659740a6daff586e7ff497f06df7e0305178ea2fa0d3ef495aa295fc",
+        "experiments/bank.edi": "35a56be6a40c83de9320f39c7a3dd6f82d9f5a03ce67ecfd8d84fba4a228973b",
         "project.edi": "a3bbb6e9636e31c05210916d7008ad27db263215875e5c144c240afaec863d8e",
-        "structures/phase.edi": "f4f2e3dee0cc2b77549a8dfe9eb6c2862b80eb459f88e6db79995b19ee3dcfef",
-        "structures/phase2.edi": "2e3c02aef12f08bd40fcc1e107138e5a41c2a08dbb5721eea58e2c257151429a"
+        "structures/phase.edi": "4d030e0e52daee13687d44a11e220b473dc2d6404470be9b8a6665fe425bbf6d",
+        "structures/phase2.edi": "36a2684b6043e7a1cb87b199f36e24be3d20f819e312b391b9933e7e85ba7b84"
       }
     },
     "tests/fixtures/background_estimate/projects/series-chebyshev": {
@@ -2791,13 +2806,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "5e920da3aa873a0fe52e43ad155d0cf165679a1dadf5cf709c916d991c52be8e",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54"
+        "structures/ncaf.edi": "3d96cf967d9b0fcf5b9c789ea2cb31a900e02fbaac1aa53c0b8eb3ccc8e2c50b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "5d249c3fae7e4d4692ae68f9395343b202a5b5e429b8ace13e3baa702eb50af1",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/ncaf.edi": "45076af473edfb4eae173728bd8447c6c0eb63f0487a9b244263dd64e4de33ea"
+        "structures/ncaf.edi": "da93cf66a299a5a07e6f671651c8248ec72988d78235fe862d17bb9f52607c8d"
       }
     },
     "tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/no_code_type_none": {
@@ -2805,13 +2820,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "7ad260e51ed1e99a389efbfb1b1196f3065352fb15d89b222456941bd972806f",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/ncaf.edi": "124a60f6c85373fa549a4e29b8d97d1ca37b0d1bd1d645dcf9913a67b75e88fc"
+        "structures/ncaf.edi": "6c01b90cac3ce600e020c0a8344dc059f41385e5d019cd92e65bd641b50e0a18"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "da072cb00c083ae35aba2b91c2714c35fb0e798dc1eb879bcbff1222a1215bb5",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/ncaf.edi": "f36fee74e44fa46ff4a67bb6ef19cec87e439dd64dfbc59122a3b86d6c687718"
+        "structures/ncaf.edi": "2a02ab5d840351e109bed3b3d26e08c7762ead12ddcc2842dd3fb4cfcfcf57bf"
       }
     },
     "tests/fixtures/c09_t6_ncaf_5bank_absorption/expected/desired_writer/type_none": {
@@ -2819,13 +2834,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "5e920da3aa873a0fe52e43ad155d0cf165679a1dadf5cf709c916d991c52be8e",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54"
+        "structures/ncaf.edi": "3d96cf967d9b0fcf5b9c789ea2cb31a900e02fbaac1aa53c0b8eb3ccc8e2c50b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "5d249c3fae7e4d4692ae68f9395343b202a5b5e429b8ace13e3baa702eb50af1",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/ncaf.edi": "45076af473edfb4eae173728bd8447c6c0eb63f0487a9b244263dd64e4de33ea"
+        "structures/ncaf.edi": "da93cf66a299a5a07e6f671651c8248ec72988d78235fe862d17bb9f52607c8d"
       }
     },
     "tests/fixtures/c09_t6_ncaf_5bank_absorption/key_absent_project": {
@@ -2833,13 +2848,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "5e920da3aa873a0fe52e43ad155d0cf165679a1dadf5cf709c916d991c52be8e",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54"
+        "structures/ncaf.edi": "3d96cf967d9b0fcf5b9c789ea2cb31a900e02fbaac1aa53c0b8eb3ccc8e2c50b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "5d249c3fae7e4d4692ae68f9395343b202a5b5e429b8ace13e3baa702eb50af1",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/ncaf.edi": "45076af473edfb4eae173728bd8447c6c0eb63f0487a9b244263dd64e4de33ea"
+        "structures/ncaf.edi": "da93cf66a299a5a07e6f671651c8248ec72988d78235fe862d17bb9f52607c8d"
       }
     },
     "tests/fixtures/c09_t6_ncaf_5bank_absorption/type_none_project": {
@@ -2847,13 +2862,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "5e920da3aa873a0fe52e43ad155d0cf165679a1dadf5cf709c916d991c52be8e",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/ncaf.edi": "8d2cfac260741c78ff52859c25a7d205483de03a8dad3f824c84929a677f0a54"
+        "structures/ncaf.edi": "3d96cf967d9b0fcf5b9c789ea2cb31a900e02fbaac1aa53c0b8eb3ccc8e2c50b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/wish_5_6.edi": "5d249c3fae7e4d4692ae68f9395343b202a5b5e429b8ace13e3baa702eb50af1",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/ncaf.edi": "45076af473edfb4eae173728bd8447c6c0eb63f0487a9b244263dd64e4de33ea"
+        "structures/ncaf.edi": "da93cf66a299a5a07e6f671651c8248ec72988d78235fe862d17bb9f52607c8d"
       }
     },
     "tests/fixtures/c34_t28_baseline/freshness-input": {
@@ -2873,23 +2888,23 @@
     "tests/fixtures/c34_t28_performance/project": {
       "iucr_19": {
         "analysis/analysis.edi": "8894e2315e7d8c9f1c3c28b4691a208bd925518e6c8b65df80b0d4b70b1b5dc2",
-        "experiments/wish_1_10.edi": "21b2a15bae074836c27ae450fe9d87c0a1a8c65896e06264291b23f90041c6df",
+        "experiments/wish_1_10.edi": "5b20cb383a4ac54971a23ed27c8547fa88a5427e202c33fcbab79e20c5d9b018",
         "experiments/wish_2_9.edi": "4672c46157bb61b1b0dc74ceb5bad4d37f0297cb01e6ba879a6798d25d67262b",
         "experiments/wish_3_8.edi": "05886971364520307208822b9afbe1fe2b76d474fe186a41aef25f9fe44e6c4d",
         "experiments/wish_4_7.edi": "4b7f46ee318d1c1c8e285ecae5db6be09eac7d2a868d2611e212e6d942df9b0e",
         "experiments/wish_5_6.edi": "51138c7dc158ba655da918bcad34814e828a6b6eb51c23e8b3f088c41ce5cd4b",
         "project.edi": "632244fb7cb029074b35c35445534f1f2e6997f5e9537ff311230252738c08d5",
-        "structures/ncaf.edi": "5ab0fd22eab21a5286af2649a88fd94cde4c5ad99ecb962bf5e77f8dd140c5a5"
+        "structures/ncaf.edi": "f96852e539c78883a86da120e389ed184295b741a5bc9e84f46003245f3c93d9"
       },
       "iucr_99": {
         "analysis/analysis.edi": "8894e2315e7d8c9f1c3c28b4691a208bd925518e6c8b65df80b0d4b70b1b5dc2",
-        "experiments/wish_1_10.edi": "21b2a15bae074836c27ae450fe9d87c0a1a8c65896e06264291b23f90041c6df",
+        "experiments/wish_1_10.edi": "5b20cb383a4ac54971a23ed27c8547fa88a5427e202c33fcbab79e20c5d9b018",
         "experiments/wish_2_9.edi": "4672c46157bb61b1b0dc74ceb5bad4d37f0297cb01e6ba879a6798d25d67262b",
         "experiments/wish_3_8.edi": "05886971364520307208822b9afbe1fe2b76d474fe186a41aef25f9fe44e6c4d",
         "experiments/wish_4_7.edi": "4b7f46ee318d1c1c8e285ecae5db6be09eac7d2a868d2611e212e6d942df9b0e",
         "experiments/wish_5_6.edi": "51138c7dc158ba655da918bcad34814e828a6b6eb51c23e8b3f088c41ce5cd4b",
         "project.edi": "4cf66f590c00ccac207b4ec0971729c5ca1bf27995eb91a81e514ccf95d5440a",
-        "structures/ncaf.edi": "5ab0fd22eab21a5286af2649a88fd94cde4c5ad99ecb962bf5e77f8dd140c5a5"
+        "structures/ncaf.edi": "f96852e539c78883a86da120e389ed184295b741a5bc9e84f46003245f3c93d9"
       }
     },
     "tests/fixtures/constraint_expressions/project": {
@@ -3043,23 +3058,23 @@
     "tests/fixtures/e02_t2_ncaf_5bank/project": {
       "iucr_19": {
         "analysis/analysis.edi": "32a0200a45754fba92d9fca8bc76ac326e7c9c6a25e256bb856be25785bf9493",
-        "experiments/wish_1_10.edi": "5ed4ae82161808c28f29b6bd4748ee97acbe4af30a4a3eb931e04e90a14007f4",
+        "experiments/wish_1_10.edi": "0913d589a0178ed586f8f5b65ba070d85566a3ef6f9c03f7e12d0adb8c79d0f3",
         "experiments/wish_2_9.edi": "670cb61bd26f4c3cdcd68a10e189ece7f1433d562dacacf6b33352ece379ba77",
         "experiments/wish_3_8.edi": "b79abd5d688652f54c2b536e7d62a72d492f24cd40e689a9d50453140c02d88b",
         "experiments/wish_4_7.edi": "23101fcb7a332f948fde42f6e7f765ea12bc9b757fa31c1ed2a84a167583d0c9",
         "experiments/wish_5_6.edi": "f7082b0c307f80dea0dbf3f712c38d9d91ce020ff242732aaae13c24873745a0",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/ncaf.edi": "2d8cc79ec8e989e015323f9ea448c0203a8aac7a9b944fb385f3b252b4469cad"
+        "structures/ncaf.edi": "5c598829a84896e2ba5de4f78306a61491704c977af110010b59396a0d352d6b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "32a0200a45754fba92d9fca8bc76ac326e7c9c6a25e256bb856be25785bf9493",
-        "experiments/wish_1_10.edi": "5ed4ae82161808c28f29b6bd4748ee97acbe4af30a4a3eb931e04e90a14007f4",
+        "experiments/wish_1_10.edi": "0913d589a0178ed586f8f5b65ba070d85566a3ef6f9c03f7e12d0adb8c79d0f3",
         "experiments/wish_2_9.edi": "670cb61bd26f4c3cdcd68a10e189ece7f1433d562dacacf6b33352ece379ba77",
         "experiments/wish_3_8.edi": "b79abd5d688652f54c2b536e7d62a72d492f24cd40e689a9d50453140c02d88b",
         "experiments/wish_4_7.edi": "23101fcb7a332f948fde42f6e7f765ea12bc9b757fa31c1ed2a84a167583d0c9",
         "experiments/wish_5_6.edi": "f7082b0c307f80dea0dbf3f712c38d9d91ce020ff242732aaae13c24873745a0",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/ncaf.edi": "2d8cc79ec8e989e015323f9ea448c0203a8aac7a9b944fb385f3b252b4469cad"
+        "structures/ncaf.edi": "5c598829a84896e2ba5de4f78306a61491704c977af110010b59396a0d352d6b"
       }
     },
     "tests/fixtures/e04_t1/editable-project": {
@@ -3135,13 +3150,13 @@
     "tests/fixtures/e04_t1/reference/unlisted legacy project/project": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/dream.edi": "b356c942fb032b530786431b2beab321e14cd84ae8cf059653c49db80bae1645",
+        "experiments/dream.edi": "dda9402dae931a982f2f7ff5195ab4c868fabde607a08ac113c29601672a5b9d",
         "project.edi": "49b868de6b2044981d9ee7476677bda0dd146a8fff22dad167d39206ba2863de",
         "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/dream.edi": "b356c942fb032b530786431b2beab321e14cd84ae8cf059653c49db80bae1645",
+        "experiments/dream.edi": "dda9402dae931a982f2f7ff5195ab4c868fabde607a08ac113c29601672a5b9d",
         "project.edi": "a563a045667964c40bc68bcc71d87834520006098753a0376ff3452b736a1d8f",
         "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613"
       }
@@ -3149,13 +3164,13 @@
     "tests/fixtures/e04_t1/reference/unused-free": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/dream.edi": "d6f521d7405b8764c338ffe72b098536c6e3a0d3c4a9fd2ce77cde3f6997521c",
+        "experiments/dream.edi": "a46314d2c05afc3296f0e07c401e541d065deff758e94e92b7c18dc8a12e655b",
         "project.edi": "49b868de6b2044981d9ee7476677bda0dd146a8fff22dad167d39206ba2863de",
         "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/dream.edi": "d6f521d7405b8764c338ffe72b098536c6e3a0d3c4a9fd2ce77cde3f6997521c",
+        "experiments/dream.edi": "a46314d2c05afc3296f0e07c401e541d065deff758e94e92b7c18dc8a12e655b",
         "project.edi": "a563a045667964c40bc68bcc71d87834520006098753a0376ff3452b736a1d8f",
         "structures/diamond.edi": "57650796c81a5963ee142a26847f89d9dac23cb6bc018406c77c6141a68f2613"
       }
@@ -3427,15 +3442,15 @@
     "tests/fixtures/fit_quality/fcj": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/echidna.edi": "4ff3e1164f99e1922c000a448ac3c07846d46d8e4b375672157cff9b5f961875",
+        "experiments/echidna.edi": "dd749768e7f2ce34e5c8838ae139d002c5d8def2e9dc65e83852bd3588eca092",
         "project.edi": "007e9e85d1c086f8b31790975ebdcdfc8c7d2ce0bfe67bbdae936e7d14f5d0f0",
-        "structures/lab6.edi": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d"
+        "structures/lab6.edi": "84d95fe347757312356b8bcc2640a26f7dfc0048bb443cac3825d584c932a1a8"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/echidna.edi": "4ff3e1164f99e1922c000a448ac3c07846d46d8e4b375672157cff9b5f961875",
+        "experiments/echidna.edi": "dd749768e7f2ce34e5c8838ae139d002c5d8def2e9dc65e83852bd3588eca092",
         "project.edi": "6cad3e4479738ddfe28bd0949720a41fcb539aab7fc4a336b484ccf9e4f4490a",
-        "structures/lab6.edi": "ae52d392119f81a94e77ba4128ee2afc447fbcd3bdd9cdc6e2fea56eba54074d"
+        "structures/lab6.edi": "84d95fe347757312356b8bcc2640a26f7dfc0048bb443cac3825d584c932a1a8"
       }
     },
     "tests/fixtures/fit_quality/fullprof-model": {
@@ -3443,13 +3458,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/hrpt.edi": "96203eeff0815b0904207df6e74eac884974fb517d1267a46198e3474342742d",
         "project.edi": "696dbf66316cd6ac65c7b485142c3050bf1aa61f537ecbf837bb96fdd35c4e08",
-        "structures/lbco.edi": "4fd22c092fd3478504b97f93d86b13b7c5041fc0d25e13d6add916b93d8c25b2"
+        "structures/lbco.edi": "5aba77fc6ed2a6914441aa172a36b53d6451301b952614842c30a68cb859e31b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/hrpt.edi": "96203eeff0815b0904207df6e74eac884974fb517d1267a46198e3474342742d",
         "project.edi": "5eae6bd50081fa1236a2f0503b332bb3181fab93ab983f64695b01655522be27",
-        "structures/lbco.edi": "4fd22c092fd3478504b97f93d86b13b7c5041fc0d25e13d6add916b93d8c25b2"
+        "structures/lbco.edi": "5aba77fc6ed2a6914441aa172a36b53d6451301b952614842c30a68cb859e31b"
       }
     },
     "tests/fixtures/fit_quality/uncertainty": {
@@ -3518,38 +3533,38 @@
     },
     "tests/fixtures/fit_tables/five": {
       "iucr_19": {
-        "analysis/analysis.edi": "9caa1eafb4a68ca72e096443e9e42f89d38955567ab05243ddb55f5e7637be49",
-        "experiments/wish_1_10.edi": "2a450e2c78104cb6b53ea1e486c6b20b43ad210713c0271280e1344dcf840305",
-        "experiments/wish_2_9.edi": "44f6fa2a30eafe6c3da7986442c6009413706a3a87f83340a87f3e1b2c4abecc",
-        "experiments/wish_3_8.edi": "27472c9e4f6b0b1623c1f6decfde012c84729972b601900a62418707d562e48a",
-        "experiments/wish_4_7.edi": "bf6e99cfde7852d844a3e9a4932e6d2fe2a25ce379ae5a47f88d812eba71b347",
-        "experiments/wish_5_6.edi": "1cf1f52e825482ebae559b6166e6b1193cd16e9d8feb38a77ac8376329d7616f",
+        "analysis/analysis.edi": "b7190a6d7d339b9b58380c1bb8c14f0e5660c93ec9b4e233530819071e891682",
+        "experiments/wish_1_10.edi": "8b59e466a2d277d2e7129c1f3a780b471b8b881e6aadb8d0406b257c15c47740",
+        "experiments/wish_2_9.edi": "41b9731404e6d5e19f95bc7ec27f0a173dc3bbd075c9a911ed929b57490662da",
+        "experiments/wish_3_8.edi": "ace19a3d448924ae2ec60a2dc8a25490786d0b0518350bcaf2c997c295169fb8",
+        "experiments/wish_4_7.edi": "54e07daaa5fdd98f8616c73d034bf36fac2dad9b9d948e2e0c786306a84fc264",
+        "experiments/wish_5_6.edi": "92365904d8359440a8e7aec01ff6a685c66ceb9cf4504921fec8b5b598bc02b5",
         "project.edi": "bf89fe639135e1015bda5c0234db835e551f6c3f879da1abfb4d1ac7aecfe6f5",
-        "structures/ncaf.edi": "1ad70ab6e47b6c17c7fa4d218d2a0317b396c61132c63c89b9632c304aebea35"
+        "structures/ncaf.edi": "6a672f31d4c94181235650eb94dc92c4c4c9c0d3a6b7c3fd0c9bc598ba2459aa"
       },
       "iucr_99": {
-        "analysis/analysis.edi": "9caa1eafb4a68ca72e096443e9e42f89d38955567ab05243ddb55f5e7637be49",
-        "experiments/wish_1_10.edi": "afe42f1d1ef9ab3661b83fe056b5f13de094a3905a6f645f0084449ca8762548",
-        "experiments/wish_2_9.edi": "77890d7845a1d76b5daf0b98ed69d1de560e93bd27845ec1be4b55300e9d2905",
-        "experiments/wish_3_8.edi": "455637c1dc2883c56b4eb152015341efa64f2d9f6b4ea01394c3497926825572",
-        "experiments/wish_4_7.edi": "f7bea841e4bac0a6f9681dd9e97d7f13ab0d60d1c00f3450972c79edea164c61",
-        "experiments/wish_5_6.edi": "00d6e21c792afce06bd261edd3d1c0f94a51cefc1b7f4344db88477b748c2269",
+        "analysis/analysis.edi": "b7190a6d7d339b9b58380c1bb8c14f0e5660c93ec9b4e233530819071e891682",
+        "experiments/wish_1_10.edi": "eab00fc7f73e0f856d440826f356ce9b0a4448b756452acbd4ff81ce40dd8968",
+        "experiments/wish_2_9.edi": "32ae7b3c20f3125b2eb685b474961099c298e2253b65d1568c22fb9e5426e922",
+        "experiments/wish_3_8.edi": "ff2394760ee8e91a44b6c0b7023b871e2fe7307966962f4bc7a793d8fc44372b",
+        "experiments/wish_4_7.edi": "add0f143a87adce74bfc8799e926dcc7107a249f3bdd167d9574fe50b9c1536d",
+        "experiments/wish_5_6.edi": "c1d95d78654b444f0321811d81a74f40c4264e1530ae012fcf7f31b9b160422b",
         "project.edi": "0a3378f73b8b15788b957ded58a7c4da685a4f60e7e85e92b66461a26a1ccc95",
-        "structures/ncaf.edi": "91d8361a414ca9cee759992adfe39a7d90e10443ea162cc76a576e8e65c2e055"
+        "structures/ncaf.edi": "f7e1d7d8c1c9370d81705d3a84b06c72bc4689a7ad92d146f8ac23512635a8d6"
       }
     },
     "tests/fixtures/fit_tables/one": {
       "iucr_19": {
-        "analysis/analysis.edi": "d66f3319626acd428ff571415bfe103e8393348d526305ddfb2f282f0f5a0df5",
-        "experiments/wish_1_10.edi": "2a450e2c78104cb6b53ea1e486c6b20b43ad210713c0271280e1344dcf840305",
+        "analysis/analysis.edi": "23ea08623650011931fb36e629c5fa7355e38947f43d8bacdfba57dab07af120",
+        "experiments/wish_1_10.edi": "8b59e466a2d277d2e7129c1f3a780b471b8b881e6aadb8d0406b257c15c47740",
         "project.edi": "bf89fe639135e1015bda5c0234db835e551f6c3f879da1abfb4d1ac7aecfe6f5",
-        "structures/ncaf.edi": "1ad70ab6e47b6c17c7fa4d218d2a0317b396c61132c63c89b9632c304aebea35"
+        "structures/ncaf.edi": "6a672f31d4c94181235650eb94dc92c4c4c9c0d3a6b7c3fd0c9bc598ba2459aa"
       },
       "iucr_99": {
-        "analysis/analysis.edi": "d66f3319626acd428ff571415bfe103e8393348d526305ddfb2f282f0f5a0df5",
-        "experiments/wish_1_10.edi": "afe42f1d1ef9ab3661b83fe056b5f13de094a3905a6f645f0084449ca8762548",
+        "analysis/analysis.edi": "23ea08623650011931fb36e629c5fa7355e38947f43d8bacdfba57dab07af120",
+        "experiments/wish_1_10.edi": "eab00fc7f73e0f856d440826f356ce9b0a4448b756452acbd4ff81ce40dd8968",
         "project.edi": "0a3378f73b8b15788b957ded58a7c4da685a4f60e7e85e92b66461a26a1ccc95",
-        "structures/ncaf.edi": "91d8361a414ca9cee759992adfe39a7d90e10443ea162cc76a576e8e65c2e055"
+        "structures/ncaf.edi": "f7e1d7d8c1c9370d81705d3a84b06c72bc4689a7ad92d146f8ac23512635a8d6"
       }
     },
     "tests/fixtures/legacy_project_load/chebyshev": {
@@ -3653,16 +3668,16 @@
     "tests/fixtures/multiphase/beer/projects/initial": {
       "iucr_19": {
         "analysis/analysis.edi": "dc254a9e94049f89b530a6e48254341a38f9f46918e189cf57a99069a33d9206",
-        "experiments/expt_n2.edi": "dc507dfb65e039bf70d3455c3db45365213292ccd99a8257da348afe110d7ddd",
-        "experiments/expt_s2.edi": "55e88bfc52a27f67588e02ab88bf00348eaa6459bae4f835b5946c708a9aaa74",
+        "experiments/expt_n2.edi": "b7cee21b6cce36b83885b925da48374968de13f6f5a13fd64a69aff6877ca4ee",
+        "experiments/expt_s2.edi": "21f7ccd36c17ca8b4602ed77d791a167a3b30ecd9aba23820192d05315ecfd3e",
         "project.edi": "b82094e69890bc71bf5e14e53fa523ab88b771f71cb224511231f3ba223d4048",
         "structures/austenite.edi": "fee197f1f24b84f7f7044a465089939e798860d0a763f8348f11ab0032b9b5be",
         "structures/ferrite.edi": "4a36d4ff5daf2f3867f023422177aeb3b33c762dc85813e468b706e06587ba3b"
       },
       "iucr_99": {
         "analysis/analysis.edi": "dc254a9e94049f89b530a6e48254341a38f9f46918e189cf57a99069a33d9206",
-        "experiments/expt_n2.edi": "dc507dfb65e039bf70d3455c3db45365213292ccd99a8257da348afe110d7ddd",
-        "experiments/expt_s2.edi": "55e88bfc52a27f67588e02ab88bf00348eaa6459bae4f835b5946c708a9aaa74",
+        "experiments/expt_n2.edi": "b7cee21b6cce36b83885b925da48374968de13f6f5a13fd64a69aff6877ca4ee",
+        "experiments/expt_s2.edi": "21f7ccd36c17ca8b4602ed77d791a167a3b30ecd9aba23820192d05315ecfd3e",
         "project.edi": "67e60ad9401f049dedf683d5f9c130532c9c97cd4a667633f4364f174aa91574",
         "structures/austenite.edi": "fee197f1f24b84f7f7044a465089939e798860d0a763f8348f11ab0032b9b5be",
         "structures/ferrite.edi": "4a36d4ff5daf2f3867f023422177aeb3b33c762dc85813e468b706e06587ba3b"
@@ -3671,16 +3686,16 @@
     "tests/fixtures/multiphase/beer/projects/second-fit": {
       "iucr_19": {
         "analysis/analysis.edi": "dc254a9e94049f89b530a6e48254341a38f9f46918e189cf57a99069a33d9206",
-        "experiments/expt_n2.edi": "d7b18981df7ec8809c9fbff97d3a762fe73071ee8788709743ff52687792fe3b",
-        "experiments/expt_s2.edi": "a03a646968e4260467d09fa2d32c7a66db8a03fe2d9f71467a3fc6e9b26aacce",
+        "experiments/expt_n2.edi": "3577b4aea005938ed4ee3bc9c72c0bbd025f7074401f7e29524d432d681eaee6",
+        "experiments/expt_s2.edi": "cb608a167466efda8c100db6672144e30cc1117a3ae5964417cf09e5fa27d356",
         "project.edi": "b82094e69890bc71bf5e14e53fa523ab88b771f71cb224511231f3ba223d4048",
         "structures/austenite.edi": "16c11c65729ac54057fd4be6cf99cff0a8c21cd86941fb8f7f0fa9496c674056",
         "structures/ferrite.edi": "25bd198eb4d63a7176a64a6fea78b8704912d5ede57c270d9185dc8f999f6426"
       },
       "iucr_99": {
         "analysis/analysis.edi": "dc254a9e94049f89b530a6e48254341a38f9f46918e189cf57a99069a33d9206",
-        "experiments/expt_n2.edi": "b27423ef8df7181914370b725b61c2fec5c6e7f779d35014f9eb2fd64cac1793",
-        "experiments/expt_s2.edi": "bfd1ca5cd5dc9f5c298777eb792d0551803277a9af48be445dfe4806174e29d8",
+        "experiments/expt_n2.edi": "b784600858e8693a4651ae219e367150605aea8f5bf594a02a0a9050337b9e13",
+        "experiments/expt_s2.edi": "ed36e724cf594d0338d4a51fd19fef11d0f082441457394e7639adf8905b14b2",
         "project.edi": "67e60ad9401f049dedf683d5f9c130532c9c97cd4a667633f4364f174aa91574",
         "structures/austenite.edi": "16c11c65729ac54057fd4be6cf99cff0a8c21cd86941fb8f7f0fa9496c674056",
         "structures/ferrite.edi": "25bd198eb4d63a7176a64a6fea78b8704912d5ede57c270d9185dc8f999f6426"
@@ -3873,41 +3888,41 @@
     "tests/fixtures/scan_template/project": {
       "iucr_19": {
         "analysis/analysis.edi": "5c074878dd0de7de1e206762c86af54af0a2bc23164c9f0324c4b2c5053c1851",
-        "experiments/d20.edi": "bd9bcc1370e5cb534a86ed5e03a0842305b3a2fe473bfd894d3e4b1088de174f",
+        "experiments/d20.edi": "e93ea755a32f5796834eb665979941f9603471a42f681b0c79e8693976477ef4",
         "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
         "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
         "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
         "project.edi": "51a1d790ce5b91294c29174247b1f731faafbdb14cacb48dab8e21be094261df",
-        "structures/cosio.edi": "22af31886bdebab7852b8f751ed5365dd732c327e06d4c2c62cf8ef8d20bb779"
+        "structures/cosio.edi": "442d9f36e51b28ab6c6f7387086eca318a93357e5ab9ead200e70b3452bbe8ae"
       },
       "iucr_99": {
         "analysis/analysis.edi": "5c074878dd0de7de1e206762c86af54af0a2bc23164c9f0324c4b2c5053c1851",
-        "experiments/d20.edi": "bd9bcc1370e5cb534a86ed5e03a0842305b3a2fe473bfd894d3e4b1088de174f",
+        "experiments/d20.edi": "e93ea755a32f5796834eb665979941f9603471a42f681b0c79e8693976477ef4",
         "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
         "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
         "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
         "project.edi": "feabf3f4301744991299758b8f07bb88c90853ab75d472e85d5d13fb52c7d55c",
-        "structures/cosio.edi": "22af31886bdebab7852b8f751ed5365dd732c327e06d4c2c62cf8ef8d20bb779"
+        "structures/cosio.edi": "442d9f36e51b28ab6c6f7387086eca318a93357e5ab9ead200e70b3452bbe8ae"
       }
     },
     "tests/fixtures/shared_correlations/scan-input": {
       "iucr_19": {
         "analysis/analysis.edi": "7df157f367e63f418597cbfb56928e752dbd4296173baf972e3222d661c1d5b7",
-        "experiments/d20.edi": "bd9bcc1370e5cb534a86ed5e03a0842305b3a2fe473bfd894d3e4b1088de174f",
+        "experiments/d20.edi": "e93ea755a32f5796834eb665979941f9603471a42f681b0c79e8693976477ef4",
         "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
         "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
         "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
         "project.edi": "f05ef916b1e2a82be30a81d29e0e17ace95a2147f5048576ad1064191c690bd2",
-        "structures/cosio.edi": "22af31886bdebab7852b8f751ed5365dd732c327e06d4c2c62cf8ef8d20bb779"
+        "structures/cosio.edi": "442d9f36e51b28ab6c6f7387086eca318a93357e5ab9ead200e70b3452bbe8ae"
       },
       "iucr_99": {
         "analysis/analysis.edi": "7df157f367e63f418597cbfb56928e752dbd4296173baf972e3222d661c1d5b7",
-        "experiments/d20.edi": "bd9bcc1370e5cb534a86ed5e03a0842305b3a2fe473bfd894d3e4b1088de174f",
+        "experiments/d20.edi": "e93ea755a32f5796834eb665979941f9603471a42f681b0c79e8693976477ef4",
         "experiments/d20_scan/all594687.dat": "13d209575f8ddfeaa32183cbfe6ee457cdbff505763cdca09be1d7c801e8415d",
         "experiments/d20_scan/all594791.dat": "0ec0607b473b3f618d3f56d494eca9184e8f38751ffaabdb77172a45f3b3999f",
         "experiments/d20_scan/all594842.dat": "95656a5ee8468c3a012010831a05889c093d08d7779b1ac77d4918cb0e823590",
         "project.edi": "389399bea2268d1b47b936cace16c307d68e63284ea6f7e4804aa2dcbfeed4e2",
-        "structures/cosio.edi": "22af31886bdebab7852b8f751ed5365dd732c327e06d4c2c62cf8ef8d20bb779"
+        "structures/cosio.edi": "442d9f36e51b28ab6c6f7387086eca318a93357e5ab9ead200e70b3452bbe8ae"
       }
     },
     "tests/fixtures/shared_correlations/single-input": {
@@ -3936,7 +3951,7 @@
         "experiments/senju_5.edi": "6cdd196b4a81cdd5164988a3a4f2aa358d2a18d4faa9ae60d1e14833d413de7e",
         "experiments/senju_6.edi": "e98d2bec30c06f7eebc4aa7b864ad0fe12cb6928e2784f80f249735c3e585efd",
         "project.edi": "cac7750c30b2bbb2eecbbd8a208f455dd416f47f5322415b59ff2cc17b7efe98",
-        "structures/taurine.edi": "e5104f79a4cfef321bd5f6fd9fc77918901a118e86dc9ee677796a3f072d867e"
+        "structures/taurine.edi": "1534241ae0f8495edb1bf9fdbf45a7dec66bd66fd642e04138e62e028ae3369e"
       },
       "iucr_99": {
         "analysis/analysis.edi": "9eae73f709e80320a3550de0c95c358647435b7f3cd3798a44793e5381b74bd6",
@@ -3947,19 +3962,19 @@
         "experiments/senju_5.edi": "6cdd196b4a81cdd5164988a3a4f2aa358d2a18d4faa9ae60d1e14833d413de7e",
         "experiments/senju_6.edi": "e98d2bec30c06f7eebc4aa7b864ad0fe12cb6928e2784f80f249735c3e585efd",
         "project.edi": "c462dc627dec3aa811a10eba6015e9743acb437c4c026972843224e80f5d75cf",
-        "structures/taurine.edi": "e5104f79a4cfef321bd5f6fd9fc77918901a118e86dc9ee677796a3f072d867e"
+        "structures/taurine.edi": "1534241ae0f8495edb1bf9fdbf45a7dec66bd66fd642e04138e62e028ae3369e"
       }
     },
     "tests/fixtures/single_crystal/fitting/becker-coppens/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project": {
       "iucr_19": {
         "analysis/analysis.edi": "d4e4fdaeb025c9129cc4b02887156962fe2af1c032888f7f44f032fcc603e126",
-        "experiments/experiment.edi": "7eda71c819238d58380bd3395802d4552f5666776756c8db920e4c11184f9483",
+        "experiments/experiment.edi": "3d3fbe60bf75f2d60c2f156dda4279d74efd0f90422feb65a3522706dabe2f93",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
         "structures/structure.edi": "07f95590b5c2973dd45ea02315720313f3f8900f755962f851ab45c0bbb60e18"
       },
       "iucr_99": {
         "analysis/analysis.edi": "d4e4fdaeb025c9129cc4b02887156962fe2af1c032888f7f44f032fcc603e126",
-        "experiments/experiment.edi": "7eda71c819238d58380bd3395802d4552f5666776756c8db920e4c11184f9483",
+        "experiments/experiment.edi": "3d3fbe60bf75f2d60c2f156dda4279d74efd0f90422feb65a3522706dabe2f93",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
         "structures/structure.edi": "07f95590b5c2973dd45ea02315720313f3f8900f755962f851ab45c0bbb60e18"
       }
@@ -3969,13 +3984,13 @@
         "analysis/analysis.edi": "840ec89a79889d8eea4aec4b1f0e96f7cb26dcccf1ed223d284c14ebe7ab0957",
         "experiments/experiment.edi": "4a2d1db09cae668ab942b64d2bf536c339dcb326c713cc859a2d361a509d629e",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/structure.edi": "9072888ef182fba17da1b07c18e5e7eff4b53d7f0715c2aee0d318b305eddbf6"
+        "structures/structure.edi": "5442dbd5c163e63107342ad98ba1000d5c470d94b3d862294b7cfa2ca8e7cdc9"
       },
       "iucr_99": {
         "analysis/analysis.edi": "840ec89a79889d8eea4aec4b1f0e96f7cb26dcccf1ed223d284c14ebe7ab0957",
         "experiments/experiment.edi": "4a2d1db09cae668ab942b64d2bf536c339dcb326c713cc859a2d361a509d629e",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/structure.edi": "9072888ef182fba17da1b07c18e5e7eff4b53d7f0715c2aee0d318b305eddbf6"
+        "structures/structure.edi": "5442dbd5c163e63107342ad98ba1000d5c470d94b3d862294b7cfa2ca8e7cdc9"
       }
     },
     "tests/fixtures/single_crystal/fitting/fullprof/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project": {
@@ -3983,13 +3998,13 @@
         "analysis/analysis.edi": "840ec89a79889d8eea4aec4b1f0e96f7cb26dcccf1ed223d284c14ebe7ab0957",
         "experiments/experiment.edi": "172a537944c21952f4e52443bd6f7867a5cb86626ba76a8022d61a6db1f0d064",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/structure.edi": "c5a64ff03b85992a6f4081394fc18577a52df0cee2a044d55b71684657229363"
+        "structures/structure.edi": "91d25bca84b09e659b49c30469025a9aae3da54dad48c3aaf0cae1a5d05a34eb"
       },
       "iucr_99": {
         "analysis/analysis.edi": "840ec89a79889d8eea4aec4b1f0e96f7cb26dcccf1ed223d284c14ebe7ab0957",
         "experiments/experiment.edi": "172a537944c21952f4e52443bd6f7867a5cb86626ba76a8022d61a6db1f0d064",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/structure.edi": "c5a64ff03b85992a6f4081394fc18577a52df0cee2a044d55b71684657229363"
+        "structures/structure.edi": "91d25bca84b09e659b49c30469025a9aae3da54dad48c3aaf0cae1a5d05a34eb"
       }
     },
     "tests/fixtures/single_crystal/fitting/fullprof/sc-neut-cwl_tb2ti2o7-heidi_basic/project": {
@@ -4009,13 +4024,13 @@
     "tests/fixtures/single_crystal/fitting/fullprof/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project": {
       "iucr_19": {
         "analysis/analysis.edi": "d4e4fdaeb025c9129cc4b02887156962fe2af1c032888f7f44f032fcc603e126",
-        "experiments/experiment.edi": "7eda71c819238d58380bd3395802d4552f5666776756c8db920e4c11184f9483",
+        "experiments/experiment.edi": "3d3fbe60bf75f2d60c2f156dda4279d74efd0f90422feb65a3522706dabe2f93",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
         "structures/structure.edi": "07f95590b5c2973dd45ea02315720313f3f8900f755962f851ab45c0bbb60e18"
       },
       "iucr_99": {
         "analysis/analysis.edi": "d4e4fdaeb025c9129cc4b02887156962fe2af1c032888f7f44f032fcc603e126",
-        "experiments/experiment.edi": "7eda71c819238d58380bd3395802d4552f5666776756c8db920e4c11184f9483",
+        "experiments/experiment.edi": "3d3fbe60bf75f2d60c2f156dda4279d74efd0f90422feb65a3522706dabe2f93",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
         "structures/structure.edi": "07f95590b5c2973dd45ea02315720313f3f8900f755962f851ab45c0bbb60e18"
       }
@@ -4025,13 +4040,13 @@
         "analysis/analysis.edi": "840ec89a79889d8eea4aec4b1f0e96f7cb26dcccf1ed223d284c14ebe7ab0957",
         "experiments/experiment.edi": "fe970cad691450b34059b276b5a482928330ba2d57b544f17c880c1ea86ec970",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/structure.edi": "fb4b2c13b1d4c2b2dd630dcbd131a0cc810eddb4ab5da6dabfc3d7fa3a37bf0d"
+        "structures/structure.edi": "842a2e6119642e8dc33a7c98b52ea12588cb37235f0424fe3439bd74a11e08ea"
       },
       "iucr_99": {
         "analysis/analysis.edi": "840ec89a79889d8eea4aec4b1f0e96f7cb26dcccf1ed223d284c14ebe7ab0957",
         "experiments/experiment.edi": "fe970cad691450b34059b276b5a482928330ba2d57b544f17c880c1ea86ec970",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/structure.edi": "fb4b2c13b1d4c2b2dd630dcbd131a0cc810eddb4ab5da6dabfc3d7fa3a37bf0d"
+        "structures/structure.edi": "842a2e6119642e8dc33a7c98b52ea12588cb37235f0424fe3439bd74a11e08ea"
       }
     },
     "tests/fixtures/single_crystal/powder": {
@@ -4039,13 +4054,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/experiment.edi": "8bed18b538bfbd9f07d9e7d9d5b82532592ac4ca52d7ba9f6116a02abf41a9bc",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/structure.edi": "9072888ef182fba17da1b07c18e5e7eff4b53d7f0715c2aee0d318b305eddbf6"
+        "structures/structure.edi": "5442dbd5c163e63107342ad98ba1000d5c470d94b3d862294b7cfa2ca8e7cdc9"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/experiment.edi": "8bed18b538bfbd9f07d9e7d9d5b82532592ac4ca52d7ba9f6116a02abf41a9bc",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/structure.edi": "9072888ef182fba17da1b07c18e5e7eff4b53d7f0715c2aee0d318b305eddbf6"
+        "structures/structure.edi": "5442dbd5c163e63107342ad98ba1000d5c470d94b3d862294b7cfa2ca8e7cdc9"
       }
     },
     "tests/fixtures/single_crystal/projects/sc-neut-cwl_pr2nio4_basic": {
@@ -4053,13 +4068,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/experiment.edi": "027ce45e0764ed0fe628d1ae262d7717dcb9fbc7c2005cda05c268c4898cb900",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/structure.edi": "9072888ef182fba17da1b07c18e5e7eff4b53d7f0715c2aee0d318b305eddbf6"
+        "structures/structure.edi": "5442dbd5c163e63107342ad98ba1000d5c470d94b3d862294b7cfa2ca8e7cdc9"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/experiment.edi": "027ce45e0764ed0fe628d1ae262d7717dcb9fbc7c2005cda05c268c4898cb900",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/structure.edi": "9072888ef182fba17da1b07c18e5e7eff4b53d7f0715c2aee0d318b305eddbf6"
+        "structures/structure.edi": "5442dbd5c163e63107342ad98ba1000d5c470d94b3d862294b7cfa2ca8e7cdc9"
       }
     },
     "tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_anisotropic-adp": {
@@ -4067,13 +4082,13 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/experiment.edi": "c6cf3cb602f86c18f4b849c673cb8706b37003beb1248e4ebe37a4c9de8cea79",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/structure.edi": "c5a64ff03b85992a6f4081394fc18577a52df0cee2a044d55b71684657229363"
+        "structures/structure.edi": "91d25bca84b09e659b49c30469025a9aae3da54dad48c3aaf0cae1a5d05a34eb"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/experiment.edi": "c6cf3cb602f86c18f4b849c673cb8706b37003beb1248e4ebe37a4c9de8cea79",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/structure.edi": "c5a64ff03b85992a6f4081394fc18577a52df0cee2a044d55b71684657229363"
+        "structures/structure.edi": "91d25bca84b09e659b49c30469025a9aae3da54dad48c3aaf0cae1a5d05a34eb"
       }
     },
     "tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_basic": {
@@ -4093,13 +4108,13 @@
     "tests/fixtures/single_crystal/projects/sc-neut-cwl_tbti_isotropic-extinction": {
       "iucr_19": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/experiment.edi": "2846e70fca859d1d29d3df4deac567780e612a9fdf28c7959515cd297c9cb3aa",
+        "experiments/experiment.edi": "531b8fc225c401470d3ab104bad565fe418be74f64aadadffc377f4bf58da422",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
         "structures/structure.edi": "07f95590b5c2973dd45ea02315720313f3f8900f755962f851ab45c0bbb60e18"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
-        "experiments/experiment.edi": "2846e70fca859d1d29d3df4deac567780e612a9fdf28c7959515cd297c9cb3aa",
+        "experiments/experiment.edi": "531b8fc225c401470d3ab104bad565fe418be74f64aadadffc377f4bf58da422",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
         "structures/structure.edi": "07f95590b5c2973dd45ea02315720313f3f8900f755962f851ab45c0bbb60e18"
       }
@@ -4109,19 +4124,22 @@
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/experiment.edi": "f0a72307bf52995d1d34a123362d0ee6ab78d08ddb3d754b556db845a904f015",
         "project.edi": "e677997c09d31cc7b34fc6c5497b9f1b36be2a0eb0b613f47043d7a7e7239bcc",
-        "structures/structure.edi": "fb4b2c13b1d4c2b2dd630dcbd131a0cc810eddb4ab5da6dabfc3d7fa3a37bf0d"
+        "structures/structure.edi": "842a2e6119642e8dc33a7c98b52ea12588cb37235f0424fe3439bd74a11e08ea"
       },
       "iucr_99": {
         "analysis/analysis.edi": "db6b3a6fb7b62313ff036e56efa6badd2f2d2953a0547ff5711048487cf799ab",
         "experiments/experiment.edi": "f0a72307bf52995d1d34a123362d0ee6ab78d08ddb3d754b556db845a904f015",
         "project.edi": "654a0c59c2bbf6686b404f01dec7d7a24778e0bb46bd81815a51fe88556a5533",
-        "structures/structure.edi": "fb4b2c13b1d4c2b2dd630dcbd131a0cc810eddb4ab5da6dabfc3d7fa3a37bf0d"
+        "structures/structure.edi": "842a2e6119642e8dc33a7c98b52ea12588cb37235f0424fe3439bd74a11e08ea"
       }
     },
     "tests/fixtures/table_display": {
       "iucr_19": {
         "ListViewParameter.qml": "cf508fd6f91ec9666bd80e124488dd7d6bebb7d91b4752c814a49627ceb61821",
         "README.md": "035f0fc9f8c4973c610eb11be21ef3889973349be68e76e83013a848fe23b34a",
+        "__pycache__/gui_base.cpython-314.pyc": "6d91305fa5db2566b31b3674e3d84609576fc093faa7131acfcb9f1fb1067ab8",
+        "__pycache__/metadata_bytes.cpython-314.pyc": "0780674d31cc32e7cd199b849d0a30a7e35fe89a6e035033caafceeda8c939d0",
+        "__pycache__/stored_id_bytes.cpython-314.pyc": "e3dbbcf31aa5dae3ce0eb6b3d77322b3340cc87c2909cf9425ffcca4a77e8272",
         "analysis/analysis.edi": "2cd008f01804da217ad833c30b668e648768e2181ad7877a104b90df8a3d2f88",
         "experiments/experiment.edi": "90ac674ec547d5af155d70e3ee9ce619301f16c433e3c680b7a17e75276eadae",
         "fraction_bridge.cpp": "70df6aa3d41aeeff591c91fa50407d9b96f14245a3d6cf29497caf818868ce0c",
@@ -4145,6 +4163,9 @@
       "iucr_99": {
         "ListViewParameter.qml": "cf508fd6f91ec9666bd80e124488dd7d6bebb7d91b4752c814a49627ceb61821",
         "README.md": "035f0fc9f8c4973c610eb11be21ef3889973349be68e76e83013a848fe23b34a",
+        "__pycache__/gui_base.cpython-314.pyc": "6d91305fa5db2566b31b3674e3d84609576fc093faa7131acfcb9f1fb1067ab8",
+        "__pycache__/metadata_bytes.cpython-314.pyc": "0780674d31cc32e7cd199b849d0a30a7e35fe89a6e035033caafceeda8c939d0",
+        "__pycache__/stored_id_bytes.cpython-314.pyc": "e3dbbcf31aa5dae3ce0eb6b3d77322b3340cc87c2909cf9425ffcca4a77e8272",
         "analysis/analysis.edi": "2cd008f01804da217ad833c30b668e648768e2181ad7877a104b90df8a3d2f88",
         "experiments/experiment.edi": "90ac674ec547d5af155d70e3ee9ce619301f16c433e3c680b7a17e75276eadae",
         "fraction_bridge.cpp": "70df6aa3d41aeeff591c91fa50407d9b96f14245a3d6cf29497caf818868ce0c",
@@ -4167,5 +4188,5 @@
       }
     }
   },
-  "source_commit": "5d9337dc8c5a02c0472b3c02d71d7ca779097a1a"
+  "source_commit": "cea605412f4844abb9463ee2a01ba7cd97fd75ab"
 }

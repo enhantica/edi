@@ -10,10 +10,10 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-31T10:34:36Z
+# measured_utc = 2026-10-31T11:43:52Z
 #
-# Recorded from: union of this branch's and main's rows in a merge of main, no node measured
-# Collected tests: 19204; with a reported duration: 10834
+# Recorded from: banked rows (nothing added; 6 stale row(s) dropped)
+# Collected tests: 19198; with a reported duration: 10828
 # Module-scoped fixture costs recorded: 94
 #
 # Breaches are decided PER TIER against the table
@@ -29,9 +29,9 @@
 # so the header cannot disagree with the rows beneath it. Holes now SURVIVE a
 # regeneration: they used to be rewritten as 0.000, which is a
 # measurement nobody took and which passes every tier threshold.
-# inventory_python = 19204
+# inventory_python = 19198
 # inventory_cpp = 396
-# inventory_measured = 16562
+# inventory_measured = 16556
 # inventory_unmeasured = 3038
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
@@ -6354,13 +6354,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::
 0.080	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/pd-xray-cwl_pbso4-lab/project]
 0.090	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project]
-0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project]
 0.020	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project]
-0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-tof_taurine-unknown_basic/project]
-0.050	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-docs/user/cli/sc-neut-tof_taurine_fit/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/adp_site_symmetry/gui/cubic]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/adp_site_symmetry/gui/general]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_19-tests/fixtures/adp_site_symmetry/gui/hexagonal]
@@ -6523,13 +6520,10 @@ UNMEASURED:failed-in-this-run	tests/integration/py/test_fittability_loading.py::
 0.080	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/pd-xray-cwl_pbso4-lab/project]
 0.080	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project]
-0.060	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project]
-0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-tof_taurine-unknown_basic/project]
-0.060	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-docs/user/cli/sc-neut-tof_taurine_fit/project]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-tests/fixtures/adp_site_symmetry/gui/cubic]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-tests/fixtures/adp_site_symmetry/gui/general]
 0.010	tests/integration/py/test_fittability_saved_bytes.py::test_main_saved_bytes_regression_pin[iucr_99-tests/fixtures/adp_site_symmetry/gui/hexagonal]

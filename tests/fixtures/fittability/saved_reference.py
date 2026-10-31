@@ -12,10 +12,12 @@ import warnings
 from pathlib import Path
 
 
-def staged(source, target, rule):
+def staged(source, target, rule, *, link_data=False):
     target.mkdir(parents=True)
     for child in source.iterdir():
-        if child.name != 'project.edi':
+        if link_data and child.name in {'experiments', 'structures'}:
+            (target / child.name).symlink_to(child.resolve(), target_is_directory=True)
+        elif child.name != 'project.edi':
             shutil.copytree(
                 child, target / child.name, symlinks=True
             ) if child.is_dir() else shutil.copy2(child, target / child.name)
@@ -87,7 +89,7 @@ def snapshot(api, source, scratch, rule):
 
 
 def fit_snapshot(api, source, scratch, rule):
-    project = api.Project.load(staged(source, scratch / 'input', rule))
+    project = api.Project.load(staged(source, scratch / 'input', rule, link_data=True))
     project.analysis.fit()
     radius = project.experiments[0].extinction.crystal_radius
     if not radius.user_constrained or radius.uncertainty <= 0:
@@ -101,11 +103,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--api', required=True, choices=['crysta', 'edi'])
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--baseline-revision', default='HEAD')
+    parser.add_argument('--inventory', type=Path)
+    parser.add_argument('--corpus-root', type=Path, required=True)
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[3]
     api = importlib.import_module(args.api)
     revision = subprocess.check_output(
-        [shutil.which('git'), 'rev-parse', 'HEAD'], cwd=root, text=True
+        [shutil.which('git'), 'rev-parse', args.baseline_revision], cwd=root, text=True
     ).strip()
     subprocess.run(
         [shutil.which('git'), 'merge-base', '--is-ancestor', revision, 'origin/main'],
@@ -119,13 +124,21 @@ def main():
         'projects': {},
         'excluded': {},
     }
-    for name in sources(root):
+    inventory = json.loads(args.inventory.read_text()) if args.inventory else None
+    if inventory:
+        record['excluded'].update(inventory['excluded'])
+    for name in inventory['projects'] if inventory else sources(root):
         values = {}
+        if not (root / name).is_dir():
+            record['excluded'][name] = 'Removed from the main project corpus'
+            continue
         try:
             for rule in ('iucr_19', 'iucr_99'):
                 with tempfile.TemporaryDirectory() as folder:
                     values[rule] = snapshot(api, root / name, Path(folder), rule)
         except (ValueError, RuntimeError, OSError) as error:
+            if inventory:
+                raise
             record['excluded'][name] = (
                 type(error).__name__
                 + ': '
@@ -137,9 +150,28 @@ def main():
     record['fit_projects'] = {}
     case = 'docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project'
     record['fit_projects'][case] = {}
+    record['fitted_tokens'] = {}
+    fit_source = args.corpus_root / 'single-crystal-page-cwl-tbti-isotropic-extinction/project'
     for rule in ('iucr_19', 'iucr_99'):
         with tempfile.TemporaryDirectory() as folder:
-            record['fit_projects'][case][rule] = fit_snapshot(api, root / case, Path(folder), rule)
+            scratch = Path(folder)
+            record['fit_projects'][case][rule] = fit_snapshot(api, fit_source, scratch, rule)
+            rows = {}
+            for relative in ('analysis/analysis.edi', 'experiments/experiment.edi'):
+                rows[relative] = [
+                    line
+                    for line in (scratch / 'saved' / relative).read_text().splitlines()
+                    if not line.startswith('_fit_result.fitting_time ')
+                    and line.startswith((
+                        '_fit_result.',
+                        'experiment 220 ',
+                        '1 deterministic ',
+                        '_extinction.domain_radius ',
+                        '_extinction.crystal_radius ',
+                        'structure ',
+                    ))
+                ]
+            record['fitted_tokens'][rule] = rows
     args.output.write_text(json.dumps(record, indent=2, sort_keys=True) + '\n')
 
 
