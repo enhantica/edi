@@ -69,6 +69,15 @@ void ParameterTableModel::sync() {
     }
 }
 
+int ParameterTableModel::numberOf(const ParameterItem* parameter) const {
+    for (int row = 0; parameter != nullptr && row < count(); ++row) {
+        if (keyAt(row) == parameter) {
+            return row + 1;
+        }
+    }
+    return 0;
+}
+
 bool ParameterTableModel::setRole(int row, const QString& role, const QVariant& value) {
     auto* item = const_cast<ParameterItem*>(static_cast<const ParameterItem*>(keyAt(row)));
     if (item == nullptr) {

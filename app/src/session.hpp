@@ -95,6 +95,9 @@ class Session : public QObject {
     // Whether Save must ask where (edi ADR-0017 §13): a project with no directory yet, or a bundled example's
     // temporary working copy, is saved as.
     Q_PROPERTY(bool needsSaveAs READ needsSaveAs NOTIFY needsSaveAsChanged)
+    // The selected figure palette (Preferences): a project created or opened takes its first colour positions in it
+    // (ADR-0038), so it opens as it would if the palette had been chosen with it open.
+    Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
 
    public:
     explicit Session(QObject* parent = nullptr);
@@ -110,6 +113,8 @@ class Session : public QObject {
     QString locationText() const;
     QString projectLocation() const;
     bool needsSaveAs() const;
+    QString colourScheme() const { return colour_scheme_; }
+    void setColourScheme(const QString& scheme);
 
     // Open a project from its folder, its project.edi or a .zip of the folder; only `file:` URLs (edi ADR-0052). An
     // archive unpacks into a temporary folder: the project has no folder of its own until Save asks where to keep it.
@@ -192,6 +197,7 @@ class Session : public QObject {
     void locationTextChanged();
     void projectLocationChanged();
     void needsSaveAsChanged();
+    void colourSchemeChanged();
     void lastErrorChanged();
     // A project or an example could not be opened: every refused open says why (the window shows it), never a silent
     // no-op.
@@ -231,6 +237,7 @@ class Session : public QObject {
     std::unique_ptr<QTemporaryDir> extracted_;
     QString opened_example_;
     QString opened_archive_;
+    QString colour_scheme_ = QStringLiteral("earth");
     // The .zip the project was saved as: its location, rewritten by every Save from the working folder.
     QString archive_location_;
     // The read-only folder a temporary working copy was made from.

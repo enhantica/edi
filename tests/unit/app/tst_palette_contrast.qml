@@ -7,6 +7,7 @@ import edi.app
 import ReportAcceptance 1.0
 import EasyApplication.Gui.Style as Style
 import "RenderedTable.js" as Render
+import "../../fixtures/scan_views/oklab.js" as FigureReference
 
 Rectangle {
     width: 1400
@@ -29,7 +30,7 @@ Rectangle {
         function initTestCase() {
             oldTheme = Style.Colors.theme;
             try {
-                oldScheme = Approved.getSchemes(Preferences);
+                oldScheme = Approved.getScheme(Preferences);
             } catch (error) {
                 oldScheme = null;
             }
@@ -41,7 +42,7 @@ Rectangle {
             Session.closeProject();
             Style.Colors.theme = oldTheme;
             if (oldScheme)
-                Approved.setSchemes(Preferences, oldScheme);
+                Approved.setScheme(Preferences, oldScheme);
             else
                 Preferences.resetToDefaults();
         }
@@ -88,18 +89,20 @@ Rectangle {
             fuzzyCompare(luminance("#0b0b0b"), 0.003346535763899161, 1e-12, "Encoded sRGB 11 uses the W3C power branch");
         }
         function colourChoice(dialog, label) {
+            if (label === "Palette")
+                return findChild(dialog.contentItem, "preferences.colours");
             const row = Render.descendants(dialog.contentItem).find(item => item.rowLabel === true && String(item.text).replace(/:$/, " ").trim() === label);
-            verify(row !== undefined, "The split Preferences exposes its independently named " + label + " colour choice");
+            verify(row !== undefined, "The shared-palette Preferences exposes its independently named " + label + " colour choice");
             const siblings = row.parent.children, box = siblings.slice(siblings.indexOf(row) + 1).find(item => item.rowBox === true);
             verify(box !== undefined, "The " + label + " choice retains its actual populated Preferences selector");
             return box;
         }
         function setBothSchemes(token) {
             const dialog = createTemporaryObject(preferencesFactory, parent);
-            verify(dialog !== null, "The colour setup uses actual split production Preferences controls");
+            verify(dialog !== null, "The colour setup uses actual shared production Preferences controls");
             const index = reference.schemes.findIndex(scheme => scheme.id === token);
             verify(index >= 0, "The colour fixture resolves an independently approved scheme token");
-            for (const label of ["Structures", "Patterns"]) {
+            for (const label of ["Palette"]) {
                 const box = colourChoice(dialog, label);
                 box.currentIndex = index;
                 box.activated(index);
@@ -107,12 +110,12 @@ Rectangle {
         }
         function test_preferences_lists_all_five_named_schemes() {
             const dialog = createTemporaryObject(preferencesFactory, parent);
-            verify(dialog !== null, "The five-palette gate creates the actual split Preferences dialog");
-            for (const label of ["Structures", "Patterns"]) {
+            verify(dialog !== null, "The five-palette gate creates the actual shared-palette Preferences dialog");
+            for (const label of ["Palette"]) {
                 const box = colourChoice(dialog, label), actual = Array.from({
                     length: box.count
                 }, (_, index) => box.textAt(index));
-                compare(JSON.stringify(actual), JSON.stringify(reference.schemes.map(scheme => scheme.label)), "Each independent Structures/Patterns preference lists all five approved palettes in owner order");
+                compare(JSON.stringify(actual), JSON.stringify(reference.schemes.map(scheme => scheme.label)), "Each independent figure palette preference lists all five approved palettes in owner order");
                 for (let index = 0; index < reference.schemes.length; ++index) {
                     box.currentIndex = index;
                     box.activated(index);
@@ -123,26 +126,26 @@ Rectangle {
             }
         }
         function test_approved_palette_assignment_data() {
+            const palettes = JSON.parse(SettingsProof.repoText("tests/fixtures/chart_controls/owner.json")).palettes;
+            const tokens = ["earth", "classic", "soft", "natural", "colourBlindSafe"];
             const rows = [];
-            for (const scheme of reference.schemes)
+            for (let index = 0; index < tokens.length; ++index)
                 for (const dark of [false, true])
                     rows.push({
-                        tag: scheme.id + (dark ? "-dark" : "-light"),
-                        scheme: scheme.id,
+                        tag: tokens[index] + (dark ? "-dark" : "-light"),
+                        scheme: tokens[index],
+                        palette: palettes[index],
                         dark
                     });
             return rows;
         }
         function test_approved_palette_assignment(data) {
-            Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            for (const count of [1, 2, 5, 6, 17, 1001]) {
-                const expected = Approved.colours(SettingsProof, data.scheme, "measured", count, data.dark);
-                const structures = Approved.colours(SettingsProof, data.scheme, "structures", count, data.dark);
-                for (let place = 0; place < count; ++place) {
-                    compare(String(ApplicationInfo.patternColour(data.scheme, place, count, data.dark)).toLowerCase(), expected[place], "The measured API equals the independently approved categorical or Oklab assignment at every place");
-                    compare(String(ApplicationInfo.structureColour(data.scheme, place, count, data.dark)).toLowerCase(), structures[place], "The count-aware structure API equals the independently approved whole-group gradient at every place");
+            const colours = data.palette[data.dark ? "dark" : "light"];
+            for (const count of [1, 2, 5, 6, 11, 12, 17, 1001])
+                for (let position = 0; position < count; ++position) {
+                    const expected = position < 11 ? colours[position] : FigureReference.gradient(colours[0], colours[1], (position - 10) / (count - 10));
+                    compare(String(ApplicationInfo.figureColour(data.scheme, position, count, data.dark)).toLowerCase(), String(expected).toLowerCase(), "The unified figure API retains every recorded categorical position and its Oklab overflow shades");
                 }
-            }
         }
         function hue(colour) {
             const coordinates = oklab(colour);
@@ -193,9 +196,9 @@ Rectangle {
                     setBothSchemes(reference.schemes[1].id);
                 Preferences.resetToDefaults();
                 const dialog = createTemporaryObject(preferencesFactory, parent);
-                verify(dialog !== null, "Default reset is observed through the actual split Preferences controls");
-                for (const label of ["Structures", "Patterns"])
-                    compare(colourChoice(dialog, label).currentText, reference.schemes[0].label, "The owner-selected Edi Natural default resets reversibly for both independent colour choices");
+                verify(dialog !== null, "Default reset is observed through the actual shared-palette Preferences controls");
+                for (const label of ["Palette"])
+                    compare(colourChoice(dialog, label).currentText, reference.schemes[0].label, "The owner-selected Earth default resets reversibly for the shared figure choice");
             }
         }
         function test_pdf_colour_observer_reaches_an_independent_qt_image() {

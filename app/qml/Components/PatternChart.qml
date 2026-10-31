@@ -302,8 +302,7 @@ Item {
         active: chart.shown && chart.visible && chart.Window.window !== null
         experiment: chart.experiment
         report: chart.report
-        colourScheme: Preferences.patternColours
-        structureColourScheme: Preferences.structureColours
+        colourScheme: Preferences.colourScheme
         // Each structure's curve, a report figure never (edi ADR-0017 §15).
         structureCurves: !chart.report && Preferences.structureCurves
         // Hiding a curve from the legend keeps the y range, or fits it to the curves still shown (Preferences).
@@ -311,6 +310,7 @@ Item {
         // The app's one pattern chart follows the project's x axis (which the report follows too) and the app's y scale.
         dSpacing: chart.axisProject ? chart.axisProject.patternDSpacing : false
         includedOnly: !chart.report && Preferences.chartIncludedOnly
+        subtractBackground: !chart.report && Preferences.chartSubtractBackground
         yScale: chart.settingsPage === "pattern" ? Math.max(0, chart.scaleTokens.indexOf(Preferences.patternYScale)) : PatternChartController.Linear
         reportExperiment: chart.reportExperiment
         dark: chart.colors.isDarkPalette
@@ -425,9 +425,9 @@ Item {
         ToolbarComboBox {
             objectName: "chart.toolbar.yscale"
             toolTip: qsTr("Y scale")
-            model: [qsTr("linear"), qsTr("square root"), qsTr("log")]
-            // The closed box names its axis (owner, 2026-10-05).
-            closedTexts: [qsTr("y: linear"), qsTr("y: square root"), qsTr("y: log")]
+            model: [qsTr("Linear"), qsTr("Square root"), qsTr("Log")]
+            // The closed box names its axis (owner, 2026-10-05), its value capitalised (the owner, 2026-10-27).
+            closedTexts: [qsTr("y: Linear"), qsTr("y: Square root"), qsTr("y: Log")]
             shownIndex: controller.yScale
             onActivated: index => {
                 if (chart.settingsPage === "pattern")
@@ -459,7 +459,7 @@ Item {
         // points with their error bars; or both.
         ToolbarComboBox {
             readonly property var tokens: ["band", "line", "points", "linePoints"]
-            readonly property var entries: [qsTr("band"), qsTr("line"), qsTr("points"), qsTr("line + points")]
+            readonly property var entries: [qsTr("Band"), qsTr("Line"), qsTr("Points"), qsTr("Line + points")]
 
             objectName: "chart.toolbar.measuredStyle"
             visible: !chart.report
@@ -476,8 +476,11 @@ Item {
             legendShown: false
             structureCurvesAvailable: !chart.report && controller.hasCalculated
             includedOnly: Preferences.chartIncludedOnly
+            subtractBackground: Preferences.chartSubtractBackground
+            backgroundAvailable: controller.backgroundAvailable
             onResetClicked: controller.reset()
             onIncludedOnlyToggled: Preferences.chartIncludedOnly = !Preferences.chartIncludedOnly
+            onSubtractBackgroundToggled: Preferences.chartSubtractBackground = !Preferences.chartSubtractBackground
         }
     }
 

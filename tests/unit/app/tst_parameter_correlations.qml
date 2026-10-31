@@ -292,8 +292,8 @@ TestCase {
         const appearance = findChild(dialog, "preferences.tab.appearance");
         mouseClick(appearance, appearance.width / 2, appearance.height / 2);
         tryCompare(appearance, "checked", true, 1000, "Appearance opens before taking the actual combo control width");
-        const names = ["structureColours", "patternColours", "stackedColours", "mapColours"];
-        tryVerify(() => names.every(name => findChild(dialog, "preferences." + name) !== null && findChild(dialog, "preferences." + name).width > 0), 2000, "All four actual Appearance colour controls are laid out before measuring their shared column");
+        const names = ["colours", "stackedColours", "mapColours"];
+        tryVerify(() => names.every(name => findChild(dialog, "preferences." + name) !== null && findChild(dialog, "preferences." + name).width > 0), 2000, "All actual Appearance colour controls are laid out before measuring their shared column");
         const columns = names.map(name => findChild(dialog, "preferences." + name).width);
         const tab = findChild(dialog, "preferences.tab.develop");
         mouseClick(tab, tab.width / 2, tab.height / 2);

@@ -64,10 +64,7 @@ CASES = (
 
 def reverse_parts():
     maps = json.loads((ROOT / 'tests/fixtures/scan_views/offered.json').read_text())['maps']
-    palettes = json.loads((ROOT / 'tests/fixtures/approved_palettes/colours.json').read_text())[
-        'palettes'
-    ]
-    return range((len(maps) + len(palettes) + 11) // 12)
+    return range((len(maps) + 11) // 12)
 
 
 def case_variants(case):

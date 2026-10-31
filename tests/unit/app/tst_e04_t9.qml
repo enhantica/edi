@@ -103,9 +103,7 @@ TestCase {
         return Math.max(...points.filter(p => isFinite(p.y)).map(p => p.y));
     }
     function approvedPalette() {
-        const catalogue = JSON.parse(Probe.readFile("tests/fixtures/approved_palettes/colours.json")).palettes;
-        const normalize = name => name.toLowerCase().replace(/[^a-z]/g, "").replace(/^edi/, "");
-        const palette = catalogue.find(row => normalize(row.name) === normalize(Approved.getSchemes(Preferences).patterns));
+        const palette = Approved.reference(Probe).schemes.find(row => row.id === Approved.getScheme(Preferences)).palette;
         verify(palette !== undefined, "The chart expectation comes from the independently approved palette coordinates");
         return palette;
     }
@@ -156,13 +154,15 @@ TestCase {
         verify(chart.topMargin > 0, " owner chart margins keep a positive gap around the toolbar and x title");
         compare(chart.bottomMargin, chart.topMargin, " owner chart margins reserve the same gap below the x-title band as above the toolbar");
         compare(chart.toolbarGap, chart.topMargin, " owner chart margins reserve the same gap below and above the toolbar");
-        const resetAt = reset.mapToItem(chart, 0, 0);
+        const controls = Review.descendants(chart).filter(item => item.visible && item.width > 0 && item.height > 0 && String(item.objectName).startsWith("chart.toolbar.") && (typeof item.currentIndex === "number" || typeof item.checked === "boolean"));
+        const toolbarTop = Math.min(...controls.map(item => item.mapToItem(chart, 0, 0).y));
+        const toolbarBottom = Math.max(...controls.map(item => item.mapToItem(chart, 0, item.height).y));
         const main = object("chart.view.main");
         const mainAt = main.mapToItem(chart, 0, 0);
-        verify(Math.abs(resetAt.y - chart.topMargin) < 1, " owner chart margin is realised above the actual toolbar button");
+        verify(Math.abs(toolbarTop - chart.topMargin) < 1, " owner chart margin is realised above the actual toolbar button");
         const rightInset = chart.width - mainAt.x - main.plotArea.x - main.plotArea.width;
         verify(rightInset > 0, "The plot's right margin and the matching toolbar gap remain positive");
-        verify(Math.abs(mainAt.y + main.plotArea.y - resetAt.y - reset.height - rightInset) < 1, "The gap below the toolbar equals the actual plot's right margin");
+        verify(Math.abs(mainAt.y + main.plotArea.y - toolbarBottom - rightInset) < 1, "The gap below the toolbar equals the actual plot's right margin");
         const title = object("chart.title.x");
         // The label is centred in its reserved title band; its normal leading
         // is distinct from the owner's equal margin outside that band.
@@ -170,13 +170,13 @@ TestCase {
         verify(Math.abs(chart.height - (titleAt.y + title.height / 2 + chart.xTitleHeight / 2) - chart.bottomMargin) < 1, " owner chart margin is realised below the actual centred x-title band");
         const scale = object("chart.toolbar.yscale");
         compare(scale.count, 3, " owner y-scale drop-down retains linear, square root and log choices");
-        ["linear", "square root", "log"].forEach((name, index) => compare(scale.textAt(index), name, " owner y-scale choices keep their independently declared order"));
+        ["Linear", "Square root", "Log"].forEach((name, index) => compare(scale.textAt(index), name, " owner y-scale choices keep their independently declared order"));
         verify(Math.abs(scale.height - object("chart.toolbar.reset").height) < 1, " owner y-scale drop-down shares the toolbar buttons' height");
         const scaleAt = scale.mapToItem(chart, 0, 0);
         ["legend", "hover", "pan", "zoom", "reset"].forEach(key => {
             const button = object("chart.toolbar." + key);
             const point = button.mapToItem(chart, 0, 0);
-            verify(scaleAt.x + scale.width < point.x, "The y-scale drop-down precedes every toolbar button at the far left");
+            verify(point.y >= scaleAt.y + scale.height - 1 || scaleAt.x + scale.width < point.x, "The y-scale selector precedes toolbar buttons on one line or sits above them when wrapped");
         });
         verify(object("chart.toolbar.zoom").checked, " I27 the explicitly selected shared box-zoom choice is active");
         verify(!object("chart.toolbar.pan").checked, " I27 pan and box zoom exclude each other");

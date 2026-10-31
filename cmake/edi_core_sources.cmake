@@ -42,9 +42,9 @@ function(edi_core_sources root out)
     configure_file(${root}/core/src/element_styles_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/element_styles_data.cpp
                    @ONLY)
 
-    # The colour palettes (data/palettes, PROVENANCE.md beside them) are embedded the same way, one per
+    # The figure palettes (data/palettes, PROVENANCE.md beside them) are embedded the same way, one per
     # edi::ColourScheme in its order; a change reconfigures.
-    set(EDI_PALETTES edi-natural edi-coast edi-garden edi-studio edi-contrast)
+    set(EDI_PALETTES earth classic soft natural colour-blind-safe)
     set(EDI_PALETTE_TABLES "")
     foreach(scheme IN LISTS EDI_PALETTES)
         set(palette_tsv ${root}/data/palettes/${scheme}.tsv)
@@ -54,11 +54,9 @@ function(edi_core_sources root out)
     endforeach()
     configure_file(${root}/core/src/palette_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/palette_data.cpp @ONLY)
 
-    # ADR-0041: the 2D map's colour maps (data/colormaps, PROVENANCE.md beside them), embedded the same way, one per
-    # edi::ScanColourMap in its order.
-    # The first four are matplotlib's; the rest are the candidates the owner chooses from (2026-10-22).
-    set(EDI_COLOUR_MAPS viridis magma inferno plasma batlow oslo lajolla acton devon lapaz thermal haline deep dense ice
-        tempo turbo ylgnbu pubu gnbu blues purples ylorrd cet-gouldian cet-l08 cet-l06 cet-l17 cet-l18)
+    # ADR-0041: the scan views' colour maps (data/colormaps, PROVENANCE.md beside them), embedded the same way, in
+    # edi::ScanColourMap's order after Blue-Red, which the core mixes itself.
+    set(EDI_COLOUR_MAPS viridis batlow inferno lapaz greys)
     set(EDI_COLOUR_MAP_TABLES "")
     set(EDI_COLOUR_MAP_NAMES "")
     list(LENGTH EDI_COLOUR_MAPS EDI_COLOUR_MAP_COUNT)

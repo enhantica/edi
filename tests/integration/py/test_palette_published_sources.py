@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.approved_palettes.reference import PALETTES
+from tests.fixtures.chart_controls.reference import PALETTES, role_colours
 from tests.fixtures.palette_sources.oklab_reference import (
     full_step_lightness_tolerance,
     gamut_hue_chroma_preserved,
@@ -175,24 +175,24 @@ def test_approved_palette_rows_keep_exact_coordinates_and_role_order(palette):
     filename = palette['name'].lower().replace(' ', '-') + '.tsv'
     with (ROOT / 'data/palettes' / filename).open() as stream:
         rows = list(csv.DictReader(stream, delimiter='\t'))
-    expected = []
-    for role, field in [('measured', 'measured'), ('structure', 'structures')]:
-        expected.extend(
-            {
-                'role': role,
-                'index': str(index),
-                'light': palette['light'][field][index],
-                'dark': palette['dark'][field][index],
-            }
-            for index in range(5)
-        )
-    for _index, field in enumerate(('total_calculation', 'background', 'difference')):
-        expected.append({
+    expected = [
+        {
+            'role': 'figure',
+            'index': str(index),
+            'light': palette['light'][index],
+            'dark': palette['dark'][index],
+        }
+        for index in range(11)
+    ]
+    expected.extend(
+        {
             'role': field,
             'index': '0',
-            'light': palette['light'][field],
-            'dark': palette['dark'][field],
-        })
+            'light': role_colours('light')[field],
+            'dark': role_colours('dark')[field],
+        }
+        for field in ('total_calculation', 'background', 'difference')
+    )
     assert rows == expected, (
         'Every shipped coordinate and role position equals the independent owner table'
     )
@@ -201,12 +201,15 @@ def test_approved_palette_rows_keep_exact_coordinates_and_role_order(palette):
 def test_exactly_five_approved_tables_and_attribution_are_published():
     actual = {p.stem for p in (ROOT / 'data/palettes').glob('*.tsv')}
     assert actual == {p['name'].lower().replace(' ', '-') for p in PALETTES}, (
-        'Only the five owner-approved Edi palettes remain in the shipped catalogue'
+        'Only the five recorded shared figure palettes remain in the shipped catalogue'
     )
     text = (ROOT / 'data/palettes/PROVENANCE.md').read_text()
     assert all(p['name'] in text for p in PALETTES), (
         'Every approved palette retains its provenance'
     )
-    assert 'Okabe' in text and 'custom' in text.lower(), (
-        'Edi Contrast is attributed as a custom inspiration rather than the Okabe-Ito table'
+    assert 'owner approved' in text and '2026-10-26' in text, (
+        'The replacement palettes identify the recorded owner approval'
+    )
+    assert 'Oklab' in text and 'Ottosson' in text, (
+        'Overflow interpolation retains its published colour-space author and method attribution'
     )

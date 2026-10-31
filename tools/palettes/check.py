@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
-"""Check data/palettes/edi-*.tsv against data/palettes/PROVENANCE.md (edi ADR-0038).
+"""Check data/palettes/*.tsv against data/palettes/PROVENANCE.md (edi ADR-0038).
 
 The approved colours are stored, never generated, so this script only reads: each table lists
-five measured, five structure and three role colours, every one `#RRGGBB`, and PROVENANCE.md's
+eleven figure colours and three role colours, every one `#RRGGBB`, and PROVENANCE.md's
 stored-values table for the palette lists the same values in the same order. It exits 1 naming
 the first difference.
 
@@ -17,14 +17,14 @@ ROOT = Path(__file__).resolve().parents[2]
 PALETTES = ROOT / 'data' / 'palettes'
 # In edi::ColourScheme's order, as cmake/edi_core_sources.cmake embeds them.
 NAMES = {
-    'edi-natural': 'Edi Natural',
-    'edi-coast': 'Edi Coast',
-    'edi-garden': 'Edi Garden',
-    'edi-studio': 'Edi Studio',
-    'edi-contrast': 'Edi Contrast',
+    'earth': 'Earth',
+    'classic': 'Classic',
+    'soft': 'Soft',
+    'natural': 'Natural',
+    'colour-blind-safe': 'Colour-blind safe',
 }
-ROLES = ['measured'] * 5 + ['structure'] * 5 + ['total_calculation', 'background', 'difference']
-INDICES = [0, 1, 2, 3, 4, 0, 1, 2, 3, 4, 0, 0, 0]
+ROLES = ['figure'] * 11 + ['total_calculation', 'background', 'difference']
+INDICES = list(range(11)) + [0, 0, 0]
 HEX = re.compile(r'#[0-9A-F]{6}')
 
 
@@ -44,8 +44,8 @@ def provenance_rows(text: str, title: str) -> list[tuple[str, int, str, str]]:
     rows = []
     for line in section.splitlines():
         cells = [cell.strip() for cell in line.strip().strip('|').split('|')]
-        if len(cells) == 7 and cells[1].isdigit():
-            rows.append((cells[0], int(cells[1]), cells[3].strip('`'), cells[5].strip('`')))
+        if len(cells) == 4 and cells[1].isdigit():
+            rows.append((cells[0], int(cells[1]), cells[2].strip('`'), cells[3].strip('`')))
     return rows
 
 
@@ -58,7 +58,7 @@ def main() -> int:
     for stem, title in NAMES.items():
         rows = table_rows(stem)
         if [(role, index) for role, index, _, _ in rows] != list(zip(ROLES, INDICES, strict=True)):
-            print(f'{stem}.tsv: not five measured, five structure and three role colours')
+            print(f'{stem}.tsv: not eleven figure colours and three role colours')
             return 1
         for role, index, light, dark in rows:
             if not (HEX.fullmatch(light) and HEX.fullmatch(dark)):

@@ -14,6 +14,7 @@
 #include <QSettings>
 #include <QUrl>
 #include <algorithm>
+#include <numeric>
 #include <memory>
 #include <cctype>
 #include <cmath>
@@ -31,6 +32,7 @@
 #include "edi/presentation.hpp"
 #include "edi/report_model.hpp"
 #include "edi/scan.hpp"
+#include "edi/scan_views.hpp"
 #include "edi/selectors.hpp"
 #include "edi/su_text.hpp"
 #include "parameter_item.hpp"
@@ -173,7 +175,7 @@ std::unique_ptr<edi::Project> opened(edi::Project project) {
 
 }  // namespace
 
-ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
+ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme)
     : QObject(parent),
       project_(opened(std::move(project))),
       registry_(new ParameterRegistry(*this, this)),
@@ -184,7 +186,8 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
       metadata_text_(nullptr),
       project_text_(nullptr),
       report_(nullptr),
-      structure_view_options_(new StructureViewOptions(this)) {
+      structure_view_options_(new StructureViewOptions(this)),
+      colour_scheme_(colourScheme) {
     const edi::Project& model = *project_;
     completeSymmetry();
     registry_->rebuild(*project_);
@@ -377,6 +380,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     }
     selection_restored_ = true;
     storeSelection();
+    restoreViewSettings();
     preview_->recalculate();
     publishCalculating();
 }
@@ -561,6 +565,60 @@ void ProjectViewModel::storeSelection() const {
     store.beginGroup(QStringLiteral("Selections"));
     store.setValue(selectionKey(), QStringList{structure ? structure->name() : QString(),
                                                experiment ? experiment->name() : QString(), dataset});
+}
+
+void ProjectViewModel::setStackedSpacing(const QString& spacing) {
+    const QString known = QString::fromStdString(edi::stacked_spacing_names()[static_cast<std::size_t>(
+        edi::stacked_spacing_or_default(spacing.toStdString()))]);
+    if (known != stacked_spacing_) {
+        stacked_spacing_ = known;
+        storeViewSettings();
+        emit stackedSpacingChanged();
+    }
+}
+
+void ProjectViewModel::setMapDirection(const QString& direction) {
+    const QString known = QString::fromStdString(edi::scan_map_direction_names()[static_cast<std::size_t>(
+        edi::scan_map_direction_or_default(direction.toStdString()))]);
+    if (known != map_direction_) {
+        map_direction_ = known;
+        storeViewSettings();
+        emit mapDirectionChanged();
+    }
+}
+
+void ProjectViewModel::restoreViewSettings() {
+    if (project_->path.empty() || settings_file_path().isEmpty()) {
+        return;
+    }
+    // Both values are read before either is applied, and applied without storing: a setter writes both
+    // fields, so applying the spacing first would overwrite the saved direction with the current one.
+    QSettings store(settings_file_path(), QSettings::IniFormat);
+    store.beginGroup(QStringLiteral("ProjectViews"));
+    store.beginGroup(selectionKey());
+    const QString spacing = QString::fromStdString(edi::stacked_spacing_names()[static_cast<std::size_t>(
+        edi::stacked_spacing_or_default(store.value(QStringLiteral("stackedSpacing")).toString().toStdString()))]);
+    const QString direction = QString::fromStdString(edi::scan_map_direction_names()[static_cast<std::size_t>(
+        edi::scan_map_direction_or_default(store.value(QStringLiteral("mapDirection")).toString().toStdString()))]);
+    if (spacing != stacked_spacing_) {
+        stacked_spacing_ = spacing;
+        emit stackedSpacingChanged();
+    }
+    if (direction != map_direction_) {
+        map_direction_ = direction;
+        emit mapDirectionChanged();
+    }
+}
+
+void ProjectViewModel::storeViewSettings() const {
+    if (!selection_restored_ || project_->path.empty() || settings_file_path().isEmpty()) {
+        return;
+    }
+    QSettings store(settings_file_path(), QSettings::IniFormat);
+    store.beginGroup(QStringLiteral("ProjectViews"));
+    store.beginGroup(selectionKey());
+    store.setValue(QStringLiteral("stackedSpacing"), stacked_spacing_);
+    store.setValue(QStringLiteral("mapDirection"), map_direction_);
 }
 
 QString ProjectViewModel::selectionKey() const {
@@ -1278,15 +1336,104 @@ void ProjectViewModel::syncDatasets() {
     syncPatternColours();
 }
 
+void ProjectViewModel::setColourScheme(const QString& scheme) {
+    if (scheme != colour_scheme_) {
+        colour_scheme_ = scheme;
+        emit colourSchemeChanged();
+        syncColourPositions();
+    }
+}
+
+int ProjectViewModel::parameterNumber(const QString& uniqueName) const {
+    const std::string name = uniqueName.toStdString();
+    for (const edi::NamedSlot& slot : edi::named_slots(*project_)) {
+        if (slot.unique_name == name) {
+            return parameters_->numberOf(registry_->find(slot.parameter));
+        }
+    }
+    return 0;
+}
+
+int ProjectViewModel::colourPositionCount() const {
+    int count = 1;
+    for (const int position : experiment_colour_positions_ + structure_colour_positions_) {
+        count = std::max(count, position + 1);
+    }
+    return count;
+}
+
+std::vector<std::size_t> ProjectViewModel::colourPositions() const {
+    std::vector<std::size_t> out;
+    for (const int position : experiment_colour_positions_ + structure_colour_positions_) {
+        out.push_back(static_cast<std::size_t>(position));
+    }
+    return out;
+}
+
+void ProjectViewModel::syncColourPositions() {
+    // Each block keeps its position while it exists; new ones, experiments first, take the next free ones (ADR-0038).
+    std::vector<edi::FigureItem> items;
+    QList<const QObject*> blocks;
+    const auto add = [&](const QObject* block, edi::FigureKind kind) {
+        const auto held = colour_positions_.constFind(block);
+        items.push_back({kind, held == colour_positions_.cend() ? std::nullopt : std::optional<std::size_t>(*held)});
+        blocks.append(block);
+    };
+    for (const ExperimentViewModel* experiment : experiment_models_) {
+        add(experiment, edi::FigureKind::Experiment);
+    }
+    for (const StructureViewModel* structure : structure_models_) {
+        add(structure, edi::FigureKind::Structure);
+    }
+    const std::vector<std::size_t> positions =
+        edi::colour_positions(edi::colour_scheme_or_default(colour_scheme_.toStdString()), items);
+    colour_positions_.clear();
+    QList<int> experiments, structures;
+    for (qsizetype i = 0; i < blocks.size(); ++i) {
+        colour_positions_.insert(blocks[i], positions[static_cast<std::size_t>(i)]);
+        const auto position = static_cast<int>(positions[static_cast<std::size_t>(i)]);
+        (i < experiment_models_.size() ? experiments : structures).append(position);
+    }
+    if (experiments != experiment_colour_positions_ || structures != structure_colour_positions_) {
+        const int count = colourPositionCount();
+        const bool experiments_changed = experiments != experiment_colour_positions_;
+        const bool structures_changed = structures != structure_colour_positions_;
+        experiment_colour_positions_ = experiments;
+        structure_colour_positions_ = structures;
+        if (experiments_changed) {
+            emit experimentColourPositionsChanged();
+        }
+        if (structures_changed) {
+            emit structureColourPositionsChanged();
+        }
+        if (colourPositionCount() != count) {
+            emit colourPositionCountChanged();
+        }
+        emit colourPositionsChanged();
+        syncPatternColours();
+    }
+}
+
 void ProjectViewModel::syncPatternColours() {
-    // One colour per experiment on every page (edi::pattern_colour by place and count): a scan's template shows one
-    // dataset at a time, in that dataset's colour among the scan's datasets.
+    // One colour per experiment on every page (edi::figure_colour at its position): a scan's template shows one
+    // dataset at a time, in that dataset's colour, the datasets taking in order the positions the structures leave
+    // free, as the Stacked view does.
+    const std::vector<std::size_t> positions = colourPositions();
     for (int i = 0; i < experiment_models_.size(); ++i) {
         if (scan_ && i == 0) {
-            experiment_models_[i]->setColourPlace(static_cast<std::size_t>(std::max(current_dataset_, 0)),
-                                                  scan_session_->datasets().files.size());
+            const std::size_t files = scan_session_->datasets().files.size();
+            std::vector<std::size_t> structures;
+            for (const int position : structure_colour_positions_) {
+                structures.push_back(static_cast<std::size_t>(position));
+            }
+            std::vector<std::size_t> datasets =
+                edi::free_positions(edi::colour_scheme_or_default(colour_scheme_.toStdString()),
+                                    edi::FigureKind::Experiment, files, structures);
+            datasets.insert(datasets.end(), structures.begin(), structures.end());
+            experiment_models_[i]->setColourPlace(static_cast<std::size_t>(std::max(current_dataset_, 0)), files,
+                                                  std::move(datasets));
         } else {
-            experiment_models_[i]->setColourPlace(std::nullopt, 0);
+            experiment_models_[i]->setColourPlace(std::nullopt, 0, positions);
         }
     }
 }
@@ -2760,6 +2907,8 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
         return message;
     }
     setLastError({});
+    // The scan views' settings go with the project to its folder, a new one's too.
+    storeViewSettings();
     emit pathChanged();
     // The results came along with the tree; their provenance is kept with them, and the datasets are listed
     // from the saved directory.
@@ -3017,6 +3166,7 @@ void ProjectViewModel::syncBlocks() {
         experiment_models_ = next;
     }
     emit experimentModelsChanged();  // a sample form may have changed too
+    syncColourPositions();
     syncLoadState();
     structure_list_->setStructures(structure_models_);
     syncDatasets();

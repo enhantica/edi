@@ -25,7 +25,7 @@ Rectangle {
         property int oldTheme
         function initTestCase() {
             try {
-                oldScheme = Approved.getSchemes(Preferences);
+                oldScheme = Approved.getScheme(Preferences);
             } catch (error) {
                 oldScheme = null;
             }
@@ -36,7 +36,7 @@ Rectangle {
         }
         function cleanupTestCase() {
             if (oldScheme)
-                Approved.setSchemes(Preferences, oldScheme);
+                Approved.setScheme(Preferences, oldScheme);
             else
                 Preferences.resetToDefaults();
             Style.Colors.theme = oldTheme;
@@ -62,10 +62,14 @@ Rectangle {
             return cases;
         }
         function test_native_bragg_ticks_labels_and_icons_share_every_colour(data) {
-            Approved.setSchemes(Preferences, data.scheme);
+            Approved.setScheme(Preferences, data.scheme);
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             const project = Session.project;
-            const expected = Approved.colours(SettingsProof, data.scheme, "structures", project.structures.count, data.report ? false : data.dark);
+            const expected = Approved.colours(SettingsProof, data.scheme, "structures", project.structures.count, data.report ? false : data.dark, {
+                structureStart: 2,
+                experiments: project.experiments.count,
+                structures: project.structures.count
+            });
             const input = data.report ? {
                 report: project.report,
                 reportExperiment: project.currentExperiment.name

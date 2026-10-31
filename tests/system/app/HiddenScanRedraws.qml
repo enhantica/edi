@@ -11,7 +11,14 @@ import "../../unit/app/ApprovedPalette.js" as Approved
 import "../../fixtures/scan_views/input.js" as Input
 
 Item {
-    Component { id: factory; Main { visible: true; width: 1400; height: 900 } }
+    Component {
+        id: factory
+        Main {
+            visible: true
+            width: 1400
+            height: 900
+        }
+    }
     TestCase {
         id: test
         name: "HiddenScanRedraws"
@@ -20,8 +27,12 @@ Item {
         property var charts: []
         property url projectRoot
         function cleanup() {
-            if (app) { app.close(); app.destroy(); }
-            app = null; charts = [];
+            if (app) {
+                app.close();
+                app.destroy();
+            }
+            app = null;
+            charts = [];
             Session.closeProject();
             Preferences.resetToDefaults();
         }
@@ -55,7 +66,7 @@ Item {
             return result;
         }
         function dataText(shape) {
-            const knots = shape === "left" ? [[10,0], [20,255], [30,255], [40,0], [65,0], [80,0]] : shape === "middle" ? [[10,0], [25,0], [35,255], [45,255], [55,0], [80,0]] : [[10,0], [25,0], [40,0], [55,255], [65,255], [80,0]];
+            const knots = shape === "left" ? [[10, 0], [20, 255], [30, 255], [40, 0], [65, 0], [80, 0]] : shape === "middle" ? [[10, 0], [25, 0], [35, 255], [45, 255], [55, 0], [80, 0]] : [[10, 0], [25, 0], [40, 0], [55, 255], [65, 255], [80, 0]];
             return knots.map(point => point[0] + " " + (point[1] === 0 ? 10 : point[1]) + " 1").join("\n") + "\n";
         }
         function reload(shape) {
@@ -68,7 +79,9 @@ Item {
             compare(Session.project.currentExperiment.pattern.count, 6, "Every actual reloaded experiment retains all six independently supplied positive measured knots");
             frame();
         }
-        function work() { return charts.map(chart => traceLayer(chart).traceBuildCount); }
+        function work() {
+            return charts.map(chart => traceLayer(chart).traceBuildCount);
+        }
         function assertHiddenUnchanged(before, target) {
             const wanted = charts.indexOf(target);
             const order = [wanted].concat(charts.map((chart, index) => index).filter(index => index !== wanted));
@@ -83,7 +96,15 @@ Item {
             const y = (axes.axisY.max - yValue) / (axes.axisY.max - axes.axisY.min) * drawing.height;
             const at = drawing.mapToItem(app.contentItem, x, y);
             const px = Math.floor(at.x * image.width / app.contentItem.width), py = Math.floor(at.y * image.height / app.contentItem.height);
-            verify(Number.isFinite(px) && Number.isFinite(py) && px >= 0 && py >= 0 && px < image.width && py < image.height, "Independent current-point pixel coordinates are inside the actual captured plot: " + JSON.stringify({xValue, yValue, px, py, axes: [axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max], drawing: [drawing.width, drawing.height], image: [image.width, image.height]}));
+            verify(Number.isFinite(px) && Number.isFinite(py) && px >= 0 && py >= 0 && px < image.width && py < image.height, "Independent current-point pixel coordinates are inside the actual captured plot: " + JSON.stringify({
+                xValue,
+                yValue,
+                px,
+                py,
+                axes: [axes.axisX.min, axes.axisX.max, axes.axisY.min, axes.axisY.max],
+                drawing: [drawing.width, drawing.height],
+                image: [image.width, image.height]
+            }));
             return image.pixel(px, py);
         }
         function sameRgb(actual, expected, tolerance) {
@@ -103,9 +124,11 @@ Item {
                     verify(sameRgb(sample(image, chart, left ? 60 : 25, row), rgb(0), 3 / 255), "Every newly shown Map band has no retained pre-hide peak at its former x coordinate");
                 }
             } else {
-                const palette = Approved.colours(SettingsProof, "ediNatural", "measured", 2, chart.colors.isDarkPalette);
+                const palette = Approved.colours(SettingsProof, "earth", "measured", 2, chart.colors.isDarkPalette);
                 for (let row = 0; row < 2; ++row) {
-                    const expected = Qt.rgba(parseInt(palette[row].slice(1,3),16)/255, parseInt(palette[row].slice(3,5),16)/255, parseInt(palette[row].slice(5,7),16)/255, 1);
+                    const ink = Qt.rgba(parseInt(palette[row].slice(1, 3), 16) / 255, parseInt(palette[row].slice(3, 5), 16) / 255, parseInt(palette[row].slice(5, 7), 16) / 255, 1);
+                    const bg = chart.colors.chartBackground;
+                    const expected = Qt.rgba(bg.r + .75 * (ink.r - bg.r), bg.g + .75 * (ink.g - bg.g), bg.b + .75 * (ink.b - bg.b), 1);
                     const y = row / 2 + .25;
                     let current = false, stale = false;
                     for (let dy = -3; dy <= 3; ++dy) {
@@ -129,7 +152,10 @@ Item {
         }
         function requestWork(chart) {
             const item = traceLayer(chart);
-            return {traces: item.traceBuildCount, draws: item.redrawCount};
+            return {
+                traces: item.traceBuildCount,
+                draws: item.redrawCount
+            };
         }
         function inactiveWorkUnchanged(chart, before) {
             const item = traceLayer(chart), after = requestWork(chart);
@@ -142,19 +168,24 @@ Item {
             for (const page of ["experiment", "analysis"])
                 for (const path of ["stacked-gpu", "stacked-painter", "map"])
                     for (const trigger of ["queued", "renderer", "resize"])
-                        rows.push({tag: page + "-" + path + "-" + trigger, page, path, trigger, mode: path === "map" ? "map" : "stacked", renderer: path === "stacked-gpu" ? "gpu" : "software"});
+                        rows.push({
+                            tag: page + "-" + path + "-" + trigger,
+                            page,
+                            path,
+                            trigger,
+                            mode: path === "map" ? "map" : "stacked",
+                            renderer: path === "stacked-gpu" ? "gpu" : "software"
+                        });
             return rows;
         }
         function test_inactive_requests(data) {
             Preferences.resetToDefaults();
             Preferences.chartHighlightSelected = false;
             Preferences.scanRenderer = data.renderer;
-            Preferences.scanStackedPalette = "ediNatural";
+            Preferences.scanStackedPalette = "earth";
             Preferences.scanMapColours = "viridis";
             Preferences.scanMapSmooth = false;
-            Preferences.scanMapReversed = false;
-            Preferences.scanStackedOffset = 100;
-            Preferences.scanStackedSize = 0;
+
             app = factory.createObject(null);
             verify(app !== null, "Inactive request coverage uses the real application on each page");
             app.requestActivate();
@@ -165,6 +196,8 @@ Item {
             Input.joint(SettingsProof, projectRoot, false, "cwl");
             verify(Session.openProject(projectRoot), "Each inactive request starts from an independent saved joint project");
             Session.project.patternDSpacing = false;
+            Session.project.stackedSpacing = "separate";
+            Session.project.mapDirection = "normal";
             reload("left");
             const target = show(data.page, data.mode), item = traceLayer(target);
             const pageIndex = app.appBarCentralTabs.currentIndex;
@@ -195,18 +228,22 @@ Item {
                 reload("right");
                 if (data.trigger === "renderer") {
                     Preferences.scanRenderer = data.renderer === "gpu" ? "software" : "gpu";
-                    item.update(); frame();
+                    item.update();
+                    frame();
                     inactiveWorkUnchanged(target, before);
                     Preferences.scanRenderer = data.renderer;
-                    item.update(); frame();
+                    item.update();
+                    frame();
                     inactiveWorkUnchanged(target, before);
                     const otherMode = data.mode === "map" ? "stacked" : "map";
                     target.mode = otherMode;
                     compare(item.mode, otherMode, "The public chart mode change reaches its actual hidden layer before the direct update");
-                    item.update(); frame();
+                    item.update();
+                    frame();
                     inactiveWorkUnchanged(target, before);
                     target.mode = data.mode;
-                    item.update(); frame();
+                    item.update();
+                    frame();
                 } else {
                     const width = app.width, oldPlotWidth = item.width;
                     app.width = width + 73;
@@ -220,7 +257,9 @@ Item {
             }
             tryVerify(() => !Session.project.calculating, 15000, "Latest data and its calculation settle while the affected view remains inactive");
             verify(!target.shown, "Every work-boundary observation occurs while the real page remains unshown");
-            item.ensurePolished(); item.update(); frame();
+            item.ensurePolished();
+            item.update();
+            frame();
             inactiveWorkUnchanged(target, before);
             const resumed = show(data.page, data.mode);
             compare(resumed, target, "Activation reuses the same page-owned item with its deferred dirty data");
@@ -228,27 +267,38 @@ Item {
             compare(after.traces - before.traces, 2, "Activation reduces the latest data exactly once for each independently supplied dataset");
             verify(after.draws > before.draws, "Activation positively performs the deferred actual drawing");
             assertLatestPixels(target, "right");
-            frame(); frame();
+            frame();
+            frame();
             compare(item.traceBuildCount, after.traces, "Unchanged frames do not repeat a deferred reduction or line build");
             compare(item.redrawCount, after.draws, "Unchanged frames do not repeat deferred GPU-line or painted updates");
-            console.log("INACTIVE_REQUEST " + JSON.stringify({page: data.page, path: data.path, trigger: data.trigger, before, after, datasets: 2}));
+            console.log("INACTIVE_REQUEST " + JSON.stringify({
+                page: data.page,
+                path: data.path,
+                trigger: data.trigger,
+                before,
+                after,
+                datasets: 2
+            }));
         }
         function test_hidden_views_data() {
             const rows = [];
             for (const page of ["experiment", "analysis"])
-                for (const mode of ["stacked", "map"]) rows.push({tag: page + "-" + mode, page, mode});
+                for (const mode of ["stacked", "map"])
+                    rows.push({
+                        tag: page + "-" + mode,
+                        page,
+                        mode
+                    });
             return rows;
         }
         function test_hidden_views(data) {
             Preferences.resetToDefaults();
             Preferences.chartHighlightSelected = false;
             Preferences.scanRenderer = "gpu";
-            Preferences.scanStackedPalette = "ediNatural";
+            Preferences.scanStackedPalette = "earth";
             Preferences.scanMapColours = "viridis";
             Preferences.scanMapSmooth = false;
-            Preferences.scanMapReversed = false;
-            Preferences.scanStackedOffset = 100;
-            Preferences.scanStackedSize = 0;
+
             app = factory.createObject(null);
             verify(app !== null, "The redraw rule is exercised in the actual Main application");
             app.requestActivate();
@@ -257,6 +307,8 @@ Item {
             Input.joint(SettingsProof, projectRoot, false, "cwl");
             verify(Session.openProject(projectRoot), "The hidden-redraw gate opens an independent two-experiment joint project");
             Session.project.patternDSpacing = false;
+            Session.project.stackedSpacing = "separate";
+            Session.project.mapDirection = "normal";
             reload("left");
             for (const name of ["experiment", "analysis"])
                 for (const mode of ["stacked", "map"])
@@ -265,8 +317,10 @@ Item {
             let target = show(data.page, data.mode);
             assertLatestPixels(target, "left");
             for (const context of ["page", "tab"]) {
-                if (context === "page") Ui.click(test, Probe, app, "appBar.tab.home");
-                else Ui.click(test, Probe, app, "mainArea." + data.page + ".tab." + (data.page === "experiment" ? "chart" : "fitting"));
+                if (context === "page")
+                    Ui.click(test, Probe, app, "appBar.tab.home");
+                else
+                    Ui.click(test, Probe, app, "mainArea." + data.page + ".tab." + (data.page === "experiment" ? "chart" : "fitting"));
                 settle();
                 const before = work();
                 reload("middle");
@@ -274,7 +328,8 @@ Item {
                 reload(context === "page" ? "right" : "left");
                 assertHiddenUnchanged(before, target);
                 // The view is still hidden after more completed frames than the edits require.
-                frame(); frame();
+                frame();
+                frame();
                 assertHiddenUnchanged(before, target);
                 target = show(data.page, data.mode);
                 const targetIndex = charts.indexOf(target);
@@ -283,9 +338,17 @@ Item {
                 for (let index = 0; index < charts.length; ++index)
                     compare(after[index] - before[index], index === targetIndex ? 2 : 0, "Only the newly shown view builds exactly once per current dataset; all other hidden scan layers remain idle");
                 assertLatestPixels(target, context === "page" ? "right" : "left");
-                frame(); frame();
+                frame();
+                frame();
                 compare(traceLayer(target).traceBuildCount, after[targetIndex], "Further unchanged frames do not repeat the deferred trace build");
-                console.log("HIDDEN_REDRAW " + JSON.stringify({page: data.page, mode: data.mode, context, before, after, datasets: 2}));
+                console.log("HIDDEN_REDRAW " + JSON.stringify({
+                    page: data.page,
+                    mode: data.mode,
+                    context,
+                    before,
+                    after,
+                    datasets: 2
+                }));
             }
         }
     }
