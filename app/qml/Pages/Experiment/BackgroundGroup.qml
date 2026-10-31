@@ -30,6 +30,38 @@ Column {
     // Estimate works on the measured pattern: without one it is disabled, its tooltip saying why (the owner, 2026-10-27).
     readonly property bool measured: experiment !== null && !experiment.calculationOnly
     readonly property string needsDataTip: qsTr("Estimate needs measured data: load data into this experiment first")
+
+    // Estimate, below the points or the terms. A disabled button takes no hover, so its tooltip, which then says why,
+    // hangs on the item around it.
+    component EstimateButton: Item {
+        id: holder
+
+        property string toolTip: ""
+        property bool active: true
+
+        implicitWidth: estimate.implicitWidth
+        implicitHeight: estimate.implicitHeight
+
+        EaElements.SideBarButton {
+            id: estimate
+            objectName: "background.estimate"
+            width: holder.width
+            enabled: holder.active
+            fontIcon: "magic"
+            text: qsTr("Estimate")
+            ToolTip.text: holder.toolTip
+            onClicked: Session.project.estimateBackground()
+
+            EaElements.ToolTip {
+                text: holder.toolTip
+                visible: disabledHover.hovered && !estimate.enabled && EaGlobals.Vars.showToolTips && text !== ""
+            }
+        }
+        HoverHandler {
+            id: disabledHover
+            enabled: !estimate.enabled
+        }
+    }
     // A background type's content by token: a new type needs only its layout here.
     readonly property var layouts: ({
             "line-segment": lineSegmentLayout,
@@ -245,14 +277,10 @@ Column {
                     ToolTip.text: qsTr("Name points by position: each point takes its position, rounded, as its name")
                     onClicked: Session.project.namePointsByPosition()
                 }
-                EaElements.SideBarButton {
-                    objectName: "background.estimate"
+                EstimateButton {
                     width: pointButtons.buttonWidth
-                    enabled: group.measured && !group.automatic
-                    fontIcon: "magic"
-                    text: qsTr("Estimate")
-                    ToolTip.text: group.measured ? qsTr("Estimate the points from the measured pattern, with the settings in Extras") : group.needsDataTip
-                    onClicked: Session.project.estimateBackground()
+                    active: group.measured && !group.automatic
+                    toolTip: group.measured ? qsTr("Estimate the points from the measured pattern, with the settings in Extras") : group.needsDataTip
                 }
             }
         }
@@ -367,14 +395,10 @@ Column {
                     ToolTip.text: qsTr("Name terms by order: each term takes its order as its name")
                     onClicked: Session.project.nameTermsByOrder()
                 }
-                EaElements.SideBarButton {
-                    objectName: "background.estimate"
+                EstimateButton {
                     width: termButtons.buttonWidth
-                    enabled: group.measured && !group.automatic
-                    fontIcon: "magic"
-                    text: qsTr("Estimate")
-                    ToolTip.text: group.measured ? qsTr("Estimate the terms from the measured pattern, with the settings in Extras") : group.needsDataTip
-                    onClicked: Session.project.estimateBackground()
+                    active: group.measured && !group.automatic
+                    toolTip: group.measured ? qsTr("Estimate the terms from the measured pattern, with the settings in Extras") : group.needsDataTip
                 }
             }
         }
