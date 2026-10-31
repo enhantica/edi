@@ -74,6 +74,7 @@ def main():
     env = os.environ.copy()
     prefix = repo / '.pixi/envs/default'
     env['PATH'] = str(prefix / 'bin') + ':' + env['PATH']
+    env['CONDA_PREFIX'] = str(prefix)
     args = [
         shutil.which('cmake', path=env['PATH']),
         '-S',
@@ -96,7 +97,7 @@ def main():
             '--build',
             str(build),
             '--target',
-            'crysta' if product == 'crysta' else '_edi',
+            '_crysta.abi3.so' if product == 'crysta' else '_edi',
             '-j',
             '4',
         ],
