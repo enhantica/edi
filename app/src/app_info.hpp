@@ -435,6 +435,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue sidebarEdge(const QJSValue& group, bool last) const;
     Q_INVOKABLE QJSValue sidebarOrderedChildren(const QJSValue& parent) const;
     Q_INVOKABLE QJSValue sidebarShownGroups(const QJSValue& group) const;
+    Q_INVOKABLE void statusItemActionChanged(QObject* control, QObject* accessible, bool live) const;
+    Q_INVOKABLE void statusItemPress(QObject* control) const;
     Q_INVOKABLE QJSValue statusKeysFit() const;
     Q_INVOKABLE QJSValue statusRoomFor() const;
     Q_INVOKABLE QJSValue statusMeasuredWidth(bool compact) const;

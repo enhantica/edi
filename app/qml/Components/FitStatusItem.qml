@@ -56,6 +56,20 @@ Control {
     readonly property real compactWidth: !framed ? iconLabel.implicitWidth + valueWidth + contentRow.spacing + leftPadding + rightPadding : dropsWord ? frameHeight : iconLabel.implicitWidth + valueWidth + contentRow.spacing + sidePadding + afterWordPadding
     signal clicked
 
+    // Accessibility follows effective availability without disabling hover/tooltips.
+    readonly property bool accessibleAction: clickable && visible && enabled
+    Accessible.role: accessibleAction ? Accessible.Button : Accessible.NoRole
+    Accessible.name: accessibleAction ? valueText : ""
+    Accessible.description: accessibleAction ? control.ToolTip.text : ""
+    Accessible.focusable: accessibleAction
+    Accessible.focused: accessibleAction && activeFocus
+    onAccessibleActionChanged: ApplicationInfo.statusItemActionChanged(control, control.Accessible, accessibleAction)
+    Component.onCompleted: ApplicationInfo.statusItemActionChanged(control, control.Accessible, accessibleAction)
+    Component.onDestruction: ApplicationInfo.statusItemActionChanged(control, control.Accessible, false)
+    function pressAccessibleAction() {
+        ApplicationInfo.statusItemPress(control);
+    }
+
     visible: shown
     anchors.verticalCenter: parent ? parent.verticalCenter : undefined
     // Whole pixels, so the fit area's items, the round buttons among them, sit on the pixel grid.
@@ -75,6 +89,7 @@ Control {
 
         EaElements.Label {
             id: iconLabel
+            Accessible.ignored: control.accessibleAction
             anchors.verticalCenter: parent.verticalCenter
             height: font.pixelSize
             verticalAlignment: Text.AlignVCenter
@@ -88,6 +103,7 @@ Control {
         }
         EaElements.Label {
             id: keyLabel
+            Accessible.ignored: control.accessibleAction
             visible: control.showKey && !control.framed
             anchors.verticalCenter: parent.verticalCenter
             height: font.pixelSize
@@ -102,6 +118,7 @@ Control {
         }
         DigitText {
             id: value
+            Accessible.ignored: control.accessibleAction
             objectName: "statusBar.fit.value"
             visible: !control.framed
             anchors.verticalCenter: parent.verticalCenter
@@ -113,6 +130,7 @@ Control {
         // ascent, which leaves a word a pixel low in the frame.
         EaElements.Label {
             id: word
+            Accessible.ignored: control.accessibleAction
             visible: control.wordShown
             anchors.verticalCenter: parent.verticalCenter
             font: control.font
