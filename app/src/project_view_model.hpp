@@ -162,6 +162,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // `project.edi`'s categories with no designed group, each with a group made from the dictionary on the Project
     // page's Extras (CategoryListModel).
     Q_PROPERTY(edi_app::CategoryListModel* categories READ categories CONSTANT)
+    // The categories of the report's own file, reports/report.edi, for the Report page's groups.
+    Q_PROPERTY(edi_app::CategoryListModel* reportCategories READ reportCategories CONSTANT)
     // The report's own file as a save writes it, reports/report.edi (the Report page's Text; ADR-0036 §7).
     Q_PROPERTY(edi_app::BlockText* reportText READ reportText CONSTANT)
     Q_PROPERTY(edi_app::BlockText* projectText READ projectText CONSTANT)
@@ -280,6 +282,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     FitViewModel* fit() const { return fit_; }
     BlockText* metadataText() const { return metadata_text_; }
     CategoryListModel* categories() const { return categories_; }
+    CategoryListModel* reportCategories() const { return report_categories_; }
     BlockText* reportText() const { return report_text_; }
     BlockText* projectText() const { return project_text_; }
     ReportViewModel* report() const { return report_; }
@@ -607,7 +610,10 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void syncUndo();
     BlockText* metadata_text_;
     CategoryListModel* categories_ = nullptr;
+    CategoryListModel* report_categories_ = nullptr;
     void syncCategories();
+    // Every block's category list against its saved text as it is now.
+    void refreshCategories();
     // The Structure view's options are the shown structure's: set from it when it is shown, saved to it on a change.
     void showStructureView();
     void keepStructureView();

@@ -40,6 +40,8 @@ CategoryPresentation category_presentation(const QString& id) {
         {QStringLiteral("sequential_fit"), {T::Extras, false, true}},
         {QStringLiteral("sequential_fit_extract"), {T::Extras, false, true}},
         {QStringLiteral("fit_parameter"), {T::Extras, false, true}},
+        // The Report page has one tab: its saved reports are listed there.
+        {QStringLiteral("report_file"), {T::Basic}},
     };
     const Place place = places.value(id, {T::Extras});
     const std::string key = id.toStdString();
@@ -77,8 +79,12 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
 
 CategoryListModel::CategoryListModel(QObject* parent) : QAbstractListModel(parent) {}
 
+void CategoryListModel::refresh() { setCategories(std::vector<edi::Category>(categories_), text_); }
+
 void CategoryListModel::setCategories(const std::vector<edi::Category>& categories,
                                       const std::function<std::string()>& text) {
+    categories_ = categories;
+    text_ = text;
     std::vector<Row> target;
     for (const edi::Category* shown : presentation_order(categories)) {
         const edi::Category& category = *shown;
@@ -90,13 +96,8 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
             target.push_back({QStringLiteral("background_estimate"), 0, false, true});
         }
     }
-    std::vector<std::string> ids;
-    for (const edi::Category& category : categories) {
-        ids.push_back(category.id);
-    }
-    if (text && ids != core_ids_) {
-        core_ids_ = ids;
-        generated_.clear();
+    std::vector<Row> generated;
+    if (text) {
         const std::string saved = text();
         // Only what a user sets or reads gets a group (the owner, 2026-10-27): not the file header, the Cartesian
         // transform, the calculator (there is one), the curves' presentation order, the block list or the
@@ -112,11 +113,11 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
                 continue;
             }
             const edi::TextCategory category = edi::text_category(saved, id);
-            generated_.push_back({QString::fromStdString(id),
-                                  category.loop ? static_cast<int>(category.rows.size()) : 0, category.loop, true});
+            generated.push_back({QString::fromStdString(id),
+                                 category.loop ? static_cast<int>(category.rows.size()) : 0, category.loop, true});
         }
     }
-    for (const Row& row : generated_) {
+    for (const Row& row : generated) {
         const bool listed = std::any_of(target.begin(), target.end(), [&row](const Row& held) { return held.id == row.id; });
         // A file's `data` loop is the core's measured data or calculation range.
         const bool data = row.id == QLatin1String("data") &&

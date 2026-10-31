@@ -43,9 +43,12 @@ class CategoryListModel : public QAbstractListModel {
 
     // Bring the rows to the core's list: rows are inserted and removed by id, counts updated in place.
     // The core's categories of a block, and those its saved text carries that the core does not list, each with a
-    // group the app makes from the dictionary (GeneratedCategory), so every category of the file has a group. The
-    // text is read (a save) only when the core's set of categories changed: `text` gives it.
+    // group the app makes from the dictionary (GeneratedCategory), so every category of the file has a group, with
+    // the count the file has: `text` gives the block's saved text, read on every call (the project caches it).
     void setCategories(const std::vector<edi::Category>& categories, const std::function<std::string()>& text = {});
+    // The same list against the block's text as it is now: after a calculation, which adds computed categories,
+    // or an edit no core category shows.
+    void refresh();
     int count() const { return static_cast<int>(rows_.size()); }
     Q_INVOKABLE bool contains(const QString& categoryId) const;
     Q_INVOKABLE int itemCount(const QString& categoryId) const;
@@ -65,8 +68,8 @@ class CategoryListModel : public QAbstractListModel {
         bool admitted = true;
     };
     std::vector<Row> rows_;
-    std::vector<std::string> core_ids_;
-    std::vector<Row> generated_;
+    std::vector<edi::Category> categories_;
+    std::function<std::string()> text_;
 };
 
 // The app's presentation of a category id: which sidebar tab shows it, its title and its icon

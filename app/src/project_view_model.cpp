@@ -205,6 +205,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         },
         this);
     categories_ = new CategoryListModel(this);
+    report_categories_ = new CategoryListModel(this);
     syncCategories();
     connect(structure_view_options_, &StructureViewOptions::changed, this, &ProjectViewModel::keepStructureView);
     render_wait_.setSingleShot(true);
@@ -2574,10 +2575,26 @@ void ProjectViewModel::undo() {
     syncUndo();
 }
 
+void ProjectViewModel::refreshCategories() {
+    // Each block's generated groups follow its file as it is now (invalidateTexts).
+    for (StructureViewModel* structure : structure_models_) {
+        structure->categories()->refresh();
+    }
+    for (ExperimentViewModel* experiment : experiment_models_) {
+        experiment->categories()->refresh();
+    }
+    analysis_->categories()->refresh();
+    categories_->refresh();
+    report_categories_->refresh();
+}
+
 void ProjectViewModel::syncCategories() {
     // The standard uncertainties have their designed group here, the report's settings theirs on the Report page.
     categories_->setCategories({edi::Category{"su_format"}, edi::Category{"report"}},
                                [this] { return metadata_text_->text().toStdString(); });
+    // The report's settings have their designed group on the Report page; what else its file holds (the saved
+    // reports) gets a group made from the dictionary there.
+    report_categories_->setCategories({edi::Category{"report"}}, [this] { return report_text_->text().toStdString(); });
 }
 
 void ProjectViewModel::showStructureView() {
@@ -3075,6 +3092,9 @@ void ProjectViewModel::invalidateTexts() {
     metadata_text_->invalidate();
     report_text_->invalidate();
     project_text_->invalidate();
+    // A file's categories follow it too: a calculation adds the computed ones, a first appearance setting or a saved
+    // report its own.
+    refreshCategories();
 }
 
 void ProjectViewModel::syncBlocks() {
