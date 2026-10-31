@@ -120,15 +120,27 @@ Item {
             for (const control of controls) {
                 verify(control !== null && control.item === item, "Both supported consumers hold the same original typed parameter");
                 for (const width of [360, 1, 360, 1, 360]) {
-                    control.width = width;
+                    const narrow = width === 1;
+                    control.width = narrow ? control.leftPadding + control.rightPadding + 1 : width;
                     verify(waitForPolish(control), "Each real width transition completes the existing layout gate");
+                    const room = control.width - control.leftPadding - control.rightPadding;
+                    ink.font = control.font;
+                    ink.text = item.fileValue;
+                    const fullInk = ink.advanceWidth;
                     console.log("WRITTEN_PRECISION " + JSON.stringify({tag: ref.tag,
-                        consumer: control === controls[0] ? "cell" : "field", width,
+                        consumer: control === controls[0] ? "cell" : "field",
+                        width: control.width, requestedStep: width, fullInk,
                         text: control.text, canonical: item.fileValue, su: item.fileSu,
                         hasSu: item.hasUncertainty, free: item.free,
                         contentWidth: control.contentWidth,
                         room: control.width - control.leftPadding - control.rightPadding}));
-                    const expected = width === 1 ? ref.scientific : item.fileValue;
+                    if (narrow) {
+                        compare(room, 1, "Both actual consumers receive the same authored positive content room");
+                        verify(fullInk > room, "The independently measured complete canonical token genuinely exceeds its positive narrow viewport");
+                    } else {
+                        verify(room >= fullInk, "The original wide viewport genuinely fits the complete canonical token");
+                    }
+                    const expected = narrow ? ref.scientific : item.fileValue;
                     tryCompare(control, "text", expected, 2000, "Actual displayed text retains the file pair's own digits at each width");
                     verify(!String(control.text).includes("…"), "Numeric display never substitutes an ellipsis");
                     compare(control.editText, item.fileValue, "The full canonical editing token survives every display-only resize");
@@ -139,6 +151,47 @@ Item {
             compare(controls[0].text, controls[1].text, "Cell and standalone field agree again at the same wide size");
             compare(SettingsProof.text(loaded.directory, loaded.file), loaded.source, "Display-only transitions never rewrite the source file");
             compare(Session.project.modified, false, "Display-only precision conversion cannot make the project dirty");
+        }
+        function test_nonpositive_room_keeps_canonical_then_recovers_data() {
+            return [{tag: "cell", component: cellFactory}, {tag: "field", component: fieldFactory}];
+        }
+        function test_nonpositive_room_keeps_canonical_then_recovers(data) {
+            const ref = cases().find(row => row.tag === "iucr_99-signed-owner-1");
+            verify(ref !== undefined, "The allocation guard uses the independent positive-SU written pair");
+            const loaded = open(ref), item = loaded.item, before = state(item);
+            const control = createTemporaryObject(data.component, surface, {item});
+            verify(control !== null && waitForPolish(control), "The guard exercise retains an actual typed production consumer");
+            verify(!control.activeFocus, "The allocation guard is observed outside an active manual editor");
+            verify(item.fileValue !== ref.scientific, "Canonical and narrow literals genuinely distinguish the guard and conversion branches");
+            for (const requestedRoom of [0, -1, 1, 0, -1, 1]) {
+                control.width = control.leftPadding + control.rightPadding + requestedRoom;
+                verify(waitForPolish(control), "Each allocation transition completes the existing layout gate");
+                const room = control.width - control.leftPadding - control.rightPadding;
+                ink.font = control.font;
+                ink.text = item.fileValue;
+                console.log("WRITTEN_PRECISION_ALLOCATION " + JSON.stringify({
+                    consumer: data.tag, requestedRoom, room, width: control.width,
+                    text: control.text, canonical: item.fileValue,
+                    fullInk: ink.advanceWidth, state: before}));
+                compare(room, requestedRoom, "The real control reaches the authored zero, negative or positive content allocation");
+                verify(ink.advanceWidth > room, "The canonical token exceeds the allocation independently of the formatter under test");
+                tryCompare(control, "text", requestedRoom > 0 ? ref.scientific : item.fileValue, 2000,
+                    "Nonpositive allocation preserves canonical text and return to positive room activates the independent narrow literal");
+                compare(control.editText, item.fileValue, "Allocation guards preserve the complete canonical editing token");
+                compare(state(item), before, "Allocation transitions cannot mutate the original value, SU presence or free flag");
+                compare(control.item, item, "Allocation transitions retain the original typed owner");
+                verify(!String(control.text).includes("…"), "Unallocated and narrow text never substitute an ellipsis");
+            }
+            control.width = 360;
+            verify(waitForPolish(control), "The existing wide allocation returns through ordinary layout");
+            ink.font = control.font;
+            ink.text = item.fileValue;
+            verify(control.width - control.leftPadding - control.rightPadding >= ink.advanceWidth,
+                "The returned original wide viewport independently fits the complete token");
+            tryCompare(control, "text", item.fileValue, 2000, "Returning wide restores the complete canonical token");
+            compare(state(item), before, "The guard exercise leaves the scientific and canonical pair exact");
+            compare(SettingsProof.text(loaded.directory, loaded.file), loaded.source, "Allocation guards cannot rewrite the original source file");
+            compare(Session.project.modified, false, "Allocation guards cannot make the original project dirty");
         }
         function test_fit_digits_preserves_full_token() {
             const ref = cases().find(row => row.tag === "iucr_99-120000(2.0)");
