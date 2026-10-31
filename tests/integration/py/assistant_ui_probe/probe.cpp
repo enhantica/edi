@@ -131,6 +131,123 @@ public:
         return false;
     }
 };
+// Finite property-notice observers for same-owner restoration/consent reentry.
+// Read the actual getters at their real notifiers; never emit/copy an app signal.
+class NativePropertyNotice final : public QObject {
+    Q_OBJECT
+    QPointer<QObject> owner_;
+    QMetaProperty property_;
+    QVariant last_;
+
+   public:
+    QString name;
+    Array events;
+    bool duplicate = false;
+    NativePropertyNotice(QObject* owner, const char* property, QObject* parent)
+        : QObject(parent), owner_(owner), name(QString::fromUtf8(property)) {
+        const int index = owner->metaObject()->indexOfProperty(property);
+        if (index < 0) throw std::runtime_error("required actual AVM property missing");
+        property_ = owner->metaObject()->property(index);
+        if (!property_.hasNotifySignal())
+            throw std::runtime_error("new dedicated AVM notifier precondition missing");
+        if (property_.notifySignal().name() != name.toUtf8() + "Changed")
+            throw std::runtime_error("declared dedicated AVM notifier name missing");
+        last_ = property_.read(owner);
+        const auto slot = metaObject()->method(metaObject()->indexOfSlot("announced()"));
+        if (!QObject::connect(owner, property_.notifySignal(), this, slot, Qt::DirectConnection))
+            throw std::runtime_error("actual AVM property observation did not connect");
+    }
+    int signalIndex() const { return property_.notifySignalIndex(); }
+    Object snapshot() const {
+        return {
+            {"name", name},
+            {"events", events},
+            {"duplicate", duplicate},
+            {"last_announced", QJsonValue::fromVariant(last_)},
+            {"current", owner_ ? QJsonValue::fromVariant(property_.read(owner_)) : QJsonValue()},
+            {"owner_alive", !owner_.isNull()}};
+    }
+   private slots:
+    void announced() {
+        if (!owner_) return;
+        const auto current = property_.read(owner_);
+        duplicate = duplicate || (!events.isEmpty() && current == last_);
+        last_ = current;
+        events.append(QJsonValue::fromVariant(current));
+    }
+};
+class NativeNotificationReentry final : public QObject {
+    Q_OBJECT
+    QPointer<edi_app::AssistantViewModel> original_;
+    std::vector<NativePropertyNotice*> properties_;
+    std::function<bool()> current_;
+    std::function<void()> destroy_;
+    QString mode_, action_, replacement_;
+    Object entered_;
+    bool fired_ = false;
+
+   public:
+    NativeNotificationReentry(edi_app::AssistantViewModel* owner, QString mode, QString action,
+                              QString replacement, std::function<bool()> current,
+                              std::function<void()> destroy)
+        : original_(owner),
+          current_(std::move(current)),
+          destroy_(std::move(destroy)),
+          mode_(std::move(mode)),
+          action_(std::move(action)),
+          replacement_(std::move(replacement)) {
+        QSet<int> seen;
+        for (const auto* name : {"sessionDraft", "contextConsentRequired",
+                                 "contextConsentIdentity", "contextApprovalBlocked"}) {
+            auto* notice = new NativePropertyNotice(owner, name, this);
+            if (seen.contains(notice->signalIndex()))
+                throw std::runtime_error("unrelated actual AVM properties share a notifier");
+            seen.insert(notice->signalIndex());
+            properties_.push_back(notice);
+        }
+        if (mode_ == "draft") {
+            QObject::connect(
+                owner, &edi_app::AssistantViewModel::sessionDraftRestored, this,
+                [this](const QString& thread, const QString& text) {
+                    if (fired_) return;
+                    fired_ = true;
+                    entered_ = {
+                        {"thread", thread},
+                        {"restored_text", text},
+                        {"getter_before", original_ ? original_->sessionDraft() : QString()},
+                        {"same_owner_before", current_()}};
+                    if (action_ == "delete")
+                        destroy_();
+                    else if (original_)
+                        original_->setSessionDraft(replacement_);
+                    entered_["same_owner_after"] = current_();
+                },
+                Qt::DirectConnection);
+        } else {
+            QObject::connect(
+                owner, &edi_app::AssistantViewModel::contextPreviewChanged, this,
+                [this] {
+                    if (fired_ || !original_ || !original_->contextConsentRequired()) return;
+                    fired_ = true;
+                    entered_ = {{"required_before", original_->contextConsentRequired()},
+                                {"connected_before", original_->connected()},
+                                {"same_owner_before", current_()}};
+                    if (action_ == "delete")
+                        destroy_();
+                    else
+                        original_->signIn();  // existing public connected-owner consent entrance
+                    entered_["same_owner_after"] = current_();
+                },
+                Qt::DirectConnection);
+        }
+    }
+    Object snapshot() const {
+        Array properties;
+        for (const auto* notice : properties_) properties.append(notice->snapshot());
+        return {{"mode", mode_},     {"action", action_},        {"fired", fired_},
+                {"entry", entered_}, {"same_owner", current_()}, {"properties", properties}};
+    }
+};
 class UrlObserver:public QObject {
     Q_OBJECT
 public:
@@ -450,6 +567,7 @@ int main(int argc,char** argv) {
     Object session_fault_facts;
     unsigned session_notification_hits=0;
     QObject session_fault_observer;
+    std::unique_ptr<NativeNotificationReentry> property_notification_reentry;
     // Test-owned handles of the original public archive owner; no application
     // rows, receipts, permissions or provider data are manufactured here.
     struct PublicArchiveProbe {
@@ -1969,6 +2087,32 @@ int main(int argc,char** argv) {
                 result={{"reached",true},{"row_id",identity},{"mode",mode},{"clipboard",copied},
                     {"selected_start",selected_start},{"selected_end",selected_end},{"formula_start",start},{"formula_end",end},
                     {"same_row",original_row->property("rowId").toString()==identity},{"same_window",body->window()==window}};
+            }
+            else if (op == "property_notification_arm") {
+                if (!observed || !window || !observed->assistant())
+                    throw std::runtime_error(
+                        "current actual Main AVM required for notifier observation");
+                const auto mode = input["mode"].toString(), action = input["action"].toString();
+                if ((mode != "draft" && mode != "consent") ||
+                    (action != "nested" && action != "delete"))
+                    throw std::invalid_argument("closed notification reentry entrance/action");
+                QPointer<edi_app::AssistantViewModel> original = observed->assistant();
+                if (!original->connected())
+                    throw std::runtime_error("genuine connected owner required");
+                property_notification_reentry = std::make_unique<NativeNotificationReentry>(
+                    original.data(), mode, action, input["replacement"].toString(),
+                    [&, original] {
+                        return original && observed && observed->assistant() == original;
+                    },
+                    [&] {
+                        engine.reset();
+                        singleton = nullptr;
+                    });
+                result = {{"armed", true}, {"facts", property_notification_reentry->snapshot()}};
+            } else if (op == "property_notification_read") {
+                if (!property_notification_reentry)
+                    throw std::runtime_error("actual notifier observation not armed");
+                result = property_notification_reentry->snapshot();
             }
             else if(op=="arm_session_notification") {
                 if(!observed || !window)throw std::runtime_error("actual original session notification owner required");
