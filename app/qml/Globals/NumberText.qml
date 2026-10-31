@@ -110,6 +110,12 @@ QtObject {
         return ApplicationInfo.numberPresentation(ApplicationInfo.NumberCompact, text, significant, undefined, undefined);
     }
 
+    // The written value/SU pair, retaining its meaningful last digit and all
+    // explicit exact digits when a control needs a scientific spelling.
+    function writtenNarrow(text, su) {
+        return ApplicationInfo.numberPresentation(ApplicationInfo.NumberWrittenNarrow, text, su, undefined, undefined);
+    }
+
     // How many significant digits an s.u. the project's rule wrote has: two under iucr_99, and under iucr_19 from 10
     // to 19 (a first digit 1); one otherwise. A whole number's text alone cannot say (`200000` is 2e5 or 2.0e5).
     function suDigits(su) {
