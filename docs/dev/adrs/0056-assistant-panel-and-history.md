@@ -4954,3 +4954,21 @@ or numerical expectation is changed. Primary prior art: Qt 6.11.2
 `src/qml/qml/qqmldelayedcallqueue.cpp` `addUniquelyAndExecuteLater`/`execute`, and the installed
 `qv4qobjectwrapper_p.h`/`qv4qmlcontext_p.h`/`qqmldata_p.h`/`qqmlcontextdata_p.h`
 native wrapper, guarded scope, deletion-state and context-validity interfaces.
+
+## Pending connection caption uses the actual connection owner
+
+FIRST AssistantViewModel already exposes the authoritative connecting state and
+its localized connectionLabel. The signed-out panel remains visible while a real
+connection is being prepared, since connected stays false until the existing
+native ready/authentication conditions hold. Its central prompt now shows that
+existing pending label while state is connecting, rather than incorrectly saying
+No ChatGPT connection during that operation. Every other disconnected state
+retains the original translated No ChatGPT connection prompt.
+
+This is a declarative caption projection, not authentication or selected-file
+approval. Connected/readiness, outgoing-data admission, consent, account identity,
+errors/notices, cancellation and actual process/transport settlement remain their
+existing backend owners. No timer, retained account, synthetic connected flag,
+new state or hidden error is introduced. A pending attempt, successful readiness,
+refusal/error/cancel and genuine disconnected state must retain their actual
+visible meanings under normal independent UI verification.
