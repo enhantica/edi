@@ -10,9 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-10-31T15:00:20Z
+# measured_utc = 2026-10-31T15:08:33Z
 #
-# Recorded from: measured test run (16 node(s) measured once, 16276 banked, 1 stale row(s) dropped)
+# Recorded from: measured test run (16 node(s) measured once, 16276 banked, 0 stale row(s) dropped)
 # Collected tests: 18801; with a reported duration: 10492
 # Module-scoped fixture costs recorded: 94
 #
@@ -17093,16 +17093,16 @@ UNMEASURED:failed-in-this-run	tests/system/py/test_sequential_scan_performance.p
 0.030	tests/system/py/test_single_crystal_edges.py::test_unsupported_free_slots_refuse_instead_of_zero_columns[none-mosaic_spread]
 0.730	tests/system/py/test_single_crystal_taurine_converged.py::test_actual_taurine_fit_matches_all_fullprof_parameters_and_uncertainties
 0.060	tests/system/py/test_single_crystal_taurine_converged.py::test_converged_artifacts_and_parameter_conventions_are_independent
-0.130	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-gpu-needle]
-0.360	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-gpu-peak]
-0.150	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-software-needle]
-0.130	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-software-peak]
-1.110	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr2-gpu-needle]
-2.080	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr2-gpu-peak]
-1.160	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr2-software-needle]
-1.150	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr2-software-peak]
+0.140	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-gpu-needle]
+0.490	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-gpu-peak]
+0.140	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-software-needle]
+0.140	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr1-software-peak]
+1.450	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr2-gpu-needle]
+2.880	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr2-gpu-peak]
+1.580	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr2-software-needle]
+1.540	tests/system/py/test_stacked_line_quality.py::test_quality_comparison_rejects_degraded_reference_controls[dpr2-software-peak]
 0.000	tests/system/py/test_stacked_line_quality.py::test_stacked_matches_pattern_line_quality[dpr1-gpu-needle]
-0.004	tests/system/py/test_stacked_line_quality.py::test_stacked_matches_pattern_line_quality[dpr1-gpu-peak]
+0.005	tests/system/py/test_stacked_line_quality.py::test_stacked_matches_pattern_line_quality[dpr1-gpu-peak]
 0.000	tests/system/py/test_stacked_line_quality.py::test_stacked_matches_pattern_line_quality[dpr1-software-needle]
 0.000	tests/system/py/test_stacked_line_quality.py::test_stacked_matches_pattern_line_quality[dpr1-software-peak]
 0.000	tests/system/py/test_stacked_line_quality.py::test_stacked_matches_pattern_line_quality[dpr2-gpu-needle]
@@ -19323,7 +19323,7 @@ UNMEASURED:failed-in-this-run	tests/unit/py/test_verification_helpers.py::test_i
 # module-cost: 241.876	tests/system/py/test_scan_update_modes.py
 # module-cost: 7.237	tests/system/py/test_shared_correlation_app_state.py
 # module-cost: 71.426	tests/system/py/test_sidebar_defaults.py
-# module-cost: 31.316	tests/system/py/test_stacked_line_quality.py
+# module-cost: 32.595	tests/system/py/test_stacked_line_quality.py
 # module-cost: 8.957	tests/system/py/test_staging_cleanup.py
 # module-cost: 9.952	tests/system/py/test_structure_backend.py
 # module-cost: 6.259	tests/system/py/test_thread_selector.py

@@ -190,5 +190,6 @@ ink masks therefore mean fractions of that opacity; a low-opacity reference
 still has a nonempty core. Each gap control locates and erases known stroke-core
 pixels before requiring a gap violation. Thin, uneven, gap, notch, double-alpha
 and two-physical-pixel-shift controls run for both shapes, both renderers and both
-DPRs. Width, coverage-error and join limits retain their existing values; no
+DPRs. Width and coverage-error limits retain their existing values. Excess join
+opacity stays in absolute alpha units at its original 0.08 limit. No
 image registration or renderer-derived reference values are used.

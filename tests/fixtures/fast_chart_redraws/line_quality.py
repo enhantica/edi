@@ -211,7 +211,7 @@ def metrics(reference, candidate, receipt):
         'coverage_error': float(np.abs(blurred_got - blurred_ref).sum() / ref.sum()),
         'missing_core_pixels': int(np.count_nonzero((ref > 0.24) & (nearby < 0.04))),
         'missing_join_pixels': int(np.count_nonzero(join & (ref > 0.16) & (nearby < 0.04))),
-        'join_excess_alpha': float(max(0, np.max(got[join]) - np.max(ref[join]))),
+        'join_excess_alpha': float(max(0, np.max(got[join]) - np.max(ref[join])) * opacity),
     }
 
 
