@@ -1167,6 +1167,11 @@ class CategoryRef {
 // saved.
 enum class Dependence : std::uint8_t { Independent, SymmetryFixed, SymmetryTied, Constrained };
 
+// What keeps a fit from varying a parameter (ADR-0053), the first that applies: a descriptor,
+// symmetry, a declared constraint, no fitted experiment using it that measures what it needs, or no derivative for
+// it in crysta. Set by refresh_fittability (fittability.hpp) from crysta's one rule; never saved.
+enum class FitBlocker : std::uint8_t { None, Descriptor, Symmetry, Constraint, Data, Capability };
+
 // A user-facing scalar with refinement state: value, standard uncertainty (absolute), and a
 // free/fit flag. Maps 1:1 onto the engine's ParameterState.
 struct Parameter {
@@ -1200,6 +1205,14 @@ struct Parameter {
     detail::Epoch epoch;
     // Set by refresh_relations and apply_relations; a dependent's free flag stays false.
     Dependence dependence = Dependence::Independent;
+    // Set by refresh_fittability: what keeps a fit from varying it, and crysta's reason for it (empty when
+    // fittable).
+    FitBlocker fit_blocker = FitBlocker::None;
+    std::string fit_reason;
+    // Set with them: no enabled link reads the value (a disabled link's scale and texture, a structure no enabled link
+    // names). Its free flag is kept for when a link reads it again, so a fit leaves it out and neither a fit nor a load
+    // refuses or clears it.
+    bool fit_idle = false;
 
     Parameter() = default;
     Parameter(double value_, std::optional<double> esd_ = 0.0, bool free_ = false)
@@ -1328,11 +1341,27 @@ class OptionalParameter {
     std::vector<std::shared_ptr<ParameterCell>> retired_;
 };
 
-// The free flag's rule (edi ADR-0024): a dependent stays dependent, so freeing one changes nothing and
-// answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`.
+// Why freeing `parameter` is refused, as of its last refresh_fittability: "cannot be fitted: <reason>" for a
+// descriptor, a value no fitted experiment can determine, or one crysta cannot differentiate (edi ADR-0053); empty
+// otherwise. A dependent's flag is ignored instead (edi ADR-0024).
+inline std::string free_refusal(const Parameter& parameter) {
+    const FitBlocker blocker = parameter.fit_blocker;
+    if (blocker != FitBlocker::Descriptor && blocker != FitBlocker::Data && blocker != FitBlocker::Capability) {
+        return {};
+    }
+    return "cannot be fitted: " + parameter.fit_reason;
+}
+
+// The free flag's rule (edi ADR-0024, ADR-0053): a dependent stays dependent, so freeing one changes nothing and
+// answers false; the caller says so with crysta's `crysta.domain.dependent_free_ignored`. Freeing a parameter
+// free_refusal names is refused (std::invalid_argument).
 inline bool set_free(Parameter& parameter, bool free) {
     if (free && parameter.dependence != Dependence::Independent) {
         return false;
+    }
+    if (const std::string refusal = free_refusal(parameter); free && !refusal.empty()) {
+        throw std::invalid_argument((parameter.spec != nullptr ? parameter.spec->name : std::string("parameter")) +
+                                    " " + refusal);
     }
     parameter.free = free;
     return true;
@@ -5908,7 +5937,7 @@ inline std::vector<Parameter*> ExperimentBase::free_parameters() {
     canonicalize_peak_specs(peak);
     require_peak_slots_fit_type(*this);
     std::vector<Parameter*> out = detail::free_of(parameters());
-    // The limit angle is a fixed setting (is_fixed_setting), known by its slot whatever it carries.
+    // The limit angle is a descriptor (ADR-0053), known by its slot whatever it carries.
     if (peak.asym_beba_limit) {
         std::erase(out, &*peak.asym_beba_limit);
     }

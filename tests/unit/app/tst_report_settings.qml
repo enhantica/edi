@@ -500,7 +500,9 @@ import EasyApplication.Gui.Globals as Globals; QtObject { property Settings sett
             verify(Session.openProject(existing), "An existing project without html_offline opens under the Embedded preference");
             compare(Session.project.report.embedLibraries, false, "Opening a project with no html_offline reads false independently of Preferences");
             verify(Session.save(), "An unchanged existing project can be saved without adding a default");
-            verify(!/_report\.html_offline/.test(SettingsProof.text(existing, "reports/report.edi")), "A save never introduces an absent html_offline item");
+            const reportRecord = SettingsProof.fileObservation(existing, "reports/report.edi");
+            verify(!reportRecord.error, "The optional saved report record is observed without a read failure");
+            verify(reportRecord.exists === false || !/_report\.html_offline/.test(reportRecord.text), "A save never introduces an absent html_offline item");
             Session.project.report.embedLibraries = true;
             compare(Session.project.modified, true, "Changing Embed is an undoable project edit rather than a transient report session option");
             compare(Preferences.newReportLibraries, "embedded", "A report edit leaves the new-project preference unchanged");

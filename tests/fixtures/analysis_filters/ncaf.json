@@ -5,7 +5,59 @@
     "category": "cell",
     "name": "length_a",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "cell",
+    "name": "length_b",
+    "label": "",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "cell",
+    "name": "length_c",
+    "label": "",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "cell",
+    "name": "angle_alpha",
+    "label": "",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "cell",
+    "name": "angle_beta",
+    "label": "",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "cell",
+    "name": "angle_gamma",
+    "label": "",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "structure",
@@ -13,7 +65,29 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "Ca1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "Ca1",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "Ca1",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "structure",
@@ -21,7 +95,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "Ca1",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -29,7 +105,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "Ca1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -37,7 +115,29 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "Al1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "Al1",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "Al1",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "structure",
@@ -45,7 +145,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "Al1",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -53,7 +155,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "Al1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -61,7 +165,29 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "Na1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "Na1",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "Na1",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "structure",
@@ -69,7 +195,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "Na1",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -77,7 +205,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "Na1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -85,7 +215,9 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "F1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -93,7 +225,9 @@
     "category": "atom_site",
     "name": "fract_y",
     "label": "F1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -101,7 +235,9 @@
     "category": "atom_site",
     "name": "fract_z",
     "label": "F1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -109,7 +245,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "F1",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -117,7 +255,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "F1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -125,7 +265,9 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "F2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -133,7 +275,9 @@
     "category": "atom_site",
     "name": "fract_y",
     "label": "F2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -141,7 +285,9 @@
     "category": "atom_site",
     "name": "fract_z",
     "label": "F2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -149,7 +295,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "F2",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -157,7 +305,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "F2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -165,7 +315,29 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "F3",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_y",
+    "label": "F3",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
+  },
+  {
+    "kind": "structure",
+    "block": "ncaf",
+    "category": "atom_site",
+    "name": "fract_z",
+    "label": "F3",
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "structure",
@@ -173,7 +345,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "F3",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -181,7 +355,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "F3",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -189,7 +365,9 @@
     "category": "peak",
     "name": "rise_alpha_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -197,7 +375,9 @@
     "category": "peak",
     "name": "rise_alpha_1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -205,7 +385,9 @@
     "category": "peak",
     "name": "decay_beta_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -213,7 +395,9 @@
     "category": "peak",
     "name": "decay_beta_1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -221,7 +405,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -229,7 +415,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -237,7 +425,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -245,7 +435,9 @@
     "category": "peak",
     "name": "broad_gauss_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -253,7 +445,9 @@
     "category": "peak",
     "name": "broad_gauss_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -261,7 +455,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -269,7 +465,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -277,7 +475,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -285,7 +485,9 @@
     "category": "peak",
     "name": "broad_lorentz_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -293,7 +495,19 @@
     "category": "peak",
     "name": "broad_lorentz_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "peak",
+    "name": "cutoff_fwhm",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -301,7 +515,9 @@
     "category": "instrument",
     "name": "setup_twotheta_bank",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -309,7 +525,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_offset",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -317,7 +535,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_linear",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -325,7 +545,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_quadratic",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -333,7 +555,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_reciprocal",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -341,7 +565,9 @@
     "category": "absorption",
     "name": "abscor1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -349,7 +575,9 @@
     "category": "absorption",
     "name": "abscor2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -357,7 +585,19 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "ncaf",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "1",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -365,7 +605,19 @@
     "category": "background",
     "name": "intensity",
     "label": "1",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "2",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -373,7 +625,19 @@
     "category": "background",
     "name": "intensity",
     "label": "2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "3",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -381,7 +645,19 @@
     "category": "background",
     "name": "intensity",
     "label": "3",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "4",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -389,7 +665,19 @@
     "category": "background",
     "name": "intensity",
     "label": "4",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "5",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -397,7 +685,19 @@
     "category": "background",
     "name": "intensity",
     "label": "5",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "6",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -405,7 +705,19 @@
     "category": "background",
     "name": "intensity",
     "label": "6",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "7",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -413,7 +725,19 @@
     "category": "background",
     "name": "intensity",
     "label": "7",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "8",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -421,7 +745,19 @@
     "category": "background",
     "name": "intensity",
     "label": "8",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "9",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -429,7 +765,19 @@
     "category": "background",
     "name": "intensity",
     "label": "9",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "10",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -437,7 +785,19 @@
     "category": "background",
     "name": "intensity",
     "label": "10",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "11",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -445,7 +805,19 @@
     "category": "background",
     "name": "intensity",
     "label": "11",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "12",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -453,7 +825,19 @@
     "category": "background",
     "name": "intensity",
     "label": "12",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "13",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -461,7 +845,19 @@
     "category": "background",
     "name": "intensity",
     "label": "13",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "14",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -469,7 +865,19 @@
     "category": "background",
     "name": "intensity",
     "label": "14",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "15",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -477,7 +885,19 @@
     "category": "background",
     "name": "intensity",
     "label": "15",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "16",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -485,7 +905,19 @@
     "category": "background",
     "name": "intensity",
     "label": "16",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "17",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -493,7 +925,19 @@
     "category": "background",
     "name": "intensity",
     "label": "17",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "18",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -501,7 +945,19 @@
     "category": "background",
     "name": "intensity",
     "label": "18",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "19",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -509,7 +965,19 @@
     "category": "background",
     "name": "intensity",
     "label": "19",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "20",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -517,7 +985,19 @@
     "category": "background",
     "name": "intensity",
     "label": "20",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "21",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -525,7 +1005,19 @@
     "category": "background",
     "name": "intensity",
     "label": "21",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "22",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -533,7 +1025,19 @@
     "category": "background",
     "name": "intensity",
     "label": "22",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "23",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -541,7 +1045,19 @@
     "category": "background",
     "name": "intensity",
     "label": "23",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "24",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -549,7 +1065,19 @@
     "category": "background",
     "name": "intensity",
     "label": "24",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "25",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -557,7 +1085,19 @@
     "category": "background",
     "name": "intensity",
     "label": "25",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "26",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -565,7 +1105,19 @@
     "category": "background",
     "name": "intensity",
     "label": "26",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "27",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -573,7 +1125,19 @@
     "category": "background",
     "name": "intensity",
     "label": "27",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "28",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -581,7 +1145,19 @@
     "category": "background",
     "name": "intensity",
     "label": "28",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "29",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -589,7 +1165,19 @@
     "category": "background",
     "name": "intensity",
     "label": "29",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "30",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -597,7 +1185,19 @@
     "category": "background",
     "name": "intensity",
     "label": "30",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "31",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -605,7 +1205,19 @@
     "category": "background",
     "name": "intensity",
     "label": "31",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "32",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -613,7 +1225,19 @@
     "category": "background",
     "name": "intensity",
     "label": "32",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "33",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -621,7 +1245,19 @@
     "category": "background",
     "name": "intensity",
     "label": "33",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "34",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -629,7 +1265,19 @@
     "category": "background",
     "name": "intensity",
     "label": "34",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "35",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -637,7 +1285,19 @@
     "category": "background",
     "name": "intensity",
     "label": "35",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_1_10",
+    "category": "background",
+    "name": "position",
+    "label": "36",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -645,7 +1305,9 @@
     "category": "background",
     "name": "intensity",
     "label": "36",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -653,7 +1315,9 @@
     "category": "peak",
     "name": "rise_alpha_0",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -661,7 +1325,9 @@
     "category": "peak",
     "name": "rise_alpha_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -669,7 +1335,9 @@
     "category": "peak",
     "name": "decay_beta_0",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -677,7 +1345,9 @@
     "category": "peak",
     "name": "decay_beta_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -685,7 +1355,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -693,7 +1365,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -701,7 +1375,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_2",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -709,7 +1385,9 @@
     "category": "peak",
     "name": "broad_gauss_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -717,7 +1395,9 @@
     "category": "peak",
     "name": "broad_gauss_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -725,7 +1405,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -733,7 +1415,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -741,7 +1425,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -749,7 +1435,9 @@
     "category": "peak",
     "name": "broad_lorentz_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -757,7 +1445,19 @@
     "category": "peak",
     "name": "broad_lorentz_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "peak",
+    "name": "cutoff_fwhm",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -765,7 +1465,9 @@
     "category": "instrument",
     "name": "setup_twotheta_bank",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -773,7 +1475,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_offset",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -781,7 +1485,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_linear",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -789,7 +1495,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_quadratic",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -797,7 +1505,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_reciprocal",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -805,7 +1515,9 @@
     "category": "absorption",
     "name": "abscor1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -813,7 +1525,9 @@
     "category": "absorption",
     "name": "abscor2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -821,7 +1535,19 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "ncaf",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "1",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -829,7 +1555,19 @@
     "category": "background",
     "name": "intensity",
     "label": "1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "2",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -837,7 +1575,19 @@
     "category": "background",
     "name": "intensity",
     "label": "2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "3",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -845,7 +1595,19 @@
     "category": "background",
     "name": "intensity",
     "label": "3",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "4",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -853,7 +1615,19 @@
     "category": "background",
     "name": "intensity",
     "label": "4",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "5",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -861,7 +1635,19 @@
     "category": "background",
     "name": "intensity",
     "label": "5",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "6",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -869,7 +1655,19 @@
     "category": "background",
     "name": "intensity",
     "label": "6",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "7",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -877,7 +1675,19 @@
     "category": "background",
     "name": "intensity",
     "label": "7",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "8",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -885,7 +1695,19 @@
     "category": "background",
     "name": "intensity",
     "label": "8",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "9",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -893,7 +1715,19 @@
     "category": "background",
     "name": "intensity",
     "label": "9",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "10",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -901,7 +1735,19 @@
     "category": "background",
     "name": "intensity",
     "label": "10",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "11",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -909,7 +1755,19 @@
     "category": "background",
     "name": "intensity",
     "label": "11",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "12",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -917,7 +1775,19 @@
     "category": "background",
     "name": "intensity",
     "label": "12",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "13",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -925,7 +1795,19 @@
     "category": "background",
     "name": "intensity",
     "label": "13",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "14",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -933,7 +1815,19 @@
     "category": "background",
     "name": "intensity",
     "label": "14",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "15",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -941,7 +1835,19 @@
     "category": "background",
     "name": "intensity",
     "label": "15",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "16",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -949,7 +1855,19 @@
     "category": "background",
     "name": "intensity",
     "label": "16",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "17",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -957,7 +1875,19 @@
     "category": "background",
     "name": "intensity",
     "label": "17",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "18",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -965,7 +1895,19 @@
     "category": "background",
     "name": "intensity",
     "label": "18",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "19",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -973,7 +1915,19 @@
     "category": "background",
     "name": "intensity",
     "label": "19",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "20",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -981,7 +1935,19 @@
     "category": "background",
     "name": "intensity",
     "label": "20",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "21",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -989,7 +1955,19 @@
     "category": "background",
     "name": "intensity",
     "label": "21",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_2_9",
+    "category": "background",
+    "name": "position",
+    "label": "22",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -997,7 +1975,9 @@
     "category": "background",
     "name": "intensity",
     "label": "22",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1005,7 +1985,9 @@
     "category": "peak",
     "name": "rise_alpha_0",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1013,7 +1995,9 @@
     "category": "peak",
     "name": "rise_alpha_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1021,7 +2005,9 @@
     "category": "peak",
     "name": "decay_beta_0",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1029,7 +2015,9 @@
     "category": "peak",
     "name": "decay_beta_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1037,7 +2025,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1045,7 +2035,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1053,7 +2045,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_2",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1061,7 +2055,9 @@
     "category": "peak",
     "name": "broad_gauss_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1069,7 +2065,9 @@
     "category": "peak",
     "name": "broad_gauss_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1077,7 +2075,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1085,7 +2085,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1093,7 +2095,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1101,7 +2105,9 @@
     "category": "peak",
     "name": "broad_lorentz_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1109,7 +2115,19 @@
     "category": "peak",
     "name": "broad_lorentz_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "peak",
+    "name": "cutoff_fwhm",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1117,7 +2135,9 @@
     "category": "instrument",
     "name": "setup_twotheta_bank",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1125,7 +2145,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_offset",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1133,7 +2155,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_linear",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1141,7 +2165,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_quadratic",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1149,7 +2175,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_reciprocal",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1157,7 +2185,9 @@
     "category": "absorption",
     "name": "abscor1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1165,7 +2195,9 @@
     "category": "absorption",
     "name": "abscor2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1173,7 +2205,19 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "ncaf",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "1",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1181,7 +2225,19 @@
     "category": "background",
     "name": "intensity",
     "label": "1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "2",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1189,7 +2245,19 @@
     "category": "background",
     "name": "intensity",
     "label": "2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "3",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1197,7 +2265,19 @@
     "category": "background",
     "name": "intensity",
     "label": "3",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "4",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1205,7 +2285,19 @@
     "category": "background",
     "name": "intensity",
     "label": "4",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "5",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1213,7 +2305,19 @@
     "category": "background",
     "name": "intensity",
     "label": "5",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "6",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1221,7 +2325,19 @@
     "category": "background",
     "name": "intensity",
     "label": "6",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "7",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1229,7 +2345,19 @@
     "category": "background",
     "name": "intensity",
     "label": "7",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "8",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1237,7 +2365,19 @@
     "category": "background",
     "name": "intensity",
     "label": "8",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "9",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1245,7 +2385,19 @@
     "category": "background",
     "name": "intensity",
     "label": "9",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "10",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1253,7 +2405,19 @@
     "category": "background",
     "name": "intensity",
     "label": "10",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "11",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1261,7 +2425,19 @@
     "category": "background",
     "name": "intensity",
     "label": "11",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "12",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1269,7 +2445,19 @@
     "category": "background",
     "name": "intensity",
     "label": "12",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "13",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1277,7 +2465,19 @@
     "category": "background",
     "name": "intensity",
     "label": "13",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "14",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1285,7 +2485,19 @@
     "category": "background",
     "name": "intensity",
     "label": "14",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "15",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1293,7 +2505,19 @@
     "category": "background",
     "name": "intensity",
     "label": "15",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "16",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1301,7 +2525,19 @@
     "category": "background",
     "name": "intensity",
     "label": "16",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "17",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1309,7 +2545,19 @@
     "category": "background",
     "name": "intensity",
     "label": "17",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "18",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1317,7 +2565,19 @@
     "category": "background",
     "name": "intensity",
     "label": "18",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "19",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1325,7 +2585,19 @@
     "category": "background",
     "name": "intensity",
     "label": "19",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "20",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1333,7 +2605,19 @@
     "category": "background",
     "name": "intensity",
     "label": "20",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "21",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1341,7 +2625,19 @@
     "category": "background",
     "name": "intensity",
     "label": "21",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_3_8",
+    "category": "background",
+    "name": "position",
+    "label": "22",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1349,7 +2645,9 @@
     "category": "background",
     "name": "intensity",
     "label": "22",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1357,7 +2655,9 @@
     "category": "peak",
     "name": "rise_alpha_0",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1365,7 +2665,9 @@
     "category": "peak",
     "name": "rise_alpha_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1373,7 +2675,9 @@
     "category": "peak",
     "name": "decay_beta_0",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1381,7 +2685,9 @@
     "category": "peak",
     "name": "decay_beta_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1389,7 +2695,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1397,7 +2705,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1405,7 +2715,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_2",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1413,7 +2725,9 @@
     "category": "peak",
     "name": "broad_gauss_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1421,7 +2735,9 @@
     "category": "peak",
     "name": "broad_gauss_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1429,7 +2745,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1437,7 +2755,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1445,7 +2765,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1453,7 +2775,9 @@
     "category": "peak",
     "name": "broad_lorentz_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1461,7 +2785,19 @@
     "category": "peak",
     "name": "broad_lorentz_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "peak",
+    "name": "cutoff_fwhm",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1469,7 +2805,9 @@
     "category": "instrument",
     "name": "setup_twotheta_bank",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1477,7 +2815,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_offset",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1485,7 +2825,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_linear",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1493,7 +2835,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_quadratic",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1501,7 +2845,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_reciprocal",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1509,7 +2855,9 @@
     "category": "absorption",
     "name": "abscor1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1517,7 +2865,9 @@
     "category": "absorption",
     "name": "abscor2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1525,7 +2875,19 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "ncaf",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "1",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1533,7 +2895,19 @@
     "category": "background",
     "name": "intensity",
     "label": "1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "2",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1541,7 +2915,19 @@
     "category": "background",
     "name": "intensity",
     "label": "2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "3",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1549,7 +2935,19 @@
     "category": "background",
     "name": "intensity",
     "label": "3",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "4",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1557,7 +2955,19 @@
     "category": "background",
     "name": "intensity",
     "label": "4",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "5",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1565,7 +2975,19 @@
     "category": "background",
     "name": "intensity",
     "label": "5",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "6",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1573,7 +2995,19 @@
     "category": "background",
     "name": "intensity",
     "label": "6",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "7",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1581,7 +3015,19 @@
     "category": "background",
     "name": "intensity",
     "label": "7",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "8",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1589,7 +3035,19 @@
     "category": "background",
     "name": "intensity",
     "label": "8",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "9",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1597,7 +3055,19 @@
     "category": "background",
     "name": "intensity",
     "label": "9",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "10",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1605,7 +3075,19 @@
     "category": "background",
     "name": "intensity",
     "label": "10",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "11",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1613,7 +3095,19 @@
     "category": "background",
     "name": "intensity",
     "label": "11",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "12",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1621,7 +3115,19 @@
     "category": "background",
     "name": "intensity",
     "label": "12",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "13",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1629,7 +3135,19 @@
     "category": "background",
     "name": "intensity",
     "label": "13",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "14",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1637,7 +3155,19 @@
     "category": "background",
     "name": "intensity",
     "label": "14",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "15",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1645,7 +3175,19 @@
     "category": "background",
     "name": "intensity",
     "label": "15",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "16",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1653,7 +3195,19 @@
     "category": "background",
     "name": "intensity",
     "label": "16",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "17",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1661,7 +3215,19 @@
     "category": "background",
     "name": "intensity",
     "label": "17",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "18",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1669,7 +3235,19 @@
     "category": "background",
     "name": "intensity",
     "label": "18",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "19",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1677,7 +3255,19 @@
     "category": "background",
     "name": "intensity",
     "label": "19",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "20",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1685,7 +3275,19 @@
     "category": "background",
     "name": "intensity",
     "label": "20",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "21",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1693,7 +3295,19 @@
     "category": "background",
     "name": "intensity",
     "label": "21",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "22",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1701,7 +3315,19 @@
     "category": "background",
     "name": "intensity",
     "label": "22",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "23",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1709,7 +3335,19 @@
     "category": "background",
     "name": "intensity",
     "label": "23",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "24",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1717,7 +3355,19 @@
     "category": "background",
     "name": "intensity",
     "label": "24",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "25",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1725,7 +3375,19 @@
     "category": "background",
     "name": "intensity",
     "label": "25",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "26",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1733,7 +3395,19 @@
     "category": "background",
     "name": "intensity",
     "label": "26",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "27",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1741,7 +3415,19 @@
     "category": "background",
     "name": "intensity",
     "label": "27",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_4_7",
+    "category": "background",
+    "name": "position",
+    "label": "28",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1749,7 +3435,9 @@
     "category": "background",
     "name": "intensity",
     "label": "28",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1757,7 +3445,9 @@
     "category": "peak",
     "name": "rise_alpha_0",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1765,7 +3455,9 @@
     "category": "peak",
     "name": "rise_alpha_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1773,7 +3465,9 @@
     "category": "peak",
     "name": "decay_beta_0",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1781,7 +3475,9 @@
     "category": "peak",
     "name": "decay_beta_1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1789,7 +3485,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1797,7 +3495,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1805,7 +3505,9 @@
     "category": "peak",
     "name": "broad_gauss_sigma_2",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1813,7 +3515,9 @@
     "category": "peak",
     "name": "broad_gauss_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1821,7 +3525,9 @@
     "category": "peak",
     "name": "broad_gauss_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1829,7 +3535,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_0",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1837,7 +3545,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_1",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1845,7 +3555,9 @@
     "category": "peak",
     "name": "broad_lorentz_gamma_2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1853,7 +3565,9 @@
     "category": "peak",
     "name": "broad_lorentz_size",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1861,7 +3575,19 @@
     "category": "peak",
     "name": "broad_lorentz_strain",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "peak",
+    "name": "cutoff_fwhm",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1869,7 +3595,9 @@
     "category": "instrument",
     "name": "setup_twotheta_bank",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1877,7 +3605,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_offset",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1885,7 +3615,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_linear",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1893,7 +3625,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_quadratic",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1901,7 +3635,9 @@
     "category": "instrument",
     "name": "calib_d_to_tof_reciprocal",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1909,7 +3645,9 @@
     "category": "absorption",
     "name": "abscor1",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -1917,7 +3655,9 @@
     "category": "absorption",
     "name": "abscor2",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1925,7 +3665,19 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "ncaf",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "1",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1933,7 +3685,19 @@
     "category": "background",
     "name": "intensity",
     "label": "1",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "2",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1941,7 +3705,19 @@
     "category": "background",
     "name": "intensity",
     "label": "2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "3",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1949,7 +3725,19 @@
     "category": "background",
     "name": "intensity",
     "label": "3",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "4",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1957,7 +3745,19 @@
     "category": "background",
     "name": "intensity",
     "label": "4",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "5",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1965,7 +3765,19 @@
     "category": "background",
     "name": "intensity",
     "label": "5",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "6",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1973,7 +3785,19 @@
     "category": "background",
     "name": "intensity",
     "label": "6",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "7",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1981,7 +3805,19 @@
     "category": "background",
     "name": "intensity",
     "label": "7",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "8",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1989,7 +3825,19 @@
     "category": "background",
     "name": "intensity",
     "label": "8",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "9",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -1997,7 +3845,19 @@
     "category": "background",
     "name": "intensity",
     "label": "9",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "10",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2005,7 +3865,19 @@
     "category": "background",
     "name": "intensity",
     "label": "10",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "11",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2013,7 +3885,19 @@
     "category": "background",
     "name": "intensity",
     "label": "11",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "12",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2021,7 +3905,19 @@
     "category": "background",
     "name": "intensity",
     "label": "12",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "13",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2029,7 +3925,19 @@
     "category": "background",
     "name": "intensity",
     "label": "13",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "14",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2037,7 +3945,19 @@
     "category": "background",
     "name": "intensity",
     "label": "14",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "15",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2045,7 +3965,19 @@
     "category": "background",
     "name": "intensity",
     "label": "15",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "16",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2053,7 +3985,19 @@
     "category": "background",
     "name": "intensity",
     "label": "16",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "17",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2061,7 +4005,19 @@
     "category": "background",
     "name": "intensity",
     "label": "17",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "18",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2069,7 +4025,19 @@
     "category": "background",
     "name": "intensity",
     "label": "18",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "19",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2077,7 +4045,19 @@
     "category": "background",
     "name": "intensity",
     "label": "19",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "20",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2085,7 +4065,19 @@
     "category": "background",
     "name": "intensity",
     "label": "20",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "21",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2093,7 +4085,19 @@
     "category": "background",
     "name": "intensity",
     "label": "21",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "22",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2101,7 +4105,19 @@
     "category": "background",
     "name": "intensity",
     "label": "22",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "23",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2109,7 +4125,19 @@
     "category": "background",
     "name": "intensity",
     "label": "23",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "24",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2117,7 +4145,19 @@
     "category": "background",
     "name": "intensity",
     "label": "24",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "25",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2125,7 +4165,19 @@
     "category": "background",
     "name": "intensity",
     "label": "25",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "26",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2133,7 +4185,19 @@
     "category": "background",
     "name": "intensity",
     "label": "26",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "27",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2141,7 +4205,19 @@
     "category": "background",
     "name": "intensity",
     "label": "27",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "wish_5_6",
+    "category": "background",
+    "name": "position",
+    "label": "28",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -2149,6 +4225,8 @@
     "category": "background",
     "name": "intensity",
     "label": "28",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   }
 ]

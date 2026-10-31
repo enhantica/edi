@@ -483,7 +483,7 @@ TestCase {
         verify(radius !== null && mosaic !== null && crystal !== null, "Mixed extinction must display separate path, domain and spread fields");
         verify(/domain radius/i.test(radius.label) && /mosaic spread/i.test(mosaic.label) && /crystal radius/i.test(crystal.label), "Extinction fields must use the owner-selected descriptive names");
         verify(/µm|μm/.test(radius.parameter.units) && /rad/.test(mosaic.parameter.units) && crystal.parameter.units === "mm", "Extinction units must distinguish domain micrometres, plain inverse radians and crystal millimetres");
-        verify(!crystal.parameter.fittable && !crystal.parameter.free && !Probe.rows(Session.project.parameters).some(row => row.category === "extinction" && row.name === "crystal_radius"), "Crystal radius must stay a descriptor outside the Analysis parameter list");
+        verify(!crystal.parameter.fittable && !crystal.parameter.free && Probe.rows(Session.project.parameters).some(row => row.category === "extinction" && row.name === "crystal_radius" && row.fitReason === "a descriptor, never fitted"), "Crystal radius must remain a fixed descriptor visible in the Analysis inputs");
         const experiment = Session.project.currentExperiment;
         const choices = [["none", "None", []], ["becker-coppens-type-1", "Isotropic Becker-Coppens type I", ["crystal_radius", "mosaic_spread"]], ["becker-coppens-type-2", "Isotropic Becker-Coppens type II", ["crystal_radius", "domain_radius"]], ["becker-coppens-mixed", "Isotropic Becker-Coppens mixed", ["crystal_radius", "domain_radius", "mosaic_spread"]], ["larson-isotropic", "Isotropic Larson", ["coefficient"]], ["larson-anisotropic", "Anisotropic Larson", ["coefficient_11", "coefficient_22", "coefficient_33", "coefficient_12", "coefficient_13", "coefficient_23"]]];
         const options = Probe.rows(experiment.extinctionTypeOptions);
@@ -541,8 +541,8 @@ TestCase {
         const scale = Session.project.currentExperiment.scale;
         verify(scale.free, "The normal app fit must see the authored free scale parameter");
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
-        const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
-        verify(start !== null && start.enabled, "A measured single-crystal project with a free parameter must enable Start fitting");
+        const start = Ui.control(Probe, appWindow, "statusBar.fit.button");
+        verify(start !== null && start.clickable, "A measured single-crystal project with a free parameter must enable Start fitting");
         Ui.scrollIntoView(start);
         verify(waitForPolish(appWindow.contentItem), "The real Start fitting action must finish layout before input");
         const target = Ui.clickPoint(start);
@@ -764,8 +764,8 @@ TestCase {
         transientWarnings = 0;
         initialFitWarnings = Probe.rows(Session.loadWarnings).map(row => row.message);
         project.fit.patternUpdates = 1;
-        const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
-        verify(start !== null && start.enabled, "The loaded compound exercise must enable the real Start fitting action");
+        const start = Ui.control(Probe, appWindow, "statusBar.fit.button");
+        verify(start !== null && start.clickable, "The loaded compound exercise must enable the real Start fitting action");
         Ui.scrollIntoView(start);
         verify(waitForPolish(appWindow.contentItem), "The compound fit action must finish layout before input");
         const point = Ui.clickPoint(start);
@@ -988,8 +988,8 @@ TestCase {
         const project = Session.project;
         project.currentExperiment.scale.free = true;
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
-        const start = Ui.find(Ui.page(appWindow), "fitting.start", true);
-        verify(start !== null && start.enabled, "The report witness must fit actual single-crystal reflections through Start fitting");
+        const start = Ui.control(Probe, appWindow, "statusBar.fit.button");
+        verify(start !== null && start.clickable, "The report witness must fit actual single-crystal reflections through Start fitting");
         Ui.scrollIntoView(start);
         verify(waitForPolish(appWindow.contentItem), "The report witness's fit action must settle before input");
         const point = Ui.clickPoint(start);

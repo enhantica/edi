@@ -47,6 +47,7 @@
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQmlError>
+#include <QScopeGuard>
 #include <QtQml/qqml.h>
 #include "engine_setup.hpp"
 
@@ -85,6 +86,7 @@ class ReportSettingsProof : public QObject {
     Q_PROPERTY(bool webAvailable READ webAvailable CONSTANT)
     Q_PROPERTY(QString webExportError READ webExportError)
 public:
+    explicit ReportSettingsProof(QQmlEngine* engine) : engine_(engine) {}
     // Public Qt text layout, using the rendered label's own font and available width.
     // The QML gate checks its line count against the actual label before reading line text.
     Q_INVOKABLE QVariantList tooltipTextLines(QObject* label, bool word, bool anywhere) const {
@@ -217,9 +219,11 @@ public:
         return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
     }
     Q_INVOKABLE QVariantMap fileFacts(const QUrl& location, const QString& relative) const {
+        if (!localDirectory(location)) return {{"error", "An absolute local directory URL is required"}};
         QFile file(QDir(location.toLocalFile()).filePath(relative));
-        if (!file.open(QIODevice::ReadOnly)) return {};
+        if (!file.open(QIODevice::ReadOnly)) return {{"error", "The project file cannot be opened"}};
         const auto bytes = file.readAll();
+        if (file.error() != QFileDevice::NoError) return {{"error", "The project file cannot be read"}};
         return {{"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
                 {"bytes", bytes.size()}, {"modified", QFileInfo(file).lastModified().toMSecsSinceEpoch()}};
     }
@@ -473,17 +477,63 @@ public:
         directories_.push_back(std::move(directory));
         return result;
     }
+    static bool localDirectory(const QUrl& project) {
+        return project.isValid() && project.isLocalFile() &&
+               QDir::isAbsolutePath(project.toLocalFile()) && QFileInfo(project.toLocalFile()).isDir();
+    }
+    Q_INVOKABLE QVariantMap fileObservation(const QUrl& project, const QString& relative) const {
+        if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};
+        const auto path = QDir(project.toLocalFile()).absoluteFilePath(relative);
+        if (!QFileInfo::exists(path)) return {{"exists", false}, {"path", path}};
+        QFile file(path);
+        if (!QFileInfo(path).isFile() || !file.open(QIODevice::ReadOnly))
+            return {{"error", "The project file cannot be opened"}, {"path", path}};
+        const auto bytes = file.readAll();
+        if (file.error() != QFileDevice::NoError)
+            return {{"error", "The project file cannot be read"}, {"path", path}};
+        return {{"exists", true}, {"path", path}, {"text", QString::fromUtf8(bytes)},
+                {"base64", QString::fromLatin1(bytes.toBase64())}};
+    }
     Q_INVOKABLE QString text(const QUrl& project, const QString& relative) const {
-        QFile file(QDir(project.toLocalFile()).filePath(relative));
-        if (!file.open(QIODevice::ReadOnly)) return {};
-        return QString::fromUtf8(file.readAll());
+        const auto observed = fileObservation(project, relative);
+        if (observed.contains("error") || !observed.value("exists").toBool()) {
+            if (auto* engine = qjsEngine(this))
+                engine->throwError(QStringLiteral("SettingsProof.text: %1 (%2)")
+                    .arg(observed.value("error", "The project file is missing").toString(), relative));
+            return {};
+        }
+        return observed.value("text").toString();
+    }
+    Q_INVOKABLE QVariantMap projectBytes(const QUrl& project) const {
+        if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};
+        const QDir root(project.toLocalFile());
+        if (!root.exists()) return {{"error", "The saved project directory is missing"}};
+        QVariantMap result;
+        QDirIterator files(root.absolutePath(), QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+        while (files.hasNext()) {
+            QFile file(files.next());
+            if (!file.open(QIODevice::ReadOnly)) return {{"error", "A saved project file cannot be read"}};
+            auto bytes = file.readAll();
+            if (file.error() != QFileDevice::NoError) return {{"error", "A saved project file cannot be read"}};
+            const auto relative = root.relativeFilePath(file.fileName());
+            if (relative == QStringLiteral("project.edi")) {
+                QString record = QString::fromUtf8(bytes);
+                record.replace(QRegularExpression(QStringLiteral("(?m)^(_metadata\\.(?:created|last_modified)[ \\t]+)[^\\r\\n]+")),
+                               QStringLiteral("\\1<CLOCK>"));
+                bytes = record.toUtf8();
+            }
+            result.insert(relative, QString::fromLatin1(bytes.toBase64()));
+        }
+        return result;
     }
     Q_INVOKABLE bool write(const QUrl& project, const QString& relative, const QString& text) const {
+        if (!localDirectory(project)) return false;
         QFile file(QDir(project.toLocalFile()).filePath(relative));
         if (!QDir().mkpath(QFileInfo(file).absolutePath())) return false;
         return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(text.toUtf8()) == text.toUtf8().size() && file.flush();
     }
     Q_INVOKABLE bool remove(const QUrl& project, const QString& relative) const {
+        if (!localDirectory(project)) return false;
         return QFile::remove(QDir(project.toLocalFile()).filePath(relative));
     }
     Q_INVOKABLE QUrl copyProjectArchive(const QUrl& source, bool readOnly = false) {
@@ -638,6 +688,11 @@ public:
         settings.sync();
     }
     Q_INVOKABLE QVariantMap restart(const QString& source) const {
+        auto* controller = engine_->incubationController();
+        // The fresh engine borrows the app's controller; return it to the test host afterwards.
+        const auto restore = qScopeGuard([this, controller] {
+            engine_->setIncubationController(controller);
+        });
         QQmlEngine engine;
         edi_app::configure_engine(engine);
         QQmlComponent component(&engine);
@@ -672,6 +727,7 @@ public:
         return result;
     }
 private:
+    QQmlEngine* engine_;
     mutable QString web_export_error_;
     std::unique_ptr<AcceptanceAnimationDriver> animation_driver_;
     std::vector<std::unique_ptr<QTemporaryDir>> directories_;
@@ -679,7 +735,7 @@ private:
 
 static void register_report_settings_proof() {
     qmlRegisterSingletonType<ReportSettingsProof>("ReportAcceptance", 1, 0, "SettingsProof",
-        [](QQmlEngine*, QJSEngine*) -> QObject* { return new ReportSettingsProof; });
+        [](QQmlEngine* engine, QJSEngine*) -> QObject* { return new ReportSettingsProof(engine); });
 }
 Q_COREAPP_STARTUP_FUNCTION(register_report_settings_proof)
 #include "test_report_settings_observer.moc"

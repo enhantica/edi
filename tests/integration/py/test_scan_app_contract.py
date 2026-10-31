@@ -336,20 +336,32 @@ console.log(JSON.stringify(output));"""
 
 
 def assert_follow(text):
-    follow = item(text, 'fitting.follow')
-    assert property_value(follow, 'checkable') == 'true', (
-        'Follow wiring: the actual button must toggle'
+    follow = item(text, 'statusBar.fit.follow')
+    enabled = 'clickable' if re.search(r'(?m)^\s*clickable:', follow) else 'enabled'
+    result = evaluate(
+        '[null,{scanning:false,following:false},{scanning:false,following:true},'
+        '{scanning:true,following:false},{scanning:true,following:true}].map(fit=>{'
+        'const bar={fit};return ['
+        + property_value(follow, enabled)
+        + ','
+        + property_value(follow, 'checked')
+        + '];})',
     )
-    assert property_value(follow, 'enabled') == 'group.fit !== null && group.fit.scanning', (
-        'Follow wiring: its own enabled binding must require a running scan'
+    assert result == [
+        [False, False],
+        [False, False],
+        [False, False],
+        [True, False],
+        [True, True],
+    ], 'Status Follow availability and checked state follow only the running scan'
+    handler = 'onToggled' if re.search(r'(?m)^\s*onToggled:', follow) else 'onClicked'
+    result = evaluate(
+        '[false,true].map(initial=>{const bar={fit:{following:initial}};'
+        + ('const checked=!initial;(' if handler == 'onToggled' else 'const checked=initial;(')
+        + property_value(follow, handler)
+        + ');return bar.fit.following;})',
     )
-    assert (
-        property_value(follow, 'checked')
-        == 'group.fit !== null && group.fit.scanning && group.fit.following'
-    ), 'Follow wiring: its own checked binding must read live follow state'
-    assert property_value(follow, 'onToggled') == 'group.fit.following = checked', (
-        'Follow wiring: toggling must update that fit model'
-    )
+    assert result == [True, False], 'Actual status Follow input toggles its own running fit model'
 
 
 def test_messages_is_first_in_both_layout_and_width_inventory():
@@ -369,56 +381,28 @@ def test_messages_is_first_in_both_layout_and_width_inventory():
 
 
 def test_button_names_and_follow_have_live_model_bindings():
-    text = source('qml/Pages/Analysis/FittingGroup.qml')
-    start = item(text, 'fitting.start')
-    assert (
-        property_value(start, 'enabled')
-        == 'group.fit !== null && (group.fit.running || group.fit.available)'
-    ), 'Buttons wiring: availability must guard the actual fit button'
-    assert (
-        property_value(start, 'onClicked')
-        == 'group.fit.running ? group.fit.cancel() : group.fit.start()'
-    ), 'Buttons wiring: the actual fit button dispatches stop or start from live running state'
+    text = source('qml/Components/StatusBarFitButton.qml')
     require(
-        property_value(start, 'text'),
-        r'group\.fit\.running\s*\?\s*qsTr\("Stop fitting"\).*'
-        r'group\.fit\.continuable\s*\?\s*qsTr\("Continue fitting"\).*'
-        r'qsTr\("Start fitting"\)',
-        'Buttons wiring: the actual button label follows running and resumable state',
+        text,
+        r'onClicked:[^\n]*fit\.cancel\(\)[^\n]*fit\.start\(\)',
+        'Status Fit dispatches stop or start from live worker state',
     )
-    assert_follow(text)
-    follow = item(text, 'fitting.follow')
-    assert control_type(text, 'fitting.start') == control_type(text, 'fitting.follow'), (
-        'Buttons wiring: Start and Follow inherit the same button base'
+    require(
+        text,
+        r'valueText:[^\n]*qsTr\("Stop"\)[^\n]*fit\.continuable[^\n]*qsTr\("Continue"\)[^\n]*qsTr\("Fit"\)',
+        'Status Fit labels follow running and resumable state',
     )
-    # Both controls inherit the same base width unless they override it.
-    for name in ('width', 'implicitWidth', 'wide'):
-        a = re.search(r'(?m)^\s*' + name + r':([^\n]+)', start)
-        b = re.search(r'(?m)^\s*' + name + r':([^\n]+)', follow)
-        assert (a.group(1).strip() if a else None) == (b.group(1).strip() if b else None), (
-            'Buttons wiring: Start and Follow share the same base and width override'
-        )
+    assert_follow(source('qml/Components/StatusBar.qml'))
 
 
 def test_follow_observer_rejects_disconnected_controls_and_unrelated_handlers():
-    text = source('qml/Pages/Analysis/FittingGroup.qml')
+    text = source('qml/Components/StatusBar.qml')
     assert_follow(text)
-    for old, new in [
-        ('checkable: true', 'checkable: false'),
-        ('enabled: group.fit !== null && group.fit.scanning', 'enabled: false'),
-        (
-            'checked: group.fit !== null && group.fit.scanning && group.fit.following',
-            'checked: true',
-        ),
-        ('onToggled: group.fit.following = checked', 'onToggled: {}'),
-    ]:
-        changed = text.replace(old, new)
-        assert changed != text, (
-            'Follow wiring: each escape must actually alter the production control'
-        )
-        changed += (
-            '\nButton { enabled: group.fit.scanning; onToggled: group.fit.following = checked }'
-        )
+    follow = item(text, 'statusBar.fit.follow')
+    for field in ('following', 'scanning'):
+        changed = text.replace(follow, follow.replace('fit.' + field, 'fit.disconnected'))
+        assert changed != text, 'Each Follow escape changes the actual displayed control'
+        changed += '\nButton { onClicked: bar.fit.following = true; enabled: bar.fit.scanning }'
         with pytest.raises(AssertionError):
             assert_follow(changed)
 
@@ -435,11 +419,17 @@ OUTCOMES = [
 
 def outcome_functions(text, *, include_context=True):
     colors = {color: color for _key, _word, _icon, color in OUTCOMES}
+    colors.update(
+        themeForeground='themeForeground', statusBarIconForeground='statusBarIconForeground'
+    )
     context = 'const qsTr=x=>x; const EaStyle={Colors:' + json.dumps(colors) + '};'
     return (
         (context if include_context else '')
         + '\n'
-        + '\n'.join(block(text, 'function ' + name + '(') for name in ('word', 'icon', 'color'))
+        + '\n'.join(
+            block(text, 'function ' + name + '(')
+            for name in ('word', 'icon', 'color', 'textColor')
+        )
     )
 
 
@@ -465,7 +455,7 @@ def assert_outcome_consumers(bar, label, dialog):
     )
     context = (
         outcome_functions(source('qml/Globals/FitOutcomes.qml'))
-        + '\nconst FitOutcomes={word,icon,color};'
+        + '\nconst FitOutcomes={word,icon,color,textColor};'
     )
     icon_label = object_id(label, 'iconLabel')
     value_label = object_id(label, 'value')
@@ -488,32 +478,39 @@ def assert_outcome_consumers(bar, label, dialog):
     assignments = ','.join(
         key + ':(' + property_value(summary, key) + ')' for key in status_properties
     )
-    rows = evaluate(
-        'keys.map(outcome=>{const row={outcome,icon:"fallback",value:"17"}; '
-        'const control={'
-        + assignments
-        + '}; return [['
-        + ','.join(display_expressions)
-        + '],['
-        + ','.join(expressions)
-        + ']];})',
-        context,
-    )
-    for (_key, word, icon, color), (segments, overall) in zip(OUTCOMES, rows, strict=True):
-        assert [
-            segments[0],
-            segments[1],
-            segments[2],
-            segments[3],
-        ] == [icon, word, color, color], (
-            'Outcomes: displayed status icon and digit value use the effective tuple'
+    for stale in (False, True):
+        rows = evaluate(
+            'keys.map(key=>{const bar={fit:{outcome:key,outOfDate:'
+            + str(stale).lower()
+            + '}};const outcome=('
+            + property_value(summary, 'outcome')
+            + ');const outdated=('
+            + property_value(summary, 'outdated')
+            + ');const row={outcome,icon:"fallback",value:"17"}; '
+            'const control={'
+            + assignments
+            + '}; return [['
+            + ','.join(display_expressions)
+            + '],['
+            + ','.join(expressions)
+            + ']];})',
+            context,
         )
-        assert overall == [
-            icon,
-            color,
-            word,
-            color,
-        ], 'Outcomes: Overall status takes the outcome branch for icon, word and both colours'
+        for (_key, word, icon, color), (segments, overall) in zip(OUTCOMES, rows, strict=True):
+            neutral = color == 'themeForegroundMinor'
+            text_color = 'themeForeground' if neutral else color
+            status_icon_color = 'statusBarIconForeground' if neutral else color
+            expected = (
+                ['history', 'Outdated', 'orange', 'orange']
+                if stale
+                else [icon, word, status_icon_color, text_color]
+            )
+            assert segments == expected, (
+                'Outcomes: status uses its current outcome or the amber outdated history marker'
+            )
+            assert overall == [icon, color, word, text_color], (
+                'Outcomes: results retain their original outcome; neutral text stays readable'
+            )
     assert not re.search(r'font\.underline:\s*true', bar + label + dialog), (
         'Outcomes: clickable summaries do not underline'
     )
@@ -557,6 +554,7 @@ def status_item_declarations(text):
         body = object_id(area, identifier)
         prefix = (
             'const outcome=(' + property_value(body, 'outcome') + ');'
+            'const outdated=(' + property_value(body, 'outdated') + ');'
             if identifier == 'statusItem'
             else ''
         )
@@ -593,7 +591,7 @@ def status_item_results(text, fit):
         'statusBarIconForeground:"#666666",statusBarTextForeground:"#666666"}};'
     )
     context += outcome_functions(source('qml/Globals/FitOutcomes.qml'), include_context=False)
-    context += '\nconst FitOutcomes={word,icon,color};'
+    context += '\nconst FitOutcomes={word,icon,color,textColor};'
     for name in ('running', 'scanning', 'summary', 'scanSummary'):
         context += (
             'const '
@@ -633,7 +631,7 @@ const bar={fit:{running:true,scanning:true,ok:7,fail:2,scanOk:7,scanFailed:2,ela
 eta:'ETA',chi:'CHI',goodnessOfFit:'CHI',completed:12,total:24,fraction:0.5,
 
 percent:50,scanFitted:9,scanSkipped:3,scanProcessed:12,scanTotal:24,iterations:'13',outcome:'success'}};
-const fitArea={};const outcome='success';
+const fitArea={};const outcome='success';const outdated=false;
 const EaStyle={Colors:{red:'red',green:'green',themeForeground:'neutral',
 statusBarIconForeground:'neutral'}};"""
     running = property_value(area, 'running')
@@ -682,7 +680,7 @@ statusBarIconForeground:'neutral'}};"""
     state = context + "bar.fit.scanning=true;bar.fit.running=true;bar.fit.outcome='success';"
     state += (
         outcome_functions(source('qml/Globals/FitOutcomes.qml'), include_context=False)
-        + '\nconst FitPresentation={word,icon,color};'
+        + '\nconst FitPresentation={word,icon,color,textColor};'
     )
     state = state.replace("const FitOutcomes={separator:' | '};", '')
     state += '\nconst FitOutcomes=FitPresentation;'
@@ -911,7 +909,7 @@ def assert_explorer_outcomes(qml):
     ]
     context = outcome_functions(source('qml/Globals/FitOutcomes.qml'))
     context += (
-        '\nconst FitOutcomes={word,icon,color}; const keys='
+        '\nconst FitOutcomes={word,icon,color,textColor}; const keys='
         + json.dumps([key for key, _word, _icon, _color in OUTCOMES])
         + ';'
     )

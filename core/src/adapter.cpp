@@ -47,6 +47,7 @@
 #include "crysta/fit.hpp"
 #include "crysta/fit_quality.hpp"
 #include "crysta/fit_report.hpp"
+#include "crysta/fittability.hpp"
 #include "crysta/identity.hpp"
 #include "crysta/model.hpp"
 #include "crysta/parameter.hpp"
@@ -72,6 +73,7 @@
 #include "crysta/threading.hpp"
 #include "crysta/tokens.hpp"
 #include "edi/categories.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
@@ -2986,7 +2988,6 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
         slot(e.peak.asym_beba_a1, "asym_beba_a1", 0.0);
         slot(e.peak.asym_beba_b1, "asym_beba_b1", 0.0);
         slot(e.peak.asym_beba_limit, "asym_beba_limit", 180.0);
-        peak.back().set_free(false);  // a fixed setting, whatever its flag (is_fixed_setting)
     }
     // Every other slot must be the declared profile's: one it does not carry would be dropped here,
     // from a calculation, a fit and a save alike, so it is refused instead.
@@ -3152,7 +3153,6 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
     }
     if (e.extinction.crystal_radius) {
         built.extinction[2] = param(*e.extinction.crystal_radius, crysta::CORRECTION, "crystal_radius");
-        built.extinction[2].set_free(false);  // a descriptor, whatever its flag (is_fixed_setting)
     }
     if (e.extinction.coefficient) {
         built.extinction[3] = param(*e.extinction.coefficient, crysta::CORRECTION, "coefficient");
@@ -3617,10 +3617,11 @@ RelationProject relation_project(const Project& model) {
     for (const auto& bank_item : model.experiments) {
         crysta::BraggPdExperiment& built = build_on_heap(converted.banks, *bank_item, true);
         // crysta's project needs every bank to link a structure. A bank with no link has no scale
-        // of its own, so here it links the first structure under a scale no edi parameter names.
+        // of its own, so here it links the first structure, disabled, under a scale no edi parameter
+        // names: the link reads nothing.
         if (bank_item->linked_structures.empty() && !structures.empty()) {
             built.linked_structures.assign(std::vector<crysta::LinkedStructure>{crysta::LinkedStructure(
-                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), true)});
+                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), false)});
         }
     }
     converted.project =
@@ -3749,9 +3750,9 @@ void mark_dependents(Project& model, const crysta::RelationGraph& relations, con
             const bool saved_su = from_file && relation.source == crysta::Dependence::Constrained &&
                                   target.uncertainty.get().value_or(0.0) != 0.0;
             if (warn && !saved_su) {
-                warn("crysta.domain.dependent_free_ignored: parameter '" + relation.target_name +
-                     "' is " + dependent_source(relation) +
-                     "; free = True is ignored and it stays dependent");
+                warn("crysta.domain.dependent_free_ignored: parameter '" + relation.target_name + "' is " +
+                     dependent_source(relation) + "; free = True is ignored and it stays dependent (cannot be fitted: " +
+                     std::string(crysta::fit_reason(crysta::dependence_blocker(relation.source))) + ")");
             }
         }
     }
@@ -3775,6 +3776,99 @@ void refresh_relations(Project& project, const WarningSink& warn, bool from_file
         throw coded_refusal(problems);
     }
     mark_dependents(project, crysta::compile_relations(*converted->project, false), warn, from_file);
+}
+
+namespace {
+FitBlocker fit_blocker_of(crysta::FitBlocker blocker) {
+    switch (blocker) {
+        case crysta::FitBlocker::Descriptor: return FitBlocker::Descriptor;
+        case crysta::FitBlocker::Symmetry: return FitBlocker::Symmetry;
+        case crysta::FitBlocker::Constraint: return FitBlocker::Constraint;
+        case crysta::FitBlocker::Data: return FitBlocker::Data;
+        case crysta::FitBlocker::Capability: return FitBlocker::Capability;
+        case crysta::FitBlocker::None: break;
+    }
+    return FitBlocker::None;
+}
+
+// crysta's reason with its detail, or for a blocker given alone its reason; empty when fittable.
+void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}, bool idle = false) {
+    parameter.fit_blocker = fit_blocker_of(blocker);
+    parameter.fit_reason = reason.empty() ? std::string(crysta::fit_reason(blocker)) : std::move(reason);
+    parameter.fit_idle = idle;
+}
+}  // namespace
+
+bool is_descriptor(const std::string& uid) { return crysta::is_descriptor(uid); }
+
+std::string fit_reason(FitBlocker blocker) {
+    switch (blocker) {
+        case FitBlocker::Descriptor: return std::string(crysta::fit_reason(crysta::FitBlocker::Descriptor));
+        case FitBlocker::Symmetry: return std::string(crysta::fit_reason(crysta::FitBlocker::Symmetry));
+        case FitBlocker::Constraint: return std::string(crysta::fit_reason(crysta::FitBlocker::Constraint));
+        case FitBlocker::Data: return std::string(crysta::fit_reason(crysta::FitBlocker::Data));
+        case FitBlocker::Capability: return std::string(crysta::fit_reason(crysta::FitBlocker::Capability));
+        case FitBlocker::None: break;
+    }
+    return {};
+}
+
+void refresh_fittability(Project& project) {
+    // Every parameter a page or a fit names, fittable until the rule says otherwise; a descriptor by its entry alone.
+    std::vector<Parameter*> parameters;
+    std::set<const Parameter*> seen;
+    std::vector<std::pair<std::string, Parameter*>> named;
+    for (const NamedSlot& slot : named_slots(project)) {
+        named.emplace_back(slot.unique_name, slot.parameter);
+        if (seen.insert(slot.parameter).second) {
+            parameters.push_back(slot.parameter);
+        }
+    }
+    for (const ParameterEntry& entry : parameter_entries(project)) {
+        if (seen.insert(entry.parameter).second) {
+            parameters.push_back(entry.parameter);
+        }
+    }
+    for (Parameter* parameter : parameters) {
+        mark(*parameter, crysta::FitBlocker::None);
+        const ParameterSpec* spec = parameter->spec;
+        if (spec != nullptr && crysta::is_descriptor(std::string(spec->category) + "." + spec->name)) {
+            mark(*parameter, crysta::FitBlocker::Descriptor);
+        }
+    }
+    if (project.structures.empty()) {
+        return;
+    }
+    std::optional<crysta::Fittability> rule;
+    try {
+        RelationProject converted = relation_project(project);
+        // An experiment that links nothing crosses with a placeholder link to the first structure, which is no use of it.
+        std::vector<std::size_t> fitted;
+        for (const std::size_t index : fit_context(project)) {
+            if (!project.experiments[index]->linked_structures.empty()) {
+                fitted.push_back(index);
+            }
+        }
+        rule = crysta::fittability(*converted.project, fitted);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a calculation or fit says why
+        return;
+    }
+    std::set<const Parameter*> answered;
+    for (const auto& [unique_name, parameter] : named) {
+        const crysta::FitEligibility* status = rule->status(unique_name);
+        if (parameter->fit_blocker == FitBlocker::Descriptor || status == nullptr) {
+            continue;
+        }
+        mark(*parameter, status->blocker, status->reason(), status->idle);
+        answered.insert(parameter);
+    }
+    // A parameter crysta's model does not hold (an inert slot of the other beam mode), or one of an experiment no fit
+    // uses, is one no fitted experiment can determine.
+    for (Parameter* parameter : parameters) {
+        if (parameter->fit_blocker != FitBlocker::Descriptor && !answered.contains(parameter)) {
+            mark(*parameter, crysta::FitBlocker::Data);
+        }
+    }
 }
 
 void complete_relations(Project& project) {
@@ -5332,6 +5426,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         throw std::invalid_argument("edi fit_scan: _fitting_mode.type is '" + fitting_mode +
                                     "' - the scan body serves only 'sequential' and 'independent'");
     }
+    require_fittable_free(*this);  // ADR-0053: a free flag the fit cannot honour is refused by name
     if (experiments.size() != 1) {
         throw std::invalid_argument(
             "edi fit_sequential: the project has " + std::to_string(experiments.size()) +

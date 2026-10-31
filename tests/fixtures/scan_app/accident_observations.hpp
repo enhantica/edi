@@ -219,7 +219,15 @@ QJsonObject mixed_generation(const std::string& path, const std::string& edit) {
         edit_error = cell_item(*view)->lastError();
     }
     settled(*view);
-    const auto continued = run(*view, "mixed-continue", 0);
+    const auto edited = scientific_state(*view), edited_files = result_files(path);
+    const auto continued = run(*view, "mixed-refit", 0);
+    view->undo();
+    settled(*view);
+    const bool refit_undo_restored = edited_files == result_files(path);
+    view->setCurrentExperimentIndex(edited.value("selected").toInt());
+    settled(*view);
+    const auto undo_refit = scientific_state(*view);
+    const auto refitted = run(*view, "mixed-refit-again", 0);
     const auto mixed = scientific_state(*view);
     const bool kept = contents(path, "analysis/results.csv").startsWith(prefix);
     const auto saved = view->saveTo(QString::fromStdString(path + "-saved"));
@@ -236,6 +244,10 @@ QJsonObject mixed_generation(const std::string& path, const std::string& edit) {
     return {{"first", first},
             {"editError", edit_error},
             {"continued", continued},
+            {"edited", edited},
+            {"undoRefit", undo_refit},
+            {"refitUndoRestored", refit_undo_restored},
+            {"refitted", refitted},
             {"prefixKept", kept},
             {"mixed", mixed},
             {"saveError", saved},

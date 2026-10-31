@@ -1,0 +1,11 @@
+_edi.schema_version 3
+_fitting_mode.type joint
+_minimizer.max_iterations 1
+loop_
+_alias.id
+_alias.parameter_unique_name
+held phase.atom_site.Ni.adp_iso
+source phase.atom_site.Ni.occupancy
+loop_
+_constraint.expression
+"held = source / 2"

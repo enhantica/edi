@@ -82,6 +82,7 @@ nav:
           - dev/adrs/0050-observed-reflections-and-fit-cutoff.md
           - dev/adrs/0051-names-and-numbers-from-the-dictionary.md
           - dev/adrs/0052-project-folders-archives-and-opening.md
+          - dev/adrs/0053-what-a-fit-can-free.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -159,6 +160,7 @@ nav:
           - user/guides/background-estimate.md
           - user/guides/open-save-and-export.md
           - user/guides/fit-quality.md
+          - user/guides/which-values-a-fit-can-free.md
       - Tutorials:
           - user/tutorials/index.md
           - user/tutorials/pd-neut-cwl_lbco_simulation.ipynb

@@ -28,7 +28,6 @@ struct CategoryField {
     Parameter* parameter = nullptr;  // the model field
     bool used_by_profile = true;     // false: outside the profile's set, shown because it is free
     bool refinable = true;           // false: symmetry fixes it or ties it to another parameter
-    bool fittable = true;            // false: a fixed setting (is_fixed_setting): editable, never fitted
 };
 
 struct Category {
@@ -96,17 +95,21 @@ inline void add_optional(std::vector<CategoryField>& fields, const char* name,
     }
 }
 
+// `carried`: listed whether shown or not, a value the experiment carries (the Analysis table's inventory, edi
+// ADR-0053).
 inline void add_if_shown(std::vector<CategoryField>& fields, const char* name, Parameter& field,
-                         bool declared) {
-    if (declared || field.free) {
+                         bool declared, bool carried = false) {
+    if (declared || field.free || carried) {
         fields.push_back({name, &field, declared});
     }
 }
 
 }  // namespace detail
 
-// The peak category's parameter fields and asymmetry subheading for the experiment's profile.
-inline Category peak_category(ExperimentBase& experiment) {
+// The peak category's parameter fields and asymmetry subheading for the experiment's profile. With `every_carried`
+// a time-of-flight experiment lists the coefficients its profile does not use too, as the Analysis table does
+// (edi ADR-0053); the Experiment page shows those only while free.
+inline Category peak_category(ExperimentBase& experiment, bool every_carried = false) {
     Category category{"peak"};
     PeakBase& peak = experiment.peak;
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
@@ -126,16 +129,13 @@ inline Category peak_category(ExperimentBase& experiment) {
         detail::add_optional(category.asymmetry, "asym_beba_a1", peak.asym_beba_a1);
         detail::add_optional(category.asymmetry, "asym_beba_b1", peak.asym_beba_b1);
         detail::add_optional(category.asymmetry, "asym_beba_limit", peak.asym_beba_limit);
-        if (peak.asym_beba_limit) {
-            category.asymmetry.back().fittable = false;  // a fixed setting (is_fixed_setting)
-        }
         for (const auto& [name, member] : detail::tof_peak_fields()) {  // inert on CW: only if free
             detail::add_if_shown(category.fields, name, peak.*member, false);
         }
     } else {
         for (const auto& [name, member] : detail::tof_peak_fields()) {
             detail::add_if_shown(category.fields, name, peak.*member,
-                                 detail::tof_profile_declares(profile, name));
+                                 detail::tof_profile_declares(profile, name), every_carried);
         }
     }
     return category;
@@ -184,8 +184,8 @@ inline Category absorption_category(ExperimentBase& experiment) {
     return category;
 }
 
-// An experiment's categories in page order (§2b (iii)).
-inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
+// An experiment's categories in page order (§2b (iii)); `every_carried` as for peak_category.
+inline std::vector<Category> experiment_categories(ExperimentBase& experiment, bool every_carried = false) {
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
     std::vector<Category> categories;
     categories.push_back({"experiment_type"});
@@ -199,9 +199,6 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
                                  : Category{"instrument"});
         Category extinction{"extinction"};
         detail::add_optional(extinction.fields, "crystal_radius", experiment.extinction.crystal_radius);
-        if (experiment.extinction.crystal_radius) {
-            extinction.fields.back().fittable = false;  // a descriptor of the crystal (is_fixed_setting)
-        }
         detail::add_optional(extinction.fields, "domain_radius", experiment.extinction.domain_radius);
         detail::add_optional(extinction.fields, "mosaic_spread", experiment.extinction.mosaic_spread);
         detail::add_optional(extinction.fields, "coefficient", experiment.extinction.coefficient);
@@ -228,7 +225,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
         categories.push_back(data);
     }
     categories.push_back(instrument_category(experiment));
-    categories.push_back(peak_category(experiment));
+    categories.push_back(peak_category(experiment, every_carried));
     // The declared model's rows — the line-segment points, or a polynomial or Chebyshev model's
     // terms.
     if (experiment.background_type == "line-segment") {

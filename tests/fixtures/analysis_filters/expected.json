@@ -5,7 +5,9 @@
     "category": "cell",
     "name": "length_a",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -13,7 +15,9 @@
     "category": "cell",
     "name": "length_b",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -21,7 +25,9 @@
     "category": "cell",
     "name": "length_c",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -29,7 +35,9 @@
     "category": "cell",
     "name": "angle_alpha",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -37,7 +45,9 @@
     "category": "cell",
     "name": "angle_beta",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -45,7 +55,9 @@
     "category": "cell",
     "name": "angle_gamma",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -53,7 +65,9 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "A",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -61,7 +75,9 @@
     "category": "atom_site",
     "name": "fract_y",
     "label": "A",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -69,7 +85,9 @@
     "category": "atom_site",
     "name": "fract_z",
     "label": "A",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -77,7 +95,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "A",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -85,7 +105,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "A",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -93,7 +115,9 @@
     "category": "cell",
     "name": "length_a",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -101,7 +125,9 @@
     "category": "cell",
     "name": "length_b",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -109,7 +135,9 @@
     "category": "cell",
     "name": "length_c",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -117,7 +145,9 @@
     "category": "cell",
     "name": "angle_alpha",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -125,7 +155,9 @@
     "category": "cell",
     "name": "angle_beta",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -133,7 +165,9 @@
     "category": "cell",
     "name": "angle_gamma",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -141,7 +175,9 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "A",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -149,7 +185,9 @@
     "category": "atom_site",
     "name": "fract_y",
     "label": "A",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -157,7 +195,9 @@
     "category": "atom_site",
     "name": "fract_z",
     "label": "A",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -165,7 +205,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "A",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -173,7 +215,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "A",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -181,7 +225,9 @@
     "category": "atom_site",
     "name": "fract_x",
     "label": "B",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -189,7 +235,9 @@
     "category": "atom_site",
     "name": "fract_y",
     "label": "B",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -197,7 +245,9 @@
     "category": "atom_site",
     "name": "fract_z",
     "label": "B",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -205,7 +255,9 @@
     "category": "atom_site",
     "name": "occupancy",
     "label": "B",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "structure",
@@ -213,7 +265,9 @@
     "category": "atom_site",
     "name": "adp_iso",
     "label": "B",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -221,7 +275,9 @@
     "category": "peak",
     "name": "broad_gauss_u",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -229,7 +285,9 @@
     "category": "peak",
     "name": "broad_gauss_v",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -237,7 +295,9 @@
     "category": "peak",
     "name": "broad_gauss_w",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -245,7 +305,9 @@
     "category": "peak",
     "name": "broad_lorentz_x",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -253,7 +315,19 @@
     "category": "peak",
     "name": "broad_lorentz_y",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "peak",
+    "name": "cutoff_fwhm",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -261,7 +335,9 @@
     "category": "instrument",
     "name": "setup_wavelength",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -269,7 +345,9 @@
     "category": "instrument",
     "name": "calib_twotheta_offset",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -277,7 +355,9 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "amber",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -285,7 +365,29 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "violet",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "background",
+    "name": "origin",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "background",
+    "name": "order",
+    "label": "c0",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -293,7 +395,19 @@
     "category": "background",
     "name": "coef",
     "label": "c0",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "east",
+    "category": "background",
+    "name": "order",
+    "label": "c1",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -301,7 +415,9 @@
     "category": "background",
     "name": "coef",
     "label": "c1",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -309,7 +425,9 @@
     "category": "peak",
     "name": "broad_gauss_u",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -317,7 +435,9 @@
     "category": "peak",
     "name": "broad_gauss_v",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -325,7 +445,9 @@
     "category": "peak",
     "name": "broad_gauss_w",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -333,7 +455,9 @@
     "category": "peak",
     "name": "broad_lorentz_x",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -341,7 +465,19 @@
     "category": "peak",
     "name": "broad_lorentz_y",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "peak",
+    "name": "cutoff_fwhm",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -349,7 +485,9 @@
     "category": "instrument",
     "name": "setup_wavelength",
     "label": "",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -357,7 +495,9 @@
     "category": "instrument",
     "name": "calib_twotheta_offset",
     "label": "",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -365,7 +505,9 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "amber",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   },
   {
     "kind": "experiment",
@@ -373,7 +515,29 @@
     "category": "linked_structure",
     "name": "scale",
     "label": "violet",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "background",
+    "name": "origin",
+    "label": "",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "background",
+    "name": "order",
+    "label": "c0",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -381,7 +545,19 @@
     "category": "background",
     "name": "coef",
     "label": "c0",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "background",
+    "name": "order",
+    "label": "c1",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -389,7 +565,19 @@
     "category": "background",
     "name": "coef",
     "label": "c1",
-    "free": false
+    "free": false,
+    "descriptor": false,
+    "blocked": false
+  },
+  {
+    "kind": "experiment",
+    "block": "west",
+    "category": "background",
+    "name": "order",
+    "label": "c2",
+    "free": false,
+    "descriptor": true,
+    "blocked": true
   },
   {
     "kind": "experiment",
@@ -397,6 +585,8 @@
     "category": "background",
     "name": "coef",
     "label": "c2",
-    "free": true
+    "free": true,
+    "descriptor": false,
+    "blocked": false
   }
 ]

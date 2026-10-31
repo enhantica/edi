@@ -797,13 +797,16 @@ EaComponents.ApplicationWindow {
             refusal.open();
         }
     }
+    // A finished fit opens its results unless the preferences say not to; the status bar's fit status opens them then.
     Connections {
         target: Session.project ? Session.project.fit : null
         function onFinished() {
-            fitResults.open();
+            if (Preferences.showFitResults)
+                fitResults.open();
         }
         function onScanFinished() {
-            fitResults.open();
+            if (Preferences.showFitResults)
+                fitResults.open();
         }
         function onRefused(message) {
             fitError.message = message;

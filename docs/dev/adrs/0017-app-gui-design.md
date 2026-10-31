@@ -905,34 +905,53 @@ runner prints `edi_app_tests: built at <sha>`, which a drawn run's table carries
 changes); a table naming no revision is never banked. The tool reads only a directory's `run-NN.json` tables and
 refuses to write its bank rows into it.
 
-### 17. Fitting: Start fitting, the status bar, the results and Undo
+### 17. Fitting: the status bar's fit buttons, the results and Undo
 
 (the owner, 2026-10-02)
 
-- **Start fitting** (Analysis, Fitting group) runs the project's fit on the worker (ADR-0020 §9) and reads **Stop
-  fitting**, with a stop icon, while it runs (owner, 2026-10-05; *Cancel fitting* before): a stop keeps the partial
-  result. In a scan project it follows the datasets' fits (owner, 2026-10-06; §19). While a fit runs the parameter
-  table is disabled and every edit is refused.
-- **Follow** sits to the right of Start fitting at the same width. It is enabled only while a scan runs and starts
-  on; while on, the pattern tab shows the file being fitted. In a scan project **Reset fits** sits between them, and
-  the three share the row in thirds. Reset fits and Follow show only in the sequential and independent modes;
-  otherwise Start fitting is alone at the full width (ADR-0046).
+- **Fitting is run from the status bar only** (the owner, 2026-10-26; the Analysis page's Fitting group, with Start
+  fitting, Reset fits and Follow, is gone). The **Fit** button runs the project's fit on the worker (ADR-0020 §9) and
+  reads **Stop**, with a stop icon, while it runs: a stop keeps the partial result. In a scan project it follows the
+  datasets' fits (owner, 2026-10-06; §19). While a fit runs the parameter table is disabled and every edit is refused.
+  The Analysis page's parameter table fills the sidebar down to its value slider, about half of the next row showing.
+- **Reset** and **Follow** stand before the Fit button in a project's sequential and independent modes only
+  (ADR-0046). Follow is enabled only while a scan runs and starts on; while on, the pattern tab shows the file being
+  fitted. Reset clears every dataset's fit result.
 - **The chart follows the fit**: a frame of the current iteration's pattern at most once per display frame, then the
   fitted pattern when the fit ends. A fit that writes nothing puts back the pattern the project holds.
 - **The status bar's keys** (the owner, 2026-10-03): every item shows its key only while all the shown items fit the
   bar's width with their keys, measured from the items themselves; otherwise each shows its icon and value. (It
   replaced a fixed window-width threshold.)
 - **The status bar's fit area** (owner, 2026-10-05) is right-aligned after the items. While a fit runs it shows the
-  live values, then a progress bar (`Components/FitProgressBar.qml`) with its text inside at the far right, where the
-  values' changing width does not move it (owner, 2026-10-06): a single fit
+  live values, then a progress bar (`Components/FitProgressBar.qml`) with its text inside, at the right before the Fit
+  button, where the values' changing width does not move it (owner, 2026-10-06): a single fit
   fills the bar with moving stripes and reads `fitting · it 12`, then `4s · χ² 12.40 → 7.50`; a scan will fill it by
   file count. After the run the bar and the live values go, and a summary stays: the outcome, then `it 23 · 7s · χ²
   12.40 → 7.01`. One order everywhere: progress, then the counts, then time, then χ², every separator the same
   ` · ` (`FitOutcomes.separator`).
+- **The status bar's fit buttons** (the owner, 2026-10-26) are its last items: Reset and Follow in a scan project,
+  then the Fit button in the right corner, after the outcome, the values and, while a fit runs, the progress bar. They
+  are shown on every page whenever the Analysis page is available, so a fit can be run again after changing a value
+  elsewhere. The Fit button reads *Fit*, *Continue* or *Stop* with the matching icon. While it can act it is black
+  with white text in light mode and white with black text in dark mode, its background turning the accent blue on
+  hover with the base's colour animation (`Components/StatusBarFitButton.qml`, `AppColors.fitButtonBackground`);
+  otherwise it looks like the other buttons. The outcome, Reset and Follow (`Components/StatusBarButton.qml`) are
+  white with a 1 px border in the bar's border colour in light mode and black with a border just off the bar's
+  background in dark mode, the theme's text, the accent while Follow is on and the disabled colour while a button
+  cannot act; on hover their icon and word turn the accent blue (`AppColors.statusButtonBackground`,
+  `statusButtonBorder`). The Fit button's tool tip, shown only while tool tips are on, says *Fit the free parameters*.
+  When the bar runs short of room Reset and Follow drop their words before the Fit button does, each then a circle
+  round its icon. All are framed fit-area items whose body is two font sizes tall and as round as the progress bar,
+  which has that height too, the outlined ones drawing their 1 px border outside it and the Fit button having none
+  while it can act, so every button's body is the same height (the owner, 2026-10-26); they share one spacing: half a
+  font size before the icon, a little less between icon and word, a little more after the word, so the three look
+  even. The status bar has the tab bars' height, three font sizes, with the buttons centred in it
+  (`Base/Gui/Style/Sizes.qml`, which edi builds in place of the base's; the owner, 2026-10-26).
 - **One look per fit outcome** (owner, 2026-10-05), from `Globals/FitOutcomes.qml` for every place that shows one
   (the status-bar summary, the results window's Overall status row, the Experiments table's Fit column): *Success*
   (green check circle), *Max iterations* and *No step* (amber exclamation circle; the result is kept), *Stopped*
-  (grey stop circle), *Superseded* (grey minus circle) and *Failed* (red cross circle). No underline; the summary's
+  (stop circle) and *Superseded* (minus circle), whose word is in the text colour and icon in the grey of the icons
+  around it so they never look disabled (the owner, 2026-10-26), and *Failed* (red cross circle). No underline; the summary's
   outcome highlights on hover, as every clickable status-bar item does, and opens the results.
 - **The Fit column** of the Experiments table, and each experiment's line in the block selector, show the outcome
   icon on each experiment the last fit fitted: the first after a single fit, every bank after a joint fit. Any
@@ -944,7 +963,8 @@ refuses to write its bank rows into it.
   fitting time (seconds), iterations, goodness-of-fit (reduced χ²), Rwp, and each bank's Rwp for a joint fit. The
   table is built from the result the project records (`_fit_result`), so a project opened with one shows its last
   fit too: the status bar's iterations, reduced χ² and stop reason, and the same table from the Fit status item,
-  outcome, which opens it on a click.
+  outcome, which opens it on a click. The *Show fit results after fitting* preference (Prompts, beside Enable tool
+  tips, on by default; the owner, 2026-10-26) keeps the pop-up closed when a fit ends; the outcome still opens it.
 - **A refused or failed fit** shows its reason in a message dialog; the project is unchanged.
 - **A fitted value outside its admissible range** (the table's min and max) is kept, as the CLI keeps it, and shown in
   red with a tooltip naming the range, as diffraction-lib's table of fitted parameters does (the owner, 2026-10-02).
@@ -1018,13 +1038,13 @@ refuses to write its bank rows into it.
   resets. Above 5000
   points the chart draws, per x bucket, only the lowest and the highest, so every excursion stays visible. The tab
   is disabled in a project that is not a scan.
-- **Running a scan.** In the sequential or independent mode Start fitting runs crysta's driver from the template on the
-  worker (`edi::FitJob`, the scan entry points of the core), which writes `analysis/results.csv` as it fits each file;
-  the template itself is left as it was. The button follows the datasets' fits (owner, 2026-10-06): **Start fitting**
-  while none is fitted, **Continue fitting** while some are not (after a Stop too), which fits from the first dataset
-  without a row (the driver resumes from the file), and **disabled** once every dataset is fitted, its tooltip saying
-  so. **Reset fits** clears every dataset's fit result, one Undo step that writes them back, and so enables Start
-  fitting again. Stop fitting keeps the rows written so far.
+- **Running a scan.** In the sequential or independent mode the status bar's Fit button runs crysta's driver from the
+  template on the worker (`edi::FitJob`, the scan entry points of the core), which writes `analysis/results.csv` as it
+  fits each file; the template itself is left as it was. The button follows the datasets' fits (owner, 2026-10-06):
+  **Fit** while none is fitted, **Continue** while some are not (after a Stop too), which fits from the first dataset
+  without a row (the driver resumes from the file), and **disabled** once every dataset is fitted. **Reset** clears
+  every dataset's fit result, one Undo step that writes them back, and so enables Fit again. **Stop** keeps the rows
+  written so far.
   While a scan runs the status bar's bar fills by files, with *count · percent · file* inside, and the ok and fail
   counts, the time, the time left and the last χ² beside it. Joint is not offered in a project that declares a scan.
 - **Follow** is on when a scan starts and enabled only while one runs: the pattern tab then shows each file as it is
@@ -1033,9 +1053,13 @@ refuses to write its bank rows into it.
 - **The template dataset** (`_sequential_fit.template_file`): a single fit on a shown dataset makes its result the
   template and that dataset the template dataset. Its entry in the selector and its row in the Experiments table
   carry the word *template* in the accent blue. A scan project opens on it, else on the first dataset.
-- **Out of date.** A run records which template it fitted from (`analysis/scan-run.json`); results from another
-  template than the one held now stay shown, marked *out of date* in the status bar's summary and on the Evolution
-  tab. The mark survives saving and reopening, and goes when a run of the current template replaces them.
+- **Outdated.** A run records which template it fitted from (`analysis/scan-run.json`); results from another
+  template than the one held now stay shown, and the Evolution tab marks them out of date. The status bar's outcome
+  button reads *Outdated* in amber with the history icon, and its results window shows the previous results under an
+  amber note: *These results are from before your parameter changes. Fit again to update them.* The Fit button reads
+  **Refit** and is enabled even when every dataset is fitted: it fits every file again from the template, the old
+  results going to Undo, which restores them; Reset still clears them without fitting (the owner, 2026-10-26). The
+  mark survives saving and reopening, and goes when a run of the current template replaces them.
 - **After a scan** the status bar's summary reads *outcome · fitted/files · N ok · N fail · χ² min–max*, a fail count
   above zero in red, and the results window shows the run as a whole: Overall status, files fitted, converged,
   failed, the fitting time and the χ² range, with *Show evolution*, which opens the Evolution tab. The outcome is the

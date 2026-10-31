@@ -12,7 +12,7 @@ namespace edi_app {
 namespace {
 const QStringList kRoles{"parameter", "path",  "blockKind", "blockName", "category", "rowLabel", "name",
                          "displayName", "value", "uncertainty", "hasUncertainty", "free", "minimum",
-                         "maximum", "units", "refinable"};
+                         "maximum", "units", "refinable", "fittable", "fitReason", "fitGroup"};
 // One predicate serves menu counts and filtering, so parent groups include all their children.
 bool matches_group(const QString& group, const QString& kind, const QString& category, const QString& name) {
     if (group.isEmpty()) return true;
@@ -42,23 +42,28 @@ void ParameterTableModel::setExperimentScope(const QString& experiment) {
 void ParameterTableModel::sync() {
     QList<Row> rows;
     int free_count = 0;
+    int not_fittable_count = 0;
+    QList<int> group_counts{0, 0, 0, 0};
     for (ParameterItem* item : registry_.items()) {
-        if (!item->isRefinable() || !item->isFittable()) {
-            continue;  // symmetry fixes or ties it, or a fixed setting: shown on its page, never fitted
-        }
         if (!experiment_scope_.isEmpty() && item->blockKind() == QLatin1String("experiment") &&
             item->blockName() != experiment_scope_) {
             continue;  // a scan mode fits one experiment at a time: another experiment's parameter
         }
         free_count += item->isFree() ? 1 : 0;
+        not_fittable_count += !item->isFree() && !item->isFittable() ? 1 : 0;
         rows.append({item,
                      {QVariant::fromValue<QObject*>(item), item->path(), item->blockKind(), item->blockName(),
                       item->category(), item->rowLabel(), item->name(), item->displayName(), item->value(),
                       item->uncertainty(), item->hasUncertainty(), item->isFree(), item->minimum(), item->maximum(),
-                      item->displayUnits(), item->isRefinable()}});
+                      item->displayUnits(), item->isRefinable(), item->isFittable(), item->fitReason(),
+                      item->fitGroup()}});
+        if (!item->isFree() && item->fitGroup() > 0) {
+            ++group_counts[item->fitGroup() - 1];
+        }
     }
     setTableRows(rows);
-    const int fixed_count = count() - free_count;
+    // Free, fixed (could be freed) and not fittable partition the rows (edi ADR-0053).
+    const int fixed_count = count() - free_count - not_fittable_count;
     if (free_count != free_count_) {
         free_count_ = free_count;
         emit freeCountChanged();
@@ -66,6 +71,14 @@ void ParameterTableModel::sync() {
     if (fixed_count != fixed_count_) {
         fixed_count_ = fixed_count;
         emit fixedCountChanged();
+    }
+    if (not_fittable_count != not_fittable_count_) {
+        not_fittable_count_ = not_fittable_count;
+        emit notFittableCountChanged();
+    }
+    if (group_counts != group_counts_) {
+        group_counts_ = group_counts;
+        emit groupCountsChanged();
     }
 }
 
@@ -113,7 +126,8 @@ bool matches_datablock(const QString& key, const QString& kind, const QString& n
 }  // namespace
 
 void ParameterFilterModel::refresh() {
-    struct Row { QString kind, block, category, name; bool free = false; };
+    struct Row { QString kind, block, category, name; bool free = false; bool fittable = true; };
+    // Only the rows the show-filters leave, so every picker counts what the table can show.
     QList<Row> rows;
     if (sourceModel() != nullptr) {
         const auto roles = sourceModel()->roleNames();
@@ -121,8 +135,12 @@ void ParameterFilterModel::refresh() {
             return sourceModel()->data(sourceModel()->index(row, 0), roles.key(role));
         };
         for (int row = 0; row < sourceModel()->rowCount(); ++row) {
+            if (!shownByGroup(value(row, "free").toBool(), value(row, "fitGroup").toInt())) {
+                continue;
+            }
             rows.append({value(row, "blockKind").toString(), value(row, "blockName").toString(),
-                         value(row, "category").toString(), value(row, "name").toString(), value(row, "free").toBool()});
+                         value(row, "category").toString(), value(row, "name").toString(), value(row, "free").toBool(),
+                         value(row, "fittable").toBool()});
         }
     }
 
@@ -222,12 +240,12 @@ void ParameterFilterModel::refresh() {
         emit categoryFilterChanged();
     }
 
-    // The parameters the datablock and category leave: all, free, fixed.
-    QList<int> counts{0, 0, 0};
+    // The parameters the datablock and category leave: all, free, fixed (could be freed), not fittable.
+    QList<int> counts{0, 0, 0, 0};
     for (const Row& row : scoped) {
         if (!matches_group(category_filter_, row.kind, row.category, row.name)) continue;
         ++counts[0];
-        ++counts[row.free ? 1 : 2];
+        ++counts[row.free ? 1 : row.fittable ? 2 : 3];
     }
 
     const bool datablocks_changed = datablocks != datablocks_;
@@ -314,6 +332,22 @@ bool ParameterFilterModel::shows(ParameterItem* parameter) const {
     return rowOf(parameter) >= 0;
 }
 
+bool ParameterFilterModel::shownByGroup(bool free, int group) const {
+    // What a fit can vary is always shown, and so is a value marked free (the owner, 2026-10-26).
+    return free || group <= 0 || group > static_cast<int>(shown_groups_.size()) || shown_groups_[group - 1];
+}
+
+void ParameterFilterModel::setShownGroup(int group, bool shown) {
+    if (group <= 0 || group > static_cast<int>(shown_groups_.size()) || shown_groups_[group - 1] == shown) {
+        return;
+    }
+    beginFilterChange();
+    shown_groups_[group - 1] = shown;
+    endFilterChange(Direction::Rows);
+    emit shownGroupsChanged();
+    refresh();
+}
+
 void ParameterFilterModel::setVariability(Variability variability) {
     if (variability != variability_) {
         beginFilterChange();
@@ -332,7 +366,12 @@ bool ParameterFilterModel::filterAcceptsRow(int source_row, const QModelIndex& s
         return false;
     }
     const bool free = value("free").toBool();
-    if ((variability_ == Free && !free) || (variability_ == Fixed && free)) {
+    const bool fittable = value("fittable").toBool();
+    if (!shownByGroup(free, value("fitGroup").toInt())) {
+        return false;
+    }
+    if ((variability_ == Free && !free) || (variability_ == Fixed && (free || !fittable)) ||
+        (variability_ == NotFittable && (free || fittable))) {
         return false;
     }
     return name_filter_.isEmpty() || value("path").toString().contains(name_filter_, Qt::CaseInsensitive) ||
