@@ -2625,6 +2625,19 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     if (!warnings.isEmpty()) {
         return warnings.join(QLatin1Char('\n'));
     }
+    // An item the read project does not write back (one no reader takes, in any category) is refused, not lost.
+    try {
+        const std::vector<std::string> unread = edi::unread_items(*read, file.toStdString(), text.toStdString());
+        if (!unread.empty()) {
+            QStringList names;
+            for (const std::string& name : unread) {
+                names.append(QString::fromStdString(name));
+            }
+            return tr("Not an item this file holds: %1").arg(names.join(QStringLiteral(", ")));
+        }
+    } catch (const std::exception& refusal) {
+        return QString::fromUtf8(refusal.what());
+    }
     // A block keeps its name: a rename is made on its page, where its references follow it.
     const auto names = [](const auto& blocks) {
         QStringList out;

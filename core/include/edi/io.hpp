@@ -194,6 +194,9 @@ bool save_report_settings(const Project& project, const std::string& directory);
 // The report settings as `reports/report.edi` states them, each one the project leaves at its default written out with
 // that value, and the saved-report rows: what the Report page's Text tab shows, never empty. crysta writes the text.
 std::string report_settings_text(const Project& project);
+// The input items `text`, a new text of the project file `relative`, gives that `read` (the project read with it) does
+// not write back: names no reader takes, which an apply would lose. Each by its current name in lower case.
+std::vector<std::string> unread_items(const Project& read, const std::string& relative, const std::string& text);
 
 // A report setting's value checked by crysta's rules, as a file states it (ADR-0036 §7): `tag` is `_report.<item>`,
 // `_correlation_chart.threshold` or `_pattern_chart.x_axis`, `value` its text. Throws std::invalid_argument naming the
