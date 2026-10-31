@@ -152,14 +152,46 @@ Rectangle {
                     colours.push(String(colour).toUpperCase());
             verify(owner.palettes[0].light.every(colour => colours.includes(colour)), "The live strip displays all eleven independently recorded palette positions");
             tryCompare(dialog, "opened", true, 2000, "The Preferences opening transition finishes before its pixel baseline");
-            const before = grabImage(strip);
-            verify(before.width > 0, "The live order strip renders actual pixels");
+            function stripSnapshot() {
+                const root = surface.Window.window.contentItem;
+                surface.Window.window.update();
+                verify(waitForRendering(root), "Each palette snapshot follows an explicitly requested whole-window frame");
+                const image = grabImage(root);
+                const at = strip.mapToItem(root, 0, 0);
+                const sx = image.width / root.width, sy = image.height / root.height;
+                const left = Math.floor(at.x * sx), top = Math.floor(at.y * sy);
+                const right = Math.ceil((at.x + strip.width) * sx), bottom = Math.ceil((at.y + strip.height) * sy);
+                verify(left >= 0 && top >= 0 && right <= image.width && bottom <= image.height, "The whole-window capture contains the visible palette strip");
+                const pixels = [];
+                for (let y = top; y < bottom; ++y)
+                    for (let x = left; x < right; ++x)
+                        pixels.push(String(image.pixel(x, y)));
+                return {
+                    width: right - left,
+                    height: bottom - top,
+                    pixels
+                };
+            }
+            function sameStrip(expected, actual) {
+                return expected.width === actual.width && expected.height === actual.height && expected.pixels.every((pixel, index) => pixel === actual.pixels[index]);
+            }
+            tryCompare(Session.project, "calculating", false, 8000, "The baseline project's calculation finishes before its palette is captured");
+            let before = stripSnapshot();
+            tryVerify(() => {
+                const next = stripSnapshot();
+                const settled = sameStrip(before, next);
+                before = next;
+                return settled;
+            }, 2000, "The visible palette reaches a stable baseline before comparing project edits");
+            verify(before.width > 0 && before.pixels.some(pixel => pixel.toUpperCase() === owner.palettes[0].light[3]), "The capture contains the recorded colour of the actual free palette square");
             verify(Session.project.createStructure(), "Adding a real project structure exercises the live assignment consumer");
-            verify(waitForPolish(strip) && waitForRendering(strip), "A project edit reaches the order strip's rendering");
-            tryVerify(() => !before.equals(grabImage(strip)), 2000, "Adding an item changes a free square into that item's coloured icon");
+            tryCompare(Session.project, "calculating", false, 8000, "The added structure's calculation finishes before its palette frame is compared");
+            verify(waitForPolish(strip), "A project edit reaches the order strip's layout");
+            tryVerify(() => !sameStrip(before, stripSnapshot()), 2000, "Adding an item changes a free square into that item's coloured icon");
             Session.project.removeStructure(Session.project.structures.count - 1);
-            verify(waitForPolish(strip) && waitForRendering(strip), "Removing an item reaches the order strip's rendering");
-            tryVerify(() => before.equals(grabImage(strip)), 2000, "Removing the new item restores its free square and original assignments");
+            tryCompare(Session.project, "calculating", false, 8000, "The removed structure's calculation finishes before its palette frame is compared");
+            verify(waitForPolish(strip), "Removing an item reaches the order strip's layout");
+            tryVerify(() => sameStrip(before, stripSnapshot()), 2000, "Removing the new item restores its free square and original assignments");
         }
         function test_saved_html_and_pdf_are_light_data() {
             return owner.palettes.map((palette, index) => ({
