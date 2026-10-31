@@ -293,6 +293,11 @@
    "reason": "the parameter table column of fit upper bounds, not the calculation range"
   },
   {
+   "file": "app/qml/Pages/Experiment/InstrumentGroup.qml",
+   "literal": "Instrument",
+   "reason": "the instrument that measured the experiment, a selector label, not the instrument category's title"
+  },
+  {
    "file": "app/qml/Pages/Experiment/LinkedStructureGroup.qml",
    "literal": "s.u.",
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
