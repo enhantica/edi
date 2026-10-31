@@ -628,9 +628,54 @@ TestCase {
         ];
     }
     function resultBytes() {
-        const path = Session.project.path;
-        return ["results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"].map(name => SettingsProof.text(path, "analysis/" + name));
+        const directory = Session.projectDirectoryUrl;
+        verify(String(directory).startsWith("file:"), "Result observations use the current project's converted local directory URL");
+        return ["results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"].map(name => {
+            const relative = "analysis/" + name;
+            const observed = SettingsProof.fileObservation(directory, relative);
+            verify(!observed.error, "The saved scan file must be readable: " + relative + ": " + observed.error);
+            compare(observed.path, Session.project.path + "/" + relative, "Scan bytes come from the opened project's analysis directory");
+            if (name !== "scan-notes.csv") {
+                verify(observed.exists, "Every completed scan stores its required result and provenance file: " + relative);
+                verify(observed.base64.length > 0, "Required scan result and provenance observations contain real bytes: " + relative);
+            }
+            return observed.exists ? {
+                exists: true,
+                bytes: observed.base64
+            } : {
+                exists: false
+            };
+        });
     }
+    function checkFileObserver() {
+        const directory = SettingsProof.emptyDirectory();
+        verify(SettingsProof.write(directory, "empty", ""), "The observer witness stores an independently authored empty file");
+        const empty = SettingsProof.fileObservation(directory, "empty");
+        verify(!empty.error && empty.exists && empty.base64 === "", "An empty readable file is present with zero bytes");
+        const absent = SettingsProof.fileObservation(directory, "absent");
+        verify(!absent.error && absent.exists === false && absent.base64 === undefined, "An absent optional file differs from an empty readable file");
+        verify(!!SettingsProof.fileObservation(directory, ".").error, "Reading a directory as a file is an observation error");
+        verify(!!SettingsProof.fileObservation(Session.project.path, "project.edi").error, "A plain path is refused before any cwd-relative observation");
+        verify(!!SettingsProof.projectBytes(Session.project.path).error, "A plain path cannot observe the unrelated working directory as project bytes");
+        verify(!SettingsProof.write(Session.project.path, "observer-escape", "bad"), "A plain path cannot write relative to the working directory");
+        verify(!SettingsProof.remove(Session.project.path, "project.edi"), "A plain path cannot remove a file relative to the working directory");
+        let refused = false;
+        try {
+            SettingsProof.text(Session.project.path, "project.edi");
+        } catch (error) {
+            refused = true;
+        }
+        verify(refused, "The text convenience reader raises an error for an unconverted path");
+        refused = false;
+        try {
+            SettingsProof.text(directory, "absent");
+        } catch (error) {
+            refused = true;
+        }
+        verify(refused, "The text convenience reader raises an error for a missing required file");
+        compare(SettingsProof.text(directory, "empty"), "", "A valid local URL reads the empty file without an error");
+    }
+
     function resultRows() {
         const table = Session.project.fit.results, rows = [];
         for (let i = 0; i < table.count; ++i)
@@ -706,6 +751,7 @@ TestCase {
     }
     function test_refit_and_undo(data) {
         const before = outdatedScan(data.tag);
+        checkFileObserver();
         fitState("Refit");
         verify(Session.project.fit.available && actionable(shortcut()), "Outdated completed scans enable Refit without Reset");
         runningSpy.clear();

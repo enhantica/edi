@@ -475,12 +475,35 @@ public:
         directories_.push_back(std::move(directory));
         return result;
     }
+    static bool localDirectory(const QUrl& project) {
+        return project.isValid() && project.isLocalFile() &&
+               QDir::isAbsolutePath(project.toLocalFile()) && QFileInfo(project.toLocalFile()).isDir();
+    }
+    Q_INVOKABLE QVariantMap fileObservation(const QUrl& project, const QString& relative) const {
+        if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};
+        const auto path = QDir(project.toLocalFile()).absoluteFilePath(relative);
+        if (!QFileInfo::exists(path)) return {{"exists", false}, {"path", path}};
+        QFile file(path);
+        if (!QFileInfo(path).isFile() || !file.open(QIODevice::ReadOnly))
+            return {{"error", "The project file cannot be opened"}, {"path", path}};
+        const auto bytes = file.readAll();
+        if (file.error() != QFileDevice::NoError)
+            return {{"error", "The project file cannot be read"}, {"path", path}};
+        return {{"exists", true}, {"path", path}, {"text", QString::fromUtf8(bytes)},
+                {"base64", QString::fromLatin1(bytes.toBase64())}};
+    }
     Q_INVOKABLE QString text(const QUrl& project, const QString& relative) const {
-        QFile file(QDir(project.toLocalFile()).filePath(relative));
-        if (!file.open(QIODevice::ReadOnly)) return {};
-        return QString::fromUtf8(file.readAll());
+        const auto observed = fileObservation(project, relative);
+        if (observed.contains("error") || !observed.value("exists").toBool()) {
+            if (auto* engine = qjsEngine(this))
+                engine->throwError(QStringLiteral("SettingsProof.text: %1 (%2)")
+                    .arg(observed.value("error", "The project file is missing").toString(), relative));
+            return {};
+        }
+        return observed.value("text").toString();
     }
     Q_INVOKABLE QVariantMap projectBytes(const QUrl& project) const {
+        if (!localDirectory(project)) return {{"error", "An absolute local directory URL is required"}};
         const QDir root(project.toLocalFile());
         if (!root.exists()) return {{"error", "The saved project directory is missing"}};
         QVariantMap result;
@@ -489,6 +512,7 @@ public:
             QFile file(files.next());
             if (!file.open(QIODevice::ReadOnly)) return {{"error", "A saved project file cannot be read"}};
             auto bytes = file.readAll();
+            if (file.error() != QFileDevice::NoError) return {{"error", "A saved project file cannot be read"}};
             const auto relative = root.relativeFilePath(file.fileName());
             if (relative == QStringLiteral("project.edi")) {
                 QString record = QString::fromUtf8(bytes);
@@ -501,11 +525,13 @@ public:
         return result;
     }
     Q_INVOKABLE bool write(const QUrl& project, const QString& relative, const QString& text) const {
+        if (!localDirectory(project)) return false;
         QFile file(QDir(project.toLocalFile()).filePath(relative));
         if (!QDir().mkpath(QFileInfo(file).absolutePath())) return false;
         return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(text.toUtf8()) == text.toUtf8().size() && file.flush();
     }
     Q_INVOKABLE bool remove(const QUrl& project, const QString& relative) const {
+        if (!localDirectory(project)) return false;
         return QFile::remove(QDir(project.toLocalFile()).filePath(relative));
     }
     Q_INVOKABLE QUrl copyProjectArchive(const QUrl& source, bool readOnly = false) {
