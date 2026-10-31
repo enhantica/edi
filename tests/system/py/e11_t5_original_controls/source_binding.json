@@ -62,6 +62,10 @@
     {
       "path": "app/src/assistant_view_model.hpp",
       "sha256": null
+    },
+    {
+      "path": "tests/unit/app/e11_t5_usage_account_phase.hpp",
+      "sha256": "3cf23e103c91159447b8594a8eae4f656ca9a3c35636614a8e961fa71b2b2fe7"
     }
   ],
   "production_files": [
@@ -89,10 +93,28 @@
   "active_native_cases_sha256": "2f0f026f34571484879fe38360909f71102cf72249bd2d8028790f6097a89dd7",
   "original_source_protocol_cases_sha256": "b2f640318a0e45adabb7b4bddf430ba622ecc44c699997760bf08bece448f933",
   "compiled_caller_proof": {
-    "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantComposer_qml.cpp": null,
-    "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantPanel_qml.cpp": null
+    "current": {
+      "generated_inputs": {
+        "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantComposer_qml.cpp": null,
+        "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantPanel_qml.cpp": null
+      },
+      "source_proof": {
+        "path": null,
+        "sha256": null
+      }
+    },
+    "original": {
+      "generated_inputs": {
+        "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantComposer_qml.cpp": null,
+        "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantPanel_qml.cpp": null
+      },
+      "source_proof": {
+        "path": null,
+        "sha256": null
+      }
+    }
   },
-  "source_proof_basis": "PENDING: root binds each fresh variant from final source/pinned Qt compiled caller proof. Retain all warning descriptions/counts; mechanical source locations only, no output-derived oracle.",
+  "source_proof_basis": "PENDING: independently source-prove all six cases for BOTH final variants, bound to each actual bond/source/tree/generated inputs and exact per-variant case registry. Static353 compiler inventory is an input only, not completed attribution. Retain all descriptions/counts/steps and elect only source-proved locations.",
   "original87_role": "Historical immutable pure protocol custody +unchanged Qt/compiler/GUI/runtime only. Native SDK2 equality removed ONLY for this explicitDEA/SDK116 composition and replaced by exact SDK116 tuple above.",
   "binding_status": "PENDING_ROOT_FINAL_INPUTS",
   "caller_binding_status": "PENDING_ROOT_COMPILED_CALLER_PROOF",

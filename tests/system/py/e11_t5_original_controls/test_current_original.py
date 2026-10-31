@@ -8,6 +8,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import shlex
 import sys
 from collections import Counter
 from contextlib import ExitStack
@@ -26,6 +27,115 @@ def _absolute(value):
 
 def _sha(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+USAGE_HEADER = 'tests/unit/app/e11_t5_usage_account_phase.hpp'
+USAGE_HEADER_HASHES = {
+    'native': '3cf23e103c91159447b8594a8eae4f656ca9a3c35636614a8e961fa71b2b2fe7',
+    'original': '88a78241a487ff474a833b82e57c5ed3aab0cd594b7e8526194d310f4426c22d',
+}
+ACTIVITY_HEADER_SHA256 = '07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe'
+ACTIVITY_ADAPTER_SHA256 = '9d3cfc16c6e85e94ed249b55924184c5d43a6ac8f7a781ffee329da18504a298'
+PROBE_SOURCE_SHA256 = '1e5d1156dc1704dcb3e3b823427881d02a0964971b72de5875a0fe42f8bcde75'
+ACTIVITY_INPUTS = {
+    'tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp': ACTIVITY_HEADER_SHA256,
+    'tests/unit/app/e11_t5_a2a_phase_adapter.hpp': ACTIVITY_ADAPTER_SHA256,
+    'tests/integration/py/assistant_ui_probe/probe.cpp': PROBE_SOURCE_SHA256,
+}
+CALLER_KEYS = {
+    'graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantComposer_qml.cpp',
+    'graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantPanel_qml.cpp',
+}
+
+
+def _compiled_phase_inputs(bond, usage_phase):
+    _usage_header_input(bond, usage_phase)
+    _activity_source_inputs(bond)
+    _activity_object_input(bond)
+
+
+def _usage_header_input(bond, usage_phase):
+    source, graph = _absolute(bond['root']), _absolute(bond['real_build_root'])
+    selected = bond['selected_header']
+    expected = USAGE_HEADER_HASHES[usage_phase]
+    assert _absolute(selected['path']) == source / USAGE_HEADER
+    assert selected['sha256'] == bond['selected_header_sha256'] == expected
+    assert _sha(_absolute(selected['path'])) == expected
+    usage_object = (
+        'app/CMakeFiles/edi_app_tests.dir/__/tests/unit/app/test_e11_t5_usage_account.cpp.o'
+    )
+    assert selected['object'] == usage_object, 'The selected header belongs to the usage unit'
+    assert selected['selected_targets'] == ['edi_app_tests']
+    assert _sha(graph / usage_object) == selected['object_sha256']
+    dependencies = selected['dependency_record']
+    assert (
+        hashlib.sha256(dependencies.encode()).hexdigest() == selected['dependency_record_sha256']
+    )
+    assert '(VALID)' in dependencies.splitlines()[0]
+    assert str(source / USAGE_HEADER) in {line.strip() for line in dependencies.splitlines()[1:]}
+
+
+def _activity_source_inputs(bond):
+    source = _absolute(bond['root'])
+    built = bond['build_observation']['data']
+    for relative, digest in ACTIVITY_INPUTS.items():
+        row = built['source_inputs'][relative]
+        assert _absolute(row['path']) == source / relative
+        assert row['sha256'] == _sha(_absolute(row['path'])) == digest, relative
+    probe_source = 'tests/integration/py/assistant_ui_probe/probe.cpp'
+    assert bond['compiled_sources'][probe_source] == ACTIVITY_INPUTS[probe_source]
+
+
+def _activity_object_input(bond):
+    graph = _absolute(bond['real_build_root'])
+    built = bond['build_observation']['data']
+    activity_object = 'assistant-ui-probe/CMakeFiles/assistant_real_owner_probe.dir/probe.cpp.o'
+    object_path = graph / activity_object
+    witness = built['object_witnesses'][activity_object]
+    assert _absolute(witness['path']) == object_path
+    assert _sha(object_path) == witness['sha256']
+    target = 'assistant_real_owner_probe'
+    record = built['active_target_input_records'][target]
+    assert _sha(_absolute(record['path'])) == record['sha256']
+    assert record['sha256'] == bond['active_target_inputs'][target]['record_sha256']
+    inputs = _absolute(record['path']).read_text().splitlines()
+    assert str(object_path) in {str((graph / value).resolve()) for value in inputs if value}
+    _activity_compile_command(bond, graph, object_path)
+
+
+def _activity_compile_command(bond, graph, object_path):
+    database = bond['native_consumer_graph']
+    commands = _absolute(database['compile_commands'])
+    assert _sha(commands) == database['compile_commands_sha256']
+    probe_source = _absolute(bond['root']) / 'tests/integration/py/assistant_ui_probe/probe.cpp'
+    rows = [row for row in json.loads(commands.read_text()) if Path(row['file']) == probe_source]
+    assert len(rows) == 1, 'Activity has one genuine owning probe translation unit'
+    arguments = shlex.split(rows[0]['command'])
+    output = Path(arguments[arguments.index('-o') + 1])
+    assert _absolute(rows[0]['directory']) == graph
+    assert (graph / output).resolve() == object_path
+
+
+def _compiled_callers(bond, bond_hash, record, registry_path):
+    expected = record['generated_inputs']
+    assert set(expected) == CALLER_KEYS, 'Both actual Composer/Panel caller units are mandatory'
+    for key, digest in expected.items():
+        assert isinstance(digest, str) and len(digest) == 64
+        observed = bond['generated_inputs'][key]
+        assert observed['sha256'] == digest, key
+        assert _sha(_absolute(observed['path'])) == digest, key
+    reference = record['source_proof']
+    path = _absolute(reference['path'])
+    assert _sha(path) == reference['sha256'], 'Caller attribution is an immutable source proof'
+    proof = json.loads(path.read_text())
+    assert proof['bond_sha256'] == bond_hash
+    assert proof['compiled_source'] == bond['source'] and proof['compiled_tree'] == bond['tree']
+    assert proof['family_phases'] == bond['family_phases']
+    assert proof['generated_inputs'] == expected
+    assert proof['case_registry_sha256'] == _sha(registry_path)
+    assert proof['cases'] == json.loads(registry_path.read_text()), (
+        'Source attribution covers the complete exact six-case registry, not only generated hashes'
+    )
 
 
 def _source_inputs():
@@ -85,12 +195,22 @@ def _source_inputs():
         (original, 'original_runtime_config_sha256'),
     ):
         assert _sha(_absolute(bond['bundled_runtime']['config'])) == binding[key]
-    for key, expected_hash in binding['compiled_caller_proof'].items():
-        observed = receipt['generated_inputs'][key]
-        assert observed['sha256'] == expected_hash, key
-        assert _sha(_absolute(observed['path'])) == expected_hash, key
-    assert receipt['selected_header_sha256'] == (
-        '07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe'
+    for bond, key in ((receipt, 'current'), (original, 'original')):
+        _compiled_phase_inputs(bond, bond['family_phases']['usage'])
+        _compiled_callers(
+            bond,
+            binding['current_bond_sha256']
+            if key == 'current'
+            else binding['original_bond_sha256'],
+            binding['compiled_caller_proof'][key],
+            Path(__file__).with_name('native_case_registry.json')
+            if key == 'current'
+            else _absolute(original['root'])
+            / 'tests/system/py/e11_t5_original_controls/native_case_registry.json',
+        )
+    assert (
+        binding['native_attribution_proof']
+        == (binding['compiled_caller_proof']['current']['source_proof']['sha256'])
     )
     for row in binding['production_files']:
         if row['compiled']:
