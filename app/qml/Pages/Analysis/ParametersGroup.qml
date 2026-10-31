@@ -23,8 +23,14 @@ EaElements.GroupBox {
     property ProjectViewModel project: null
     property ParameterItem selected: null
     // Some experiment holds measured data: without any, nothing can be fitted (edi ADR-0046), so the free column, its
-    // header menu and the free or fixed filter are hidden (the owner, 2026-10-27); values stay editable.
+    // header menu and the listing filters are hidden (the owner, 2026-10-27); values stay editable. Hidden filters are
+    // cleared, so the table lists every parameter its category count counts: a free or fixed choice left from a project
+    // with data showed one row under "Atomic displacement (4)" (the owner, 2026-10-27).
     readonly property bool measured: project !== null && project.fit.measured
+    onMeasuredChanged: {
+        if (!measured)
+            parameterFilter.clearFilters();
+    }
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
     property int selectedRow: -1
     property real tableViewportHeight: 0
@@ -72,7 +78,11 @@ EaElements.GroupBox {
         group.selected = null;
         group.ensureSelection();
     }
-    Component.onCompleted: group.ensureSelection()
+    Component.onCompleted: {
+        if (!measured)
+            parameterFilter.clearFilters();
+        group.ensureSelection();
+    }
 
     Connections {
         target: parameterFilter
@@ -168,6 +178,7 @@ EaElements.GroupBox {
         Column {
             id: filters
 
+            visible: group.measured
             readonly property real third: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
 
             spacing: AppSizes.groupContentSpacing
@@ -335,7 +346,7 @@ EaElements.GroupBox {
             id: table
             objectName: "parameters.list"
             // Reserve the controls below and half a row as a scroll cue (ADR-0029).
-            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - filters.height - sliderRow.height - 2 * AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
+            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - (filters.visible ? filters.height + AppSizes.groupContentSpacing : 0) - sliderRow.height - AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
             defaultInfoText: qsTr("No parameters")
             sourceModel: ParameterFilterModel {
                 id: parameterFilter
