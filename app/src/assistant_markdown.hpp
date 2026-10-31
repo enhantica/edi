@@ -4,6 +4,7 @@
 #include <QQuickItem>
 #include <QRectF>
 #include <vector>
+#include <memory>
 #include <cstdint>
 #include <QColor>
 #include <QFont>
@@ -31,6 +32,7 @@ class AssistantMarkdown : public QQuickItem {
     Q_PROPERTY(QColor tableBaseColor READ tableBaseColor WRITE setTableBaseColor NOTIFY tableBaseColorChanged)
  public:
     explicit AssistantMarkdown(QQuickItem* parent = nullptr);
+    ~AssistantMarkdown() override;
     QQuickTextDocument* document() const;
     QQuickItem* editor() const;
     void setEditor(QQuickItem* editor);
@@ -99,5 +101,7 @@ class AssistantMarkdown : public QQuickItem {
     QString mono_font_family_;
     bool body_font_set_ = false;
     qreal math_text_width_ = -1;
+    // Last member: queued/connected functors retire first on construction unwinding too.
+    std::unique_ptr<QObject> callback_context_;
 };
 } // namespace edi_app
