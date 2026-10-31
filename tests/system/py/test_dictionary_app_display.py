@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[3]
 
 
 def run_actor(tmp_path, function):
+    if function == 'DictionaryDisplay::test_page:experiment':
+        run_actor(tmp_path, 'DescriptionLoadState::test_description_load_state')
     assert (ROOT / 'core/include/edi/display.hpp').is_file(), (
         'The app consumes the public dictionary through its core display bridge'
     )
@@ -52,11 +54,7 @@ def run_actor(tmp_path, function):
             '-input',
             str(ROOT / 'tests/unit/app/tst_dictionary_display.qml'),
             *(
-                [
-                    function,
-                    'DictionaryDisplay::test_instrument_selectors',
-                    'DictionaryDisplay::test_description_load_state',
-                ]
+                [function, 'DictionaryDisplay::test_instrument_selectors']
                 if function == 'DictionaryDisplay::test_page:experiment'
                 else [function]
             ),
