@@ -28,7 +28,9 @@ def category_metadata():
     result = {}
     for row in rows:
         values = [value for value in row.values() if type(value) is int]
-        assert len(values) == 1, 'The independent dictionary reference declares each category presentation number'
+        assert len(values) == 1, (
+            'The independent dictionary reference declares each category presentation number'
+        )
         result[row['edi_name']] = (values[0], len(result))
     return result
 

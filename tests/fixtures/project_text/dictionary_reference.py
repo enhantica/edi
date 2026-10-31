@@ -12,9 +12,23 @@ FIXTURE = Path(__file__).with_name('dictionary_reference.json')
 
 def from_yaml(path):
     document = yaml.safe_load(path.read_text())
+    category_keys = ('id', 'edi_name', 'title', 'loop_title', 'loop', 'icon', 'order', 'mark')
+    item_keys = ('uid', 'category', 'display_name', 'display_units', 'dtype')
     return {
-        'categories': document['categories'],
-        'items': document['parameters'] + document.get('items', []),
+        'categories': [
+            {key: row[key] for key in category_keys if key in row}
+            for row in document['categories']
+        ],
+        'items': [
+            {
+                **{key: row[key] for key in item_keys if key in row},
+                'options': [
+                    {key: option[key] for key in ('token', 'display_name')}
+                    for option in row.get('options', [])
+                ],
+            }
+            for row in document['parameters'] + document.get('items', [])
+        ],
     }
 
 
@@ -24,7 +38,9 @@ def reference():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('sdk_path', nargs='?', help='Legacy observer argument; the SDK need not ship YAML')
+    parser.add_argument(
+        'sdk_path', nargs='?', help='Legacy observer argument; the SDK need not ship YAML'
+    )
     parser.add_argument('--generate', type=Path)
     parser.add_argument('--revision')
     args = parser.parse_args()
