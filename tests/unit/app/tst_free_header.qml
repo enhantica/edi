@@ -29,8 +29,7 @@ TestCase {
         Ui.click(test, Probe, appWindow, "parameters.category");
         let listRow;
         tryVerify(() => {
-            listRow = Ui.itemsWithProperty(picker.popup.contentItem, "modelData")
-                .find(item => item.modelData.title !== undefined && item.height > 0 && item.topPadding !== undefined);
+            listRow = Ui.itemsWithProperty(picker.popup.contentItem, "modelData").find(item => item.modelData.title !== undefined && item.height > 0 && item.topPadding !== undefined);
             return listRow !== undefined;
         }, 2000, "The category dropdown must instantiate its actual padded list delegate");
         filterRowHeight = listRow.height;
@@ -55,8 +54,7 @@ TestCase {
         if (emptyController) {
             // The empty model has no batch target. Check its actual menu state;
             // nonempty actors separately exercise the real header's mouse route.
-            const declared = Probe.objectsWithProperty(appWindow, "shown")
-                .find(item => item.freeCount !== undefined && item.fixedCount !== undefined);
+            const declared = Probe.objectsWithProperty(appWindow, "shown").find(item => item.freeCount !== undefined && item.fixedCount !== undefined);
             verify(declared !== undefined, "The empty subset must retain its production radio-menu controller");
             declared.open();
         } else {
@@ -67,6 +65,10 @@ TestCase {
             menu = Probe.visiblePopups(appWindow).find(item => item.shown !== undefined);
             return menu !== undefined;
         }, 2000, "Left-clicking the free title must open the radio menu");
+        tryVerify(() => {
+            const centre = menu.parent.mapToItem(appWindow.contentItem, menu.x + menu.width / 2, menu.y + menu.height / 2);
+            return Math.abs(centre.x - appWindow.contentItem.width / 2) <= 1 && Math.abs(centre.y - appWindow.contentItem.height / 2) <= 1;
+        }, 2000, "The free-column menu opens at the centre of the app window in both axes");
         const text = Ui.text(menu.contentItem);
         verify(!text.includes("shown parameters") && !text.includes("Applies to"), "The lean popup must contain neither the retired title nor footer");
         const buttons = ["free", "fixed", "mixed"].map(state => radio(menu, state));
@@ -76,13 +78,10 @@ TestCase {
         compare(menu.topPadding + layout.topPadding, margin, "The popup's top inner margin must equal its right margin");
         compare(menu.bottomPadding + layout.bottomPadding, margin, "The popup's bottom inner margin must equal its right margin");
         buttons.forEach((button, index) => {
-            const expected = index === 2
-                ? "Mixed · " + menu.freeCount + " free · " + menu.fixedCount + " fixed"
-                : (index === 0 ? "Free" : "Fixed") + " · all " + menu.shown.length;
+            const expected = index === 2 ? "Mixed · " + menu.freeCount + " free · " + menu.fixedCount + " fixed" : (index === 0 ? "Free" : "Fixed") + " · all " + menu.shown.length;
             compare(button.text, expected, "Every popup radio row must render one exact state/count text with one space around each dot");
             if (index > 0) {
-                const pitch = button.mapToItem(layout, 0, button.height / 2).y
-                    - buttons[index - 1].mapToItem(layout, 0, buttons[index - 1].height / 2).y;
+                const pitch = button.mapToItem(layout, 0, button.height / 2).y - buttons[index - 1].mapToItem(layout, 0, buttons[index - 1].height / 2).y;
                 compare(pitch, filterRowHeight, "Popup row centres must retain the actual filter dropdown row pitch");
             }
         });
@@ -111,6 +110,9 @@ TestCase {
         ];
     }
     function test_filtered_batch(data) {
+        appWindow.width = data.filter === "name" ? 1200 : 1430;
+        appWindow.height = data.filter === "combined" ? 930 : 1000;
+        verify(waitForPolish(appWindow.contentItem), "Window resizing settles before opening the centred free menu");
         const parameters = allParameters();
         const target = parameters.filter(parameter => parameter.category === "cell" && parameter.fittable && parameter.refinable);
         verify(target.length >= 2, "The independent cell fixture must reach several mutable rows");
