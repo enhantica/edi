@@ -47,6 +47,7 @@
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQmlError>
+#include <QScopeGuard>
 #include <QtQml/qqml.h>
 #include "engine_setup.hpp"
 
@@ -85,6 +86,7 @@ class ReportSettingsProof : public QObject {
     Q_PROPERTY(bool webAvailable READ webAvailable CONSTANT)
     Q_PROPERTY(QString webExportError READ webExportError)
 public:
+    explicit ReportSettingsProof(QQmlEngine* engine) : engine_(engine) {}
     // Public Qt text layout, using the rendered label's own font and available width.
     // The QML gate checks its line count against the actual label before reading line text.
     Q_INVOKABLE QVariantList tooltipTextLines(QObject* label, bool word, bool anywhere) const {
@@ -658,6 +660,11 @@ public:
         settings.sync();
     }
     Q_INVOKABLE QVariantMap restart(const QString& source) const {
+        auto* controller = engine_->incubationController();
+        // The fresh engine borrows the app's controller; return it to the test host afterwards.
+        const auto restore = qScopeGuard([this, controller] {
+            engine_->setIncubationController(controller);
+        });
         QQmlEngine engine;
         edi_app::configure_engine(engine);
         QQmlComponent component(&engine);
@@ -692,6 +699,7 @@ public:
         return result;
     }
 private:
+    QQmlEngine* engine_;
     mutable QString web_export_error_;
     std::unique_ptr<AcceptanceAnimationDriver> animation_driver_;
     std::vector<std::unique_ptr<QTemporaryDir>> directories_;
@@ -699,7 +707,7 @@ private:
 
 static void register_report_settings_proof() {
     qmlRegisterSingletonType<ReportSettingsProof>("ReportAcceptance", 1, 0, "SettingsProof",
-        [](QQmlEngine*, QJSEngine*) -> QObject* { return new ReportSettingsProof; });
+        [](QQmlEngine* engine, QJSEngine*) -> QObject* { return new ReportSettingsProof(engine); });
 }
 Q_COREAPP_STARTUP_FUNCTION(register_report_settings_proof)
 #include "test_report_settings_observer.moc"

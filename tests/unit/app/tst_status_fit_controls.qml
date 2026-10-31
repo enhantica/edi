@@ -82,10 +82,7 @@ TestCase {
         mouseClick(item, point.x, point.y, Qt.LeftButton, Qt.NoModifier, 0);
     }
     function pagesReady() {
-        tryVerify(() => {
-            appWindow.update();
-            return appWindow.pagesWanted > 0 && appWindow.pagesBuilt === appWindow.pagesWanted;
-        }, 10000, "The opened project's workflow pages finish loading before navigation or fit input");
+        tryVerify(() => appWindow.pagesWanted > 0 && appWindow.pagesBuilt === appWindow.pagesWanted, 10000, "The opened project's workflow pages finish loading before navigation or fit input");
     }
     function open(kind) {
         const path = kind === "scan" ? "tests/fixtures/correlations/scan-sequential" : "tests/fixtures/excluded_display/cw";
@@ -424,6 +421,7 @@ TestCase {
         keyAction(follow, data.tag === "scan" ? Qt.Key_Space : Qt.Key_Return, true);
         compare(Session.project.fit.following, !keyboardFollowing, "Keyboard Follow toggles the same real model state as pointer input");
         click(follow);
+        tryVerify(() => Session.project.fit.scanFitted > 0, 10000, "The reset witness publishes a real scan result before cancellation");
         Session.project.fit.cancel();
         finish();
         dialogs().forEach(dialog => dialog.close());
