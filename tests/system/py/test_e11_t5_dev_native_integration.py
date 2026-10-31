@@ -6398,34 +6398,157 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
                     if row.get('id') == resumes[-1]['id'] and 'result' in row]
         assert len(accepted) == 1 and accepted[0]['result']['thread']['id'] == original, (
             'The view-only failure occurs AFTER matching runtime acceptance of the exact genuine selected thread')
+        reconnect_facts = {
+            'before_transport': actor.command('usage_transport_snapshot')['reply'],
+            'account_reply': {
+                'account': {
+                    'type': 'chatgpt',
+                    'email': original_account['email'],
+                    'planType': 'plus',
+                },
+                'requiresOpenaiAuth': False,
+            },
+        }
+        reconnect_facts['barrier'] = _original_usage_fifo_reply(
+            actor, 'view-only-auto-reconnect', result=reconnect_facts['account_reply']
+        )
+        _session_configure(actor, fixture_account_read_response=reconnect_facts['barrier'])
         before_fault = len(_session_wire(actor))
         fault = actor.command('close_owned_transport_write')['reply']
         assert fault['original_vm_child'] and fault['public_close_write_channel_invoked'], (
             'Only the actual current fixture-owned runtime child receives the ordinary transport EOF')
-        actor.until(lambda value: not value['ui']['connected'])
+        actor.until(
+            lambda value: (
+                not value['ui']['connected']
+                and Path(reconnect_facts['barrier']['ready']).is_file()
+            )
+        )
+        reconnect_facts['held'] = {
+            'request': json.loads(
+                Path(reconnect_facts['barrier']['ready']).read_text(encoding='utf-8')
+            ),
+            'transport': actor.command('usage_transport_snapshot')['reply'],
+            'ui': actor.last['ui'],
+            'wire': _session_wire(actor)[before_fault:],
+            'inputs': _session_state(actor)['inputs'],
+            'draft': qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text'),
+            'emitted': [
+                json.loads(line)
+                for line in actor.trace
+                .with_suffix('.sent.jsonl')
+                .read_text(encoding='utf-8')
+                .splitlines()
+            ],
+        }
+        (actor.folder / 'view-only-reconnect-held-account.json').write_text(
+            json.dumps(reconnect_facts, indent=2), encoding='utf-8'
+        )
+        assert (
+            reconnect_facts['held']['request']['method'] == 'account/read'
+            and reconnect_facts['held']['request']['pid']
+            == reconnect_facts['held']['transport']['peer_pid']
+            and reconnect_facts['held']['request']['parent_pid']
+            == reconnect_facts['held']['transport']['host_pid']
+            and reconnect_facts['held']['transport']['original_vm_child']
+            and reconnect_facts['held']['request']['pid']
+            != reconnect_facts['before_transport']['peer_pid']
+        ), (
+            'The automatic retry reaches a genuine NEW owned helper and its '
+            'original correlated account/read'
+        )
+        assert (
+            not reconnect_facts['held']['ui']['connected']
+            and not any(
+                row.get('id') == reconnect_facts['held']['request']['request_id']
+                for row in reconnect_facts['held']['emitted']
+            )
+            and not any(
+                row.get('method') in {'thread/start', 'turn/start'}
+                for row in reconnect_facts['held']['wire']
+            )
+        ), (
+            'The withheld account response proves real pre-auth automatic '
+            'recovery without early model input'
+        )
+        assert reconnect_facts['held']['draft'] == a_draft and any(
+            row == pending_file
+            for row in reconnect_facts['held']['ui']['selected_files']
+            if row['pending']
+        ), (
+            'The actual disconnected retry preserves the exact unapproved A '
+            'draft and physical input descriptor'
+        )
         assert len(_session_state(actor)['inputs']) == 2, (
             'The original idle view fails before any fresh user turn or genuine outgoing approval')
-        actor.until(lambda value: _unique_input_control(value, 'assistant.connection') is not None)
-        actor.command('click', name='assistant.connection')
-        actor.until(lambda value: value['ui']['connected'] and not qml(actor, 'Session.assistant.sessionsLoading'))
+        reconnect_facts['release'] = _release_original_usage_reply(
+            actor,
+            reconnect_facts['barrier'],
+            reconnect_facts['held']['request']['request_id'],
+            method='account/read',
+        )
+        # The original response envelope was captured before ready. Future
+        # deliberate Share restarts use the peer's unchanged normal account path.
+        _session_configure(actor, fixture_account_read_response=None)
+        actor.until(
+            lambda value: (
+                value['ui']['connected'] and not qml(actor, 'Session.assistant.sessionsLoading')
+            )
+        )
         recovered_wire = _session_wire(actor)[before_fault:]
         recovered_resumes = [row for row in recovered_wire if row.get('method') == 'thread/resume']
-        sent_after = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
-        confirmed = [row for row in sent_after if recovered_resumes and row.get('id') == recovered_resumes[-1]['id'] and 'result' in row]
-        reconnect_facts = {'accepted_view_resume': accepted[0], 'physical_fault': fault,
-                          'reconnect_wire': recovered_wire, 'confirmed_resume': confirmed,
-                          'actual_current_ui': actor.last['ui']}
-        (actor.folder / 'view-only-transport-reconnect.json').write_text(json.dumps(reconnect_facts, indent=2))
-        assert recovered_resumes and recovered_resumes[-1]['params']['threadId'] == original \
-            and len(confirmed) == 1 and confirmed[0]['result']['thread']['id'] == original, (
-                'One ordinary visible Connect recovers the exact accepted view-only runtime identity, rather than merely displaying cached rows')
+        sent_after = [
+            json.loads(line)
+            for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()
+        ]
+        confirmed = [
+            row
+            for row in sent_after
+            if recovered_resumes
+            and row.get('id') == recovered_resumes[-1]['id']
+            and 'result' in row
+        ]
+        reconnect_facts.update({
+            'accepted_view_resume': accepted[0],
+            'physical_fault': fault,
+            'reconnect_wire': recovered_wire,
+            'confirmed_resume': confirmed,
+            'actual_current_ui': actor.last['ui'],
+            'account_response': [
+                row
+                for row in sent_after
+                if row.get('id') == reconnect_facts['held']['request']['request_id']
+            ],
+        })
+        (actor.folder / 'view-only-transport-reconnect.json').write_text(
+            json.dumps(reconnect_facts, indent=2)
+        )
+        assert (
+            len(reconnect_facts['account_response']) == 1
+            and reconnect_facts['account_response'][0].get('result')
+            == reconnect_facts['account_reply']
+        ), 'The exact originally held same-account response actually reaches the automatic retry'
+        assert (
+            recovered_resumes
+            and recovered_resumes[-1]['params']['threadId'] == original
+            and len(confirmed) == 1
+            and confirmed[0]['result']['thread']['id'] == original
+        ), (
+            'Source-owned automatic recovery confirms the exact accepted '
+            'view-only runtime identity, rather than merely displaying cached rows'
+        )
         assert not any(row.get('method') in ('thread/start', 'turn/start') for row in recovered_wire) \
             and qml(actor, 'Session.assistant.account') == original_account, (
                 'Transport recovery cannot create a replacement thread, replay prior input or borrow a different account')
-        assert actor.last['ui']['context_consent_required'] and any( \
-            row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']) \
-            and not _original_context_disclosure_present(actor.last), (
-                'View-only Connect neither asks for new Share nor retroactively approves or loses the still-unapproved changed input')
+        assert (
+            actor.last['ui']['context_consent_required']
+            and any(
+                row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']
+            )
+            and not _original_context_disclosure_present(actor.last)
+        ), (
+            'View-only automatic recovery neither asks for new Share nor '
+            'retroactively approves or loses the still-unapproved changed input'
+        )
         recovered_rows = {row['id']: row for row in actor.last['ui']['messages']}
         assert all(recovered_rows.get(row['id']) == row for row in history), (
             'The same accepted runtime recovery retains every original selected history identity and content')
