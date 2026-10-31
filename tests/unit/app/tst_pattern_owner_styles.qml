@@ -40,7 +40,7 @@ Rectangle {
         property var chart
         property var app
         readonly property var tokens: ["band", "line", "points", "linePoints"]
-        readonly property var labels: ["band", "line", "points", "line + points"]
+        readonly property var labels: ["Band", "Line", "Points", "Line + points"]
         FontMetrics {
             id: metrics
         }

@@ -404,6 +404,8 @@ Rectangle {
         }
         function preferenceColour(label) {
             openPreferences();
+            if (label === "Palette")
+                return findChild(preferencesDialog.contentItem, "preferences.colours");
             const row = Render.descendants(preferencesDialog.contentItem).find(item => item.rowLabel === true && String(item.text).replace(/:$/, " ").trim() === label);
             verify(row !== undefined, "Preferences contains its actual independently named " + label + " colour choice");
             const siblings = row.parent.children, index = siblings.indexOf(row);
@@ -577,7 +579,9 @@ Rectangle {
                 verify(index >= 0, "Every approved categorical Edi scheme remains offered for Stacked");
                 choose(selector, index);
                 const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
-                const colours = Approved.colours(SettingsProof, scheme.id, "measured", 3, data.dark);
+                const colours = Approved.colours(SettingsProof, scheme.id, "measured", 3, data.dark, {
+                    scan: true
+                });
                 for (let row = 0; row < 3; ++row) {
                     const coordinate = stackedAt(row, 3, [0, 128, 255][row] / 255);
                     const py = Math.round((axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height), px = Math.round(layer.width * .4), expected = rgb(colours[row]);
@@ -590,7 +594,7 @@ Rectangle {
                         verify(["r", "g", "b"].every(c => Math.abs(pixel[c] - (bg[c] + alpha * (expected[c] - bg[c]))) <= 3 / 255), "Every width sample is a composite of the independent scheme colour over the plot background");
                         coverage += Math.max(0, Math.min(1, alpha));
                     }
-                    verify(Math.abs(coverage - measured.width) <= .15 * measured.width, "Every widely separated Stacked row has drawable independent scheme ink as wide as the Pattern measured line, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + measured.width + " sampledBand=" + JSON.stringify({
+                    verify(Math.abs(coverage - 1.5 * .75) <= .15 * 1.5, "Every widely separated Stacked row has drawable independent scheme ink at the approved 1.5 pixel width and 75 percent opacity, including the selected dataset; coverage=" + coverage + " scheme=" + scheme.id + " row=" + row + " expectedWidth=" + (1.5 * .75) + " sampledBand=" + JSON.stringify({
                         x: px,
                         yMin: py - 6,
                         yMax: py + 6,
@@ -974,19 +978,19 @@ Rectangle {
             const code = 'import QtQuick; import edi.app; QtObject { property string preference:Preferences.scanMapColours }';
             const fresh = SettingsProof.restart(code);
             verify(!fresh.error, "The absent-choice witness starts a fresh production Map engine");
-            compare(fresh.preference, "ramp:ediNatural", "The absent Map preference uses the same Edi Natural shades default");
+            compare(fresh.preference, "blue-red", "The absent Map preference uses the approved Blue-Red default");
             const scan = open("map");
             Preferences.scanMapColours = fresh.preference;
             ready(scan);
-            compare(chart.mapChoices[paletteSelector("map").currentIndex], "ramp:ediNatural", "The actual Map selector displays the independently reloaded absent-key default");
-            const selector = paletteSelector("map"), choice = chart.mapChoices.indexOf("plasma");
+            compare(chart.mapChoices[paletteSelector("map").currentIndex], "blue-red", "The actual Map selector displays the independently reloaded absent-key default");
+            const selector = paletteSelector("map"), choice = chart.mapChoices.indexOf("inferno");
             verify(choice >= 0, "A distinct published colour map provides the saved-choice witness");
             choose(selector, choice);
-            tryCompare(Preferences, "scanMapColours", "plasma", 1000, "Real Map selector input updates the saved choice");
-            tryVerify(() => SettingsProof.value(location, "ScanViews", "mapColours") === "plasma", 2000, "The selected Map choice reaches the actual settings file before restart");
+            tryCompare(Preferences, "scanMapColours", "inferno", 1000, "Real Map selector input updates the saved choice");
+            tryVerify(() => SettingsProof.value(location, "ScanViews", "mapColours") === "inferno", 2000, "The selected Map choice reaches the actual settings file before restart");
             const saved = SettingsProof.restart(code);
             verify(!saved.error, "The saved-choice witness starts another fresh production engine");
-            compare(saved.preference, "plasma", "The remembered Map preference remains bound to its toolbar selector");
+            compare(saved.preference, "inferno", "The remembered Map preference remains bound to its toolbar selector");
         }
         function test_map_interpolation_default() {
             Preferences.resetToDefaults();
@@ -1169,7 +1173,9 @@ Rectangle {
                     continue;
                 const low = Math.min(...visible), high = Math.max(...visible);
                 if (data.mode === "stacked") {
-                    const colour = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[1];
+                    const colour = Approved.colours(SettingsProof, "earth", "measured", 3, false, {
+                        scan: true
+                    })[1];
                     const expected = rgb(colour);
                     for (const intensity of [low, high]) {
                         const y = (axes.axisY.max - (stackedAt(1, 3, intensity / 255))) / (axes.axisY.max - axes.axisY.min) * layer.height;
@@ -1210,7 +1216,9 @@ Rectangle {
                 const intensity = values[i % 8];
                 if (data.mode === "stacked") {
                     const at = layer.mapToItem(chart, px, (axes.axisY.max - (stackedAt(1, 3, intensity / 255))) / (axes.axisY.max - axes.axisY.min) * layer.height);
-                    const expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[1]);
+                    const expected = rgb(Approved.colours(SettingsProof, "earth", "measured", 3, false, {
+                        scan: true
+                    })[1]);
                     let hit = false;
                     for (let dx = -1; dx <= 1; ++dx)
                         for (let dy = -2; dy <= 2; ++dy)
@@ -1371,7 +1379,9 @@ Rectangle {
                 const at = layer.mapToItem(chart, x, y);
                 return image.pixel(Math.floor(at.x), Math.floor(at.y));
             }
-            const full = logicalImage(chart), expected = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[0]);
+            const full = logicalImage(chart), expected = rgb(Approved.colours(SettingsProof, "earth", "measured", 3, false, {
+                scan: true
+            })[0]);
             if (data.mode === "map")
                 verify(String(sample(full, x(36), y)) !== String(sample(full, x(43), y)), "Off retains the independently different 32- and 64-count Map bands inside the excluded range");
             activate(active, true);
@@ -1472,7 +1482,9 @@ Rectangle {
             ready(scan);
             const layer = named("layer"), axes = named("axes"), origin = layer.mapToItem(chart, 0, 0);
             compare(axes.axisY.visible, false, "Joint experiment names replace the entire numeric y axis on both views");
-            const expected = Approved.colours(SettingsProof, "ediNatural", "measured", 2, data.dark);
+            const expected = Approved.colours(SettingsProof, "earth", "measured", 2, data.dark, {
+                scan: true
+            });
             for (let row = 0; row < 2; ++row) {
                 const name = ["expt_n2", "expt_s2"][row];
                 const labels = Render.texts(chart).filter(item => item.text === name);
@@ -1483,7 +1495,7 @@ Rectangle {
                 const coordinate = data.mode === "stacked" ? stackedAt(row, 2, 0) : row;
                 const wanted = origin.y + (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                 verify(Math.abs(centre - wanted) <= 1, "Each joint label ends at its Stacked baseline or is centred on its Map row");
-                tryCompare(label, "color", row === Session.project.currentExperimentIndex ? Style.Colors.themeAccent : rgb(expected[row]), 2000, "Each joint dataset name settles to its dataset colour or the selected bold accent in both themes");
+                tryCompare(label, "color", data.mode === "map" && row === Session.project.currentExperimentIndex ? Style.Colors.themeAccent : rgb(expected[row]), 2000, "Each joint dataset name settles to its dataset colour or the selected bold accent in both themes");
                 let parent = label.parent;
                 while (parent && parent.segments === undefined)
                     parent = parent.parent;
@@ -1491,9 +1503,9 @@ Rectangle {
                 const icons = Render.texts(parent).filter(item => item !== label && String(item.font.family).includes("Awesome"));
                 compare(icons.length, 1, "Every outside joint row label has exactly one real experiment icon");
                 verify(parent.segments.some(piece => piece.icon === "microscope"), "The joint row uses the prior experiment list's microscope icon");
-                compare(String(icons[0].color).toLowerCase(), row === Session.project.currentExperimentIndex ? String(Style.Colors.themeAccent).toLowerCase() : expected[row], "The experiment icon and its name share the independent dataset colour");
+                compare(String(icons[0].color).toLowerCase(), data.mode === "map" && row === Session.project.currentExperimentIndex ? String(Style.Colors.themeAccent).toLowerCase() : expected[row], "The experiment icon and its name share the independent dataset colour");
                 verify(icons[0].mapToItem(chart, icons[0].width, 0).x <= left.x, "The experiment icon precedes its name outside the axis");
-                const frame = logicalImage(chart), inkColour = row === Session.project.currentExperimentIndex ? Style.Colors.themeAccent : rgb(expected[row]);
+                const frame = logicalImage(chart), inkColour = data.mode === "map" && row === Session.project.currentExperimentIndex ? Style.Colors.themeAccent : rgb(expected[row]);
                 for (const item of [label, icons[0]]) {
                     const at = item.mapToItem(chart, 0, 0);
                     let painted = false;
@@ -1532,12 +1544,16 @@ Rectangle {
             tryVerify(() => Math.abs(axes.axisX.min - .8) < 1e-5 && Math.abs(axes.axisX.max - 2.8) < 1e-5, 2000, "Both nontrivial TOF calibrations share the independently known physical d range" + "; expected=[0.8,2.8] observedAtPollStart=" + JSON.stringify([axes.axisX.min, axes.axisX.max]) + " selector=" + selector.displayText);
             Session.project.currentExperimentIndex = 0;
             verify(waitForRendering(chart), "The joint d view has a completed actual frame");
-            const frame = logicalImage(chart), measured = Approved.colours(SettingsProof, "ediNatural", "measured", 2, false);
+            const frame = logicalImage(chart), measured = Approved.colours(SettingsProof, "earth", "measured", 2, false, {
+                scan: true
+            });
             for (let row = 0; row < 2; ++row) {
                 const x = (1.8 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
                 const y = data.mode === "stacked" ? stackedAt(row, 2, 1) : row;
                 const at = layer.mapToItem(chart, x, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height + (data.mode === "map" ? (row === 0 ? -5 : 5) : 0));
-                const expected = data.mode === "stacked" ? rgb(measured[row]) : rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 1, false)[0]);
+                const expected = data.mode === "stacked" ? rgb(measured[row]) : rgb(Approved.colours(SettingsProof, "earth", "measured", 1, false, {
+                    scan: true
+                })[0]);
                 let hit = false;
                 for (let dx = -2; dx <= 2; ++dx)
                     for (let dy = -2; dy <= 2; ++dy)
@@ -1710,17 +1726,21 @@ Rectangle {
                 visible: false,
                 shown: true
             });
-            verify(pattern !== null, "Independent structure/pattern choices are observed through the actual Pattern drawing");
+            verify(pattern !== null, "The shared figure palette are observed through the actual Pattern drawing");
             const refs = Approved.reference(SettingsProof).schemes;
-            function check(structures, patterns) {
+            function check(scheme) {
                 pattern.visible = true;
                 verify(waitForRendering(pattern), "The palette witness shows its paused Pattern chart before observing uploaded series colours");
                 const series = Render.series(pattern), measured = series.find(item => item.objectName === "chart.series.meas"), bragg = series.find(item => item.objectName === "chart.series.bragg.0");
                 verify(measured !== undefined && bragg !== undefined, "The colour-split witness reaches real measured and structure drawing series");
-                const expectedMeasured = Approved.colours(SettingsProof, patterns, "measured", 3, data.dark)[1], expectedStructure = Approved.colours(SettingsProof, structures, "structures", 1, data.dark)[0];
-                tryVerify(() => String(measured.color).toLowerCase() === expectedMeasured && String(bragg.color).toLowerCase() === expectedStructure, 2000, "Patterns and Structures independently follow their own approved colour choices" + "; chosen=" + JSON.stringify({
-                    patterns: patterns,
-                    structures: structures
+                const expectedMeasured = Approved.colours(SettingsProof, scheme, "measured", 3, data.dark, {
+                    scan: true
+                })[1], expectedStructure = Approved.colours(SettingsProof, scheme, "structures", 1, data.dark, {
+                    structureStart: 2
+                })[0];
+                tryVerify(() => String(measured.color).toLowerCase() === expectedMeasured && String(bragg.color).toLowerCase() === expectedStructure, 2000, "Pattern and Bragg series follow the same approved figure palette" + "; chosen=" + JSON.stringify({
+                    palette: scheme,
+                    shared: scheme
                 }) + " expected=" + JSON.stringify({
                     measured: expectedMeasured,
                     bragg: expectedStructure
@@ -1730,31 +1750,36 @@ Rectangle {
                 }));
                 Session.project.report.active = true;
                 tryVerify(() => Session.project.report.model.pattern_styles !== undefined, 3000, "The colour split reaches the actual report style model");
-                const reportMeas = Approved.colours(SettingsProof, patterns, "measured", 3, false)[1], reportStructure = Approved.colours(SettingsProof, structures, "structures", 1, false)[0];
+                const reportMeas = Approved.colours(SettingsProof, scheme, "measured", 3, false, {
+                    scan: true
+                })[1], reportStructure = Approved.colours(SettingsProof, scheme, "structures", 1, false, {
+                    structureStart: 2
+                })[0];
                 tryVerify(() => {
                     const styles = Session.project.report.model.pattern_styles;
                     return styles.some(row => row.key === "meas.1" && String(row.light).toLowerCase() === reportMeas) && styles.some(row => row.key === "bragg.0" && String(row.light).toLowerCase() === reportStructure);
-                }, 3000, "The report follows the same independent structure/pattern choices after its deferred model update" + "; chosen=" + JSON.stringify({
-                    patterns: patterns,
-                    structures: structures
+                }, 3000, "The report follows the same shared figure palette after its deferred model update" + "; chosen=" + JSON.stringify({
+                    palette: scheme,
+                    shared: scheme
                 }) + " expected=" + JSON.stringify({
                     "meas.1": reportMeas,
                     "bragg.0": reportStructure
                 }) + " observedAtPollStart=" + JSON.stringify(Session.project.report.model.pattern_styles));
                 pattern.visible = false;
             }
-            choosePreference("Structures", refs[1].label);
-            choosePreference("Patterns", refs[3].label);
-            check(refs[1].id, refs[3].id);
-            choosePreference("Structures", refs[2].label);
-            check(refs[2].id, refs[3].id);
-            choosePreference("Patterns", refs[4].label);
-            check(refs[2].id, refs[4].id);
+            choosePreference("Palette", refs[1].label);
+            check(refs[1].id);
+            choosePreference("Palette", refs[2].label);
+            check(refs[2].id);
+            choosePreference("Palette", refs[4].label);
+            check(refs[4].id);
             choosePreference("Stacked", refs[1].label);
-            choosePreference("Map", "Plasma");
-            compare(String(chart.stackedPalette), refs[1].id, "The Stacked colour preference controls its own lines independently of Structures and Patterns");
+            choosePreference("Map", "Inferno");
+            compare(String(chart.stackedPalette), refs[1].id, "The Stacked colour preference controls its own lines without changing the figure palette");
             const layer = named("layer"), axes = named("axes"), frame = logicalImage(chart);
-            const colours = Approved.colours(SettingsProof, refs[1].id, "measured", 3, data.dark);
+            const colours = Approved.colours(SettingsProof, refs[1].id, "measured", 3, data.dark, {
+                scan: true
+            });
             for (let row = 0; row < 3; ++row) {
                 const y = stackedAt(row, 3, [0, 128, 255][row] / 255);
                 const at = layer.mapToItem(chart, layer.width * .4, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
@@ -1769,26 +1794,26 @@ Rectangle {
                 shown: true
             });
             verify(map !== null && waitForRendering(map), "The independent Map preference reaches an actual completed image");
-            compare(map.mapColours, "plasma", "The separate Map preference controls the map without changing the other three choices");
-            const expected = [refs[2].label, refs[4].label, refs[1].label, "Plasma"];
-            for (let i = 0; i < 4; ++i)
-                compare(currentPreference(["Structures", "Patterns", "Stacked", "Map"][i]), expected[i], "Changing one of the four colour preferences preserves the other independently chosen values");
+            compare(map.mapColours, "inferno", "The separate Map preference controls the map without changing the figure palette and Stacked override");
+            const expected = [refs[4].label, refs[1].label, "Inferno"];
+            for (let i = 0; i < 3; ++i)
+                compare(currentPreference(["Palette", "Stacked", "Map"][i]), expected[i], "Changing one of the three colour preferences preserves the other independently chosen values");
         }
         function test_preferences_map_shortcut_and_roster() {
             const scan = open("map");
             ready(scan);
             const roster = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/offered.json")).maps;
-            compare(roster.length, 28, "The keep-all witness uses the owner's complete pinned candidate roster");
+            compare(roster.length, 6, "The keep-all witness uses the owner's complete pinned candidate roster");
             const toolbar = named("toolbar.colourMap"), preference = preferenceColour("Map");
             const expectedTitles = roster.map(name => ApplicationInfo.scanColourTitle(name)).sort();
             for (const control of [toolbar, preference]) {
                 const offered = [];
                 for (let i = 0; i < control.count; ++i)
                     offered.push(control.textAt(i));
-                verify(expectedTitles.every(title => offered.includes(title)), "All 28 independently frozen candidate identities are offered in both Map preference and shortcut");
+                verify(expectedTitles.every(title => offered.includes(title)), "All six independently frozen approved identities are offered in both Map preference and shortcut");
             }
-            choosePreference("Map", "Plasma");
-            compare(toolbar.currentText, "Plasma", "The actual Preferences Map choice immediately updates the toolbar shortcut");
+            choosePreference("Map", "Inferno");
+            compare(toolbar.currentText, "Inferno", "The actual Preferences Map choice immediately updates the toolbar shortcut");
             let viridis = -1;
             for (let i = 0; i < toolbar.count; ++i)
                 if (toolbar.textAt(i).toLowerCase() === "viridis")
@@ -1796,17 +1821,17 @@ Rectangle {
             verify(viridis >= 0, "The shortcut retains the independent viridis map witness");
             choose(toolbar, viridis);
             compare(currentPreference("Map").toLowerCase(), "viridis", "Actual Map-toolbar input updates the very same preference in the reverse direction");
-            verify(interpolationToggle(chart) !== undefined && Render.descendants(chart).some(item => typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip)), "Reverse and stepped/smooth remain actual Map-toolbar controls beside the shared shortcut");
+            verify(interpolationToggle(chart) !== undefined && named("toolbar.direction").count === 3, "Direction and stepped/smooth remain actual Map-toolbar controls beside the shared shortcut");
         }
         function test_preferences_four_choices_remembered() {
             const scan = open("stacked");
             ready(scan);
-            const refs = Approved.reference(SettingsProof).schemes, labels = ["Structures", "Patterns", "Stacked", "Map"], expected = [refs[1].label, refs[3].label, refs[2].label, "Plasma"];
-            for (let i = 0; i < 4; ++i)
+            const refs = Approved.reference(SettingsProof).schemes, labels = ["Palette", "Stacked", "Map"], expected = [refs[1].label, refs[2].label, "Inferno"];
+            for (let i = 0; i < 3; ++i)
                 choosePreference(labels[i], expected[i]);
-            const fresh = SettingsProof.restart('import QtQuick; import edi.app; Item { AppPreferencesDialog { id: dialog } Component.onCompleted: Preferences.dialogShown=true; function walk(item) {let out=[item];for(const child of item.children||[])out=out.concat(walk(child));return out;} readonly property var labels:["Structures","Patterns","Stacked","Map"]; readonly property var rows:walk(dialog.contentItem).filter(item=>item.rowLabel===true); function selected(label) {const row=rows.find(item=>String(item.text).replace(/:$/," ").trim()===label);if(!row)return "";const siblings=row.parent.children;const box=siblings.slice(siblings.indexOf(row)+1).find(item=>item.rowBox===true);return box?box.currentText:"";} property bool acceptanceReady:labels.every(label=>selected(label)!==""); property string saved:JSON.stringify(labels.map(label=>selected(label))) }');
-            verify(!fresh.error && fresh.acceptanceReady, "A fresh actual Preferences engine restores all four real colour selectors");
-            compare(fresh.saved, JSON.stringify(expected), "Four distinct colour choices are remembered independently across a fresh production settings engine");
+            const fresh = SettingsProof.restart('import QtQuick; import edi.app; Item { AppPreferencesDialog { id: dialog } function walk(item) {let out=[item];for(const child of item.children||[])out=out.concat(walk(child));return out;} readonly property var names:["colours","stackedColours","mapColours"]; function selected(name) {const box=walk(dialog.contentItem).find(item=>item.objectName==="preferences."+name);return box?box.currentText:"";} property bool acceptanceReady:names.every(name=>selected(name)!==""); property string saved:JSON.stringify(names.map(name=>selected(name))) }');
+            verify(!fresh.error && fresh.acceptanceReady, "A fresh actual Preferences engine restores all three real colour selectors");
+            compare(fresh.saved, JSON.stringify(expected), "Figure, Stacked and Map choices are remembered independently across a fresh production settings engine");
         }
         Component {
             id: applicationFactory
@@ -1906,7 +1931,9 @@ Rectangle {
                 for (let y = 5; y < captureLayer.height - 5; y += 5)
                     colours.add(String(firstPixel(x, y)));
             verify(colours.size > 3, "Before any fit the actual plot contains measured map/curve ink rather than only an empty canvas");
-            const expectedLine = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", scan.count, false)[1]);
+            const expectedLine = rgb(Approved.colours(SettingsProof, "earth", "measured", scan.count, false, {
+                scan: true
+            })[1]);
             const frozenMap = JSON.parse(SettingsProof.repoText("tests/fixtures/scan_views/maps.json")).viridis.colours;
             const mapReferences = new Set([32, 96, 128, 192, 255].map(index => frozenMap[index].toLowerCase()));
             let measuredInk = false;
@@ -2018,7 +2045,9 @@ Rectangle {
             const axes = named("axes"), layer = named("layer"), labels = rowLabels(), origin = layer.mapToItem(chart, 0, 0);
             compare(axes.axisY.visible, false, "Labelled rows hide the whole y axis so it reserves no numeric-scale gutter");
             compare(labels.length, expected.length, "Sparse rows show exactly one icon-and-name label for each independent dataset");
-            const colours = Approved.colours(SettingsProof, "ediNatural", "measured", expected.length, dark);
+            const colours = Approved.colours(SettingsProof, "earth", "measured", expected.length, dark, {
+                scan: true
+            });
             for (let i = 0; i < expected.length; ++i) {
                 const matches = labelFor(labels, expected[i]);
                 compare(matches.length, 1, "Every row uses its independent file, datablock or scan value with unit");
@@ -2027,13 +2056,13 @@ Rectangle {
                 const coordinate = chart.mode === "stacked" ? stackedAt(i, expected.length, 0) : coordinates[i];
                 const wanted = origin.y + (axes.axisY.max - coordinate) / (axes.axisY.max - axes.axisY.min) * layer.height;
                 verify(Math.abs(right.y - wanted) <= 1, "A Stacked label's bottom sits on its independent baseline; a Map label stays centred on its row");
-                tryCompare(label, "color", i === Session.project.currentExperimentIndex && !Preferences.chartHighlightSelected ? Style.Colors.themeAccent : rgb(colours[i]), 2000, "Every row label settles to its independently approved dataset colour or selected accent");
+                tryCompare(label, "color", chart.mode === "map" && i === Session.project.currentExperimentIndex && !Preferences.chartHighlightSelected ? Style.Colors.themeAccent : rgb(colours[i]), 2000, "Every row label settles to its independently approved dataset colour or selected accent");
                 let parent = label.parent;
                 while (parent && parent.segments === undefined)
                     parent = parent.parent;
                 const icons = Render.texts(parent).filter(item => String(item.font.family).includes("Awesome"));
                 compare(icons.length, 1, "Every labelled row draws its experiment icon");
-                compare(String(icons[0].color).toLowerCase(), i === Session.project.currentExperimentIndex && !Preferences.chartHighlightSelected ? String(Style.Colors.themeAccent).toLowerCase() : colours[i], "The experiment icon uses the same independent dataset colour as its row label");
+                compare(String(icons[0].color).toLowerCase(), chart.mode === "map" && i === Session.project.currentExperimentIndex && !Preferences.chartHighlightSelected ? String(Style.Colors.themeAccent).toLowerCase() : colours[i], "The experiment icon uses the same independent dataset colour as its row label");
                 verify(icons[0].mapToItem(chart, icons[0].width, 0).x <= label.mapToItem(chart, 0, 0).x, "The experiment icon precedes the name outside the y axis");
             }
         }
@@ -2043,7 +2072,7 @@ Rectangle {
             ready(scan);
             const selector = axisControl("y"), expected = data.byIndex ? ["all594687.dat", "all594791.dat", "all594842.dat"] : [100, 250, 700];
             choose(selector, data.byIndex ? 1 : 0);
-            compare(selector.displayText, data.byIndex ? "y: file" : "y: temperature (K)", "The order selector names files or the extracted quantity, never a file-index scale");
+            compare(selector.displayText, data.byIndex ? "y: File" : "y: Temperature (K)", "The order selector names files or the extracted quantity, never a file-index scale");
             checkRows(expected, data.byIndex ? [0, 1, 2] : [100, 250, 700], data.dark);
         }
         function test_row_order_and_map_bands_data() {
@@ -2152,7 +2181,9 @@ Rectangle {
             choose(axisControl("y"), 0);
             const axes = named("axes");
             verify(axes.axisY.visible && axes.axisY.labelsVisible, "The Map retains a numeric axis when rows use physical scan values");
-            checkDatasetTicks([100, 250, 700], Approved.colours(SettingsProof, "ediNatural", "measured", 3, data.dark));
+            checkDatasetTicks([100, 250, 700], Approved.colours(SettingsProof, "earth", "measured", 3, data.dark, {
+                scan: true
+            }));
         }
         function checkDatasetTicks(rows, colours) {
             const layer = named("layer"), axes = named("axes"), ticks = named("rowTicks"), origin = layer.mapToItem(chart, 0, 0);
@@ -2206,7 +2237,7 @@ Rectangle {
             } else
                 scan = open(data.mode);
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
-            Preferences.scanStackedPalette = "ediNatural";
+            Preferences.scanStackedPalette = "earth";
             ready(scan);
             const selector = axisControl("y");
             if (selector.count > 1)
@@ -2215,21 +2246,27 @@ Rectangle {
                 compare(selector.currentIndex, 0, "A joint fit starts in its sole datablock ordering");
             const rows = data.kind === "value" ? [100, 250, 700] : data.kind === "file" ? [0, 1, 2] : [0, 1];
             compare(named("axes").axisY.visible, data.mode === "map" && data.kind === "value", "Only a Map ordered by physical values keeps the numeric y axis");
-            for (const palette of ["ediNatural", "ediCoast"]) {
+            for (const palette of ["earth", "classic"]) {
                 Preferences.scanStackedPalette = palette;
                 surface.Window.window.update();
                 verify(waitForRendering(chart), "A changed Stacked colour choice redraws ticks on both scan views");
-                checkDatasetTicks(rows, Approved.colours(SettingsProof, palette, "measured", rows.length, data.dark));
+                checkDatasetTicks(rows, Approved.colours(SettingsProof, palette, "measured", rows.length, data.dark, {
+                    scan: true
+                }));
             }
             const pointer = named("pointer");
             mouseDrag(pointer, pointer.width * .2, pointer.height * .15, pointer.width * .6, pointer.height * .7, Qt.LeftButton);
             verify(waitForRendering(chart), "Actual zoom redraws dataset ticks at their new row coordinates");
-            checkDatasetTicks(rows, Approved.colours(SettingsProof, "ediCoast", "measured", rows.length, data.dark));
+            checkDatasetTicks(rows, Approved.colours(SettingsProof, "classic", "measured", rows.length, data.dark, {
+                scan: true
+            }));
             // Put the first and last rows exactly at the viewport boundaries.
             chart.zoomY = [rows[0], rows[rows.length - 1]];
             surface.Window.window.update();
             verify(waitForRendering(chart), "The boundary viewport has a completed frame");
-            checkDatasetTicks(rows, Approved.colours(SettingsProof, "ediCoast", "measured", rows.length, data.dark));
+            checkDatasetTicks(rows, Approved.colours(SettingsProof, "classic", "measured", rows.length, data.dark, {
+                scan: true
+            }));
         }
         function test_dataset_ticks_survive_label_thinning_data() {
             return test_current_row_tracks_async_coordinates_data();
@@ -2239,7 +2276,7 @@ Rectangle {
             const count = Input.dense(SettingsProof, root, false);
             verify(Session.openProject(root), "Dense dataset ticks use independently generated measured files");
             Preferences.resetToDefaults();
-            Preferences.scanStackedPalette = "ediNatural";
+            Preferences.scanStackedPalette = "earth";
             Style.Colors.theme = Style.Colors.LightTheme;
             chart = factory.createObject(surface, {
                 project: Session.project,
@@ -2253,44 +2290,48 @@ Rectangle {
             surface.Window.window.update();
             verify(waitForRendering(chart), "Dense tick rows have a completed frame in their full row viewport");
             verify(rowLabels().length < count, "The dense tick witness reaches actual label thinning");
-            const endpoints = Approved.colours(SettingsProof, "ediNatural", "measured", 2, false);
+            const endpoints = Approved.colours(SettingsProof, "earth", "measured", 2, false, {
+                scan: true
+            });
             checkDatasetTicks(Array.from({
                 length: count
             }, (_, i) => i), Array.from({
                 length: count
             }, (_, i) => Oklab.gradient(endpoints[0], endpoints[1], i / (count - 1))));
         }
-        function heightSelector() {
-            const control = named("toolbar.height");
-            verify(control.visible && typeof control.textAt === "function", "The Stacked height gate reaches the named actual height combobox");
+        function spacingSelector() {
+            const control = named("toolbar.spacing");
+            verify(control.visible && typeof control.textAt === "function", "The Stacked spacing gate reaches the named actual spacing combobox");
             return control;
         }
         function test_stacked_height_default_and_memory() {
-            const location = Globals.Vars.settingsFile, code = 'import QtQuick; import edi.app; QtObject { property int saved:Preferences.scanStackedSize }';
-            SettingsProof.erase(location, "ScanViews", "stackedSize");
-            const fresh = SettingsProof.restart(code);
-            verify(!fresh.error, "The absent height key is read by an actual fresh preferences engine");
-            compare(fresh.saved, 0, "An absent Stacked size setting defaults to Fit");
             const scan = open("stacked", "rows");
             ready(scan);
-            const selector = heightSelector();
-            compare(selector.count, 11, "The height selector offers Fit and ten percentage choices");
-            for (let i = 0; i < selector.count; ++i) {
-                const expected = i === 0 ? "Fit" : (i * 10) + "%";
-                compare(selector.textAt(i).replace(/\s/g, ""), expected, "Every height choice has its independently specified percentage or Fit label");
-            }
-            for (const choice of [10, 1, 0]) {
+            let selector = spacingSelector();
+            const titles = ["Overlay", "Close", "Medium", "Wide", "Separate"];
+            compare(selector.currentText, "Wide", "An unsaved Stacked spacing defaults to Wide");
+            compare(selector.count, titles.length, "The spacing selector offers the five approved steps");
+            for (let i = 0; i < titles.length; ++i)
+                compare(selector.textAt(i), titles[i], "Every spacing label equals the independently approved sequence");
+            for (const choice of [4, 1, 0]) {
+                selector = spacingSelector();
                 choose(selector, choice);
-                const expected = choice * 10;
-                compare(Preferences.scanStackedSize, expected, "Actual height input commits the selected plot-height percentage");
-                tryVerify(() => SettingsProof.value(location, "ScanViews", "stackedSize") === expected, 2000, "The height percentage reaches the actual preferences file before restart");
-                const restored = SettingsProof.restart(code);
-                verify(!restored.error, "The saved percentage loads in another real preferences engine");
-                compare(restored.saved, expected, "Fixed height and Fit both persist across an engine restart");
+                compare(Session.project.stackedSpacing, titles[choice].toLowerCase(), "Actual spacing input updates the project view setting");
+                verify(Session.save(), "The selected spacing is written through the actual project save");
+                chart.destroy();
+                chart = null;
+                Session.closeProject();
+                verify(Session.openProject(projectLocation), "The actual saved spacing project reopens");
+                chart = factory.createObject(surface, {
+                    project: Session.project,
+                    mode: "stacked"
+                });
+                ready(Session.project.scanViews);
+                compare(spacingSelector().currentText, titles[choice], "Each nondefault spacing choice survives a project reopen");
             }
             chart.mode = "map";
-            verify(waitForRendering(chart), "The chart switches to Map after height selection");
-            verify(!Ui.rendered(selector), "The pattern-height selector is exposed only for Stacked");
+            verify(waitForRendering(chart), "The chart switches to Map after spacing selection");
+            verify(!Ui.rendered(findChild(chart, "scanView.stacked.toolbar.spacing")), "The spacing selector is exposed only for Stacked");
         }
 
         function test_stacked_height_changes_rise_not_rows_data() {
@@ -2309,15 +2350,17 @@ Rectangle {
             const scan = open("stacked", "height");
             ready(scan);
             choose(axisControl("y"), data.byIndex ? 1 : 0);
-            const rows = data.byIndex ? [0, 1, 2] : [100, 250, 400], selector = heightSelector();
-            for (const choice of [1, 5, 10, 0]) {
+            const rows = data.byIndex ? [0, 1, 2] : [100, 250, 400], selector = spacingSelector();
+            for (const choice of [0, 1, 2, 3, 4]) {
                 choose(selector, choice);
                 const layer = named("layer");
                 compare(rows.map((_, i) => scan.rowOf(i)), rows, "Height changes preserve the actual scientific dataset coordinates");
                 for (let i = 0; i < rows.length; ++i)
-                    fuzzyCompare(layer.rowOf(i), stackedAt(i, rows.length, 0), 1e-9, "A changed height places each Stacked baseline at rank times height times offset");
-                fuzzyCompare(layer.patternHeight, choice === 0 ? 1 / 1.2 : choice / 10, 1e-9, "The actual height equals the fixed plot share or the closed-form Fit height");
-                checkDatasetTicks(rows, Approved.colours(SettingsProof, "ediNatural", "measured", 3, false));
+                    fuzzyCompare(layer.rowOf(i), stackedAt(i, rows.length, 0), 1e-9, "A changed height places each Stacked baseline at the closed-form spacing rule");
+                fuzzyCompare(layer.patternHeight, 1 - choice / 4 + choice / 12, 1e-9, "The actual height equals the closed-form height at the selected spacing");
+                checkDatasetTicks(rows, Approved.colours(SettingsProof, "earth", "measured", 3, false, {
+                    scan: true
+                }));
             }
         }
 
@@ -2329,19 +2372,42 @@ Rectangle {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             ready(scan);
             exposeStack();
-            const toggle = Render.descendants(chart).find(item => item.visible && typeof item.checked === "boolean" && /reverse/i.test(String(item.objectName) + " " + item.toolTip));
-            verify(toggle !== undefined && toggle.enabled, "Both Stacked and Map expose a real reverse-colours button");
-            const colours = Approved.colours(SettingsProof, "ediNatural", "measured", 3, data.dark), location = Globals.Vars.settingsFile;
-            const ownKey = data.mode === "map" ? "mapReversed" : "stackedReversed";
+            const toggle = data.mode === "stacked" ? named("toolbar.reverse") : named("toolbar.direction");
+            verify(toggle !== undefined && toggle.enabled, "Stacked exposes reversal and Map exposes the named direction selector");
+            const colours = Approved.colours(SettingsProof, "earth", "measured", 3, data.dark, {
+                scan: true
+            }), location = Globals.Vars.settingsFile;
+
             for (const reversed of [true, false, true]) {
-                if (toggle.checked !== reversed)
-                    mouseClick(toggle, toggle.width / 2, toggle.height / 2);
-                tryCompare(toggle, "checked", reversed, 1000, "Actual pointer input reverses either scan view in both directions");
-                tryVerify(() => SettingsProof.value(location, "ScanViews", ownKey) === reversed, 2000, "The view's reverse choice reaches its own saved settings key");
-                const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property bool map:Preferences.scanMapReversed; property bool stacked:Preferences.scanStackedReversed }');
-                verify(!fresh.error, "A fresh production settings engine reads the separately remembered reversal choices");
-                compare(fresh[data.mode], reversed, "The chosen view remembers its own reversal after restart");
-                compare(fresh[data.mode === "map" ? "stacked" : "map"], false, "Reversing one view leaves the other view's remembered colours unchanged");
+                const toggle = data.mode === "stacked" ? named("toolbar.reverse") : named("toolbar.direction");
+                if (data.mode === "map") {
+                    choose(toggle, reversed ? 2 : 1);
+                    compare(Session.project.mapDirection, reversed ? "inverted" : "normal", "The Map direction selector updates the named project direction");
+                } else {
+                    if (toggle.checked !== reversed)
+                        mouseClick(toggle, toggle.width / 2, toggle.height / 2);
+                    tryCompare(toggle, "checked", reversed, 1000, "Actual pointer input reverses Stacked in both directions");
+                }
+                if (data.mode === "stacked") {
+                    tryVerify(() => SettingsProof.value(location, "ScanViews", "stackedReversed") === reversed, 2000, "Stacked reversal reaches its own saved setting");
+                    const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property bool stacked:Preferences.scanStackedReversed }');
+                    verify(!fresh.error, "A fresh engine reads the Stacked reversal setting");
+                    compare(fresh.stacked, reversed, "Stacked remembers its reversal after restart");
+                } else {
+                    verify(Session.save(), "The named Map direction saves in the actual project");
+                    compare(Session.project.stackedSpacing, "wide", "Map direction changes preserve the independent Stacked spacing");
+                    chart.destroy();
+                    chart = null;
+                    Session.closeProject();
+                    verify(Session.openProject(projectLocation), "The actual saved Map direction project reopens");
+                    chart = factory.createObject(surface, {
+                        project: Session.project,
+                        mode: "map",
+                        shown: true
+                    });
+                    tryCompare(Session.project.scanViews, "loaded", Session.project.scanViews.count, 8000, "The reopened Map loads every independently written row");
+                    compare(Session.project.mapDirection, reversed ? "inverted" : "normal", "Normal and Inverted survive the actual project persistence boundary");
+                }
                 surface.Window.window.update();
                 verify(waitForRendering(chart), "The reverse input reaches actual pattern and dataset-tick pixels");
                 const expected = data.mode === "stacked" && reversed ? colours.slice().reverse() : colours;
@@ -2490,7 +2556,7 @@ Rectangle {
             Preferences.patternYScale = "linear";
             Preferences.chartHighlightSelected = false;
             Preferences.scanMapColours = "viridis";
-            Preferences.scanStackedPalette = "ediNatural";
+            Preferences.scanStackedPalette = "earth";
             const root = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/scan_template/project"));
             const fixture = Input.coincident(SettingsProof, root, data.shape === "all");
             verify(Session.openProject(root), "Coincident datasets open through the ordinary project and scan reader");
@@ -2507,7 +2573,7 @@ Rectangle {
                 const selector = axisControl("y");
                 let index = -1;
                 for (let i = 0; i < selector.count; ++i)
-                    if (selector.textAt(i) === "file")
+                    if (selector.textAt(i) === "File")
                         index = i;
                 verify(index >= 0, "The control reaches explicit file ordering through the real row selector");
                 choose(selector, index);
@@ -2521,7 +2587,9 @@ Rectangle {
             const layer = named("layer"), pointer = named("pointer");
             verify(waitForRendering(chart), "The independent identity observer captures completed data pixels without the selection border");
             const frame = logicalImage(chart);
-            const colours = chart.mode === "stacked" ? Approved.colours(SettingsProof, "ediNatural", "measured", fixture.intensities.length, false).map(rgb) : fixture.intensities.map(level => {
+            const colours = chart.mode === "stacked" ? Approved.colours(SettingsProof, "earth", "measured", fixture.intensities.length, false, {
+                scan: true
+            }).map(rgb) : fixture.intensities.map(level => {
                 const sample = samples.find(value => value.index === level);
                 return {
                     r: Math.round(sample.rgb[0] * 255) / 255,

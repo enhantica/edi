@@ -17,9 +17,30 @@ Rectangle {
     width: 512
     height: 384
     color: "white"
-    Item { id: viewport; width: 512; height: 384; clip: true }
-    Component { id: patternFactory; PatternChart { width: 900; height: 650; x: -10000; settingsPage: "pattern" } }
-    Component { id: scanFactory; ScanViewChart { width: 900; height: 650; x: -10000; mode: "stacked" } }
+    Item {
+        id: viewport
+        width: 512
+        height: 384
+        clip: true
+    }
+    Component {
+        id: patternFactory
+        PatternChart {
+            width: 900
+            height: 650
+            x: -10000
+            settingsPage: "pattern"
+        }
+    }
+    Component {
+        id: scanFactory
+        ScanViewChart {
+            width: 900
+            height: 650
+            x: -10000
+            mode: "stacked"
+        }
+    }
     TestCase {
         id: test
         name: "LineQuality"
@@ -28,10 +49,13 @@ Rectangle {
         property var scan: null
         property var detached: []
         function cleanup() {
-            for (const item of detached) item.item.parent = item.parent;
+            for (const item of detached)
+                item.item.parent = item.parent;
             detached = [];
-            if (pattern) pattern.destroy();
-            if (scan) scan.destroy();
+            if (pattern)
+                pattern.destroy();
+            if (scan)
+                scan.destroy();
             pattern = null;
             scan = null;
             Session.closeProject();
@@ -44,7 +68,12 @@ Rectangle {
         function test_capture_data() {
             let rows = [];
             for (const mode of ["gpu", "software"])
-                for (const shape of ["peak", "needle"]) rows.push({tag: mode + "-" + shape, mode: mode, shape: shape});
+                for (const shape of ["peak", "needle"])
+                    rows.push({
+                        tag: mode + "-" + shape,
+                        mode: mode,
+                        shape: shape
+                    });
             return rows;
         }
         function test_capture(data) {
@@ -53,7 +82,7 @@ Rectangle {
             Preferences.patternMeasuredStyle = "line";
             Preferences.scanRenderer = data.mode;
             Preferences.chartHighlightSelected = false;
-            Preferences.scanStackedSize = 0;
+
             const dpr = Screen.devicePixelRatio;
             ChartBackendProof.watch(surface);
             const centre = 10 + (256 * dpr + 0.25) / (512 * dpr) * 70;
@@ -62,11 +91,13 @@ Rectangle {
             const location = SettingsProof.copyProject(Qt.resolvedUrl("../../fixtures/scan_template/project"));
             Input.dense(SettingsProof, location, false, 1);
             const xs = points.map(point => point[0]);
-            for (let i = 0; i <= 4096; ++i) xs.push(10 + 70 * i / 4096);
+            for (let i = 0; i <= 4096; ++i)
+                xs.push(10 + 70 * i / 4096);
             xs.sort((a, b) => a - b);
             const dense = xs.filter((x, i) => i === 0 || x !== xs[i - 1]).map(x => {
                 let index = 0;
-                while (index + 1 < points.length - 1 && x > points[index + 1][0]) ++index;
+                while (index + 1 < points.length - 1 && x > points[index + 1][0])
+                    ++index;
                 const a = points[index], b = points[index + 1];
                 return [x, a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0])];
             });
@@ -76,25 +107,34 @@ Rectangle {
             verify(start >= 0, "The Pattern reference fixture declares its original measured-data loop");
             verify(SettingsProof.write(location, file, old.slice(0, start) + "loop_\n_data.two_theta\n_data.intensity_meas\n_data.intensity_meas_su\n" + rows), "The real Pattern reference receives exactly the same independent columns");
             verify(Session.openProject(location), "The line-quality pair opens the same private project");
-            pattern = patternFactory.createObject(surface, {experiment: Session.project.currentExperiment});
-            scan = scanFactory.createObject(surface, {project: Session.project});
+            pattern = patternFactory.createObject(surface, {
+                experiment: Session.project.currentExperiment
+            });
+            scan = scanFactory.createObject(surface, {
+                project: Session.project
+            });
             tryVerify(() => Probe.datasetReady(Session.project) && !Session.project.calculating && scan.scan && scan.scan.loaded === 1, 15000, "Both production charts finish loading the independent line-quality pattern");
             const view = ChartOracle.object(pattern, "chart.view.main");
             verify(view !== null, "The independent rendering reference is the actual Pattern chart Qt Graphs view");
             const series = Render.series(view), measured = series.find(item => item.objectName === "chart.series.meas");
             verify(measured !== undefined, "The Pattern reference contains its real measured line series");
             tryVerify(() => ChartOracle.points(measured).some(point => point.y === 255), 4000, "The Pattern reference contains the supplied independent points before raster comparison");
+            measured.width = 1.5;
             const supplied = ChartOracle.points(measured);
             const peak = points[data.shape === "peak" ? 1 : 2];
             verify(supplied.some(actual => Math.abs(actual.x - peak[0]) < 1e-8 && actual.y === 255), "The actual Pattern reduction retains the independently supplied narrow peak at its physical x position");
             verify(dense.length > 8 * viewport.width, "The independent line input exceeds both DPR reduction budgets rather than bypassing reduction with a sparse polyline");
-            const expected = Approved.colours(SettingsProof, "ediNatural", "measured", 1, false)[0];
+            const expected = Approved.colours(SettingsProof, "earth", "measured", 1, false)[0];
             compare(String(measured.color).toLowerCase(), expected, "The Pattern reference retains the independently approved measured colour");
+            Session.project.stackedSpacing = "separate";
             const layer = Render.descendants(scan).find(item => item.objectName === "scanView.stacked.layer");
             verify(layer !== undefined, "The candidate is the actual production Stacked layer");
             compare(String(layer.colourOf(0)).toLowerCase(), expected, "Both Stacked paths retain the independently approved measured colour");
             compare(layer.gpu, data.mode === "gpu", "The line-quality matrix exercises the requested effective Stacked renderer");
-            detached.push({item: view, parent: view.parent});
+            detached.push({
+                item: view,
+                parent: view.parent
+            });
             view.parent = viewport;
             view.anchors.fill = undefined;
             view.width = 512;
@@ -106,13 +146,17 @@ Rectangle {
             view.axisX.visible = false;
             view.axisY.visible = false;
             AppState.patternViewRanges = [10, 80, -25.5, 280.5];
-            for (const item of series) item.visible = item === measured;
+            for (const item of series)
+                item.visible = item === measured;
             frame(view);
             view.x = -view.plotArea.x;
             view.y = -view.plotArea.y;
             compare(view.axisX.min, 10, "The independent Pattern reference uses the declared x range");
             compare(view.axisY.min, -25.5, "The independent Pattern reference uses the declared y range");
-            detached.push({item: layer, parent: layer.parent});
+            detached.push({
+                item: layer,
+                parent: layer.parent
+            });
             layer.parent = viewport;
             layer.anchors.fill = undefined;
             layer.x = 0;
@@ -121,7 +165,7 @@ Rectangle {
             layer.height = view.plotArea.height;
             scan.setZoom([10, 80], [-0.1, 1.1]);
             layer.opacity = data.shape === "peak" ? 0.3 : 1;
-            view.opacity = layer.opacity;
+            view.opacity = layer.opacity * .75;
             layer.visible = false;
             frame(view);
             const origin = view.mapToItem(surface, view.plotArea.x, view.plotArea.y);
@@ -148,7 +192,22 @@ Rectangle {
                 elapsed.push(Date.now() - before);
             }
             grabImage(surface).save(candidate);
-            console.log("LINE_QUALITY_CAPTURE " + JSON.stringify({mode: data.mode, shape: data.shape, dpr, reference, candidate, colour: expected, width: layer.width, height: layer.height, points, input_count: dense.length, reference_count: supplied.length, backend: ChartBackendProof.facts(surface), pattern_frame_delivery_ms: referenceElapsed, stacked_frame_delivery_ms: elapsed}));
+            console.log("LINE_QUALITY_CAPTURE " + JSON.stringify({
+                mode: data.mode,
+                shape: data.shape,
+                dpr,
+                reference,
+                candidate,
+                colour: expected,
+                width: layer.width,
+                height: layer.height,
+                points,
+                input_count: dense.length,
+                reference_count: supplied.length,
+                backend: ChartBackendProof.facts(surface),
+                pattern_frame_delivery_ms: referenceElapsed,
+                stacked_frame_delivery_ms: elapsed
+            }));
         }
     }
 }
