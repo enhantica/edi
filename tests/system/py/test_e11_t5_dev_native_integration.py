@@ -2219,13 +2219,49 @@ def test_on_native_parameter_target_is_revealed_from_real_virtualized_or_clipped
     if position == 'offscreen':
         target = next(row for path, row in reversed(list(eligible.items())) if path not in exposed)
     else:
+        layout_proof = {
+            'before_scroll': [row for row in controls if row['parameter_path'] in eligible],
+        }
         row = next(row for row in controls if row['exposed'] and row['parameter_path'] in eligible)
         qml(actor, f'{table}.contentY += {row["height"] / 2}')
         controls = actor.last['ui']['controls']
-        target_control = next(
+        candidates = [
             row
             for row in controls
-            if row['parameter_path'] in eligible and row['exposed'] and not row['fully_exposed']
+            if row['parameter_path'] in eligible
+            and row['exposed'] and row['fully_exposed']
+            and row.get('interaction_row', {}).get('valid')
+            and row['interaction_row']['row_exposed']
+            and not row['interaction_row']['row_fully_exposed']
+        ]
+        layout_proof.update({
+            'after_half_row_scroll': [
+                row for row in controls if row['parameter_path'] in eligible
+            ],
+            'candidates': candidates,
+        })
+        (actor.folder / 'clipped-row-layout.json').write_text(
+            json.dumps(layout_proof, indent=2)
+        )
+        assert candidates, (
+            'The unchanged half-row input must expose an eligible partial interaction row even '
+            'when its ink fits; a missing constructed entrance is a fixture failure'
+        )
+        target_control = candidates[0]
+        row = target_control['interaction_row']
+        assert row['parameter_path'] == target_control['parameter_path'], (
+            'The actual value control and ancestor row retain the same current parameter identity'
+        )
+        assert row['table_name'] == 'parameters.list' and target_control['same_window'], (
+            'The partial row belongs to the actual parameter table in the current real window'
+        )
+        assert row['row_rect'] != row['visible_rect'] or all(
+            row['header_overlap'][index] > 0 for index in (2, 3)
+        ), (
+            'Actual row/window/clip/header geometry independently witnesses the clipping boundary'
+        )
+        assert target_control['fully_exposed'] and not row['row_fully_exposed'], (
+            'Complete ink visibility cannot stand in for complete interaction-row exposure'
         )
         target = eligible[target_control['parameter_path']]
     before = actor.last['ui']['project']['parameters']
@@ -2253,6 +2289,32 @@ def test_on_native_parameter_target_is_revealed_from_real_virtualized_or_clipped
         row['parameter_path'] == target['path'] and row['exposed']
         for row in actor.last['ui']['controls']
     ), 'The actual native ON route realizes and exposes its originally virtualized target'
+    if position == 'clipped':
+        revealed = [
+            row for row in actor.last['ui']['controls']
+            if row['parameter_path'] == target['path']
+            and row.get('interaction_row', {}).get('valid')
+            and row['visible'] and row['same_window']
+        ]
+        layout_proof['after_native_reveal'] = revealed
+        (actor.folder / 'clipped-row-layout.json').write_text(
+            json.dumps(layout_proof, indent=2)
+        )
+        assert len(revealed) == 1, (
+            'Native reveal exposes exactly one current value control for the original member'
+        )
+        row = revealed[0]['interaction_row']
+        assert row['parameter_path'] == target['path'], (
+            'The revealed interaction row still observes the original parameter path'
+        )
+        assert row['row_fully_exposed'] and row['field_fully_exposed'], (
+            'The native ON route must expose the complete original interaction row and control'
+        )
+        assert row['row_rect'] == row['visible_rect'] and not all(
+            row['header_overlap'][index] > 0 for index in (2, 3)
+        ), (
+            'The revealed whole row fits its actual window/ancestor clips without header overlap'
+        )
 
 
 @pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])

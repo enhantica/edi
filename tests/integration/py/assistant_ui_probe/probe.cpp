@@ -494,6 +494,100 @@ QRectF exposed_layout_rect(QQuickItem* item) {
     if(item->window())rect=rect.intersected(item->mapRectFromScene(QRectF(QPointF(),item->window()->size())));
     return rect;
 }
+// Test-owned layout observation; the original ink exposure fields remain separate.
+// No native reveal/target helper, layout setter, hit point or event turn is used.
+Object parameter_interaction_row(QQuickItem* field, QQuickWindow* window) {
+    if (!field || !field->objectName().startsWith("parameters.value.")) return {};
+    const QPointer<QQuickItem> original_field(field);
+    const QPointer<QQuickWindow> original_window(window);
+    QPointer<QQuickItem> row, table;
+    for (auto* parent = field->parentItem(); parent; parent = parent->parentItem()) {
+        if (!row && parent->objectName().startsWith("parameters.row.")) row = parent;
+        if (row && parent->objectName() == "parameters.list") {
+            table = parent;
+            break;
+        }
+    }
+    Object out{{"valid", false}};
+    if (!window || !row || !table || field->window() != window || row->window() != window ||
+        table->window() != window)
+        return out;
+    const QPointer<QObject> parameter(field->property("item").value<QObject*>());
+    if (!original_field || !row || !table || !parameter ||
+        row->property("parameter").value<QObject*>() != parameter)
+        return out;
+    const QString path = parameter->property("path").toString();
+    const QPointer<QQuickItem> header(table->property("headerItem").value<QQuickItem*>());
+    if (!original_field || !row || !table || !parameter || !header || path.isEmpty() ||
+        header->window() != window)
+        return out;
+    const auto rect = [](const QRectF& value) -> Array {
+        return {value.x(), value.y(), value.width(), value.height()};
+    };
+    const auto identity = [](QObject* object) {
+        return QString::number(reinterpret_cast<quintptr>(object), 16);
+    };
+    const auto finite = [](const QRectF& value) {
+        return std::isfinite(value.x()) && std::isfinite(value.y()) &&
+               std::isfinite(value.width()) && std::isfinite(value.height());
+    };
+    const QRectF row_rect = row->mapRectToScene(QRectF(0, 0, row->width(), row->height()));
+    const QRectF field_rect = field->mapRectToScene(QRectF(0, 0, field->width(), field->height()));
+    const QRectF window_rect(QPointF(), window->size());
+    if (!finite(row_rect) || !finite(field_rect) || !finite(window_rect) || row_rect.isEmpty() ||
+        field_rect.isEmpty())
+        return out;
+    QRectF visible = row_rect.intersected(window_rect);
+    Array clips;
+    for (auto* parent = field->parentItem(); parent; parent = parent->parentItem()) {
+        if (!parent->clip()) continue;
+        const auto clip = parent->mapRectToScene(parent->clipRect());
+        if (!finite(clip)) return out;
+        clips.append(Object{
+            {"name", parent->objectName()}, {"identity", identity(parent)}, {"rect", rect(clip)}});
+        visible = visible.intersected(clip);
+    }
+    const auto header_rect =
+        header->mapRectToScene(QRectF(0, 0, header->width(), header->height()));
+    const auto header_visible = header->mapRectToScene(exposed_layout_rect(header));
+    const auto field_visible = field->mapRectToScene(exposed_layout_rect(field));
+    if (!finite(header_rect) || !finite(header_visible) || !finite(field_visible)) return out;
+    const auto header_overlap = visible.intersected(header_visible);
+    const bool exposed = field->isVisible() && row->isVisible() && table->isVisible() &&
+                         !visible.isEmpty() && !header_visible.contains(visible);
+    const bool fully_exposed = exposed && visible == row_rect && header_overlap.isEmpty();
+    const bool field_fully_exposed = field->isVisible() && field_visible == field_rect &&
+                                     !field_rect.intersects(header_visible);
+    if (!original_field || !original_window || !row || !table || !header || !parameter ||
+        original_field->window() != original_window || !row->isAncestorOf(original_field) ||
+        !table->isAncestorOf(row) ||
+        original_field->property("item").value<QObject*>() != parameter ||
+        row->property("parameter").value<QObject*>() != parameter)
+        return out;
+    out = {{"valid", true},
+           {"parameter_path", path},
+           {"parameter_identity", identity(parameter)},
+           {"field_name", field->objectName()},
+           {"field_identity", identity(field)},
+           {"row_name", row->objectName()},
+           {"row_identity", identity(row)},
+           {"table_name", table->objectName()},
+           {"table_identity", identity(table)},
+           {"window_identity", identity(window)},
+           {"content_y", table->property("contentY").toDouble()},
+           {"row_rect", rect(row_rect)},
+           {"field_rect", rect(field_rect)},
+           {"window_rect", rect(window_rect)},
+           {"visible_rect", rect(visible)},
+           {"ancestor_clips", clips},
+           {"header_rect", rect(header_rect)},
+           {"header_visible_rect", rect(header_visible)},
+           {"header_overlap", rect(header_overlap)},
+           {"row_exposed", exposed},
+           {"row_fully_exposed", fully_exposed},
+           {"field_fully_exposed", field_fully_exposed}};
+    return out;
+}
 Array model_rows(edi_app::RowTableModel* model) {
     Array result;
     for(int row=0;row<model->count();++row) {
@@ -941,6 +1035,8 @@ int main(int argc,char** argv) {
                 const QPointer<QQuickItem> original_item=item;
                 const bool reachable=input_reachable(item);
                 if(!owner_current() || !original_item || !original_window || window!=original_window)throw std::runtime_error("original snapshot owner retired during input hit-test");
+                const auto interaction_row=parameter_interaction_row(item,original_window);
+                if(!owner_current() || !original_item || !original_window || window!=original_window)throw std::runtime_error("original snapshot owner retired during row layout observation");
                 controls.push_back(Object{{"name",object->objectName()},{"visible",item->isVisible()},
                     {"enabled",item->isEnabled()},{"same_window",item->window()==window},{"input_reachable",reachable},{"custom_containment_mask",item->containmentMask()!=nullptr},
                     {"text_property_owner",property_owner_reachable(item,"text")},{"layout_exposed",!exposed_layout_rect(item).isEmpty()},
@@ -951,6 +1047,11 @@ int main(int argc,char** argv) {
                     {"fully_exposed",exposed_rect(item).contains(item->boundingRect())},
                     {"parameter_path",object->property("item").value<QObject*>()?
                         object->property("item").value<QObject*>()->property("path").toString():QString()}});
+                if(!interaction_row.isEmpty()) {
+                    auto control=controls.last().toObject();
+                    control["interaction_row"]=interaction_row;
+                    controls[controls.size()-1]=control;
+                }
             }
         }
         auto* assistant=observed->assistant();
