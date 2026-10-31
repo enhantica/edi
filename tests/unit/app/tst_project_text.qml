@@ -201,7 +201,7 @@ Item {
             tryCompare(editor, "readOnly", true, 1000, "Everything is view-only");
             verify(/_data\.intensity_meas\b/.test(editor.text), "Everything includes the actual measured data");
             for (const tag of ["_data.d_spacing", "_data.intensity_calc", "_data.intensity_bkg", "_data.calc_status", "_pd_calc.component_intensities_net"])
-                verify(editor.text.includes(tag), "Everything exposes every required calculated-data column and both structure curves");
+                verify(editor.text.includes(tag), "Everything exposes every required calculated-data column and both structure curves: " + tag);
             const points = Probe.rows(Session.project.currentExperiment.pattern);
             verify(points.length > 0, "The measured-data table has real calculated rows");
             for (const point of points)

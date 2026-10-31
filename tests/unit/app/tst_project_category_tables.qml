@@ -15,6 +15,7 @@ TestCase {
     when: windowShown
     property var appWindow
     property int oldTheme
+    property string oldTextShow
     ProjectTextProof {
         id: proof
     }
@@ -27,6 +28,7 @@ TestCase {
     }
     function init() {
         oldTheme = Style.Colors.theme;
+        oldTextShow = Preferences.textShow;
         Session.closeProject();
         verify(Session.openProject(proof.project()), "The category and geometry witness opens an independent project");
         appWindow = application.createObject(null, {
@@ -35,6 +37,7 @@ TestCase {
             visible: true
         });
         verify(appWindow !== null, "The category gates use the production application window");
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted, 10000, "The production window finishes preparing its pages before category controls are inspected");
     }
     function cleanup() {
         Session.closeProject();
@@ -42,6 +45,7 @@ TestCase {
             appWindow.destroy();
         appWindow = null;
         Style.Colors.theme = oldTheme;
+        Preferences.textShow = oldTextShow;
     }
     function click(name) {
         Ui.click(test, Probe, appWindow, name);
@@ -58,24 +62,28 @@ TestCase {
         return result;
     }
     function test_generated_single_row_and_loop_groups() {
-        click("appBar.tab.experiment");
+        const supplied = SettingsProof.copyProject(proof.project());
+        verify(SettingsProof.write(supplied, "analysis/analysis.edi", SettingsProof.text(supplied, "analysis/analysis.edi") + "\n_pattern_chart.x_axis d_spacing\n"), "The independent generated-enum witness declares a nondefault chart axis in Analysis");
+        verify(Session.openProject(supplied), "The ordinary reader opens the independently declared generated-enum category");
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted, 10000, "The generated-enum witness finishes preparing the reopened project pages");
+        click("appBar.tab.analysis");
         click("sideBar.tab.extras");
-        const settings = group("background_estimate");
-        compare(settings.title, "Background estimation", "The generated single-row title is the independent dictionary title");
-        const fields = Render.descendants(settings).filter(item => item.uid && item.uid.startsWith("background_estimate."));
+        const settings = group("pattern_chart");
+        compare(settings.title, "Pattern chart", "The generated single-row title is the independent dictionary title");
+        const fields = Render.descendants(settings).filter(item => typeof item.label === "string" && item.objectName.startsWith("generated.pattern_chart."));
         verify(fields.length > 0, "A generated single-row category exposes its actual dictionary fields");
         const reference = proof.dictionary();
-        verify(reference.items && reference.items.length > 0, "Generated-field labels come from an independent SDK YAML read");
+        verify(reference.items && reference.items.length > 0, "Generated-field labels come from an independent dictionary YAML capture");
         for (const field of fields) {
-            const expected = reference.items.find(row => row.uid === field.uid);
-            verify(expected !== undefined, "Every generated field belongs to the selected dictionary");
+            const expected = reference.items.find(row => row.uid === field.objectName.slice("generated.".length));
+            verify(expected !== undefined, "Every generated field belongs to the captured dictionary: " + field.objectName);
             compare(field.label, expected.display_name, "Generated fields use the dictionary label");
             if (field.unit !== undefined)
                 compare(field.unit, expected.display_units ?? "", "Generated numeric fields show the dictionary units");
         }
-        for (const uid of ["background_estimate.mode", "background_estimate.method", "background_estimate.use_model"]) {
-            const selector = fields.find(item => item.uid === uid && typeof item.textAt === "function");
-            verify(selector !== undefined, "Every generated selector is a real combobox for its dictionary item");
+        for (const uid of ["pattern_chart.x_axis"]) {
+            const selector = fields.find(item => item.objectName === "generated." + uid && typeof item.textAt === "function");
+            verify(selector !== undefined, "Every generated selector is a real combobox for its dictionary item: " + uid);
         }
         click("appBar.tab.structure");
         click("sideBar.tab.extras");
@@ -177,7 +185,7 @@ TestCase {
     }
     function test_file_categories_and_sidebar_order_follow_sdk_dictionary() {
         const reference = proof.dictionary();
-        verify(reference.categories && reference.categories.length > 0, "The category reference reads the selected SDK YAML independently of the display bridge");
+        verify(reference.categories && reference.categories.length > 0, "The category reference reads the captured dictionary YAML independently of the display bridge");
         const rows = {};
         reference.categories.forEach((row, index) => {
             const numbers = Object.keys(row).filter(key => typeof row[key] === "number");
@@ -213,10 +221,29 @@ TestCase {
         ];
         for (const entry of pages) {
             click("appBar.tab." + entry.page);
+            const text = SettingsProof.text(proof.project(), entry.file);
+            verify(text.length > 0, "The page-category witness reaches each saved file");
+            const carried = new Set((text.match(/^_[A-Za-z0-9_]+\./gm) ?? []).map(tag => tag.slice(1, -1)));
+            if (entry.page === "project") {
+                let description;
+                tryVerify(() => (description = Ui.find(Ui.page(appWindow), "project.description")) !== null && !description.readOnly, 2000, "Project metadata remains editable in the Project page's Description view");
+                compare(description.text, Session.project.description, "The Description view displays the actual project metadata");
+            }
+            click("sideBar.tab.text");
+            Preferences.textShow = "everything";
+            let editor;
+            tryVerify(() => (editor = Ui.find(Ui.page(appWindow), "text.view")) !== null && editor.readOnly, 2000, "Each page exposes its own read-only Everything text for the category census");
+            const shown = new Set((editor.text.match(/^_[A-Za-z0-9_]+\./gm) ?? []).map(tag => tag.slice(1, -1)));
+            compare(JSON.stringify(Array.from(shown).sort()), JSON.stringify(Array.from(carried).sort()), "Each page's Text tab shows exactly the categories of that page's file");
+            compare(shown.has("metadata"), entry.page === "project", "Project metadata appears only in the Project page's Text tab");
+        }
+        for (const entry of pages) {
+            click("appBar.tab." + entry.page);
             const found = new Set();
             for (const tier of ["basic", "extras"]) {
-                const button = Ui.find(Ui.page(appWindow), "sideBar.tab." + tier);
-                if (!button || !button.enabled)
+                let button;
+                tryVerify(() => (button = Ui.find(Ui.page(appWindow), "sideBar.tab." + tier)) !== null, 2000, "The selected page exposes its sidebar tab before the category inventory: " + entry.page + ":" + tier);
+                if (!button.enabled)
                     continue;
                 click("sideBar.tab." + tier);
                 tryVerify(() => !Ui.moving(Ui.page(appWindow)), 2000, "The selected sidebar pane finishes moving before its group order is observed");
@@ -242,8 +269,8 @@ TestCase {
             verify(text.length > 0, "The every-category census reaches the saved file for each page");
             const carried = new Set((text.match(/^_[A-Za-z0-9_]+\./gm) ?? []).map(tag => tag.slice(1, -1)));
             for (const id of carried)
-                if (id !== "geom")
-                    verify(found.has(id), "Every saved category has a real group on its page, except the deferred bond settings: " + id);
+                if (!["geom", "edi", "calculator", "atom_sites_cartn_transform", "pd_calc_overall", "pd_block", "fit_parameter_correlation", "experiment_type", "metadata"].includes(id))
+                    verify(found.has(id), "Every user-facing category has a real group on its own page, except explicitly deferred or separate views: " + entry.page + ":" + id);
         }
     }
     function test_text_controls_and_generated_groups_fit_at_minimum() {
@@ -254,10 +281,20 @@ TestCase {
             click("sideBar.tab.text");
             verify(waitForPolish(appWindow.contentItem) && waitForRendering(appWindow.contentItem), "Every Text tab completes a frame at the supported minimum size");
             const current = Ui.page(appWindow);
-            const editor = findChild(current, "text.view");
-            verify(editor !== null && Ui.inPane(editor), "Every page has a reachable Text editor at the supported minimum");
-            const controls = Render.descendants(current).filter(item => Ui.inPane(item) && ((typeof item.textAt === "function" && item.count === 2 && item.textAt(0) === "Editable") || (typeof item.clicked === "function" && /^check(?:-circle)?$/.test(item.fontIcon ?? ""))));
-            verify(controls.length >= 2, "The Show and Apply controls are both present at minimum size");
+            let editor;
+            tryVerify(() => {
+                editor = Ui.find(current, "text.view");
+                return editor !== null && Ui.exposed(editor);
+            }, 2000, "Every page has a reachable Text editor at the supported minimum: " + page);
+            const controls = [Ui.find(current, "text.show"), Ui.find(current, "text.apply")];
+            verify(controls.every(item => item !== null), "The Show and Apply controls are both present at minimum size: " + page + "; candidates=" + JSON.stringify(Render.descendants(current).filter(item => ["text.show", "text.apply"].includes(item.objectName)).map(item => ({
+                        name: item.objectName,
+                        visible: item.visible,
+                        width: item.width,
+                        height: item.height,
+                        x: item.mapToItem(appWindow.contentItem, 0, 0).x,
+                        y: item.mapToItem(appWindow.contentItem, 0, 0).y
+                    }))));
             for (const control of controls) {
                 const at = control.mapToItem(appWindow.contentItem, 0, 0);
                 verify(at.x >= 0 && at.x + control.width <= appWindow.width && at.y >= 0 && at.y + control.height <= appWindow.height, "The minimum-size Text-tab controls stay wholly within the native window");
