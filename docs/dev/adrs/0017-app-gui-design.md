@@ -149,6 +149,16 @@ The decisions it rests on, unchanged here:
   parent's last child, which in a column with a `Repeater` is the last delegate whether it is shown or not
   (gui-components#55), so edi sets `last` itself (`Globals/SideBarGroups.qml`). "Shown" is the group's tab
   rule (`CategoryGroup.shown`), not `visible`, which is also false while the page is hidden.
+  `CategoryGroup.admitted` is the explicit presentation input to that rule and defaults to true;
+  tier/extras and measured-data requirements still apply. Its readonly `shown` drives both `listed`
+  and `visible`, so logical ordering and the group's own visibility agree without filtering by
+  effective ancestor visibility. Project excludes `su_format` and `report` through this input:
+  standard uncertainties have their specialized group, and report settings belong to Report.
+  The former Project-only `visible` override left those hidden generated groups logically listed,
+  allowing a trailing hidden report group to steal the last-group border. Structure Basic/Extras,
+  Experiment Basic/Extras and Analysis Extras retain default admission and their original tier/data
+  rules. Category models, native interface eligibility, content loading, remembered open state and
+  backend sidebar ordering are unchanged; this is not a schema filter or scientific permission.
 
 ### 4. Actions not yet implemented are shown, disabled
 

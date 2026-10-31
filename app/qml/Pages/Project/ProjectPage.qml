@@ -50,7 +50,7 @@ WorkflowPage {
                 delegate: CategoryGroup {
                     shownTier: "Extras"
                     textSource: page.project ? page.project.metadataText : null
-                    visible: shown && categoryId !== "su_format" && categoryId !== "report"
+                    admitted: categoryId !== "su_format" && categoryId !== "report"
                 }
             }
         }
