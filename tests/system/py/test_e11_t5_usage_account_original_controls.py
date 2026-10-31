@@ -1,4 +1,4 @@
-"""Original canonical usage/account relations through the existing real Main peer."""
+"""Canonical usage/account relations in explicit fresh original and native cohorts."""
 
 from __future__ import annotations
 
@@ -30,6 +30,9 @@ def _bound_receipt(variable):
 
 def _phase():
     phase = json.loads((HERE / 'e11_t5_usage_canonical_phase.json').read_text())
+    assert phase['binding_status'] == 'BOUND', 'Root must bind the completed fresh comparison'
+    assert phase['namespace'] == 'fresh-usage-original-native'
+    assert phase['phase'] in {'original', 'native'}
     assert os.environ['EDI_E11_USAGE_ACCOUNT_PHASE'] == phase['phase']
     assert (
         Path(base.__file__).resolve()
@@ -41,19 +44,32 @@ def _phase():
     bond = _bound_receipt('EDI_E11_USAGE_ACCOUNT_BINARY_BOND')
     original = _bound_receipt('EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND')
     assert original['source'] == phase['original_source']
-    assert phase['namespace'] == 'original-usage-sdk116-38c5705b'
+    assert bond['source'] == phase['compiled_source']
+    assert (
+        os.environ['EDI_E11_USAGE_ACCOUNT_ORIGINAL_BINARY_BOND_SHA256']
+        == phase['original_bond_sha256']
+    )
+    original_families = {
+        'activity': 'native',
+        'composer': 'native',
+        'browser': 'native',
+        'usage': 'original',
+    }
+    assert original['family_phases'] == original_families
+    assert bond['family_phases'] == {**original_families, 'usage': phase['phase']}
     for name, expected in phase['native'].items():
         assert original['native'][name] == expected, name
         assert bond['native'][name] == expected, name
+    assert original['bundled_runtime']['config_sha256'] == phase['original_runtime_config_sha256']
+    assert bond['bundled_runtime']['config_sha256'] == phase['current_runtime_config_sha256']
     if phase['phase'] == 'original':
         assert bond == original
     else:
-        assert phase['phase'] == 'native'
         expected = os.environ['EDI_E11_USAGE_ACCOUNT_COMPILED_SOURCE']
         assert len(expected) == 40 and all(
             character in '0123456789abcdef' for character in expected
         )
-        assert bond['source'] == expected
+        assert bond['source'] == expected == phase['compiled_source']
     assert (
         bond['selected_header_sha256'] == files['tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp']
     )
@@ -69,7 +85,7 @@ def _phase():
         'compiler_kit': ['compiler_sha256', 'package_metadata'],
         'dependency_environment': ['root_lock_sha256', 'dependency_only_lock_sha256'],
         'gui_components': ['commit', 'pin_file_sha256', 'source_sha256'],
-        'bundled_runtime': ['config_sha256', 'files'],
+        'bundled_runtime': ['files'],
     }.items():
         for key in keys:
             assert bond[section][key] == original[section][key], (section, key)
@@ -82,9 +98,11 @@ def _phase():
 
 
 def _retain(actor, name, value):
-    (actor.folder / (name + '.json')).write_text(
-        json.dumps(value, ensure_ascii=False, indent=2) + '\n'
-    )
+    # JSON escapes preserve original lone UTF16 units. Encode BEFORE opening/truncating.
+    encoded = (json.dumps(value, ensure_ascii=True, indent=2) + '\n').encode('utf-8')
+    written = (actor.folder / (name + '.json')).write_bytes(encoded)
+    if written != len(encoded):
+        raise OSError('JSON capture was not fully written')
     return value
 
 

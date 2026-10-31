@@ -193,7 +193,7 @@
       ],
       "plan": "𐐨_pro-TEAM",
       "plan_label": "𐐨 Pro TEAM",
-      "initial": "𐐀",
+      "initial": "\ud801",
       "identity": "𐐨@example.invalid",
       "plan_visible": true
     }
@@ -274,7 +274,7 @@
       "percent": [],
       "plan": "",
       "plan_label": "",
-      "initial": "🧪",
+      "initial": "\ud83e",
       "identity": "🧪@example.invalid",
       "plan_visible": false
     }

@@ -32,4 +32,23 @@ TestCase {
         const result = UsageAccountProof.translationAndBindings(ApplicationInfo);
         verify(result.ok, JSON.stringify(result));
     }
+    function test_original_projection_catch_reentry_and_detached_owner_lifetime() {
+        const result = UsageAccountProof.projectionAndOwnerLifetime(ApplicationInfo);
+        verify(result.ok, JSON.stringify(result));
+    }
+
+    function test_original_null_member_receiver_descriptions() {
+        const result = UsageAccountProof.nullMemberReceivers(ApplicationInfo);
+        verify(result.ok, JSON.stringify(result));
+    }
+    function test_original_actual_context_lookup_and_notifications() {
+        const result = UsageAccountProof.actualContextLookups(ApplicationInfo);
+        verify(result.ok, JSON.stringify(result));
+    }
+
+    function test_original_dot_and_name_lookup_order() {
+        const result = UsageAccountProof.callLookupOrder(ApplicationInfo);
+        verify(result.ok, JSON.stringify(result));
+    }
+
 }

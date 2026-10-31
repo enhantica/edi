@@ -1,0 +1,101 @@
+{
+  "browser_open": {
+    "function": "test_original_browser_opens_before_late_current_owner_refresh",
+    "arguments": {},
+    "archives": 0,
+    "turns": [
+      []
+    ],
+    "contract": "native_contracts/browser_open.json",
+    "contract_sha256": "bce18438976aa5a6b97f98a8466797e359ccf38ab5afd9668153192fabb42ddf",
+    "review_proposal": "recovery260-original96/PROPOSED-ORIGINAL-BROWSER-OPEN-CONTRACT.json",
+    "review_proposal_sha256": "e5f7a98d74cd8080c1ddee17dd96332cf4969128068c27d0f421f77c0f8da29f",
+    "source_warning_total": 59,
+    "original96_folder": "test_current_original_recordin0/intentional-actor-0",
+    "native_attribution_proof": "9cfbd5b6b31aef26391717bfe342f7e498253b68b8a5c9b5b3bde69595ed3bdf"
+  },
+  "browser_restore_owner": {
+    "function": "test_original_browser_row_activation_precedes_current_owner_selection",
+    "arguments": {
+      "activation_effect": "restore_owner"
+    },
+    "archives": 2,
+    "turns": [
+      [],
+      []
+    ],
+    "contract": "native_contracts/browser_restore_owner.json",
+    "contract_sha256": "a8cc9bba5b73d0817c6e678b18184e81ade4bf48f2096872edf5de2ed1d147bd",
+    "review_proposal": "recovery260-original96/PROPOSED-ORIGINAL-BROWSER-ROW-RESTORE-OWNER-CONTRACT.json",
+    "review_proposal_sha256": "67de26f65ab017b5f4791d3948a6cd3ba65341083d535af49db2b3dd8fdcbf0a",
+    "source_warning_total": 63,
+    "original96_folder": "test_current_original_recordin1/intentional-actor-0",
+    "native_attribution_proof": "9cfbd5b6b31aef26391717bfe342f7e498253b68b8a5c9b5b3bde69595ed3bdf"
+  },
+  "browser_retire_account": {
+    "function": "test_original_browser_row_activation_precedes_current_owner_selection",
+    "arguments": {
+      "activation_effect": "retire_account"
+    },
+    "archives": 2,
+    "turns": [
+      [],
+      []
+    ],
+    "contract": "native_contracts/browser_retire_account.json",
+    "contract_sha256": "a8cc9bba5b73d0817c6e678b18184e81ade4bf48f2096872edf5de2ed1d147bd",
+    "review_proposal": "recovery260-original96/PROPOSED-ORIGINAL-BROWSER-ROW-RETIRE-ACCOUNT-CONTRACT.json",
+    "review_proposal_sha256": "67de26f65ab017b5f4791d3948a6cd3ba65341083d535af49db2b3dd8fdcbf0a",
+    "source_warning_total": 63,
+    "original96_folder": "test_current_original_recordin2/intentional-actor-0",
+    "native_attribution_proof": "9cfbd5b6b31aef26391717bfe342f7e498253b68b8a5c9b5b3bde69595ed3bdf"
+  },
+  "browser_leave_null": {
+    "function": "test_original_browser_row_activation_precedes_current_owner_selection",
+    "arguments": {
+      "activation_effect": "leave_null"
+    },
+    "archives": 2,
+    "turns": [
+      [],
+      []
+    ],
+    "contract": "native_contracts/browser_leave_null.json",
+    "contract_sha256": "1a74ed19fa343b6b782866897644b7347c3cff87c9b7b86ba17b3eb8486bd60d",
+    "review_proposal": "recovery260-original96/PROPOSED-ORIGINAL-BROWSER-ROW-LEAVE-NULL-CONTRACT.json",
+    "review_proposal_sha256": "abf3a0378767d038e28a557998be3fddf9eb82b349c9b9170b048c48a12fb47d",
+    "source_warning_total": 64,
+    "original96_folder": "test_current_original_recordin3/intentional-actor-0",
+    "native_attribution_proof": "9cfbd5b6b31aef26391717bfe342f7e498253b68b8a5c9b5b3bde69595ed3bdf"
+  },
+  "browser_footer": {
+    "function": "test_original_browser_footer_dependencies_remain_live_with_null_view_owner",
+    "arguments": {},
+    "archives": 1,
+    "turns": [
+      []
+    ],
+    "contract": "native_contracts/browser_footer.json",
+    "contract_sha256": "005e5070d1a381240f2ff6806fb849499bd650cd33f6f57294edc15462720ccc",
+    "review_proposal": "recovery260-original96/PROPOSED-ORIGINAL-BROWSER-FOOTER-CONTRACT.json",
+    "review_proposal_sha256": "6eea1369e047c1452731d4523901e4b382f0ae72ed16e15802d4bb5a80b80c79",
+    "source_warning_total": 61,
+    "original96_folder": "test_current_original_recordin4/intentional-actor-0",
+    "native_attribution_proof": "9cfbd5b6b31aef26391717bfe342f7e498253b68b8a5c9b5b3bde69595ed3bdf"
+  },
+  "composer_null_publication": {
+    "function": "test_original_composer_revision_effects_precede_null_owner_text_publication",
+    "arguments": {},
+    "archives": 0,
+    "turns": [
+      []
+    ],
+    "contract": "native_contracts/composer_null_publication.json",
+    "contract_sha256": "ff80252a89229ea34f74feee767c4ba589466e5cb068164ea4b8abbb558bfe33",
+    "review_proposal": "recovery259-original94-95/PROPOSED-ORIGINAL-COMPOSER-CONTRACT.json",
+    "review_proposal_sha256": "361fbe4598ffc6700c693c7f75314737a7cd8da9e03e1a37c91232fbca035c5a",
+    "source_warning_total": 39,
+    "original96_folder": "test_current_original_recordin5/intentional-actor-0",
+    "native_attribution_proof": "9cfbd5b6b31aef26391717bfe342f7e498253b68b8a5c9b5b3bde69595ed3bdf"
+  }
+}

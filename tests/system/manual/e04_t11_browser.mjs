@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
+import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
 import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
@@ -417,6 +418,7 @@ try {
   await send('Runtime.callFunctionOn', { objectId: node.object.objectId,
     functionDeclaration: 'function() { this.click(); }' });
   await waitAX(/Get started|Home/);
+  await checkDesktopOnlyAssistant({send, evaluate, frame, click, output, mode});
   await inspectDevelopDiagnostics(evaluate, frame, mode,
     snapshot => writeFile(join(output, `${mode}-diagnostics.json`), JSON.stringify(snapshot, null, 2)),
     () => shot('develop-diagnostics'));
