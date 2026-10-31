@@ -985,11 +985,15 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         }
         structure.scattering_lengths_fm = std::move(declared);
     }
-    // How the Structure view shows it, as saved.
+    // How the Structure view shows it, as saved: each value one its dictionary entry admits, as crysta reads it.
     std::map<std::string, std::string> view;
     for (const auto& [tag, value] : block.items) {
         if (tag.starts_with("_structure_view.")) {
-            view[tag.substr(std::string_view("_structure_view.").size())] = value;
+            const std::string item = tag.substr(std::string_view("_structure_view.").size());
+            if (const std::string why = detail::structure_view_refusal(item, value); !why.empty()) {
+                fail_schema(where, "invalid-structure-view", why);
+            }
+            view[item] = value;
         }
     }
     structure.view = std::move(view);

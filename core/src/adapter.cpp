@@ -2600,6 +2600,10 @@ std::string current_edi_name(const std::string& tag, bool every_name) {
 #endif
 }
 
+std::string structure_view_refusal(const std::string& item, const std::string& value) {
+    return crysta::structure_view_refusal(item, value);
+}
+
 std::string one_row_category(const std::string& tag) {
 #if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
     return crysta::one_row_category(tag);
