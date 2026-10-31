@@ -8,6 +8,8 @@
 #include <QJsonObject>
 #include <QQmlEngine>
 #include <QQmlError>
+#include <private/qjsengine_p.h>
+#include <private/qv4engine_p.h>
 #include <QtQml/qqmlextensionplugin.h>
 #include <QtQuickTest/quicktest.h>
 
@@ -42,7 +44,7 @@ class Setup : public QObject {
             std::fputs("binding-stack: diagnostic file write failed\n", stderr);
         }
     }
-    void observeBindingLoop(const QList<QQmlError>& errors) {
+    void observeBindingLoop(QQmlEngine* engine, const QList<QQmlError>& errors) {
         for (const auto& error : errors) {
             if (!error.description().contains(QStringLiteral("Binding loop detected for property \"resolvedColumnWidths\":"))) continue;
             if (binding_stack_taken_.exchange(true)) return;
@@ -69,9 +71,24 @@ class Setup : public QObject {
             }
             std::free(symbols);
 #endif
+            // Existing VM frame metadata only: no evaluation, property lookup or exception consumption.
+            QJsonArray qml_frames;
+            bool qml_text_truncated = false;
+            const auto* vm = QJSEnginePrivate::get(engine)->v4Engine.get();
+            if (vm) {
+                const auto stack = vm->stackTrace(32);
+                for (const auto& frame : stack) {
+                    qml_text_truncated = qml_text_truncated || frame.source.size() > 2048 || frame.function.size() > 2048;
+                    qml_frames.append(QJsonObject{{"source", frame.source.left(2048)},
+                                                 {"function", frame.function.left(2048)},
+                                                 {"line", frame.line}, {"column", frame.column}});
+                }
+            }
             writeBindingStack({{"event", "binding_loop_stack"}, {"property", "resolvedColumnWidths"},
                                {"supported", supported}, {"symbols_available", symbols_available},
-                               {"symbol_text_truncated", truncated}, {"frame_limit_reached", frame_limit_reached}, {"frames", frames}});
+                               {"symbol_text_truncated", truncated}, {"frame_limit_reached", frame_limit_reached}, {"frames", frames},
+                               {"qml_capture_available", vm != nullptr}, {"qml_frame_walk_limit", 32},
+                               {"qml_text_truncated", qml_text_truncated}, {"qml_frames", qml_frames}});
             return;
         }
     }
@@ -88,7 +105,7 @@ class Setup : public QObject {
             writeBindingStack({{"event", "capture_started"}, {"format", 1}});
         }
         binding_stack_connections_.push_back(QObject::connect(engine, &QQmlEngine::warnings, this,
-            [this](const QList<QQmlError>& errors) { observeBindingLoop(errors); }, Qt::DirectConnection));
+            [this, engine](const QList<QQmlError>& errors) { observeBindingLoop(engine, errors); }, Qt::DirectConnection));
     }
 
    public:
