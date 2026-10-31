@@ -147,7 +147,9 @@ EaComponents.ListView {
         else if ("horizontalAlignment" in cell)
             cell.horizontalAlignment = alignment;
     }
-    function fitColumns() {
+    // `measure` false only styles the cells (alignment and padding): a row scrolled into view takes the widths the whole
+    // model was measured to, never changing them (the owner, 2026-10-27).
+    function fitColumns(measure = true) {
         const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths.filter((w, i) => true) : [];
         // A cell is measured by its whole text: a number cell by the number it would show if it fitted (it shortens
         // itself to the width it is given), a label by its natural width, an editor by its text (its implicit width
@@ -158,7 +160,7 @@ EaComponents.ListView {
         const control = child => "fittedWidth" in child ? child.fittedWidth : child.implicitWidth ?? 0;
         const held = cell => Array.from(cell.children).reduce((widest, child) => Math.max(widest, control(child)), cell.implicitWidth);
         // A check box by its box and its own paddings, never the padding that pushes it right.
-        const measure = cell => cellKinds.get(cell) === "check" && cell.indicator ? (basePaddings.get(cell)?.left ?? 0) + cell.indicator.width + cell.rightPadding : "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : padded(cell, held(cell));
+        const measured = cell => cellKinds.get(cell) === "check" && cell.indicator ? (basePaddings.get(cell)?.left ?? 0) + cell.indicator.width + cell.rightPadding : "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : padded(cell, held(cell));
         // The cells of a row's inner Row, in column order, the filler left out.
         const cellsOf = row => {
             const first = row && row.contentRowData ? Array.from(row.contentRowData).find(cell => cell instanceof Item) : null;
@@ -183,7 +185,7 @@ EaComponents.ListView {
                 if (i > 0 && kinds[i])
                     alignCell(cells[i], kinds[i]);
                 padForFiller(cells[i], i);
-                widths[i] = Math.max(widths[i], Math.ceil(measure(cells[i]) - (i === fillerIndex ? fillerWidth : 0)));
+                widths[i] = Math.max(widths[i], Math.ceil(measured(cells[i]) - (i === fillerIndex ? fillerWidth : 0)));
             }
         }
         if (kinds && headerCells) {
@@ -192,14 +194,28 @@ EaComponents.ListView {
                 padForFiller(headerCells[i], i);
             }
         }
+        if (!measure)
+            return;
         refitting = false;
         if (JSON.stringify(widths) !== JSON.stringify(fittedWidths))
             fittedWidths = widths;
     }
-    // A change of the content fits the columns afresh; scrolling only adds rows to what was measured.
+    // A change of the content fits the columns afresh to every row of the model: each row is made once, measured, and
+    // the view goes back to making only the rows it shows. Scrolling measures nothing (fitColumns).
     function refit() {
         refitting = true;
-        Qt.callLater(fitColumns);
+        Qt.callLater(fitWholeModel);
+    }
+    // The cells of rows scrolled into view, styled as the measured ones are.
+    function styleCells() {
+        fitColumns(false);
+    }
+    function fitWholeModel() {
+        const shown = cacheBuffer;
+        cacheBuffer = Math.ceil(contentHeight + height);
+        forceLayout();
+        fitColumns();
+        cacheBuffer = shown;
     }
     onColumnsChanged: refit()
     // The spare width follows the columns: the last data column's cells take it as padding after their content.
@@ -216,7 +232,7 @@ EaComponents.ListView {
     Connections {
         target: table.contentItem
         function onChildrenChanged() {
-            Qt.callLater(table.fitColumns);
+            Qt.callLater(table.styleCells);
         }
     }
     // A header whose cells change after it was made (a column per structure arriving with the calculation) has
@@ -228,7 +244,7 @@ EaComponents.ListView {
             const first = table.headerItem && table.headerItem.contentRowData ? Array.from(table.headerItem.contentRowData).find(cell => cell instanceof Item) : null;
             if (first && first.parent)
                 table.applyWidths(first.parent);
-            Qt.callLater(table.fitColumns);
+            table.refit();
         }
     }
     // Long IDs and paths must leave room for the numeric cells and row controls.
