@@ -39,6 +39,7 @@
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
+#include "edi/parameter_walk.hpp"
 #include "edi/report.hpp"
 #include "edi/report_html.hpp"
 #include "edi/report_model.hpp"
