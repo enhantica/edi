@@ -44,19 +44,56 @@ Column {
         columnSpacing: AppSizes.inputSpacing
         rowSpacing: AppSizes.groupContentSpacing
 
+        // Each item in the control its dictionary type asks for: a selector, a check box, or a field taking a number
+        // or a text.
         Repeater {
             model: category.loop ? [] : category.names
-            delegate: ValueField {
+            delegate: Loader {
+                id: field
+
                 required property int index
                 required property string modelData
+                readonly property string kind: category.kinds[index] ?? "text"
+                readonly property string value: category.rowCount > 0 ? category.value(0, index) : ""
+                readonly property bool editable: !category.output && !category.setByProgram.includes(modelData) && group.source !== null && group.source.file !== ""
 
-                objectName: `generated.${group.categoryId}.${modelData}`
                 width: (EaStyle.Sizes.sideBarContentWidth - (fields.columns - 1) * AppSizes.inputSpacing) / fields.columns
-                label: category.labels[index] ?? modelData
-                unit: category.units[index] ?? ""
-                fieldValue: category.rows.length > 0 ? (category.rows[0][index] ?? "") : ""
-                editable: !category.output && !category.setByProgram.includes(modelData) && group.source !== null && group.source.file !== ""
-                onCommitted: text => group.apply(0, modelData, text)
+                sourceComponent: kind === "choice" ? choiceField : kind === "flag" ? flagField : valueField
+
+                Component {
+                    id: choiceField
+                    SelectorField {
+                        objectName: `generated.${group.categoryId}.${field.modelData}`
+                        options: category.optionsAt(field.index)
+                        uid: `${group.categoryId}.${field.modelData}`
+                        token: field.value
+                        writable: field.editable
+                        onSelected: token => group.apply(0, field.modelData, token)
+                    }
+                }
+                Component {
+                    id: flagField
+                    EaElements.CheckBox {
+                        objectName: `generated.${group.categoryId}.${field.modelData}`
+                        leftPadding: 0
+                        text: category.labels[field.index] ?? field.modelData
+                        checked: field.value === "true"
+                        enabled: field.editable
+                        onToggled: group.apply(0, field.modelData, checked ? "true" : "false")
+                    }
+                }
+                Component {
+                    id: valueField
+                    ValueField {
+                        objectName: `generated.${group.categoryId}.${field.modelData}`
+                        label: category.labels[field.index] ?? field.modelData
+                        unit: category.units[field.index] ?? ""
+                        accepts: field.kind === "number" ? "number" : "text"
+                        fieldValue: field.value
+                        editable: field.editable
+                        onCommitted: text => group.apply(0, field.modelData, text)
+                    }
+                }
             }
         }
     }
@@ -93,7 +130,7 @@ Column {
                 delegate: TableRow {
                     id: row
 
-                    required property var modelData
+                    required property list<string> values
 
                     EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
@@ -105,10 +142,15 @@ Column {
                         delegate: TextCell {
                             required property int index
                             required property string modelData
+                            readonly property string cellText: row.values[index] ?? ""
+                            // A number of a dictionary item is a number cell, aligned and written as the dictionary's.
+                            readonly property bool isNumber: category.kinds[index] === "number" && cellText !== "" && isFinite(Number(cellText))
 
                             objectName: `generated.${group.categoryId}.${modelData}.${row.index}`
                             horizontalAlignment: Text.AlignHCenter
-                            value: row.modelData[index] ?? ""
+                            accepts: category.kinds[index] === "number" ? "number" : "text"
+                            uid: isNumber ? `${group.categoryId}.${modelData}` : ""
+                            value: isNumber ? Number(cellText) : cellText
                             readOnly: category.output || group.source === null || group.source.file === ""
                             onCommitted: text => group.apply(row.index, modelData, text)
                         }

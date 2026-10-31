@@ -74,6 +74,11 @@ std::string uid_of(const ParameterSpec& spec) { return std::string(spec.category
 
 bool has_item(std::string_view uid) { return crysta::find_dictionary_item(uid) != nullptr; }
 
+std::string item_dtype(std::string_view uid) {
+    const crysta::DictionaryItem* found = crysta::find_dictionary_item(uid);
+    return found != nullptr ? found->dtype : std::string();
+}
+
 std::string label(std::string_view uid, std::string_view variant) { return item(uid).display_name_for(variant); }
 
 std::string units_label(std::string_view uid, std::string_view variant) {

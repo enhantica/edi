@@ -36,6 +36,9 @@ std::string uid_of(const ParameterSpec& spec);
 
 /// Whether the dictionary has an item with this uid.
 bool has_item(std::string_view uid);
+/// The dictionary's type of item `uid`: `float`, `int`, `bool`, `string` or `enum`; empty for an item it does not
+/// hold.
+std::string item_dtype(std::string_view uid);
 
 /// The short label every surface shows for item `uid`. Each of these throws std::invalid_argument
 /// for a uid the dictionary does not hold.
