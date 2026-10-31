@@ -15,9 +15,11 @@
 #include <QQmlEngine>
 #include <algorithm>
 #include <cstdlib>
+#include <cstdint>
 
 #if defined(Q_OS_WASM)
 #include <emscripten.h>
+#include <emscripten/val.h>
 
 // The page's side of the storage (edi ADR-0052 §9), installed once as globalThis.ediStorage. A job's files are staged
 // from the app's memory first (stage), then one call starts the job; its answer goes back through
@@ -25,13 +27,13 @@
 // synchronous file handles every current browser has; the disk is written through the File System Access API.
 // Records: IndexedDB "edi-projects", store "places", one per place by its key. Files: the origin private file system
 // under edi/projects/<key> and edi/recovery/<key>.
-EM_JS_DEPS(edi_web_storage, "$FS,$stringToNewUTF8,$UTF8ToString");
+EM_JS_DEPS(edi_web_storage, "$FS,$stringToNewUTF8,$UTF8ToString,$Emval,_emval_decref");
 
 EM_JS(int, edi_storage_install, (), {
     if (globalThis.ediStorage) {
         return globalThis.ediStorage.disk ? 1 : 0;
     }
-    const S = {handles : new Map(), loaded : new Map(), staged : new Map(), workerJobs : new Map(), queues : new Map(), next : 1};
+    const S = {handles : new Map(), staged : new Map(), workerJobs : new Map(), runs : new Map(), next : 1};
     globalThis.ediStorage = S;
     S.disk = typeof globalThis.showDirectoryPicker === "function" && typeof globalThis.showOpenFilePicker === "function"
              && typeof globalThis.showSaveFilePicker === "function";
@@ -46,20 +48,11 @@ EM_JS(int, edi_storage_install, (), {
             S.answer(job, {ok : false, message : String(error && error.message ? error.message : error)});
         }
     };
-    S.key = () => Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
-    // One place's writes and drops run one after another, in the order the app sent them: a Save that finishes later
-    // never overtakes a newer keep, and a discard is never undone by a keep still in flight.
-    S.serial = (key, run) => {
-        const next = (S.queues.get(key) || Promise.resolve()).then(run, run);
-        const tail = next.catch(() => {});
-        S.queues.set(key, tail);
-        tail.then(() => {
-            if (S.queues.get(key) === tail) {
-                S.queues.delete(key);
-            }
-        });
-        return next;
+    S.policy = (operation, value) => {
+        const result = Module._edi_storage_policy(operation, Emval.toHandle(value));
+        try { return Emval.toValue(result); } finally { __emval_decref(result); }
     };
+    S.key = () => S.policy(0, undefined);
 
     S.db = () => S.opened || (S.opened = new Promise((resolve, reject) => {
         const request = indexedDB.open("edi-projects", 1);
@@ -138,21 +131,18 @@ EM_JS(int, edi_storage_install, (), {
     // The documents a project save writes in a folder and replaces there (as the app's desktop save does): the entity
     // documents directly in structures/ and experiments/, and the analysis document. Anything else stays.
     S.owned = async folder => {
-        const owned = [ "analysis/analysis.edi" ];
-        for (const category of [ "structures", "experiments" ]) {
+        const owned = S.policy(13, undefined);
+        for (const category of S.policy(14, undefined)) {
             let at;
             try {
                 at = await folder.getDirectoryHandle(category);
             } catch (error) {
-                if (S.missing(error)) {
-                    continue;
-                }
+                if (S.missing(error)) continue;
                 throw error;
             }
             for await (const [name, handle] of at.entries()) {
-                if (handle.kind === "file" && name.toLowerCase().endsWith(".edi")) {
-                    owned.push(category + "/" + name);
-                }
+                const path = S.policy(1, {category : category, name : name, handle : handle});
+                if (path !== null) owned.push(path);
             }
         }
         return owned;
@@ -180,13 +170,14 @@ EM_JS(int, edi_storage_install, (), {
     S.openFolder = async (handle, root) => {
         const key = S.key();
         S.handles.set(key, handle);
-        S.loaded.set(key, new Set(await S.copyIn(handle, root + "/" + handle.name)));
-        await S.put({key : key, kind : "folder", name : handle.name, handle : handle, saved : true, time : Date.now()});
-        return {ok : true, key : key, kind : "folder", name : handle.name, path : root + "/" + handle.name};
+        S.policy(2, {key : key, paths : await S.copyIn(handle, S.policy(8, {root : root, name : handle.name}))});
+        await S.put(S.policy(12, {key : key, kind : "folder", name : handle.name, handle : handle}));
+        return S.policy(18, {key : key, kind : "folder", handle : handle, root : root});
     };
     // The browser storage writer: a dedicated worker with synchronous access handles, which Firefox and Safari offer
     // where they offer no writable streams. It writes every file of a job, then removes what the folder has besides.
     const writerMain = () => {
+        const pendingPlans = new Map();
         const walk = async (folder, prefix, out) => {
             for await (const [name, handle] of folder.entries()) {
                 const path = prefix ? prefix + "/" + name : name;
@@ -198,15 +189,21 @@ EM_JS(int, edi_storage_install, (), {
             return out;
         };
         onmessage = async event => {
+            if (event.data.phase === "retention") {
+                const done = pendingPlans.get(event.data.id);
+                pendingPlans.delete(event.data.id);
+                done(event.data);
+                return;
+            }
             const {id, parts, files} = event.data;
             try {
                 let folder = await navigator.storage.getDirectory();
                 for (const part of parts) {
                     folder = await folder.getDirectoryHandle(part, {create : true});
                 }
-                const kept = new Set();
+                const paths = [];
                 for (const [path, data] of files) {
-                    kept.add(path);
+                    paths.push(path);
                     const names = path.split("/");
                     let at = folder;
                     for (const name of names.slice(0, -1)) {
@@ -220,16 +217,18 @@ EM_JS(int, edi_storage_install, (), {
                     access.close();
                 }
                 const entries = await walk(folder, "", []);
-                for (const [path, kind] of entries.reverse()) {
-                    const used = kind === "directory" ? [...kept].some(file => file.startsWith(path + "/")) : kept.has(path);
-                    if (!used) {
-                        const names = path.split("/");
-                        let at = folder;
-                        for (const name of names.slice(0, -1)) {
-                            at = await at.getDirectoryHandle(name);
-                        }
-                        await at.removeEntry(names[names.length - 1], {recursive : true});
+                const plan = await new Promise(resolve => {
+                    pendingPlans.set(id, resolve);
+                    postMessage({id : id, phase : "retention", entries : entries, paths : paths});
+                });
+                if (plan.error !== undefined) throw new Error(plan.error);
+                for (const path of plan.paths) {
+                    const names = path.split("/");
+                    let at = folder;
+                    for (const name of names.slice(0, -1)) {
+                        at = await at.getDirectoryHandle(name);
                     }
+                    await at.removeEntry(names[names.length - 1], {recursive : true});
                 }
                 postMessage({id : id, ok : true});
             } catch (error) {
@@ -242,6 +241,14 @@ EM_JS(int, edi_storage_install, (), {
             const source = "(" + writerMain.toString() + ")();";
             S.worker = new Worker(URL.createObjectURL(new Blob([source], {type : "text/javascript"})));
             S.worker.onmessage = event => {
+                if (event.data.phase === "retention") {
+                    try {
+                        S.worker.postMessage({id : event.data.id, phase : "retention", paths : S.policy(4, event.data)});
+                    } catch (error) {
+                        S.worker.postMessage({id : event.data.id, phase : "retention", error : String(error && error.message ? error.message : error)});
+                    }
+                    return;
+                }
                 const done = S.workerJobs.get(event.data.id);
                 S.workerJobs.delete(event.data.id);
                 if (done) {
@@ -341,7 +348,7 @@ EM_JS(void, edi_storage_pick_open, (int job, const char* kind_utf8, const char* 
         }
         const key = S.key();
         S.handles.set(key, handle);
-        await S.put({key : key, kind : "zip", name : file.name, handle : handle, saved : true, time : Date.now()});
+        await S.put(S.policy(12, {key : key, kind : "zip", name : file.name, handle : handle}));
         return {ok : true, key : key, kind : "zip", name : file.name, path : path};
     })().then(value => S.answer(job, value), error => S.fail(job, error));
 });
@@ -367,7 +374,7 @@ EM_JS(void, edi_storage_pick_save, (int job, const char* kind_utf8, const char* 
         S.handles.set(key, handle);
         if (kind === "folder") {
             // A folder holding another project: its documents the save does not write again are removed with it.
-            S.loaded.set(key, new Set(await S.owned(handle)));
+            S.policy(2, {key : key, paths : await S.owned(handle)});
         }
         return {ok : true, key : key, kind : kind, name : handle.name};
     })().then(value => S.answer(job, value), error => S.fail(job, error));
@@ -380,23 +387,22 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
     const name = UTF8ToString(name_utf8);
     const files = S.staged.get(job) || [];
     S.staged.delete(job);
-    S.serial(key, async () => {
+    S.runs.set(job, async () => {
         let handle = null;
-        if (recovery || kind === "browser") {
-            await S.writeBrowser([ "edi", recovery ? "recovery" : "projects", key ], files);
-        } else if (kind === "folder") {
+        const destination = S.policy(15, {kind : kind, recovery : recovery});
+        if (destination === "browser") {
+            await S.writeBrowser(S.policy(7, {key : key, recovery : recovery}), files);
+        } else if (destination === "folder") {
             handle = await S.handle(key);
             if (!(await S.permitted(handle))) {
                 throw new Error("the browser was not allowed to write to the folder " + handle.name);
             }
             await S.writeTo(handle, files);
-            const written = new Set(files.map(file => file[0]));
-            for (const path of S.loaded.get(key) || []) {
-                if (!written.has(path)) {
-                    await S.removePath(handle, path);
-                }
+            const paths = files.map(file => file[0]);
+            for (const path of S.policy(3, {key : key, paths : paths})) {
+                await S.removePath(handle, path);
             }
-            S.loaded.set(key, written);
+            S.policy(2, {key : key, paths : paths});
         } else {
             handle = await S.handle(key);
             if (!(await S.permitted(handle))) {
@@ -406,23 +412,12 @@ EM_JS(void, edi_storage_write, (int job, const char* key_utf8, const char* kind_
             await writable.write(files.length > 0 ? files[0][1] : new Uint8Array());
             await writable.close();
         }
-        const record = (await S.record(key)) || {key : key, kind : kind, name : name, saved : false};
-        record.kind = kind;
-        record.name = name;
-        if (handle) {
-            record.handle = handle;
-        }
-        if (recovery) {
-            record.recovery = true;
-            record.recoveryTime = Date.now();
-        } else {
-            record.saved = true;
-            record.time = Date.now();
-        }
-        await S.put(record);
+        const record = await S.record(key);
+        await S.put(S.policy(5, {record : record, key : key, kind : kind, name : name, handle : handle, recovery : recovery}));
         return {ok : true};
-    }).then(value => S.answer(job, value), error => S.fail(job, error));
+    });
 });
+
 
 EM_JS(void, edi_storage_load, (int job, const char* key_utf8, int recovery, const char* root_utf8), {
     const S = globalThis.ediStorage;
@@ -430,71 +425,88 @@ EM_JS(void, edi_storage_load, (int job, const char* key_utf8, int recovery, cons
     const root = UTF8ToString(root_utf8);
     (async () => {
         const record = await S.record(key);
-        if (!record) {
-            throw new Error("this browser no longer keeps that project");
-        }
-        if (recovery || record.kind === "browser") {
-            const folder = await S.opfs([ "edi", recovery ? "recovery" : "projects", key ], false);
-            await S.copyIn(folder, root + "/" + record.name);
-            return {ok : true, key : key, kind : record.kind, name : record.name, path : root + "/" + record.name};
+        if (S.policy(6, {record : record, recovery : recovery})) {
+            const folder = await S.opfs(S.policy(7, {key : key, recovery : recovery}), false);
+            await S.copyIn(folder, S.policy(8, {root : root, name : record.name}));
+            return S.policy(17, {key : key, record : record, root : root});
         }
         const handle = await S.handle(key);
         if (!(await S.permitted(handle))) {
             throw new Error("the browser was not allowed to open " + handle.name);
         }
-        if (record.kind === "folder") {
-            S.loaded.set(key, new Set(await S.copyIn(handle, root + "/" + handle.name)));
-            return {ok : true, key : key, kind : "folder", name : handle.name, path : root + "/" + handle.name};
+        if (S.policy(16, {record : record})) {
+            S.policy(2, {key : key, paths : await S.copyIn(handle, S.policy(8, {root : root, name : handle.name}))});
+            return S.policy(18, {key : key, kind : "folder", handle : handle, root : root});
         }
         const file = await handle.getFile();
         FS.mkdirTree(root);
-        FS.writeFile(root + "/" + file.name, new Uint8Array(await file.arrayBuffer()));
-        return {ok : true, key : key, kind : "zip", name : file.name, path : root + "/" + file.name};
+        FS.writeFile(S.policy(8, {root : root, name : file.name}), new Uint8Array(await file.arrayBuffer()));
+        return S.policy(18, {key : key, kind : "zip", handle : file, root : root});
     })().then(value => S.answer(job, value), error => S.fail(job, error));
 });
+
 
 EM_JS(void, edi_storage_list, (int job), {
     const S = globalThis.ediStorage;
     S.store("readonly", store => store.getAll())
-        .then(records => {
-            const places = records.map(record => ({
-                key : record.key,
-                kind : record.kind,
-                name : record.name,
-                saved : !!record.saved,
-                time : record.time || 0,
-                recovery : !!record.recovery,
-                recoveryTime : record.recoveryTime || 0
-            }));
-            S.answer(job, {ok : true, places : places});
-        }, error => S.fail(job, error));
+        .then(records => S.answer(job, {ok : true, places : records.map(record => S.policy(11, {record : record}))}), error => S.fail(job, error));
 });
+
 
 EM_JS(void, edi_storage_drop, (int job, const char* key_utf8, int whole), {
     const S = globalThis.ediStorage;
     const key = UTF8ToString(key_utf8);
-    S.serial(key, async () => {
+    S.runs.set(job, async () => {
         const record = await S.record(key);
-        const parts = whole ? [ "recovery", "projects" ] : ["recovery"];
-        for (const part of parts) {
+        const removed = [];
+        for (const part of S.policy(10, {whole : whole})) {
             try {
                 await (await S.opfs([ "edi", part ], false)).removeEntry(key, {recursive : true});
             } catch (error) {
-                // Nothing kept there.
+                if (!S.missing(error)) {
+                    // Keep the original removal refusal; a proven earlier removal can still update its metadata.
+                    try {
+                        if (S.policy(20, {record : record, removed : removed})) await S.put(record);
+                    } finally {
+                        throw error;
+                    }
+                }
             }
+            removed.push(part);
         }
-        if (record) {
-            if (whole || !record.saved) {
-                await S.remove(key);
-            } else {
-                record.recovery = false;
-                await S.put(record);
-            }
+        const disposition = S.policy(9, {record : record, whole : whole});
+        if (disposition === "remove") {
+            await S.remove(key);
+        } else if (disposition === "put") {
+            await S.put(record);
         }
         S.handles.delete(key);
         return {ok : true};
-    }).then(value => S.answer(job, value), error => S.fail(job, error));
+    });
 });
+
+
+// One browser-realm primitive operation; native WebStorage selects every operand and policy step.
+EM_JS(emscripten::EM_VAL, edi_storage_add, (emscripten::EM_VAL left, emscripten::EM_VAL right), {
+    return Emval.toHandle(Emval.toValue(left) + Emval.toValue(right));
+});
+
+// Browser promise turns are scheduling/I/O adapters; WebStorage alone selects the next job for each place.
+EM_JS(void, edi_storage_resume, (int job), {
+    const S = globalThis.ediStorage;
+    const run = S.runs.get(job);
+    S.runs.delete(job);
+    const next = Promise.resolve().then(run);
+    // Queue liveness is independent of answer delivery, matching the original caught tail's microtask order.
+    next.then(() => Module._edi_storage_serial_finished(job), () => Module._edi_storage_serial_finished(job));
+    next.then(value => S.answer(job, value), error => S.fail(job, error));
+});
+
+extern "C" EMSCRIPTEN_KEEPALIVE emscripten::EM_VAL edi_storage_policy(int operation, emscripten::EM_VAL input) {
+    const auto value = emscripten::val::take_ownership(input);
+    return edi_app::WebStorage::policy(operation, value).release_ownership();
+}
+extern "C" EMSCRIPTEN_KEEPALIVE void edi_storage_serial_finished(int job) { edi_app::WebStorage::serialFinished(job); }
 
 extern "C" EMSCRIPTEN_KEEPALIVE void edi_storage_answered(int job, char* json) {
     const QString text = QString::fromUtf8(json);
@@ -585,6 +597,119 @@ void WebPlaceListModel::setPlaces(QList<Place> places) {
 }
 
 // ---- WebStorage ---------------------------------------------------------------------------------
+
+#if defined(Q_OS_WASM)
+namespace {
+using emscripten::val;
+QString storage_text(const val& value) { return QString::fromStdU16String(value.as<std::u16string>()); }
+val storage_add(const val& left, const val& right) { return val::take_ownership(edi_storage_add(left.as_handle(), right.as_handle())); }
+val storage_string(const QString& value) { return val(value.toStdU16String()); }
+QStringList storage_paths(const val& values) {
+    QStringList paths;
+    for (const val& value : values) { const auto path = storage_text(value); if (!paths.contains(path)) paths.append(path); }
+    return paths;
+}
+val storage_array(const QStringList& paths) {
+    val out = val::array(); unsigned index = 0; for (const QString& path : paths) out.set(index++, storage_string(path)); return out;
+}
+val storage_path(const val& root, const val& name) { const auto prefix = storage_add(root, val("/")); return storage_add(prefix, name); }
+val storage_result(const val& args, bool handle) {
+    val out = val::object(); out.set("ok", true); out.set("key", args["key"]);
+    out.set("kind", handle ? args["kind"] : args["record"]["kind"]);
+    out.set("name", handle ? args["handle"]["name"] : args["record"]["name"]);
+    out.set("path", storage_path(args["root"], handle ? args["handle"]["name"] : args["record"]["name"])); return out;
+}
+} // namespace
+
+emscripten::val WebStorage::policy(int operation, const emscripten::val& args) {
+    using emscripten::val;
+    if (operation == 0) {
+        const auto stamp = val::global("Date").call<val>("now").call<val>("toString", 36);
+        const auto prefix = storage_add(stamp, val("-"));
+        const auto suffix = val::global("Math").call<val>("random").call<val>("toString", 36).call<val>("slice", 2, 10);
+        return storage_add(prefix, suffix);
+    }
+    if (operation == 1) {
+        if (!args["handle"]["kind"].strictlyEquals(val("file")) || !args["name"].call<val>("toLowerCase").call<bool>("endsWith", ".edi")) return val::null();
+        return storage_path(args["category"], args["name"]);
+    }
+    if (operation == 2) { instance()->loaded_files_.insert(storage_text(args["key"]), storage_paths(args["paths"])); return val::undefined(); }
+    if (operation == 3) {
+        const auto written = storage_paths(args["paths"]); QStringList obsolete;
+        for (const QString& path : instance()->loaded_files_.value(storage_text(args["key"]))) if (!written.contains(path)) obsolete.append(path);
+        return storage_array(obsolete);
+    }
+    if (operation == 4) {
+        const auto kept = storage_paths(args["paths"]); const val entries = args["entries"]; val removed = val::array(); unsigned next = 0;
+        std::uint32_t remaining = entries["length"].as<std::uint32_t>();
+        while (remaining > 0) {
+            const val entry = entries[--remaining]; const QString path = storage_text(entry[0]); bool used = false;
+            if (entry[1].strictlyEquals(val("directory"))) { const auto prefix = path + QStringLiteral("/"); used = std::any_of(kept.begin(), kept.end(), [&](const QString& file) { return file.startsWith(prefix); }); }
+            else used = kept.contains(path);
+            if (!used) removed.set(next++, entry[0]);
+        } return removed;
+    }
+    if (operation == 5) {
+        val record = args["record"];
+        if (!record) { record = val::object(); record.set("key", args["key"]); record.set("kind", args["kind"]); record.set("name", args["name"]); record.set("saved", false); }
+        record.set("kind", args["kind"]); record.set("name", args["name"]);
+        if (!(!args["handle"])) record.set("handle", args["handle"]);
+        if (!(!args["recovery"])) { record.set("recovery", true); record.set("recoveryTime", val::global("Date").call<val>("now")); }
+        else { record.set("saved", true); record.set("time", val::global("Date").call<val>("now")); }
+        return record;
+    }
+    if (operation == 6) {
+        const val record = args["record"];
+        if (!record) val::global("Error").new_("this browser no longer keeps that project").throw_();
+        return val(!(!args["recovery"]) || record["kind"].strictlyEquals(val("browser")));
+    }
+    if (operation == 7) { val out = val::array(); out.set(0, "edi"); out.set(1, !(!args["recovery"]) ? "recovery" : "projects"); out.set(2, args["key"]); return out; }
+    if (operation == 8) return storage_path(args["root"], args["name"]);
+    if (operation == 9) {
+        val record = args["record"]; if (!record) return val("none");
+        if (!(!args["whole"]) || !record["saved"]) return val("remove");
+        record.set("recovery", false); return val("put");
+    }
+    if (operation == 10) { val out = val::array(); out.set(0, "recovery"); if (!(!args["whole"])) out.set(1, "projects"); return out; }
+    if (operation == 11) {
+        const val record = args["record"]; val place = val::object();
+        place.set("key", record["key"]); place.set("kind", record["kind"]); place.set("name", record["name"]); place.set("saved", !(!record["saved"]));
+        const val time = record["time"]; place.set("time", !time ? val(0) : time); place.set("recovery", !(!record["recovery"]));
+        const val recovery = record["recoveryTime"]; place.set("recoveryTime", !recovery ? val(0) : recovery); return place;
+    }
+    if (operation == 12) {
+        val record = val::object(); record.set("key", args["key"]); record.set("kind", args["kind"]); record.set("name", args["name"]); record.set("handle", args["handle"]); record.set("saved", true); record.set("time", val::global("Date").call<val>("now")); return record;
+    }
+    if (operation == 13) return storage_array({QStringLiteral("analysis/analysis.edi")});
+    if (operation == 14) return storage_array({QStringLiteral("structures"), QStringLiteral("experiments")});
+    if (operation == 15) {
+        if (!(!args["recovery"]) || args["kind"].strictlyEquals(val("browser"))) return val("browser");
+        return val(args["kind"].strictlyEquals(val("folder")) ? "folder" : "zip");
+    }
+    if (operation == 16) return val(args["record"]["kind"].strictlyEquals(val("folder")));
+    if (operation == 17) return storage_result(args, false);
+    if (operation == 18) return storage_result(args, true);
+    if (operation == 20) {
+        val record = args["record"];
+        if (!record || !record["recovery"]) return val(false);
+        for (const val& part : args["removed"]) if (part.strictlyEquals(val("recovery"))) { record.set("recovery", false); return val(true); }
+        return val(false);
+    }
+    return val::undefined();
+}
+
+void WebStorage::queueSerial(int job, const QString& key) {
+    const auto encoded = key.toUtf8(); const auto transportKey = QString::fromUtf8(encoded.constData());
+    auto& queue = serial_jobs_[transportKey]; const bool first = queue.isEmpty(); queue.append(job); if (first) edi_storage_resume(job);
+}
+void WebStorage::serialFinished(int job) {
+    const QPointer<WebStorage> storage = the_instance(); if (storage.isNull()) return;
+    for (auto it = storage->serial_jobs_.begin(); it != storage->serial_jobs_.end(); ++it) {
+        if (it->isEmpty() || it->front() != job) continue;
+        it->removeFirst(); if (it->isEmpty()) storage->serial_jobs_.erase(it); else edi_storage_resume(it->front()); return;
+    }
+}
+#endif
 
 WebStorage::WebStorage(QObject* parent) : QObject(parent), places_(new WebPlaceListModel(this)) {
 #if defined(Q_OS_WASM)
@@ -740,6 +865,7 @@ void WebStorage::write(const QString& key, const QString& kind, const QString& n
     }
     edi_storage_write(job, key.toUtf8().constData(), kind.toUtf8().constData(), name.toUtf8().constData(),
                       recovery ? 1 : 0);
+    queueSerial(job, key);
 #else
     Q_UNUSED(key);
     Q_UNUSED(kind);
@@ -763,7 +889,9 @@ void WebStorage::load(const QString& key, bool recovery, const QString& root, An
 
 void WebStorage::dropRecovery(const QString& key) {
 #if defined(Q_OS_WASM)
-    edi_storage_drop(begin(Reply([this](const QString&) { refresh(); })), key.toUtf8().constData(), 0);
+    const int job = begin(Reply([this](const QString&) { refresh(); }));
+    edi_storage_drop(job, key.toUtf8().constData(), 0);
+    queueSerial(job, key);
 #else
     Q_UNUSED(key);
 #endif
@@ -771,7 +899,9 @@ void WebStorage::dropRecovery(const QString& key) {
 
 void WebStorage::forget(const QString& key) {
 #if defined(Q_OS_WASM)
-    edi_storage_drop(begin(Reply([this](const QString&) { refresh(); })), key.toUtf8().constData(), 1);
+    const int job = begin(Reply([this](const QString&) { refresh(); }));
+    edi_storage_drop(job, key.toUtf8().constData(), 1);
+    queueSerial(job, key);
 #else
     Q_UNUSED(key);
 #endif
