@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from tests.integration.py.test_example_catalogue import APP_ONLY, SELECTED, page_cases, selected
+from tests.integration.py.test_example_catalogue import SELECTED, page_cases, selected
 
 ROOT = Path(__file__).resolve().parents[3]
 CHECKER = 'tools/checks/example_catalogue.py'
@@ -179,12 +179,8 @@ def test_owner_selection_rejects_coordinated_consumer_changes(tmp_path, change):
     by_id = {row['id']: row for row in record['projects']}
     for row in record['projects']:
         row.pop('user-facing', None)
-    fixtures = [row for row in record['projects'] if row['id'] not in expected + APP_ONLY]
-    record['projects'] = (
-        fixtures
-        + [{**by_id[case], 'user-facing': True} for case in expected]
-        + [by_id[case] for case in APP_ONLY]
-    )
+    fixtures = [row for row in record['projects'] if row['id'] not in expected]
+    record['projects'] = fixtures + [{**by_id[case], 'user-facing': True} for case in expected]
     text = 'schema: 1\nprojects:\n'
     for row in record['projects']:
         text += f'  - id: {row["id"]}\n'
@@ -242,12 +238,12 @@ def test_owner_selection_rejects_coordinated_consumer_changes(tmp_path, change):
     )
     assert generated.returncode == 0, 'The mutation must regenerate the real app metadata'
     views = read_selection(root)
-    assert all(
-        view == expected + (APP_ONLY if name == 'metadata' else []) for name, view in views.items()
-    ), 'The coordinated control reaches each catalogue reader and retains the app-only tail'
-    assert all(
-        view != SELECTED + (APP_ONLY if name == 'metadata' else []) for name, view in views.items()
-    ), 'Agreement between consumers must not hide deletion, substitution or reordering'
+    assert all(view == expected for view in views.values()), (
+        'The coordinated control must reach every independent selection reader'
+    )
+    assert all(view != SELECTED for view in views.values()), (
+        'Agreement between consumers must not hide deletion, substitution or reordering'
+    )
 
 
 def test_actual_cmake_configuration_emits_the_owner_selected_index(tmp_path):
@@ -275,10 +271,8 @@ def test_actual_cmake_configuration_emits_the_owner_selected_index(tmp_path):
         timeout=20,
     )
     assert result.returncode == 0, 'The actual example bundle configuration must succeed'
-    assert (
-        tmp_path / 'build/app/examples/index.txt'
-    ).read_text().splitlines() == SELECTED + APP_ONLY, (
-        'The built app index preserves the catalogue order followed by the declared app-only ids'
+    assert (tmp_path / 'build/app/examples/index.txt').read_text().splitlines() == SELECTED, (
+        'The built app index must preserve the owner selection and order'
     )
 
 
