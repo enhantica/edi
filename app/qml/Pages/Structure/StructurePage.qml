@@ -75,6 +75,7 @@ WorkflowPage {
             Repeater {
                 model: page.structure ? page.structure.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.structure ? page.structure.text : null
                     shownTier: "Basic"
                     contents: page.contents
                 }
@@ -86,6 +87,7 @@ WorkflowPage {
             Repeater {
                 model: page.structure ? page.structure.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.structure ? page.structure.text : null
                     shownTier: "Extras"
                     contents: page.contents
                 }

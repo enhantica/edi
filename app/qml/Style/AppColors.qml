@@ -16,6 +16,14 @@ QtObject {
     // The hover highlight of a clickable status-bar item: the foreground at a tenth.
     readonly property color hoverHighlight: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.1)
 
+    // The Text tab's `.edi` colours, as easydiffraction's coloured CIF (the owner, 2026-10-25): datablock names
+    // orange, item names blue, a loop's column names green and `loop_` grey, each at least 4.5:1 on the text view's
+    // background in its theme.
+    readonly property color textDatablock: EaStyle.Colors.isDarkPalette ? "#F2A65A" : "#B3540B"
+    readonly property color textItem: EaStyle.Colors.isDarkPalette ? "#79AEF2" : "#1C5DB8"
+    readonly property color textLoopColumn: EaStyle.Colors.isDarkPalette ? "#82C886" : "#2B7A30"
+    readonly property color textLoop: EaStyle.Colors.isDarkPalette ? "#A6A6A6" : "#6E6E6E"
+
     // A structure's colour by its place among the project's, from the colour scheme's structure colours (edi ADR-0038):
     // the first ones in order, or past five a gradient along the order.
     function structure(index) {

@@ -185,6 +185,12 @@ crysta::Cell to_completed_crysta_cell(const Cell& c, const crysta::CellFreedom& 
 // the symmetry-COMPLETED cell (fork 2's contract, above): this is the single edi→engine conversion
 // choke point, so every consumer — calculate, fit, fit_joint —
 // crosses the boundary with a cell that satisfies the model's own space-group ties.
+// One `_structure_view` item of a structure, absent while the view has not set it.
+std::optional<std::string> view_item(const Structure& s, const char* name) {
+    const auto found = s.view.find(name);
+    return found != s.view.end() ? std::optional<std::string>(found->second) : std::nullopt;
+}
+
 crysta::Structure to_crysta_structure(const Structure& s) {
     crysta::SpaceGroup space_group = resolve_group(s);
     const crysta::CellFreedom freedom = crysta::cell_freedom(space_group);
@@ -197,6 +203,14 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                  // A calculation of this structure (a fit's quality) reads the declared
                                  // scattering lengths from it, as the fit reads them from select_scattering.
                                  built.scattering_lengths_fm = s.scattering_lengths_fm;
+                                 // How the view shows it, saved with it: each item crysta's category has.
+                                 using View = crysta::StructureViewCategory;
+                                 std::apply(
+                                     [&](auto... column) {
+                                         std::size_t index = 0;
+                                         ((built.*column = view_item(s, View::items[index++])), ...);
+                                     },
+                                     View::columns);
                                  // The bond cutoffs cross presence-faithfully, so crysta's
                                  // writer saves a declared `_geom` and no other.
                                  built.geom.min_bond_distance_cutoff =

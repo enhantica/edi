@@ -984,6 +984,12 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         }
         structure.scattering_lengths_fm = std::move(declared);
     }
+    // How the Structure view shows it, as saved.
+    for (const auto& [tag, value] : block.items) {
+        if (tag.starts_with("_structure_view.")) {
+            structure.view[tag.substr(std::string_view("_structure_view.").size())] = value;
+        }
+    }
     return structure;
 }
 
@@ -3717,6 +3723,8 @@ std::vector<std::string> registered_peak_types() {
 // `whole` holds the loader's rules for a project as a whole: one structure or more, one experiment or more, each
 // declaring what it computes over and linking structures the project holds. A save's readback lifts them, since a save
 // writes a project still being built too, and its values must still be adopted (edi ADR-0052).
+std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
+
 static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
@@ -4430,6 +4438,31 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         throw IoError("project.edi declares " + tag +
                                       " more than once: " + record_where);
                     }
+                    // A long description is a semicolon text field after its tag, as crysta writes it (crysta's
+                    // ADR on display metadata, item 12): a line break inside a paragraph is a space, and an empty
+                    // line a paragraph break.
+                    if (line.find_first_not_of(" \t\r", tag.size()) == std::string::npos) {
+                        std::string opening;
+                        if (std::getline(record_lines, opening) && opening.starts_with(';')) {
+                            std::vector<std::string> field;
+                            field.push_back(opening.substr(1));
+                            bool closed = false;
+                            for (std::string next; std::getline(record_lines, next);) {
+                                if (next.starts_with(';')) {
+                                    closed = true;
+                                    break;
+                                }
+                                field.push_back(next);
+                            }
+                            if (!closed) {
+                                throw IoError("project.edi " + tag + " has an unterminated text field: " +
+                                              record_where);
+                            }
+                            restored.emplace(tag, text_field_paragraphs(field));
+                            break;
+                        }
+                        throw IoError("project.edi " + tag + " has no value: " + record_where);
+                    }
                     restored.emplace(tag, lexical_value(line, tag.size(), tag));
                     break;
                 }
@@ -4612,6 +4645,28 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // dependent saved with its s.u.).
     refresh_relations(project, warn, true);
     return project;
+}
+
+// A semicolon text field's lines as one text: a line break inside a paragraph is a space, an empty line a
+// paragraph break (crysta's ADR on display metadata, item 12).
+std::string text_field_paragraphs(const std::vector<std::string>& lines) {
+    std::string text;
+    std::size_t breaks = 0;
+    for (std::string line : lines) {
+        while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) {
+            line.pop_back();
+        }
+        if (line.empty()) {
+            breaks += text.empty() ? 0 : 1;
+            continue;
+        }
+        if (!text.empty()) {
+            text += breaks > 0 ? std::string(breaks, '\n') : std::string(" ");
+        }
+        breaks = 0;
+        text += line;
+    }
+    return text;
 }
 
 Project load_project(const std::string& path, const WarningSink& on_warning) {
@@ -5244,6 +5299,31 @@ class ScratchSave {
         return fs::is_regular_file(path) ? read_file(path.string()) : std::string();
     }
 
+    // The saved project with the file at `relative` holding `text`, read back as an open reads it. The
+    // report's settings file may be one the save did not write, as the project stated none yet.
+    Project load_with(const std::string& relative, const std::string& text, const WarningSink& on_warning) const {
+        const fs::path path = root_ / "project" / relative;
+        fs::create_directories(path.parent_path());
+        std::ofstream(path, std::ios::binary | std::ios::trunc) << text;
+        // A refusal or a warning names the project's own file, never the scratch folder.
+        const std::string folder = (root_ / "project").string() + "/";
+        const auto local = [&folder](std::string message) {
+            for (std::size_t at = message.find(folder); at != std::string::npos; at = message.find(folder, at)) {
+                message.erase(at, folder.size());
+            }
+            return message;
+        };
+        try {
+            return load_project((root_ / "project").string(), [&on_warning, &local](const std::string& warning) {
+                if (on_warning) {
+                    on_warning(local(warning));
+                }
+            });
+        } catch (const std::exception& refusal) {
+            throw IoError(local(refusal.what()));
+        }
+    }
+
    private:
     fs::path root_;
 };
@@ -5276,6 +5356,29 @@ std::string block_edi_text(const Project& project, BlockKind kind, const std::st
         case BlockKind::ANALYSIS: break;
     }
     return save.text("analysis/analysis.edi");
+}
+
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const WarningSink& on_warning) {
+    const std::vector<std::string> files = saved_file_order(project);
+    if (std::find(files.begin(), files.end(), relative) == files.end()) {
+        throw IoError("the project has no file " + relative);
+    }
+    const ScratchSave save(project);
+    Project read = save.load_with(relative, text, on_warning);
+    // The copy lives where the project does, so a later save writes back to it, and keeps what the scratch save
+    // stamped: the project's record is the project's unless the edit is of it, and its times always are.
+    read.path = project.path;
+    read.scan_data_root = project.scan_data_root;
+    if (relative != "project.edi") {
+        read.metadata = project.metadata;
+    } else {
+        read.metadata.path = project.metadata.path;
+        read.metadata.created = project.metadata.created;
+        read.metadata.last_modified = project.metadata.last_modified;
+        read.metadata.timestamp = project.metadata.timestamp;
+    }
+    return read;
 }
 
 std::vector<std::pair<std::string, std::string>> project_edi_files(const Project& project) {

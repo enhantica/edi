@@ -664,8 +664,8 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             }
         }
     }
-    // The Structure page's tables, the current structure's row marked, in both themes. Run only when asked
-    // (`--demo-only tables-`).
+    // The Structure, Report and Experiment pages' tables, the current structure's row marked, in both themes. Run only
+    // when asked (`--demo-only tables-`).
     if (only.startsWith(QLatin1String("tables-"))) {
         steps_.push_back({"tables-1-structure-light",
                           QStringList{"resize:1280x960", "theme:light"} + start + open_example("pd-neut-tof_ferrite-austenite-beer")
@@ -674,6 +674,79 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"tables-3-report-dark", {"appBar.tab.report"}});
         steps_.push_back({"tables-4-report-light", {"theme:light"}});
         steps_.push_back({"tables-5-report-again", {"theme:light"}});
+        // The Experiment page's measured data and background tables.
+        steps_.push_back({"tables-6-data-light", {"appBar.tab.experiment", extras, "expand:group.data"}});
+        steps_.push_back({"tables-7-data-dark", {"theme:dark"}});
+        steps_.push_back({"tables-8-background-dark", {"expand:group.background"}});
+        steps_.push_back({"tables-9-background-light", {"theme:light"}});
+    }
+    // The tables of two constant-wavelength examples, in both themes: measured data and background points on the
+    // Experiment page, the experiments, the Analysis parameters and the atom sites. Run only when asked
+    // (`--demo-only tablecheck-`).
+    if (only.startsWith(QLatin1String("tablecheck-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        int n = 0;
+        const auto name = [&n](const QString& what) {
+            return QStringLiteral("tablecheck-%1-%2").arg(++n, 2, 10, QLatin1Char('0')).arg(what);
+        };
+        for (const QString& id : {QStringLiteral("pd-neut-cwl_y2o3-spodi"), QStringLiteral("pd-neut-cwl_lbco-hrpt")}) {
+            const QString sample = id.section(QLatin1Char('_'), 1, 1).section(QLatin1Char('-'), 0, 0);
+            steps_.push_back({name(sample + "-data-light"), QStringList{"resize:1280x960", "theme:light"} + start +
+                                                                 open_example(id) +
+                                                                 QStringList{experiment, extras, "expand:group.data"}});
+            steps_.push_back({name(sample + "-data-dark"), {"theme:dark"}});
+            steps_.push_back({name(sample + "-background-dark"), {basic, "expand:group.background"}});
+            steps_.push_back({name(sample + "-background-light"), {"theme:light"}});
+            steps_.push_back({name(sample + "-experiments-light"), {"expand:group.experiments"}});
+            steps_.push_back({name(sample + "-parameters-light"), {analysis, basic, "expand:group.parameters"}});
+            steps_.push_back({name(sample + "-parameters-dark"), {"theme:dark"}});
+            steps_.push_back({name(sample + "-atom-sites-dark"), {"appBar.tab.structure", basic, "expand:group.atom_site"}});
+            steps_.push_back({name(sample + "-atom-sites-light"), {"theme:light"}});
+        }
+    }
+    // Every table of the app in the light theme, on an example that fills it, each image named after its table (the
+    // owner, 2026-10-27). Run only when asked (`--demo-only tableshots-`).
+    if (only.startsWith(QLatin1String("tableshots-"))) {
+        const QString experiment = QStringLiteral("appBar.tab.experiment");
+        const QString structure = QStringLiteral("appBar.tab.structure");
+        const auto shot = [this](const QString& table, const QStringList& actions) {
+            steps_.push_back({QStringLiteral("tableshots-") + table, actions});
+        };
+        shot("examples", QStringList{"resize:1280x960", "theme:light"} + start);
+        shot("structures", start + open_example("pd-neut-tof_ferrite-austenite-beer") +
+                               QStringList{structure, basic, "expand:group.structures"});
+        shot("linked-structures", {experiment, basic, "expand:group.linked_structure"});
+        shot("measured-data-two-structures", {extras, "expand:group.data"});
+        shot("recent-projects", {"appBar.tab.project", basic, "expand:group.recentProjects"});
+        shot("atom-sites", start + open_example("pd-neut-cwl_y2o3-spodi") + QStringList{structure, basic, "expand:group.atom_site"});
+        shot("atomic-displacements", {"expand:group.atom_site_aniso"});
+        shot("measured-data", {experiment, extras, "expand:group.data"});
+        shot("measured-data-wide-window", {"resize:1920x1080"});
+        shot("measured-data-small-window", {"resize:1100x760"});
+        shot("background-points", {"resize:1280x960", basic, "expand:group.background"});
+        shot("parameters", {analysis, basic, "expand:group.parameters"});
+        shot("measured-data-lbco", start + open_example("pd-neut-cwl_lbco-hrpt") + QStringList{experiment, extras, "expand:group.data"});
+        shot("background-points-lbco", {basic, "expand:group.background"});
+        shot("excluded-regions", {"expand:group.excluded_region"});
+        shot("experiments", start + open_example("pd-neut-tof_ncaf-wish") + QStringList{experiment, basic, "expand:group.experiments"});
+        shot("joint-fit", {analysis, extras, "expand:group.joint_fit"});
+        shot("background-terms", start + open_example("pd-neut-tof_cecoal-polaris") +
+                                     QStringList{experiment, basic, "expand:group.background"});
+        shot("aliases", start + open_example("pd-neut-cwl_cosio-d20") + QStringList{analysis, extras, "expand:group.alias"});
+        shot("constraints", {"expand:group.constraint"});
+        shot("single-crystal-reflections", start + open_example("sc-neut-tof_taurine-senju") +
+                                               QStringList{experiment, extras, "expand:group.refln"});
+        shot("scattering-lengths", open_cli_project("pd-neut-cwl_lab6-11b-echidna_basic") +
+                                       QStringList{structure, extras, "expand:group.scattering_length"});
+        shot("preferred-orientation", open_cli_project("pd-neut-cwl_lbco-hrpt_start-2") +
+                                          QStringList{experiment, extras, "expand:group.preferred_orientation"});
+        shot("reflections", start + open_example("pd-neut-cwl_lbco-hrpt") +
+                                QStringList{experiment, extras, "expand:group.refln"});
+        shot("fit-results", start + open_example("pd-neut-cwl_lbco-hrpt") +
+                                QStringList{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"});
+        // A scan's window keeps changing while its datasets load, so its step is captured unsettled.
+        shot("sequential-extract", start + open_example("pd-neut-cwl_cosio-d20_scan") +
+                                       QStringList{analysis, extras, "expand:group.sequential_fit_extract", "capture-now"});
     }
     // Each structure's curve: the Analysis chart with the toolbar's switch on, in both themes, and the Experiment page's
     // data table with a column per structure. Run only when asked (`--demo-only curves-`).
@@ -709,6 +782,40 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"latp-3-curves-on", {"chart.toolbar.structureCurves"}});
         steps_.push_back({"latp-4-curves-off", {"chart.toolbar.structureCurves"}});
         steps_.push_back({"latp-5-reset", {"chart.toolbar.reset"}});
+    }
+    // The Text tab on LBCO's structure, Editable and Everything, in both themes. Run only when asked
+    // (`--demo-only texttab-`).
+    if (only.startsWith(QLatin1String("texttab-"))) {
+        steps_.push_back({"texttab-1-editable-light", QStringList{"resize:1280x960", "theme:light"} + start +
+                                                          open_example("pd-neut-cwl_lbco-hrpt") +
+                                                          QStringList{"appBar.tab.structure", text}});
+        steps_.push_back({"texttab-2-editable-dark", {"theme:dark"}});
+        steps_.push_back({"texttab-3-everything-dark", {"text.show", "choose:Everything"}});
+        steps_.push_back({"texttab-4-everything-light", {"theme:light"}});
+        steps_.push_back({"texttab-5-editable-again", {"text.show", "choose:Editable"}});
+        // An edit not yet applied: the check button turns red.
+        steps_.push_back({"texttab-6-edited-light", {"text.view", "type: "}});
+        steps_.push_back({"texttab-7-edited-dark", {"theme:dark"}});
+    }
+    // Each page's Text tab at the supported minimum window size. Run only when asked (`--demo-only textmin-`).
+    if (only.startsWith(QLatin1String("textmin-"))) {
+        steps_.push_back({"textmin-1-project", QStringList{"resize:1024x640", "theme:light"} + start +
+                                                   open_example("pd-neut-cwl_lbco-hrpt") +
+                                                   QStringList{"appBar.tab.project", text}});
+        steps_.push_back({"textmin-2-structure", {"appBar.tab.structure", text}});
+        steps_.push_back({"textmin-3-experiment", {"appBar.tab.experiment", text}});
+        steps_.push_back({"textmin-4-analysis", {"appBar.tab.analysis", text}});
+        steps_.push_back({"textmin-5-report", {"appBar.tab.report", text}});
+    }
+    // The excluded ranges on Stacked and the Map, shown and hidden (the owner, 2026-10-27): NCAF's five banks. Run only
+    // when asked (`--demo-only excluded-`).
+    if (only.startsWith(QLatin1String("excluded-"))) {
+        steps_.push_back({"excluded-1-stacked-shown", QStringList{"resize:1280x960", "theme:light"} + start +
+                                                          open_example("pd-neut-tof_ncaf-wish") +
+                                                          QStringList{"appBar.tab.experiment", "mainArea.experiment.tab.stacked"}});
+        steps_.push_back({"excluded-2-stacked-hidden", {"scanView.stacked.toolbar.includedRange"}});
+        steps_.push_back({"excluded-3-map-hidden", {"mainArea.experiment.tab.map"}});
+        steps_.push_back({"excluded-4-map-shown", {"scanView.map.toolbar.includedRange"}});
     }
     // The owner's stray structure fill: ncaf's five banks, one structure, on log and square-root y with each
     // structure's curve off, then on and off again. Run only when asked (`--demo-only ncaf-`).
@@ -1562,8 +1669,15 @@ void DemoDriver::settle_then(std::function<void()> next) {
         auto* session = engine ? engine->singletonInstance<Session*>("edi.app", "Session") : nullptr;
         const bool calculating =
             session != nullptr && session->project() != nullptr && session->project()->calculating();
+        // A page still being made after a project opened keeps its tab disabled, which no frame shows.
+        bool preparing = false;
+        for (const QString& tab : {QStringLiteral("appBar.tab.structure"), QStringLiteral("appBar.tab.experiment"),
+                                   QStringLiteral("appBar.tab.analysis"), QStringLiteral("appBar.tab.report")}) {
+            const QQuickItem* item = find(tab, false);
+            preparing = preparing || (item != nullptr && item->property("preparing").toBool());
+        }
         const QImage frame = window_.grabWindow();
-        if (!calculating && !previous_frame_.isNull() && frame == previous_frame_) {
+        if (!calculating && !preparing && !previous_frame_.isNull() && frame == previous_frame_) {
             next();
             return;
         }

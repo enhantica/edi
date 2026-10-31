@@ -27,7 +27,7 @@ Column {
         defaultInfoText: qsTr("No aliases")
         sourceModel: group.aliases
 
-        columnWidths: [numberColumnWidth, textColumnWidth("id", Session.label("alias.id")), -1, AppSizes.iconColumnWidth]
+        columns: [numberColumnWidth, -1, -1, AppSizes.iconColumnWidth]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -64,12 +64,8 @@ Column {
                 onCommitted: text => group.aliases.setText(row.index, "id", text)
             }
             // The base's table combo box (TableViewComboBox), searchable: a project has many parameters.
-            Item {
-                property int horizontalAlignment: Text.AlignLeft
-                height: parent.height
+            ComboCell {
                 SearchableComboBox {
-                    width: Math.min(parent.width, implicitWidth)
-                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
                     inTable: true
                     horizontalAlignment: Text.AlignLeft
                     objectName: `alias.parameter.${row.index}`

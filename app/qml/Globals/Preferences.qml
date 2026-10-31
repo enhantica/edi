@@ -82,6 +82,7 @@ QtObject {
         preferences.singleCrystalQuantity = "f_squared";
         preferences.chartHighlightSelected = true;
         preferences.chartHiddenRange = "keep";
+        preferences.textShow = "editable";
     }
 
     property Settings settings: Settings {
@@ -158,6 +159,16 @@ QtObject {
     // A curve hidden by a click on a pattern chart's legend (the owner, 2026-10-25): "keep" the y range as it is, every
     // fit counting the hidden curve, or "fit" it once to the curves still shown, later fits counting only those.
     property string chartHiddenRange: "keep"
+
+    // What every page's Text tab shows (the owner, 2026-10-27): "editable", the categories the user sets, or
+    // "everything", the measured data and the program's output too, read-only. One setting for every Text tab.
+    property string textShow: "editable"
+
+    property Settings textSettings: Settings {
+        location: EaGlobals.Vars.settingsFile
+        category: "TextTab"
+        property alias show: preferences.textShow
+    }
 
     property Settings chartSettings: Settings {
         location: EaGlobals.Vars.settingsFile

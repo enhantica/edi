@@ -109,4 +109,43 @@ void StructureViewOptions::cycleAtoms(bool hasCopies) {
     }
 }
 
+std::map<std::string, std::string> StructureViewOptions::toView() const {
+    const auto flag = [](bool on) { return std::string(on ? "true" : "false"); };
+    return {{"atom_view", atomView().toStdString()},
+            {"colour_scheme", colorScheme().toStdString()},
+            {"atom_scale", QString::number(options_.atom_scale, 'g', 6).toStdString()},
+            {"adp_probability", QString::number(options_.adp_probability, 'g', 6).toStdString()},
+            {"labels", flag(options_.labels)},
+            {"atoms", atoms().toStdString()},
+            {"bonds", flag(options_.bonds)},
+            {"cell", flag(options_.cell)},
+            {"axes", flag(options_.axes)}};
+}
+
+void StructureViewOptions::setFromView(const std::map<std::string, std::string>& view) {
+    const edi::SceneOptions defaults;
+    const auto text = [&view](const char* name) {
+        const auto found = view.find(name);
+        return found != view.end() ? QString::fromStdString(found->second) : QString();
+    };
+    const auto flag = [&text](const char* name, bool fallback) {
+        const QString value = text(name);
+        return value == QLatin1String("true") ? true : value == QLatin1String("false") ? false : fallback;
+    };
+    const auto number = [&text](const char* name, double fallback) {
+        bool ok = false;
+        const double value = text(name).toDouble(&ok);
+        return ok ? value : fallback;
+    };
+    setAtomView(text("atom_view").isEmpty() ? QStringLiteral("covalent") : text("atom_view"));
+    setColorScheme(text("colour_scheme").isEmpty() ? QStringLiteral("jmol") : text("colour_scheme"));
+    setAtomScale(number("atom_scale", defaults.atom_scale));
+    setAdpProbability(number("adp_probability", defaults.adp_probability));
+    setShowLabels(flag("labels", defaults.labels));
+    setAtoms(text("atoms").isEmpty() ? QStringLiteral("all") : text("atoms"));
+    setBonds(flag("bonds", defaults.bonds));
+    setCell(flag("cell", defaults.cell));
+    setAxes(flag("axes", defaults.axes));
+}
+
 }  // namespace edi_app

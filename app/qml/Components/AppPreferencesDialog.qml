@@ -221,7 +221,7 @@ AppDialog {
             }
         }
 
-        // Appearance: the theme, the colour scheme, the sidebar's side and auto collapse; no 1D plotting row.
+        // Appearance: the theme, the colour scheme, the sidebar's side and whether one sidebar group is open at a time; no 1D plotting row.
         RowGrid {
             RowLabel {
                 id: themeLabel
@@ -317,13 +317,26 @@ AppDialog {
             }
 
             RowLabel {
-                text: qsTr("Auto collapse") + ":"
+                text: qsTr("One sidebar group open at a time") + ":"
             }
             RowCheckBox {
                 objectName: "preferences.autoCollapse"
                 checked: Preferences.autoCollapse
                 onToggled: Preferences.autoCollapse = checked
-                ToolTip.text: qsTr("Auto collapse for side bar groups")
+                ToolTip.text: qsTr("Opening a group in the sidebar closes the other open groups")
+            }
+
+            RowLabel {
+                text: qsTr("Text tab shows") + ":"
+            }
+            RowBox {
+                readonly property list<string> choices: ["editable", "everything"]
+
+                objectName: "preferences.textShow"
+                model: [qsTr("Editable"), qsTr("Everything")]
+                currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
+                onActivated: index => Preferences.textShow = choices[index]
+                ToolTip.text: qsTr("What every Text tab shows: the categories you can edit, or also the measured data and results, read-only")
             }
         }
 

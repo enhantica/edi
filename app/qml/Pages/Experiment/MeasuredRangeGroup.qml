@@ -88,7 +88,10 @@ Column {
         // Each structure's curve, one column per structure at the end of the row. A Repeater places its cells before
         // itself, so the Repeater, declared last, takes the last width, kept narrow.
         readonly property var componentNames: group.experiment ? group.experiment.pattern.componentNames : []
-        columnWidths: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
+        columns: [numberColumnWidth, -1, -1, -1, -1, -1, -1, -1, -1].concat(componentNames.map(() => -1)).concat([0.001])
+        // A layout of its own (the owner, 2026-10-27): the count, the status and the structures' columns fit their
+        // content, and the other numeric columns share the rest equally after their own widths.
+        spreadColumns: [1, 2, 3, 4, 5, 6, 7]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -190,8 +193,11 @@ Column {
                 ring: status === "pending"
                 toolTip: status === "incl" ? Session.optionLabel("data.calc_status", "incl") : status === "excl" ? Session.optionLabel("data.calc_status", "excl") : status === "pending" ? qsTr("Pending") : status === "failed" ? qsTr("Failed") : ""
             }
+            // One cell per structure on every row, an empty one where the point has no curve (an excluded point, or
+            // before a calculation): the base centres a row's cells, so a row with fewer would sit apart from the
+            // header.
             Repeater {
-                model: row.model.componentIntensities
+                model: table.componentNames.map((name, i) => (row.model.componentIntensities ?? [])[i] ?? NaN)
                 delegate: EaComponents.ListViewLabel {
                     required property var modelData
                     horizontalAlignment: Text.AlignHCenter

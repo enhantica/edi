@@ -139,6 +139,9 @@ class ScanLayer : public QQuickPaintedItem {
     Q_INVOKABLE QColor colourOf(int dataset) const;
     // A line's colour faded to `faded` over the background, opaque.
     QColor fadedColour(const QColor& colour) const;
+    // A stacked line's colour, with `top` the highlighted dataset (-1 for none).
+    QColor lineColour(int dataset, int top) const;
+    QColor blendedColour(const QColor& colour, double keep) const;
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     int coloursRevision() const { return colours_revision_; }
@@ -212,6 +215,8 @@ class ScanLayer : public QQuickPaintedItem {
     struct Reduction {
         std::uint64_t generation = 0;  // the dataset's ScanViewModel::Pattern::generation it was made from; 0: none
         std::vector<float> x, v;
+        // Stacked, with the excluded ranges shown: the trace's stretches inside them, drawn dimmed (x, v as above).
+        std::vector<float> excluded_x, excluded_v;
     };
     bool lines_on_gpu() const { return gpu_ && mode_ == QLatin1String("stacked"); }
     // Asks for this frame's drawing: the reductions and the GPU lines at the polish, the painting after it.

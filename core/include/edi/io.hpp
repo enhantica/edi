@@ -106,6 +106,11 @@ std::string entity_path(const std::string& directory, const std::string& kind,
 // Every file a save writes, in the loader's read order (project, structures, experiments,
 // analysis), each as its path relative to the project directory and its text.
 std::vector<std::pair<std::string, std::string>> project_edi_files(const Project& project);
+// A Text tab's edit read as opening a project reads it (edi ADR-0017 §7): the project saved to a scratch
+// folder, its file at `relative` replaced by `text`, and the folder loaded, every check of an open run on it.
+// The project is not touched; the copy keeps its path. Throws the loader's refusal.
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const WarningSink& on_warning = {});
 
 // The crystal system of a space-group setting, named by crysta (its resolver and
 // per-setting freedom map); throws what crysta's resolver throws for an unknown setting.

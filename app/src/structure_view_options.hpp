@@ -3,6 +3,8 @@
 #define EDI_APP_STRUCTURE_VIEW_OPTIONS_HPP
 
 #include <QObject>
+#include <map>
+#include <string>
 #include <QString>
 #include <QtQml/qqmlregistration.h>
 
@@ -60,6 +62,10 @@ class StructureViewOptions : public QObject {
     Q_INVOKABLE void cycleAtoms(bool hasCopies);
 
     const edi::SceneOptions& sceneOptions() const { return options_; }
+    // The options as a structure saves them (`_structure_view`, by item name), and set from such a map, each item
+    // it lacks at its default.
+    std::map<std::string, std::string> toView() const;
+    void setFromView(const std::map<std::string, std::string>& view);
     OptionListModel* atomViewOptions() const { return atom_view_options_; }
 
    signals:

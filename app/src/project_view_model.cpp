@@ -192,8 +192,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     const SavedFile saved = [this](const std::string& relative) { return savedFile(relative); };
     analysis_ = new AnalysisViewModel(*project_, *this, saved, this);
     (void)model;
-    metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this);
-    report_text_ = new BlockText([this] { return edi::report_settings_text(*project_); }, this);
+    metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this, [] { return std::string("project.edi"); });
+    report_text_ = new BlockText([this] { return edi::report_settings_text(*project_); }, this,
+                                 [] { return std::string("reports/report.edi"); });
     project_text_ = new BlockText(
         [this] {
             std::string text;
@@ -203,6 +204,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
             return text;
         },
         this);
+    categories_ = new CategoryListModel(this);
+    syncCategories();
+    connect(structure_view_options_, &StructureViewOptions::changed, this, &ProjectViewModel::keepStructureView);
     render_wait_.setSingleShot(true);
     connect(&render_wait_, &QTimer::timeout, this, [this] { followRendered(false); });
     loadScan();
@@ -219,6 +223,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, report_, &ReportViewModel::refresh);
     current_structure_ = structure_models_.isEmpty() ? -1 : 0;
     current_experiment_ = experiment_models_.isEmpty() ? -1 : 0;
+    showStructureView();  // the opened project's shown structure, as it saved its view, once it is the current one
     syncParameterTable();
     syncCorrelations();
     published_name_ = name();
@@ -577,6 +582,7 @@ void ProjectViewModel::publishCurrent() {
     }
     if (currentStructure() != published_structure_) {
         published_structure_ = currentStructure();
+        showStructureView();
         emit currentStructureChanged();
     }
     if (currentExperiment() != published_experiment_) {
@@ -2444,6 +2450,8 @@ void ProjectViewModel::undo() {
         }
     } else if (const auto* structures = std::get_if<edi::StructuresUndo>(&undo_history_.back())) {
         undone = apply(edi::Edit::restore_structures(*project_, *structures), true).isEmpty();
+    } else if (const auto* text = std::get_if<AppliedText>(&undo_history_.back())) {
+        undone = apply(edi::Edit::replace_project(*project_, edi::Project(*text->before)), true).isEmpty();
     } else if (const auto* report = std::get_if<edi::ReportSettingsState>(&undo_history_.back())) {
         undone = write_report_settings(edi::Edit::report_settings(*project_, *report)).isEmpty();
     } else if (const auto* flags = std::get_if<FreeFlags>(&undo_history_.back())) {
@@ -2564,6 +2572,82 @@ void ProjectViewModel::undo() {
         undo_history_.pop_back();
     }
     syncUndo();
+}
+
+void ProjectViewModel::syncCategories() {
+    // The standard uncertainties have their designed group here, the report's settings theirs on the Report page.
+    categories_->setCategories({edi::Category{"su_format"}, edi::Category{"report"}},
+                               [this] { return metadata_text_->text().toStdString(); });
+}
+
+void ProjectViewModel::showStructureView() {
+    // The view shows each structure as that structure saved it (the owner, 2026-10-10): its options come from
+    // the structure, and a change is saved with it.
+    const StructureViewModel* shown = currentStructure();
+    showing_view_ = true;
+    structure_view_options_->setFromView(shown != nullptr ? shown->structure()->view : std::map<std::string, std::string>{});
+    showing_view_ = false;
+}
+
+void ProjectViewModel::keepStructureView() {
+    if (showing_view_ || current_structure_ < 0 || static_cast<std::size_t>(current_structure_) >= project_->structures.size()) {
+        return;
+    }
+    edi::Structure& shown = *project_->structures[static_cast<std::size_t>(current_structure_)];
+    std::map<std::string, std::string> view = structure_view_options_->toView();
+    if (view != shown.view) {
+        shown.view = std::move(view);
+        saved_files_.reset();
+        invalidateTexts();
+        setModified(true);
+    }
+}
+
+QString ProjectViewModel::applyText(const QString& file, const QString& text) {
+    // A scan's datasets read their data from its files, which a project read from text does not carry.
+    if (scan_) {
+        return tr("A scan project is edited on its pages, not as text");
+    }
+    // A category the dictionary does not hold is a mistake, which the reader would pass over.
+    for (const std::string& id : edi::text_category_ids(text.toStdString())) {
+        if (edi::category_label(id).empty()) {
+            return tr("Unknown category '_%1'").arg(QString::fromStdString(id));
+        }
+    }
+    // What the reader only warns about (an item it does not know, a value it reads in another way) is not applied
+    // either: the text is applied only as it is read.
+    std::optional<edi::Project> read;
+    QStringList warnings;
+    try {
+        read = edi::project_with_file_text(*project_, file.toStdString(), text.toStdString(),
+                                           [&warnings](const std::string& warning) {
+                                               warnings.append(QString::fromStdString(warning));
+                                           });
+    } catch (const std::exception& refusal) {
+        return QString::fromUtf8(refusal.what());
+    }
+    if (!warnings.isEmpty()) {
+        return warnings.join(QLatin1Char('\n'));
+    }
+    // A block keeps its name: a rename is made on its page, where its references follow it.
+    const auto names = [](const auto& blocks) {
+        QStringList out;
+        for (const auto& block : blocks) {
+            out.append(QString::fromStdString(block->name.value()));
+        }
+        return out;
+    };
+    if (names(read->structures) != names(project_->structures) || names(read->experiments) != names(project_->experiments)) {
+        return tr("A block's name is changed on its page, not in the text");
+    }
+    auto before = std::make_shared<const edi::Project>(*project_);
+    const QString error = apply(edi::Edit::replace_project(*project_, std::move(*read)), true);
+    if (!error.isEmpty()) {
+        return error;
+    }
+    undo_history_.emplace_back(AppliedText{std::move(before)});
+    syncUndo();
+    return {};
 }
 
 void ProjectViewModel::syncUndo() {
@@ -2801,6 +2885,7 @@ void ProjectViewModel::publish(bool structural) {
     if (structural) {
         registry_->rebuild(*project_);
         syncBlocks();
+        showStructureView();  // an apply or an undo can change what the structure saved
     }
     registry_->publish(*project_);
     for (StructureViewModel* structure : structure_models_) {

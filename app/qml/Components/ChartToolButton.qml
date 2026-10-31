@@ -17,19 +17,21 @@ Rectangle {
     property string fontIcon: ""
     property string toolTip: ""
     property bool checked: false
+    // A button that asks for attention while enabled (the Text tab's ✓): the theme's red, the icon white.
+    property bool alert: false
     signal clicked
 
     width: AppSizes.toolbarControlSize
     height: width
-    color: EaStyle.Colors.contentBackground
-    border.color: button.enabled ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
+    color: button.alert && button.enabled ? EaStyle.Colors.red : EaStyle.Colors.contentBackground
+    border.color: button.alert && button.enabled ? EaStyle.Colors.red : button.enabled ? EaStyle.Colors.chartAxis : EaStyle.Colors.themeBackgroundDisabled
     border.width: EaStyle.Sizes.borderThickness
 
     EaElements.Label {
         anchors.centerIn: parent
         font.family: EaStyle.Fonts.iconsFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize * 1.15
-        color: !button.enabled ? EaStyle.Colors.themeForegroundDisabled : hover.hovered || button.checked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
+        color: !button.enabled ? EaStyle.Colors.themeForegroundDisabled : button.alert ? "white" : hover.hovered || button.checked ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
         text: button.fontIcon
     }
     HoverHandler {
