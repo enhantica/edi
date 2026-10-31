@@ -155,23 +155,45 @@ Item {
             verify(!after.valid && !after.attempted, "A retained accessible ID cannot recover a destroyed owner");
             compare(clicked.count, 1, "No action is emitted after actual destruction");
         }
-        function test_queued_destruction_refuses_press_before_ordinary_unwind() {
+        function test_pending_delete_stays_live_before_ordinary_unwind() {
             const item = createAction(true);
             const id = live(item, "Fit");
             verify(StatusAccessibilityProof.watchLifetime(item), "The queued-owner witness watches actual QObject lifetime");
             item.destroy();
             compare(StatusAccessibilityProof.lifetimeFacts().destroyed, 0, "The same script still precedes actual QObject destruction");
             verify(StatusAccessibilityProof.lifetimeFacts().alive, "The same script retains the actual guarded native owner before deletion");
-            // No event turn or object dereference between QML retirement and
-            // the retained native action: this is the queued-owner entrance.
+            // Public destroy() posts DeferredDelete; it does not itself retire
+            // the still-live context or declared action availability.
+            compare(live(item, "Fit"), id, "The pending-delete interval retains the SAME live native interface");
             attempt(id);
-            compare(clicked.count, 0, "A queued-for-destruction owner cannot emit clicked before deletion");
+            compare(clicked.count, 1, "One pending-live Press emits the SAME original clicked signal exactly once");
             tryVerify(() => {
                 const facts = StatusAccessibilityProof.lifetimeFacts();
                 return facts.destroyed === 1 && !facts.alive;
             }, 1000, "The ordinary event unwind then deletes the same owner");
             const after = StatusAccessibilityProof.press(id);
             verify(!after.valid && !after.attempted, "The same retained ID is invalid after actual destruction");
+            compare(clicked.count, 1, "The actual destroyed owner cannot emit another clicked signal");
+        }
+        function test_public_retirement_refuses_pending_delete_press() {
+            const item = createAction(true);
+            const id = live(item, "Fit");
+            item.clickable = false;
+            passive(item, "Fit");
+            verify(StatusAccessibilityProof.watchLifetime(item), "The retired pending-delete witness watches the actual owner");
+            item.destroy();
+            compare(StatusAccessibilityProof.lifetimeFacts().destroyed, 0, "Retired availability is proved before actual destruction");
+            verify(StatusAccessibilityProof.lifetimeFacts().alive, "The retired control is still alive in this same script");
+            passive(item, "Fit");
+            attempt(id);
+            compare(clicked.count, 0, "Explicit public availability retirement refuses cached Press before deletion");
+            tryVerify(() => {
+                const facts = StatusAccessibilityProof.lifetimeFacts();
+                return facts.destroyed === 1 && !facts.alive;
+            }, 1000, "Ordinary event unwind deletes the genuinely retired owner");
+            const after = StatusAccessibilityProof.press(id);
+            verify(!after.valid && !after.attempted, "Actual destruction invalidates the retired cached interface");
+            compare(clicked.count, 0, "Neither pending retired nor actually destroyed owner emits clicked");
         }
     }
 }
