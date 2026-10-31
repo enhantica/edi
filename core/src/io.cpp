@@ -712,9 +712,10 @@ const std::set<std::string>& known_covered_tags() {
         "_data_range.time_of_flight_max", "_data_range.time_of_flight_min",
         "_data_range.time_of_flight_step", "_data_range.two_theta_max",
         "_data_range.two_theta_min", "_data_range.two_theta_step",
-        // _experiment_type (the four typed axes)
+        // _experiment_type (the four typed axes and the description, ADR-0053)
         "_experiment_type.beam_mode", "_experiment_type.radiation_probe",
         "_experiment_type.sample_form", "_experiment_type.scattering_type",
+        "_experiment_type.dimensionality", "_experiment_type.polarisation",
         // _instrument
         "_instrument.calib_d_to_tof_linear", "_instrument.calib_d_to_tof_offset",
         "_instrument.calib_d_to_tof_quadratic", "_instrument.calib_d_to_tof_reciprocal",
@@ -722,7 +723,7 @@ const std::set<std::string>& known_covered_tags() {
         "_instrument.calib_twotheta_offset", "_instrument.setup_monochromator_twotheta",
         "_instrument.setup_polarization_coefficient", "_instrument.setup_twotheta_bank",
         "_instrument.setup_wavelength", "_instrument.setup_wavelength_2",
-        "_instrument.setup_wavelength_2_to_1_ratio",
+        "_instrument.setup_wavelength_2_to_1_ratio", "_instrument.name", "_instrument.facility",
         // _data_source (the plain-data file the measured data was read from)
         "_data_source.file_name",
         // _background_estimate (the automatic background estimate's settings, ADR-0040)
@@ -1502,6 +1503,34 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
 
 // ADR-0040: the `_background_estimate` settings. A blank (absent, `.` or `?`) item is the default; any other
 // value is checked as the Python setters check it.
+// ADR-0053: an experiment's description, each item as declared: `1d` the only
+// dimensionality, `unpolarised` the polarisation of a neutron experiment and `.` that of an X-ray
+// one, the instrument and facility any text (`?` an unknown one).
+void read_description(const Block& block, ExperimentBase& experiment, const std::string& where) {
+    if (const std::string* dimensionality = block.find("_experiment_type.dimensionality")) {
+        if (*dimensionality != "1d") {
+            fail_schema(where, "unknown-dimensionality",
+                        "_experiment_type.dimensionality '" + *dimensionality + "' is not a known token (expected '1d')");
+        }
+        experiment.experiment_type.dimensionality = *dimensionality;
+    }
+    if (const std::string* polarisation = block.find("_experiment_type.polarisation")) {
+        const bool xray = experiment.experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY;
+        if (*polarisation != (xray ? "." : "unpolarised")) {
+            fail_schema(where, "unknown-polarisation",
+                        "_experiment_type.polarisation '" + *polarisation + "' does not fit " +
+                            (xray ? "an X-ray experiment (expected '.')" : "a neutron experiment (expected 'unpolarised')"));
+        }
+        experiment.experiment_type.polarisation = *polarisation;
+    }
+    if (const std::string* name = block.find("_instrument.name")) {
+        experiment.instrument.name = *name;
+    }
+    if (const std::string* facility = block.find("_instrument.facility")) {
+        experiment.instrument.facility = *facility;
+    }
+}
+
 void read_background_estimate(const Block& block, ExperimentBase& experiment, const std::string& where) {
     const auto item = [&block](const char* tag) -> std::optional<std::string> {
         const std::string* value = block.find(tag);
@@ -1675,6 +1704,7 @@ BraggPdExperiment single_crystal_from_block(const Block& block, const std::strin
     if (const std::string* source = block.find("_scattering_source.neutron_scattering_length")) {
         experiment.neutron_scattering_length = *source;
     }
+    read_description(block, experiment, where);
     if (cw) {
         experiment.instrument.setup_wavelength =
             require_spec_parameter(block, spec::instrument_wavelength, where);
@@ -1876,6 +1906,7 @@ BraggPdExperiment experiment_from_block(const Block& block, const std::string& w
          : item == ScatteringSourceItem::XRAY_DISPERSION ? experiment.xray_dispersion
                                                          : experiment.neutron_scattering_length) = *value;
     }
+    read_description(block, experiment, where);
     if (const std::string* file = block.find("_data_source.file_name")) {
         experiment.data_file = *file;
     }
@@ -2826,605 +2857,135 @@ std::string element_from_type_symbol(const std::string& type_symbol) {
     return end == 0 ? type_symbol : type_symbol.substr(0, end);
 }
 
-// Classic IUCr CIF structure reader (`_cell_*` / `_atom_site_*` underscore tags) — the core
-// reader this task's necessity sweep removed with its binding, RESTORED per review-32 F1 with
-// two task-era adaptations: `esd` is spelled `uncertainty`, and each site keeps the ADP type the
-// file gives it.
-Structure structure_from_cif_block(const Block& block, const std::string& where) {
-    Structure structure;
-    structure.name = block.name;
-    // A CIF spells the bond increment `incr`; the model and a
-    // `.edi` file spell it `inc`. Both CIF forms are read: the DDLm data name and its classic alias.
-    for (const auto& [dotted, classic, field] :
-         {std::tuple<const char*, const char*, detail::Written<std::optional<double>> Geom::*>{
-              "_geom.min_bond_distance_cutoff", "_geom_min_bond_distance_cutoff",
-              &Geom::min_bond_distance_cutoff},
-          {"_geom.bond_distance_incr", "_geom_bond_distance_incr", &Geom::bond_distance_inc}}) {
-        const std::string* text = block.find(dotted);
-        if (text == nullptr) {
-            text = block.find(classic);
-        }
-        if (text != nullptr) {
-            const double value = to_double(*text, where);
-            if (value < 0.0) {
-                fail_domain(where, "out-of-range",
-                            std::string(dotted) + " '" + *text + "' must be finite and >= 0");
-            }
-            structure.geom.*field = value;
-        }
-    }
-    if (const std::string* symbol = block.find("_space_group_name_H-M_alt")) {
-        structure.space_group.name_h_m = *symbol;
-    } else {
-        structure.space_group.name_h_m = block.require("_symmetry_space_group_name_H-M", where);
-    }
-    read_into(structure.cell.length_a,
-              parse_parameter(block.require("_cell_length_a", where), where), where);
-    read_into(structure.cell.length_b,
-              parse_parameter(block.require("_cell_length_b", where), where), where);
-    read_into(structure.cell.length_c,
-              parse_parameter(block.require("_cell_length_c", where), where), where);
-    read_into(structure.cell.angle_alpha,
-              parse_parameter(block.require("_cell_angle_alpha", where), where), where);
-    read_into(structure.cell.angle_beta,
-              parse_parameter(block.require("_cell_angle_beta", where), where), where);
-    read_into(structure.cell.angle_gamma,
-              parse_parameter(block.require("_cell_angle_gamma", where), where), where);
-    require_realizable_cell(structure.cell, where);
-
-    const Loop* loop = block.loop_with("_atom_site_label");
-    if (loop == nullptr) {
-        fail_schema(where, "missing-required-loop", "missing _atom_site loop (not a CIF structure)");
-    }
-
-    // The tensors, in the form the loop spells (U_ij, B_ij or beta_ij), keyed by site label;
-    // a site with one keeps it in that type (ADR-0027).
-    struct CifTensor {
-        std::string type;
-        AtomSiteAniso tensor;
-    };
-    std::map<std::string, CifTensor> tensors;
-    static const std::array<std::pair<const char*, std::array<const char*, 6>>, 3> kForms{{
-        {"Uani",
-         {"_atom_site_aniso_U_11", "_atom_site_aniso_U_22", "_atom_site_aniso_U_33",
-          "_atom_site_aniso_U_12", "_atom_site_aniso_U_13", "_atom_site_aniso_U_23"}},
-        {"Bani",
-         {"_atom_site_aniso_B_11", "_atom_site_aniso_B_22", "_atom_site_aniso_B_33",
-          "_atom_site_aniso_B_12", "_atom_site_aniso_B_13", "_atom_site_aniso_B_23"}},
-        {"beta",
-         {"_atom_site_aniso_beta_11", "_atom_site_aniso_beta_22", "_atom_site_aniso_beta_33",
-          "_atom_site_aniso_beta_12", "_atom_site_aniso_beta_13", "_atom_site_aniso_beta_23"}},
-    }};
-    // A tensor column is the label or any component the three forms spell.
-    const auto is_tensor = [](const std::string& tag) {
-        if (tag == "_atom_site_aniso_label") {
-            return true;
-        }
-        return std::any_of(kForms.begin(), kForms.end(), [&tag](const auto& form) {
-            return std::find(form.second.begin(), form.second.end(), tag) != form.second.end();
-        });
-    };
-    if (const Loop* aniso = block.tensor_loop(is_tensor, "_atom_site_aniso_label", where)) {
-        bool found_form = false;
-        for (const auto& [type, tags] : kForms) {
-            if (aniso->column(tags[0]) < 0) {
-                continue;
-            }
-            found_form = true;
-            for (const auto& row : aniso->rows) {
-                const std::string& label = loop_cell(*aniso, row, "_atom_site_aniso_label", where);
-                CifTensor held{type, AtomSiteAniso{}};
-                held.tensor.id = label;
-                // The three diagonal columns are required; an off-diagonal column the file leaves
-                // out is zero.
-                const std::vector<Parameter*> components = held.tensor.parameters();
-                for (std::size_t k = 0; k < 6; ++k) {
-                    const std::string cell = k >= 3 && aniso->column(tags[k]) < 0
-                                                 ? std::string("0")
-                                                 : loop_cell(*aniso, row, tags[k], where);
-                    read_into(*components[k], parse_parameter(cell, where), where);
-                }
-                tensors.emplace(label, std::move(held));
-            }
-            break;
-        }
-        if (!found_form) {
-            fail_schema(where, "missing-loop-column",
-                        "the _atom_site_aniso loop has no U_11, B_11 or beta_11 column");
-        }
-    }
-
-    std::vector<std::pair<std::string, std::string>> declared_types;
-    std::set<std::string> consumed;
-    for (const auto& row : loop->rows) {
-        AtomSite site;
-        site.id = loop_cell(*loop, row, "_atom_site_label", where);
-        site.type_symbol =
-            element_from_type_symbol(loop_cell(*loop, row, "_atom_site_type_symbol", where));
-        const int wyckoff = loop->column("_atom_site_Wyckoff_symbol");
-        if (wyckoff >= 0) {
-            site.wyckoff_letter = row[static_cast<std::size_t>(wyckoff)];
-        }
-        read_into(site.fract_x,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_x", where), where),
-                  where);
-        read_into(site.fract_y,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_y", where), where),
-                  where);
-        read_into(site.fract_z,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_fract_z", where), where),
-                  where);
-        read_into(site.occupancy,
-                  parse_parameter(loop_cell(*loop, row, "_atom_site_occupancy", where), where),
-                  where);
-        // The site takes the type _atom_site_adp_type declares, its numbers converted to it from the
-        // form the file spells them in (below, once the structure is complete). A site that declares
-        // none takes its tensor row's form (the row states the type), else the default, Biso, a
-        // U_iso_or_equiv value converted to B.
-        // A declared type outside the five, an anisotropic type without a tensor row, an isotropic
-        // type with one, and a tensor row naming no site refuse (ADR-0027).
-        const int b_iso_column = loop->column("_atom_site_B_iso_or_equiv");
-        const int u_iso_column = loop->column("_atom_site_U_iso_or_equiv");
-        const int type_column = loop->column("_atom_site_adp_type");
-        const auto given = [&row](int column) {
-            return column >= 0 && row[static_cast<std::size_t>(column)] != "?" &&
-                   row[static_cast<std::size_t>(column)] != ".";
-        };
-        std::string type = "Biso";
-        if (given(b_iso_column)) {
-            read_into(site.adp_iso,
-                      parse_parameter(row[static_cast<std::size_t>(b_iso_column)], where), where);
-        } else if (given(u_iso_column)) {
-            read_into(site.adp_iso,
-                      parse_parameter(row[static_cast<std::size_t>(u_iso_column)], where), where);
-            type = "Uiso";
-        }
-        const std::string label = site.id.value();
-        const std::string declared =
-            given(type_column) ? row[static_cast<std::size_t>(type_column)] : std::string();
-        const auto tensor = tensors.find(label);
-        if (!declared.empty()) {
-            const std::string at = where + ": site '" + label + "'";
-            if (!is_adp_type(declared)) {
-                throw IoError(at + " declares _atom_site_adp_type '" + declared +
-                              "', which is not one of Biso, Uiso, Bani, Uani or beta");
-            }
-            if (is_anisotropic_adp_type(declared) && tensor == tensors.end()) {
-                throw IoError(at + " declares the anisotropic type '" + declared +
-                              "' but has no _atom_site_aniso row");
-            }
-            if (!is_anisotropic_adp_type(declared) && tensor != tensors.end()) {
-                throw IoError(at + " declares the isotropic type '" + declared +
-                              "' but has an _atom_site_aniso row");
-            }
-            declared_types.emplace_back(label, declared);
-        } else if (tensor == tensors.end() && type != "Biso") {
-            declared_types.emplace_back(label, "Biso");  // the default; the column gave U
-        }
-        if (tensor != tensors.end()) {
-            type = tensor->second.type;
-            structure.atom_site_aniso.push_back(tensor->second.tensor);
-            consumed.insert(label);
-        }
-        site.adp_type = type;
-        structure.atom_sites.push_back(std::move(site));
-    }
-    for (const auto& [label, tensor] : tensors) {
-        if (!consumed.contains(label)) {
-            throw IoError(where + ": the _atom_site_aniso row '" + label + "' names no _atom_site row");
-        }
-    }
-    // A file may give a tensor without U_iso_or_equiv: the equivalent value comes from it. Then
-    // each declared type, converted from the form the file spells it in, uncertainties with it.
-    if (!structure.atom_site_aniso.empty()) {
-        sync_atom_site_aniso(structure);
-    }
-    for (const auto& [label, declared] : declared_types) {
-        for (const auto& site : structure.atom_sites) {
-            if (site->id.value() == label) {
-                change_adp_type(structure, *site, declared);
-            }
-        }
-    }
-    return structure;
-}
-
-// ---- classic-CIF experiment translation (experiment half) ----------------------------
-//
-// The classic vocabulary is diffraction-lib's own `cif_names` tables at the frozen anchor
-// (`datablocks/experiment/categories/*` — every TagSpec pairs the dot-form `.edi` spelling with its
-// classic CIF spellings). Translation is mechanical: each classic item/loop-column is rewritten to
-// its `.edi` tag and the block then flows through the ONE experiment builder, so the CIF branch can
-// never drift from the `.edi` semantics. Classic tags with no `.edi` schema counterpart (the
-// double-exponential peak terms, the CW wavelength-2 family) are dropped exactly as the `.edi`
-// reader ignores unmodelled categories.
-
-struct CifExperimentItemRule {
-    const char* edi;                    // the `.edi` tag the builder reads
-    std::vector<const char*> classic;   // classic spellings, upstream priority order (first wins)
-    // Which selector family requires this tag, and the upstream-declared default that fills it
-    // when the CIF omits it (diffraction-lib AttributeSpec defaults at the frozen anchor):
-    // "" = never filled; "cwl" / "tof" = the family's concrete classes; "tof-jvd" = only the
-    // Lorentzian-carrying tof-jorgensen-von-dreele (TofJorgensen has no Lorentzian mixin, and a
-    // default there would change which profile the block means).
-    const char* family = "";
-    const char* fallback = nullptr;
-};
-
-const std::vector<CifExperimentItemRule>& experiment_cif_item_rules() {
-    static const std::vector<CifExperimentItemRule> rules{
-        {"_experiment_type.sample_form",
-         {"_easydiffraction_experiment_type.sample_form", "_expt_type.sample_form"}},
-        {"_experiment_type.beam_mode",
-         {"_easydiffraction_experiment_type.beam_mode", "_expt_type.beam_mode"}},
-        {"_experiment_type.radiation_probe",
-         {"_easydiffraction_experiment_type.radiation_probe", "_expt_type.radiation_probe"}},
-        {"_experiment_type.scattering_type",
-         {"_easydiffraction_experiment_type.scattering_type", "_expt_type.scattering_type"}},
-        {"_peak.type", {"_easydiffraction_peak.type"}},
-        {"_peak.cutoff_fwhm", {"_easydiffraction_peak.cutoff_fwhm"}},
-        {"_background.type", {"_easydiffraction_background.type"}},
-        // CW broadening (cwl_mixins)
-        {"_peak.broad_gauss_u", {"_easydiffraction_peak.broad_gauss_u"}, "cwl", "0.01"},
-        {"_peak.broad_gauss_v", {"_easydiffraction_peak.broad_gauss_v"}, "cwl", "-0.01"},
-        {"_peak.broad_gauss_w", {"_easydiffraction_peak.broad_gauss_w"}, "cwl", "0.02"},
-        {"_peak.broad_lorentz_x", {"_easydiffraction_peak.broad_lorentz_x"}, "cwl-tch", "0.0"},
-        {"_peak.broad_lorentz_y", {"_easydiffraction_peak.broad_lorentz_y"}, "cwl-tch", "0.0"},
-        // The CW asymmetry mixins, filled only on the rung that carries them.
-        // The pseudo-Voigt mixing: the loader reads an absent one as 0, so no fallback is filled.
-        {"_peak.mixing_eta_0", {"_easydiffraction_peak.mixing_eta_0"}},
-        {"_peak.mixing_eta_1", {"_easydiffraction_peak.mixing_eta_1"}},
-        {"_peak.asym_fcj_1", {"_easydiffraction_peak.asym_fcj_1"}, "cwl-fcj", "0.0"},
-        {"_peak.asym_fcj_2", {"_easydiffraction_peak.asym_fcj_2"}, "cwl-fcj", "0.0"},
-        {"_peak.asym_beba_a0", {"_easydiffraction_peak.asym_beba_a0"}, "cwl-beba", "0.0"},
-        {"_peak.asym_beba_b0", {"_easydiffraction_peak.asym_beba_b0"}, "cwl-beba", "0.0"},
-        {"_peak.asym_beba_a1", {"_easydiffraction_peak.asym_beba_a1"}, "cwl-beba", "0.0"},
-        {"_peak.asym_beba_b1", {"_easydiffraction_peak.asym_beba_b1"}, "cwl-beba", "0.0"},
-        // The limit angle: the loader reads an absent one as 180, so no fallback is filled.
-        {"_peak.asym_beba_limit", {"_easydiffraction_peak.asym_beba_limit"}},
-        // TOF broadening (tof_mixins)
-        {"_peak.broad_gauss_sigma_0", {"_easydiffraction_peak.broad_gauss_sigma_0"}, "tof",
-         "7.0"},
-        {"_peak.broad_gauss_sigma_1", {"_easydiffraction_peak.broad_gauss_sigma_1"}, "tof",
-         "0.0"},
-        {"_peak.broad_gauss_sigma_2", {"_easydiffraction_peak.broad_gauss_sigma_2"}, "tof",
-         "0.0"},
-        {"_peak.broad_gauss_size", {"_easydiffraction_peak.broad_gauss_size"}, "tof", "0.0"},
-        {"_peak.broad_gauss_strain", {"_easydiffraction_peak.broad_gauss_strain"}, "tof", "0.0"},
-        {"_peak.broad_lorentz_gamma_0", {"_easydiffraction_peak.broad_lorentz_gamma_0"},
-         "tof-jvd", "0.0"},
-        {"_peak.broad_lorentz_gamma_1", {"_easydiffraction_peak.broad_lorentz_gamma_1"},
-         "tof-jvd", "0.0"},
-        {"_peak.broad_lorentz_gamma_2", {"_easydiffraction_peak.broad_lorentz_gamma_2"},
-         "tof-jvd", "0.0"},
-        {"_peak.broad_lorentz_size", {"_easydiffraction_peak.broad_lorentz_size"}, "tof-jvd",
-         "0.0"},
-        {"_peak.broad_lorentz_strain", {"_easydiffraction_peak.broad_lorentz_strain"}, "tof-jvd",
-         "0.0"},
-        {"_peak.rise_alpha_0", {"_easydiffraction_peak.rise_alpha_0"}, "tof", "0.0"},
-        {"_peak.rise_alpha_1", {"_easydiffraction_peak.rise_alpha_1"}, "tof", "0.2"},
-        {"_peak.decay_beta_0", {"_easydiffraction_peak.decay_beta_0"}, "tof", "0.04"},
-        {"_peak.decay_beta_1", {"_easydiffraction_peak.decay_beta_1"}, "tof", "0.0"},
-        // CW instrument
-        {"_instrument.setup_wavelength",
-         {"_diffrn_radiation_wavelength.value", "_instr.wavelength"},
-         "cwl",
-         "1.5406"},
-        {"_instrument.calib_twotheta_offset",
-         {"_pd_calib.2theta_offset", "_instr.2theta_offset"},
-         "cwl",
-         "0.0"},
-        // Optional line shifts, translated when present and never filled
-        {"_instrument.calib_sample_displacement", {"_instr.sample_displacement"}},
-        {"_instrument.calib_sample_transparency", {"_instr.sample_transparency"}},
-        // The X-ray polarization pair, translated when present and never filled
-        {"_instrument.setup_polarization_coefficient", {"_instr.polarization_coefficient"}},
-        {"_instrument.setup_monochromator_twotheta", {"_instr.monochromator_twotheta"}},
-        // The K-alpha doublet pair, likewise
-        {"_instrument.setup_wavelength_2", {"_instr.wavelength_2"}},
-        {"_instrument.setup_wavelength_2_to_1_ratio", {"_instr.wavelength_2_to_1_ratio"}},
-        // TOF instrument
-        {"_instrument.setup_twotheta_bank", {"_instr.2theta_bank"}, "tof", "150.0"},
-        {"_instrument.calib_d_to_tof_offset", {"_instr.d_to_tof_offset"}, "tof", "0.0"},
-        {"_instrument.calib_d_to_tof_linear", {"_instr.d_to_tof_linear"}, "tof", "10000.0"},
-        {"_instrument.calib_d_to_tof_quadratic", {"_instr.d_to_tof_quad"}, "tof", "0.0"},
-        {"_instrument.calib_d_to_tof_reciprocal", {"_instr.d_to_tof_recip"}, "tof", "0.0"},
-    };
-    return rules;
-}
-
-// The declared-range items translate ONLY when the document carries no measured loop: in a real
-// pdCIF the `_pd_meas.*_range_*` summary rides BESIDE the data, and translating it there would
-// declare data and range at once — the exact contradiction the one-loader ruling refuses.
-const std::vector<CifExperimentItemRule>& experiment_cif_range_rules() {
-    static const std::vector<CifExperimentItemRule> rules{
-        {"_data_range.two_theta_min", {"_pd_meas.2theta_range_min"}},
-        {"_data_range.two_theta_max", {"_pd_meas.2theta_range_max"}},
-        {"_data_range.two_theta_step", {"_pd_meas.2theta_range_inc"}},
-        {"_data_range.time_of_flight_min", {"_pd_meas.time_of_flight_range_min"}},
-        {"_data_range.time_of_flight_max", {"_pd_meas.time_of_flight_range_max"}},
-        {"_data_range.time_of_flight_step", {"_pd_meas.time_of_flight_range_inc"}},
-    };
-    return rules;
-}
-
-const std::map<std::string, std::string>& experiment_cif_loop_key_map() {
-    static const std::map<std::string, std::string> map{
-        {"_pd_background.id", "_background.id"},
-        {"_pd_background.line_segment_X", "_background.position"},
-        {"_pd_background_line_segment_X", "_background.position"},
-        {"_pd_background.line_segment_intensity", "_background.intensity"},
-        {"_pd_background_line_segment_intensity", "_background.intensity"},
-        {"_pd_phase_block.id", "_linked_structure.structure_id"},
-        {"_pd_phase_block.scale", "_linked_structure.scale"},
-        {"_easydiffraction_excluded_region.id", "_excluded_region.id"},
-        {"_easydiffraction_excluded_region.start", "_excluded_region.start"},
-        {"_easydiffraction_excluded_region.end", "_excluded_region.end"},
-        {"_pd_data.point_id", "_data.id"},
-        {"_pd_meas.2theta_scan", "_data.two_theta"},
-        {"_pd_proc.2theta_scan", "_data.two_theta"},
-        {"_pd_meas.time_of_flight", "_data.time_of_flight"},
-        {"_pd_meas.intensity_total", "_data.intensity_meas"},
-        {"_pd_proc.intensity_norm", "_data.intensity_meas"},
-        {"_pd_meas.intensity_total_su", "_data.intensity_meas_su"},
-        {"_pd_proc.intensity_norm_su", "_data.intensity_meas_su"},
-    };
-    return map;
-}
-
-bool experiment_block_is_classic_cif(const Block& block) {
-    static const std::set<std::string> classic = [] {
-        std::set<std::string> tags;
-        for (const auto& rule : experiment_cif_item_rules()) {
-            tags.insert(rule.classic.begin(), rule.classic.end());
-        }
-        for (const auto& rule : experiment_cif_range_rules()) {
-            tags.insert(rule.classic.begin(), rule.classic.end());
-        }
-        for (const auto& [cif, edi] : experiment_cif_loop_key_map()) {
-            tags.insert(cif);
-        }
-        return tags;
-    }();
-    for (const auto& item : block.items) {
-        if (classic.contains(item.first)) {
-            return true;
-        }
-    }
-    for (const Loop& loop : block.loops) {
-        for (const std::string& tag : loop.tags) {
-            if (classic.contains(tag)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-Block translate_experiment_cif(const Block& in) {
-    // The peak category is one row in either vocabulary. A peak item written as a loop column has
-    // no translation, and dropping it would let a profile's foreign or supplied coefficients vanish
-    // before the profile rules see them, so it is refused.
-    for (const Loop& loop : in.loops) {
-        for (const std::string& tag : loop.tags) {
-            if (starts_with(tag, "_peak.") || starts_with(tag, "_easydiffraction_peak.")) {
-                fail_schema("classic CIF experiment block '" + in.name + "'", "peak-item-in-loop",
-                            tag + " is a scalar item, not a loop column");
-            }
-        }
-    }
-    Block out;
-    out.name = in.name;
-    out.items.emplace_back("_edi.schema_version", "3");
-    const auto translate_items = [&in, &out](const std::vector<CifExperimentItemRule>& rules) {
-        for (const CifExperimentItemRule& rule : rules) {
-            const std::string* value = nullptr;
-            for (const char* classic : rule.classic) {
-                value = in.find(classic);
-                if (value != nullptr) {
-                    break;  // upstream priority order: the first declared spelling wins
-                }
-            }
-            // A peak item in the dot-form spelling is the same declaration, so it is carried
-            // rather than dropped (a profile's coefficients never fall back to defaults).
-            if (value == nullptr && starts_with(rule.edi, "_peak.")) {
-                value = in.find(rule.edi);
-            }
-            if (value != nullptr) {
-                out.items.emplace_back(rule.edi, *value);
-            }
-        }
-    };
-    translate_items(experiment_cif_item_rules());
-    bool have_data_loop = false;
-    const std::string translated_where = "classic CIF experiment block '" + in.name + "'";
-    for (const Loop& loop : in.loops) {
-        std::vector<std::string> tags;
-        std::vector<std::size_t> keep;
-        for (std::size_t index = 0; index < loop.tags.size(); ++index) {
-            const auto found = experiment_cif_loop_key_map().find(loop.tags[index]);
-            if (found != experiment_cif_loop_key_map().end()) {
-                tags.push_back(found->second);
-                keep.push_back(index);
-            }
-        }
-        if (tags.empty()) {
-            continue;  // no `.edi` counterpart in this loop (publication metadata etc.)
-        }
-        std::vector<std::vector<std::string>> rows;
-        rows.reserve(loop.rows.size());
-        for (const std::vector<std::string>& row : loop.rows) {
-            std::vector<std::string> cells;
-            cells.reserve(keep.size());
-            for (const std::size_t index : keep) {
-                cells.push_back(row[index]);
-            }
-            rows.push_back(std::move(cells));
-        }
-        for (const std::string& tag : tags) {
-            have_data_loop = have_data_loop || starts_with(tag, kDataCategory);
-        }
-        out.loops.emplace_back(std::move(tags), std::move(rows), translated_where);
-    }
-    if (!have_data_loop) {
-        translate_items(experiment_cif_range_rules());
-    }
-    // A CIF with no phase block keeps diffraction-lib's default linked structure (structure_id
-    // 'Si', scale 1.0 — the reference constructs the category and overrides only what the CIF
-    // carries), so the builder's required loop is synthesized when absent.
-    bool have_linked = false;
-    for (const Loop& loop : out.loops) {
-        have_linked = have_linked || loop.column("_linked_structure.scale") >= 0;
-    }
-    if (!have_linked) {
-        out.loops.emplace_back(
-            std::vector<std::string>{"_linked_structure.structure_id", "_linked_structure.scale"},
-            std::vector<std::vector<std::string>>{{"Si", "1.0"}}, translated_where);
-    }
-    // A `_pd_background` line-segment loop declares its own type by shape (upstream's
-    // line-segment class matches exactly these cif columns), so the `.edi` selector the builder
-    // requires is synthesized when the CIF spells none.
-    if (out.find("_background.type") == nullptr) {
-        for (const Loop& loop : out.loops) {
-            if (loop.column("_background.position") >= 0) {
-                out.items.emplace_back("_background.type", "line-segment");
-                break;
-            }
-        }
-    }
-    // Upstream defaults, mirrored where our builder is stricter than the reference: the peak type
-    // follows the declared beam mode's family default when the CIF names none, and the cutoff
-    // carries diffraction-lib's declared default (0.0).
-    if (out.find("_peak.type") == nullptr) {
-        if (const std::string* beam = out.find("_experiment_type.beam_mode")) {
-            if (*beam == kBeamModeCwl) {
-                out.items.emplace_back("_peak.type", kPeakCwlDefault);
-            } else if (*beam == kBeamModeTof) {
-                out.items.emplace_back("_peak.type", kPeakJorgensen);
-            }
-        }
-    }
-    if (out.find("_peak.cutoff_fwhm") == nullptr) {
-        out.items.emplace_back("_peak.cutoff_fwhm", "0");
-    }
-    // A parameter the CIF omits keeps diffraction-lib's declared default (the reference builds
-    // the concrete class first, then overrides only what the CIF carries), so the builder's
-    // required-item reads are satisfied exactly as upstream satisfies them — scoped to the
-    // block's own selector family, because emitting another family's tags would change what the
-    // block declares.
-    const std::string* type_item = out.find("_peak.type");
-    const std::string selector = type_item != nullptr ? *type_item : "";
-    const bool fills_cwl = selector.rfind("cwl-", 0) == 0;
-    const bool fills_tof = selector.rfind("tof-", 0) == 0;
-    // The TOF pseudo-Voigt carries the Lorentzian mixin too.
-    const bool fills_jvd = selector == "tof-jorgensen-von-dreele" || selector == kPeakTofPseudoVoigt;
-    for (const CifExperimentItemRule& rule : experiment_cif_item_rules()) {
-        if (rule.fallback == nullptr || out.find(rule.edi) != nullptr) {
-            continue;
-        }
-        const std::string family = rule.family;
-        // A CW rule fills only a slot the selector's profile carries.
-        const CwlProfileSlots slots = cwl_profile_slots(selector);
-        if ((family == "cwl" && fills_cwl) || (family == "tof" && fills_tof) ||
-            (family == "tof-jvd" && fills_jvd) ||
-            (family == "cwl-tch" && fills_cwl && slots.lorentz_xy) ||
-            (family == "cwl-fcj" && slots.fcj) || (family == "cwl-beba" && slots.beba)) {
-            out.items.emplace_back(rule.edi, rule.fallback);
-        }
-    }
-    return out;
-}
-
 // ---- One way in for structure and experiment files ------------------------------------------
 //
-// Every structure text and every experiment text edi reads as `.edi` goes through edi_text_block,
-// and nothing else parses one. Before any name is read as another, crysta decides from the names
-// edi's reader reads, as written, whether the text is a CIF; a CIF is refused, as reading CIF files
-// is not supported yet. The two from-text entries keep reading the CIFs they always read, by the
-// readers above.
+// Every structure text and every experiment text edi reads goes through edi_text_block, and
+// nothing else parses one. Before any name is read as another, crysta decides from the names edi's
+// reader reads, as written, whether the text is a CIF: a CIF is read by crysta, which writes the
+// `.edi` text a save would write for what it builds, and edi's reader reads that text; any other
+// text goes to edi's reader as it is. No file suffix decides anything.
 
-// A structure or experiment text: refused when it is a CIF, else read by edi's `.edi` reader.
-static Block edi_text_block(const std::string& text, const std::string& where) {
+// An ADP column spelled by a name of some site types only (`_atom_site_U_iso_or_equiv` holds a U value) must match
+// the type of every site it gives a value for, declared or the default Biso, or the value would be read in the wrong
+// representation; such a column is refused. Checked on the names as written.
+static void refuse_adp_spellings(const Block& written, const std::string& where) {
+    const auto column_of = [](const Loop& loop, const std::string& name) {
+        for (std::size_t index = 0; index < loop.tags.size(); ++index) {
+            if (detail::current_edi_name(loop.tags[index], true) == name) {
+                return static_cast<int>(index);
+            }
+        }
+        return -1;
+    };
+    const auto lower = [](std::string text) {
+        std::transform(text.begin(), text.end(), text.begin(),
+                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+        return text;
+    };
+    // Each site's type as the site reader reads it: Biso when the file declares none or gives `.`, a
+    // type it does not read left to its own refusal. Site ids are exact.
+    std::map<std::string, std::optional<std::string>> site_types;
+    for (const Loop& loop : written.loops) {
+        const int id = column_of(loop, "_atom_site.id");
+        const int type = column_of(loop, "_atom_site.adp_type");
+        for (const auto& row : id < 0 ? std::vector<std::vector<std::string>>{} : loop.rows) {
+            std::optional<std::string> read = std::string("Biso");
+            if (type >= 0) {
+                const std::string& token = row[static_cast<std::size_t>(type)];
+                if (token != "." && !token.empty()) {
+                    read = is_adp_type(token) ? std::optional<std::string>(token) : std::nullopt;
+                }
+            }
+            site_types[row[static_cast<std::size_t>(id)]] = read;
+        }
+    }
+    for (const Loop& loop : written.loops) {
+        int id = column_of(loop, "_atom_site.id");
+        if (id < 0) {
+            id = column_of(loop, "_atom_site_aniso.id");
+        }
+        for (std::size_t column = 0; id >= 0 && column < loop.tags.size(); ++column) {
+            const std::vector<std::string> variants = detail::name_variants(loop.tags[column]);
+            // An anisotropic site's isotropic value is its tensor's equivalent, derived from the
+            // tensor, so its column is never read.
+            const bool isotropic_value = detail::current_edi_name(loop.tags[column], true) == "_atom_site.adp_iso";
+            for (const auto& row : variants.empty() ? std::vector<std::vector<std::string>>{} : loop.rows) {
+                const std::string& site = row[static_cast<std::size_t>(id)];
+                const auto found = site_types.find(site);
+                if (found != site_types.end() && !found->second.has_value()) {
+                    continue;
+                }
+                const std::string type = found != site_types.end() ? *found->second : std::string("Biso");
+                const std::string form = lower(type);
+                if (isotropic_value && (form == "uani" || form == "bani" || form == "beta")) {
+                    continue;
+                }
+                if (std::none_of(variants.begin(), variants.end(),
+                                 [&](const std::string& token) { return lower(token) == lower(type); })) {
+                    std::string allowed = variants.front();
+                    for (std::size_t index = 1; index < variants.size(); ++index) {
+                        allowed += " or " + variants[index];
+                    }
+                    fail_schema(where, "adp-name-disagrees-with-type",
+                                "site '" + site + "' is " + type + ", but its column " + loop.tags[column] +
+                                    " holds a value for " + allowed + ": the type and the name disagree");
+                }
+            }
+        }
+    }
+}
+
+// crysta's code for what a CIF import leaves unread or does not keep, which leads each report as it
+// leads crysta's own warnings, so a caller tells them from the loader's notes.
+constexpr const char* kCifReport = "crysta.schema.cif_items_not_read: ";
+
+// What crysta reports about a CIF it read: to `on_warning`, else to stderr as the loader's other
+// warnings go.
+static void report_notes(const std::vector<std::string>& notes, const WarningSink& on_warning) {
+    for (const std::string& note : notes) {
+        if (on_warning) {
+            on_warning(kCifReport + note);
+        } else {
+            std::cerr << "Warning: " << kCifReport << note << "\n";
+        }
+    }
+}
+
+// A structure or experiment text as a block for edi's reader: a CIF through crysta, any other
+// text as it is.
+static Block edi_text_block(const std::string& text, const std::string& where, bool experiment,
+                            const WarningSink& on_warning) {
     std::vector<std::string> tags;
     for (const Token& token : tokenize(text, where)) {
         if (is_tag(token)) {
             tags.push_back(token.text);
         }
     }
-    try {
-        detail::refuse_cif_names(tags);
-    } catch (const std::invalid_argument& error) {
-        throw IoError(where + ": " + error.what());
+    if (detail::is_cif_names(tags)) {
+        std::vector<std::string> notes;
+        std::string written;
+        try {
+            written = detail::cif_to_edi(text, experiment, where, notes);
+        } catch (const std::exception& error) {
+            throw IoError(error.what());
+        }
+        report_notes(notes, on_warning);
+        return parse_block(written, where, true, true);
+    }
+    if (std::any_of(tags.begin(), tags.end(), [](const std::string& tag) { return !detail::name_variants(tag).empty(); })) {
+        refuse_adp_spellings(parse_block(text, where, true, false), where);
     }
     return parse_block(text, where, true, true);
 }
 
-// The block a text holds, as written, when the from-text entries read it as a classic CIF: a
-// structure that spells its cell `_cell_length_a` and not `_cell.length_a`, or an experiment that
-// spells any of diffraction-lib's CIF names. A block with the schema line is `.edi` and takes the
-// `.edi` path, read with every name it lists, whatever CIF names it also spells; so does any
-// other text, one edi cannot parse included.
-static std::optional<Block> classic_cif_block(const std::string& text, const std::string& where,
-                                              bool (*is_classic)(const Block&)) {
-    std::optional<Block> block;
-    try {
-        block = parse_block(text, where);
-    } catch (const IoError&) {
-        return std::nullopt;
-    }
-    const bool schema_line = std::any_of(block->items.begin(), block->items.end(), [](const auto& item) {
-        return detail::current_edi_name(item.first, true) == "_edi.schema_version";
-    });
-    return is_classic(*block) && !schema_line ? block : std::nullopt;
+Structure structure_from_edi_text(const std::string& text, const std::string& where,
+                                  const WarningSink& on_warning) {
+    return structure_from_block(edi_text_block(text, where, false, on_warning), where);
 }
 
-// Whether a classic reader refused for a declaration the text lacks, an item, a loop or a column,
-// rather than for one it makes. Such a text goes on as any other: a CIF is refused, and a `.edi`
-// block that spells an item by a CIF name is read with every name it lists.
-static bool lacks_a_declaration(const SchemaValidationError& error) {
-    static const std::set<std::string> absent = {
-        "edi.schema.missing-required-tag", "edi.schema.missing-required-loop",
-        "edi.schema.missing-family-tag", "edi.schema.missing-loop-column",
-        "edi.schema.missing-data-column"};
-    const std::vector<Diagnostic>& diagnostics = error.diagnostics();
-    return std::any_of(diagnostics.begin(), diagnostics.end(),
-                       [](const Diagnostic& diagnostic) { return absent.contains(diagnostic.code); });
-}
-
-static bool structure_block_is_classic_cif(const Block& block) {
-    return block.find("_cell.length_a") == nullptr && block.find("_cell_length_a") != nullptr;
-}
-
-Structure structure_from_edi_text(const std::string& text) {
-    const std::string where = "<from_cif_str>";
-    if (const std::optional<Block> block = classic_cif_block(text, where, structure_block_is_classic_cif)) {
-        try {
-            return structure_from_cif_block(*block, where);
-        } catch (const SchemaValidationError& error) {
-            if (!lacks_a_declaration(error)) {
-                throw;
-            }
-        }
-    }
-    return structure_from_block(edi_text_block(text, where), where);
-}
-
-Structure load_structure_cif_file(const std::string& path) {
-    return structure_from_block(edi_text_block(read_file(path), path), path);
-}
-
-BraggPdExperiment experiment_from_edi_text(const std::string& text) {
-    const std::string where = "<from_cif_str>";
-    if (const std::optional<Block> block = classic_cif_block(text, where, experiment_block_is_classic_cif)) {
-        try {
-            return experiment_from_block(translate_experiment_cif(*block), where);
-        } catch (const SchemaValidationError& error) {
-            if (!lacks_a_declaration(error)) {
-                throw;
-            }
-        }
-    }
-    return experiment_from_block(edi_text_block(text, where), where);
+BraggPdExperiment experiment_from_edi_text(const std::string& text, const std::string& where,
+                                           const WarningSink& on_warning) {
+    return experiment_from_block(edi_text_block(text, where, true, on_warning), where);
 }
 
 BraggPdExperiment simulation_experiment(const std::string& name, const ExperimentTypeTokens& type,
@@ -3501,16 +3062,6 @@ BraggPdExperiment simulation_experiment(const std::string& name, const Experimen
 
 namespace {
 
-// A `.edi` block file's own rules, after its dispatcher: the extension and the project format's
-// schema are checked before anything is built.
-void require_edi_file(const Block& block, const std::string& path) {
-    if (fs::path(path).extension() != ".edi") {
-        throw IoError(path + ": not a .edi file - structures and experiments load from .edi block "
-                             "files only");
-    }
-    require_edi_schema(block, path);
-}
-
 // ADR-0016: compared by canonical key — the comparison the collection itself makes when it admits
 // the experiment — so this friendlier early refusal can never disagree with it.
 bool holds_experiment(const Project& project, const std::string& name) {
@@ -3525,15 +3076,21 @@ bool holds_experiment(const Project& project, const std::string& name) {
 
 }  // namespace
 
-Structure load_structure_edi_file(const std::string& path) {
-    const Block block = edi_text_block(read_file(path), path);
-    require_edi_file(block, path);
+Structure load_structure_file(const std::string& path, const WarningSink& on_warning) {
+    const Block block = edi_text_block(read_file(path), path, false, on_warning);
+    require_edi_schema(block, path);
     return structure_from_block(block, path);
 }
 
-BraggPdExperiment load_experiment_edi_file(const std::string& path) {
-    const Block block = edi_text_block(read_file(path), path);
-    require_edi_file(block, path);
+Structure load_structure_edi_file(const std::string& path) { return load_structure_file(path); }
+
+Structure load_structure_cif_file(const std::string& path) { return load_structure_file(path); }
+
+BraggPdExperiment load_experiment_edi_file(const std::string& path) { return load_experiment_file(path); }
+
+BraggPdExperiment load_experiment_file(const std::string& path, const WarningSink& on_warning) {
+    const Block block = edi_text_block(read_file(path), path, true, on_warning);
+    require_edi_schema(block, path);
     // The file must say what it is: all four type axes, read from the block itself, because the
     // builder would supply an absent one (beam mode from `_peak.type`, the others by default).
     std::string missing;
@@ -3564,14 +3121,16 @@ BraggPdExperiment load_experiment_edi_file(const std::string& path) {
 }
 
 std::vector<BraggPdExperiment> load_experiment_edi_files(const Project& project,
-                                                         const std::vector<std::string>& paths) {
+                                                         const std::vector<std::string>& paths,
+                                                         const WarningSink& on_warning) {
     std::vector<BraggPdExperiment> loaded;
     std::set<std::string> names;
     for (const auto& item : project.experiments) {
         names.insert(KeyTraits<BraggPdExperiment>::canonical(item->name));
     }
     for (const std::string& path : paths) {
-        BraggPdExperiment experiment = load_experiment_edi_file(path);
+        BraggPdExperiment experiment = load_experiment_file(path, on_warning);
+        require_held_links(project, experiment, path + ": ");
         if (!names.insert(KeyTraits<BraggPdExperiment>::canonical(experiment.name)).second) {
             throw IoError(path + ": an experiment named '" +
                           detail::printable_id(experiment.name) + "' is already " +
@@ -3594,11 +3153,28 @@ void add_loaded_structure(Project& project, Structure structure) {
     project.structures.push_back(std::move(structure));
 }
 
+void require_held_links(const Project& project, const BraggPdExperiment& experiment, const std::string& where,
+                        const std::string& source) {
+    // An empty id spells `structure`, as crysta's loader reads it.
+    const auto spelled = [](const std::string& id) { return id.empty() ? std::string("structure") : id; };
+    for (const auto& link : experiment.linked_structures) {
+        const std::string wanted = spelled(link->structure_id.value());
+        const bool held = std::any_of(project.structures.begin(), project.structures.end(),
+                                      [&](const auto& structure) { return spelled(structure->name.value()) == wanted; });
+        if (!held) {
+            throw IoError(where + "experiment '" + experiment.name + "'" + (source.empty() ? "" : " (" + source + ")") +
+                          " links the structure '" + detail::printable_id(wanted) +
+                          "' (_linked_structure.structure_id), which the project does not hold");
+        }
+    }
+}
+
 void add_loaded_experiment(Project& project, BraggPdExperiment experiment) {
     if (holds_experiment(project, experiment.name)) {
         throw IoError("an experiment named '" + detail::printable_id(experiment.name) +
                       "' is already in the project");
     }
+    require_held_links(project, experiment);
     project.experiments.push_back(std::move(experiment));
 }
 
@@ -3730,9 +3306,16 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     if (!fs::is_directory(root)) {
         throw IoError("not a project directory: " + directory);
     }
-    // crysta's rule: each `.edi`; any other file is passed over.
+    // crysta's rule: each `.edi` and `.cif`, the suffix in any case, a `.cif` beside a `.edi` of its
+    // name reported and not read; any other file is passed over.
+    std::vector<std::string> hidden;
     const std::vector<std::string> structure_files =
-        detail::project_structure_files((root / "structures").string());
+        detail::project_structure_files((root / "structures").string(), &hidden);
+    const std::vector<std::string> experiment_files =
+        detail::project_structure_files((root / "experiments").string(), &hidden);
+    for (const std::string& path : hidden) {
+        warn(kCifReport + path + " not read: " + fs::path(path).stem().string() + ".edi in the same folder is read");
+    }
     if (structure_files.empty() && whole) {
         throw IoError("project has no structures/*.edi: " + directory);
     }
@@ -3745,7 +3328,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // Each is read as crysta reads one, so a CIF written in one is refused.
     for (const std::string& path : structure_files) {
         const fs::path file(path);
-        Structure structure = load_structure_cif_file(file.string());
+        Structure structure = load_structure_file(file.string(), on_warning);
         if (std::any_of(project.structures.begin(), project.structures.end(),
                         [&](const std::shared_ptr<Structure>& held) {
                             return datablock_key(held->name, "structure") ==
@@ -3765,10 +3348,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
     // not modelled, so the value is not kept.
     std::set<std::string> warned_calculators;
     // crysta's rule, as for structures.
-    for (const std::string& path :
-         detail::project_experiment_files((root / "experiments").string())) {
+    for (const std::string& path : experiment_files) {
         const fs::path file(path);
-        const Block experiment_block = edi_text_block(read_file(file.string()), file.string());
+        const Block experiment_block = edi_text_block(read_file(file.string()), file.string(), true, on_warning);
         if (const std::string* calculator = experiment_block.find("_calculator.type")) {
             if (*calculator != "crysta" && warned_calculators.insert(*calculator).second) {
                 warn("unsupported _calculator.type \"" + *calculator + "\" - using crysta");
@@ -3781,7 +3363,9 @@ static Project load_project_folder(const std::string& directory, const WarningSi
             experiment.effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT) {
             std::vector<std::string> ignored;
             for (const auto& item : experiment_block.items) {
-                if (item.first.starts_with("_instrument.")) {
+                // The instrument's name and facility describe it, and are kept.
+                if (item.first.starts_with("_instrument.") && item.first != "_instrument.name" &&
+                    item.first != "_instrument.facility") {
                     ignored.push_back(item.first);
                 }
             }
@@ -3804,18 +3388,8 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                           ") declares neither an embedded _data loop nor a _data_range grid - a "
                           "project must say what it computes over");
         }
-        // Every linked structure names a structure of the project, as crysta's loader requires (an empty
-        // id spells `structure`).
-        const auto spelled = [](const std::string& id) { return id.empty() ? std::string("structure") : id; };
-        for (const auto& link : experiment.linked_structures) {
-            const std::string wanted = spelled(link->structure_id.value());
-            const bool held = std::any_of(project.structures.begin(), project.structures.end(),
-                                          [&](const auto& structure) { return spelled(structure->name.value()) == wanted; });
-            if (!held && whole) {
-                throw IoError("project " + directory + ": experiment '" + experiment.name + "' (" + file.string() +
-                              ") links the structure '" + detail::printable_id(wanted) +
-                              "', which the project does not hold");
-            }
+        if (whole) {
+            require_held_links(project, experiment, "project " + directory + ": ", file.string());
         }
         project.experiments.push_back(std::move(experiment));
     }
@@ -4396,6 +3970,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         // How the project writes values with a standard uncertainty.
         std::optional<std::string> declared_su_rule;
         std::map<std::string, std::string> restored;
+        std::vector<std::pair<std::string, std::string>> retired;
         {
             std::istringstream record_lines(record_text);
             std::string line;
@@ -4417,6 +3992,13 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                                       " more than once: " + record_where);
                     }
                     declared_su_rule = lexical_value(line, su_rule_tag.size(), su_rule_tag);
+                    continue;
+                }
+                // A retired description tag (ADR-0053) converts below, once, and is never
+                // written back.
+                if (const std::string tag = line.substr(0, line.find_first_of(" \t\r"));
+                    detail::is_retired_metadata_tag(tag)) {
+                    retired.emplace_back(tag, lexical_value(line, tag.size(), tag));
                     continue;
                 }
                 for (const char* field : kMetadataFields) {
@@ -4476,6 +4058,17 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                 into = found->second;
             }
         };
+        if (!retired.empty()) {
+            std::vector<std::string> notices;
+            try {
+                notices = detail::apply_legacy_metadata(retired, project);
+            } catch (const std::invalid_argument& refusal) {
+                throw IoError(std::string("project.edi: ") + refusal.what() + ": " + record_where);
+            }
+            for (const std::string& notice : notices) {
+                warn(notice);
+            }
+        }
         restore("name", project.metadata.name);
         restore("title", project.metadata.title);
         restore("description", project.metadata.description);

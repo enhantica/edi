@@ -4,8 +4,3 @@ _metadata.name pd-neut-cwl_cosio-d20
 _metadata.title "Co₂SiO₄ [Pnma] · D20 @ ILL"
 _metadata.description "Olivine · Coordinates, displacements and oxygen occupancies"
 _metadata.authors .
-_metadata.purpose "refinement"
-_metadata.dimensionality "1D"
-_metadata.instrument "D20"
-_metadata.facility "ILL"
-_metadata.polarisation "none"

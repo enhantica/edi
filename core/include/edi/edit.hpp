@@ -251,6 +251,14 @@ class Edit {
     static Edit chi_square_tolerance(Project& project, double tolerance) {
         return Edit([&project, tolerance] { set_minimizer_chi_square_tolerance(project, tolerance); });
     }
+    // The facility and instrument that measured an experiment (ADR-0053), both at once, as a change of facility
+    // may also clear the instrument. "?" states an unknown one.
+    static Edit instrument_description(ExperimentBase& experiment, std::string facility, std::string instrument) {
+        return Edit([&experiment, facility = std::move(facility), instrument = std::move(instrument)] {
+            experiment.instrument.facility = facility;
+            experiment.instrument.name = instrument;
+        });
+    }
     static Edit peak_profile(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_peak_profile(experiment, token); });
     }
@@ -605,14 +613,15 @@ class Edit {
     }
 
     // Loaded experiments added, all or none: every name is checked against the project and against
-    // the others (add_loaded_experiment's rule and message), then the collection takes them in one
-    // mutation.
+    // the others, and every linked structure against the project's (add_loaded_experiment's rules
+    // and messages), then the collection takes them in one mutation.
     static Edit add_experiments(Project& project, std::vector<BraggPdExperiment> experiments) {
         auto batch = std::make_shared<std::vector<BraggPdExperiment>>(std::move(experiments));
         return Edit([&project, batch] {
             require_scan_template(project, project.experiments.size() + batch->size());
             std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
             for (const BraggPdExperiment& experiment : *batch) {
+                require_held_links(project, experiment);
                 const std::string key = KeyTraits<BraggPdExperiment>::canonical(experiment.name);
                 for (const auto& held : all) {
                     if (KeyTraits<BraggPdExperiment>::canonical(held->name) == key) {

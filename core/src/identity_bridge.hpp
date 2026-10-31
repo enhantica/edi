@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 // ADR-0016: the loader's reach into crysta's ONE identity decision — the identity-column table and
@@ -33,14 +34,25 @@ std::string current_edi_name(const std::string& tag, bool every_name);
 // an item of a loop category or a name no item lists. Such an item written as a loop column is refused.
 std::string one_row_category(const std::string& tag);
 
-// Returns unless `tags`, the names a structure or experiment text spells as edi's reader reads
-// them, are a CIF's by crysta's rule; crysta throws std::invalid_argument for a CIF, as reading
-// CIF files is not supported yet.
-void refuse_cif_names(const std::vector<std::string>& tags);
+// The site types whose own names include `tag`, an ADP name that spells its item for those types only
+// (`_atom_site_U_iso_or_equiv`: Uiso and Uani); empty for a name every type shares.
+std::vector<std::string> name_variants(const std::string& tag);
 
-// A project's structure files by crysta's rule, sorted: each `.edi` in `folder`; any other file is
-// passed over.
-std::vector<std::string> project_structure_files(const std::string& folder);
+// Whether `tags`, the names a structure or experiment text spells as edi's reader reads them, are
+// a CIF's by crysta's rule: they name items and none is `.edi`-only.
+bool is_cif_names(const std::vector<std::string>& tags);
+
+// A CIF text read by crysta as one structure, or one experiment, and written back as the `.edi`
+// text a save would write; what crysta reports goes to `notes`. Throws std::invalid_argument when
+// crysta refuses the text and std::runtime_error when it breaks the CIF grammar, the message led
+// by `where`.
+std::string cif_to_edi(const std::string& text, bool experiment, const std::string& where,
+                       std::vector<std::string>& notes);
+
+// A project's structure files by crysta's rule, sorted: each `.edi` and `.cif` in `folder`, the
+// suffix in any case; a `.cif` beside a `.edi` of the same name goes to `hidden` instead.
+std::vector<std::string> project_structure_files(const std::string& folder,
+                                                 std::vector<std::string>* hidden = nullptr);
 // A project's experiment files by the same rule.
 std::vector<std::string> project_experiment_files(const std::string& folder);
 
@@ -51,6 +63,16 @@ class Project;
 }  // namespace edi
 
 namespace edi::detail {
+
+// Whether `tag` is one of the project record's five retired `_metadata` tags (ADR-0053).
+bool is_retired_metadata_tag(const std::string& tag);
+
+// The retired tags a project record carries (tag and value as written), converted onto the
+// project's experiments by crysta's one conversion: an item an experiment declares stands, one it
+// leaves out takes the converted value. Returns one warning per retired tag; throws
+// std::invalid_argument naming a tag or value crysta refuses.
+std::vector<std::string> apply_legacy_metadata(
+    const std::vector<std::pair<std::string, std::string>>& record, Project& project);
 
 // ADR-0036 §7: the report's settings, checked by crysta's rules; each throws std::invalid_argument naming the item.
 // `_report.<item>` with its decoded value, stated into `project`; an item the category does not have is refused.

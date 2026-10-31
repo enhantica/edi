@@ -5,6 +5,9 @@ Status: accepted (owner's examples table decisions, 2026-10-09).
 Amended by [One example catalogue](0048-one-example-catalogue.md): the app bundles the registry's user-facing
 projects, in registry order, and the app's own LiF example is retired.
 
+Amended by [Each experiment describes itself](0053-experiment-description.md): the descriptive tags moved from the
+project record to each experiment, the facets are read from the experiments, and the purpose is derived from the data.
+
 The prior implementation is `ExampleListModel` in Session and `ExamplesGroup.qml`: it inferred sample and technique from registry IDs and displayed two lines without filters. The CLI registry is an execution contract; presentation facts now live in the app's bundled `examples/metadata.json`, with source paths for each entry. Missing facts remain “Not specified”; simulation purpose is separate from the saved fitting mode. Multi-phase examples name every sample.
 
 The model publishes typed properties and list models, following ADR-0015. Search normalizes Unicode and case and requires every word. A property picker selects the value vocabulary; choosing a new property resets the value to All. Value counts reflect the text search, count each example once, and ignore the selected value. Zero-count choices remain available. Filtering retains registry order and immutable example IDs; clicking a filtered row opens its own ID.

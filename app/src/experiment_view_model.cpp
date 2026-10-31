@@ -4,6 +4,7 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <array>
 #include <exception>
 #include <filesystem>
 #include <iterator>
@@ -68,6 +69,59 @@ std::vector<edi::CategoryField> instrument_display_order(std::vector<edi::Catego
     });
     return fields;
 }
+
+// The facilities and instruments the selectors offer (the owner, 2026-10-27): every instrument of edi's and
+// diffraction-lib's examples, and common laboratory diffractometers, each with the sample form it measures.
+struct KnownInstrument {
+    const char* facility;
+    const char* name;
+    bool single_crystal;
+};
+constexpr std::array<KnownInstrument, 28> kKnownInstruments{{
+    {"PSI", "HRPT", false},
+    {"ILL", "D1A", false},
+    {"ILL", "D20", false},
+    {"ISIS", "PEARL", false},
+    {"ISIS", "POLARIS", false},
+    {"ISIS", "WISH", false},
+    {"ANSTO", "ECHIDNA", false},
+    {"MLZ", "SPODI", false},
+    {"MLZ", "HEiDi", true},
+    {"J-PARC", "SENJU", true},
+    {"LLB", "5C2", true},
+    {"ESS", "BEER", false},
+    {"ESS", "DREAM", false},
+    {"Argonne", "SEPD", false},
+    {"SNS", "NOMAD", false},
+    {"ESRF", "BM01", false},
+    {"PETRA III", "P02.1", false},
+    {"Laboratory", "Bruker D8 Advance", false},
+    {"Laboratory", "Bruker D2 Phaser", false},
+    {"Laboratory", "Malvern Panalytical Empyrean", false},
+    {"Laboratory", "Malvern Panalytical X'Pert³ Powder", false},
+    {"Laboratory", "Malvern Panalytical Aeris", false},
+    {"Laboratory", "Rigaku SmartLab", false},
+    {"Laboratory", "Rigaku MiniFlex", false},
+    {"Laboratory", "STOE STADI P", false},
+    {"Laboratory", "Bruker D8 Venture", true},
+    {"Laboratory", "Rigaku XtaLAB Synergy", true},
+    {"Laboratory", "STOE IPDS", true},
+}};
+
+// A selector's options: "Not specified" (the empty token) first, then `names`, and `held` too when the file states a
+// name the list does not have, so the selector shows it.
+void set_description_options(OptionListModel* options, std::vector<std::string> names, const std::string& held) {
+    if (!held.empty() && std::find(names.begin(), names.end(), held) == names.end()) {
+        names.push_back(held);
+    }
+    std::vector<std::string> tokens{""};
+    std::vector<std::string> labels{QObject::tr("Not specified").toStdString()};
+    for (const std::string& name : names) {
+        tokens.push_back(name);
+        labels.push_back(name);
+    }
+    options->setOptions(tokens, "", labels);
+}
 }  // namespace
 
 ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project, edi::ExperimentBase& experiment,
@@ -81,8 +135,12 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       beam_mode_options_(new OptionListModel(this)),
       radiation_probe_options_(new OptionListModel(this)),
       scattering_type_options_(new OptionListModel(this)),
+      dimensionality_options_(new OptionListModel(this)),
+      polarisation_options_(new OptionListModel(this)),
       peak_type_options_(new OptionListModel(this)),
       absorption_type_options_(new OptionListModel(this)),
+      facility_options_(new OptionListModel(this)),
+      instrument_options_(new OptionListModel(this)),
       extinction_type_options_(new OptionListModel(this)),
       mosaic_distribution_options_(new OptionListModel(this)),
       reflns_threshold_basis_options_(new OptionListModel(this)),
@@ -114,7 +172,9 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     for (const auto& [options, uid] : {std::pair{sample_form_options_, "experiment_type.sample_form"},
                                        std::pair{beam_mode_options_, "experiment_type.beam_mode"},
                                        std::pair{radiation_probe_options_, "experiment_type.radiation_probe"},
-                                       std::pair{scattering_type_options_, "experiment_type.scattering_type"}}) {
+                                       std::pair{scattering_type_options_, "experiment_type.scattering_type"},
+                                       std::pair{dimensionality_options_, "experiment_type.dimensionality"},
+                                       std::pair{polarisation_options_, "experiment_type.polarisation"}}) {
         options->setItemOptions(uid, option_tokens(uid));
     }
     peak_type_options_->setItemOptions("peak.type", edi::supported_peak_profiles(mode), edi::default_peak_profile(mode));
@@ -125,6 +185,7 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     reflns_threshold_basis_options_->setOptions(edi::reflns_threshold_basis_tokens(), "intensity",
                                                 edi::reflns_threshold_basis_labels());
     background_type_options_->setItemOptions("background.type", edi::supported_background_types());
+    sync_description();
     background_estimate_methods_->setItemOptions("background_estimate.method", edi::background_estimator_methods());
     background_estimate_modes_->setItemOptions("background_estimate.mode", option_tokens("background_estimate.mode"));
     background_estimate_models_->setItemOptions("background_estimate.use_model",
@@ -201,6 +262,82 @@ QString ExperimentViewModel::radiationProbeToken() const {
 }
 QString ExperimentViewModel::scatteringTypeToken() const {
     return QString::fromUtf8(edi::token(experiment_.experiment_type.effective_scattering_type()));
+}
+QString ExperimentViewModel::dimensionalityToken() const {
+    return QString::fromStdString(experiment_.experiment_type.effective_dimensionality());
+}
+QString ExperimentViewModel::polarisationToken() const {
+    return QString::fromStdString(experiment_.experiment_type.effective_polarisation());
+}
+// The instrument's and facility's names; an unknown one, declared `?` or left out, is empty.
+QString ExperimentViewModel::instrumentName() const {
+    const std::string& name = experiment_.instrument.name;
+    return name == "?" ? QString() : QString::fromStdString(name);
+}
+QString ExperimentViewModel::facility() const {
+    const std::string& facility = experiment_.instrument.facility;
+    return facility == "?" ? QString() : QString::fromStdString(facility);
+}
+
+// The selectors' state from the experiment: its names, the instruments of its facility for its sample form, and
+// whether they can be chosen, which they can once a data file was loaded into it in this session. The saved data file
+// name is not that: it comes back when the project is reopened, and then the file's description stands.
+void ExperimentViewModel::sync_description() {
+    const std::string held_facility = facility().toStdString();
+    const std::string held_instrument = instrumentName().toStdString();
+    const bool single_crystal = experiment_.experiment_type.effective_sample_form() != edi::SampleFormEnum::POWDER;
+    std::vector<std::string> facilities;
+    std::vector<std::string> instruments;
+    for (const KnownInstrument& known : kKnownInstruments) {
+        if (std::find(facilities.begin(), facilities.end(), known.facility) == facilities.end()) {
+            facilities.emplace_back(known.facility);
+        }
+        if (held_facility == known.facility && known.single_crystal == single_crystal) {
+            instruments.emplace_back(known.name);
+        }
+    }
+    const QString facility_token = QString::fromStdString(held_facility);
+    const QString instrument_token = QString::fromStdString(held_instrument);
+    const bool editable = experiment_.description_chosen;
+    const bool changed = facility_token != facility_token_ || instrument_token != instrument_token_ ||
+                         editable != description_editable_ || facility_options_->count() == 0;
+    if (!changed) {
+        return;
+    }
+    set_description_options(facility_options_, facilities, held_facility);
+    set_description_options(instrument_options_, instruments, held_instrument);
+    facility_token_ = facility_token;
+    instrument_token_ = instrument_token;
+    description_editable_ = editable;
+    emit descriptionChanged();
+}
+
+// A facility chosen: its instrument stays when the new facility has it, else it becomes "Not specified".
+void ExperimentViewModel::setFacility(const QString& facility) {
+    if (facility == facility_token_) {
+        return;
+    }
+    std::string instrument = instrument_token_.toStdString();
+    const bool kept = std::any_of(kKnownInstruments.begin(), kKnownInstruments.end(), [&](const KnownInstrument& known) {
+        return facility.toStdString() == known.facility && instrument == known.name;
+    });
+    if (!kept) {
+        instrument.clear();
+    }
+    setLastError(editor_.apply(edi::Edit::instrument_description(experiment_,
+                                                                 facility.isEmpty() ? "?" : facility.toStdString(),
+                                                                 instrument.empty() ? "?" : instrument),
+                               false));
+}
+
+void ExperimentViewModel::setInstrument(const QString& instrument) {
+    if (instrument == instrument_token_) {
+        return;
+    }
+    setLastError(editor_.apply(
+        edi::Edit::instrument_description(experiment_, facility_token_.isEmpty() ? "?" : facility_token_.toStdString(),
+                                          instrument.isEmpty() ? "?" : instrument.toStdString()),
+        false));
 }
 // The declared model, now that edi computes more than one.
 ExperimentViewModel::EstimateSettings ExperimentViewModel::read_estimate_settings() const {
@@ -444,6 +581,7 @@ void ExperimentViewModel::sync() {
             emit(this->*signal)();
         }
     };
+    sync_description();
     update(name_, QString::fromStdString(experiment_.name), &ExperimentViewModel::nameChanged);
     const std::string default_profile = edi::default_peak_profile(experiment_.effective_beam_mode());
     update(peak_type_, QString::fromStdString(experiment_.peak.type.value_or(default_profile)),

@@ -293,6 +293,11 @@
    "reason": "the parameter table column of fit upper bounds, not the calculation range"
   },
   {
+   "file": "app/qml/Pages/Experiment/InstrumentGroup.qml",
+   "literal": "Instrument",
+   "reason": "the instrument that measured the experiment, a selector label, not the instrument category's title"
+  },
+  {
    "file": "app/qml/Pages/Experiment/LinkedStructureGroup.qml",
    "literal": "s.u.",
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
@@ -376,6 +381,11 @@
    "file": "lib/src/bindings.cpp",
    "literal": "Project",
    "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportTable.qml",
+   "literal": ".",
+   "reason": "the decimal point of a number aligned on its point, not the inapplicable polarisation token"
   }
  ]
 }

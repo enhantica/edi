@@ -82,6 +82,7 @@ nav:
           - dev/adrs/0050-observed-reflections-and-fit-cutoff.md
           - dev/adrs/0051-names-and-numbers-from-the-dictionary.md
           - dev/adrs/0052-project-folders-archives-and-opening.md
+          - dev/adrs/0053-experiment-description.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -153,6 +154,7 @@ nav:
           - user/cli/sc-neut-tof_taurine-senju/index.md
       - Guides:
           - user/guides/complete-project-loading.md
+          - user/guides/reading-cif-files.md
           - user/guides/sequential-fitting-in-the-app.md
           - user/guides/projects-from-scratch-in-the-app.md
           - user/guides/the-report.md

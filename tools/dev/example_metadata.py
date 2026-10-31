@@ -2,12 +2,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Generate/check the Examples presentation index from committed project records.
 
-The app-only descriptive tags stay in carried project.edi files during save; supported
-experiment axes and fitting mode belong to their ordinary native categories.
+The project record gives the title and description; the experiment axes, the description
+(dimensionality, polarisation, instrument and facility, ADR-0053) and the fitting mode
+come from their ordinary native categories, and the purpose from whether any experiment has
+measured data.
 """
 
 import argparse
 import json
+import re
 import shlex
 from pathlib import Path
 
@@ -53,18 +56,26 @@ def generate() -> dict[str, object]:
             key: sorted({scalars(p)['_experiment_type.' + field] for p in experiments})
             for key, field in axes.items()
         }
+        described = [scalars(p) for p in experiments]
+        measured = any(
+            re.search(r'^_(data|refln)\.', p.read_text(encoding='utf-8'), re.MULTILINE)
+            for p in experiments
+        )
         values.update(
-            purpose=[metadata['_metadata.purpose']],
+            purpose=['refinement' if measured else 'simulation'],
             fittingMode=[scalars(analysis)['_fitting_mode.type']],
-            facilities=[metadata['_metadata.facility']],
-            instruments=[metadata['_metadata.instrument']],
-            dimensionality=[metadata['_metadata.dimensionality']],
+            facilities=sorted({item.get('_instrument.facility', '') for item in described}),
+            instruments=sorted({item.get('_instrument.name', '') for item in described}),
+            dimensionality=sorted({
+                item.get('_experiment_type.dimensionality') or '1d' for item in described
+            }),
         )
-        values['polarisation'] = (
-            [metadata['_metadata.polarisation']]
-            if values['probe'] == ['neutron']
-            else ['__not_applicable__']
-        )
+        values['polarisation'] = sorted({
+            (item.get('_experiment_type.polarisation') or 'unpolarised')
+            if item.get('_experiment_type.radiation_probe', 'neutron') == 'neutron'
+            else '__not_applicable__'
+            for item in described
+        })
         sources = [record, analysis, *experiments, *sorted((project / 'structures').glob('*.edi'))]
         entries[example_id] = {
             'samples': sample.split(' / '),
