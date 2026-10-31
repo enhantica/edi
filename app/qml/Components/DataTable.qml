@@ -50,7 +50,8 @@ EaComponents.ListView {
     property var columns: []
     property bool equalColumns: false
     property var spreadColumns: []
-    autoColumnPadding: EaStyle.Sizes.tableColumnSpacing * 4
+    // The column margin is separate from the cell's own measured insets (ADR-0029).
+    autoColumnPadding: EaStyle.Sizes.tableColumnSpacing * 3
     // The last data column, which holds the spare width as empty space after its content; -1 for none.
     readonly property int fillerIndex: equalColumns || spreadColumns.length > 0 ? -1 : columns.lastIndexOf(-1)
     // Each column's widest text, its header's or a cell's, without the margin.

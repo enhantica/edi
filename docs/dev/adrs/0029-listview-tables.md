@@ -158,6 +158,15 @@ since the base centres each row. Atom sites, atomic displacements and the Analys
 own: equal columns for the first two; for the parameters the name in full, then value and s.u. at three tenths of
 the rest each and min and max at two tenths, with free at the right.
 
+The shared `DataTable.autoColumnPadding` is three table spacings, including for
+inheriting atom/ADP tables. That declared column margin is additional to a cell's
+required base/control chrome and its kind-specific alignment inset, which remain
+part of the natural measurement. It is distinct from last-column filler spare.
+Fixed action/icon widths, hidden placeholders, the identifier cap and each
+explicit equal/spread/Analysis distribution retain their own declarations. The
+previous shared four-spacing setting did not implement this accepted margin;
+original/native visual parity does not supersede the three-spacing contract.
+
 
 ### 2026-10-28: deferred fitting belongs to the actual table
 
