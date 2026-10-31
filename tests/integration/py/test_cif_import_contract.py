@@ -339,7 +339,31 @@ def test_project_members_use_case_insensitive_suffixes_and_edi_shadowing(tmp_pat
     )
 
 
-def test_observer_rejects_lookup_only_and_partial_column_escapes():
+def test_observer_rejects_lookup_only_and_partial_column_escapes(tmp_path):
+    result = case.observe(
+        'experiment',
+        case.EXPERIMENT + "_diffrn_source.facility 'Authored facility'\n",
+        tmp_path,
+    )
+    assert 'refused' not in result, 'A supported facility declaration reaches the real reader'
+    assert not any(case.notices(note, '_diffrn_source.facility') for note in result['notes']), (
+        'The supported facility is consumed rather than reported unused'
+    )
+    assert [case.decoded(v) for v in result['cells'][case.key('_instrument.facility')]] == [
+        'Authored facility'
+    ], 'The saved model retains the facility after the real reader looks it up'
+    native = (
+        case.ROOT / 'tests/fixtures/loop_parameter_ids/line-segment/experiments/bank.edi'
+    ).read_text()
+    for marker in ['', '_instrument.name ?\n_instrument.facility ?\n']:
+        result = case.observe('experiment', native + '\n' + marker, tmp_path / str(len(marker)))
+        assert 'refused' not in result, (
+            'Optional instrument descriptions may be omitted or unknown'
+        )
+        for tag in ['_instrument.name', '_instrument.facility']:
+            assert result['cells'][case.key(tag)] == ['?'], (
+                'An unspecified instrument description is written as the unknown marker'
+            )
     for found in [[], ['0.1'], ['0.271828', '0.1']]:
         with pytest.raises(AssertionError, match='saved column'):
             case.accounted(
