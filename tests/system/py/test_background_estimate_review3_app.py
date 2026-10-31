@@ -405,7 +405,7 @@ def undo_observation_control(value, uncertainty, present, free, rule, token, nat
         '_background.origin 80\nloop_\n_background.id\n_background.order\n_background.coef\n'
         + ''.join(f'{r[0]} {r[1]} {token}\n' for r in row_data),
     }
-    return receipt, copy.deepcopy(after['terms']), [triplet] * len(row_data)
+    return receipt, [tuple(row) for row in after['terms']], [triplet] * len(row_data)
 
 
 def undo_observation_mutants(receipt):
