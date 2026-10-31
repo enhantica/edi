@@ -54,7 +54,7 @@
 #include <private/qqmltypewrapper_p.h>
 #include <private/qv4compileddata_p.h>
 #include <private/qv4function_p.h>
-#include <private/qv4memberdata_p.h>
+#include <private/qv4arrayobject_p.h>
 #include <private/qmetaobject_p.h>
 #include <private/qqmlengine_p.h>
 #include <private/qqmljavascriptexpression_p.h>
@@ -62,7 +62,6 @@
 #include <private/qv4jscall_p.h>
 #include <private/qv4lookup_p.h>
 #include <private/qv4mm_p.h>
-#include <private/qv4proxy_p.h>
 #include <private/qv4regexpobject_p.h>
 #include <private/qv4qmlcontext_p.h>
 #include <private/qv4qobjectwrapper_p.h>
@@ -84,13 +83,13 @@ namespace QV4 {
 namespace Heap {
 #define AssistantPanelCallbackMembers(class, Member) \
     Member(class, Pointer, QmlContext*, context) \
-    Member(class, Pointer, MemberData*, captures) \
+    Member(class, Pointer, ArrayObject*, captures) \
     Member(class, NoMark, bool, strict) \
     Member(class, NoMark, uint, operation)
 DECLARE_HEAP_OBJECT(AssistantPanelCallback, FunctionObject) {
     DECLARE_MARKOBJECTS(AssistantPanelCallback)
     QV4QPointer<QObject> panel;
-    void init(QV4::ExecutionEngine* engine, QV4::QmlContext* captured, uint kind, QObject* owner, QV4::MemberData* values = nullptr) {
+    void init(QV4::ExecutionEngine* engine, QV4::QmlContext* captured, uint kind, QObject* owner, QV4::ArrayObject* values = nullptr) {
         FunctionObject::init(engine, QString());
         context.set(engine, captured ? captured->d() : nullptr);
         captures.set(engine, values ? values->d() : nullptr);
@@ -855,7 +854,7 @@ QV4::ReturnedValue panelUsageGet(const PanelUsageFrame& frame, const QV4::Value&
                 | (forCall ? QV4::QObjectWrapper::NoFlag : QV4::QObjectWrapper::AttachMethods));
             return wrapper->getQmlProperty(frame.context, name, flags, nullptr);
         }
-        if (!object->as<QV4::ProxyObject>()
+        if (object->vtable()->type != QV4::Managed::Type_ProxyObject
             && object->vtable()->resolveLookupGetter == QV4::Object::staticVTable()->resolveLookupGetter) {
             const auto index = object->internalClass()->findValueOrGetter(name->toPropertyKey());
             if (index.isValid()) return QV4::Object::getValue(&value, *object->d()->propertyData(index.index), index.attrs);
@@ -921,6 +920,19 @@ QJSValue panelUsageConstruct(const PanelUsageFrame& frame, const QJSValue& const
     return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
 }
 QJSValue panelUsageMemberCall(const PanelUsageFrame&, const QJSValue&, const char*, const QJSValueList&);
+// Keep context-list wrappers live: each access reads the current property at its original index.
+qsizetype panelUsageContextListCount(QQmlListProperty<QObject>* property) {
+    auto* context = static_cast<QQmlContext*>(property->object);
+    const auto value = QQmlContextPrivate::get(context)->propertyValue(static_cast<int>(quintptr(property->data)));
+    return value.userType() == qMetaTypeId<QList<QObject*>>()
+        ? static_cast<const QList<QObject*>*>(value.constData())->size() : 0;
+}
+QObject* panelUsageContextListAt(QQmlListProperty<QObject>* property, qsizetype index) {
+    auto* context = static_cast<QQmlContext*>(property->object);
+    const auto value = QQmlContextPrivate::get(context)->propertyValue(static_cast<int>(quintptr(property->data)));
+    return value.userType() == qMetaTypeId<QList<QObject*>>()
+        ? static_cast<const QList<QObject*>*>(value.constData())->at(index) : nullptr;
+}
 QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::String* name,
                                            QV4::Value* base, bool forCall = false) {
     auto* vm = frame.vm();
@@ -962,7 +974,7 @@ QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::S
         const auto& value = cp->propertyValue(index);
         if (value.userType() == qMetaTypeId<QList<QObject*>>()) {
             QQmlListProperty<QObject> list(source->asQQmlContext(), reinterpret_cast<void*>(qintptr(index)),
-                QQmlContextPrivate::context_count, QQmlContextPrivate::context_at);
+                panelUsageContextListCount, panelUsageContextListAt);
             return QV4::QmlListWrapper::create(vm, list, QMetaType::fromType<QQmlListProperty<QObject>>());
         }
         return vm->fromVariant(value);
@@ -1045,10 +1057,10 @@ void panelUsageContextWrite(const PanelUsageFrame& frame, const char* name, cons
 QJSValue panelUsageClosure(const PanelUsageFrame& frame, uint operation, const QJSValueList& values, int arity = 0) {
     if (!panelUsageReady(frame)) return {};
     QV4::Scope scope(frame.vm());
-    QV4::Scoped<QV4::MemberData> captures(scope, QV4::MemberData::allocate(frame.vm(), values.size()));
-    captures->d()->values.size = values.size();
+    QV4::JSCallArguments retained(scope, static_cast<int>(values.size()));
     for (qsizetype i = 0; i < values.size(); ++i)
-        captures->set(frame.vm(), i, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), values[i])));
+        retained.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), values[i]);
+    QV4::ScopedArrayObject captures(scope, frame.vm()->newArrayObject(retained.args, static_cast<int>(values.size())));
     QV4::Scoped<QV4::QmlContext> context(scope, frame.qmlScope);
     QV4::Scoped<QV4::AssistantPanelCallback> callback(scope,
         frame.vm()->memoryManager->allocate<QV4::AssistantPanelCallback>(frame.vm(), context.getPointer(), operation, nullptr, captures.getPointer()));
@@ -3014,13 +3026,13 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
     const QJSValue value = count ? QJSValuePrivate::fromReturnedValue(arguments[0].asReturnedValue()) : QJSValue();
     QJSValue result;
     if (callback->d()->operation >= 60) {
-        QV4::Scoped<QV4::MemberData> captures(scope, callback->d()->captures);
-        const auto retained = [&](uint index) { return QJSValuePrivate::fromReturnedValue((*captures)[index].asReturnedValue()); };
+        QV4::ScopedArrayObject captures(scope, callback->d()->captures);
+        const auto retained = [&](uint index) { return QJSValuePrivate::fromReturnedValue(captures->arrayData()->get(index)); };
         const auto argument = [&](uint index) {
             return index < static_cast<uint>(count) ? QJSValuePrivate::fromReturnedValue(arguments[index].asReturnedValue()) : QJSValue();
         };
         const auto updateCapture = [&](uint index, const QJSValue& value) {
-            if (panelUsageReady(frame)) captures->set(frame.vm(), index, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), value)));
+            if (panelUsageReady(frame)) captures->arrayData()->setArrayData(frame.vm(), index, QV4::Value::fromReturnedValue(QJSValuePrivate::convertToReturnedValue(frame.vm(), value)));
         };
         result = callback->d()->operation >= 380 ? lifecycleCallback(frame, callback->d()->operation, retained, argument)
             : callback->d()->operation >= 360 ? presentationCallback(frame, callback->d()->operation, retained, argument)
@@ -3053,9 +3065,9 @@ QV4::ReturnedValue QV4::AssistantPanelCallback::virtualCall(const FunctionObject
         if (panelUsageReady(frame)) result = QJSValue(!selected.isNull());
     }
     else {
-        QV4::Scoped<QV4::MemberData> captures(scope, callback->d()->captures);
+        QV4::ScopedArrayObject captures(scope, callback->d()->captures);
         const auto captured = [&](uint index) {
-            return QJSValuePrivate::fromReturnedValue((*captures)[index].asReturnedValue());
+            return QJSValuePrivate::fromReturnedValue(captures->arrayData()->get(index));
         };
         if (callback->d()->operation >= 20) result = projectCallback(frame, callback->d()->operation, captured);
         else if (callback->d()->operation < 10) mainAssistantDelayed(frame, callback->d()->operation, captured);
