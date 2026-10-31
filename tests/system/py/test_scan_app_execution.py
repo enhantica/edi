@@ -412,11 +412,12 @@ def test_evolution_point_click_changes_the_shared_selection(execution):
 def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_execution, mode):
     execution = transition_execution
     flow = execution[mode + '-flow']
-    assert all(value is not None for value in flow['originalFiles'].values()), (
-        'Reset fits: its Undo witness starts with CSV, provenance and run-summary files present'
-    )
-    assert not flow['fitted']['available'], (
-        'Fit state: all fitted datasets disable Start without discarding result files'
+    assert all(
+        flow['originalFiles'][name] is not None
+        for name in ('results.csv', 'results-provenance.csv', 'scan-run.json')
+    ), 'Reset fits: its Undo witness starts with CSV, provenance and run-summary files present'
+    assert flow['fitted']['available'], (
+        'Refit: the seeded previous-generation results enable replacement before Reset'
     )
     assert all(value is None for value in flow['resetFiles'].values()), (
         'Reset fits: every CSV, provenance and run-summary file must be cleared'
@@ -424,8 +425,8 @@ def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_ex
     assert flow['resetState']['available'] and not flow['resetState']['continuable'], (
         'Reset fits: no fitted datasets re-enables Start rather than Continue'
     )
-    assert flow['resetRestored'] and not flow['restoredState']['available'], (
-        'Reset fits: one Undo restores every prior result byte and the completed fit state'
+    assert flow['resetRestored'] and flow['restoredState']['available'], (
+        'Reset fits: one Undo restores every prior result byte and its available Refit state'
     )
     assert flow['stop']['entered'] and flow['stop']['completed'] == 40, (
         'Stop and continue: Stop after file 40 must reach the real worker boundary'
@@ -443,18 +444,21 @@ def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_ex
     assert flow['undoRestored'], (
         'Undo: a first partial run restores absence of all prior result files as one step'
     )
-    assert flow['partialEdited']['available'] and flow['partialEdited']['continuable'], (
-        'Continue fitting: a template edit keeps a partial scan resumable '
-        'without clearing its prefix'
-    )
     assert flow['continue']['completed'] == 122 and flow['prefixKept'], (
         'Stop and continue: continuation keeps the prefix and fits only files 41 through 162; '
         f'worker report: {flow["continue"]}'
     )
     expected = execution['modes'][mode]['files']
     assert_work(flow['work'], expected[40:], 'continue')
-    assert not flow['edited']['available'] and not flow['blocked']['entered'], (
-        'Fit state: editing a completed scan keeps Start disabled until Reset fits'
+    assert flow['edited']['available'] and flow['refit']['entered'], (
+        'Refit: editing a completed scan enables fitting without Reset'
+    )
+    assert flow['refit']['completed'] == len(expected) and flow['refitReplaced'], (
+        'Refit: the edited template replaces every dataset result, including already fitted files'
+    )
+    assert_work(flow['work'], expected, 'refit')
+    assert flow['refitUndoRestored'] and flow['refitUndoStale'], (
+        'Refit Undo: one step restores all prior result/provenance bytes and outdated state'
     )
     assert (
         flow['editKept']
@@ -463,7 +467,7 @@ def test_stop_undo_continue_and_template_edit_exercise_real_worker(transition_ex
         and flow['oldResultsVisible']
     ), (
         'Result tagging: old CSV results remain visible with actual fit and Evolution '
-        'out-of-date markers'
+        'outdated state and Evolution marker'
     )
     assert all(value is None for value in flow['editResetFiles'].values()), (
         'Reset fits: clearing stale results removes every result and provenance file'

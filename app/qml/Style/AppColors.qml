@@ -16,20 +16,28 @@ QtObject {
     // The hover highlight of a clickable status-bar item: the foreground at a tenth.
     readonly property color hoverHighlight: Qt.rgba(EaStyle.Colors.themeForeground.r, EaStyle.Colors.themeForeground.g, EaStyle.Colors.themeForeground.b, 0.1)
 
-    // A structure's colour by its place among the project's, from the colour scheme's structure colours (edi ADR-0038):
-    // the first ones in order, or past five a gradient along the order.
-    function structure(index) {
-        const count = Session.project ? Math.max(Session.project.structures.count, 1) : 1;
-        return index >= 0 ? ApplicationInfo.structureColour(Preferences.structureColours, index, count, EaStyle.Colors.isDarkPalette) : EaStyle.Colors.themeForegroundMinor;
-    }
+    // The status bar's buttons (the owner, 2026-10-26): the fit status, Reset and Follow white with a 1 px border in the
+    // bar's border colour in light mode, black with a border just off the bar's background in dark mode; the Fit button
+    // black in light mode and white in dark mode while it can act, the accent on hover.
+    readonly property color statusButtonBackground: EaStyle.Colors.isDarkPalette ? "#000000" : "#ffffff"
+    readonly property color statusButtonBorder: EaStyle.Colors.isDarkPalette ? "#3c3c3c" : EaStyle.Colors.appBarBorder
+    readonly property color fitButtonBackground: EaStyle.Colors.isDarkPalette ? "#ffffff" : "#000000"
+    readonly property color fitButtonForeground: EaStyle.Colors.isDarkPalette ? "#000000" : "#ffffff"
 
-    // An experiment's colour by its place among the project's, from the colour scheme's measured colours: the first
-    // ones in order, or past five a gradient along the order. None is a structure's colour.
-    // `dark` picks the dark theme's colour; without it, the app's theme decides (a PDF's figure asks for the light one).
+    // A block's colour from the figure palette (edi ADR-0038): the palette's colour at the block's position, which the
+    // open project holds (a block keeps its position; a new one takes the next free). `dark` picks the dark theme's
+    // colour; without it, the app's theme decides (a PDF's figure asks for the light one).
+    function positioned(positions, index, dark) {
+        const project = Session.project;
+        if (!project || index < 0 || index >= positions.length)
+            return EaStyle.Colors.themeForegroundMinor;
+        return ApplicationInfo.figureColour(Preferences.colourScheme, positions[index], project.colourPositionCount, dark === undefined ? EaStyle.Colors.isDarkPalette : dark);
+    }
+    function structure(index, dark) {
+        return colors.positioned(Session.project ? Session.project.structureColourPositions : [], index, dark);
+    }
     function experiment(index, dark) {
-        const count = Session.project ? Math.max(Session.project.experiments.count, 1) : 1;
-        const darkColour = dark === undefined ? EaStyle.Colors.isDarkPalette : dark;
-        return index >= 0 ? ApplicationInfo.patternColour(Preferences.patternColours, index, count, darkColour) : EaStyle.Colors.themeForegroundMinor;
+        return colors.positioned(Session.project ? Session.project.experimentColourPositions : [], index, dark);
     }
 
     // A block's colour by its kind ("structure" or "experiment") and place.
@@ -51,7 +59,7 @@ QtObject {
     }
     readonly property list<color> tableUnderlays: [EaStyle.Colors.themeBackgroundHovered1, EaStyle.Colors.themeBackgroundHovered2, EaStyle.Colors.themeRowHovered, EaStyle.Colors.mainContentBackground]
 
-    // A colour drawn flat on any of `backgrounds`, moved to 3:1 contrast on each by its lightness (edi ADR-0047).
+    // A colour drawn flat on any of `backgrounds`, moved to 2:1 contrast on each by its lightness (edi ADR-0047).
     function readable(colour, backgrounds) {
         return ApplicationInfo.readableColour(colour, backgrounds);
     }

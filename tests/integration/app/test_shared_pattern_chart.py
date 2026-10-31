@@ -18,7 +18,15 @@ CASES = {
     + [
         f'test_toolbar_toggles_follow_every_page:{page}-{button}'
         for page in ('experiment', 'analysis', 'structure')
-        for button in ('legend', 'hover', 'structureCurves', 'includedRange', 'pan', 'zoom')
+        for button in (
+            'legend',
+            'hover',
+            'structureCurves',
+            'includedRange',
+            'subtractBackground',
+            'pan',
+            'zoom',
+        )
     ],
     'hidden_work': ['test_hidden_pages_do_no_chart_work'],
 }

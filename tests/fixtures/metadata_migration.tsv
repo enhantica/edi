@@ -1,0 +1,111 @@
+record	experiment	legacy_dimensionality	legacy_polarisation	legacy_instrument	legacy_facility	legacy_purpose	dimensionality	polarisation	instrument_name	facility
+app/examples/pd-xray-cwl_lif/project/project.edi	app/examples/pd-xray-cwl_lif/project/experiments/cu_ka.edi	1D		?	?	simulation	1d	.	?	?
+docs/user/cli/pd-neut-cwl_cosio-d20/project/project.edi	docs/user/cli/pd-neut-cwl_cosio-d20/project/experiments/d20.edi	1D	none	D20	ILL	refinement	1d	unpolarised	D20	ILL
+docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/project.edi	docs/user/cli/pd-neut-cwl_cosio-d20_scan-162f/project/experiments/d20.edi	1D	none	D20	ILL	refinement	1d	unpolarised	D20	ILL
+docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/project.edi	docs/user/cli/pd-neut-cwl_cosio-d20_scan-324f/project/experiments/d20.edi	1D	none	D20	ILL	refinement	1d	unpolarised	D20	ILL
+docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/project.edi	docs/user/cli/pd-neut-cwl_cosio-d20_scan-3f/project/experiments/d20.edi	1D	none	D20	ILL	refinement	1d	unpolarised	D20	ILL
+docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/project.edi	docs/user/cli/pd-neut-cwl_cosio-d20_scan/project/experiments/d20.edi	1D	none	D20	ILL	refinement	1d	unpolarised	D20	ILL
+docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/project.edi	docs/user/cli/pd-neut-cwl_cosio-d20_start-1/project/experiments/d20.edi	1D	none	D20	ILL	refinement	1d	unpolarised	D20	ILL
+docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/project.edi	docs/user/cli/pd-neut-cwl_cosio-d20_start-4/project/experiments/d20.edi	1D	none	D20	ILL	refinement	1d	unpolarised	D20	ILL
+docs/user/cli/pd-neut-cwl_hs-hrpt/project/project.edi	docs/user/cli/pd-neut-cwl_hs-hrpt/project/experiments/hrpt.edi	1D	none	HRPT	PSI	refinement	1d	unpolarised	HRPT	PSI
+docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/project.edi	docs/user/cli/pd-neut-cwl_lab6-11b-echidna_basic/project/experiments/echidna.edi	1D	none	ECHIDNA	ANSTO	refinement	1d	unpolarised	ECHIDNA	ANSTO
+docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/project.edi	docs/user/cli/pd-neut-cwl_lab6-11b-echidna_tch-fcj/project/experiments/echidna.edi	1D	none	ECHIDNA	ANSTO	refinement	1d	unpolarised	ECHIDNA	ANSTO
+docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/project.edi	docs/user/cli/pd-neut-cwl_lab6-echidna_fcj-asymmetry/project/experiments/echidna.edi	1D	none	ECHIDNA	ANSTO	verification	1d	unpolarised	ECHIDNA	ANSTO
+docs/user/cli/pd-neut-cwl_lbco-hrpt/project/project.edi	docs/user/cli/pd-neut-cwl_lbco-hrpt/project/experiments/hrpt.edi	1D	none	HRPT	PSI	refinement	1d	unpolarised	HRPT	PSI
+docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/project.edi	docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project/experiments/hrpt.edi	1D	none	HRPT	PSI	refinement	1d	unpolarised	HRPT	PSI
+docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/project.edi	docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi	1D	none	HRPT	PSI	refinement	1d	unpolarised	HRPT	PSI
+docs/user/cli/pd-neut-cwl_lbco_simulation/project/project.edi	docs/user/cli/pd-neut-cwl_lbco_simulation/project/experiments/hrpt.edi	1D	none	HRPT	PSI	simulation	1d	unpolarised	HRPT	PSI
+docs/user/cli/pd-neut-cwl_lmo-echidna/project/project.edi	docs/user/cli/pd-neut-cwl_lmo-echidna/project/experiments/echidna.edi	1D	none	ECHIDNA	ANSTO	refinement	1d	unpolarised	ECHIDNA	ANSTO
+docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/project.edi	docs/user/cli/pd-neut-cwl_pbso4_beba-asymmetry/project/experiments/d1a.edi	1D	none	D1A	ILL	refinement	1d	unpolarised	D1A	ILL
+docs/user/cli/pd-neut-cwl_y2o3-spodi/project/project.edi	docs/user/cli/pd-neut-cwl_y2o3-spodi/project/experiments/spodi.edi	1D	none	SPODI	FRM II	refinement	1d	unpolarised	SPODI	FRM II
+docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/project.edi	docs/user/cli/pd-neut-cwl_y2o3_beta-adp/project/experiments/y2o3.edi	1D	none	SPODI	FRM II	verification	1d	unpolarised	SPODI	FRM II
+docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/project.edi	docs/user/cli/pd-neut-cwl_yalo3-al2o3-spodi/project/experiments/spodi.edi	1D	none	SPODI	FRM II	refinement	1d	unpolarised	SPODI	FRM II
+docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/project.edi	docs/user/cli/pd-neut-cwl_yap-spodi_3k/project/experiments/spodi.edi	1D	none	SPODI	FRM II	refinement	1d	unpolarised	SPODI	FRM II
+docs/user/cli/pd-neut-tof_cecoal-polaris/project/project.edi	docs/user/cli/pd-neut-tof_cecoal-polaris/project/experiments/polaris.edi	1D	none	POLARIS	ISIS	refinement	1d	unpolarised	POLARIS	ISIS
+docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/project.edi	docs/user/cli/pd-neut-tof_cecoal-polaris_chebyshev/project/experiments/polaris.edi	1D	none	POLARIS	ISIS	refinement	1d	unpolarised	POLARIS	ISIS
+docs/user/cli/pd-neut-tof_ceo2-pearl/project/project.edi	docs/user/cli/pd-neut-tof_ceo2-pearl/project/experiments/pearl.edi	1D	none	PEARL	ISIS	refinement	1d	unpolarised	PEARL	ISIS
+docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/project.edi	docs/user/cli/pd-neut-tof_ceo2-pearl_polynomial/project/experiments/pearl.edi	1D	none	PEARL	ISIS	refinement	1d	unpolarised	PEARL	ISIS
+docs/user/cli/pd-neut-tof_diamond-dream_basic/project/project.edi	docs/user/cli/pd-neut-tof_diamond-dream_basic/project/experiments/dream.edi	1D	none	DREAM	ESS	verification	1d	unpolarised	DREAM	ESS
+docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/project.edi	docs/user/cli/pd-neut-tof_diamond-dream_mcstas/project/experiments/dream.edi	1D	none	DREAM	ESS	refinement	1d	unpolarised	DREAM	ESS
+docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/project.edi	docs/user/cli/pd-neut-tof_fe_pseudo-voigt/project/experiments/beer.edi	1D	none	BEER	ESS	verification	1d	unpolarised	BEER	ESS
+docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/project.edi	docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/experiments/expt_n2.edi	1D	none	BEER	ESS	refinement	1d	unpolarised	BEER	ESS
+docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/project.edi	docs/user/cli/pd-neut-tof_ferrite-austenite-beer/project/experiments/expt_s2.edi	1D	none	BEER	ESS	refinement	1d	unpolarised	BEER	ESS
+docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/project.edi	docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_n2.edi	1D	none	BEER	ESS	refinement	1d	unpolarised	BEER	ESS
+docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/project.edi	docs/user/cli/pd-neut-tof_ferrite-austenite-beer_joint/project/experiments/expt_s2.edi	1D	none	BEER	ESS	refinement	1d	unpolarised	BEER	ESS
+docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/project.edi	docs/user/cli/pd-neut-tof_lbco-si-mcstas/project/experiments/mcstas.edi	1D	none	McStas	?	refinement	1d	unpolarised	McStas	?
+docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_4_7.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-2bank_start-3/project/experiments/wish_5_6.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_2_9.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_4_7.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-3bank_start-5/project/experiments/wish_5_6.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_1_10.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_2_9.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_3_8.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_4_7.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-5/project/experiments/wish_5_6.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_1_10.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_2_9.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_3_8.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_4_7.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project/experiments/wish_5_6.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_1_10.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_2_9.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_3_8.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_4_7.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_ncaf-wish/project/project.edi	docs/user/cli/pd-neut-tof_ncaf-wish/project/experiments/wish_5_6.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+docs/user/cli/pd-neut-tof_si-sepd/project/project.edi	docs/user/cli/pd-neut-tof_si-sepd/project/experiments/sepd.edi	1D	none	SEPD	Argonne	refinement	1d	unpolarised	SEPD	Argonne
+docs/user/cli/pd-neut-tof_si-sepd_start-2/project/project.edi	docs/user/cli/pd-neut-tof_si-sepd_start-2/project/experiments/sepd.edi	1D	none	SEPD	Argonne	refinement	1d	unpolarised	SEPD	Argonne
+docs/user/cli/pd-neut-tof_si-sepd_start-5/project/project.edi	docs/user/cli/pd-neut-tof_si-sepd_start-5/project/experiments/sepd.edi	1D	none	SEPD	Argonne	refinement	1d	unpolarised	SEPD	Argonne
+docs/user/cli/pd-neut-tof_si_simulation/project/project.edi	docs/user/cli/pd-neut-tof_si_simulation/project/experiments/sepd.edi	1D	none	SEPD	Argonne	simulation	1d	unpolarised	SEPD	Argonne
+docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/project.edi	docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/d1a.edi	1D		D1A	ILL	refinement	1d	unpolarised	D1A	ILL
+docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/project.edi	docs/user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/project/experiments/lab.edi	1D		D1A	ILL	refinement	1d	.	?	?
+docs/user/cli/pd-xray-cwl_lam7o3-p021/project/project.edi	docs/user/cli/pd-xray-cwl_lam7o3-p021/project/experiments/p021.edi	1D		P02.1	PETRA III	refinement	1d	.	P02.1	PETRA III
+docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/project.edi	docs/user/cli/pd-xray-cwl_latp-bm01_scan/project/experiments/bm01.edi	1D		BM01	ESRF	refinement	1d	.	BM01	ESRF
+docs/user/cli/pd-xray-cwl_latp_scan-4f/project/project.edi	docs/user/cli/pd-xray-cwl_latp_scan-4f/project/experiments/bm01.edi	1D		BM01	ESRF	refinement	1d	.	BM01	ESRF
+docs/user/cli/pd-xray-cwl_lif_single/project/project.edi	docs/user/cli/pd-xray-cwl_lif_single/project/experiments/cu_ka.edi	1D		?	?	verification	1d	.	?	?
+docs/user/cli/pd-xray-cwl_nacl_simulation/project/project.edi	docs/user/cli/pd-xray-cwl_nacl_simulation/project/experiments/lab.edi	1D		?	?	simulation	1d	.	?	?
+docs/user/cli/pd-xray-cwl_pbso4-lab/project/project.edi	docs/user/cli/pd-xray-cwl_pbso4-lab/project/experiments/lab.edi	1D		?	?	refinement	1d	.	?	?
+docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/project.edi	docs/user/cli/pd-xray-cwl_pbso4-lab_round-robin/project/experiments/pbsox.edi	1D		?	?	refinement	1d	.	?	?
+docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/project.edi	docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/experiments/pr2nio4.edi	1D	none	?	?	verification	1d	unpolarised	?	?
+docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/project.edi	docs/user/cli/sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi	1D	none	5C2	LLB	refinement	1d	unpolarised	5C2	LLB
+docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/project.edi	docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp/project/experiments/heidi.edi	1D	none	HEiDi	MLZ (FRM II)	verification	1d	unpolarised	HEiDi	MLZ (FRM II)
+docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/project.edi	docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_basic/project/experiments/heidi.edi	1D	none	HEiDi	MLZ (FRM II)	verification	1d	unpolarised	HEiDi	MLZ (FRM II)
+docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/project.edi	docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_fit/project/experiments/heidi.edi	1D	none	HEiDi	MLZ (FRM II)	refinement	1d	unpolarised	HEiDi	MLZ (FRM II)
+docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/project.edi	docs/user/cli/sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction/project/experiments/heidi.edi	1D	none	HEiDi	MLZ (FRM II)	verification	1d	unpolarised	HEiDi	MLZ (FRM II)
+docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/project.edi	docs/user/cli/sc-neut-tof_taurine-unknown_basic/project/experiments/senju.edi	1D	none	SENJU	J-PARC	verification	1d	unpolarised	SENJU	J-PARC
+docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi	docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_1.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi	docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_2.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi	docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_3.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi	docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_4.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi	docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_5.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+docs/user/cli/sc-neut-tof_taurine_fit/project/project.edi	docs/user/cli/sc-neut-tof_taurine_fit/project/experiments/senju_6.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+tests/fixtures/background_estimate/projects/fitted-auto-chebyshev/project.edi	tests/fixtures/background_estimate/projects/fitted-auto-chebyshev/experiments/d20.edi					fitting				
+tests/fixtures/background_estimate/projects/fitted-auto-fast-chebyshev/project.edi	tests/fixtures/background_estimate/projects/fitted-auto-fast-chebyshev/experiments/d20.edi					fitting				
+tests/fixtures/background_estimate/projects/fitted-auto-fast-line-segment/project.edi	tests/fixtures/background_estimate/projects/fitted-auto-fast-line-segment/experiments/d20.edi					fitting				
+tests/fixtures/background_estimate/projects/fitted-auto-fast-polynomial/project.edi	tests/fixtures/background_estimate/projects/fitted-auto-fast-polynomial/experiments/d20.edi					fitting				
+tests/fixtures/background_estimate/projects/fitted-auto-line-segment/project.edi	tests/fixtures/background_estimate/projects/fitted-auto-line-segment/experiments/d20.edi					fitting				
+tests/fixtures/background_estimate/projects/fitted-auto-polynomial/project.edi	tests/fixtures/background_estimate/projects/fitted-auto-polynomial/experiments/d20.edi					fitting				
+tests/fixtures/background_estimate/projects/lifecycle-auto/project.edi	tests/fixtures/background_estimate/projects/lifecycle-auto/experiments/hrpt.edi	1D	none	HRPT	PSI	fitting	1d	unpolarised	HRPT	PSI
+tests/fixtures/background_estimate/projects/lifecycle-excluded/project.edi	tests/fixtures/background_estimate/projects/lifecycle-excluded/experiments/hrpt.edi	1D	none	HRPT	PSI	fitting	1d	unpolarised	HRPT	PSI
+tests/fixtures/background_estimate/projects/lifecycle-guided/project.edi	tests/fixtures/background_estimate/projects/lifecycle-guided/experiments/hrpt.edi	1D	none	HRPT	PSI	fitting	1d	unpolarised	HRPT	PSI
+tests/fixtures/background_estimate/projects/lifecycle-model/project.edi	tests/fixtures/background_estimate/projects/lifecycle-model/experiments/hrpt.edi	1D	none	HRPT	PSI	fitting	1d	unpolarised	HRPT	PSI
+tests/fixtures/background_estimate/projects/lifecycle-saved-auto/project.edi	tests/fixtures/background_estimate/projects/lifecycle-saved-auto/experiments/hrpt.edi	1D	none	HRPT	PSI	fitting	1d	unpolarised	HRPT	PSI
+tests/fixtures/background_estimate/projects/lifecycle-saved-placed/project.edi	tests/fixtures/background_estimate/projects/lifecycle-saved-placed/experiments/hrpt.edi	1D	none	HRPT	PSI	fitting	1d	unpolarised	HRPT	PSI
+tests/fixtures/background_estimate/projects/lifecycle-scan-independent/project.edi	tests/fixtures/background_estimate/projects/lifecycle-scan-independent/experiments/hrpt.edi	1D	none	HRPT	PSI	fitting	1d	unpolarised	HRPT	PSI
+tests/fixtures/background_estimate/projects/lifecycle-scan-sequential/project.edi	tests/fixtures/background_estimate/projects/lifecycle-scan-sequential/experiments/hrpt.edi	1D	none	HRPT	PSI	fitting	1d	unpolarised	HRPT	PSI
+tests/fixtures/e05_t1/stop-nostep/project/project.edi	tests/fixtures/e05_t1/stop-nostep/project/experiments/hrpt.edi	1D	none	HRPT	PSI	fit	1d	unpolarised	HRPT	PSI
+tests/fixtures/fit_quality/fcj/project.edi	tests/fixtures/fit_quality/fcj/experiments/echidna.edi	1D	none	ECHIDNA	ANSTO	verification	1d	unpolarised	ECHIDNA	ANSTO
+tests/fixtures/fit_tables/five/project.edi	tests/fixtures/fit_tables/five/experiments/wish_1_10.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+tests/fixtures/fit_tables/five/project.edi	tests/fixtures/fit_tables/five/experiments/wish_2_9.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+tests/fixtures/fit_tables/five/project.edi	tests/fixtures/fit_tables/five/experiments/wish_3_8.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+tests/fixtures/fit_tables/five/project.edi	tests/fixtures/fit_tables/five/experiments/wish_4_7.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+tests/fixtures/fit_tables/five/project.edi	tests/fixtures/fit_tables/five/experiments/wish_5_6.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+tests/fixtures/fit_tables/one/project.edi	tests/fixtures/fit_tables/one/experiments/wish_1_10.edi	1D	none	WISH	ISIS	refinement	1d	unpolarised	WISH	ISIS
+tests/fixtures/shared_correlations/scan-input/project.edi	tests/fixtures/shared_correlations/scan-input/experiments/d20.edi	1D	none	D20	ILL	refinement	1d	unpolarised	D20	ILL
+tests/fixtures/shared_correlations/single-input/project.edi	tests/fixtures/shared_correlations/single-input/experiments/hrpt.edi	1D	none	HRPT	PSI	refinement	1d	unpolarised	HRPT	PSI
+tests/fixtures/single_crystal/example_fits/taurine_converged/project/project.edi	tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_1.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+tests/fixtures/single_crystal/example_fits/taurine_converged/project/project.edi	tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_2.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+tests/fixtures/single_crystal/example_fits/taurine_converged/project/project.edi	tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_3.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+tests/fixtures/single_crystal/example_fits/taurine_converged/project/project.edi	tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_4.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+tests/fixtures/single_crystal/example_fits/taurine_converged/project/project.edi	tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_5.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC
+tests/fixtures/single_crystal/example_fits/taurine_converged/project/project.edi	tests/fixtures/single_crystal/example_fits/taurine_converged/project/experiments/senju_6.edi	1D	none	SENJU	J-PARC	refinement	1d	unpolarised	SENJU	J-PARC

@@ -108,6 +108,7 @@ def test_fullprof_comparison_projects_retain_verification_purpose(project):
 @pytest.mark.parametrize(('ok', 'failed'), [(0, 0), (7, 0), (0, 3), (7, 3)])
 def test_displayed_sequential_counts_consume_state_colours(summary, ok, failed):
     fit = {
+        'outOfDate': False,
         'scanOk': ok,
         'scanFailed': failed,
         'scanning': not summary,

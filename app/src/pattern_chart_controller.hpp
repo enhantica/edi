@@ -59,13 +59,9 @@ class PatternChartController : public QObject {
     // The chart is shown: a hidden chart is only marked dirty, and refreshed when it is shown again.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
     Q_PROPERTY(bool dark READ dark WRITE setDark NOTIFY darkChanged)
-    // The colour scheme, a token of edi::colour_scheme_from_name (data/palettes): the experiments' and structures'
-    // colours.
+    // The palette, a token of edi::colour_scheme_from_name (data/palettes): the experiments' and structures' colours,
+    // each at its position (ExperimentViewModel::colourPositions).
     Q_PROPERTY(QString colourScheme READ colourScheme WRITE setColourScheme NOTIFY colourSchemeChanged)
-    // The structures' own colour scheme (the Bragg ticks and the structure curves), when the app's Structures colours
-    // differ from its Patterns colours (the owner, 2026-10-22); empty: colourScheme's.
-    Q_PROPERTY(QString structureColourScheme READ structureColourScheme WRITE setStructureColourScheme NOTIFY
-                   structureColourSchemeChanged)
     // The main plot area, in logical pixels, and the window's device pixel ratio: the decimation's width.
     Q_PROPERTY(qreal plotWidth READ plotWidth WRITE setPlotWidth NOTIFY plotWidthChanged)
     Q_PROPERTY(qreal plotHeight READ plotHeight WRITE setPlotHeight NOTIFY plotHeightChanged)
@@ -81,8 +77,14 @@ class PatternChartController : public QObject {
     // Whether the shown experiment has a current d column: until a calculation gives one, d cannot be chosen.
     Q_PROPERTY(bool dAvailable READ dAvailable NOTIFY dAvailableChanged)
     // Only the included range (edi ADR-0044): the x range runs from the first to the last included point, and the
-    // excluded regions show no measured points or ticks. A change starts the x range over.
+    // excluded regions show no measured points or ticks. A change starts both ranges over.
     Q_PROPERTY(bool includedOnly READ includedOnly WRITE setIncludedOnly NOTIFY includedOnlyChanged)
+    // Every curve with the background subtracted (edi::PatternView::subtract_background; off by default, an app setting
+    // shared with the scan views), and whether the shown experiment declares a background to subtract
+    // (edi::has_background), fitted or not.
+    Q_PROPERTY(bool subtractBackground READ subtractBackground WRITE setSubtractBackground NOTIFY
+                   subtractBackgroundChanged)
+    Q_PROPERTY(bool backgroundAvailable READ backgroundAvailable NOTIFY backgroundAvailableChanged)
     // How long a box zoom, a wheel zoom and a reset move the axis ranges (easydiffractionbeta's
     // ChartView.SeriesAnimations, EaStyle.Times.chartAnimation), in milliseconds; 0: at once.
     Q_PROPERTY(int animationDuration READ animationDuration WRITE setAnimationDuration NOTIFY animationDurationChanged)
@@ -174,8 +176,6 @@ class PatternChartController : public QObject {
     bool dark() const { return dark_; }
     void setDark(bool dark);
     QString colourScheme() const { return colour_scheme_; }
-    QString structureColourScheme() const { return structure_colour_scheme_; }
-    void setStructureColourScheme(const QString& scheme);
     void setColourScheme(const QString& scheme);
     qreal plotWidth() const { return plot_width_; }
     void setPlotWidth(qreal width);
@@ -192,6 +192,9 @@ class PatternChartController : public QObject {
     void setDSpacing(bool on);
     bool includedOnly() const { return included_only_; }
     void setIncludedOnly(bool on);
+    bool subtractBackground() const { return subtract_background_; }
+    void setSubtractBackground(bool on);
+    bool backgroundAvailable() const { return background_available_; }
     int animationDuration() const { return animation_duration_; }
     void setAnimationDuration(int milliseconds);
 
@@ -282,7 +285,6 @@ class PatternChartController : public QObject {
     void activeChanged();
     void darkChanged();
     void colourSchemeChanged();
-    void structureColourSchemeChanged();
     void plotWidthChanged();
     void plotHeightChanged();
     void residualPlotHeightChanged();
@@ -291,6 +293,8 @@ class PatternChartController : public QObject {
     void dSpacingChanged();
     void dAvailableChanged();
     void includedOnlyChanged();
+    void subtractBackgroundChanged();
+    void backgroundAvailableChanged();
     void animationDurationChanged();
     void measuredSeriesChanged();
     void measuredLayerChanged();
@@ -374,8 +378,7 @@ class PatternChartController : public QObject {
     QPointer<ReportViewModel> report_;
     QString report_experiment_;
     bool active_ = true, dark_ = false, dirty_ = true;
-    QString colour_scheme_ = QStringLiteral("ediNatural");
-    QString structure_colour_scheme_;
+    QString colour_scheme_ = QStringLiteral("earth");
     // The style table the chart draws with: the report model's own in a report figure, else the palette's for the
     // project's experiments in the colour scheme.
     std::vector<edi::SeriesStyle> styles() const;
@@ -385,6 +388,8 @@ class PatternChartController : public QObject {
     YScale y_scale_ = Linear;
     bool d_spacing_ = false, d_available_ = false;
     bool included_only_ = false;
+    bool subtract_background_ = false;
+    bool background_available_ = false;
     edi::PatternAxis axis() const { return d_spacing_ ? edi::PatternAxis::DSpacing : edi::PatternAxis::Native; }
     // The view: unset means the data's full x range, and y ranges fitted to what is presented.
     std::optional<double> x_min_, x_max_, y_min_, y_max_;

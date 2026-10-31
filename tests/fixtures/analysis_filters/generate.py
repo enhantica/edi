@@ -9,6 +9,7 @@ FIELDS = {
     'cell': {'length_a', 'length_b', 'length_c', 'angle_alpha', 'angle_beta', 'angle_gamma'},
     'atom_site': {'fract_x', 'fract_y', 'fract_z', 'occupancy', 'adp_iso'},
     'peak': {
+        'cutoff_fwhm',
         'broad_gauss_u',
         'broad_gauss_v',
         'broad_gauss_w',
@@ -40,7 +41,7 @@ FIELDS = {
     },
     'absorption': {'abscor1', 'abscor2'},
     'linked_structure': {'scale'},
-    'background': {'coef', 'intensity'},
+    'background': {'coef', 'intensity', 'position', 'order', 'origin'},
 }
 
 
@@ -88,18 +89,21 @@ def read_block(kind, file):
     if kind == 'structure' and file.stem == 'ncaf':
         if '_space_group.it_number 199' not in file.read_text():
             raise ValueError('The NCAF oracle requires its declared cubic I 21 3 setting')
-        constrained = {'Ca1', 'Al1', 'Na1', 'F3'}
-        result = [
-            row
-            for row in result
-            if not (row['category'] == 'cell' and row['name'] != 'length_a')
-            and not (
-                row['category'] == 'atom_site'
-                and row['label'] in constrained
-                and row['name'] in {'fract_y', 'fract_z'}
-            )
-        ]
+        mark_symmetry(result)
     return result
+
+
+def mark_symmetry(rows):
+    for row in rows:
+        cell = row['category'] == 'cell' and row['name'] != 'length_a'
+        coordinate = (
+            row['category'] == 'atom_site'
+            and row['label'] in {'Ca1', 'Al1', 'Na1', 'F3'}
+            and row['name'] in {'fract_y', 'fract_z'}
+        )
+        if cell or coordinate:
+            row['blocked'] = True
+            row['free'] = False
 
 
 def append(result, kind, block, tag, label, value):
@@ -112,6 +116,18 @@ def append(result, kind, block, tag, label, value):
             'name': name,
             'label': label,
             'free': '(' in value,
+            'descriptor': name
+            in {'position', 'order', 'origin', 'cutoff_fwhm', 'setup_twotheta_bank'},
+            'blocked': name
+            in {
+                'position',
+                'order',
+                'origin',
+                'cutoff_fwhm',
+                'setup_twotheta_bank',
+                'abscor2',
+                'calib_d_to_tof_reciprocal',
+            },
         })
 
 

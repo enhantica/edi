@@ -9,7 +9,7 @@ from pathlib import Path
 import edi
 import pytest
 
-from tests.fixtures.approved_palettes.reference import PALETTES
+from tests.fixtures.chart_controls.reference import PALETTES, role_colours
 from tests.integration.py.test_report_iucr_persistence import project
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -83,6 +83,14 @@ def test_default_pattern_titles_are_coloured_segments_with_unstyled_separators(t
     assert hasattr(loaded, 'report'), 'The coloured-title seam reaches the production report'
     document = json.loads(loaded.report.model().to_json())
     pattern = document['experiments'][0]['pattern']
+    styles = {row['key']: row for row in document['pattern_styles']}
+    for theme in ('light', 'dark'):
+        assert styles['meas.0'][theme] == PALETTES[0][theme][0], (
+            'The actual default report starts with the recorded Earth colour in each theme'
+        )
+        assert styles['calc'][theme] == role_colours(theme)['total_calculation'], (
+            'The actual default report uses the recorded common calc red in each theme'
+        )
     main = pattern['y_main']['segments']
     residual = pattern['y_residual']['segments']
     assert [(part['text'], part['style']) for part in main] == [
@@ -119,24 +127,33 @@ def test_palette_rows_are_data_with_default_first_colour_and_valid_hex(dark):
         assert all(
             re.fullmatch(r'#[0-9a-fA-F]{6}', row[t]) for row in rows for t in ('light', 'dark')
         ), 'Every report palette coordinate is valid complete sRGB hex'
-        for role, field in [('measured', 'measured'), ('structure', 'structures')]:
-            selected = [row for row in rows if row['role'] == role]
-            assert [int(row['index']) for row in selected] == list(range(5)), (
-                'Each categorical group retains all five consecutive approved places'
-            )
-            assert [row[theme] for row in selected] == palette[theme][field], (
-                'Report data inputs retain the exact approved categorical order in both themes'
-            )
+        selected = [row for row in rows if row['role'] == 'figure']
+        assert [int(row['index']) for row in selected] == list(range(11)), (
+            'The shared figure pool retains all eleven consecutive approved positions'
+        )
+        assert [row[theme] for row in selected] == palette[theme], (
+            'Report inputs retain the exact recorded shared figure order in both themes'
+        )
         assert {row['role'] for row in rows} == {
-            'measured',
-            'structure',
+            'figure',
             'total_calculation',
             'background',
             'difference',
-        }, 'Role colours replace gradient stops; each gradient spans its group first to second'
-        assert (
-            len({row[theme] for row in rows if row['role'] in {'measured', 'structure'}}) == 10
-        ), 'The two categorical groups keep ten distinct entries'
-    assert PALETTES[0]['name'] == 'Edi Natural' and PALETTES[0]['default'], (
-        'The independently approved report default is Edi Natural'
+        }, 'The shared figure pool and three chart roles replace separate per-kind groups'
+        assert len({row[theme] for row in selected}) == 11, (
+            'The shared categorical pool keeps eleven distinct entries in each theme'
+        )
+        for role, expected in role_colours(theme).items():
+            role_rows = [row for row in rows if row['role'] == role]
+            assert len(role_rows) == 1 and role_rows[0][theme] == expected, (
+                'Each common report role retains exactly one independently recorded colour'
+            )
+    assert [palette['name'] for palette in PALETTES] == [
+        'Earth',
+        'Classic',
+        'Soft',
+        'Natural',
+        'Colour-blind safe',
+    ] and [palette['default'] for palette in PALETTES] == [True, False, False, False, False], (
+        'The recorded report palette names and order put Earth alone first as the default'
     )

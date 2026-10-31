@@ -548,7 +548,7 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
             for (std::size_t i = 0; i < category.fields.size(); ++i) {
                 const CategoryField& field = category.fields[i];
                 ParameterEntry entry{field.parameter, "", "structure", structure->name, category.id, "", field.name,
-                                     field.refinable, field.fittable};
+                                     field.refinable};
                 const std::string root = detail::structure_root(project, *structure);
                 if (category.id == "atom_site") {
                     entry.row_label = structure->atom_sites[i / 5]->id;
@@ -589,13 +589,14 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
     const bool joint = project.experiments.size() > 1;
     for (const auto& experiment : project.experiments) {
         const std::string prefix = joint ? "experiments[" + experiment->name + "]." : std::string("experiment.");
-        for (const Category& category : experiment_categories(*experiment)) {
+        // Every value the experiment carries, the coefficients its profile does not use included (edi ADR-0053).
+        for (const Category& category : experiment_categories(*experiment, true)) {
             std::vector<CategoryField> fields = category.fields;
             fields.insert(fields.end(), category.asymmetry.begin(), category.asymmetry.end());
             for (std::size_t i = 0; i < fields.size(); ++i) {
                 const CategoryField& field = fields[i];
                 ParameterEntry entry{field.parameter, "", "experiment", experiment->name, category.id, "", field.name,
-                                     field.refinable, field.fittable};
+                                     field.refinable};
                 std::string label = field.name;
                 std::string spelled = prefix + category.id + "." + field.name;
                 // A loop row is named by its id, never its position (the owner, 2026-10-11); the engine's label
@@ -622,6 +623,53 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
                                      spelled);
                 entries.push_back(entry);
             }
+        }
+    }
+    return entries;
+}
+
+std::vector<DescriptorEntry> model_descriptors(Project& project) {
+    std::vector<DescriptorEntry> entries;
+    for (const auto& structure : project.structures) {
+        const std::string root = detail::structure_root(project, *structure);
+        for (const auto& [key, length] : structure->scattering_lengths_fm.get()) {
+            entries.push_back({"scattering_length.length_fm", root + "scattering_length[" + key + "].length_fm",
+                               "structure", structure->name, "scattering_length", key, "length_fm", length});
+        }
+    }
+    const bool joint = project.experiments.size() > 1;
+    for (const auto& experiment : project.experiments) {
+        if (experiment->reflections.has_value()) {
+            continue;  // a single crystal carries none of them
+        }
+        const std::string prefix = joint ? "experiments[" + experiment->name + "]." : std::string("experiment.");
+        const auto add = [&](const std::string& category, const std::string& row, const std::string& name,
+                             double value) {
+            const std::string at = row.empty() ? prefix + category + "." + name
+                                               : prefix + category + "[" + row + "]." + name;
+            entries.push_back({category + "." + name, at, "experiment", experiment->name, category, row, name, value});
+        };
+        add("peak", "", "cutoff_fwhm", experiment->peak.cutoff_fwhm);
+        if (experiment->background_type == "line-segment") {
+            for (const auto& point : experiment->background) {
+                add("background", point->id.value(), "position", point->position.get());
+            }
+        } else {
+            for (const auto& term : experiment->background_terms) {
+                add("background", term->id.value(), "order", term->order.get());
+            }
+        }
+        for (const auto& [name, field] : {std::pair{"origin", &experiment->background_origin},
+                                          std::pair{"x_min", &experiment->background_x_min},
+                                          std::pair{"x_max", &experiment->background_x_max}}) {
+            if (field->has_value()) {
+                add("background", "", name, **field);
+            }
+        }
+        for (const auto& row : experiment->preferred_orientation) {
+            add("preferred_orientation", row->structure_id.value(), "index_h", row->index_h.get());
+            add("preferred_orientation", row->structure_id.value(), "index_k", row->index_k.get());
+            add("preferred_orientation", row->structure_id.value(), "index_l", row->index_l.get());
         }
     }
     return entries;

@@ -9,6 +9,7 @@
 #include <QtQml/qqmlregistration.h>
 #include <cstdint>
 #include <optional>
+#include <vector>
 
 #include "block_text.hpp"
 #include "category_list_model.hpp"
@@ -45,11 +46,26 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(QString beamModeToken READ beamModeToken CONSTANT)
     Q_PROPERTY(QString radiationProbeToken READ radiationProbeToken CONSTANT)
     Q_PROPERTY(QString scatteringTypeToken READ scatteringTypeToken CONSTANT)
+    // ADR-0054: the experiment's description, its effective values.
+    Q_PROPERTY(QString dimensionalityToken READ dimensionalityToken CONSTANT)
+    Q_PROPERTY(QString polarisationToken READ polarisationToken CONSTANT)
+    Q_PROPERTY(QString instrumentName READ instrumentName CONSTANT)
+    Q_PROPERTY(QString facility READ facility CONSTANT)
+    // The Facility and Instrument selectors: the names held, empty for "Not specified", and their options, the
+    // instruments those of the chosen facility for the experiment's sample form. They can be chosen for an
+    // experiment made from a data file; one read from a `.edi` or `.cif` file shows what its file states.
+    Q_PROPERTY(QString facilityToken READ facilityToken WRITE setFacility NOTIFY descriptionChanged)
+    Q_PROPERTY(QString instrumentToken READ instrumentToken WRITE setInstrument NOTIFY descriptionChanged)
+    Q_PROPERTY(bool descriptionEditable READ descriptionEditable NOTIFY descriptionChanged)
+    Q_PROPERTY(edi_app::OptionListModel* facilityOptions READ facilityOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* instrumentOptions READ instrumentOptions CONSTANT)
     // Each type axis's values by their dictionary names, for the Experiment type group's selectors.
     Q_PROPERTY(edi_app::OptionListModel* sampleFormOptions READ sampleFormOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* beamModeOptions READ beamModeOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* radiationProbeOptions READ radiationProbeOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* scatteringTypeOptions READ scatteringTypeOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* dimensionalityOptions READ dimensionalityOptions CONSTANT)
+    Q_PROPERTY(edi_app::OptionListModel* polarisationOptions READ polarisationOptions CONSTANT)
     Q_PROPERTY(QString peakType READ peakType WRITE setPeakType NOTIFY peakTypeChanged)
     Q_PROPERTY(edi_app::OptionListModel* peakTypeOptions READ peakTypeOptions CONSTANT)
     Q_PROPERTY(QString absorptionType READ absorptionType WRITE setAbsorptionType NOTIFY absorptionTypeChanged)
@@ -167,10 +183,23 @@ class ExperimentViewModel : public QObject {
     QString beamModeToken() const;
     QString radiationProbeToken() const;
     QString scatteringTypeToken() const;
+    QString dimensionalityToken() const;
+    QString polarisationToken() const;
+    QString instrumentName() const;
+    QString facility() const;
+    QString facilityToken() const { return facility_token_; }
+    QString instrumentToken() const { return instrument_token_; }
+    bool descriptionEditable() const { return description_editable_; }
+    OptionListModel* facilityOptions() const { return facility_options_; }
+    OptionListModel* instrumentOptions() const { return instrument_options_; }
+    void setFacility(const QString& facility);
+    void setInstrument(const QString& instrument);
     OptionListModel* sampleFormOptions() const { return sample_form_options_; }
     OptionListModel* beamModeOptions() const { return beam_mode_options_; }
     OptionListModel* radiationProbeOptions() const { return radiation_probe_options_; }
     OptionListModel* scatteringTypeOptions() const { return scattering_type_options_; }
+    OptionListModel* dimensionalityOptions() const { return dimensionality_options_; }
+    OptionListModel* polarisationOptions() const { return polarisation_options_; }
     QString peakType() const { return peak_type_; }
     void setPeakType(const QString& token);
     OptionListModel* peakTypeOptions() const { return peak_type_options_; }
@@ -273,14 +302,18 @@ class ExperimentViewModel : public QObject {
     // A chart's x axis: while one chart is on d, the pattern is captured on d as well.
     void setChartAxis(const QObject* chart, edi::PatternAxis axis);
     bool dSpacingWanted() const { return !d_charts_.isEmpty(); }
-    // The colour of this experiment's pattern (edi::pattern_colour) is its place among a count: by default among the
-    // project's experiments; a scan's template shows one dataset at a time and takes that dataset's place among the
-    // scan's datasets, as the Project page lists them (setColourPlace).
+    // The colour of this experiment's pattern (edi::figure_colour) is the position of its place among a count: by
+    // default its place among the project's experiments; a scan's template shows one dataset at a time and takes that
+    // dataset's place among the scan's datasets, as the Project page lists them (setColourPlace). The positions are
+    // its chart's style table's (edi::pattern_style_table): the experiments' or the datasets', then the structures'.
     std::size_t colourPlace() const { return colour_place_.value_or(place()); }
     std::size_t colourCount() const { return colour_place_ ? colour_count_ : project_.experiments.size(); }
     // The project's structures, whose ticks the pattern shows.
     std::size_t structureCount() const { return project_.structures.size(); }
-    void setColourPlace(std::optional<std::size_t> place, std::size_t count);
+    const std::vector<std::size_t>& colourPositions() const { return colour_positions_; }
+    // Whether it shows one dataset of a scan, coloured as one of the scan's patterns (edi::pattern_set_colour).
+    bool showsDataset() const { return colour_place_.has_value(); }
+    void setColourPlace(std::optional<std::size_t> place, std::size_t count, std::vector<std::size_t> positions);
     // An edit was admitted: what the pattern shows was calculated before it. The frame stays; the pattern
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.
@@ -318,6 +351,7 @@ class ExperimentViewModel : public QObject {
     void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
+    void descriptionChanged();
     void extinctionTypeChanged();
     void mosaicDistributionChanged();
     void reflnsThresholdSigmaChanged();
@@ -349,6 +383,8 @@ class ExperimentViewModel : public QObject {
     void scaleChanged();
     void lastErrorChanged();
     void patternSourceChanged();
+    // Another experiment's or a structure's position in the palette changed (setColourPlace).
+    void colourPositionsChanged();
     void patternWentStale();
     void adjustingChanged();
     void patternShownChanged();
@@ -367,6 +403,7 @@ class ExperimentViewModel : public QObject {
     bool adjusting_ = false;
     std::optional<std::size_t> colour_place_;
     std::size_t colour_count_ = 0;
+    std::vector<std::size_t> colour_positions_;
     std::uint64_t presented_generation_ = 0;
     ProjectEditor& editor_;
     bool can_load_data_ = false;
@@ -378,8 +415,15 @@ class ExperimentViewModel : public QObject {
     OptionListModel* beam_mode_options_;
     OptionListModel* radiation_probe_options_;
     OptionListModel* scattering_type_options_;
+    OptionListModel* dimensionality_options_;
+    OptionListModel* polarisation_options_;
     OptionListModel* peak_type_options_;
     OptionListModel* absorption_type_options_;
+    OptionListModel* facility_options_;
+    OptionListModel* instrument_options_;
+    QString facility_token_, instrument_token_;
+    bool description_editable_ = false;
+    void sync_description();
     OptionListModel* extinction_type_options_;
     OptionListModel* mosaic_distribution_options_;
     QString extinction_type_, mosaic_distribution_;

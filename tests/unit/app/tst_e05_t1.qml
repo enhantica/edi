@@ -103,7 +103,7 @@ TestCase {
         Session.openProject(Probe.repoUrl(path));
         verify(Session.hasProject, " gate 1 independently declared CLI input opens");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
-        tryVerify(() => Ui.control(Probe, appWindow, "fitting.start") !== null, 5000, " gate 1 real fitting button reaches the selected Analysis page");
+        tryVerify(() => Ui.control(Probe, appWindow, "statusBar.fit.button") !== null, 5000, " gate 1 real fitting button reaches the selected Analysis page");
         tryVerify(() => !Session.project.calculating, 10000, " gate 1 initial calculation completes before fitting begins");
     }
     function fitPopup(name) {
@@ -111,7 +111,7 @@ TestCase {
         return Probe.visibleControl(appWindow, name);
     }
     function button() {
-        return Ui.control(Probe, appWindow, "fitting.start");
+        return Ui.control(Probe, appWindow, "statusBar.fit.button");
     }
     function statusChi() {
         const area = Review.find(appWindow.contentItem, "statusBar.fit");
@@ -133,13 +133,13 @@ TestCase {
         const expected = FitOracle.expected(data.path);
         verify(FitOracle.inputsMatchCli(data.path), " gate 1 every input byte is tied to the frozen CLI reference");
         open(data.path);
-        verify(button().enabled, " gate 1 Start fitting enables every registered single or joint project");
+        verify(button().clickable, " gate 1 Start fitting enables every registered single or joint project");
         const project = Session.project;
         const before = FitOracle.bytes(project);
         const undo = Ui.control(Probe, appWindow, "appBar.button.undo");
         verify(undo !== null && !undo.enabled, " gate 3 app-bar Undo arrow is disabled before the first fit");
         verify(FitOracle.observe(project.fit), " gate 2 observer reaches actual fit-iteration notifications");
-        Ui.click(test, Probe, appWindow, "fitting.start");
+        Ui.click(test, Probe, appWindow, "statusBar.fit.button");
         tryVerify(() => project.fit !== undefined && project.fit.status !== "" && !project.fit.running, 20000, " gate 1 clicking Start fitting produces a stop status");
         tryVerify(() => project.fit.running === false, 20000, " gate 2 final delivery clears fitting state");
         compare(canonicalStatus(project.fit.status), expected.status.replace(/[_ ]/g, ""), " gate 1 GUI stop reason equals the CLI fit of the same project");
@@ -176,8 +176,8 @@ TestCase {
     function test_fit_result_save_reopen(data) {
         const expected = FitOracle.expected(data.path);
         open(data.path);
-        verify(button().enabled, " valid CLI fixture enables the actual Start fitting control");
-        Ui.click(test, Probe, appWindow, "fitting.start");
+        verify(button().clickable, " valid CLI fixture enables the actual Start fitting control");
+        Ui.click(test, Probe, appWindow, "statusBar.fit.button");
         tryVerify(() => Session.project.fit && !Session.project.fit.running && Session.project.fit.iterations !== "", 20000, " gate 8 actual app fit completes before save");
         const popup = fitPopup("fit.results");
         verify(popup !== null && popup.visible, " gate 8 save follows the final fit delivery");
@@ -303,8 +303,8 @@ TestCase {
         const expected = FitOracle.expected(data.path);
         verify(FitOracle.inputsMatchCli(data.path), " gate 1 stop-case inputs are tied to actual author-time CLI fits");
         open(data.path);
-        verify(button().enabled, " valid CLI fixture enables the actual Start fitting control");
-        Ui.click(test, Probe, appWindow, "fitting.start");
+        verify(button().clickable, " valid CLI fixture enables the actual Start fitting control");
+        Ui.click(test, Probe, appWindow, "statusBar.fit.button");
         tryVerify(() => Session.project.fit && !Session.project.fit.running && Session.project.fit.iterations !== "", 20000, " gate 2 early-stop fit reaches final delivery");
         compare(canonicalStatus(Session.project.fit.status), canonicalStatus(expected.status), " gate 1 MaxIter and NoStep equal independently committed CLI stop reasons");
         verify(FitOracle.tableEqualsCli(Session.project, data.path), " gate 4 early-stop parameter values and errors equal independent CLI values");
@@ -328,8 +328,9 @@ TestCase {
     }
     function test_scan_modes_are_disabled(data) {
         open("tests/fixtures/e04_t5/" + data.mode);
-        verify(!button().enabled, " gate 5 scan modes keep Start fitting disabled");
-        verify(String(button().ToolTip.text).includes(data.mode), " gate 5 disabled-button tooltip names its unsupported scan mode");
+        verify(!button().clickable, " gate 5 scan modes keep Start fitting disabled");
+        compare(button().ToolTip.text, "Fit the free parameters", "The status Fit action uses the owner tooltip even while unavailable");
+        verify(String(Session.project.fit.unavailableReason).includes(data.mode), "The unavailable fit model keeps its mode-specific refusal reason");
     }
     function test_cancel_and_blocked_edits() {
         open("docs/user/cli/pd-neut-tof_ncaf-wish-5bank_start-fullprof/project");
@@ -340,7 +341,7 @@ TestCase {
         // No time-based waits. Fitting state is set synchronously by the actual button action.
         mouseClick(button(), button().width / 2, button().height / 2, Qt.LeftButton, Qt.NoModifier, 0);
         verify(project.fit.running === true, " gate 3 fitting state is entered before processing its final queued delivery");
-        compare(button().text, "Stop fitting", "The active fit button offers the existing stop action");
+        compare(button().valueText, "Stop", "The active fit button offers the existing stop action");
         parameter.value = value * 1.13;
         compare(parameter.value, value, " gate 6 fitted-input writes through GUI models are blocked while fitting");
         tryVerify(() => Number(project.fit.iterations) > 0 && project.fit.running, 20000, "The stop-and-Undo witness reaches an accepted iteration before requesting a partial result");
@@ -360,8 +361,8 @@ TestCase {
     function test_calculation_only_refusal_dialog() {
         open("app/examples/pd-xray-cwl_lif/project");
         const before = FitOracle.modelValues(Session.project);
-        verify(button().enabled, " gate 5 calculation-only single mode reaches the fitting refusal");
-        Ui.click(test, Probe, appWindow, "fitting.start");
+        verify(button().clickable, " gate 5 calculation-only single mode reaches the fitting refusal");
+        Ui.click(test, Probe, appWindow, "statusBar.fit.button");
         tryVerify(() => {
             const error = fitPopup("fit.error");
             return error !== null && error.visible && error.message.length > 0;
@@ -375,9 +376,9 @@ TestCase {
         const reference = FitOracle.refusalCase();
         verify(reference.path !== undefined && reference.record.status === "error", " gate 5 failed-fit fixture is backed by an actual CLI error");
         open(reference.path);
-        verify(button().enabled, " gate 5 a loaded measured single project reaches the actual fit attempt");
+        verify(button().clickable, " gate 5 a loaded measured single project reaches the actual fit attempt");
         const before = FitOracle.bytes(Session.project);
-        Ui.click(test, Probe, appWindow, "fitting.start");
+        Ui.click(test, Probe, appWindow, "statusBar.fit.button");
         tryVerify(() => {
             const error = fitPopup("fit.error");
             return error !== null && error.visible && error.message.length > 0;
@@ -474,8 +475,8 @@ TestCase {
         const expected = FitOracle.fittedRangeRows(data.path);
         verify(expected.length > 0, " scope 11 independent CLI fixtures include fitted rows with declared ranges");
         open(data.path);
-        verify(button().enabled, " valid CLI fixture enables the actual Start fitting control");
-        Ui.click(test, Probe, appWindow, "fitting.start");
+        verify(button().clickable, " valid CLI fixture enables the actual Start fitting control");
+        Ui.click(test, Probe, appWindow, "statusBar.fit.button");
         tryVerify(() => Session.project.fit && !Session.project.fit.running && Session.project.fit.iterations !== "", 20000, " scope 11 table coloring follows the final fit delivery");
         const popup = fitPopup("fit.results");
         verify(popup !== null && popup.visible, " scope 11 fitted table inspection follows the final popup");

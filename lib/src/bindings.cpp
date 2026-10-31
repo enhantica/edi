@@ -35,9 +35,11 @@
 #include "edi/categories.hpp"
 #include "edi/display.hpp"
 #include "edi/edits.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_spec.hpp"
+#include "edi/parameter_walk.hpp"
 #include "edi/project_archive.hpp"
 #include "edi/report.hpp"
 #include "edi/report_html.hpp"
@@ -923,7 +925,8 @@ static void relations_changed(edi::Project& project) {
 // The project a parameter handle belongs to, through the row it is attached to (X12); null for one no
 // project holds. The row's collection names the project that adopted it, which may have been destroyed
 // (the link then reads none) or may no longer hold the row (removed, replaced or moved to another
-// project), so the project must still hold this very parameter.
+// project), so the project must still hold this very parameter: in a fit slot or among the values its
+// pages list, a setup value such as a bank angle included (edi ADR-0053).
 static edi::Project* project_of(const edi::Parameter& parameter) {
     const edi::detail::RowLink* link = parameter.category.get();
     const edi::detail::Membership* record = link != nullptr ? link->record() : nullptr;
@@ -934,6 +937,11 @@ static edi::Project* project_of(const edi::Parameter& parameter) {
     }
     for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
         if (slot.parameter == &parameter) {
+            return project;
+        }
+    }
+    for (const edi::ParameterEntry& entry : edi::parameter_entries(*project)) {
+        if (entry.parameter == &parameter) {
             return project;
         }
     }
@@ -952,6 +960,37 @@ static edi::Dependence dependence_now(edi::Parameter& parameter) {
     }
     warn_dependents(*project);
     return parameter.dependence;
+}
+
+// A parameter's fit mark as the project holding it is now (ADR-0053); one no project holds is judged by its
+// dictionary entry alone, a descriptor or not.
+static void fittability_now(edi::Parameter& parameter) {
+    if (edi::Project* project = project_of(parameter); project != nullptr) {
+        edi::refresh_fittability(*project);
+        return;
+    }
+    const bool descriptor =
+        parameter.spec != nullptr && edi::is_descriptor(std::string(parameter.spec->category) + "." + parameter.spec->name);
+    parameter.fit_blocker = descriptor ? edi::FitBlocker::Descriptor : edi::FitBlocker::None;
+    parameter.fit_reason = descriptor ? edi::fit_reason(edi::FitBlocker::Descriptor) : std::string();
+}
+
+// A parameter's name in a refusal: its unique name in the project holding it, or its path there for a value no
+// fit slot names, else its own name.
+static std::string parameter_name(edi::Parameter& parameter) {
+    if (edi::Project* project = project_of(parameter); project != nullptr) {
+        for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
+            if (slot.parameter == &parameter) {
+                return slot.unique_name;
+            }
+        }
+        for (const edi::ParameterEntry& entry : edi::parameter_entries(*project)) {
+            if (entry.parameter == &parameter) {
+                return entry.path;
+            }
+        }
+    }
+    return parameter.spec != nullptr ? parameter.spec->name : std::string("parameter");
 }
 
 // The structure holding the row of a parameter (a site's, a tensor's), in a project or not; null otherwise.
@@ -1389,6 +1428,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built =
                 nb::module_::import_("edi").attr("ExperimentFactory").attr("from_cif_str")(cif_str);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
@@ -1400,6 +1441,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built = nb::module_::import_("edi").attr("ExperimentFactory").attr(
                 "from_cif_path")(cif_path);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
@@ -1411,6 +1454,8 @@ static void def_collection_views(nb::module_& m) {
             nb::object built = nb::module_::import_("edi").attr("ExperimentFactory").attr(
                 "from_cif_path")(edi_path);
             auto item = nb::cast<std::shared_ptr<edi::BraggPdExperiment>>(built);
+            // An import into the project: its links are checked before anything changes.
+            edi::require_held_links(*self.owner, *item);
             const std::string key = self.key_of(*item);
             self.set_item(key, std::move(item));
         },
@@ -1965,10 +2010,20 @@ NB_MODULE(_edi, m) {
     m.def("_model_dump", &edi::engine_model_dump, "project"_a);
     m.def("_folds_reflections", &edi::engine_folds_reflections, "project"_a);
     m.def("_structure_factor_evaluations", &edi::engine_structure_factor_evaluations);
-    m.def("_structure_from_edi_text",
-          [](const std::string& text) { return edi::structure_from_edi_text(text); });
-    m.def("_experiment_from_edi_text",
-          [](const std::string& text) { return edi::experiment_from_edi_text(text); });
+    // `where` names the text in a refusal (the path, for a file); crysta's reports on a CIF are
+    // Python warnings.
+    m.def(
+        "_structure_from_edi_text",
+        [](const std::string& text, const std::string& where) {
+            return edi::structure_from_edi_text(text, where, warn_python);
+        },
+        "text"_a, "where"_a = "<from_cif_str>");
+    m.def(
+        "_experiment_from_edi_text",
+        [](const std::string& text, const std::string& where) {
+            return edi::experiment_from_edi_text(text, where, warn_python);
+        },
+        "text"_a, "where"_a = "<from_cif_str>");
     // A single crystal for ExperimentFactory: diffraction-lib's defaults (wavelength 1.5406 at
     // constant wavelength, no extinction, as the loader
     // gives a block that declares none), and its reflections read from a FullProf .int or a plain
@@ -2150,11 +2205,11 @@ NB_MODULE(_edi, m) {
             "free", [](const edi::Parameter& p) { return p.free.get(); },
             [](edi::Parameter& p, bool free) {
                 refuse_detached(p);
-                if (free && edi::is_fixed_setting(p.spec)) {
-                    throw std::invalid_argument(std::string(p.spec->name) +
-                                                " is a fixed setting, not a refinable parameter");
-                }
                 (void)dependence_now(p);  // the marks as the relations are now
+                fittability_now(p);       // and as the fit rule is now (ADR-0053)
+                if (const std::string refusal = edi::free_refusal(p); free && !refusal.empty()) {
+                    throw std::invalid_argument(parameter_name(p) + " " + refusal);
+                }
                 if (!edi::set_free(p, free)) {
                     const std::string name = p.spec != nullptr ? p.spec->name : std::string("parameter");
                     const std::string message =
@@ -2162,7 +2217,8 @@ NB_MODULE(_edi, m) {
                         (p.dependence == edi::Dependence::Constrained ? "set by a constraint"
                          : p.dependence == edi::Dependence::SymmetryFixed ? "fixed by symmetry"
                                                                           : "constrained by symmetry") +
-                        "; free = True is ignored and it stays dependent";
+                        "; free = True is ignored and it stays dependent" +
+                        (p.fit_reason.empty() ? std::string() : " (cannot be fitted: " + p.fit_reason + ")");
                     if (PyErr_WarnEx(PyExc_UserWarning, message.c_str(), 1) < 0) {
                         throw nb::python_error();
                     }
@@ -2653,7 +2709,28 @@ NB_MODULE(_edi, m) {
         .def_prop_rw(
             "scattering_type",
             [](const edi::ExperimentType& t) { return t.effective_scattering_type(); },
-            [](edi::ExperimentType& t, edi::ScatteringTypeEnum value) { t.scattering_type = value; });
+            [](edi::ExperimentType& t, edi::ScatteringTypeEnum value) { t.scattering_type = value; })
+        // ADR-0054: the description, read as its effective value and set as declared.
+        .def_prop_rw(
+            "dimensionality", [](const edi::ExperimentType& t) { return t.effective_dimensionality(); },
+            [](edi::ExperimentType& t, const std::string& value) {
+                if (value != "1d") {
+                    throw nb::value_error(("dimensionality '" + value + "' is not a known token (expected '1d')").c_str());
+                }
+                t.dimensionality = value;
+            })
+        .def_prop_rw(
+            "polarisation", [](const edi::ExperimentType& t) { return t.effective_polarisation(); },
+            [](edi::ExperimentType& t, const std::string& value) {
+                const bool xray = t.effective_radiation_probe() == edi::RadiationProbeEnum::XRAY;
+                if (value != (xray ? "." : "unpolarised")) {
+                    throw nb::value_error(("polarisation '" + value + "' does not fit " +
+                                           (xray ? "an X-ray experiment (expected '.')"
+                                                 : "a neutron experiment (expected 'unpolarised')"))
+                                              .c_str());
+                }
+                t.polarisation = value;
+            });
 
     // The peak-profile category: typed selector + TOF/CW parameter blocks (CW presence-tracked).
     nb::class_<edi::views::PeakNode> peak(m, "PeakBase");
@@ -2847,6 +2924,19 @@ NB_MODULE(_edi, m) {
     // presence-tracked.
     nb::class_<edi::views::InstrumentNode> instrument(m, "InstrumentBase");
     instrument.def("__setattr__", renewing_setattr<edi::views::InstrumentNode>({}, renew_storage), nb::arg("name"), nb::arg("value").none());
+    // ADR-0054: the instrument's and its facility's names, `?` when unknown.
+    instrument.def_prop_rw(
+        "name",
+        [](const edi::views::InstrumentNode& self) {
+            return self.storage().name.empty() ? std::string("?") : self.storage().name;
+        },
+        [](edi::views::InstrumentNode& self, const std::string& value) { self.storage().name = value; });
+    instrument.def_prop_rw(
+        "facility",
+        [](const edi::views::InstrumentNode& self) {
+            return self.storage().facility.empty() ? std::string("?") : self.storage().facility;
+        },
+        [](edi::views::InstrumentNode& self, const std::string& value) { self.storage().facility = value; });
 
     nb::class_<edi::views::CwlInstrumentBase, edi::views::InstrumentNode>(m, "CwlInstrumentBase");
     nb::class_<edi::views::CwlPdInstrumentBase, edi::views::CwlInstrumentBase>(

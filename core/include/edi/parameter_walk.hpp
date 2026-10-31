@@ -22,15 +22,31 @@ struct ParameterEntry {
     std::string category;    // the `.edi` category id
     std::string row_label;   // an atom id or a row index for loop categories; empty otherwise
     std::string name;        // the `.edi` item name
-    bool refinable = true;   // false: symmetry fixes or ties it (categories.hpp); shown, never fitted
-    bool fittable = true;    // false: a fixed setting (categories.hpp); editable, never fitted
+    bool refinable = true;   // false: symmetry fixes or ties it (categories.hpp); its value is shown, not typed
 };
 
-// Every shown parameter of the project (the union of the categories' shown fields, §2b (iv), I15)
-// in page order: structures, then experiments. A listing of what a fit can vary (the app's
-// Analysis table) takes the `refinable` entries; the pages show every entry. Paths come from the fit surface's own grammar
+// Every parameter the project's model carries (the union of the categories' shown fields, §2b (iv), I15, and a
+// time-of-flight experiment's coefficients its profile does not use) in page order: structures, then experiments. The app's Analysis table lists every entry, with what keeps a fit from
+// varying it (fittability.hpp, ADR-0053). Paths come from the fit surface's own grammar
 // functions (core/src/parameter_paths.cpp), so fit results map onto these rows by path.
 std::vector<ParameterEntry> parameter_entries(Project& project);
+
+// A numerical model input that is no Parameter (crysta's dictionary `model_input`, ADR-0053): a background point's
+// position, a polynomial term's order, the polynomial origin and the Chebyshev domain, the peak cutoff, a texture
+// direction's indices, a scattering length. A descriptor, never fitted; the Analysis table lists it read-only.
+struct DescriptorEntry {
+    std::string uid;         // its dictionary entry, `category.name`
+    std::string path;        // the identity path, in the grammar of parameter_entries
+    std::string block_kind;  // "structure" or "experiment"
+    std::string block_name;  // the datablock name
+    std::string category;    // the `.edi` category id
+    std::string row_label;   // the row's id for a loop category; empty otherwise
+    std::string name;        // the `.edi` item name
+    double value = 0.0;
+};
+
+// Every descriptor of the project that is no Parameter, in page order: structures, then experiments.
+std::vector<DescriptorEntry> model_descriptors(Project& project);
 
 // What a fit or an undo worked out on a copy, written onto the project it was copied from. Every
 // parameter's value, uncertainty and fit start is written from `from` onto `to` where they differ — a

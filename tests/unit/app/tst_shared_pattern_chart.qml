@@ -243,7 +243,7 @@ Item {
                 sameState(shownChart(destination), expected);
         }
         function toolbarNames() {
-            return ["legend", "hover", "structureCurves", "includedRange", "pan", "zoom"];
+            return ["legend", "hover", "structureCurves", "includedRange", "subtractBackground", "pan", "zoom"];
         }
         function test_toolbar_toggles_follow_every_page_data() {
             const rows = [];

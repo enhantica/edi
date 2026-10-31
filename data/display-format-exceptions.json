@@ -228,14 +228,19 @@
    "reason": "an app preference (engine threads), outside the dictionary (I1)"
   },
   {
+   "file": "app/qml/Components/PaletteStrip.qml",
+   "literal": "calculator",
+   "reason": "the Font Awesome icon's name, not the calculator category's title"
+  },
+  {
+   "file": "app/qml/Components/PaletteStrip.qml",
+   "literal": "calc",
+   "reason": "the label of the calculated curve's colour in the Preferences colour strip (the owner, 2026-10-26), not the calc item"
+  },
+  {
    "file": "app/qml/Components/ParameterCell.qml",
    "literal": "s.u.",
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
-  },
-  {
-   "file": "app/qml/Components/PatternChart.qml",
-   "literal": "points",
-   "reason": "a way of drawing the measured data, a chart preference; not the background points"
   },
   {
    "file": "app/qml/Components/ScanViewChart.qml",
@@ -293,6 +298,11 @@
    "reason": "the parameter table column of fit upper bounds, not the calculation range"
   },
   {
+   "file": "app/qml/Pages/Experiment/InstrumentGroup.qml",
+   "literal": "Instrument",
+   "reason": "the instrument that measured the experiment, a selector label, not the instrument category's title"
+  },
+  {
    "file": "app/qml/Pages/Experiment/LinkedStructureGroup.qml",
    "literal": "s.u.",
    "reason": "the base library title of any parameter s.u., not the measured-data s.u. item"
@@ -338,6 +348,11 @@
    "reason": "the beam mode abbreviation in a diagnostic, not a label"
   },
   {
+   "file": "core/src/scan_views.cpp",
+   "literal": "Auto",
+   "reason": "the Map's direction choice, a view setting outside the dictionary"
+  },
+  {
    "file": "data/report/report.js",
    "literal": "Bonds",
    "reason": "the exported structure view's toggle for its bonds, a view setting, not the bond category"
@@ -376,6 +391,11 @@
    "file": "lib/src/bindings.cpp",
    "literal": "Project",
    "reason": "the name of a Python class, as diffraction-lib names it; not a displayed label"
+  },
+  {
+   "file": "app/qml/Pages/Report/ReportTable.qml",
+   "literal": ".",
+   "reason": "the decimal point of a number aligned on its point, not the inapplicable polarisation token"
   }
  ]
 }

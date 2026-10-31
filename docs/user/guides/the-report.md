@@ -52,12 +52,12 @@ python -m edi report path/to/project --check
 The first writes the ticked formats but the PDF, which the app writes, into `reports/`, as Save report does. Flags
 change a setting for that run only: `--offline` or `--online`, `--x-axis native` or `d_spacing`,
 `--correlation-threshold X`, `--exclude KEY` (repeated) or `--include-all`. Two more are choices the app takes from its
-Preferences and its Analysis page: `--colour-scheme NAME` (`ediNatural`, the default, `ediCoast`, `ediGarden`,
-`ediStudio` or `ediContrast`) and, in a fit of several experiments, `--correlation-experiment NAME`, the
+Preferences and its Analysis page: `--colour-scheme NAME`, the figure palette (`earth`, the default, `classic`,
+`soft`, `natural` or `colourBlindSafe`) and, in a fit of several experiments, `--correlation-experiment NAME`, the
 experiment whose parameters the correlation chart shows (by default the first). `--output PATH` writes the HTML report
 to that file instead, leaving the saved reports alone. `--check` lists each saved report as current, out of date or
 missing, writes nothing, and exits with 1 when one is not current. A report is out of date when the project changed
-since it was saved, whatever colour scheme or experiment it was saved with.
+since it was saved, whatever palette or experiment it was saved with.
 
 ## From Python
 

@@ -18,7 +18,8 @@ namespace {
 const double kNaN = std::numeric_limits<double>::quiet_NaN();
 constexpr double kBraggRowPx = 18.0;   // one Bragg row per structure (diffraction-lib's layout)
 constexpr double kTickInset = 0.15;    // a tick spans the middle 70 % of its row
-constexpr std::size_t kPaletteSize = 3;
+constexpr std::size_t kMeasuredRows = 3;     // the style table always lists this many measured rows
+constexpr std::size_t kStructureRows = 5;   // and this many structure rows
 
 // The x range a column index is taken over, and whether rows can be binned at all.
 struct Columns {
@@ -315,18 +316,43 @@ std::vector<std::size_t> decimate_min_max(std::span<const double> x, std::span<c
 }
 
 std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t experiments, std::size_t structures,
-                                             std::optional<ColourScheme> structure_scheme) {
-    const ColourScheme structural = structure_scheme.value_or(scheme);
+                                             std::span<const std::size_t> positions, bool pattern_set) {
     // edi ADR-0017 §15: easydiffractionbeta's chart widths (its QtCharts1dTab.qml; the residual's 1 px line and the
-    // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the scheme's (ADR-0038): the
-    // measured and tick colours by the block's place among its group, the calculated, background and residual
-    // colours the scheme's role colours.
-    // At least three measured rows, as the table always listed.
+    // Bragg ticks' 1 px lines as it draws them, the owner, 2026-10-02). Every colour is the palette's (ADR-0038): an
+    // experiment's and a structure's at its position, the calculated, background and residual colours its role colours.
+    const std::size_t measured_rows = std::max(experiments, kMeasuredRows);
+    const std::size_t structure_rows = std::max(structures, kStructureRows);
+    // The items at their positions, as given (they never collide) or as a project with none held takes them; the rows
+    // past them at the next free positions.
+    const bool given = positions.size() == experiments + structures;
+    const std::vector<std::size_t> held = given ? std::vector<std::size_t>(positions.begin(), positions.end())
+                                                : colour_positions(scheme, experiments, structures);
+    const std::vector<std::size_t> spare_measured =
+        free_positions(scheme, FigureKind::Experiment, measured_rows - experiments, held);
+    std::vector<std::size_t> taken = held;
+    taken.insert(taken.end(), spare_measured.begin(), spare_measured.end());
+    const std::vector<std::size_t> spare_structure =
+        free_positions(scheme, FigureKind::Structure, structure_rows - structures, taken);
+    // Shades past the palette spread over the positions the project itself uses.
+    const std::size_t count = held.empty() ? 0 : *std::max_element(held.begin(), held.end()) + 1;
+    const auto colour = [&](std::size_t position, bool dark) { return figure_colour(scheme, position, count, dark); };
+    const auto measured_at = [&](std::size_t place) {
+        return place < experiments ? held[place] : spare_measured[place - experiments];
+    };
+    const auto structure_at = [&](std::size_t place) {
+        return place < structures ? held[experiments + place] : spare_structure[place - structures];
+    };
+    const std::vector<std::size_t> structure_positions(held.begin() + static_cast<std::ptrdiff_t>(experiments),
+                                                       held.end());
+    const auto measured = [&](std::size_t place, bool dark) {
+        return pattern_set && place < experiments
+                   ? pattern_set_colour(scheme, place, experiments, structure_positions, dark)
+                   : colour(measured_at(place), dark);
+    };
     std::vector<SeriesStyle> table;
-    const std::size_t count = std::max<std::size_t>(experiments, 1);
-    for (std::size_t place = 0; place < std::max(count, kPaletteSize); ++place) {
-        table.push_back({"meas." + std::to_string(place), pattern_colour(scheme, place, count, false),
-                         pattern_colour(scheme, place, count, true), "line+markers+bars", 2.0, 1.0, 5.0});
+    for (std::size_t place = 0; place < measured_rows; ++place) {
+        table.push_back({"meas." + std::to_string(place), measured(place, false), measured(place, true),
+                         "line+markers+bars", 2.0, 1.0, 5.0});
     }
     const auto role = [scheme](ChartRole chart_role, bool dark) { return role_colour(scheme, chart_role, dark); };
     table.push_back({"calc", role(ChartRole::TotalCalculation, false), role(ChartRole::TotalCalculation, true), "line",
@@ -336,15 +362,14 @@ std::vector<SeriesStyle> pattern_style_table(ColourScheme scheme, std::size_t ex
                      1.0, 0.0});
     table.push_back({"resid", role(ChartRole::Difference, false), role(ChartRole::Difference, true), "line", 1.0, 1.0,
                      0.0});
-    // A structure's ticks take the colour its row in the structure lists has (edi::structure_colour among them all).
-    for (std::size_t place = 0; place < std::max(structures, kGroupColourCount); ++place) {
-        table.push_back({"bragg." + std::to_string(place), structure_colour(structural, place, structures, false),
-                         structure_colour(structural, place, structures, true), "ticks", 1.0, 1.0, 0.0});
+    // A structure's ticks and its curve (an outline over a soft fill of the same colour) take its colour.
+    for (std::size_t place = 0; place < structure_rows; ++place) {
+        table.push_back({"bragg." + std::to_string(place), colour(structure_at(place), false),
+                         colour(structure_at(place), true), "ticks", 1.0, 1.0, 0.0});
     }
-    // A structure's curve: an outline in its structure colour over a soft fill of the same colour (ADR-0038).
-    for (std::size_t place = 0; place < std::max(structures, kGroupColourCount); ++place) {
-        table.push_back({"structure." + std::to_string(place), structure_colour(structural, place, structures, false),
-                         structure_colour(structural, place, structures, true), "line+fill", 1.5, 0.25, 0.0});
+    for (std::size_t place = 0; place < structure_rows; ++place) {
+        table.push_back({"structure." + std::to_string(place), colour(structure_at(place), false),
+                         colour(structure_at(place), true), "line+fill", 1.5, 0.25, 0.0});
     }
     table.push_back({"excluded", "#8C8C8C", "#8C8C8C", "band", 0.0, 0.15, 0.0});
     return table;
@@ -565,7 +590,46 @@ std::vector<PatternSource::Phase> group_reflections(std::span<const std::string>
     return phases;
 }
 
-PatternPresentation present_pattern(const PatternSource& source, const PatternView& view) {
+namespace {
+
+// `source` with its calculated background subtracted from the measured and calculated columns and the background
+// column at zero; unchanged without a current background column of the data's length.
+PatternSource background_subtracted(const PatternSource& source) {
+    if (!source.current || !source.x || !source.bkg || source.bkg->size() != source.x->size()) {
+        return source;
+    }
+    const std::vector<double>& bkg = *source.bkg;
+    const auto less_bkg = [&bkg](const PatternSource::Column& column) -> PatternSource::Column {
+        if (!column || column->size() != bkg.size()) {
+            return column;
+        }
+        auto out = std::make_shared<std::vector<double>>(*column);
+        for (std::size_t i = 0; i < out->size(); ++i) {
+            (*out)[i] -= bkg[i];
+        }
+        return out;
+    };
+    PatternSource out = source;
+    out.meas = less_bkg(source.meas);
+    out.calc = less_bkg(source.calc);
+    out.bkg = std::make_shared<const std::vector<double>>(bkg.size(), 0.0);
+    return out;
+}
+
+}  // namespace
+
+bool has_background(const ExperimentBase& experiment) {
+    return experiment.background_type == "line-segment" ? !experiment.background.empty()
+                                                        : !experiment.background_terms.empty();
+}
+
+PatternSource presented_source(const PatternSource& source, const PatternView& view) {
+    return view.subtract_background ? background_subtracted(source) : source;
+}
+
+PatternPresentation present_pattern(const PatternSource& given, const PatternView& view) {
+    const PatternSource subtracted = view.subtract_background ? background_subtracted(given) : PatternSource{};
+    const PatternSource& source = view.subtract_background ? subtracted : given;
     PatternPresentation out;
     out.current = source.current;
     out.excluded = source.excluded;
@@ -905,6 +969,10 @@ std::string hover_text(const PatternSource& source, const PatternSeries& series,
         return {};
     }
     return item_number(source.x_item, (*source.x)[row]) + ", " + item_number(series_item(series.kind), (*column)[row]);
+}
+
+std::string measured_readout(double value) {
+    return "meas: " + readout_number(series_item(SeriesKind::Measured), value);
 }
 
 std::vector<HoverLine> hover_readout(const PatternSource& source, const PatternSeries& series, std::size_t point) {
