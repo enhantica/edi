@@ -206,7 +206,7 @@ TestCase {
         for (const page of [0, 1, 2, 3, 4, 5]) {
             AppState.open(page);
             verify(waitForPolish(appWindow.contentItem), "Page navigation settles before status shortcut visibility is inspected");
-            verify(AppState.analysisPageEnabled && shortcut().visible, "The status Fit shortcut remains visible on every page whenever Analysis is enabled, even before the first fit");
+            verify(AppState.analysisPageEnabled && shortcut().visible, "After opening an unfitted project and navigating to page " + page + ", Fit must remain visible whenever Analysis is enabled; observed Analysis enabled=" + AppState.analysisPageEnabled + ", Fit visible=" + shortcut().visible);
         }
         Session.closeProject();
         const remaining = View.descendants(area()).filter(item => typeof item.clicked === "function" && (item.text === "Fit" || item.keyText === "Fit" || item.valueText === "Fit"));
@@ -430,16 +430,18 @@ TestCase {
             fuzzyCompare(item.rightPadding, button.rightPadding, .5, "Scan actions have Fit's right padding");
         }
         let compact = false;
+        const captionStates = [];
         for (const width of [1000, 800, 640, 500]) {
             appWindow.width = width;
             verify(waitForPolish(appWindow.contentItem), "Narrow-window layout settles before checking action captions");
             const hasCaption = item => View.textItems(item).some(label => label.text === caption(item));
+            captionStates.push("width=" + width + ": Reset=" + hasCaption(reset) + ", Follow=" + hasCaption(follow) + ", Fit=" + hasCaption(button));
             if (!hasCaption(reset) && !hasCaption(follow) && hasCaption(button)) {
                 compact = true;
                 break;
             }
         }
-        verify(compact, "Reset and Follow drop their captions before Fit on a narrow status bar");
+        verify(compact, "After a scan is stopped and reset, narrowing the window must show icon-only Reset and Follow while Fit keeps its caption at some width; observed " + captionStates.join("; "));
         appWindow.width = 1300;
         verify(waitForPolish(appWindow.contentItem), "The wide status controls are restored before worker input");
         Session.project.fit.start();
@@ -549,7 +551,7 @@ TestCase {
         const initial = table.height;
         appWindow.height += 160;
         verify(waitForPolish(appWindow.contentItem), "Sidebar resizing finishes before checking table growth");
-        verify(table.height > initial + 100, "The table consumes the new sidebar height instead of leaving the old fit-button space");
+        verify(table.height > initial + 100, "On Analysis, increasing window height from 720 to 880 must grow the parameter table by more than 100 pixels; observed table height " + initial + " -> " + table.height);
         verify(slider.mapToItem(appWindow.contentItem, 0, slider.height).y <= appWindow.contentItem.height, "The value slider remains within the resized application viewport");
         const rows = View.descendants(table).filter(item => /^parameters.row.[0-9]+$/.test(item.objectName));
         verify(rows.length > 2, "The table-height witness contains enough independently authored parameters for clipping");
@@ -705,7 +707,7 @@ TestCase {
         finish();
         compare(Session.project.fit.scanFitted, 2, "Refit processes every scan file again rather than continuing after the last result");
         verify(!Session.project.fit.outOfDate, "A full Refit clears the outdated state");
-        verify(JSON.stringify(resultBytes()) !== JSON.stringify(before.bytes), "Refit replaces the old result generation with the edited template's generation");
+        verify(JSON.stringify(resultBytes()) !== JSON.stringify(before.bytes), "After a " + data.tag + " scan completes, editing the template cell length by 0.03125 and activating Refit must replace the saved result generation; observed all four saved result/provenance files byte-identical to before the edit (scanFitted=" + Session.project.fit.scanFitted + ", outOfDate=" + Session.project.fit.outOfDate + ")");
         verify(Session.project.canUndo, "Refit retains a single reversible result replacement");
         Session.project.undo();
         tryVerify(() => !Session.project.calculating && Session.project.fit.outOfDate, 10000, "One Undo restores the previous outdated result generation");

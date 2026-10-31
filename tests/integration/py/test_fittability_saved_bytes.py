@@ -89,7 +89,7 @@ def test_main_saved_bytes_regression_pin(tmp_path, case, rule):
 def test_main_fitted_descriptor_bytes_regression_pin(tmp_path, case, rule):
     actual = fit_snapshot(importlib.import_module(API), ROOT / case, tmp_path, rule)
     # Recovered from saves matching saved-main.json's hashes, not a new fit baseline.
-    # Restore only fitted numbers after comparing them at crysta ADR-0057's tolerance.
+    # Restore only fitted numbers after checking relative 5e-9 and absolute 5e-10 bounds.
     analysis = (tmp_path / 'saved/analysis/analysis.edi').read_bytes()
     for name, pin in {
         'reduced_chi_square': b'76.80145036893185',
