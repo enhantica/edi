@@ -137,18 +137,19 @@ Rectangle {
                     }
                 }
             }
+            // Several lines, wrapped, from its start (the owner, 2026-10-27): Return types a line break, and leaving the
+            // field commits.
             DescriptionRow {
                 label: qsTr("Description")
-                EaElements.TextInput {
+                EaElements.TextArea {
                     objectName: "project.description"
                     width: column.width - AppSizes.descriptionNameColumnWidth
+                    padding: 0
+                    backgroundOpacity: 0
+                    wrapMode: TextEdit.Wrap
                     placeholderText: qsTr("Enter project description here")
                     text: tab.project ? tab.project.description : ""
-                    onAccepted: commit()
-                    onEditingFinished: commit()
-
-                    // Return and leaving the field both commit; the second of the two finds nothing new.
-                    function commit() {
+                    onEditingFinished: {
                         if (tab.project && text !== tab.project.description)
                             tab.project.description = text;
                     }
