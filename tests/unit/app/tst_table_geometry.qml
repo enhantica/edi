@@ -960,6 +960,12 @@ Item {
             const first = input.positionToRectangle(0);
             verify(first.x >= 0 && first.x < input.width, "The first digit is inside the inactive text viewport");
             verify(!String(input.text).includes("…"), "Inactive numbers are clipped without substituting an ellipsis");
+            const ownerWindow = parent.Window.window;
+            verify(ownerWindow !== null && ownerWindow === surface.Window.window
+                && ownerWindow === test.Window.window && windowShown && ownerWindow.visible
+                && ownerWindow.visibility !== Window.Hidden && ownerWindow.visibility !== Window.Minimized,
+                "The overflow item belongs to the same exposed QuickTest viewing window");
+            ownerWindow.update();
             verify(waitForRendering(parent), "The actual overflow frame is rendered before pixel inspection");
             const image = grabImage(parent);
             for (let x = Math.ceil(input.x + input.width + 2); x < parent.width - 2; ++x)
