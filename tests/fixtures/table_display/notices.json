@@ -2,7 +2,7 @@
   "source": "THIRD-PARTY-NOTICES",
   "sha256": "685403ccc0d899865ca83601786a96edbb69c608855af2b2cafed7ef287a3095",
   "catalogue": "DEPENDENCIES.md",
-  "catalogue_sha256": "6ce01493cb661aec90902890fe9c98bda6da887842dbbf6627bd88e142004859",
+  "catalogue_sha256": "51ee86357d5f5239a8e395fab517bbfd0d74ba98626b2f789a2fdaf152de6186",
   "rows": [
     {
       "component": "crysta",
@@ -33,6 +33,18 @@
       "version": "23.1.2",
       "licence": "Apache-2.0 WITH LLVM-exception",
       "use": "the LLVM OpenMP runtime (macOS)"
+    },
+    {
+      "component": "miniz",
+      "version": "3.0.2",
+      "licence": "MIT",
+      "use": "reads and writes project .zip archives, compiled into edi's core"
+    },
+    {
+      "component": "JKQTMathText / JKQTCommon",
+      "version": "5.0.0 (9e9f0af8)",
+      "licence": "LGPL-2.1-or-later",
+      "use": "native assistant equation layout and generated images; only MathText/Common"
     },
     {
       "component": "Qt",
@@ -74,31 +86,67 @@
       "component": "Scientific colour maps",
       "version": "",
       "licence": "MIT",
-      "use": "Fabio Crameri's batlow, oslo, lajolla, acton, devon and lapaz, candidates for the scan map's colours"
-    },
-    {
-      "component": "cmocean",
-      "version": "",
-      "licence": "MIT",
-      "use": "thermal, haline, deep, dense, ice and tempo, candidates for the scan map's colours"
-    },
-    {
-      "component": "Turbo",
-      "version": "",
-      "licence": "Apache-2.0",
-      "use": "Google's Turbo colour map, a candidate for the scan map's colours"
+      "use": "Fabio Crameri's batlow and lapaz, two of the scan views' colour maps"
     },
     {
       "component": "ColorBrewer",
       "version": "",
       "licence": "Apache-2.0",
-      "use": "the YlGnBu, PuBu, GnBu, Blues, Purples and YlOrRd schemes spread to 256 colours, candidates for the scan map's colours"
+      "use": "the Greys scheme spread to 256 colours, one of the scan views' colour maps"
     },
     {
-      "component": "CET colour maps",
-      "version": "",
-      "licence": "CC-BY-4.0",
-      "use": "Peter Kovesi's perceptually uniform maps L20, L08, L06, L17 and L18, candidates for the scan map's colours"
+      "component": "OpenAI Codex",
+      "version": "0.162.1",
+      "licence": "Apache-2.0",
+      "use": "official app-server and code-mode host in the desktop runtime package"
+    },
+    {
+      "component": "jwt-cpp",
+      "version": "0.7.2",
+      "licence": "MIT",
+      "use": "native OpenID signature validation; headers in third_party/jwt-cpp"
+    },
+    {
+      "component": "picojson",
+      "version": "bundled with jwt-cpp 0.7.2",
+      "licence": "BSD-2-Clause",
+      "use": "the JSON adapter included with jwt-cpp"
+    },
+    {
+      "component": "ripgrep",
+      "version": "15.2.0",
+      "licence": "MIT OR Unlicense",
+      "use": "the official runtime package's rg executable, used under MIT"
+    },
+    {
+      "component": "zsh",
+      "version": "77045ef",
+      "licence": "Zsh",
+      "use": "the official runtime package's patched shell helper; source and patch in data/assistant/runtime/PROVENANCE.md"
+    },
+    {
+      "component": "bubblewrap",
+      "version": "vendored at Codex 092d3acd",
+      "licence": "LGPL-2.0-or-later",
+      "use": "the Linux runtime package's sandbox helper; corresponding-source delivery remains a release obligation"
+    },
+    {
+      "component": "rusty-V8",
+      "version": "150.4.0",
+      "licence": "MIT",
+      "use": "Deno Rust bindings embedded in the code-mode host"
+    },
+    {
+      "component": "V8 (Codex code-mode host)",
+      "version": "ac1e2398",
+      "licence": "BSD-3-Clause AND additional notices",
+      "use": "the V8 engine embedded in the code-mode host; distinct from Qt V8"
+    },
+    {
+      "component": "ICU data (deno_core_icudata)",
+      "version": "0.77.0 / ee5f27ad",
+      "licence": "Unicode-3.0 AND additional notices",
+      "use": "the ICU data embedded in the code-mode host via deno_core_icudata"
     },
     {
       "component": "plotly.js",
@@ -255,6 +303,12 @@
       "version": "1.22.2",
       "licence": "MIT-style",
       "use": "network authentication (Linux)"
+    },
+    {
+      "component": "XITS",
+      "version": "pinned with JKQTMathText 9e9f0af8",
+      "licence": "OFL-1.1",
+      "use": "native equation fonts"
     },
     {
       "component": "PT Sans, PT Mono",
