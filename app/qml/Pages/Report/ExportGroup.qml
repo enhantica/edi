@@ -28,7 +28,8 @@ EaElements.GroupBox {
     // A save under way, from its start until its files are written or refused. The page keeps the report built and
     // the preview's figures drawn meanwhile, even when another page is shown: a PDF takes those figures.
     property bool saving: false
-    // A save asked for before the project had a place of its own, made once Save as gives it one.
+    // A save asked for before the project had a place of its own, made once that Save as gives it one, and dropped
+    // when it is cancelled or refused.
     property bool afterSaveAs: false
 
     // Writes the ticked formats; with the PDF ticked, once the preview's figures are grabbed. While the project
@@ -229,14 +230,18 @@ EaElements.GroupBox {
     // A report that could not be saved says why, as a project that could not.
     Connections {
         target: Session
-        function onNeedsSaveAsChanged() {
-            if (group.afterSaveAs && !Session.needsSaveAs) {
-                group.afterSaveAs = false;
-                group.saveReport();
-            }
-        }
         function onProjectChanged() {
             group.afterSaveAs = false;
+        }
+    }
+    Connections {
+        target: AppState
+        function onSaveAsFinished(saved: bool) {
+            if (!group.afterSaveAs)
+                return;
+            group.afterSaveAs = false;
+            if (saved && !Session.needsSaveAs)
+                group.saveReport();
         }
     }
     Connections {

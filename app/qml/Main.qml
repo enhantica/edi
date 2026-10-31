@@ -455,6 +455,7 @@ EaComponents.ApplicationWindow {
             zip = !diskWritable;
             copy = !diskWritable;
         }
+        onRejected: AppState.saveAsFinished(false)
         onAccepted: {
             if (!diskWritable)
                 Session.downloadWebProject();
@@ -528,9 +529,12 @@ EaComponents.ApplicationWindow {
         fileMode: FileDialog.SaveFile
         acceptLabel: qsTr("Save")
         onAccepted: {
-            if (!Session.saveProjectAs(selectedFile, false, saveAsChoice.copy))
+            const saved = Session.saveProjectAs(selectedFile, false, saveAsChoice.copy);
+            if (!saved)
                 saveError.open();
+            AppState.saveAsFinished(saved);
         }
+        onRejected: AppState.saveAsFinished(false)
     }
 
     FileDialog {
@@ -546,9 +550,12 @@ EaComponents.ApplicationWindow {
         nameFilters: [qsTr("Zip archives (*.zip)")]
         acceptLabel: qsTr("Save")
         onAccepted: {
-            if (!Session.saveProjectAs(selectedFile, true, saveAsChoice.copy))
+            const saved = Session.saveProjectAs(selectedFile, true, saveAsChoice.copy);
+            if (!saved)
                 saveError.open();
+            AppState.saveAsFinished(saved);
         }
+        onRejected: AppState.saveAsFinished(false)
     }
 
     // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052).
