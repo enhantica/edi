@@ -143,9 +143,10 @@ std::string category_tooltip(std::string_view id) {
     return found != nullptr ? found->title + ": " + found->edi_name : std::string();
 }
 
-int category_order(std::string_view id) {
+std::pair<int, std::size_t> category_order(std::string_view id) {
     const crysta::DictionaryCategory* found = crysta::find_dictionary_category(id);
-    return found != nullptr ? found->order : std::numeric_limits<int>::max();
+    return found != nullptr ? std::pair{found->order, found->declared}
+                            : std::pair{std::numeric_limits<int>::max(), std::numeric_limits<std::size_t>::max()};
 }
 
 bool category_is_output(std::string_view id) {

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // What a surface shows for a `.edi` item: its label, units, description and `.edi` name, a selector's
@@ -71,9 +73,9 @@ std::string category_icon(std::string_view id);
 std::string category_description(std::string_view id);
 /// A category's title and its `.edi` name, `Cell: _cell`, as a group's tooltip names the file's category.
 std::string category_tooltip(std::string_view id);
-/// A category's order number in crysta's dictionary, which sets the sidebar's order as it sets the files'.
-/// A category the dictionary does not hold comes last.
-int category_order(std::string_view id);
+/// Where a category sorts by crysta's dictionary, as it sets the files' order: its order number, then its place in the
+/// dictionary for equal numbers. A category the dictionary does not hold comes last.
+std::pair<int, std::size_t> category_order(std::string_view id);
 /// Whether the program or a data file supplies a category (its dictionary mark is output) rather than the user.
 bool category_is_output(std::string_view id);
 /// Whether the program writes an item of an input category (the project's times and location), so no user edits
