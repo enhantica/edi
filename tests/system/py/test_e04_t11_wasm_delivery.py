@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 import yaml
+
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
