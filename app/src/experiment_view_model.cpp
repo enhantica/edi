@@ -98,7 +98,7 @@ constexpr std::array<KnownInstrument, 28> kKnownInstruments{{
     {"Laboratory", "Bruker D8 Advance", false},
     {"Laboratory", "Bruker D2 Phaser", false},
     {"Laboratory", "Malvern Panalytical Empyrean", false},
-    {"Laboratory", "Malvern Panalytical X'Pert³ Powder", false},
+    {"Laboratory", "Malvern Panalytical X'Pert3 Powder", false},
     {"Laboratory", "Malvern Panalytical Aeris", false},
     {"Laboratory", "Rigaku SmartLab", false},
     {"Laboratory", "Rigaku MiniFlex", false},
