@@ -19,7 +19,7 @@ def test_analysis_free_header_declares_the_owner_radio_popup():
         ('TapHandler {', 'onTapped') if 'TapHandler {' in header else ('MouseArea {', 'onClicked')
     )
     assert property_value(block(header, marker), signal) == 'freeMenu.open()', (
-        'The free header actual left-click handler opens its menu with the declared window position'
+        'The free header left-click opens its menu with the declared window position'
     )
     color = property_value(header, 'color')
     if re.fullmatch(r'group\.\w+', color):

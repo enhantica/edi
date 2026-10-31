@@ -3,6 +3,7 @@ import QtTest
 import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import "UiInteraction.js" as Ui
 
 TestCase {
@@ -46,9 +47,12 @@ TestCase {
         return JSON.stringify(parameters.map(parameter => [parameter.path, parameter.free, parameter.value]));
     }
     function popup(emptyController = false) {
+        tryVerify(() => !Probe.visiblePopups(appWindow).some(item => item.shown !== undefined), 2000, "The previous free menu closes before the header receives new pointer input");
         const header = Ui.control(Probe, appWindow, "parameters.freeHeader");
         verify(header !== null && Ui.exposed(header), "The free title must be a visible real left-click target");
         const point = Ui.clickPoint(header);
+        mouseMove(appWindow.contentItem, 1, 1);
+        verify(waitForRendering(appWindow.contentItem), "The pointer exit reaches a rendered frame before re-entering the free header");
         mouseMove(header, point.x, point.y);
         tryCompare(header, "color", EaStyle.Colors.themeAccent, 2000, "Hover must accent the actual free header");
         if (emptyController) {
@@ -130,10 +134,11 @@ TestCase {
         if (data.filter !== "category") {
             const field = Ui.control(Probe, appWindow, "parameters.nameFilter");
             verify(field !== null, "The real name filter must be exposed before typing");
+            appWindow.requestActivate();
+            field.forceActiveFocus();
             mouseClick(field);
-            keyClick(Qt.Key_A, Qt.ControlModifier);
-            for (const character of "length")
-                keyClick(character.toUpperCase().charCodeAt(0));
+            field.selectAll();
+            verify(SettingsProof.type(field, "length"), "The name filter receives real keyboard text in its application window");
         }
         if (data.filter !== "name")
             list.sourceModel.categoryFilter = "cell";
@@ -181,9 +186,11 @@ TestCase {
     function test_empty_filter_has_no_batch() {
         const field = Ui.control(Probe, appWindow, "parameters.nameFilter");
         verify(field !== null, "The empty-row witness requires the real name filter");
+        appWindow.requestActivate();
+        field.forceActiveFocus();
         mouseClick(field);
-        for (const character of "zzzzmissing")
-            keyClick(character.toUpperCase().charCodeAt(0));
+        field.selectAll();
+        verify(SettingsProof.type(field, "zzzzmissing"), "The empty-subset filter receives real keyboard text in its application window");
         const before = snapshot(allParameters());
         const menu = popup(true);
         compare(menu.shown.length, 0, "An unmatched filter must produce exactly zero popup targets");
