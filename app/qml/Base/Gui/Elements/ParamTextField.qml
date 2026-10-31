@@ -62,6 +62,8 @@ EaElements.TextField {
     // Shares the row's width with its siblings, a quarter of the font size apart (edi's AppSizes.inputSpacing).
     width: (EaStyle.Sizes.sideBarContentWidth - (parent.children.length - 1) * EaStyle.Sizes.fontPixelSize * 0.25) / parent.children.length
 
+    // Match ParameterCell's idle overflow policy without changing active editing.
+    horizontalAlignment: !activeFocus && contentWidth > width - leftPadding - rightPadding ? TextInput.AlignLeft : TextInput.AlignRight
     text: control.value
     font.bold: control.fit && enabled
 
