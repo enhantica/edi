@@ -54,9 +54,9 @@ class ExperimentViewModel : public QObject {
     // The Facility and Instrument selectors: the names held, empty for "Not specified", and their options, the
     // instruments those of the chosen facility for the experiment's sample form. They can be chosen for an
     // experiment made from a data file; one read from a `.edi` or `.cif` file shows what its file states.
-    Q_PROPERTY(QString facilityToken READ facilityToken WRITE setFacility NOTIFY descriptionChanged)
-    Q_PROPERTY(QString instrumentToken READ instrumentToken WRITE setInstrument NOTIFY descriptionChanged)
-    Q_PROPERTY(bool descriptionEditable READ descriptionEditable NOTIFY descriptionChanged)
+    Q_PROPERTY(QString facilityToken READ facilityToken WRITE setFacility NOTIFY facilityTokenChanged)
+    Q_PROPERTY(QString instrumentToken READ instrumentToken WRITE setInstrument NOTIFY instrumentTokenChanged)
+    Q_PROPERTY(bool descriptionEditable READ descriptionEditable NOTIFY descriptionEditableChanged)
     Q_PROPERTY(edi_app::OptionListModel* facilityOptions READ facilityOptions CONSTANT)
     Q_PROPERTY(edi_app::OptionListModel* instrumentOptions READ instrumentOptions CONSTANT)
     // Each type axis's values by their dictionary names, for the Experiment type group's selectors.
@@ -351,7 +351,9 @@ class ExperimentViewModel : public QObject {
     void fitOutcomeChanged();
     void peakTypeChanged();
     void absorptionTypeChanged();
-    void descriptionChanged();
+    void facilityTokenChanged();
+    void instrumentTokenChanged();
+    void descriptionEditableChanged();
     void extinctionTypeChanged();
     void mosaicDistributionChanged();
     void reflnsThresholdSigmaChanged();

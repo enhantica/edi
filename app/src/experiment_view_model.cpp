@@ -296,9 +296,10 @@ void ExperimentViewModel::sync_description() {
     const QString facility_token = QString::fromStdString(held_facility);
     const QString instrument_token = QString::fromStdString(held_instrument);
     const bool editable = experiment_.description_chosen;
-    const bool changed = facility_token != facility_token_ || instrument_token != instrument_token_ ||
-                         editable != description_editable_ || facility_options_->count() == 0;
-    if (!changed) {
+    const bool facility_changed = facility_token != facility_token_;
+    const bool instrument_changed = instrument_token != instrument_token_;
+    const bool editable_changed = editable != description_editable_;
+    if (!facility_changed && !instrument_changed && !editable_changed && facility_options_->count() != 0) {
         return;
     }
     set_description_options(facility_options_, facilities, held_facility);
@@ -306,7 +307,16 @@ void ExperimentViewModel::sync_description() {
     facility_token_ = facility_token;
     instrument_token_ = instrument_token;
     description_editable_ = editable;
-    emit descriptionChanged();
+    if (facility_changed) {
+        emit facilityTokenChanged();
+    }
+    // The instrument options follow the facility, so the instrument selector looks again when either changes.
+    if (facility_changed || instrument_changed) {
+        emit instrumentTokenChanged();
+    }
+    if (editable_changed) {
+        emit descriptionEditableChanged();
+    }
 }
 
 // A facility chosen: its instrument stays when the new facility has it, else it becomes "Not specified".
