@@ -23,14 +23,14 @@ Column {
     property string refusal: ""
 
     function apply(row: int, name: string, value: string) {
-        group.refusal = Session.project ? Session.project.applyText(group.source.file, data.editedText(row, name, value)) : "";
+        group.refusal = Session.project ? Session.project.applyText(group.source.file, category.editedText(row, name, value)) : "";
     }
 
     spacing: AppSizes.groupContentSpacing
     width: EaStyle.Sizes.sideBarContentWidth
 
     GeneratedCategory {
-        id: data
+        id: category
         source: group.source
         categoryId: group.categoryId
     }
@@ -39,23 +39,23 @@ Column {
     Grid {
         id: fields
 
-        visible: !data.loop
-        columns: Math.min(4, Math.max(1, data.names.length))
+        visible: !category.loop
+        columns: Math.min(4, Math.max(1, category.names.length))
         columnSpacing: AppSizes.inputSpacing
         rowSpacing: AppSizes.groupContentSpacing
 
         Repeater {
-            model: data.loop ? [] : data.names
+            model: category.loop ? [] : category.names
             delegate: ValueField {
                 required property int index
                 required property string modelData
 
                 objectName: `generated.${group.categoryId}.${modelData}`
                 width: (EaStyle.Sizes.sideBarContentWidth - (fields.columns - 1) * AppSizes.inputSpacing) / fields.columns
-                label: data.labels[index] ?? modelData
-                unit: data.units[index] ?? ""
-                fieldValue: data.rows.length > 0 ? (data.rows[0][index] ?? "") : ""
-                editable: !data.output && !data.setByProgram.includes(modelData) && group.source !== null && group.source.file !== ""
+                label: category.labels[index] ?? modelData
+                unit: category.units[index] ?? ""
+                fieldValue: category.rows.length > 0 ? (category.rows[0][index] ?? "") : ""
+                editable: !category.output && !category.setByProgram.includes(modelData) && group.source !== null && group.source.file !== ""
                 onCommitted: text => group.apply(0, modelData, text)
             }
         }
@@ -63,7 +63,7 @@ Column {
 
     // A loop: the shared table, made only for a loop, so no empty table stands for single items.
     Loader {
-        active: data.loop
+        active: category.loop
         width: parent.width
         sourceComponent: Component {
             DataTable {
@@ -71,21 +71,21 @@ Column {
 
                 objectName: `generated.${group.categoryId}.list`
                 defaultInfoText: qsTr("No rows")
-                sourceModel: data.loop ? data.rows : null
+                sourceModel: category.loop ? category.rows : null
                 // The cells a Repeater makes come before it, so the Repeater, declared last, takes the last width.
-                columns: [numberColumnWidth].concat(data.names.map(() => -1)).concat([0.001])
+                columns: [numberColumnWidth].concat(category.names.map(() => -1)).concat([0.001])
 
                 header: EaComponents.ListViewHeader {
                     EaComponents.ListViewLabel {
                         horizontalAlignment: Text.AlignHCenter
                     }
                     Repeater {
-                        model: data.labels
+                        model: category.labels
                         delegate: EaComponents.ListViewLabel {
                             required property int index
                             required property string modelData
                             horizontalAlignment: Text.AlignHCenter
-                            text: data.units[index] ? `${modelData} (${data.units[index]})` : modelData
+                            text: category.units[index] ? `${modelData} (${category.units[index]})` : modelData
                         }
                     }
                 }
@@ -101,7 +101,7 @@ Column {
                         text: row.index + 1
                     }
                     Repeater {
-                        model: data.names
+                        model: category.names
                         delegate: TextCell {
                             required property int index
                             required property string modelData
@@ -109,7 +109,7 @@ Column {
                             objectName: `generated.${group.categoryId}.${modelData}.${row.index}`
                             horizontalAlignment: Text.AlignHCenter
                             value: row.modelData[index] ?? ""
-                            readOnly: data.output || group.source === null || group.source.file === ""
+                            readOnly: category.output || group.source === null || group.source.file === ""
                             onCommitted: text => group.apply(row.index, modelData, text)
                         }
                     }

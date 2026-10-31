@@ -143,7 +143,7 @@ EaComponents.ContentPage {
         target: textLoader.item
         ignoreUnknownSignals: true
         function onDirtyChanged() {
-            page.textDirty = textLoader.item.dirty;
+            page.textDirty = (textLoader.item as TextTab)?.dirty ?? false;
         }
         function onStayRequested() {
             if (page.pageIndex >= 0)
@@ -221,7 +221,7 @@ EaComponents.ContentPage {
             Loader {
                 id: textLoader
                 active: SwipeView.isCurrentItem || page.textDirty
-                onItemChanged: page.textDirty = item !== null && item.dirty === true
+                onItemChanged: page.textDirty = (item as TextTab)?.dirty === true
             },
             Loader {
                 id: settingsLoader
