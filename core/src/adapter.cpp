@@ -187,8 +187,9 @@ crysta::Cell to_completed_crysta_cell(const Cell& c, const crysta::CellFreedom& 
 // crosses the boundary with a cell that satisfies the model's own space-group ties.
 // One `_structure_view` item of a structure, absent while the view has not set it.
 std::optional<std::string> view_item(const Structure& s, const char* name) {
-    const auto found = s.view.find(name);
-    return found != s.view.end() ? std::optional<std::string>(found->second) : std::nullopt;
+    const std::map<std::string, std::string>& view = s.view;
+    const auto found = view.find(name);
+    return found != view.end() ? std::optional<std::string>(found->second) : std::nullopt;
 }
 
 crysta::Structure to_crysta_structure(const Structure& s) {

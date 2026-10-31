@@ -2585,7 +2585,7 @@ void ProjectViewModel::showStructureView() {
     // the structure, and a change is saved with it.
     const StructureViewModel* shown = currentStructure();
     showing_view_ = true;
-    structure_view_options_->setFromView(shown != nullptr ? shown->structure()->view : std::map<std::string, std::string>{});
+    structure_view_options_->setFromView(shown != nullptr ? shown->structure()->view.get() : std::map<std::string, std::string>{});
     showing_view_ = false;
 }
 
@@ -2595,7 +2595,7 @@ void ProjectViewModel::keepStructureView() {
     }
     edi::Structure& shown = *project_->structures[static_cast<std::size_t>(current_structure_)];
     std::map<std::string, std::string> view = structure_view_options_->toView();
-    if (view != shown.view) {
+    if (view != shown.view.get()) {
         shown.view = std::move(view);
         saved_files_.reset();
         invalidateTexts();

@@ -985,11 +985,13 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         structure.scattering_lengths_fm = std::move(declared);
     }
     // How the Structure view shows it, as saved.
+    std::map<std::string, std::string> view;
     for (const auto& [tag, value] : block.items) {
         if (tag.starts_with("_structure_view.")) {
-            structure.view[tag.substr(std::string_view("_structure_view.").size())] = value;
+            view[tag.substr(std::string_view("_structure_view.").size())] = value;
         }
     }
+    structure.view = std::move(view);
     return structure;
 }
 
