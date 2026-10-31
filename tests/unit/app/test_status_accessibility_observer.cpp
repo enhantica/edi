@@ -4,6 +4,7 @@
 #include <QAccessible>
 #include <QCoreApplication>
 #include <QJSEngine>
+#include <QPointer>
 #include <QQmlEngine>
 #include <QVariantMap>
 
@@ -11,6 +12,26 @@ class StatusAccessibilityProof final : public QObject {
     Q_OBJECT
    public:
     using QObject::QObject;
+
+    Q_INVOKABLE bool watchLifetime(QObject* object) {
+        stopLifetimeWatch();
+        if (!object) return false;
+        watched_ = object;
+        lifetimeConnection_ =
+            QObject::connect(object, &QObject::destroyed, this, [this] { ++destroyedCount_; });
+        return static_cast<bool>(lifetimeConnection_) && !watched_.isNull();
+    }
+
+    Q_INVOKABLE void stopLifetimeWatch() {
+        QObject::disconnect(lifetimeConnection_);
+        lifetimeConnection_ = {};
+        watched_.clear();
+        destroyedCount_ = 0;
+    }
+
+    Q_INVOKABLE QVariantMap lifetimeFacts() const {
+        return {{"alive", !watched_.isNull()}, {"destroyed", destroyedCount_}};
+    }
 
     Q_INVOKABLE QVariantMap observe(QObject* object) const {
         auto* iface = object ? QAccessible::queryAccessibleInterface(object) : nullptr;
@@ -48,6 +69,11 @@ class StatusAccessibilityProof final : public QObject {
         actions->doAction(QAccessibleActionInterface::pressAction());
         return {{"valid", true}, {"attempted", true}};
     }
+
+   private:
+    QPointer<QObject> watched_;
+    QMetaObject::Connection lifetimeConnection_;
+    int destroyedCount_ = 0;
 };
 
 static void registerStatusAccessibilityProof() {

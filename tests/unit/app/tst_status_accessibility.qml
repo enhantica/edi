@@ -35,13 +35,12 @@ Item {
         name: "StatusAccessibilityBoundary"
         when: windowShown
         SignalSpy { id: clicked; signalName: "clicked" }
-        SignalSpy { id: destroyed; signalName: "destroyed" }
         function init() {
             failOnWarning(/.*/);
         }
         function cleanup() {
             clicked.target = null;
-            destroyed.target = null;
+            StatusAccessibilityProof.stopLifetimeWatch();
         }
         function createAction(framed, clickable = true) {
             const parent = createTemporaryObject(holder, surface);
@@ -146,11 +145,12 @@ Item {
             passive(item, "Fit");
             attempt(id);
             compare(clicked.count, 1, "The retired signal connection cannot advertise or dispatch a later Press");
-            destroyed.target = item;
-            verify(destroyed.valid, "The lifetime gate watches actual QObject destruction");
-            destroyed.clear();
+            verify(StatusAccessibilityProof.watchLifetime(item), "The lifetime gate watches actual QObject destruction");
             item.destroy();
-            tryCompare(destroyed, "count", 1, 1000, "Ordinary Qt destruction retires the actual object");
+            tryVerify(() => {
+                const facts = StatusAccessibilityProof.lifetimeFacts();
+                return facts.destroyed === 1 && !facts.alive;
+            }, 1000, "Ordinary Qt destruction retires the actual object");
             const after = StatusAccessibilityProof.press(id);
             verify(!after.valid && !after.attempted, "A retained accessible ID cannot recover a destroyed owner");
             compare(clicked.count, 1, "No action is emitted after actual destruction");
@@ -158,16 +158,18 @@ Item {
         function test_queued_destruction_refuses_press_before_ordinary_unwind() {
             const item = createAction(true);
             const id = live(item, "Fit");
-            destroyed.target = item;
-            verify(destroyed.valid, "The queued-owner witness watches actual QObject lifetime");
-            destroyed.clear();
+            verify(StatusAccessibilityProof.watchLifetime(item), "The queued-owner witness watches actual QObject lifetime");
             item.destroy();
-            compare(destroyed.count, 0, "The same script still precedes actual QObject destruction");
+            compare(StatusAccessibilityProof.lifetimeFacts().destroyed, 0, "The same script still precedes actual QObject destruction");
+            verify(StatusAccessibilityProof.lifetimeFacts().alive, "The same script retains the actual guarded native owner before deletion");
             // No event turn or object dereference between QML retirement and
             // the retained native action: this is the queued-owner entrance.
             attempt(id);
             compare(clicked.count, 0, "A queued-for-destruction owner cannot emit clicked before deletion");
-            tryCompare(destroyed, "count", 1, 1000, "The ordinary event unwind then deletes the same owner");
+            tryVerify(() => {
+                const facts = StatusAccessibilityProof.lifetimeFacts();
+                return facts.destroyed === 1 && !facts.alive;
+            }, 1000, "The ordinary event unwind then deletes the same owner");
             const after = StatusAccessibilityProof.press(id);
             verify(!after.valid && !after.attempted, "The same retained ID is invalid after actual destruction");
         }
