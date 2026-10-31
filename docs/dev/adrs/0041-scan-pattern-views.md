@@ -162,7 +162,10 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    (`edi::scan_polyline`) rather than a stroke from each column's lowest to its highest value, which drew stairs. On
    the GPU each segment's quad reaches past both ends by half the width and a device pixel, and the shader gives a
    pixel only to the nearest of the segment and its two neighbours (ties to the earlier), so joins are round and each
-   pixel is drawn once along the line; the fringe fades over one device pixel. The painter strokes each pattern as
+   pixel is drawn once along the line; the fringe fades over one device pixel. The line colours are opaque, the 75 %
+   blended toward the plot's background, and an opacity below 1 from the view or a parent blends them toward it once
+   more in the shader instead of making them translucent, so a pixel that several short segments reach at a sharp peak
+   is never drawn darker than the line. The painter strokes each pattern as
    one path with round joins, its width in item pixels at any ratio. With the shown dataset highlighted, the other
    lines take the disabled colour, opaque, rather than drawn translucent, so a line crossing itself up and down a
    narrow peak stays one even colour.

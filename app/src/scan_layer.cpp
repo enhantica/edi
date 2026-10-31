@@ -1000,6 +1000,8 @@ void ScanLayer::feedLines() {
         styles.push_back(style);
     }
     lines_->setStyles(std::move(styles));
+    lines_->setPaper(background_);
+    top_->setPaper(background_);
     const double line_px = y_max_ > y_min_ ? line_width(baselines_, order, y_max_ - y_min_, height()) : 1.0;
     for (ScanLines* item : {lines_, top_}) {
         item->setYMin(y_min_);
