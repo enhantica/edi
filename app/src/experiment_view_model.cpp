@@ -280,7 +280,8 @@ QString ExperimentViewModel::facility() const {
 }
 
 // The selectors' state from the experiment: its names, the instruments of its facility for its sample form, and
-// whether they can be chosen, which they can for an experiment made from a data file.
+// whether they can be chosen, which they can once a data file was loaded into it in this session. The saved data file
+// name is not that: it comes back when the project is reopened, and then the file's description stands.
 void ExperimentViewModel::sync_description() {
     const std::string held_facility = facility().toStdString();
     const std::string held_instrument = instrumentName().toStdString();
@@ -297,7 +298,7 @@ void ExperimentViewModel::sync_description() {
     }
     const QString facility_token = QString::fromStdString(held_facility);
     const QString instrument_token = QString::fromStdString(held_instrument);
-    const bool editable = !experiment_.data_file.empty();
+    const bool editable = experiment_.description_chosen;
     const bool changed = facility_token != facility_token_ || instrument_token != instrument_token_ ||
                          editable != description_editable_ || facility_options_->count() == 0;
     if (!changed) {

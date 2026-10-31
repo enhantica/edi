@@ -3842,6 +3842,9 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
     // name without a directory; the data itself is `data`. Empty: none.
     std::string data_file;
+    // Whether a data file was loaded into the experiment in this session, so the app lets the user choose its
+    // facility and instrument (ADR-0052). Never saved or read: a reopened file states its own description.
+    bool description_chosen = false;
     // The automatic background estimate's settings (`_background_estimate`, ADR-0040), each empty until
     // declared: the mode (`manual` or `auto`; empty is manual), the method (`auto`, `arpls`, `snip` or
     // `fabc`; empty is auto), the width, smoothness and point count (empty is derived from the data), the

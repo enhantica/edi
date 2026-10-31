@@ -1420,6 +1420,11 @@ PlainDataRows read_plain_data(const std::string& path) {
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name) {
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+    // New data starts with an unknown facility and instrument, which the user chooses (ADR-0052); the previous
+    // data's description does not carry over.
+    load.experiment.description_chosen = true;
+    load.experiment.instrument.name.clear();
+    load.experiment.instrument.facility.clear();
     if (experiment.reflections.has_value()) {
         // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
         // reader), taking a FullProf file's wavelength at constant wavelength.
