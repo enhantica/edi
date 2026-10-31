@@ -130,7 +130,28 @@ function text(root) {
     return result;
 }
 
+// ADR-0052 pages are built sequentially in the background. Whole-window polish
+// is a stationary-layout gate only after the actual workflow tabs stop preparing.
+// Keep this scoped to the declared app-bar owner, not every item with such a flag.
+function preparingWorkflowTabs(window) {
+    const names = ["appBar.tab.project", "appBar.tab.structure", "appBar.tab.experiment",
+                   "appBar.tab.analysis", "appBar.tab.report"];
+    const preparing = [];
+    function visit(item) {
+        if (!item) return;
+        if (names.includes(item.objectName) && item.preparing === true)
+            preparing.push(item);
+        for (const child of item.children || [])
+            visit(child);
+    }
+    visit(window.appBarCentralTabs);
+    return preparing;
+}
+
 function click(testCase, probe, window, name) {
+    if (preparingWorkflowTabs(window).length > 0)
+        testCase.tryVerify(() => preparingWorkflowTabs(window).length === 0, 15000,
+                           "ADR-0052: declared workflow-page preparation completes before layout/input settling");
     testCase.tryVerify(() => !moving(window.contentItem), 2000,
                        "I10/I19: viewports finish moving before locating the next real input");
     testCase.verify(testCase.waitForPolish(window, 2000),
