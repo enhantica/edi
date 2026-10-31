@@ -15369,6 +15369,7 @@ struct AssistantViewModel::State {
         if (file.read(&extra, 1) != 0 || file.error() != QFileDevice::NoError)
             throw std::runtime_error("Selected file changed or could not be read");
     }
+#ifndef __EMSCRIPTEN__
     std::vector<edi::assistant::SelectedFile> selected_snapshot(const Object& selection, const QMap<QString, QByteArray>& hashes) {
         using Bounds = edi::assistant::SelectedFileLimits;
         if (selection != file_context()) throw std::runtime_error("Selected-file ownership changed");
@@ -15402,6 +15403,7 @@ struct AssistantViewModel::State {
     std::vector<edi::assistant::SelectedFile> native_selected_bytes(const NativeReceipt& receipt) {
         return selected_snapshot(receipt.selected_context, receipt.selected_hashes);
     }
+#endif
     std::vector<edi::assistant::SelectedFile> read_selected_urls(const QList<QUrl>& urls,const Object& current,QMap<QString,QByteArray>* physical
 #ifndef __EMSCRIPTEN__
         ,std::vector<std::shared_ptr<LocalInputSource>>* proofs

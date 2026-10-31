@@ -12,6 +12,7 @@
 #include <QJsonObject>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <limits>
 #include <stdexcept>
 #include <utility>
@@ -20,7 +21,10 @@ namespace edi_app::assistant_data {
 // Original native publication owners, without calculation or GUI publication.
 // ADR-0057 owns the scalar column contract.
 inline double index_number(std::size_t value) {
-    if(value>((quint64{1}<<std::numeric_limits<double>::digits)-1))edi::assistant::detail::refuse("invalid_argument","The requested native row index is not exactly representable in JSON");
+    if constexpr (std::numeric_limits<std::size_t>::digits > std::numeric_limits<double>::digits) {
+        if (static_cast<std::uintmax_t>(value) > ((quint64{1} << std::numeric_limits<double>::digits) - 1))
+            edi::assistant::detail::refuse("invalid_argument","The requested native row index is not exactly representable in JSON");
+    }
     return static_cast<double>(value);
 }
 inline std::size_t index(const QJsonValue& value) {
