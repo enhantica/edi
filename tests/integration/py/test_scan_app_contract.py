@@ -849,9 +849,12 @@ console.log(JSON.stringify([calls,currentIndex]));"""
 def test_disabled_placeholders_and_load_data_are_present():
     types = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
     for placeholder in ('dimensionality', 'polarisation'):
-        assert property_value(item(types, 'experimentType.polarisation'), 'options') == (
-            'row.experiment ? row.experiment.polarisationOptions : null'
-        ), 'ADR-0054 displays the selected experiment polarisation for each probe'
+        assert (
+            property_value(item(types, 'experimentType.' + placeholder), 'enabled') == 'false'
+        ), 'Each experiment descriptor with one admitted value remains disabled'
+    assert property_value(item(types, 'experimentType.polarisation'), 'options') == (
+        'row.experiment ? row.experiment.polarisationOptions : null'
+    ), 'ADR-0054 displays the selected experiment polarisation for each probe'
     require_availability(source('qml/Pages/Experiment/ExperimentsGroup.qml'))
 
 

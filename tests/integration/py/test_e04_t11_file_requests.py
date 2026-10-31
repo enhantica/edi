@@ -268,7 +268,7 @@ def test_every_browser_file_receiver_preserves_request_ownership(case):
         ],
         'structure-cardinality': [
             ('structure', 'openFiles(".cif,.edi", false)', 'openFiles(".cif,.edi", true)'),
-            ('experiment', 'openFiles(".edi", true)', 'openFiles(".edi", false)'),
+            ('experiment', 'openFiles(".cif,.edi", true)', 'openFiles(".edi", false)'),
         ],
     }
     for key, old, new in escapes[case]:
