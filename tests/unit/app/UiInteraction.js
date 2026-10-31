@@ -94,6 +94,8 @@ function control(probe, window, name) {
 
 function moving(root) {
     if (root.moving === true) return true;
+    if (String(root).startsWith("SwipeView") && root.currentItem &&
+        Math.abs(root.currentItem.mapToItem(root, 0, 0).x) > 1) return true;
     const children = root.children || [];
     return children.some(child => moving(child));
 }

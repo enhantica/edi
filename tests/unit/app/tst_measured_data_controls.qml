@@ -37,6 +37,7 @@ TestCase {
         verify(appWindow !== null, "Measured-data availability uses the production application window");
         verify(Session.openExample("pd-neut-cwl_lbco_simulation"), "The real bundled LBCO simulation opens: " + Session.lastError);
         ready();
+        tryVerify(() => appWindow.pagesBuilt > 0 && appWindow.pagesBuilt === appWindow.pagesWanted, 10000, "The production window finishes preparing its pages before measured-data controls are inspected");
         verify(Session.project.currentExperiment.calculationOnly, "The initial example has no measured observations");
         verify(!Session.project.fit.measured, "The simulation has no measured experiment anywhere in its project");
         Session.project.currentExperiment.backgroundEstimateMode = "manual";
@@ -96,14 +97,15 @@ TestCase {
     }
     function tooltipNeedsMeasurements(button) {
         exposed(button);
-        mouseMove(button, button.width / 2, button.height / 2);
-        tryVerify(() => {
-            // Qt's shared attached tooltip need not be a QObject child of the window.
-            const popups = Probe.visiblePopups(appWindow).concat([button.ToolTip.toolTip]);
-            const text = popups.filter(popup => popup && popup.visible && popup.opened).map(popup => Ui.text(popup.contentItem ?? popup)).join(" ");
-            return /measur|observ/i.test(text) && /data|pattern/i.test(text) && /need|require|load|without|first|available/i.test(text);
-        }, 2500, "Hovering disabled Estimate displays a tooltip explaining that measured data must be loaded");
+        function renderedReason() {
+            return Render.texts(Ui.windowRoot(appWindow)).some(item => Ui.rendered(item) && /measur|observ/i.test(item.text) && /data|pattern/i.test(item.text) && /need|require|load|without|first|available/i.test(item.text));
+        }
         mouseMove(appWindow.contentItem, 1, 1);
+        tryVerify(() => !renderedReason(), 1500, "The measured-data explanation is not already rendered away from Estimate");
+        mouseMove(button, button.width / 2, button.height / 2);
+        tryVerify(renderedReason, 2500, "Hovering disabled Estimate displays a tooltip explaining that measured data must be loaded");
+        mouseMove(appWindow.contentItem, 1, 1);
+        tryVerify(() => !renderedReason(), 1500, "The measured-data tooltip disappears after leaving Estimate");
     }
     function experimentControls(measured, projectMeasured) {
         if (projectMeasured === undefined)
@@ -184,7 +186,7 @@ TestCase {
         if (!measured)
             verify(!fit[0].enabled, "The simulation cannot start a fit without measured data");
         const dictionary = reference.dictionary();
-        verify(dictionary.categories && dictionary.categories.length > 0, "Fit-only category identities come from the selected SDK dictionary");
+        verify(dictionary.categories && dictionary.categories.length > 0, "Fit-only category identities come from the captured dictionary reference");
         const reflectionSelection = dictionary.categories.find(item => item.title === "Fitted reflections");
         verify(reflectionSelection !== undefined, "The dictionary declares the single-crystal fitted-reflection selection category");
         const hidden = ["minimizer", "fitting_mode", reflectionSelection.id, "joint_fit", "fit_parameter", "sequential_fit", "sequential_fit_extract"];
