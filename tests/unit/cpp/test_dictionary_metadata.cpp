@@ -27,7 +27,7 @@ TEST_CASE("The core metadata bridge retains every dictionary label unit and file
                       "Every core item has a dictionary description");
     }
     edi::Project project;
-    project.experiments.emplace_back(edi::BraggPdExperiment{});
+    project.experiments.push_back(edi::BraggPdExperiment{});
     edi::refresh_fittability(project);
     const auto& angle = project.experiment().instrument.setup_twotheta_bank;
     CHECK_MESSAGE(edi::is_descriptor("instrument.setup_twotheta_bank"),

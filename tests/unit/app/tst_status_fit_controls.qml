@@ -279,7 +279,6 @@ TestCase {
         fitState("Stop");
         const progress = findChild(appWindow, "statusBar.fit.progress");
         verify(progress !== null && progress.visible, "The running position witness includes the actual fit progress bar");
-        rightmostFitAction();
         verify(actionable(button), "The running status action stays available to stop the worker on either page");
         keyAction(button, data.tag === "status" ? Qt.Key_Space : Qt.Key_Return, true);
         finish();
@@ -406,6 +405,18 @@ TestCase {
         }
         if (!isScan)
             return;
+        Session.project.fit.start();
+        verify(Session.project.fit.scanning && actionable(follow), "The keyboard witness reaches an available real Follow action");
+        const keyboardFollowing = Session.project.fit.following;
+        keyAction(follow, data.tag === "scan" ? Qt.Key_Space : Qt.Key_Return, true);
+        compare(Session.project.fit.following, !keyboardFollowing, "Keyboard Follow toggles the same real model state as pointer input");
+        click(follow);
+        Session.project.fit.cancel();
+        finish();
+        dialogs().forEach(dialog => dialog.close());
+        verify(Session.project.fit.canReset, "The stopped real scan retains a resettable result");
+        keyAction(reset, data.tag === "scan" ? Qt.Key_Return : Qt.Key_Space, true);
+        compare(Session.project.fit.scanFitted, 0, "Keyboard Reset clears the real result set before the style witness restarts");
         verify(reset.mapToItem(area(), reset.width, 0).x <= follow.mapToItem(area(), 0, 0).x && follow.mapToItem(area(), follow.width, 0).x <= button.mapToItem(area(), 0, 0).x, "The scan actions are ordered Reset, Follow, Fit at the right end");
         for (const item of [reset, follow]) {
             const fill = rectangle(item), fitFill = rectangle(button);
@@ -463,6 +474,15 @@ TestCase {
     }
     function test_disabled_style(data) {
         open("scan");
+        Session.project.fit.start();
+        finish();
+        dialogs().forEach(dialog => dialog.close());
+        const keyboardReset = scanControl("reset");
+        verify(Session.project.fit.canReset && actionable(keyboardReset), "Completed real scan results enable Reset for keyboard input");
+        keyAction(keyboardReset, data.tag === "light" ? Qt.Key_Return : Qt.Key_Space, true);
+        compare(Session.project.fit.scanFitted, 0, "Keyboard Reset clears the same completed scan results as pointer input");
+        keyAction(keyboardReset, Qt.Key_Space, false);
+        keyAction(keyboardReset, Qt.Key_Return, false);
         Session.project.fit.start();
         finish();
         dialogs().forEach(dialog => dialog.close());
