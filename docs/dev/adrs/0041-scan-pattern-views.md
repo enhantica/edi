@@ -161,12 +161,11 @@ asked for the same views for a joint fit, where the WISH banks line up on the d 
    columns, not item pixels, so a high-DPI screen gets its full resolution; it follows the points in their order
    (`edi::scan_polyline`) rather than a stroke from each column's lowest to its highest value, which drew stairs. On
    the GPU each segment's quad reaches past both ends by half the width and a device pixel, and the shader gives a
-   pixel only to the pattern's nearest segment (ties to the earlier), reading the pattern's points from a texture and
-   stopping once a segment lies farther along x than the pixel is from its own. So joins are round and each pixel is
-   drawn once, also where several short segments meet at a sharp peak; the fringe fades over one device pixel. The
-   painter strokes each pattern as one path with round joins, its width in item pixels at any ratio. With the shown
-   dataset highlighted, the other lines take the disabled colour, opaque, rather than drawn translucent, so a line
-   crossing itself up and down a narrow peak stays one even colour.
+   pixel only to the nearest of the segment and its two neighbours (ties to the earlier), so joins are round and each
+   pixel is drawn once along the line; the fringe fades over one device pixel. The painter strokes each pattern as
+   one path with round joins, its width in item pixels at any ratio. With the shown dataset highlighted, the other
+   lines take the disabled colour, opaque, rather than drawn translucent, so a line crossing itself up and down a
+   narrow peak stays one even colour.
    Each dataset's reduction (its trace, or the Map's pixel columns) is kept until its points, the x range, the plot's
    width, the y scale or the included range change: a colour, a reversal or a row placing reduces nothing, and a
    change of the shown dataset draws nothing. The changes of one frame are drawn once, at the frame's polish. A view

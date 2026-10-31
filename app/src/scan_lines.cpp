@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "scan_lines.hpp"
 
-#include <QImage>
 #include <QQuickWindow>
 #include <QSGGeometry>
 #include <QSGGeometryNode>
 #include <QSGMaterial>
 #include <QSGMaterialShader>
 #include <QSGRectangleNode>
-#include <QSGTexture>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstring>
 #include <limits>
-#include <memory>
 #include <type_traits>
 
 namespace edi_app {
@@ -23,21 +20,12 @@ namespace {
 
 // How many patterns one node draws: the shader's uniform arrays hold this many (app/shaders/scan_line.vert).
 constexpr std::size_t kGroup = 64;
-// Texels to a row of the points texture (app/shaders/scan_line.frag). Each point takes two texels, its x and its v,
-// each a 24-bit number in the red, green and blue bytes: x from -32768 pixels in 1/256 pixel steps, and v as a share of
-// the largest |v| in its trace, from -1 in steps of 2^-23. A break's point has x = 0, which no point reaches.
-constexpr int kRow = 2048;
-constexpr double kMost = 16777215.0;
-
-QRgb fixed24(double value, double offset, double scale) {
-    return 0xff000000U | static_cast<QRgb>(std::clamp(std::round((value + offset) * scale), 1.0, kMost));
-}
 
 // What the shader is given besides the matrix and the opacity: each pattern's baseline and height in item pixels,
-// its colour, and the texture of the group's points.
+// and its colour.
 class LineMaterial : public QSGMaterial {
    public:
-    explicit LineMaterial(QSGTexture* points) : points(points) { setFlag(Blending); }
+    LineMaterial() { setFlag(Blending); }
     QSGMaterialType* type() const override {
         static QSGMaterialType kind;
         return &kind;
@@ -46,7 +34,7 @@ class LineMaterial : public QSGMaterial {
     int compare(const QSGMaterial* other) const override {
         const auto* that = static_cast<const LineMaterial*>(other);
         if (placement != that->placement || colour != that->colour || half_width != that->half_width ||
-            pixel != that->pixel || points.get() != that->points.get()) {
+            pixel != that->pixel) {
             return this < that ? -1 : 1;
         }
         return 0;
@@ -56,7 +44,6 @@ class LineMaterial : public QSGMaterial {
     std::array<float, 4 * kGroup> colour{};
     float half_width = 1.0F;
     float pixel = 1.0F;  // one device pixel, in item pixels
-    std::unique_ptr<QSGTexture> points;
 };
 
 class LineShader : public QSGMaterialShader {
@@ -78,27 +65,17 @@ class LineShader : public QSGMaterialShader {
         std::memcpy(buffer + 64 + 2 * kArray, rest, sizeof(rest));
         return true;
     }
-    // The points texture, uploaded here on its first use, as Qt's own materials do.
-    void updateSampledImage(RenderState& state, int binding, QSGTexture** texture, QSGMaterial* material,
-                            QSGMaterial* /*old*/) override {
-        QSGTexture* points = static_cast<LineMaterial*>(material)->points.get();
-        if (binding == 1 && points != nullptr) {
-            points->commitTextureOperations(state.rhi(), state.resourceUpdateBatch());
-            *texture = points;
-        }
-    }
 };
 
 QSGMaterialShader* LineMaterial::createShader(QSGRendererInterface::RenderMode /*mode*/) const {
     return new LineShader;
 }
 
-// A vertex: its segment's two points (x in pixels, v as the style scales it); where the segment's first point and its
-// pattern's first and last points are in the points texture, and the largest |v| in the pattern, negative when x falls
-// along it; which end and which side of the segment it is (end * 2 + side); and its pattern's place in the group
-// (place * 4).
+// A vertex: its segment's two points (x in pixels, v in [0, 1]), the points before and after it (each equal to the
+// segment's end when there is none), which end and which side of the segment it is (end * 2 + side), and its pattern's
+// place in the group with whether the points before and after exist (place * 4 + before + 2 * after).
 struct Vertex {
-    float x0, v0, x1, v1, at, first, last, scale, corner, pattern;
+    float x0, v0, x1, v1, xb, vb, xa, va, corner, pattern;
 };
 
 const QSGGeometry::AttributeSet& vertex_layout() {
@@ -115,61 +92,38 @@ bool finite_point(const ScanLines::Trace& trace, std::size_t k) {
 }
 
 // A group of traces' quads, in order: four vertices and two triangles for each segment whose two points are finite.
-// `points` takes every point of the group's traces, in order (kRow).
-QSGGeometry* quads_of(const std::vector<ScanLines::Trace>& traces, std::size_t first, std::size_t count,
-                      QImage& points) {
-    std::size_t segments = 0, total = 0;
+QSGGeometry* quads_of(const std::vector<ScanLines::Trace>& traces, std::size_t first, std::size_t count) {
+    std::size_t segments = 0;
     for (std::size_t i = first; i < first + count; ++i) {
         const ScanLines::Trace& trace = traces[i];
-        const std::size_t n = std::min(trace.x.size(), trace.v.size());
-        total += n;
-        for (std::size_t k = 0; k + 1 < n; ++k) {
+        const std::size_t points = std::min(trace.x.size(), trace.v.size());
+        for (std::size_t k = 0; k + 1 < points; ++k) {
             segments += finite_point(trace, k) && finite_point(trace, k + 1) ? 1 : 0;
         }
     }
-    const auto texels = static_cast<int>(2 * total);
-    points = QImage(kRow, std::max(1, (texels + kRow - 1) / kRow), QImage::Format_RGB32);
-    points.fill(0xff000000U);
     const bool wide = 4 * segments > std::numeric_limits<quint16>::max();
     auto* geometry = new QSGGeometry(vertex_layout(), static_cast<int>(4 * segments), static_cast<int>(6 * segments),
                                      wide ? QSGGeometry::UnsignedIntType : QSGGeometry::UnsignedShortType);
     geometry->setDrawingMode(QSGGeometry::DrawTriangles);
     auto* vertex = static_cast<Vertex*>(geometry->vertexData());
-    std::size_t start = 0;
     for (std::size_t i = first; i < first + count; ++i) {
         const ScanLines::Trace& trace = traces[i];
         const auto place = static_cast<float>(i - first);
-        const std::size_t n = std::min(trace.x.size(), trace.v.size());
-        float x_first = std::numeric_limits<float>::quiet_NaN(), x_last = x_first;
-        float largest = 0.0F;
-        for (std::size_t k = 0; k < n; ++k) {
-            largest = finite_point(trace, k) ? std::max(largest, std::abs(trace.v[k])) : largest;
-        }
-        largest = largest > 0.0F ? largest : 1.0F;
-        for (std::size_t k = 0; k < n; ++k) {
-            const bool finite = finite_point(trace, k);
-            const auto at = static_cast<int>(2 * (start + k));
-            auto* out = reinterpret_cast<QRgb*>(points.scanLine(at / kRow)) + at % kRow;
-            out[0] = finite ? fixed24(trace.x[k], 32768.0, 256.0) : 0xff000000U;
-            out[1] = finite ? fixed24(trace.v[k] / largest, 1.0, 8388608.0) : 0xff000000U;
-            if (finite) {
-                x_first = std::isnan(x_first) ? trace.x[k] : x_first;
-                x_last = trace.x[k];
-            }
-        }
-        const float scale = x_last < x_first ? -largest : largest;
-        const auto first_point = static_cast<float>(start), last_point = static_cast<float>(start + n - 1);
-        for (std::size_t k = 0; k + 1 < n; ++k) {
+        const std::size_t points = std::min(trace.x.size(), trace.v.size());
+        for (std::size_t k = 0; k + 1 < points; ++k) {
             if (!finite_point(trace, k) || !finite_point(trace, k + 1)) {
                 continue;
             }
             const float x0 = trace.x[k], v0 = trace.v[k], x1 = trace.x[k + 1], v1 = trace.v[k + 1];
-            const auto at = static_cast<float>(start + k);
+            const bool before = k > 0 && finite_point(trace, k - 1);
+            const bool after = k + 2 < points && finite_point(trace, k + 2);
+            const float xb = before ? trace.x[k - 1] : x0, vb = before ? trace.v[k - 1] : v0;
+            const float xa = after ? trace.x[k + 2] : x1, va = after ? trace.v[k + 2] : v1;
+            const float code = 4.0F * place + (before ? 1.0F : 0.0F) + (after ? 2.0F : 0.0F);
             for (const float corner : {0.0F, 1.0F, 2.0F, 3.0F}) {
-                *vertex++ = {x0, v0, x1, v1, at, first_point, last_point, scale, corner, 4.0F * place};
+                *vertex++ = {x0, v0, x1, v1, xb, vb, xa, va, corner, code};
             }
         }
-        start += n;
     }
     const auto fill = [segments](auto* index) {
         using Index = std::remove_pointer_t<decltype(index)>;
@@ -288,13 +242,8 @@ QSGNode* ScanLines::updatePaintNode(QSGNode* old, UpdatePaintNodeData* /*data*/)
         auto* node = static_cast<QSGGeometryNode*>(child);
         if (rebuild) {
             node = new QSGGeometryNode;
-            QImage points;
-            node->setGeometry(quads_of(traces_, first, count, points));
-            QSGTexture* texture = window() != nullptr ? window()->createTextureFromImage(points) : nullptr;
-            if (texture != nullptr) {
-                texture->setFiltering(QSGTexture::Nearest);
-            }
-            node->setMaterial(new LineMaterial(texture));
+            node->setGeometry(quads_of(traces_, first, count));
+            node->setMaterial(new LineMaterial);
             node->setFlags(QSGNode::OwnsGeometry | QSGNode::OwnsMaterial);
             root->appendChildNode(node);
         }
