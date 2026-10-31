@@ -81,10 +81,26 @@ QtObject {
     // An action that replaces the project runs on the next turn of the event loop, never inside the handler that asked
     // for it: replacing the project rebuilds the pages, and the page holding that handler with them.
     function afterChanges(action) {
+        if (textEdit !== null) {
+            textEdit.settleEdit(() => afterChanges(action));
+            return;
+        }
         if (Session.project !== null && Session.project.modified)
             changesQuestion(action);
         else
             Qt.callLater(action);
+    }
+    // The Text tab holding an edit not yet applied, or null. What would replace what it shows (another project,
+    // closing the window, another Show choice) settles the edit first, as leaving the tab does (TextTab.settleEdit).
+    property var textEdit: null
+    // Every Text tab shows `choice` ("editable" or "everything") once an unapplied edit is settled.
+    function setTextShow(choice) {
+        if (Preferences.textShow === choice)
+            return;
+        if (textEdit !== null)
+            textEdit.settleEdit(() => Preferences.textShow = choice);
+        else
+            Preferences.textShow = choice;
     }
     // A created project that could not be saved at its location stays open, unsaved: the window says why.
     signal createFailed

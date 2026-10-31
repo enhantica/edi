@@ -335,7 +335,11 @@ AppDialog {
                 objectName: "preferences.textShow"
                 model: [qsTr("Editable"), qsTr("Everything")]
                 currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
-                onActivated: index => Preferences.textShow = choices[index]
+                // Through the Text tabs, which settle an unapplied edit first; until then the box shows the setting.
+                onActivated: index => {
+                    AppState.setTextShow(choices[index]);
+                    currentIndex = Qt.binding(() => Math.max(0, choices.indexOf(Preferences.textShow)));
+                }
                 ToolTip.text: qsTr("What every Text tab shows: the categories you can edit, or also the measured data and results, read-only")
             }
         }

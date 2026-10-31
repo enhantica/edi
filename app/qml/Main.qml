@@ -359,7 +359,7 @@ EaComponents.ApplicationWindow {
     // project's temporary folder goes with it.
     property bool quitting: false
     onClosing: close => {
-        if (!quitting && Session.project !== null && Session.project.modified) {
+        if (!quitting && Session.project !== null && (Session.project.modified || AppState.textEdit !== null)) {
             close.accepted = false;
             AppState.afterChanges(() => {
                 window.quitting = true;
