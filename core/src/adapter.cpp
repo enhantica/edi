@@ -2241,7 +2241,8 @@ namespace {
 // start-carrying parameters), fill the persistence-only fields the calculation conversion never
 // needed, and stamp the loader-grade identity with crysta's own exported stamp. crysta::Project
 // cannot move, so it is lent rather than returned.
-void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use) {
+void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use,
+                        const std::string* source = nullptr) {
     BuiltExperiments built_experiments;
     built_experiments.reserve(model.experiments.size());
     for (const auto& e_item : model.experiments) {
@@ -2345,6 +2346,11 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     cproject.path = model.path.empty() ? model.scan_data_root : model.path;
     // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
     cproject.scan_data_root = model.scan_data_root;
+    // A save that carries its files from another folder (a scratch save writing texts) carries no scan data.
+    if (source != nullptr) {
+        cproject.path = *source;
+        cproject.scan_data_root = std::string();
+    }
     // The project identity rides the delegated save. Copy the persisted metadata fields
     // across (the two ProjectMetadata mirrors are distinct C++ types; `path` is engine
     // bookkeeping the record never carries) and ENGAGE persistence — crysta's writer then merges
@@ -2512,16 +2518,19 @@ void refresh_agreement_records(Project& project) {
     });
 }
 
-void save_project_via_crysta(const Project& model, const std::string& directory) {
+void save_project_via_crysta(const Project& model, const std::string& directory, const std::string* source) {
     // crysta::save_project does the write: staging, atomic publish and fail-closed validation are its own.
-    with_saved_project(model, [&directory](crysta::Project& project) {
-        try {
-            crysta::save_project(project, directory);
-        } catch (const std::exception& error) {
-            raise_coded(error);
-            throw;
-        }
-    });
+    with_saved_project(
+        model,
+        [&directory](crysta::Project& project) {
+            try {
+                crysta::save_project(project, directory);
+            } catch (const std::exception& error) {
+                raise_coded(error);
+                throw;
+            }
+        },
+        source);
 }
 
 SaveSpelling save_spelling(const Project& model) {

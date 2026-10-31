@@ -145,7 +145,9 @@ std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_gr
 // Write a Project back out as a `.edi` project directory (inverse of load_project: structures,
 // experiments, analysis). Each bank's embedded `_data` loop is written back IFF present, so
 // presence round-trips — a complete project stays complete, a model-only one stays model-only.
-void save_project(const Project& project, const std::string& directory);
+// With `source`, the project's files are carried from that folder instead of its own, and no scan data: the project
+// itself is saved, not a copy, so what it has calculated is written as current (a scratch save writing its texts).
+void save_project(const Project& project, const std::string& directory, const std::string* source = nullptr);
 
 // Save the project to `directory` and make it the project's directory (Project.path and
 // metadata.path) — the binding's save_as rule: the last-modified time advances before the write and
@@ -172,8 +174,10 @@ bool adopt_values(Project& project, const Project& saved);
 bool adopt_saved_project(Project& project, const std::string& directory);
 
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
-// the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
-void save_project_via_crysta(const Project& project, const std::string& directory);
+// the adapter (the one crysta-touching TU); edi-only signature (ADR-0003). With `source`, the
+// project's files are carried from that folder instead of its own, and no scan data with them.
+void save_project_via_crysta(const Project& project, const std::string& directory,
+                             const std::string* source = nullptr);
 // The fit's agreement records (each bank's, its phases' and every bank's together) recomputed by crysta from the
 // project's values, with due background estimates deferred, as a save that adopted rounded values keeps them. A project
 // holding no fit result, or one crysta cannot calculate, is left as it is.
