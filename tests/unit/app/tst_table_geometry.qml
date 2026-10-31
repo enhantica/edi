@@ -172,15 +172,22 @@ Item {
             verify(cell.width >= Math.max(bodyNeed, headingNeed), "A compact fixed column fits both its independently supplied content and heading");
             assertCellInkFits(cell);
         }
-        function geometrySettled(table) {
-            return table.columnFitLife !== null && table.columnFitLife.alive
+        function geometrySettled(table, expandedOwner = null) {
+            const tableReady = table.columnFitLife !== null && table.columnFitLife.alive
                 && !table.columnFitLife.queued && !table.refitting
                 && !isPolishScheduled(surface.Window.window);
+            if (!tableReady || expandedOwner === null)
+                return tableReady;
+            const finalHeight = expandedOwner.titleArea.height + expandedOwner.spacing
+                + expandedOwner.contentHeight + expandedOwner.bottomPadding;
+            return expandedOwner.visible && !expandedOwner.collapsed
+                && expandedOwner.height === finalHeight
+                && expandedOwner.implicitHeight === finalHeight;
         }
-        function settleGeometry(table) {
-            tryVerify(() => geometrySettled(table), 2000,
-                "The actual live table completes its queued fit and whole-window polish before geometry is observed");
-            verify(geometrySettled(table), "Geometry capture cannot admit a queued, refitting, retired or unpolished owner");
+        function settleGeometry(table, expandedOwner = null) {
+            tryVerify(() => geometrySettled(table, expandedOwner), 2000,
+                "The actual live table and declared containing GroupBox expansion settle within the same geometry clock");
+            verify(geometrySettled(table, expandedOwner), "Geometry capture cannot admit queued fit, unpolished layout or incomplete declared owner expansion");
         }
         function advance(text, font) {
             ink.font = font;
@@ -544,6 +551,7 @@ Item {
                 },
                 {
                     tag: "experiments",
+                    expandedGroupBoxOwner: true,
                     kinds: ["numbering", "icon", "icon", "text", "held-text", "hidden", "icon"],
                     expectedPolicy: "content",
                     filler: 4,
@@ -675,7 +683,7 @@ Item {
                 group.width = width;
                 table.width = width;
                 table.forceLayout();
-                settleGeometry(table);
+                settleGeometry(table, data.expandedGroupBoxOwner ? group : null);
                 const delegate = table.itemAtIndex(0);
                 verify(delegate !== null, "The actual first delegate exists");
                 const body = Render.cells(delegate), head = Render.cells(table.headerItem);
@@ -801,7 +809,7 @@ Item {
                     rows.setProperty(i, "structureId", "long.identifier.".repeat(100));
                 }
                 table.forceLayout();
-                settleGeometry(table);
+                settleGeometry(table, data.expandedGroupBoxOwner ? group : null);
                 const longCells = Render.cells(table.itemAtIndex(0));
                 const longWidth = longCells[data.idColumn].width;
                 const longHead = Render.cells(table.headerItem);
@@ -817,7 +825,7 @@ Item {
                     for (const role of ["id", "label", "name", "structureId"])
                         rows.setProperty(i, role, "r" + i);
                 table.forceLayout();
-                settleGeometry(table);
+                settleGeometry(table, data.expandedGroupBoxOwner ? group : null);
                 const shortCells = Render.cells(table.itemAtIndex(0));
                 const shortHead = Render.cells(table.headerItem);
                 compare(policyErrors(data, policyRecord(data, table, shortCells, shortHead, fixedColumns(data, shortHead), data.expectedPolicy === "equal" ? selectorBounds(group, shortCells, shortHead) : [])).length, 0, "Returning short identifiers preserve every original fixed and header/body boundary");
