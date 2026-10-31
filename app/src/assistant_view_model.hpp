@@ -41,6 +41,7 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QVariantMap workReportReceipt READ workReportReceipt NOTIFY workReportReceiptChanged)
     Q_PROPERTY(QString state READ state NOTIFY stateChanged)
     Q_PROPERTY(bool connected READ connected NOTIFY connectedChanged)
+    Q_PROPERTY(bool conversationAvailable READ conversationAvailable NOTIFY conversationAvailableChanged)
     Q_PROPERTY(QString connectionLabel READ connectionLabel NOTIFY connectionLabelChanged)
     Q_PROPERTY(edi_app::RowTableModel* models READ models CONSTANT)
     Q_PROPERTY(QString selectedModel READ selectedModel WRITE setSelectedModel NOTIFY selectedModelChanged)
@@ -87,6 +88,7 @@ class AssistantViewModel : public QObject {
     void setActionWindow(QQuickWindow* window);
     QString state() const;
     bool connected() const;
+    bool conversationAvailable() const;
     QString connectionLabel() const;
     RowTableModel* models() const;
     QString selectedModel() const;
@@ -240,6 +242,7 @@ class AssistantViewModel : public QObject {
     void conversationClearCommitted(const QString& intent);
     void stateChanged();
     void connectedChanged();
+    void conversationAvailableChanged();
     void connectionLabelChanged();
     void selectedModelChanged();
     void selectedSkillChanged();

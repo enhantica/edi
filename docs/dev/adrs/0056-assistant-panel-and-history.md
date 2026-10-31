@@ -4972,3 +4972,36 @@ existing backend owners. No timer, retained account, synthetic connected flag,
 new state or hidden error is introduced. A pending attempt, successful readiness,
 refusal/error/cancel and genuine disconnected state must retain their actual
 visible meanings under normal independent UI verification.
+
+## Conversation display and transport readiness are separate projections
+
+FIRST ViewedSession already retains a verified conversation independently of its
+disposable execution process. The existing account projection likewise retains
+that verified account during an approved same-session resume. After Share installs
+new skill instructions, generic_prepare_thread retires only that settled process
+and resumes the same thread. Connected correctly remains false until the original
+native authentication/ready proof completes; replacing the whole chat with a
+connection prompt during this owned transfer misrepresents the retained view.
+
+AssistantViewModel.conversationAvailable exposes display availability separately:
+an actually connected conversation, or the still-current ViewedSession paired
+with its exact approved ResumeCheckpoint. The latter checks thread/email,
+project/model/controller, generation, account epoch, history owner, workspace and
+structurally identical approved disclosure. The getter reads existing immutable
+identities only. It never calls current_disclosure, resume_identity_current,
+staged-skill/file checks, provider operations or model mutation. Its dedicated
+notification uses the existing per-property observed/version publication owner.
+No history-nonempty test, presentation latch or new retained account is added.
+
+The transcript/composer pane uses this display property and the signed-out overlay
+its inverse. Every connected/send/drop/model/auth/approval guard remains unchanged;
+retained display does not grant input or claim a ready connection. The existing
+header continues to show the real connection/cancel state. Conversation error
+notices and the original Stop/cancel actions remain visible through their normal
+channels. A local same-approved-scope preparation failure may retain the verified
+chat with its actual error and honest Connect retry header; it is not an account
+failure and does not require destroying the retained view. Real transport failure
+clears the resuming owner, and sign-out, account/project retirement, Clear, archive
+or different-thread selection invalidate their original owners. Cold login,
+unknown/different account or stale scope cannot use retained rows as display
+proof. Browser/unmanaged paths keep the original connected-only availability.

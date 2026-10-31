@@ -424,7 +424,7 @@ Popup {
             }
             ColumnLayout {
                 id: chatBody
-                visible: panel.assistant.connected
+                visible: panel.assistant.conversationAvailable
                 enabled: visible
                 z: 1
                 anchors.left: parent.left
@@ -584,7 +584,7 @@ Popup {
             }
             Rectangle {
                 objectName: "assistant.signedOut"
-                visible: !panel.assistant.connected
+                visible: !panel.assistant.conversationAvailable
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: header.bottom
