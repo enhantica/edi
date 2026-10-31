@@ -1,27 +1,35 @@
 {
-  "phase": "original",
-  "panel_sha256": "3f32348e85df85cc7cb23b2bef428493fd79adbe587529310684311b38f63ddb",
-  "app_info_sha256": "9c80523331ef110ed7dcf4e70b577bb846f42bc54b4c53902aed55eff5014e77",
+  "phase": "native",
+  "panel_sha256": null,
+  "app_info_sha256": null,
   "allowance_call": "p.allowanceWindow(MINUTES)",
   "files": {
-    "app/qml/Components/AssistantPanel.qml": "3f32348e85df85cc7cb23b2bef428493fd79adbe587529310684311b38f63ddb",
-    "app/src/app_info.cpp": "9c80523331ef110ed7dcf4e70b577bb846f42bc54b4c53902aed55eff5014e77",
-    "app/src/assistant_view_model.cpp": "206d8275347caecd1e66612e13825a003b901af0918d0246ec6a14e09f1466e4",
+    "app/qml/Components/AssistantPanel.qml": null,
+    "app/src/app_info.cpp": null,
+    "app/src/assistant_view_model.cpp": null,
     "tests/system/py/test_e11_t5_dev_native_integration.py": "f217a03b7e8f274dc1b3cd140f8268e2edf8d1ef83877eeb424670a3f730046b",
     "tests/integration/py/assistant_ui_probe/probe.cpp": "9a992415e8edb8c4aa50e5b82b8d6b526abedc82c6c4d87fcc0c19948080c2e7",
     "tests/integration/py/assistant_ui_probe/codex_peer.py": "b3ac490856539a6f264dab4464780133cb5f934c7aede97b7d4cae76d098acdc",
     "tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp": "07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe",
-    "app/src/app_info.hpp": "e9bcfa310c1f4de5b7ca27e123ea6ceb05beed0357b4b7557b863e8e5ce7c7a5",
-    "app/qml/Components/AssistantComposer.qml": "094662af21e1fee1bf247888524ddc66ba14677a4c0538292ac16eac313c0e69",
-    "tests/system/py/test_e11_t5_usage_account_original_controls.py": "00a78f3c2b9adadbc118d0d32c00a4d9ab2d3217d045085826efa122599afdc5",
-    "tests/system/py/e11_t5_usage_canonical_cases.json": "7c29942c5fd05dc70ab756d5c257fa1c603167b648ef4af4e66ec94852b36e2b",
-    "tests/system/py/e11_t5_usage_canonical_observer.js": "44c835b90d624f91c2bac42e38b38842c1404ab0c4d015016d2abdfdc97a481d"
+    "app/src/app_info.hpp": null,
+    "app/qml/Components/AssistantComposer.qml": null,
+    "tests/system/py/test_e11_t5_usage_account_original_controls.py": "7d83ef2147c9a16c599d1005c1fd0a27a4867884d37a6c129cd21767d93dd06b",
+    "tests/system/py/e11_t5_usage_canonical_cases.json": "04fce80e34bd354f4ea15c6d2eaaa3d21a4c279d1ad7a807d2ca76cd1b005ed1",
+    "tests/system/py/e11_t5_usage_canonical_observer.js": "44c835b90d624f91c2bac42e38b38842c1404ab0c4d015016d2abdfdc97a481d",
+    "app/qml/Components/AssistantWorking.qml": null
   },
-  "original_source": "38c5705b9c2a23ffccbbd51f9ab114a46d5eab3d",
-  "namespace": "original-usage-sdk116-38c5705b",
+  "original_source": null,
+  "namespace": "fresh-usage-original-native",
   "native": {
-    "source": "71274419ec69b3fe2f1ba1288044bf0207ad3d84",
-    "tree": "a75cf9d3070560182927d861ace5fa8b42e952f0",
-    "archive_sha256": "dbdc48d9496d414727b23ebcc76862a7b7cdc943b976b4ec93b92abd1798f76a"
-  }
+    "source": null,
+    "tree": null,
+    "archive_sha256": null
+  },
+  "original_bond_sha256": null,
+  "binding_status": "PENDING_ROOT_FINAL_INPUTS",
+  "compiled_source": null,
+  "current_runtime_config_sha256": null,
+  "original_runtime_config_sha256": null,
+  "historical125_source": "dea0543ce45825f5b72ff504373c2bf8829d35e9",
+  "historical125_bond_sha256": "784e9d2cc7ad3aeb302e9a8b1e535b18d44fcc0d550b72db69f84810dd8af7b5"
 }

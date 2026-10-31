@@ -1,0 +1,122 @@
+{
+  "phase": "native-complete-final",
+  "frozen266_sha256": "b2f640318a0e45adabb7b4bddf430ba622ecc44c699997760bf08bece448f933",
+  "source256_manifest": "93b2eac1ef4e6a3495324c053657bb92052605cd667c9f7544df8d0dade21932",
+  "required_files": [
+    {
+      "path": "tests/system/py/test_e11_t5_dev_native_integration.py",
+      "sha256": "f217a03b7e8f274dc1b3cd140f8268e2edf8d1ef83877eeb424670a3f730046b"
+    },
+    {
+      "path": "tests/integration/py/assistant_ui_probe/probe.cpp",
+      "sha256": "9a992415e8edb8c4aa50e5b82b8d6b526abedc82c6c4d87fcc0c19948080c2e7"
+    },
+    {
+      "path": "tests/system/py/e11_t5_original_qml_error_contract.py",
+      "sha256": "ab98d8fb54e7984131e26feaf9bcde7ff250d43243eebcdc33b68732a8d79e61"
+    },
+    {
+      "path": "tests/system/py/test_e11_t5_qml_error_receipts.py",
+      "sha256": "6db017de0bcff3198254d41c2541686fb966ef3259fea583c1134efcaa2b6c3a"
+    },
+    {
+      "path": "tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp",
+      "sha256": "07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe"
+    },
+    {
+      "path": "tests/integration/py/assistant_ui_probe/codex_peer.py",
+      "sha256": "b3ac490856539a6f264dab4464780133cb5f934c7aede97b7d4cae76d098acdc"
+    },
+    {
+      "path": "app/qml/Components/TableRow.qml",
+      "sha256": null
+    },
+    {
+      "path": "app/qml/Components/AssistantConnectionDialog.qml",
+      "sha256": null
+    },
+    {
+      "path": "app/qml/Components/AssistantPlan.qml",
+      "sha256": null
+    },
+    {
+      "path": "app/qml/Components/AssistantQuestion.qml",
+      "sha256": null
+    },
+    {
+      "path": "app/qml/Components/AssistantTrial.qml",
+      "sha256": null
+    },
+    {
+      "path": "app/qml/Components/AssistantMessage.qml",
+      "sha256": null
+    },
+    {
+      "path": "app/src/assistant_message_presentation.hpp",
+      "sha256": null
+    },
+    {
+      "path": "app/src/assistant_view_model.cpp",
+      "sha256": null
+    },
+    {
+      "path": "app/src/assistant_view_model.hpp",
+      "sha256": null
+    }
+  ],
+  "production_files": [
+    {
+      "path": "app/qml/Components/AssistantComposer.qml",
+      "sha256": null,
+      "compiled": true
+    },
+    {
+      "path": "app/qml/Components/AssistantPanel.qml",
+      "sha256": null,
+      "compiled": true
+    },
+    {
+      "path": "app/src/app_info.cpp",
+      "sha256": null,
+      "compiled": true
+    },
+    {
+      "path": "app/src/app_info.hpp",
+      "sha256": null,
+      "compiled": false
+    }
+  ],
+  "active_native_cases_sha256": "2f0f026f34571484879fe38360909f71102cf72249bd2d8028790f6097a89dd7",
+  "original_source_protocol_cases_sha256": "b2f640318a0e45adabb7b4bddf430ba622ecc44c699997760bf08bece448f933",
+  "compiled_caller_proof": {
+    "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantComposer_qml.cpp": null,
+    "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantPanel_qml.cpp": null
+  },
+  "source_proof_basis": "PENDING: root binds each fresh variant from final source/pinned Qt compiled caller proof. Retain all warning descriptions/counts; mechanical source locations only, no output-derived oracle.",
+  "original87_role": "Historical immutable pure protocol custody +unchanged Qt/compiler/GUI/runtime only. Native SDK2 equality removed ONLY for this explicitDEA/SDK116 composition and replaced by exact SDK116 tuple above.",
+  "binding_status": "PENDING_ROOT_FINAL_INPUTS",
+  "caller_binding_status": "PENDING_ROOT_COMPILED_CALLER_PROOF",
+  "current_source": null,
+  "current_bond_sha256": null,
+  "original_source": null,
+  "original_bond_sha256": null,
+  "current_runtime_config_sha256": null,
+  "original_runtime_config_sha256": null,
+  "comparison_native": {
+    "source": null,
+    "tree": null,
+    "archive_sha256": null
+  },
+  "family_phases": {
+    "activity": "native",
+    "composer": "native",
+    "browser": "native",
+    "usage": "native"
+  },
+  "historical_native256_attribution_proof": "9cfbd5b6b31aef26391717bfe342f7e498253b68b8a5c9b5b3bde69595ed3bdf",
+  "native_attribution_proof": null,
+  "historical125": {
+    "source": "dea0543ce45825f5b72ff504373c2bf8829d35e9",
+    "bond_sha256": "784e9d2cc7ad3aeb302e9a8b1e535b18d44fcc0d550b72db69f84810dd8af7b5"
+  }
+}
