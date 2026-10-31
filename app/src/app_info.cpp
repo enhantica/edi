@@ -5746,24 +5746,42 @@ void ApplicationInfo::tableColumnsChanged(bool widthsChanged) const {
 }
 void ApplicationInfo::tableDestroyed() const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife"); assistantMemberWrite(f, life, "alive", QJSValue(false));
-    const auto owner = panelUsageContextRead(f, "table"); const auto literal = panelUsageLiteral(f, 1); panelUsageWrite(f, literal.value, "0", panelUsageContextRead(f, "headerItem"));
+    const auto owner = panelUsageContextRead(f, "table");
+    // Destruction retires existing connections; it must not enable pending QML bindings.
+    const auto stored = [&](const QJSValue& source, const char* name) -> QJSValue {
+        if (!panelUsageReady(f)) return {};
+        QV4::Scope scope(f.vm());
+        QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), source));
+        const auto* wrapper = value->as<QV4::QObjectWrapper>();
+        const QPointer<QObject> object(wrapper ? wrapper->object() : nullptr);
+        if (!object || QQmlData::wasDeleted(object.data())) return {};
+        const QVariant result = object->property(name);
+        f.checked();
+        if (!panelUsageReady(f)) return {};
+        return QJSValuePrivate::fromReturnedValue(f.vm()->fromVariant(result));
+    };
+    const auto owns = [&](const QJSValue& row) {
+        return consentQtObject(f, row) && stored(row, "listView").strictlyEquals(owner)
+            && panelUsageReady(f);
+    };
+    const auto literal = panelUsageLiteral(f, 1); panelUsageWrite(f, literal.value, "0", stored(owner, "headerItem"));
     const auto array = panelUsageContextRead(f, "Array"); QJSValue children;
-    if (panelUsageTruth(panelUsageContextRead(f, "contentItem"))) children = assistantContextField(f, "contentItem", "children"); else if (panelUsageReady(f)) children = f->newArray();
+    if (panelUsageTruth(stored(owner, "contentItem"))) children = stored(stored(owner, "contentItem"), "children"); else if (panelUsageReady(f)) children = f->newArray();
     const auto additional = panelUsageMemberCall(f, array, "from", {children}); uint index = 1;
     panelUsageEach(f, additional, [&](const QJSValue& row) { panelUsageWrite(f, literal.value, qPrintable(QString::number(index++)), row); return panelUsageReady(f); });
     const auto rows = panelUsageComplete(f, literal);
     panelUsageEach(f, rows, [&](const QJSValue& row) {
-        if (!consentQtObject(f, row) || !consentFieldEquals(f, row, "listView", owner)) return panelUsageReady(f);
-        const auto arrayAgain = panelUsageContextRead(f, "Array"); const auto data = panelUsageRead(f, row, "data");
+        if (!owns(row)) return panelUsageReady(f);
+        const auto arrayAgain = panelUsageContextRead(f, "Array"); const auto data = stored(row, "data");
         if (!panelUsageReady(f)) return false;
         const auto source = data.isNull() || data.isUndefined() ? f->newArray() : data;
         const auto childrenAgain = panelUsageMemberCall(f, arrayAgain, "from", {source});
         return panelUsageEach(f, childrenAgain, [&](const QJSValue& child) {
-            if (consentQtObject(f, child) && tableHas(f, child, "ignoreUnknownSignals") && tableHas(f, child, "target") && consentFieldEquals(f, child, "target", owner)) assistantMemberWrite(f, child, "enabled", QJSValue(false));
+            if (consentQtObject(f, child) && tableHas(f, child, "ignoreUnknownSignals") && tableHas(f, child, "target") && stored(child, "target").strictlyEquals(owner)) assistantMemberWrite(f, child, "enabled", QJSValue(false));
             return panelUsageReady(f);
         });
     });
-    panelUsageEach(f, rows, [&](const QJSValue& row) { if (consentQtObject(f, row) && consentFieldEquals(f, row, "listView", owner)) assistantMemberWrite(f, row, "listView", consentNull()); return panelUsageReady(f); });
+    panelUsageEach(f, rows, [&](const QJSValue& row) { if (owns(row)) assistantMemberWrite(f, row, "listView", consentNull()); return panelUsageReady(f); });
 }
 QJSValue ApplicationInfo::tableTextWidth(int row, const QString& role) const {
     const auto f = panelUsageEngine(this); QJSValue text(QString{});
