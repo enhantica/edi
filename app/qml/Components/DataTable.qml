@@ -149,6 +149,9 @@ EaComponents.ListView {
     }
     // `measure` false only styles the cells (alignment and padding): a row scrolled into view takes the widths the whole
     // model was measured to, never changing them (the owner, 2026-10-27).
+    function sameValues(a, b) {
+        return a.length === b.length && a.every((value, i) => value === b[i]);
+    }
     function fitColumns(measure = true) {
         const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths.filter((w, i) => true) : [];
         // A cell is measured by its whole text: a number cell by the number it would show if it fitted (it shortens
@@ -178,7 +181,7 @@ EaComponents.ListView {
                 kinds = cells.map(cell => kindOf(cell));
                 const rightAligned = kind => kind === "number" || kind === "check";
                 const edges = kinds.map((kind, i) => i > 0 && i + 1 < kinds.length && rightAligned(kind) && (kinds[i + 1] === "icon" || "fills" in cells[i + 1]));
-                if (JSON.stringify(edges) !== JSON.stringify(wideEdges))
+                if (!sameValues(edges, wideEdges))
                     wideEdges = edges;
             }
             for (let i = 0; i < cells.length && i < widths.length; ++i) {
@@ -197,7 +200,7 @@ EaComponents.ListView {
         if (!measure)
             return;
         refitting = false;
-        if (JSON.stringify(widths) !== JSON.stringify(fittedWidths))
+        if (!sameValues(widths, fittedWidths))
             fittedWidths = widths;
     }
     // A change of the content fits the columns afresh to every row of the model: each row is made once, measured, and
