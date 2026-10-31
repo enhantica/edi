@@ -198,14 +198,15 @@ EaComponents.SideBarColumn {
                     enabled: tab.editable && tab.dirty
                     alert: true
                     fontIcon: "check"
-                    toolTip: qsTr("Apply the edited text to the project")
+                    // What it does, or why it cannot: one text, shown over the disabled button by the hover below.
+                    toolTip: tab.everything ? qsTr("Switch Show to Editable to edit the text") : !tab.dirty ? qsTr("Edit the text to apply it") : qsTr("Apply the edited text to the project")
                     onClicked: tab.applyEdit()
                 }
                 HoverHandler {
                     id: applyHover
                 }
                 EaElements.ToolTip {
-                    text: tab.everything ? qsTr("Switch Show to Editable to edit the text") : qsTr("Edit the text to apply it")
+                    text: applyButton.toolTip
                     visible: !applyButton.enabled && applyHover.hovered && EaGlobals.Vars.showToolTips
                 }
             }
