@@ -93,12 +93,60 @@ def pair(name):
     return before, after
 
 
+# Exact source-only transition from accepted5ee12a7b, not a saved-output pin.
+# Old archive/JSON identities remain untouched and still own the next stage.
+_DESCRIPTION_INPUTS = {
+    'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/project.edi': {
+        'before': 'b47088ce8a1198fba99f4cca2fdee1b317230e0c66fbdc2602273344bdbab721',
+        'after': 'e32ac6ec6bcb5f5e793fd830ec0674abba9981663077bd86560adf3cf252cee5',
+        'remove': (),
+        'restore': (
+            b'_metadata.purpose "refinement"\n'
+            b'_metadata.dimensionality "1D"\n'
+            b'_metadata.instrument "HRPT"\n'
+            b'_metadata.facility "PSI"\n'
+            b'_metadata.polarisation "none"\n'
+        ),
+    },
+    'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-4/project/experiments/hrpt.edi': {
+        'before': 'c7a093e4cdee2aeca6553b84cca81293b748caeb6270d2083b5a043724128c26',
+        'after': '645318644c24043b73c2aff1878a59720dd509b47db16a559b3c01ffeb0a545e',
+        'remove': (
+            b'_experiment_type.dimensionality 1d\n',
+            b'_experiment_type.polarisation unpolarised\n',
+            b'_instrument.name HRPT\n',
+            b'_instrument.facility PSI\n',
+        ),
+        'restore': b'',
+    },
+}
+
+
+def pre_description_bytes(name, data):
+    """Reverse only the two independently source-proven metadata migrations."""
+    row = _DESCRIPTION_INPUTS.get(name)
+    if row is None:
+        return data
+    assert hashlib.sha256(data).hexdigest() == row['after'], (
+        'A complete committed description-migration input is required before retaining old bytes'
+    )
+    for line in row['remove']:
+        assert data.count(line) == 1, 'Each declared migrated experiment field occurs exactly once'
+        data = data.replace(line, b'', 1)
+    data += row['restore']
+    assert hashlib.sha256(data).hexdigest() == row['before'], (
+        'Metadata reversal must recover the complete independently committed prior source'
+    )
+    return data
+
+
 def pre_catalogue_bytes(path):
     """Bind a live descriptive file to its whole source pair before retaining old bytes."""
     data = path.read_bytes()
     if path.suffix != '.edi' or not path.is_relative_to(ROOT):
         return data
     name = path.relative_to(ROOT).as_posix()
+    data = pre_description_bytes(name, data)
     pins = json.loads((HERE / 'metadata-inputs.json').read_text())['files']
     if name not in pins:
         return data
