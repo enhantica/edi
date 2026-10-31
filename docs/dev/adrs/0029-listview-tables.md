@@ -25,6 +25,15 @@ values, uncertainties and their headers align right, with units aligned left in 
 column so they sit next to the values. Text editors show the beginning of an overflowing value when idle and expose its full value
 on hover. Free parameters are bold and green; invalid values retain red.
 
+The app-owned `ParamTextField` override applies that idle overflow alignment to
+standalone parameter entries, matching the FIRST `ParameterCell` policy rather
+than inheriting the pinned `TextField`'s unconditional right alignment. This also
+covers `ValueField` and the appearance scale/probability entries through their
+existing shared control. Fitting text and active editing retain right alignment;
+units padding, canonical and narrow tokens, cursor/draft/IME ownership, commit
+paths and table-specific column alignment remain unchanged. The global style and
+pinned GUI sources are not changed.
+
 The analysis table offers name, variability and category filters. The category
 picker uses readable titles, icons and counts, with Structure and Experiment
 parent groups and atom/peak subgroups. Every category represented in the parameter
