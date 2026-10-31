@@ -22,6 +22,15 @@ Item {
         id: ink
     }
     Component {
+        id: fractionalViewport
+        Text {
+            text: "Independent natural viewport"
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            width: implicitWidth
+        }
+    }
+    Component {
         id: atoms
         AtomSitesGroup {}
     }
@@ -91,6 +100,48 @@ Item {
             verify(found !== undefined, "The independent fixture has its intensity parameter");
             return found.parameter;
         }
+        function fixedInkViewportFits(width, advance) {
+            return width + 0.6 >= advance;
+        }
+        function test_fixed_ink_qreal_domain_rejects_an_actual_undersized_viewport() {
+            const item = createTemporaryObject(fractionalViewport, surface);
+            verify(item !== null, "The ink negative uses a genuine natural-width Qt text item");
+            ink.font = item.font;
+            ink.text = item.text;
+            const actual = ink.advanceWidth;
+            verify(actual > 2 * 0.6, "The independent literal arms a positive undersizing contrast");
+            compare(item.width, item.implicitWidth, "The positive preserves its natural qreal viewport");
+            verify(fixedInkViewportFits(item.width, actual),
+                "Natural unrounded text and its qreal logical advance share the same measurement domain");
+            item.width = actual / 2;
+            verify(item.width > 0 && !fixedInkViewportFits(item.width, actual),
+                "The same ink predicate rejects a genuinely positive but undersized real viewport");
+        }
+        function rememberShownIdentifiers(data, table, seen) {
+            for (let index = 0; index < data.rows; ++index) {
+                const row = table.itemAtIndex(index);
+                if (!row || !row.visible || row.height <= 0)
+                    continue;
+                const top = row.mapToItem(table, 0, 0).y;
+                if (top < table.height && top + row.height > 0) {
+                    const authored = "r" + index;
+                    if (!seen.includes(authored))
+                        seen.push(authored);
+                }
+            }
+            verify(seen.length > 0, "Generic ID needs come only from actual shown authored rows");
+        }
+        function identifierInputs(data, seen) {
+            // Atom ID columns explicitly use the all-model text-width helper.
+            // Generic auto-fitted columns retain only shown/visited identities.
+            return data.expectedPolicy === "equal" ? ["r" + (data.rows - 1)] : seen;
+        }
+        function suppliedIdentifierNeed(inputs, font) {
+            let widest = 0;
+            for (const text of inputs)
+                widest = Math.max(widest, advance(text, font));
+            return widest;
+        }
         function assertCellInkFits(cell) {
             const drawn = Render.texts(cell);
             const rings = Render.descendants(cell).filter(item => item.visible && item.radius > 0 && item.border && item.border.width > 0);
@@ -98,8 +149,8 @@ Item {
             for (const item of drawn) {
                 ink.font = item.font;
                 ink.text = item.text;
-                const needed = Math.ceil(ink.advanceWidth);
-                verify(item.width + 0.6 >= needed, "The actual fixed-column text or glyph viewport fits its independently measured ink");
+                const needed = ink.advanceWidth;
+                verify(fixedInkViewportFits(item.width, needed), "The actual fixed-column text or glyph viewport fits its independently measured ink");
                 const left = item.mapToItem(cell, 0, 0).x;
                 verify(left >= -0.6 && left + needed <= cell.width + 0.6, "Fixed-column ink remains within its actual cell boundary");
             }
@@ -619,7 +670,7 @@ Item {
             table.sourceModel = rows;
             table.maxRowCountShow = 4;
             tryCompare(table, "count", data.rows, 2000, "The supplied numbering-length input reaches the delegate model");
-            const widths = [], records = [];
+            const widths = [], records = [], seenIdentifiers = [];
             for (const width of [610, 930]) {
                 group.width = width;
                 table.width = width;
@@ -628,6 +679,8 @@ Item {
                 const delegate = table.itemAtIndex(0);
                 verify(delegate !== null, "The actual first delegate exists");
                 const body = Render.cells(delegate), head = Render.cells(table.headerItem);
+                if (data.idColumn >= 0 && data.expectedPolicy !== "equal")
+                    rememberShownIdentifiers(data, table, seenIdentifiers);
                 compare(body.length, data.count, "The rendered row has every declared column");
                 compare(head.length, data.count, "The rendered header has every declared column");
                 for (let i = 0; i < body.length; ++i) {
@@ -667,7 +720,7 @@ Item {
                     } else {
                         let natural = naturalCellNeed(data, column, body[column], head[column]);
                         if (column === data.idColumn)
-                            natural = Math.max(natural, advance("r" + (data.rows - 1), body[column].font)
+                            natural = Math.max(natural, suppliedIdentifierNeed(identifierInputs(data, seenIdentifiers), body[column].font)
                                 + declaredChrome(data, column, "body"));
                         needs[column] = natural + margin;
                         naturalInkNeeds[column] = natural;
@@ -707,13 +760,16 @@ Item {
                 }
                 if (data.idColumn >= 0) {
                     assertCellInkFits(head[data.idColumn]);
-                    assertSuppliedTextFits(body[data.idColumn], "r" + (data.rows - 1), identityTitle(data));
+                    for (const authored of identifierInputs(data, seenIdentifiers))
+                        assertSuppliedTextFits(body[data.idColumn], authored, identityTitle(data));
                     verify(body[data.idColumn].width <= table.width * 0.25 + 1, "Identifiers leave scientific columns the remaining space");
                     ink.font = Qt.font({
                         family: EaStyle.Fonts.fontFamily,
                         pixelSize: EaStyle.Sizes.fontPixelSize
                     });
-                    const shortNeed = Math.max(advance(identityTitle(data), ink.font), advance("r111", ink.font));
+                    const shortNeed = Math.max(advance(identityTitle(data), ink.font),
+                        data.expectedPolicy === "equal" ? advance("r111", ink.font)
+                            : suppliedIdentifierNeed(seenIdentifiers, ink.font));
                     const shortAllowance = data.expectedPolicy === "equal" ? ink.font.pixelSize + 2
                         : declaredChrome(data, data.idColumn, "body") + 3 * EaStyle.Sizes.tableColumnSpacing + 1;
                     verify(body[data.idColumn].width <= shortNeed + shortAllowance, "Short names and IDs fit their own declared heading, chrome and margin rather than a fixed wide share");
@@ -767,11 +823,51 @@ Item {
                 compare(policyErrors(data, policyRecord(data, table, shortCells, shortHead, fixedColumns(data, shortHead), data.expectedPolicy === "equal" ? selectorBounds(group, shortCells, shortHead) : [])).length, 0, "Returning short identifiers preserve every original fixed and header/body boundary");
                 verify(shortCells[data.idColumn].width < longWidth, "The long-to-short resize restores compact actual ID width");
                 compare(shortCells[data.idColumn].width, widths[1][data.idColumn], "The ID column returns to its original independently supplied short-content width");
-                assertSuppliedTextFits(shortCells[data.idColumn], "r" + (data.rows - 1), identityTitle(data));
+                for (const authored of identifierInputs(data, seenIdentifiers))
+                    assertSuppliedTextFits(shortCells[data.idColumn], authored, identityTitle(data));
             }
             compare(transitionErrors(data, records[0], records[1]).length, 0, "A wider viewport follows the declared equal-atom or last-data-only spare-width rule");
             armPolicyEscapes(data, records[0], records[1]);
             verify(Math.abs(widths[1][0] - widths[0][0]) < 0.6, "Numbering remains content-sized as the sidebar grows");
+        }
+        function test_generic_id_width_learns_only_real_shown_rows_and_keeps_visited_maximum() {
+            const p = parameter(), last = 111, wideText = "visited.identifier.111";
+            for (let index = 0; index <= last; ++index)
+                rows.append({id: index === last ? wideText : "r" + index,
+                    position: 12, intensity: p});
+            const group = createTemporaryObject(background, surface, {
+                width: 930, experiment: Session.project.currentExperiment});
+            verify(group !== null, "The visited-ID witness uses the genuine production background owner");
+            const table = Ui.find(group, "background.list");
+            verify(table !== null, "The actual generic auto-fitted table is present");
+            table.sourceModel = rows;
+            table.width = 930;
+            table.maxRowCountShow = 4;
+            table.forceLayout();
+            settleGeometry(table);
+            compare(table.count, last + 1, "The whole independently authored model remains populated");
+            compare(table.itemAtIndex(last), null, "The later wider ID is genuinely unseen initially");
+            const before = Render.cells(table.itemAtIndex(0))[1].width;
+            table.positionViewAtIndex(last, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => table.itemAtIndex(last) !== null && geometrySettled(table), 2000,
+                "Ordinary actual scrolling instantiates the wider authored row within the original clock");
+            const shown = table.itemAtIndex(last), shownCell = Render.cells(shown)[1];
+            const top = shown.mapToItem(table, 0, 0).y;
+            verify(shown.visible && top >= 0 && top + shown.height <= table.height + 0.6,
+                "The later identifier really reaches the current viewport, not a hidden cache entry");
+            assertSuppliedTextFits(shownCell, wideText, Session.label("background.id"));
+            const visited = shownCell.width;
+            verify(visited > before, "Seeing the independently longer ID genuinely widens the column");
+            table.positionViewAtIndex(0, ListView.Contain);
+            table.forceLayout();
+            tryVerify(() => table.itemAtIndex(0) !== null && table.itemAtIndex(last) === null
+                && geometrySettled(table), 2000,
+                "Returning to the first real row releases the later delegate under the same clock");
+            verify(Render.cells(table.itemAtIndex(0))[1].width + 0.6 >= visited,
+                "Scroll-only widening retains the actually visited maximum after its delegate is gone");
+            compare(rows.get(last).id, wideText, "No scroll or measurement rewrites the authored source ID");
+            compare(table.count, last + 1, "Learning visible widths never drops unseen model rows");
         }
         function test_loop_table_boundaries_align_for_identical_identifiers() {
             const p = parameter();
