@@ -21,6 +21,7 @@ import edi
 import pytest
 import yaml
 
+from tests.fixtures.e05_t1 import declarations
 from tests.fixtures.project_save.agreement import rounded_model_reference
 from tests.fixtures.project_save.reference import (
     declared_rule,
@@ -95,11 +96,7 @@ def test_cli_fixture_inventory():
         for row in registry
         if str(edi.Project.load(ROOT / 'docs/user/cli' / row['id'] / 'project').fitting_mode)
         in {'single', 'joint'}
-        and scalars(
-            (ROOT / 'docs/user/cli' / row['id'] / 'project/project.edi').read_text(),
-            '_metadata.',
-        ).get('_metadata.purpose')
-        != 'simulation'
+        and declarations.has_measured_data(ROOT / 'docs/user/cli' / row['id'] / 'project')
     }
     assert len(CASES) == len(expected) and {row['id'] for row in CASES} == expected, (
         ' gate 1 every registered measured single and joint project has exactly one CLI fixture; '
@@ -416,6 +413,26 @@ def test_zero_gain_converges_and_domain_blocked_positive_gain_stalls(stalled, tm
     assert persisted.get('_fit_result.success') == ('false' if stalled else 'true'), (
         'saving a live stop result must preserve the predicted-gain success distinction'
     )
+
+
+def test_valid_stop_fixture_still_refuses_a_missing_experiment_schema(tmp_path):
+    materialize = runpy.run_path(str(ROOT / 'tests/fixtures/e05_t1/stop_projects.py'))[
+        'materialize'
+    ]
+    source = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
+    target = materialize(edi, source, tmp_path / 'source', stalled=True)
+    assert edi.Project.load(str(target)) is not None, (
+        'The genuine generated domain fixture must load before its missing-schema adversary'
+    )
+    experiment = target / 'experiments/hrpt.edi'
+    lines = experiment.read_text().splitlines()
+    declarations = [line for line in lines if line.split()[:1] == ['_edi.schema_version']]
+    assert len(declarations) == 1, (
+        'The actual normal writer supplies exactly one schema declaration'
+    )
+    experiment.write_text('\n'.join(line for line in lines if line not in declarations) + '\n')
+    with pytest.raises(edi.IoError, match=r'_edi\.schema_version'):
+        edi.Project.load(str(target))
 
 
 def test_committed_nostep_witness_has_positive_gain_and_only_domain_rejections():

@@ -3,6 +3,25 @@
 import shutil
 from pathlib import Path
 
+import gemmi
+
+
+def background_prefix(text):
+    """Retain the normal writer's actual unique supported schema before body replacement."""
+    prefix, separator, _old = text.partition('_background.type ')
+    if not separator:
+        message = 'the LBCO stop input must declare its background'
+        raise ValueError(message)
+    document = gemmi.cif.read_string(text)
+    document.check_for_duplicates()
+    schema = document.sole_block().find_pair('_edi.schema_version')
+    if schema is None or gemmi.cif.as_string(schema[1]) not in {'2', '3', '4'}:
+        message = 'the saved experiment must retain one supported _edi.schema_version'
+        raise ValueError(message)
+    if gemmi.cif.read_string(prefix).sole_block().find_pair('_edi.schema_version') is None:
+        prefix += ' '.join(schema) + '\n\n'
+    return prefix
+
 
 def materialize(engine, source, target, *, stalled):
     """Write a disposable LBCO input with an independently declared stop condition."""
@@ -23,10 +42,7 @@ def materialize(engine, source, target, *, stalled):
         return target
 
     experiment = target / 'experiments/hrpt.edi'
-    prefix, separator, _old = experiment.read_text().partition('_background.type ')
-    if not separator:
-        message = 'the LBCO stop input must declare its background'
-        raise ValueError(message)
+    prefix = background_prefix(experiment.read_text())
     experiment.write_text(
         prefix
         + """_background.type line-segment
