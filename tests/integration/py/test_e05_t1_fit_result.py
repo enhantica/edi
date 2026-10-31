@@ -461,3 +461,30 @@ def test_committed_nostep_witness_has_positive_gain_and_only_domain_rejections()
     assert expected['predicted_gain'] == 3.0 and expected['chi_square'] == 3.0, (
         'the independently derived scalar gradient and normal matrix give positive gain three'
     )
+
+
+def test_materialized_stop_keeps_actual_cwl_profile_and_refuses_its_removal(tmp_path):
+    materialize = runpy.run_path(str(ROOT / 'tests/fixtures/e05_t1/stop_projects.py'))[
+        'materialize'
+    ]
+    source = ROOT / 'docs/user/cli/pd-neut-cwl_lbco-hrpt_start-2/project'
+    target = materialize(edi, source, tmp_path / 'source', stalled=True)
+    experiment = target / 'experiments/hrpt.edi'
+    text = experiment.read_text()
+    assert scalars(text, '_experiment_type.')['_experiment_type.beam_mode'] == (
+        'constant wavelength'
+    ), 'The independently declared original CWL beam is retained rather than retagged'
+    assert scalars(text, '_peak.')['_peak.type'] == 'cwl-tch-pseudo-voigt', (
+        'The actual saved profile must survive the synthetic background/data replacement'
+    )
+    assert edi.Project.load(str(target)) is not None, (
+        'The complete real saved profile/calibration source loads before its typed adversary'
+    )
+    lines = text.splitlines()
+    profile = [line for line in lines if line.split()[:1] == ['_peak.type']]
+    assert len(profile) == 1, 'The normal writer supplies one actual profile declaration'
+    experiment.write_text('\n'.join(line for line in lines if line not in profile) + '\n')
+    with pytest.raises(
+        edi.DomainValidationError, match=r'_experiment_type\.beam_mode.*_peak\.type'
+    ):
+        edi.Project.load(str(target))
