@@ -256,8 +256,8 @@ def test_legacy_project_without_fit_result_keeps_model_state(case, tmp_path):
     after = edi.Project.load(target)
     actual = [(p.value, p.uncertainty, p.free) for p in after.parameters]
     assert len(actual) == len(before), ' gate 8 legacy persistence retains every model parameter'
-    require_saved_parameters(after.parameters, expected)
-    require_saved_parameters(project.parameters, expected)
+    require_saved_parameters(after.parameters, expected, model=after, phase='loaded')
+    require_saved_parameters(project.parameters, expected, model=project, phase='completed')
 
 
 @pytest.mark.parametrize('status', ['done', 'cancelled', 'maxiter', 'nostep'])

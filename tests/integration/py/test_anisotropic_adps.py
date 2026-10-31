@@ -183,7 +183,9 @@ def test_each_declared_type_survives_load_and_two_saves(tmp_path, cell, kind):
     for generation in range(2):
         expected_parameters = saved_parameters(project, 'iucr_99')
         text = saved(project, tmp_path / f'saved-{generation}')
-        require_saved_parameters(project.parameters, expected_parameters)
+        require_saved_parameters(
+            project.parameters, expected_parameters, model=project, phase='completed'
+        )
         rows = loop_rows(text, '_atom_site')
         assert rows[0]['_atom_site.adp_type'] == kind, 'Saving must write the current ADP type'
         if kind in {'Uani', 'Bani', 'beta'}:
@@ -212,7 +214,9 @@ def test_each_declared_type_survives_load_and_two_saves(tmp_path, cell, kind):
         previous_modified = modified
         previous = text
         project = engine.Project.load(tmp_path / f'saved-{generation}')
-        require_saved_parameters(project.parameters, expected_parameters)
+        require_saved_parameters(
+            project.parameters, expected_parameters, model=project, phase='loaded'
+        )
         assert project.structure.atom_sites[0].adp_type == kind, (
             'Reloading must preserve the serialized ADP type'
         )
@@ -274,7 +278,9 @@ def test_user_type_change_converts_with_cctbx_and_saves_current_type(tmp_path, s
         ), 'Before Save scalar conversion and tensor equivalent values agree with cctbx'
     expected_parameters = saved_parameters(project, 'iucr_99')
     text = saved(project, tmp_path / 'changed')
-    require_saved_parameters(project.parameters, expected_parameters)
+    require_saved_parameters(
+        project.parameters, expected_parameters, model=project, phase='completed'
+    )
     row = loop_rows(text, '_atom_site')[0]
     assert row['_atom_site.adp_type'] == target, (
         'A user type change must become the saved current type'
