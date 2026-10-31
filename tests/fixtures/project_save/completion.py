@@ -18,6 +18,18 @@ OPTIONAL_XRAY = (
     'setup_wavelength_2',
     'setup_wavelength_2_to_1_ratio',
 )
+EXTINCTION = (
+    'domain_radius',
+    'mosaic_spread',
+    'crystal_radius',
+    'coefficient',
+    'coefficient_11',
+    'coefficient_22',
+    'coefficient_33',
+    'coefficient_12',
+    'coefficient_13',
+    'coefficient_23',
+)
 DECLARED_TABLE_SHA256 = 'fc29a89a22c41453fe51195484f35c21fc06347ef911ef72c0f20635c95be496'
 OPERATORS = {
     ast.Add: operator.add,
@@ -92,6 +104,31 @@ def declared_groups():
     return groups, aliases
 
 
+@cache
+def declared_short_aliases():
+    data = Path(__file__).with_name('declared-space-groups.symtab').read_bytes()
+    assert hashlib.sha256(data).hexdigest() == DECLARED_TABLE_SHA256, (
+        'The exact short-name table bytes must remain frozen before parsing'
+    )
+    rows = data.decode()
+    aliases = {}
+    for line in rows.split('@@aliases\n', 1)[1].splitlines():
+        if not line or line.startswith('#'):
+            continue
+        name, it, code = line.split('\t')
+        tokens = name.split()
+        real_direction = any(symbol != '1' for symbol in tokens[1:])
+        short = normalized(
+            ' '.join(
+                symbol
+                for index, symbol in enumerate(tokens)
+                if index == 0 or symbol != '1' or not real_direction
+            )
+        )
+        aliases.setdefault(short, []).append((int(it), code.casefold()))
+    return aliases
+
+
 def setting(structure):
     groups, aliases = declared_groups()
     name = normalized(structure.space_group.name_h_m)
@@ -101,6 +138,8 @@ def setting(structure):
         assert code in {'-', suffix}, 'A declared setting name and code cannot conflict'
         code = suffix
     candidates = sorted(set(aliases.get(name, [])))
+    if not candidates:
+        candidates = sorted(set(declared_short_aliases().get(name, [])))
     if code != '-':
         candidates = [key for key in candidates if key[1] == code]
     assert len(candidates) == 1, (
@@ -131,6 +170,26 @@ def fixed_declaration(key, letter):
         'Full declared operators retain the fixed orbit multiplicity'
     )
     return representative, orbit
+
+
+def owned_experiment_shape(experiment, bind):
+    links = list(experiment.linked_structures)
+    assert len({row.structure_id for row in links}) == len(links), (
+        'Linked-scale rows retain unique ids within their actual bank'
+    )
+    for row in links:
+        bind(f'{experiment.name}.linked_structure.{row.structure_id}.scale', row.scale)
+    extinction = experiment.extinction
+    extinction_shape = None
+    if extinction is not None:
+        presence = []
+        for field in EXTINCTION:
+            parameter = getattr(extinction, field)
+            presence.append((field, parameter is not None))
+            if parameter is not None:
+                bind(f'{experiment.name}.extinction.{field}', parameter)
+        extinction_shape = (extinction.type, extinction.mosaic_distribution, tuple(presence))
+    return tuple((row.structure_id, row.enabled) for row in links), extinction_shape
 
 
 def model_inputs(project):
@@ -174,12 +233,15 @@ def model_inputs(project):
                     f'{structure.name}.atom_site_aniso.{row.id}.adp_{suffix}',
                     getattr(row, 'adp_' + suffix),
                 )
+    assert len({e.name for e in project.experiments}) == len(project.experiments), (
+        'Experiment bank names retain unique ownership'
+    )
     for experiment in project.experiments:
         family = (
             experiment.experiment_type.beam_mode.name,
             experiment.experiment_type.radiation_probe.name,
         )
-        shapes.append((experiment.name, family))
+        shapes.append((experiment.name, family, *owned_experiment_shape(experiment, bind)))
         if family == ('CONSTANT_WAVELENGTH', 'XRAY'):
             for field in OPTIONAL_XRAY:
                 parameter = getattr(experiment.instrument, field)

@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace as Record
 
 import pytest
+
 from tests.fixtures.project_save.completion import (
     CELL,
     OPTIONAL_XRAY,
@@ -19,7 +20,6 @@ from tests.fixtures.project_save.completion import (
     setting,
     tree,
 )
-
 from tests.fixtures.project_save.reference import (
     optional_written,
     require_optional_tokens,
@@ -192,6 +192,8 @@ def test_optional_slots_do_not_cross_the_declared_experiment_family(family):
     subject.experiments = [
         Record(
             name='experiment',
+            linked_structures=[],
+            extinction=None,
             instrument=Record(**entries),
             experiment_type=Record(
                 beam_mode=Record(name=family[0]), radiation_probe=Record(name=family[1])
@@ -259,6 +261,8 @@ def test_optional_dependent_token_is_from_the_final_adopted_write(tmp_path):
     subject.experiments = [
         Record(
             name='experiment',
+            linked_structures=[],
+            extinction=None,
             instrument=Record(**entries),
             experiment_type=Record(
                 beam_mode=Record(name='CONSTANT_WAVELENGTH'), radiation_probe=Record(name='XRAY')
