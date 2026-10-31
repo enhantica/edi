@@ -131,6 +131,147 @@ public:
         return false;
     }
 };
+// Opt-in diagnostic receipts only; never send an input or settle the event loop.
+class PassiveDispatchTrace final {
+    QObject receiver_;
+    QFile file_;
+    QElapsedTimer clock_;
+    QList<QPointer<edi_app::CodexAgent>> agents_;
+    std::vector<QMetaObject::Connection> connections_;
+    quint64 records_ = 0, clicks_ = 0, active_click_ = 0;
+    bool failed_ = false, truncated_ = false;
+    static constexpr quint64 record_limit = 4096;
+    static constexpr int chain_limit = 32;
+    static QString identity(QObject* object) {
+        return object ? QString::number(reinterpret_cast<quintptr>(object), 16) : QString();
+    }
+    static Object object_info(QObject* object) {
+        if (!object) return {{"alive", false}};
+        return {{"alive", true}, {"identity", identity(object)},
+                {"name", object->objectName().left(128)},
+                {"class", QString::fromLatin1(object->metaObject()->className()).left(128)}};
+    }
+    static Array rect(const QRectF& value) { return {value.x(), value.y(), value.width(), value.height()}; }
+    static Object item_info(QQuickItem* item, QQuickWindow* window) {
+        auto out = object_info(item);
+        if (!item) return out;
+        out["visible"] = item->isVisible(); out["enabled"] = item->isEnabled();
+        out["clip"] = item->clip(); out["opacity"] = item->opacity(); out["z"] = item->z();
+        out["local_rect"] = rect(QRectF(0, 0, item->width(), item->height()));
+        out["bounding_rect"] = rect(item->boundingRect());
+        out["window_rect"] = rect(item->mapRectToScene(QRectF(0, 0, item->width(), item->height())));
+        out["same_window"] = item->window() == window;
+        out["active_focus"] = item->hasActiveFocus();
+        out["containment_mask"] = item->containmentMask() != nullptr;
+        return out;
+    }
+    static Object readiness(QObject* object) {
+        // Declared public readiness only; no text, model, payload or arbitrary getter enumeration.
+        const QPointer<QObject> original(object);
+        Object out;
+        for (const char* name : {"preparing", "pageWanted", "current", "assistantCovered",
+                                 "moving", "movingHorizontally", "movingVertically",
+                                 "flicking", "running", "transitionRunning", "status"}) {
+            if (!original) break;
+            const int index = original->metaObject()->indexOfProperty(name);
+            if (index < 0) continue;
+            const auto value = original->metaObject()->property(index).read(original);
+            if (value.metaType().id() == QMetaType::Bool) out[name] = value.toBool();
+            else if (value.metaType().id() == QMetaType::Int || value.metaType().flags().testFlag(QMetaType::IsEnumeration))
+                out[name] = value.toInt();
+        }
+        return out;
+    }
+public:
+    bool open(const QString& path) {
+        if (!QFileInfo(path).isAbsolute()) return false;
+        file_.setFileName(path);
+        if (!file_.open(QIODevice::WriteOnly | QIODevice::NewOnly)) return false;
+        if (!file_.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner)) { file_.close(); return false; }
+        clock_.start();
+        write("capture_started", {{"format", 1}, {"clock", "QElapsedTimer monotonic"},
+                                  {"record_limit", static_cast<int>(record_limit)}, {"chain_limit", chain_limit}});
+        return healthy();
+    }
+    ~PassiveDispatchTrace() {
+        for (const auto& connection : connections_) QObject::disconnect(connection);
+        if (file_.isOpen()) write("capture_finished", {{"io_failed", failed_}, {"truncated", truncated_}}, true);
+    }
+    bool healthy() const { return !failed_ && !truncated_; }
+    void write(const char* event, Object row = {}, bool final = false) {
+        if (!file_.isOpen() || failed_) return;
+        if (!final && records_ >= record_limit) { truncated_ = true; return; }
+        row["event"] = QString::fromLatin1(event);
+        row["ordinal"] = QString::number(++records_);
+        row["monotonic_ns"] = QString::number(clock_.nsecsElapsed());
+        row["click"] = QString::number(active_click_);
+        const auto bytes = QJsonDocument(row).toJson(QJsonDocument::Compact) + '\n';
+        if (file_.write(bytes) != bytes.size() || !file_.flush()) failed_ = true;
+    }
+    void watch(edi_app::AssistantViewModel* owner) {
+        if (!owner || !healthy()) return;
+        agents_.erase(std::remove_if(agents_.begin(), agents_.end(), [](const auto& value) { return !value; }), agents_.end());
+        for (auto* agent : owner->findChildren<edi_app::CodexAgent*>(QString(), Qt::FindDirectChildrenOnly)) {
+            if (!healthy()) return;
+            if (std::any_of(agents_.begin(), agents_.end(), [agent](const auto& value) { return value == agent; })) continue;
+            if (agents_.size() >= 16) { truncated_ = true; return; }
+            agents_.append(agent);
+            const QString id = identity(agent);
+            write("transport_watch_started", {{"agent_identity", id}});
+            connections_.push_back(QObject::connect(agent, &edi_app::CodexAgent::event, &receiver_,
+                [this, id](const QString& method, const QJsonObject&) {
+                    if (method == "turn/completed") write("provider_turn_completed_receipt", {{"agent_identity", id}});
+                    else if (method == "turn/started") write("provider_turn_started_receipt", {{"agent_identity", id}});
+                    else if (method == "error") write("provider_error_receipt", {{"agent_identity", id}});
+                }, Qt::DirectConnection));
+            connections_.push_back(QObject::connect(agent, &edi_app::CodexAgent::failed, &receiver_,
+                [this, id](const QString&) { write("transport_failed_receipt", {{"agent_identity", id}}); }, Qt::DirectConnection));
+        }
+    }
+    void snapshot(const char* event, QQuickItem* target, QQuickWindow* window, const QPoint& point) {
+        const QPointer<QQuickWindow> original_window(window);
+        const QPointer<QQuickItem> original(target);
+        Array chain;
+        QPointer<QQuickItem> parent = original;
+        for (int depth = 0; parent && depth < chain_limit; ++depth) {
+            const QPointer<QQuickItem> current = parent;
+            auto row = item_info(current, original_window);
+            row["readiness"] = readiness(current);
+            if (current) {
+                const auto local = current->mapFromScene(QPointF(point));
+                row["point_local"] = Array{local.x(), local.y()};
+                row["clip_rect"] = rect(current->clipRect());
+                parent = current->parentItem();
+            } else parent.clear();
+            chain.append(row);
+        }
+        auto target_row = item_info(original, original_window);
+        if (original) {
+            const auto local = original->mapFromScene(QPointF(point));
+            target_row["intended_local"] = Array{local.x(), local.y()};
+        }
+        Object row{{"target", target_row}, {"ancestor_chain", chain}, {"chain_truncated", bool(parent)},
+                   {"intended_window_point", Array{point.x(), point.y()}},
+                   {"window", object_info(original_window)}, {"window_active", original_window && original_window->isActive()},
+                   {"qt_focus_object", object_info(QGuiApplication::focusObject())},
+                   {"active_focus_item", object_info(original_window ? original_window->activeFocusItem() : nullptr)},
+                   {"mouse_grabber_item", object_info(original_window ? original_window->mouseGrabberItem() : nullptr)}};
+        if (original_window) row["window_size"] = Array{original_window->width(), original_window->height()};
+        write(event, row);
+    }
+    void mouse_receipt(QEvent* event, QQuickWindow* window) {
+        if (!event || (event->type() != QEvent::MouseButtonPress && event->type() != QEvent::MouseButtonRelease)) return;
+        const auto* mouse = static_cast<QMouseEvent*>(event);
+        write(event->type() == QEvent::MouseButtonPress ? "window_press_receipt" : "window_release_receipt",
+              {{"position", Array{mouse->position().x(), mouse->position().y()}},
+               {"button", static_cast<int>(mouse->button())}, {"window_active", window && window->isActive()},
+               {"active_focus_item", object_info(window ? window->activeFocusItem() : nullptr)},
+               {"mouse_grabber_item", object_info(window ? window->mouseGrabberItem() : nullptr)}});
+    }
+    void begin_click() { active_click_ = ++clicks_; }
+    void end_click() { active_click_ = 0; }
+};
+
 // Finite property-notice observers for same-owner restoration/consent reentry.
 // Read the actual getters at their real notifiers; never emit/copy an app signal.
 class NativePropertyNotice final : public QObject {
@@ -379,6 +520,12 @@ int main(int argc,char** argv) {
     user_dirs.close();
 #endif
     QGuiApplication app(argc,argv);
+    std::unique_ptr<PassiveDispatchTrace> dispatch_trace;
+    const auto dispatch_trace_path = qEnvironmentVariable("EDI_TEST_UI_DISPATCH_TRACE");
+    if (!dispatch_trace_path.isEmpty()) {
+        dispatch_trace = std::make_unique<PassiveDispatchTrace>();
+        if (!dispatch_trace->open(dispatch_trace_path)) return EXIT_FAILURE;
+    }
     app.setQuitOnLastWindowClosed(false); // The owned stdin protocol, including EOF, owns this test host lifetime.
     QGuiApplication::setOrganizationName("EdiIndependentAcceptance");
     const auto test_application_name=qEnvironmentVariable("EDI_TEST_ASSISTANT_APPLICATION_NAME");
@@ -678,6 +825,24 @@ int main(int argc,char** argv) {
         if(current_count>1)return nullptr;
         return count==1?sole:nullptr; // Exact unique observation only; never first-of-many.
     };
+    auto dispatch_click = [&](QQuickItem* target, QQuickWindow* recipient, const QPoint& point) {
+        if (!dispatch_trace) {
+            QTest::mouseClick(recipient, Qt::LeftButton, Qt::NoModifier, point);
+            return;
+        }
+        dispatch_trace->watch(observed ? observed->assistant() : nullptr);
+        const QPointer<QQuickItem> original_target(target);
+        const QPointer<QQuickWindow> original_window(recipient);
+        dispatch_trace->begin_click();
+        const auto boundary = qScopeGuard([&] { dispatch_trace->end_click(); });
+        dispatch_trace->snapshot("click_before_dispatch", original_target, original_window, point);
+        if (!original_target || !original_window) {
+            dispatch_trace->write("observation_owner_retired");
+            throw std::runtime_error("passive dispatch observation owner retired before input");
+        }
+        QTest::mouseClick(recipient, Qt::LeftButton, Qt::NoModifier, point);
+        dispatch_trace->snapshot("click_after_dispatch", original_target, original_window, point);
+    };
     auto click=[&](QObject* object,const std::function<bool()>& original_owner={}) {
         const auto owner_current=capture_input_owner();
         auto* item=qobject_cast<QQuickItem*>(object);
@@ -686,7 +851,7 @@ int main(int argc,char** argv) {
         if(!input_reachable(item)) throw std::runtime_error("requested real UI control is not reachable");
         const auto center=item->mapToScene(QPointF(item->width()/2,item->height()/2)).toPoint();
         if(item->objectName()!=original_name || (original_owner && !original_owner()) || !owner_current())throw std::runtime_error("original input owner retired before physical click; no input was sent");
-        QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,center);drain();
+        dispatch_click(item, window, center);drain();
     };
     auto activate_item_link=[&](QObject* object)->bool {
         auto* item=qobject_cast<QQuickItem*>(object);
@@ -703,7 +868,7 @@ int main(int argc,char** argv) {
             if(!link_at.invoke(object,Qt::DirectConnection,QGenericReturnArgument("QString",&link),QGenericArgument(types[0].constData(),&px),QGenericArgument(types[1].constData(),&py)))
                 throw std::runtime_error("public Qt text link hit-test invocation failed");
             if(link.isEmpty()) continue;
-            QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,item->mapToScene(QPointF(x,y)).toPoint());
+            dispatch_click(item, window, item->mapToScene(QPointF(x,y)).toPoint());
             drain();return true;
         }
         return false;
@@ -751,7 +916,10 @@ int main(int argc,char** argv) {
         }
         ui_sequence.push_back(row);
     };
-    ui_inputs.observe=ui_record;window->installEventFilter(&ui_inputs);
+    ui_inputs.observe=[&](const QString& kind, QEvent* event) {
+        if (dispatch_trace) dispatch_trace->mouse_receipt(event, window);
+        ui_record(kind, event);
+    };window->installEventFilter(&ui_inputs);
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerShown,&ui_inputs,[&]{ui_record("pointer_shown");});
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerMoved,&ui_inputs,[&]{ui_record("pointer_moved");});
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerPressed,&ui_inputs,[&]{ui_record("pointer_pressed");});
@@ -940,10 +1108,16 @@ int main(int argc,char** argv) {
     const auto execute_command=[&](const QByteArray& line) {
         ++qml_warning_command;qml_warning_phase="command";qml_warning_operation="decode";
         const auto qml_warning_boundary=qScopeGuard([&] {qml_warning_phase="between_commands";qml_warning_operation.clear();});
+        if (dispatch_trace) dispatch_trace->write("command_started", {{"command", QString::number(qml_warning_command)}});
+        const auto dispatch_trace_boundary = qScopeGuard([&] {
+            if (dispatch_trace) dispatch_trace->write("command_finished",
+                {{"command", QString::number(qml_warning_command)}, {"operation", qml_warning_operation.left(64)}});
+        });
         try {
             auto input=decode(line).toObject();
             auto op=input["op"].toString();Object result;
             qml_warning_operation=op;
+            if (dispatch_trace) dispatch_trace->watch(observed ? observed->assistant() : nullptr);
             if((!observed || !window) && op!="inspect" && op!="destroy" && op!="session_fault_facts")throw std::runtime_error("the original Main owner has retired");
             if(op=="message_snapshot") {
                 e11_a2a_phase::requireDeclaredPhase();
@@ -1725,7 +1899,7 @@ int main(int argc,char** argv) {
                     if(!exposed)result={{"reached",false},{"reason","original session row input center is clipped/inactive"},{"thread_id",id}};
                     else {
                         QSignalSpy pressed(area.data(),SIGNAL(pressedChanged()));
-                        QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,scene.toPoint());drain();
+                        dispatch_click(area, window, scene.toPoint());drain();
                         result={{"reached",true},{"thread_id",id},{"actual_pressed_changes",pressed.count()},
                             {"same_row_after",bool(row)&&row->property("threadId").toString()==id},
                             {"same_window_after",bool(area)&&area->window()==window}};
@@ -1933,7 +2107,7 @@ int main(int argc,char** argv) {
                 if(!connection)throw std::runtime_error("the original TextEdit linkActivated signal could not be observed; no input sent");
                 const auto prior=urls.activated.size();
                 if(!reachable())throw std::runtime_error("original link receiver retired before physical delivery; no input sent");
-                QTest::mouseClick(original_window,Qt::LeftButton,Qt::NoModifier,press);drain();
+                dispatch_click(body, original_window, press);drain();
                 QObject::disconnect(connection);
                 const bool delivered=delivery.activations.size()==1 && delivery.activations[0].toObject()["href"]==href
                     && delivery.activations[0].toObject()["row_id"]==identity
@@ -2348,7 +2522,9 @@ int main(int argc,char** argv) {
                 text.reset();drain(100);urls.image_requests=0;urls.activated=Array{};
             } else if(op=="destroy") {engine.reset();singleton=nullptr;}
             else result=fixture.dispatch(input);
+            if (dispatch_trace) dispatch_trace->watch(observed ? observed->assistant() : nullptr);
             drain();
+            if (dispatch_trace && !dispatch_trace->healthy()) throw std::runtime_error("passive dispatch trace is incomplete");
             auto output=fixture.snapshot();output["reply"]=result;
             output["ui"]=(op=="messages_probe" || op=="message_input") ? Object{{"alive",bool(observed)&&bool(window)},{"state",observed?observed->assistant()->state():QString()},{"connected",observed&&observed->assistant()->connected()},{"can_cancel",observed&&observed->assistant()->canCancel()}} : ui_snapshot();
             output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["cache_restore"]=cache_restore_info;output["initial_cache_read_binding"]=initial_cache_read_binding;output["test_settings"]=Object{{"path",edi_app::settings_file_path()},{"native_store_path",edi_app::settings_store_path()},{"default_qsettings_path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()},{"application_name_override",test_application_name},{"app_local_data",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)}};
