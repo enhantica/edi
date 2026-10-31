@@ -3633,7 +3633,7 @@ QJSValue ApplicationInfo::derivedBackgroundValue(const QJSValue& value) const {
     return panelUsageGlobalCall(f, "String", {rounded});
 }
 namespace {
-void parameterTextRefit(const PanelUsageFrame& f, bool scalable) {
+void parameterTextRefit(const PanelUsageFrame& f, bool scalable, bool textCell = false) {
     QObject* scopeObject = nullptr;
     if (f.qmlScope) scopeObject = f.qmlScope->qml()->scopeObject;
     const QPointer<QObject> owner(scopeObject);
@@ -3650,13 +3650,18 @@ void parameterTextRefit(const PanelUsageFrame& f, bool scalable) {
     const auto absolute = panelUsageMemberCall(f, math, "abs", {QJSValue(*width - *implicit)});
     const auto sized = assistantRelation(f, absolute, QJSValue(0.5), 2);
     bool full = (scalable && panelUsageTruth(panelUsageContextRead(f, "fitDigits"))) || !sized;
-    if (!full) full = panelUsageContextRead(f, "item").isNull();
+    if (!full) full = textCell ? !panelUsageTruth(panelUsageContextRead(f, "numeric"))
+                              : panelUsageContextRead(f, "item").isNull();
     QJSValue shown;
-    if (full) shown = panelUsageContextRead(f, "valueText");
+    if (full) shown = panelUsageContextRead(f, textCell ? "written" : "valueText");
     else {
         const auto formatter = panelUsageContextRead(f, "NumberText");
         QJSValueList args;
-        for (const char* name : {"valueText", "room", "shownMetrics", "narrowText"}) args.append(panelUsageContextRead(f, name));
+        if (textCell) {
+            for (const char* name : {"written", "room", "metrics"}) args.append(panelUsageContextRead(f, name));
+        } else {
+            for (const char* name : {"valueText", "room", "shownMetrics", "narrowText"}) args.append(panelUsageContextRead(f, name));
+        }
         shown = panelUsageMemberCall(f, formatter, "fitted", args);
     }
     if (current()) panelUsageContextWrite(f, "shownValue", shown);
@@ -3667,6 +3672,9 @@ void ApplicationInfo::parameterCellRefit() const {
 }
 void ApplicationInfo::parameterFieldRefit() const {
     parameterTextRefit(panelUsageEngine(this), false);
+}
+void ApplicationInfo::textCellRefit() const {
+    parameterTextRefit(panelUsageEngine(this), false, true);
 }
 QJSValue ApplicationInfo::parameterCellScaledPixelSize() const {
     const auto f = panelUsageEngine(this);
