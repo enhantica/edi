@@ -303,3 +303,32 @@ scroll-only widening remain unchanged. Header completion, implicit-width changes
 resolved-width changes, dynamic header children, reentrant replacement and table
 retirement exercise this one shared header entrance; desktop/browser compilation
 and strict normal table-owner verification remain required after source review.
+
+## The automatic text path owns the same identifier cap
+
+FIRST DataTable.textColumnWidth already limits an explicitly measured label to
+maximumTextColumnShare of the table width. Automatic -1 columns must follow that
+same declared limit; their previous generic fitted-width distribution had no
+kind-specific cap. ApplicationInfo now projects a local cap mask from the actual
+live row cells' existing kinds and accepted input types. Number/integer editors,
+parameters, checks, icons and selector fittedWidth controls keep their original
+allocation. A column mixing text and non-text keeps the non-text allocation; no
+raw model value, header wording, object-name prefix or measured glyph decides type.
+
+Raw fittedWidths remains the original natural/header/scroll maximum. Only its
+current automatic text allocation is limited, reserving the existing declared
+column margin inside the share; the same limited measurements feed the room,
+margin-collapse and scale calculation. The final natural allocation is bounded
+again after rounding/spread. Actual table-width and maximumTextColumnShare reads
+make resize recompute the projection without a new width/kind cache. Fixed
+positive widths and equalColumns return through their original paths. The final
+last-data-column filler is still added afterward as intentional spare space, not
+natural text demand; fixed actions, scientific numeric and explicit Analysis/
+atom layouts retain their original owners.
+
+The existing icon/action declaration takes precedence over inherited checked:
+ListViewButton inherits TabButton's checked property, but its fontIcon still
+makes it an icon cell. Genuine checkboxes without fontIcon/ring keep the check
+alignment and inset. No glyph-clipping cause is claimed by this classification
+repair. Both corrections use the shared native table owner; no procedural QML,
+timer, state, model, scientific write or vendor change is added.
