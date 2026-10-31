@@ -66,26 +66,26 @@ TEST_CASE("Shared mesh retains empty selections and the last valid repeated site
     for (const auto profile :
          {edi::SharedSiteMeshProfile::QtFloat, edi::SharedSiteMeshProfile::Three160}) {
         const auto empty = edi::shared_site_mesh(scene, {}, 12, 6, profile, basis);
-        CHECK_MESSAGE(empty.vertices.empty() && empty.indices.empty(),
+        CHECK_MESSAGE((empty.vertices.empty() && empty.indices.empty()),
                       "An empty selection does not fabricate mesh geometry");
         const std::vector<std::size_t> sites{scene.atoms.size() - 1, scene.atoms.size() - 1};
         const auto mesh = edi::shared_site_mesh(scene, sites, 12, 6, profile, basis);
-        REQUIRE_MESSAGE(!mesh.vertices.empty() && !mesh.indices.empty(),
+        REQUIRE_MESSAGE((!mesh.vertices.empty() && !mesh.indices.empty()),
                         "A genuine multipart final site reaches the public mesh kernel");
         bool first = false, second = false;
         for (const auto& vertex : mesh.vertices) {
             if (profile == edi::SharedSiteMeshProfile::QtFloat) {
-                CHECK_MESSAGE(vertex.site == .5 || vertex.site == 1.5,
+                CHECK_MESSAGE((vertex.site == .5 || vertex.site == 1.5),
                               "Qt pick coordinates name selection ordinals, not source atoms");
                 first = first || vertex.site == .5;
                 second = second || vertex.site == 1.5;
             }
-            CHECK_MESSAGE(std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y) &&
-                              std::isfinite(vertex.position.z),
+            CHECK_MESSAGE((std::isfinite(vertex.position.x) && std::isfinite(vertex.position.y) &&
+                           std::isfinite(vertex.position.z)),
                           "Finite valid site inputs retain finite positions");
         }
         if (profile == edi::SharedSiteMeshProfile::QtFloat)
-            CHECK_MESSAGE(first && second,
+            CHECK_MESSAGE((first && second),
                           "Repeated valid sites retain both original Qt selection identities");
         CHECK_MESSAGE(std::all_of(mesh.indices.begin(), mesh.indices.end(),
                                   [&](auto index) { return index < mesh.vertices.size(); }),
