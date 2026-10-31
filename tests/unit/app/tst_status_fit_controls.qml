@@ -361,9 +361,11 @@ TestCase {
         else
             tryVerify(() => paintedGrayMatches(fill, 0), 1500, "Secondary status buttons have the declared rendered black background in dark mode");
         compare(fill.border.width, 1, "Secondary status buttons have a one-pixel border");
-        tryVerify(() => colorsMatch(fill.border.color, EaStyle.Colors.appBarBorder), 1500, "Secondary button borders match the status bar's own border line");
-        if (light)
+        tryVerify(() => colorsMatch(fill.border.color, AppColors.statusButtonBorder), 1500, "Secondary button borders follow the declared status-button palette in each theme");
+        if (light) {
+            verify(colorsMatch(fill.border.color, EaStyle.Colors.appBarBorder), "The light secondary border retains the status bar's own border line");
             verify(luminance(fill.border.color) < luminance(EaStyle.Colors.statusBarBackground), "The light secondary border is darker than the status bar background");
+        }
         if (!canHover)
             return;
         verify(actionable(item), "The secondary hover witness has a real available action");
