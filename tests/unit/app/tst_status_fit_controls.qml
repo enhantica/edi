@@ -413,6 +413,50 @@ TestCase {
         normalButtonStyle(status, data.tag === "light", true);
         rightmostFitAction();
     }
+    function footerGeometryReady(requestedWidth) {
+        const group = findChild(appWindow, "statusBar.fit");
+        if (!group || !group.parent || !group.parent.parent || !group.parent.parent.parent)
+            return false;
+        // FIRST StatusBar fitArea is parented directly to bar; bar fills the
+        // statusBarContainer, which spans the appContainer's anchored width.
+        const bar = group.parent, container = bar.parent, host = container.parent;
+        return host.parent === appWindow.contentItem && appWindow.width === requestedWidth
+            && appWindow.contentItem.width === Math.max(0, appWindow.width - appWindow.leftPadding - appWindow.rightPadding)
+            && host.width === appWindow.contentItem.width && container.width === host.width
+            && bar.width === container.width && bar.mapToItem(appWindow.contentItem, 0, 0).x === 0
+            && !isPolishScheduled(appWindow);
+    }
+    function resultsPresentationReady() {
+        const candidates = dialogs();
+        if (candidates.length !== 1)
+            return false;
+        const dialog = candidates[0], content = dialog.contentItem;
+        if (!dialog.visible || !dialog.opened || dialog.opacity !== 1 || !content
+            || content.width <= 0 || content.height <= 0 || isPolishScheduled(appWindow))
+            return false;
+        const table = findChild(content, "fit.results.list");
+        const expected = Session.project.fit.results.count;
+        if (!table || !table.visible || table.width <= 0 || table.height <= 0
+            || table.count !== expected || expected <= 0 || !table.headerItem
+            || table.headerItem.width <= 0 || table.headerItem.height <= 0)
+            return false;
+        let bottom = 0;
+        for (let index = 0; index < expected; ++index) {
+            const row = table.itemAtIndex(index);
+            if (!row || !row.visible || row.width <= 0 || row.height <= 0)
+                return false;
+            const top = row.mapToItem(table.contentItem, 0, 0).y;
+            if (top < bottom)
+                return false;
+            bottom = top + row.height;
+            const metric = findChild(row, "fit.results.metric." + index);
+            const value = findChild(row, "fit.results.value." + index);
+            if (!metric || !value || !metric.visible || !value.visible
+                || metric.width <= 0 || value.width <= 0 || metric.height <= 0 || value.height <= 0)
+                return false;
+        }
+        return true;
+    }
     function test_scan_controls_data() {
         return ["single", "joint", "scan", "independent", "scan-single"].map(kind => ({
                     tag: kind
@@ -447,7 +491,7 @@ TestCase {
         let compact = false;
         for (const width of [1000, 800, 640, 500]) {
             appWindow.width = width;
-            verify(waitForPolish(appWindow.contentItem), "Narrow-window layout settles before checking action captions");
+            tryVerify(() => footerGeometryReady(width), 5000, "Narrow-window layout settles before checking action captions");
             const hasCaption = item => View.textItems(item).some(label => label.text === caption(item));
             if (!hasCaption(reset) && !hasCaption(follow) && hasCaption(button)) {
                 compact = true;
@@ -456,7 +500,7 @@ TestCase {
         }
         verify(compact, "Reset and Follow drop their captions before Fit on a narrow status bar");
         appWindow.width = 1300;
-        verify(waitForPolish(appWindow.contentItem), "The wide status controls are restored before worker input");
+        tryVerify(() => footerGeometryReady(1300), 5000, "The wide status controls are restored before worker input");
         Session.project.fit.start();
         verify(Session.project.fit.scanning && actionable(follow), "Follow becomes available while the actual scan runs");
         const previous = Session.project.fit.following;
@@ -696,7 +740,7 @@ TestCase {
         const outcome = findChild(appWindow, "statusBar.fit.outcome");
         verify(outcome !== null && outcome.visible && actionable(outcome), "Previous outdated results retain their real window-opening action");
         click(outcome);
-        tryVerify(() => dialogs().length === 1, 1000, "The Outdated outcome opens the retained results window");
+        tryVerify(() => resultsPresentationReady(), 1000, "The Outdated outcome opens the retained results window");
         const dialog = dialogs()[0];
         const banner = View.textItems(dialog.contentItem).find(item => item.visible && item.text === "These results are from before your parameter changes. Fit again to update them.");
         verify(banner !== undefined && Ui.exposed(banner), "Previous results display the owner's exact visible warning banner");
