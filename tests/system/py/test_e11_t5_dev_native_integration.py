@@ -12887,3 +12887,63 @@ def test_original_a2b_expanded_web_completion_refreshes_body_and_default_copy(ma
     finally:
         _a2b_finish_observation(actor, marker, facts, 'a2b-original-web-consumption.json',
                                 failed=sys.exc_info()[0] is not None)
+
+
+@pytest.mark.parametrize('consumer', ['ParameterCell', 'ParameterField'])
+def test_actual_written_parameter_consumers_keep_ime_and_original_member(main_actor, consumer):
+    actor = main_actor([[]])
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/constraint_expressions/project'))[
+        'reply'
+    ]['opened'], 'Written display controls retain real input and scientific ownership'
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    wait_positive_tab(actor, 'appBar.tab.analysis')
+    actor.command('click', name='appBar.tab.analysis')
+    label = 'label: "";' if consumer == 'ParameterField' else ''
+    source = (
+        'import QtQuick\nimport edi.app\n'
+        + consumer
+        + ' { objectName: "e11.precision.editor"; x: 200; y: 100; z: 10000; '
+        'width: 300; height: 40; item: Session.project.currentStructure.cell.lengthA; '
+        + label
+        + ' }'
+    )
+    qml(
+        actor,
+        f'(function(){{Qt.createQmlObject({json.dumps(source)}, contentItem); return null;}})()',
+    )
+    editor = control_expression('e11.precision.editor')
+    actor.command('click', name='e11.precision.editor')
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text='9.125')
+    actor.command('manual_ime', preedit='7', commit='')
+    qml(actor, f'{editor}.width = 45')
+    qml(actor, 'Session.project.currentStructure.cell.lengthA.value = 5.375')
+    focused = actor.command('focused_input')['reply']
+    assert focused['text'] == '9.125' and focused['preedit'] == '7', (
+        'Width fitting and native publication preserve the original real manual draft and IME'
+    )
+    actor.command('manual_ime', preedit='', commit='')
+    actor.command('manual_key', key='escape')
+    actor.command('click', name='e11.precision.editor')
+    assert float(actor.command('focused_input')['reply']['text']) == 5.375, (
+        'Cancelling real composition exposes the current full canonical value'
+    )
+    original_b = next(
+        row
+        for row in actor.last['ui']['project']['parameters']
+        if row['path'].endswith('cell.length_b')
+    )['value']
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text='11.625')
+    replacement = f'{editor}.item = Session.project.currentStructure.cell.lengthB'
+    qml(actor, f'(function(){{{replacement}; return null;}})()')
+    actor.command('manual_key', key='return')
+    after_b = next(
+        row
+        for row in actor.last['ui']['project']['parameters']
+        if row['path'].endswith('cell.length_b')
+    )['value']
+    assert after_b == original_b, (
+        'A supported consumer cannot graft an older manual draft onto a replacement typed item'
+    )
+    qml(actor, f'(function(){{{editor}.destroy(); return null;}})()')

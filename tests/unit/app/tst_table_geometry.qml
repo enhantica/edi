@@ -399,9 +399,16 @@ Item {
             });
             verify(input !== null && waitForPolish(input), "Both actual parameter consumers complete the narrow layout");
             input.focus = false;
-            compare(input.value, "2.290e7", "Narrow rendering retains the independently specified scientific string");
+            ink.font = input.font;
+            ink.text = "2.290e7";
+            input.width = Math.min(data.width, Math.ceil(ink.advanceWidth / 2) + input.leftPadding + input.rightPadding);
+            verify(waitForPolish(input), "The compact token also reaches a genuinely over-room rendered viewport");
+            compare(input.item.fileValue, "22900000", "The supplied IUCr99 pair retains its canonical written value");
+            compare(input.item.fileSu, "100000", "The supplied pair retains its written uncertainty");
+            tryCompare(input, "text", "2.290e7", 2000, "The actual narrow display retains the last place required by SU 1.0e5");
             verify(input.contentWidth > input.width - input.leftPadding - input.rightPadding, "The test creates actual text overflow");
             compare(input.cursorPosition, 0, "Inactive overflow starts at the first digit");
+            compare(input.horizontalAlignment, Text.AlignLeft, "A long number clips its end while retaining its beginning");
             const first = input.positionToRectangle(0);
             verify(first.x >= 0 && first.x < input.width, "The first digit is inside the inactive text viewport");
             verify(!String(input.text).includes("…"), "Inactive numbers are clipped without substituting an ellipsis");

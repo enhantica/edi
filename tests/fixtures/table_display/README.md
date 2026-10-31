@@ -1,6 +1,26 @@
 # Table display witnesses
 
-The expected strings come from the owner's declared display rule: values with magnitude at least 1e6, or nonzero magnitude below 1e-4, use four significant digits in scientific notation. Values at 1e-4 and zero remain plain. The scientific value keeps its display precision as a narrow cell clips its end. The supplied background value 22900000 with s.u. 100000 must display as `2.290e7` and `0.010e7`; editing shows `22900000`.
+The historical table below retains the direct `NumberText.parameter` fallback
+vectors for values without a project-backed written spelling. Its four-digit
+rule is not a universal oracle for editable project parameters: ADR-0051 §4 and
+ADR-0017 §21 require the project's written value/SU pair and the same meaningful
+digits when narrowing. The supplied IUCr99 pair 22900000/100000 has last place
+1e4, so its narrow value is `2.290e7`; its full canonical value and separate SU
+remain `22900000` and `100000`. Editing exposes the complete canonical token.
+
+`tst_written_parameter_precision.qml` reuses the independent Decimal/IUCr
+`uncertainty_display/expected.json` references for unequal rule precision,
+integer trailing zeros, small and signed values. It opens disposable real
+projects and retains the same typed parameter in both app consumers through
+wide/narrow transitions, font fitting, no-op editing and cancelled drafts.
+Optional absent, engaged-zero and fixed input markers remain separate. The
+real-Main input gate additionally retains actual IME preedit during resizing and
+native publication and refuses an old draft on a successor item. The geometry
+owner still checks genuine over-room clipping, first-digit visibility, no
+ellipsis, outside pixels and full-value editing; it narrows the viewport using
+independent text metrics so the compact token itself genuinely overflows.
+The scientific editing case checks the written canonical SU rather than imposing
+the historical direct-fallback value exponent on the project's menu spelling.
 
 | Supplied value | Display |
 | --- | --- |

@@ -4,10 +4,11 @@ import QtQuick.Controls
 import QtTest
 import "ExampleProjects.js" as Examples
 import EasyApplication.Gui.Components as EaComponents
-import EasyApplication.Gui.Elements as EaElements
 import EasyApplication.Gui.Style as EaStyle
 import edi.app
 import TableIdTests 1.0
+import EdiAcceptance 1.0
+import ReportAcceptance 1.0
 import "UiInteraction.js" as Ui
 
 Item {
@@ -32,14 +33,15 @@ Item {
     }
     Component {
         id: cellComponent
-        EaComponents.TableViewParameter {
+        ParameterCell {
             width: 240
             height: 48
         }
     }
     Component {
         id: fieldComponent
-        EaElements.ParamTextField {
+        ParameterField {
+            label: ""
             width: 240
             height: 48
         }
@@ -205,38 +207,51 @@ Item {
             }
         }
         function test_parameter_menus(data) {
-            const parameter = {
-                value: 3.9,
-                error: 0.02,
-                enabled: true,
-                fittable: true,
-                fit: true,
-                category: "cell",
-                name: "length_a",
-                units: "Å"
-            };
+            const directory = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/table_display"));
+            const file = "structures/structure.edi";
+            const original = SettingsProof.text(directory, file);
+            verify(original.includes("_cell.length_a 4.026700"), "The menu input addresses the declared physical lattice parameter");
+            verify(SettingsProof.write(directory, file, original.replace("_cell.length_a 4.026700", "_cell.length_a 4.026700(2000)")), "The real loader receives an authored positive uncertainty and free flag");
+            verify(Session.openProject(directory), "The supported menu opens a real project: " + Session.lastError);
+            const parameter = Probe.rows(Session.project.parameters).map(row => row.parameter).find(item => item.category === "cell" && item.name === "length_a");
+            verify(parameter !== undefined && parameter.refinable && parameter.fittable, "The menu input is a genuine applicable typed ParameterItem");
+            verify(parameter.hasUncertainty && parameter.uncertainty > 0 && parameter.free, "The actual parameter supplies uncertainty and a free flag");
+            compare(parameter.displayUnits, "Å", "The native dictionary supplies lattice units");
             const control = createTemporaryObject(data.component, surface, {
                 x: 100,
                 y: 100,
-                parameter: parameter
+                item: parameter
             });
-            verify(control !== null);
-            verify(waitForPolish(control));
-            click(control, Qt.RightButton);
+            verify(control !== null && control.item === parameter, "The app-owned cell or field retains the genuine typed item");
+            verify(waitForPolish(control), "The supported menu consumer finishes layout before real input");
+            compare(control.canFit, parameter.fittable || parameter.free, "The menu follows the native fittability or existing free flag");
             const overlay = control.Overlay.overlay;
-            verify(overlay !== null);
-            tryVerify(() => Ui.text(overlay).includes("cell.length_a"));
+            verify(overlay !== null, "The supported parameter menu has its real window overlay");
+            control.readOnly = true;
+            click(control, Qt.RightButton);
+            tryVerify(() => Ui.text(overlay).includes("cell.length_a"), 2000, "Read-only inspection retains the supported parameter menu");
+            const readOnlyWords = Ui.text(overlay).split(/\s+/).filter(word => word.length > 0);
+            verify(readOnlyWords.includes("s.u.") && readOnlyWords.includes("units") && readOnlyWords.includes("Å"), "Read-only inspection retains uncertainty and units");
+            verify(!Ui.exposed(control.fitCheckBox), "Read-only inspection cannot expose an editable free toggle");
+            compare(parameter.free, true, "Read-only inspection cannot change the parameter's free flag");
+            mouseClick(surface, surface.width - 10, surface.height - 10);
+            tryVerify(() => !Ui.text(overlay).includes("cell.length_a"), 2000, "The read-only parameter menu closes through ordinary input");
+            control.readOnly = false;
+            click(control, Qt.RightButton);
+            tryVerify(() => Ui.text(overlay).includes("cell.length_a"), 2000, "A real right click opens the parameter's own menu");
             const words = Ui.text(overlay).split(/\s+/).filter(word => word.length > 0);
             verify(words.includes("s.u."), "The uncertainty heading uses s.u.");
             verify(words.includes("free"), "The fit toggle heading uses free");
             verify(words.includes("units") && words.includes("Å"), "The popup displays the parameter units");
-            verify(!words.includes("error") && !words.includes("vary"));
-            verify(Ui.exposed(control.fitCheckBox));
-            compare(control.fitCheckBox.checked, true);
+            verify(!words.includes("error") && !words.includes("vary"), "The supported menu retains the app's scientific headings");
+            verify(Ui.exposed(control.fitCheckBox), "An applicable free parameter exposes its real menu toggle");
+            compare(control.fitCheckBox.checked, true, "The real free flag is initially checked");
             click(control.fitCheckBox);
-            compare(control.fitCheckBox.checked, false);
+            compare(control.fitCheckBox.checked, false, "A real menu click clears the toggle");
+            compare(parameter.free, false, "The actual supported menu commits to the original typed parameter");
             mouseClick(surface, surface.width - 10, surface.height - 10);
-            tryVerify(() => !Ui.text(overlay).includes("cell.length_a"));
+            tryVerify(() => !Ui.text(overlay).includes("cell.length_a"), 2000, "Clicking outside closes the original parameter menu");
+
         }
     }
 }
