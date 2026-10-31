@@ -185,7 +185,7 @@ TestCase {
         console.log("BACKGROUND_REVIEW3_BASIS " + JSON.stringify({kind: kind, field: field, rows: rows(kind)}));
     }
     function mixedFit(kind, mode) {
-        open(kind, mode, true, true);
+        const input = open(kind, mode, true, true);
         const before = rows(kind), fit = Session.project.fit;
         verify(fit.available, "Mixed measured/simulation fitting must be available: " + fit.unavailableReason);
         fit.start();tryVerify(() => !fit.running, 1000, "The mixed app worker fit must finish");
@@ -201,13 +201,28 @@ TestCase {
         const e = Session.project.currentExperiment;
         const uncertainties = Probe.rows(kind === "line-segment" ? e.background : e.backgroundTerms).map(row =>
             (kind === "line-segment" ? row.intensity : row.coef).uncertainty);
+        const beforeSave = {state: state(), parameters: undoSaveParameters(),
+                            suRule: Session.project.suRule,
+                            project_file: SettingsProof.text(input, "project.edi")};
+        console.log("BACKGROUND_REVIEW3_MIXED_BEFORE_SAVE " + JSON.stringify(beforeSave));
+        verify(beforeSave.suRule === "iucr_19" || beforeSave.suRule === "iucr_99",
+               "Mixed Save captures the actual supported project uncertainty rule");
+        verify(beforeSave.parameters.every(p => p.refinable && isFinite(p.value)
+               && typeof p.hasUncertainty === "boolean" && isFinite(p.uncertainty)),
+               "Mixed Save supplies every original scalar value, free flag and explicit optional-SU witness");
         const destination = Probe.scratchProjectUrl();
         verify(Session.saveAs(destination), "The mixed worker's fitted Auto background must save: " + Session.lastError);
         // Save adopts IUCr-rounded values; the separate loader checks that exact
         // declared rounding against these pre-save values and uncertainties.
         console.log("BACKGROUND_REVIEW3_SAVED " + JSON.stringify({kind: kind, state: state(),
             live_rows: fitted, live_su: uncertainties,
+            before_save: beforeSave, parameters: undoSaveParameters(),
+            su_rule: Session.project.suRule,
+            project_file: SettingsProof.text(destination, "project.edi"),
             file: SettingsProof.text(destination, "experiments/d20.edi")}));
+        compare(Session.project.suRule, beforeSave.suRule, "Mixed Save retains its actual selected uncertainty rule");
+        compare(JSON.stringify(backgroundDescriptors(state())), JSON.stringify(backgroundDescriptors(beforeSave.state)),
+                "Mixed Save retains exact type, mode, basis, population, IDs, positions/orders and free flags");
         console.log("BACKGROUND_REVIEW3 mixed " + kind + " " + mode);
     }
     function delegatedSave(kind) {

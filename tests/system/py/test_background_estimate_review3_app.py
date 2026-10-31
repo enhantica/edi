@@ -5,7 +5,6 @@ import json
 import os
 import re
 import subprocess
-from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal, localcontext
 from pathlib import Path
 
 import edi as engine
@@ -50,29 +49,6 @@ CASES = [
     'delegated_polynomial',
     'delegated_chebyshev',
 ]
-
-
-def iucr19_value(value, uncertainty):
-    """Independent decimal construction from the declared IUCr rule (ADR-0092).
-
-    Round s.u. up to two digits, retain 10-19 and a carried 10, otherwise one;
-    round the value half away from zero to that last digit, preserving nonzero.
-    """
-    if uncertainty is None or not np.isfinite(uncertainty) or uncertainty <= 0:
-        return value
-    with localcontext() as context:
-        context.prec = 350
-        v, su = Decimal(str(value)), Decimal(str(uncertainty))
-        quantum = Decimal(1).scaleb(su.adjusted() - 1)
-        leading = (su / quantum).to_integral_value(rounding=ROUND_CEILING)
-        if leading >= 20:
-            quantum = Decimal(1).scaleb(su.adjusted())
-        rounded = v.quantize(quantum, rounding=ROUND_HALF_UP)
-        if v != 0 and rounded == 0:
-            digits = 2 if leading < 20 or leading == 100 else 1
-            quantum = Decimal(1).scaleb(v.copy_abs().adjusted() - digits + 1)
-            rounded = v.quantize(quantum, rounding=ROUND_HALF_UP)
-        return float(rounded)
 
 
 def saved_background_parameters(experiment):
@@ -200,6 +176,77 @@ def require_undo_saved_state(receipt, native_rows, native_parameters):
         )
 
 
+def mixed_declared_rule(receipt, folder):
+    before = receipt['before_save']
+    rules = []
+    for name, text in [('before', before['project_file']), ('after', receipt['project_file'])]:
+        assert isinstance(text, str) and text.strip(), (
+            'Mixed Save retains obtainable actual pre/post project file bytes'
+        )
+        directory = folder / name
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / 'project.edi').write_text(text, encoding='utf-8')
+        rules.append(declared_rule(directory))
+    assert rules[0] in {'iucr_19', 'iucr_99'}, (
+        'The independently parsed original project has a supported declared/default rule'
+    )
+    assert rules[0] == before['suRule'] == rules[1] == receipt['su_rule'], (
+        'Actual pre/post host rules and original/saved project files retain one uncertainty rule'
+    )
+    return rules[0]
+
+
+def require_mixed_saved_state(receipt, native_rows, native_parameters, rule):
+    assert rule == receipt['before_save']['suRule'], (
+        'Mixed values are projected from the independently parsed pre-Save rule'
+    )
+    active, expected = undo_save_projection(receipt)
+    live, uncertainties = receipt['live_rows'], receipt['live_su']
+    assert receipt['before_save']['state'][active] == live, (
+        'The original fitted rows survive the later real calculation before Save'
+    )
+    assert len(native_rows) == len(live) == len(uncertainties), (
+        'Saving a fitted background must preserve every live row and its uncertainty witness'
+    )
+    for actual, prior, uncertainty, parameter, projected in zip(
+        native_rows,
+        live,
+        uncertainties,
+        receipt['before_save']['parameters'],
+        expected,
+        strict=True,
+    ):
+        assert parameter['uncertainty'] == uncertainty, (
+            'The old numerical SU receipt agrees with its explicit pre-Save presence witness'
+        )
+        assert actual[:2] == tuple(prior[:2]) and actual[3] == prior[3], (
+            'IUCr save normalization must preserve fitted ids, positions/orders and free flags'
+        )
+        assert actual[2] == projected[0], (
+            'Saving fitted Auto values must use the declared independent IUCr decimal rule'
+        )
+    # The existing strict checker adds full host/native/file value, optional-SU,
+    # free, descriptor, population and raw-token checks using saved_triplet.
+    require_undo_saved_state(receipt, native_rows, native_parameters)
+
+
+def require_mixed_observation(receipt, native_rows, native_parameters, folder):
+    rule = mixed_declared_rule(receipt, folder)
+    require_mixed_saved_state(receipt, native_rows, native_parameters, rule)
+    return rule
+
+
+def coherent_other_rule_observation(receipt, token, wrong):
+    wrong_token, wrong_value, wrong_su = wrong
+    damaged = copy.deepcopy(receipt)
+    for row in damaged['state']['terms']:
+        row[2] = wrong_value
+    for parameter in damaged['parameters']:
+        parameter.update(value=wrong_value, uncertainty=wrong_su)
+    damaged['file'] = damaged['file'].replace(token, wrong_token)
+    return damaged
+
+
 @pytest.mark.parametrize('case', CASES)
 def test_app_estimate_lifecycle_crosses_each_publication_boundary(tmp_path, case):
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
@@ -222,10 +269,11 @@ def test_app_estimate_lifecycle_crosses_each_publication_boundary(tmp_path, case
         env={**os.environ, 'QT_QPA_PLATFORM': 'offscreen', 'QT_QUICK_BACKEND': 'software'},
     )
     output = result.stdout + result.stderr
-    if case.startswith('undo_'):
-        (tmp_path / 'undo-save-output.json').write_text(
-            json.dumps({'output': output}, ensure_ascii=True)
+    if case.startswith(('undo_', 'mixed_')):
+        artifact = (
+            'undo-save-output.json' if case.startswith('undo_') else 'mixed-save-output.json'
         )
+        (tmp_path / artifact).write_text(json.dumps({'output': output}, ensure_ascii=True))
     assert result.returncode == 0 and f'PASS   : edi_app::{selected}()' in output, (
         'Auto refresh, fit publication, save and typed Undo must remain coherent: ' + output
     )
@@ -254,8 +302,9 @@ def test_app_estimate_lifecycle_crosses_each_publication_boundary(tmp_path, case
         receipt = json.loads(re.findall(r'BACKGROUND_REVIEW3_SAVED (\{[^\n]+\})', output)[0])
         source = materialize(tmp_path / 'app-saved', receipt['kind'])
         (source / 'experiments/d20.edi').write_text(receipt['file'])
-        if case.startswith('undo_'):
+        if case.startswith(('undo_', 'mixed_')):
             (source / 'project.edi').write_text(receipt['project_file'])
+        if case.startswith('undo_'):
             assert declared_rule(source) == receipt['before_save']['suRule'], (
                 'The actual saved project file carries the selected pre-Save rule'
             )
@@ -277,20 +326,16 @@ def test_app_estimate_lifecycle_crosses_each_publication_boundary(tmp_path, case
             'Every app lifecycle save must write the exact typed background published to its host'
         )
         if case.startswith('mixed_'):
-            observed = rows(loaded.experiment)
-            live, uncertainties = receipt['live_rows'], receipt['live_su']
-            assert len(observed) == len(live) == len(uncertainties), (
-                'Saving a fitted background must preserve every live row '
-                'and its uncertainty witness'
+            rule = mixed_declared_rule(receipt, tmp_path / 'mixed-rule-witness')
+            assert declared_rule(source) == rule and loaded.su_rule == rule, (
+                'The actual reopened project carries the independently parsed pre-Save rule'
             )
-            for actual, prior, uncertainty in zip(observed, live, uncertainties, strict=True):
-                assert actual[:2] == tuple(prior[:2]) and actual[3] == prior[3], (
-                    'IUCr save normalization must preserve fitted ids, '
-                    'positions/orders and free flags'
-                )
-                assert actual[2] == iucr19_value(prior[2], uncertainty), (
-                    'Saving fitted Auto values must use the declared independent IUCr decimal rule'
-                )
+            require_mixed_saved_state(
+                receipt,
+                rows(loaded.experiment),
+                saved_background_parameters(loaded.experiment),
+                rule,
+            )
         before = rows(loaded.experiment)
         loaded.analysis.calculate()
         assert rows(loaded.experiment) == before, (
@@ -300,6 +345,16 @@ def test_app_estimate_lifecycle_crosses_each_publication_boundary(tmp_path, case
         if case.startswith('undo_'):
             require_undo_saved_state(
                 receipt, rows(loaded.experiment), saved_background_parameters(loaded.experiment)
+            )
+        if case.startswith('mixed_'):
+            assert loaded.su_rule == rule, (
+                'Recalculation retains the independently parsed saved uncertainty rule'
+            )
+            require_mixed_saved_state(
+                receipt,
+                rows(loaded.experiment),
+                saved_background_parameters(loaded.experiment),
+                rule,
             )
 
 
@@ -510,4 +565,75 @@ def test_real_fixed_save_adopts_literal_native_zero_from_each_optional_input(
         assert (parameter.value, parameter.uncertainty, parameter.free) == (1.23457, 0.0, False), (
             'Actual adopting Save AND native readback expose engaged zero '
             'for every fixed prior state'
+        )
+
+
+@pytest.mark.parametrize(
+    'offered',
+    [
+        pytest.param(
+            ('iucr_19', True, '1.23(4)', 1.23, 0.04, '1.235(35)', 1.235, 0.035), id='declared19'
+        ),
+        pytest.param(
+            ('iucr_99', True, '1.235(35)', 1.235, 0.035, '1.23(4)', 1.23, 0.04), id='declared99'
+        ),
+        pytest.param(
+            ('iucr_99', False, '1.235(35)', 1.235, 0.035, '1.23(4)', 1.23, 0.04), id='default99'
+        ),
+    ],
+)
+def test_mixed_save_uses_declared_rule_and_rejects_coherent_other_rule(tmp_path, offered):
+    rule, declared, token, value, su, wrong_token, wrong_value, wrong_su = offered
+    receipt, native_rows, native_parameters = undo_observation_control(
+        1.23456789, 0.03456, True, True, rule, token, su
+    )
+    assert native_parameters == [(value, su, True)] * 2, (
+        'The two unequal rule positives offer independently literal native value/SU pairs'
+    )
+    header = '_edi.schema_version 3\n'
+    receipt['before_save']['project_file'] = header + (
+        '_su_format.rule ' + rule + '\n' if declared else ''
+    )
+    receipt['project_file'] = header + '_su_format.rule ' + rule + '\n'
+    receipt['live_rows'] = copy.deepcopy(receipt['before_save']['state']['terms'])
+    receipt['live_su'] = [0.03456] * 2
+    require_mixed_observation(receipt, native_rows, native_parameters, tmp_path / 'positive')
+    for index, damaged in enumerate(undo_observation_mutants(receipt)):
+        assert damaged != receipt, (
+            'Every shared strict-state counterfeit remains armed in mixed Save'
+        )
+        with pytest.raises(AssertionError):
+            require_mixed_observation(
+                damaged, native_rows, native_parameters, tmp_path / ('state-' + str(index))
+            )
+    for boundary in ['before', 'after', 'unsupported']:
+        damaged = copy.deepcopy(receipt)
+        other_rule = 'iucr_99' if rule == 'iucr_19' else 'iucr_19'
+        text = (
+            header
+            + '_su_format.rule '
+            + ('unknown_rule' if boundary == 'unsupported' else other_rule)
+            + '\n'
+        )
+        if boundary == 'before':
+            damaged['before_save']['project_file'] = text
+        else:
+            damaged['project_file'] = text
+        assert damaged != receipt, (
+            'The raw project-rule counterfeit changes the actual offered file'
+        )
+        with pytest.raises(AssertionError):
+            mixed_declared_rule(damaged, tmp_path / boundary)
+    # A coherent wrong-rule output cannot pass merely because all of its post
+    # representations agree with each other; the original rule/pair stay fixed.
+    damaged = coherent_other_rule_observation(receipt, token, (wrong_token, wrong_value, wrong_su))
+    assert damaged != receipt and (wrong_value, wrong_su) != (value, su), (
+        'The other-rule counterfeit supplies a genuinely different complete post-Save pair'
+    )
+    with pytest.raises(AssertionError):
+        require_mixed_saved_state(
+            damaged,
+            [tuple(row) for row in damaged['state']['terms']],
+            [(wrong_value, wrong_su, True)] * 2,
+            rule,
         )
