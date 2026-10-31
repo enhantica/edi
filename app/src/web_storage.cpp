@@ -630,7 +630,7 @@ emscripten::val WebStorage::policy(int operation, const emscripten::val& args) {
         return storage_add(prefix, suffix);
     }
     if (operation == 1) {
-        if (!args["handle"]["kind"].strictlyEquals(val("file")) || !args["name"].call<val>("toLowerCase").call<bool>("endsWith", ".edi")) return val::null();
+        if (!args["handle"]["kind"].strictlyEquals(val("file")) || !args["name"].call<val>("toLowerCase").call<bool>("endsWith", val(".edi"))) return val::null();
         return storage_path(args["category"], args["name"]);
     }
     if (operation == 2) { instance()->loaded_files_.insert(storage_text(args["key"]), storage_paths(args["paths"])); return val::undefined(); }
@@ -660,7 +660,7 @@ emscripten::val WebStorage::policy(int operation, const emscripten::val& args) {
     }
     if (operation == 6) {
         const val record = args["record"];
-        if (!record) val::global("Error").new_("this browser no longer keeps that project").throw_();
+        if (!record) val::global("Error").new_(val("this browser no longer keeps that project")).throw_();
         return val(!(!args["recovery"]) || record["kind"].strictlyEquals(val("browser")));
     }
     if (operation == 7) { val out = val::array(); out.set(0, "edi"); out.set(1, !(!args["recovery"]) ? "recovery" : "projects"); out.set(2, args["key"]); return out; }
