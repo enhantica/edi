@@ -16,12 +16,18 @@ TestCase {
     when: windowShown
     property var appWindow
     property var expected
+    property var savedShow
     Component {
         id: application
         Main {}
     }
     function init() {
         Session.closeProject();
+        savedShow = [Preferences.analysisShowNotMeasured, Preferences.analysisShowBySymmetry, Preferences.analysisShowByConstraint, Preferences.analysisShowFixedSettings];
+        Preferences.analysisShowNotMeasured = true;
+        Preferences.analysisShowBySymmetry = true;
+        Preferences.analysisShowByConstraint = true;
+        Preferences.analysisShowFixedSettings = true;
         expected = JSON.parse(Probe.readFile("tests/fixtures/analysis_filters/expected.json"));
         appWindow = application.createObject(null);
         verify(appWindow !== null, "Analysis acceptance must host the production application");
@@ -31,6 +37,7 @@ TestCase {
     }
     function cleanup() {
         Session.closeProject();
+        ["analysisShowNotMeasured", "analysisShowBySymmetry", "analysisShowByConstraint", "analysisShowFixedSettings"].forEach((name, i) => Preferences[name] = savedShow[i]);
         if (appWindow)
             appWindow.destroy();
         appWindow = null;
@@ -161,7 +168,7 @@ TestCase {
             const source = rows.filter(r => r.kind === kind);
             add(kind === "structure" ? "Structure" : "Experiment", source, true);
             const cell = source.filter(r => r.category === "cell");
-            add("Unit cell", cell);
+            add("Cell", cell);
             const atoms = source.filter(r => r.category === "atom_site");
             add("Atom sites", atoms);
             add("Atomic coordinates", atoms.filter(r => r.name.startsWith("fract_")));
@@ -179,7 +186,7 @@ TestCase {
         return result;
     }
     function checkCounts(block, category, variability, wanted, selectedRows) {
-        options(variability).forEach((entry, choice) => compare(count(entry), selectedRows.filter(r => choice === 0 || r.free === (choice === 1)).length, "Every parameter count must remain scoped to its upper selections"));
+        options(variability).forEach((entry, choice) => compare(count(entry), selectedRows.filter(r => choice === 0 || (choice === 3 ? r.blocked : (choice === 1 ? r.free : !r.free && !r.blocked))).length, "Every parameter count must remain scoped to its upper selections"));
         options(category).forEach(entry => compare(count(entry), wanted.find(group => group.title === caption(entry)).rows.length, "Downstream filters must not change category membership counts"));
         options(block).forEach(entry => compare(count(entry), expected.filter(r => caption(entry) === "All datablocks" || r.block === caption(entry)).length, "Downstream filters must not change datablock parameter counts"));
     }
@@ -261,16 +268,16 @@ TestCase {
             select(category, g.title, g.heading);
             compare(count(category.currentText), g.rows.length, "Every category count must be its independent parameter membership");
             const choices = options(variability);
-            compare(choices.map(caption), ["All parameters", "Free parameters", "Fixed parameters"], "The parameter filter must retain all, free and fixed choices");
+            compare(choices.map(caption), ["All parameters", "Free parameters", "Fixed parameters", "Not fittable"], "The parameter filter must retain all, free and fixed choices");
             choices.forEach((value, index) => {
-                const rows = g.rows.filter(r => index === 0 || r.free === (index === 1));
+                const rows = g.rows.filter(r => index === 0 || (index === 3 ? r.blocked : (index === 1 ? r.free : !r.free && !r.blocked)));
                 compare(count(value), rows.length, "Parameter menu counts must respect both upstream selectors");
                 choose(variability, index);
                 checkCounts(block, category, variability, wanted, g.rows);
                 sameRows(rows, "Every datablock/category/variability combination must show exactly its independent parameter identities");
                 ["COEF", "amber", "east", "absent_parameter"].forEach(query => {
                     typeName(query);
-                    const matching = rows.filter(r => query === "COEF" ? r.category === "background" : r.block === query || r.label === query);
+                    const matching = rows.filter(r => query === "COEF" ? r.name === "coef" : r.block === query || r.label === query);
                     sameRows(matching, "Case-insensitive name search must return every matching row and only that upstream subset");
                     checkCounts(block, category, variability, wanted, g.rows);
                     typeName("");
@@ -308,7 +315,7 @@ TestCase {
         return rows;
     }
     function wantedRows(state) {
-        return scopedRows(state).filter(row => (state.variability === 0 || row.free === (state.variability === 1)) && (!state.query || identity(row).toLowerCase().includes(state.query.toLowerCase())));
+        return scopedRows(state).filter(row => (state.variability === 0 || (state.variability === 1 ? row.free : !row.free && !row.blocked)) && (!state.query || identity(row).toLowerCase().includes(state.query.toLowerCase())));
     }
     function closedPicker(picker, text, icons) {
         compare(picker.displayText, text, "The closed selector's display text names its applied selection with its independent count");
@@ -348,10 +355,10 @@ TestCase {
             return;
         }
         const upper = scopedRows(state);
-        const variabilityRows = upper.filter(row => state.variability === 0 || row.free === (state.variability === 1));
+        const variabilityRows = upper.filter(row => state.variability === 0 || (state.variability === 1 ? row.free : !row.free && !row.blocked));
         closedPicker(block, (state.block || "All datablocks") + " (" + expected.filter(row => !state.block || row.block === state.block).length + ")", aspect === "icons");
         closedPicker(category, (state.category || "All categories") + " (" + upper.length + ")", aspect === "icons");
-        closedPicker(variability, ["All parameters", "Free parameters", "Fixed parameters"][state.variability] + " (" + variabilityRows.length + ")", aspect === "icons");
+        closedPicker(variability, ["All parameters", "Free parameters", "Fixed parameters", "Not fittable"][state.variability] + " (" + variabilityRows.length + ")", aspect === "icons");
     }
     function ncaf() {
         expected = JSON.parse(Probe.readFile("tests/fixtures/analysis_filters/ncaf.json"));
@@ -359,8 +366,8 @@ TestCase {
     }
     function test_ncaf_oracle() {
         ncaf();
-        compare(expected.length, 269, "The saved I 21 3 project has its independently counted parameter population");
-        compare(expected.filter(row => row.block === "wish_2_9").length, 44, "The reported wish bank has its independently counted complete parameter population");
+        compare(expected.length, 423, "The saved I 21 3 project has its independently counted parameter population");
+        compare(expected.filter(row => row.block === "wish_2_9").length, 67, "The reported wish bank has its independently counted complete parameter population");
         compare(expected.filter(row => row.category === "peak" && /^(rise_alpha_|decay_beta_)/.test(row.name)).length, 20, "The five banks each contribute four independent TOF asymmetry parameters");
         sameRows(expected, "The source-file and Wyckoff construction accounts for every real NCAF parameter identity");
         compare(actualRows().filter(row => row.free).map(identity).sort(), expected.filter(row => row.free).map(identity).sort(), "Saved value parentheses independently account for every NCAF free parameter");

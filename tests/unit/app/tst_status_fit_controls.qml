@@ -326,9 +326,12 @@ TestCase {
         if (light)
             tryVerify(() => paintedGrayMatches(fill, 1), 1500, "Secondary status buttons have a rendered white background in light mode");
         else
-            tryVerify(() => paintedLuminance(fill) > luminance(EaStyle.Colors.statusBarBackground), 1500, "Secondary status buttons are slightly lighter than the dark status bar");
+            tryVerify(() => paintedGrayMatches(fill, 0), 1500, "Secondary status buttons have a rendered black background in dark mode");
         compare(fill.border.width, 1, "Secondary status buttons have a one-pixel border");
-        tryVerify(() => colorsMatch(fill.border.color, EaStyle.Colors.appBarBorder), 1500, "Secondary button borders match the status bar's own border line");
+        if (light)
+            tryVerify(() => colorsMatch(fill.border.color, EaStyle.Colors.appBarBorder), 1500, "Light secondary button borders match the status bar's own border line");
+        else
+            verify(luminance(fill.border.color) > luminance(EaStyle.Colors.statusBarBackground), "Dark secondary borders are lighter than the status bar background");
         if (light)
             verify(luminance(fill.border.color) < luminance(EaStyle.Colors.statusBarBackground), "The light secondary border is darker than the status bar background");
         if (!canHover)
@@ -360,8 +363,8 @@ TestCase {
         const idleChannel = data.tag === "light" ? 0 : 1;
         tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "The enabled status Fit background is pure black in light mode and pure white in dark mode");
         tryVerify(() => data.tag === "light" ? paintedLuminance(outcome) > paintedLuminance(fill) : paintedLuminance(outcome) < paintedLuminance(fill), 1500, "The drawn outcome button has a lighter light-mode background and an inverse dark-mode hierarchy after overlay compositing");
-        fuzzyCompare(fill.height, outcome.height, 1, "Fit and outcome buttons have the same background height");
-        fuzzyCompare(fill.radius, outcome.radius, .5, "Fit and outcome buttons have the same rounded corners");
+        fuzzyCompare(fill.height - 2 * fill.border.width, outcome.height - 2 * outcome.border.width, 1, "Fit and outcome buttons have the same background height");
+        fuzzyCompare(fill.radius - fill.border.width, outcome.radius - outcome.border.width, .5, "Fit and outcome buttons have the same rounded corners");
         verify(fill.radius > 0, "The status Fit button has rounded corners");
         const label = View.textItems(button).filter(item => item.text === "Fit");
         compare(label.length, 1, "The status shortcut renders the white or inverse Fit caption");
@@ -421,8 +424,8 @@ TestCase {
         verify(reset.mapToItem(area(), reset.width, 0).x <= follow.mapToItem(area(), 0, 0).x && follow.mapToItem(area(), follow.width, 0).x <= button.mapToItem(area(), 0, 0).x, "The scan actions are ordered Reset, Follow, Fit at the right end");
         for (const item of [reset, follow]) {
             const fill = rectangle(item), fitFill = rectangle(button);
-            fuzzyCompare(fill.height, fitFill.height, 1, "Scan actions have Fit's framed height");
-            fuzzyCompare(fill.radius, fitFill.radius, .5, "Scan actions have Fit's corner radius");
+            fuzzyCompare(fill.height - 2 * fill.border.width, fitFill.height - 2 * fitFill.border.width, 1, "Scan actions have Fit's framed height");
+            fuzzyCompare(fill.radius - fill.border.width, fitFill.radius - fitFill.border.width, .5, "Scan actions have Fit's corner radius");
             fuzzyCompare(item.leftPadding, button.leftPadding, .5, "Scan actions have Fit's left padding");
             fuzzyCompare(item.rightPadding, button.rightPadding, .5, "Scan actions have Fit's right padding");
         }
@@ -542,6 +545,7 @@ TestCase {
         verify(sidebarFitActions().length === 0, "The sidebar has no Start, Stop, Continue, Follow or Reset controls");
         const table = findChild(Ui.page(appWindow), "parameters.list"), slider = findChild(Ui.page(appWindow), "parameters.slider");
         verify(table !== null && slider !== null && Ui.exposed(slider), "The expanded parameter table retains its visible value slider");
+        compare(EaStyle.Sizes.statusBarHeight, EaStyle.Sizes.tabBarHeight, "The status bar takes the tab bars' height while retaining the button body height");
         const initial = table.height;
         appWindow.height += 160;
         verify(waitForPolish(appWindow.contentItem), "Sidebar resizing finishes before checking table growth");
