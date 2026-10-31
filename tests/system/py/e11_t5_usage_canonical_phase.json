@@ -8,7 +8,7 @@
     "app/src/app_info.cpp": null,
     "app/src/assistant_view_model.cpp": null,
     "tests/system/py/test_e11_t5_dev_native_integration.py": "f217a03b7e8f274dc1b3cd140f8268e2edf8d1ef83877eeb424670a3f730046b",
-    "tests/integration/py/assistant_ui_probe/probe.cpp": "9a992415e8edb8c4aa50e5b82b8d6b526abedc82c6c4d87fcc0c19948080c2e7",
+    "tests/integration/py/assistant_ui_probe/probe.cpp": "1e5d1156dc1704dcb3e3b823427881d02a0964971b72de5875a0fe42f8bcde75",
     "tests/integration/py/assistant_ui_probe/codex_peer.py": "b3ac490856539a6f264dab4464780133cb5f934c7aede97b7d4cae76d098acdc",
     "tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp": "07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe",
     "app/src/app_info.hpp": null,

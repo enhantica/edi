@@ -96,7 +96,7 @@ def _source_inputs():
         if row['compiled']:
             assert receipt['compiled_sources'][row['path']] == row['sha256'], row['path']
     assert receipt['compiled_sources']['tests/integration/py/assistant_ui_probe/probe.cpp'] == (
-        '9a992415e8edb8c4aa50e5b82b8d6b526abedc82c6c4d87fcc0c19948080c2e7'
+        '1e5d1156dc1704dcb3e3b823427881d02a0964971b72de5875a0fe42f8bcde75'
     )
     assert (
         _sha(_absolute(os.environ['EDI_ASSISTANT_UI_PROBE']))
