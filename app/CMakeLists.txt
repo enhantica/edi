@@ -213,8 +213,10 @@ qt_add_qml_module(edi_app_module
     RESOURCES
         resources/logo/App.svg
 )
-# The Stacked view's line shader (edi ADR-0041), compiled for every graphics API Qt Quick runs on.
-qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" FILES shaders/scan_line.vert shaders/scan_line.frag)
+# The Stacked view's line shader (edi ADR-0041), compiled for every graphics API Qt Quick runs on. Its fragment stage
+# reads the points texture with texelFetch, which needs GLSL 1.50 or GLSL ES 3.00 (WebGL 2).
+qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" GLSL "300es,150"
+    FILES shaders/scan_line.vert shaders/scan_line.frag)
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
