@@ -20,7 +20,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
@@ -111,6 +110,24 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     } == expected, 'public docs placement must preserve every packed webapp asset byte'
     assert (docs / 'index.html').read_text() == 'Independent documentation transport witness', (
         'placing the webapp must preserve the rendered documentation landing page'
+    )
+
+
+def test_public_webapp_packer_preserves_inventory_through_symlinked_build_parent(tmp_path):
+    physical = tmp_path / 'physical wasm'
+    physical.mkdir()
+    alias = tmp_path / 'source/build/wasm'
+    alias.parent.mkdir(parents=True)
+    alias.symlink_to(physical, target_is_directory=True)
+    assert alias.is_symlink(), 'The actual packer follows an armed external build-parent alias'
+    # Reuse EVERY original actual-packer/archive/vendor/docs-placement assertion,
+    # with the SAME fixture bytes and ordinary subprocess budgets.
+    test_public_webapp_packer_excludes_native_build_outputs(tmp_path)
+    assert (physical / 'edi-webapp.zip').is_file(), (
+        'The normal site zip is published at the actual destination'
+    )
+    assert (physical / 'site').is_dir(), (
+        'The packed site lives under the same physical build parent'
     )
 
 
