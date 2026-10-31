@@ -628,7 +628,7 @@ TestCase {
         ];
     }
     function resultBytes() {
-        const directory = Session.projectDirectoryUrl;
+        const directory = Session.projectDirectoryUrl(Session.project.path);
         verify(String(directory).startsWith("file:"), "Result observations use the current project's converted local directory URL");
         return ["results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"].map(name => {
             const relative = "analysis/" + name;
