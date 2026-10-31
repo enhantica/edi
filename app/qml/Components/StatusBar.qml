@@ -10,8 +10,9 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home. The
-// first item, always present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
+// The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home unless the
+// Analysis page is enabled, so its Fit button is there on every page (the owner, 2026-10-26). The first item, always
+// present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
 // The fit area on the right follows the running fit and then summarises the last one (§17), as status items like the
 // ones on the left: the live values with the progress bar at the far right, then the outcome and the values.
 EaElements.StatusBar {
@@ -24,7 +25,7 @@ EaElements.StatusBar {
     property int pagesWanted: 0
     readonly property bool opening: pagesWanted > 0 && pagesBuilt < pagesWanted
 
-    visible: EaGlobals.Vars.appBarCurrentIndex !== 0
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
