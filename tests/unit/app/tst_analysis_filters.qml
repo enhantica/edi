@@ -420,10 +420,10 @@ TestCase {
         if (data.action === "fit") {
             open("tests/fixtures/analysis_filters/project");
             for (const row of expected)
-                row.free = row.category === "background" && row.label === "c0";
+                row.free = row.category === "background" && row.label === "c0" && row.name === "coef";
             for (const row of Probe.rows(Session.project.parameters)) {
                 const parameter = row.parameter;
-                parameter.free = parameter.category === "background" && parameter.rowLabel === "c0";
+                parameter.free = parameter.uid === "background.coef" && parameter.rowLabel === "c0";
             }
             state = {
                 block: "east",
