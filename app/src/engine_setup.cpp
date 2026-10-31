@@ -4,9 +4,6 @@
 #include <QThread>
 #include <QJSEngine>
 #include <stdexcept>
-#include <chrono>
-#include <cstdio>
-#include <limits>
 
 #include <QDir>
 #include <QFile>
@@ -156,83 +153,20 @@ class PageIncubation : public QObject, public QQmlIncubationController {
    public:
     PageIncubation() {
         timer_.setInterval(0);
-        QObject::connect(&timer_, &QTimer::timeout, &timer_, [this] {
-            if (observing_) { increment(timeout_entries_); record("timeout_entry"); }
-            incubateFor(50);
-            if (observing_) { increment(timeout_returns_); record("timeout_return"); }
-        });
-        if (observing_) record("start");
-    }
-    ~PageIncubation() override { if (observing_) record("finish", -1, nullptr, true); }
-
-    // Temporary native observation only; remove after diagnosis.
-    void observeAttachment(QQmlEngine* configured, bool after) noexcept {
-        if (observing_) record(after ? "attach_after" : "attach_before", -1, configured);
+        QObject::connect(&timer_, &QTimer::timeout, &timer_, [this] { incubateFor(50); });
     }
 
    protected:
     void incubatingObjectCountChanged(int count) override {
-        if (observing_) { increment(count_entries_); record("count_entry", count); }
         if (count > 0) {
             timer_.start();
         } else {
             timer_.stop();
         }
-        if (observing_) { increment(count_returns_); record("count_return", count); }
     }
 
    private:
-    void increment(quint64& value) noexcept {
-        if (value == std::numeric_limits<quint64>::max()) counter_saturated_ = true;
-        else ++value;
-    }
-    void record(const char* event, int reported = -1, QQmlEngine* configured = nullptr, bool terminal = false) noexcept {
-        if (!observing_) return;
-        if (!terminal && records_ >= kRecordLimit) {
-            if (limit_reported_) return;
-            limit_reported_ = true;
-            event = "limit";
-        }
-        try {
-            const auto now = std::chrono::steady_clock::now();
-            if (records_ == 0) started_ = now;
-            const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(now - started_).count();
-            auto* activeEngine = engine();
-            auto* activeController = activeEngine ? activeEngine->incubationController() : nullptr;
-            auto* configuredController = configured ? configured->incubationController() : nullptr;
-            auto* ownController = static_cast<QQmlIncubationController*>(this);
-            increment(records_);
-            char text[1536];
-            const int length = std::snprintf(text, sizeof(text),
-                "EDI_PAGE_INCUBATION {\"event\":\"%s\",\"seq\":%llu,\"elapsed_ns\":%lld,"
-                "\"controller_id\":\"%p\",\"engine_id\":\"%p\",\"engine_controller_id\":\"%p\","
-                "\"engine_owns_controller\":%s,\"configured_engine_id\":\"%p\",\"configured_controller_id\":\"%p\","
-                "\"configured_engine_owns_controller\":%s,\"public_count\":%d,\"reported_count\":%d,"
-                "\"timer_active\":%s,\"timer_interval\":%d,\"timer_thread_matches\":%s,"
-                "\"timeout_entries\":%llu,\"timeout_returns\":%llu,\"count_entries\":%llu,\"count_returns\":%llu,"
-                "\"record_limit_reached\":%s,\"counter_saturated\":%s,\"observer_exception\":%s,"
-                "\"qinfo_write_health\":\"unobservable\"}",
-                event, static_cast<unsigned long long>(records_), static_cast<long long>(elapsed),
-                static_cast<void*>(ownController), static_cast<void*>(activeEngine), static_cast<void*>(activeController),
-                activeEngine && activeController == ownController ? "true" : "false",
-                static_cast<void*>(configured), static_cast<void*>(configuredController),
-                configured && configuredController == ownController ? "true" : "false",
-                incubatingObjectCount(), reported, timer_.isActive() ? "true" : "false", timer_.interval(),
-                timer_.thread() == QThread::currentThread() ? "true" : "false",
-                static_cast<unsigned long long>(timeout_entries_), static_cast<unsigned long long>(timeout_returns_),
-                static_cast<unsigned long long>(count_entries_), static_cast<unsigned long long>(count_returns_),
-                limit_reported_ ? "true" : "false", counter_saturated_ ? "true" : "false", observer_exception_ ? "true" : "false");
-            if (length < 0 || static_cast<std::size_t>(length) >= sizeof(text)) { observer_exception_ = true; return; }
-            qInfo("%s", text);
-        } catch (...) { observer_exception_ = true; }
-    }
     QTimer timer_;
-    const bool observing_ = qEnvironmentVariableIntValue("EDI_TEST_PAGE_INCUBATION") == 1;
-    // Diagnostic-only bounds/counters; never consulted by the incubation flow.
-    static constexpr quint64 kRecordLimit = 4096;
-    quint64 records_ = 0, timeout_entries_ = 0, timeout_returns_ = 0, count_entries_ = 0, count_returns_ = 0;
-    bool limit_reported_ = false, counter_saturated_ = false, observer_exception_ = false;
-    std::chrono::steady_clock::time_point started_;
 };
 
 // A bundled font file's family, registered from the base's font resources; empty when the file is missing.
@@ -305,9 +239,7 @@ QByteArray& platform_spec() {
 
 static void configure_engine_settings(QQmlEngine& engine) {
     static PageIncubation incubation;
-    incubation.observeAttachment(&engine, false);
     engine.setIncubationController(&incubation);
-    incubation.observeAttachment(&engine, true);
     // The base's Settings objects write here (Globals/Vars.qml `pySettingsPath`); without it they would
     // point inside the read-only module resources. A demo or a test run uses its fresh directory.
     const QString config_dir = fresh_config_dir().isEmpty()
