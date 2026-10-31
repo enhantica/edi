@@ -357,14 +357,14 @@ EaElements.GroupBox {
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
             // A layout of its own (the owner, 2026-10-27): the name a little wider than its longest shown name, icons
-            // and text; the units as their text; of the rest, value and s.u. three tenths each, min and max two
-            // tenths each; free at the right with a wider gap before it. Value takes what rounding leaves.
+            // and text; the units as their text; value, s.u., min and max share the rest equally; free at the right
+            // with a wider gap before it. Value takes what rounding leaves.
             equalColumns: true
             readonly property real nameWidth: (fittedWidths[1] ?? 0) + autoColumnPadding + EaStyle.Sizes.fontPixelSize
             readonly property real unitsWidth: (fittedWidths[3] ?? 0) + autoColumnPadding
             readonly property real freeWidth: group.measured ? group.freeColumnWidth : 0
             readonly property real restWidth: Math.max(0, width - numberColumnWidth - nameWidth - unitsWidth - freeWidth - EaStyle.Sizes.tableColumnSpacing * (group.measured ? 7 : 6) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2)
-            columns: [numberColumnWidth, nameWidth, -1, unitsWidth, restWidth * 0.3, restWidth * 0.2, restWidth * 0.2].concat(group.measured ? [freeWidth] : [])
+            columns: [numberColumnWidth, nameWidth, -1, unitsWidth, restWidth * 0.25, restWidth * 0.25, restWidth * 0.25].concat(group.measured ? [freeWidth] : [])
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
