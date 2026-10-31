@@ -1791,7 +1791,7 @@
         },
         {
           "member": "FitResultRecord::reduced_chi_square",
-          "type": "double",
+          "type": "std::optional<double>",
           "items": [
             "reduced_chi_square"
           ]
@@ -1805,7 +1805,7 @@
         },
         {
           "member": "FitResultRecord::objective_value",
-          "type": "double",
+          "type": "std::optional<double>",
           "items": [
             "objective_value"
           ]
@@ -1854,7 +1854,7 @@
         },
         {
           "member": "FitResultRecord::prof_wr_factor",
-          "type": "double",
+          "type": "std::optional<double>",
           "items": [
             "prof_wr_factor"
           ]
@@ -2097,6 +2097,11 @@
         },
         {
           "member": "Project::scan_data_root",
+          "type": "std::string",
+          "items": []
+        },
+        {
+          "member": "Project::archive",
           "type": "std::string",
           "items": []
         }
@@ -4455,6 +4460,11 @@
       "not_storage": "what the computed categories were computed from"
     },
     {
+      "member": "ExperimentBase::carried_calculation",
+      "type": "bool",
+      "not_storage": "whether its file held calculated results"
+    },
+    {
       "member": "ExperimentBase::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
@@ -4933,7 +4943,7 @@
     },
     {
       "member": "FitResultRecord::reduced_chi_square",
-      "type": "double",
+      "type": "std::optional<double>",
       "category": "_fit_result"
     },
     {
@@ -4943,7 +4953,7 @@
     },
     {
       "member": "FitResultRecord::objective_value",
-      "type": "double",
+      "type": "std::optional<double>",
       "category": "_fit_result"
     },
     {
@@ -4978,7 +4988,7 @@
     },
     {
       "member": "FitResultRecord::prof_wr_factor",
-      "type": "double",
+      "type": "std::optional<double>",
       "category": "_fit_result"
     },
     {
@@ -5111,6 +5121,11 @@
     },
     {
       "member": "Project::scan_data_root",
+      "type": "std::string",
+      "category": "project"
+    },
+    {
+      "member": "Project::archive",
       "type": "std::string",
       "category": "project"
     },

@@ -50,7 +50,18 @@ second between successive live drawings; only-at-the-end mode draws only the
 final file after completion. All modes must settle on the final file.
 
 Run the system module with `pixi run python -m pytest
- tests/system/py/test_scan_screen.py`. Builds are private and use the linked
-published SDK and its matching Git source. To reuse qualified builds, set
+ tests/system/py/test_scan_screen.py`. Desktop uses the delivered normal
+`build/app/app/edi_app`; receipt preparation does not compile it. It must carry
+the canonical `edi-build-commit:<full sha>\n` marker produced by
+`cmake/build_commit.cmake` with `MARKER` and `MARK_DIRTY` enabled. The marker
+must identify clean checkout HEAD. Missing, stale, dirty, conflicting identities
+and uncommitted source inputs are refused. Receipt hashes cannot replace that
+binary witness; cached and supplied receipts recheck it before and after capture.
+
+The browser builds privately from `git archive <source_sha>` using the linked
+published SDK and matching Git source. Uncommitted working-tree changes are
+excluded. `source-policy.json` and the receipt's `source_policy` explicitly name
+that revision and exclusion; fixture instrumentation is recorded separately.
+To reuse qualified builds, set
 `EDI_SCAN_SCREEN_DESKTOP_RECEIPT` and `EDI_SCAN_SCREEN_BROWSER_RECEIPT` to their
 `receipt.json` files. Receipts bind production source and executable bytes.

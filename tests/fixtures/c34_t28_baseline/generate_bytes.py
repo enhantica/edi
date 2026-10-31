@@ -131,7 +131,7 @@ def legacy_input_hashes(directory, case, *, excluded=False):
 
 def without_saved_calculator(name, contents, *, excluded=False):
     if excluded:
-        contents = historical_excluded_bytes(name, contents)
+        contents = historical_excluded_bytes(name, contents, saved_precision=True)
     # Exact canonical block from 's independent CIF contract and retained
     # main-tree byte witness; this is not a new engine-output regression pin.
     if not (name.startswith('experiments/') and name.endswith('.edi')):

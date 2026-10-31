@@ -1,5 +1,7 @@
 {
   "source_commit": "16b8cca9b903ee4bbdff45a4201bcd649b5a39a8",
+  "single_crystal_source_commit": "fe080a385eea3422cd3660c65563933966a5923d",
+  "single_crystal_scope": "Tolerance-policy retention pins from the first committed single-crystal comparisons; numerical correctness remains bound to the external FullProf outputs, not these pins",
   "scope": "Unchanged comparison bounds before the October 24 minor-phase disposition; these are tolerance-policy retention pins, never calculated correctness values",
   "cases": {
     "pd-neut-cwl_lbco-hrpt": {
@@ -1168,6 +1170,698 @@
         },
         "param.latp.cell_length_c.value": {
           "tol_abs": 0.0015949516252,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "sc-neut-cwl_tb2ti2o7-heidi": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 1e-06
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "sc-neut-cwl_pr2nio4-5c2": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.Pr.fract_z.value": {
+          "tol_abs": 0.00015190482954,
+          "tol_rel": null
+        },
+        "param.Pr.adp_11.value": {
+          "tol_abs": 0.060437187,
+          "tol_rel": null
+        },
+        "param.Pr.adp_22.value": {
+          "tol_abs": 0.05833385988,
+          "tol_rel": null
+        },
+        "param.Pr.adp_33.value": {
+          "tol_abs": 0.04756878476,
+          "tol_rel": null
+        },
+        "param.Ni.adp_11.value": {
+          "tol_abs": 0.03808730192,
+          "tol_rel": null
+        },
+        "param.Ni.adp_22.value": {
+          "tol_abs": 0.03607405166,
+          "tol_rel": null
+        },
+        "param.Ni.adp_33.value": {
+          "tol_abs": 0.03580400006,
+          "tol_rel": null
+        },
+        "param.O1.adp_11.value": {
+          "tol_abs": 0.05410485114,
+          "tol_rel": null
+        },
+        "param.O1.adp_22.value": {
+          "tol_abs": 0.05271675714,
+          "tol_rel": null
+        },
+        "param.O1.adp_33.value": {
+          "tol_abs": 0.06320749272,
+          "tol_rel": null
+        },
+        "param.O1.adp_12.value": {
+          "tol_abs": 0.0335666569,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.00018849034964,
+          "tol_rel": null
+        },
+        "param.O2.adp_11.value": {
+          "tol_abs": 0.13538476154,
+          "tol_rel": null
+        },
+        "param.O2.adp_22.value": {
+          "tol_abs": 0.12919731038,
+          "tol_rel": null
+        },
+        "param.O2.adp_33.value": {
+          "tol_abs": 0.06486102678,
+          "tol_rel": null
+        },
+        "param.Oi.adp_11.value": {
+          "tol_abs": 0.7410589512,
+          "tol_rel": null
+        },
+        "param.Oi.adp_22.value": {
+          "tol_abs": 0.7170087636,
+          "tol_rel": null
+        },
+        "param.Oi.adp_33.value": {
+          "tol_abs": 0.4490963104,
+          "tol_rel": null
+        },
+        "param.Od.fract_x.value": {
+          "tol_abs": 0.004254754672,
+          "tol_rel": null
+        },
+        "param.Od.fract_y.value": {
+          "tol_abs": 0.003725339092,
+          "tol_rel": null
+        },
+        "param.Od.fract_z.value": {
+          "tol_abs": 0.0013602607474,
+          "tol_rel": null
+        },
+        "param.Od.adp_iso.value": {
+          "tol_abs": 0.3068088176,
+          "tol_rel": null
+        },
+        "param.scale.value": {
+          "tol_abs": 0.056497278,
+          "tol_rel": null
+        },
+        "iterations": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "reduced_chi_square": {
+          "tol_abs": 1e-06,
+          "tol_rel": null
+        }
+      }
+    },
+    "sc-neut-tof_taurine-senju": {
+      "default": {
+        "n_free": {
+          "tol_abs": 0.0,
+          "tol_rel": null
+        },
+        "rwp": {
+          "tol_abs": null,
+          "tol_rel": 0.05
+        },
+        "param.senju_1.scale.value": {
+          "tol_abs": 0.1188716199,
+          "tol_rel": null
+        },
+        "param.senju_2.scale.value": {
+          "tol_abs": 0.17842328726,
+          "tol_rel": null
+        },
+        "param.senju_3.scale.value": {
+          "tol_abs": 0.12730538338,
+          "tol_rel": null
+        },
+        "param.senju_4.scale.value": {
+          "tol_abs": 0.12965589278,
+          "tol_rel": null
+        },
+        "param.senju_5.scale.value": {
+          "tol_abs": 0.12616100786,
+          "tol_rel": null
+        },
+        "param.senju_6.scale.value": {
+          "tol_abs": 0.12768825592,
+          "tol_rel": null
+        },
+        "param.senju_1.coefficient_11.value": {
+          "tol_abs": 0.007107061452,
+          "tol_rel": null
+        },
+        "param.H22.adp_11.value": {
+          "tol_abs": 0.008557007484,
+          "tol_rel": null
+        },
+        "param.H21.adp_11.value": {
+          "tol_abs": 0.00888265123,
+          "tol_rel": null
+        },
+        "param.S1.fract_x.value": {
+          "tol_abs": 0.002729875234,
+          "tol_rel": null
+        },
+        "param.S1.fract_y.value": {
+          "tol_abs": 0.0014929852184,
+          "tol_rel": null
+        },
+        "param.S1.fract_z.value": {
+          "tol_abs": 0.0017101708608,
+          "tol_rel": null
+        },
+        "param.O1.fract_x.value": {
+          "tol_abs": 0.0017771526824,
+          "tol_rel": null
+        },
+        "param.O1.fract_y.value": {
+          "tol_abs": 0.0008458640678,
+          "tol_rel": null
+        },
+        "param.O1.fract_z.value": {
+          "tol_abs": 0.0010367798592,
+          "tol_rel": null
+        },
+        "param.O2.fract_x.value": {
+          "tol_abs": 0.0016574064842,
+          "tol_rel": null
+        },
+        "param.O2.fract_y.value": {
+          "tol_abs": 0.0009977073262,
+          "tol_rel": null
+        },
+        "param.O2.fract_z.value": {
+          "tol_abs": 0.0011547287832,
+          "tol_rel": null
+        },
+        "param.O3.fract_x.value": {
+          "tol_abs": 0.0016296095578,
+          "tol_rel": null
+        },
+        "param.O3.fract_y.value": {
+          "tol_abs": 0.0009125843454,
+          "tol_rel": null
+        },
+        "param.O3.fract_z.value": {
+          "tol_abs": 0.0008651954188,
+          "tol_rel": null
+        },
+        "param.N1.fract_x.value": {
+          "tol_abs": 0.0013132597516,
+          "tol_rel": null
+        },
+        "param.N1.fract_y.value": {
+          "tol_abs": 0.000521242858,
+          "tol_rel": null
+        },
+        "param.N1.fract_z.value": {
+          "tol_abs": 0.0006878893344,
+          "tol_rel": null
+        },
+        "param.H1.fract_x.value": {
+          "tol_abs": 0.003522316938,
+          "tol_rel": null
+        },
+        "param.H1.fract_y.value": {
+          "tol_abs": 0.001571731699,
+          "tol_rel": null
+        },
+        "param.H1.fract_z.value": {
+          "tol_abs": 0.0019657092892,
+          "tol_rel": null
+        },
+        "param.H2.fract_x.value": {
+          "tol_abs": 0.003565503714,
+          "tol_rel": null
+        },
+        "param.H2.fract_y.value": {
+          "tol_abs": 0.0016673072008,
+          "tol_rel": null
+        },
+        "param.H2.fract_z.value": {
+          "tol_abs": 0.0019612912274,
+          "tol_rel": null
+        },
+        "param.H3.fract_x.value": {
+          "tol_abs": 0.003799440464,
+          "tol_rel": null
+        },
+        "param.H3.fract_y.value": {
+          "tol_abs": 0.001560633706,
+          "tol_rel": null
+        },
+        "param.H3.fract_z.value": {
+          "tol_abs": 0.002132658272,
+          "tol_rel": null
+        },
+        "param.C1.fract_x.value": {
+          "tol_abs": 0.001653221598,
+          "tol_rel": null
+        },
+        "param.C1.fract_y.value": {
+          "tol_abs": 0.0006944636858,
+          "tol_rel": null
+        },
+        "param.C1.fract_z.value": {
+          "tol_abs": 0.0008399743868,
+          "tol_rel": null
+        },
+        "param.H11.fract_x.value": {
+          "tol_abs": 0.00353197714,
+          "tol_rel": null
+        },
+        "param.H11.fract_y.value": {
+          "tol_abs": 0.0017174377964,
+          "tol_rel": null
+        },
+        "param.H11.fract_z.value": {
+          "tol_abs": 0.002072565882,
+          "tol_rel": null
+        },
+        "param.H12.fract_x.value": {
+          "tol_abs": 0.003636630646,
+          "tol_rel": null
+        },
+        "param.H12.fract_y.value": {
+          "tol_abs": 0.0014964275022,
+          "tol_rel": null
+        },
+        "param.H12.fract_z.value": {
+          "tol_abs": 0.0018409131206,
+          "tol_rel": null
+        },
+        "param.C2.fract_x.value": {
+          "tol_abs": 0.0017805702064,
+          "tol_rel": null
+        },
+        "param.C2.fract_y.value": {
+          "tol_abs": 0.0006752958022,
+          "tol_rel": null
+        },
+        "param.C2.fract_z.value": {
+          "tol_abs": 0.0008400370864,
+          "tol_rel": null
+        },
+        "param.H21.fract_x.value": {
+          "tol_abs": 0.00391168282,
+          "tol_rel": null
+        },
+        "param.H21.fract_y.value": {
+          "tol_abs": 0.0016069809962,
+          "tol_rel": null
+        },
+        "param.H21.fract_z.value": {
+          "tol_abs": 0.0018744112452,
+          "tol_rel": null
+        },
+        "param.H22.fract_x.value": {
+          "tol_abs": 0.003933776574,
+          "tol_rel": null
+        },
+        "param.H22.fract_y.value": {
+          "tol_abs": 0.0017088950072,
+          "tol_rel": null
+        },
+        "param.H22.fract_z.value": {
+          "tol_abs": 0.002073570844,
+          "tol_rel": null
+        },
+        "param.S1.adp_11.value": {
+          "tol_abs": 0.005697805582,
+          "tol_rel": null
+        },
+        "param.O1.adp_11.value": {
+          "tol_abs": 0.004258978154,
+          "tol_rel": null
+        },
+        "param.O2.adp_11.value": {
+          "tol_abs": 0.00341248243,
+          "tol_rel": null
+        },
+        "param.O3.adp_11.value": {
+          "tol_abs": 0.004202890784,
+          "tol_rel": null
+        },
+        "param.N1.adp_11.value": {
+          "tol_abs": 0.002513271416,
+          "tol_rel": null
+        },
+        "param.H1.adp_11.value": {
+          "tol_abs": 0.009192205654,
+          "tol_rel": null
+        },
+        "param.H2.adp_11.value": {
+          "tol_abs": 0.008373055952,
+          "tol_rel": null
+        },
+        "param.H3.adp_11.value": {
+          "tol_abs": 0.008377074652,
+          "tol_rel": null
+        },
+        "param.C1.adp_11.value": {
+          "tol_abs": 0.003366386452,
+          "tol_rel": null
+        },
+        "param.H11.adp_11.value": {
+          "tol_abs": 0.008131357514,
+          "tol_rel": null
+        },
+        "param.H12.adp_11.value": {
+          "tol_abs": 0.009155961564,
+          "tol_rel": null
+        },
+        "param.C2.adp_11.value": {
+          "tol_abs": 0.003592503346,
+          "tol_rel": null
+        },
+        "param.S1.adp_22.value": {
+          "tol_abs": 0.0013914291178,
+          "tol_rel": null
+        },
+        "param.S1.adp_33.value": {
+          "tol_abs": 0.00246122346,
+          "tol_rel": null
+        },
+        "param.S1.adp_12.value": {
+          "tol_abs": 0.0019640881064,
+          "tol_rel": null
+        },
+        "param.S1.adp_13.value": {
+          "tol_abs": 0.002802813962,
+          "tol_rel": null
+        },
+        "param.S1.adp_23.value": {
+          "tol_abs": 0.0012013158468,
+          "tol_rel": null
+        },
+        "param.O1.adp_22.value": {
+          "tol_abs": 0.0009732615934,
+          "tol_rel": null
+        },
+        "param.O1.adp_33.value": {
+          "tol_abs": 0.0014693747474,
+          "tol_rel": null
+        },
+        "param.O1.adp_12.value": {
+          "tol_abs": 0.0012955806286,
+          "tol_rel": null
+        },
+        "param.O1.adp_13.value": {
+          "tol_abs": 0.0019632450918,
+          "tol_rel": null
+        },
+        "param.O1.adp_23.value": {
+          "tol_abs": 0.0007993767528,
+          "tol_rel": null
+        },
+        "param.O2.adp_22.value": {
+          "tol_abs": 0.0009795508912,
+          "tol_rel": null
+        },
+        "param.O2.adp_33.value": {
+          "tol_abs": 0.0018479033866,
+          "tol_rel": null
+        },
+        "param.O2.adp_12.value": {
+          "tol_abs": 0.0012912144872,
+          "tol_rel": null
+        },
+        "param.O2.adp_13.value": {
+          "tol_abs": 0.0018527450602,
+          "tol_rel": null
+        },
+        "param.O2.adp_23.value": {
+          "tol_abs": 0.0009249994112,
+          "tol_rel": null
+        },
+        "param.O3.adp_22.value": {
+          "tol_abs": 0.0008968313868,
+          "tol_rel": null
+        },
+        "param.O3.adp_33.value": {
+          "tol_abs": 0.0012975739478,
+          "tol_rel": null
+        },
+        "param.O3.adp_12.value": {
+          "tol_abs": 0.0012697765218,
+          "tol_rel": null
+        },
+        "param.O3.adp_13.value": {
+          "tol_abs": 0.0017785488654,
+          "tol_rel": null
+        },
+        "param.O3.adp_23.value": {
+          "tol_abs": 0.0006734056748,
+          "tol_rel": null
+        },
+        "param.N1.adp_22.value": {
+          "tol_abs": 0.0005650799974,
+          "tol_rel": null
+        },
+        "param.N1.adp_33.value": {
+          "tol_abs": 0.0008509492334,
+          "tol_rel": null
+        },
+        "param.N1.adp_12.value": {
+          "tol_abs": 0.000940054118,
+          "tol_rel": null
+        },
+        "param.N1.adp_13.value": {
+          "tol_abs": 0.0010683893222,
+          "tol_rel": null
+        },
+        "param.N1.adp_23.value": {
+          "tol_abs": 0.000481376768,
+          "tol_rel": null
+        },
+        "param.H1.adp_22.value": {
+          "tol_abs": 0.0018695652398,
+          "tol_rel": null
+        },
+        "param.H1.adp_33.value": {
+          "tol_abs": 0.002829075872,
+          "tol_rel": null
+        },
+        "param.H1.adp_12.value": {
+          "tol_abs": 0.002947742856,
+          "tol_rel": null
+        },
+        "param.H1.adp_13.value": {
+          "tol_abs": 0.004021103226,
+          "tol_rel": null
+        },
+        "param.H1.adp_23.value": {
+          "tol_abs": 0.0016578224694,
+          "tol_rel": null
+        },
+        "param.H2.adp_22.value": {
+          "tol_abs": 0.001773896542,
+          "tol_rel": null
+        },
+        "param.H2.adp_33.value": {
+          "tol_abs": 0.002697973456,
+          "tol_rel": null
+        },
+        "param.H2.adp_12.value": {
+          "tol_abs": 0.00279624319,
+          "tol_rel": null
+        },
+        "param.H2.adp_13.value": {
+          "tol_abs": 0.00367292192,
+          "tol_rel": null
+        },
+        "param.H2.adp_23.value": {
+          "tol_abs": 0.0016475418544,
+          "tol_rel": null
+        },
+        "param.H3.adp_22.value": {
+          "tol_abs": 0.0019622367702,
+          "tol_rel": null
+        },
+        "param.H3.adp_33.value": {
+          "tol_abs": 0.003240840278,
+          "tol_rel": null
+        },
+        "param.H3.adp_12.value": {
+          "tol_abs": 0.002648720924,
+          "tol_rel": null
+        },
+        "param.H3.adp_13.value": {
+          "tol_abs": 0.003860651448,
+          "tol_rel": null
+        },
+        "param.H3.adp_23.value": {
+          "tol_abs": 0.0016917084374,
+          "tol_rel": null
+        },
+        "param.C1.adp_22.value": {
+          "tol_abs": 0.000663214088,
+          "tol_rel": null
+        },
+        "param.C1.adp_33.value": {
+          "tol_abs": 0.0010889849336,
+          "tol_rel": null
+        },
+        "param.C1.adp_12.value": {
+          "tol_abs": 0.0010314381692,
+          "tol_rel": null
+        },
+        "param.C1.adp_13.value": {
+          "tol_abs": 0.0013677266134,
+          "tol_rel": null
+        },
+        "param.C1.adp_23.value": {
+          "tol_abs": 0.0005933439844,
+          "tol_rel": null
+        },
+        "param.H11.adp_22.value": {
+          "tol_abs": 0.00202259431,
+          "tol_rel": null
+        },
+        "param.H11.adp_33.value": {
+          "tol_abs": 0.003380110012,
+          "tol_rel": null
+        },
+        "param.H11.adp_12.value": {
+          "tol_abs": 0.00260177928,
+          "tol_rel": null
+        },
+        "param.H11.adp_13.value": {
+          "tol_abs": 0.003621147602,
+          "tol_rel": null
+        },
+        "param.H11.adp_23.value": {
+          "tol_abs": 0.001625106607,
+          "tol_rel": null
+        },
+        "param.H12.adp_22.value": {
+          "tol_abs": 0.0018846210946,
+          "tol_rel": null
+        },
+        "param.H12.adp_33.value": {
+          "tol_abs": 0.002569331248,
+          "tol_rel": null
+        },
+        "param.H12.adp_12.value": {
+          "tol_abs": 0.00287704387,
+          "tol_rel": null
+        },
+        "param.H12.adp_13.value": {
+          "tol_abs": 0.003754711438,
+          "tol_rel": null
+        },
+        "param.H12.adp_23.value": {
+          "tol_abs": 0.0014525046222,
+          "tol_rel": null
+        },
+        "param.C2.adp_22.value": {
+          "tol_abs": 0.000746750439,
+          "tol_rel": null
+        },
+        "param.C2.adp_33.value": {
+          "tol_abs": 0.0011291024364,
+          "tol_rel": null
+        },
+        "param.C2.adp_12.value": {
+          "tol_abs": 0.001203570518,
+          "tol_rel": null
+        },
+        "param.C2.adp_13.value": {
+          "tol_abs": 0.001406119763,
+          "tol_rel": null
+        },
+        "param.C2.adp_23.value": {
+          "tol_abs": 0.0006412396618,
+          "tol_rel": null
+        },
+        "param.H21.adp_22.value": {
+          "tol_abs": 0.002096116176,
+          "tol_rel": null
+        },
+        "param.H21.adp_33.value": {
+          "tol_abs": 0.002508700082,
+          "tol_rel": null
+        },
+        "param.H21.adp_12.value": {
+          "tol_abs": 0.00315356973,
+          "tol_rel": null
+        },
+        "param.H21.adp_13.value": {
+          "tol_abs": 0.003480476652,
+          "tol_rel": null
+        },
+        "param.H21.adp_23.value": {
+          "tol_abs": 0.0016068303114,
+          "tol_rel": null
+        },
+        "param.H22.adp_22.value": {
+          "tol_abs": 0.0019281928984,
+          "tol_rel": null
+        },
+        "param.H22.adp_33.value": {
+          "tol_abs": 0.003502570582,
+          "tol_rel": null
+        },
+        "param.H22.adp_12.value": {
+          "tol_abs": 0.002830598288,
+          "tol_rel": null
+        },
+        "param.H22.adp_13.value": {
+          "tol_abs": 0.00412616864,
+          "tol_rel": null
+        },
+        "param.H22.adp_23.value": {
+          "tol_abs": 0.001756116106,
+          "tol_rel": null
+        },
+        "param.senju_1.coefficient_22.value": {
+          "tol_abs": 0.00297860395,
+          "tol_rel": null
+        },
+        "param.senju_1.coefficient_33.value": {
+          "tol_abs": 0.002933684074,
           "tol_rel": null
         },
         "iterations": {

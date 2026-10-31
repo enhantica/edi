@@ -24,6 +24,14 @@ and saves them in `analysis.edi`.
 4. **Shown in per cent, Rwp first.** The fit results table lists Rwp, Rp, Rexp, cRwp and cRp, then each experiment's
    when the fit covered several, then each phase's R_Bragg and R_F, named by its structure (and experiment when there
    are several). A factor the record does not hold has no row.
+5. **A factor that is not a number is none.** A fit over points with no weight or no signal gives a factor that is
+   not a number. The record holds none for it, as for a factor it never had: a save leaves it out, a load reads it
+   absent, and the table and the reports show nothing for it. The pooled Rwp, reduced χ² and objective value, and
+   each experiment's Rwp, are optional for this reason, though a save always wrote them before. No factor is ever
+   the zero an empty sum gives: a fit records none for a dataset it covered no points of, and a save's refresh leaves
+   the factors a record holds for a dataset, or for the pool, it has no point to assess. An experiment's share of the fit is marked by any of its
+   fields, not by its Rwp alone. When the record holds shares, an experiment without one shows no factors; the pooled
+   ones stand in only for a record with no shares at all (a single fit saved before them).
 
 ## Consequences
 

@@ -786,9 +786,12 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
         result.rows = {{"Overall status", status_word(record), ""},
                        {label("fit_result.fitting_time"), duration_text(record.fitting_time),
                         units_label("fit_result.fitting_time")},
-                       {label("fit_result.iterations"), std::to_string(record.iterations), ""},
-                       {label("fit_result.reduced_chi_square"),
-                        formatted("fit_result.reduced_chi_square", record.reduced_chi_square), ""}};
+                       {label("fit_result.iterations"), std::to_string(record.iterations), ""}};
+        // An agreement factor that was not a number is none, and has no row.
+        if (record.reduced_chi_square) {
+            result.rows.push_back({label("fit_result.reduced_chi_square"),
+                                   formatted("fit_result.reduced_chi_square", *record.reduced_chi_square), ""});
+        }
         // A single crystal's fit is over F²: crysta records its R(F²) and wR(F²) as the profile pair, which the
         // dictionary names by the sample form.
         const bool single_crystal =
@@ -801,9 +804,11 @@ std::vector<ReportCategory> analysis_of(const Project& project, const std::optio
                                    formatted("fit_result.prof_r_factor", *record.prof_r_factor, form),
                                    units_label("fit_result.prof_r_factor", form)});
         }
-        result.rows.push_back({label("fit_result.prof_wr_factor", form),
-                               formatted("fit_result.prof_wr_factor", record.prof_wr_factor, form),
-                               units_label("fit_result.prof_wr_factor", form)});
+        if (record.prof_wr_factor) {
+            result.rows.push_back({label("fit_result.prof_wr_factor", form),
+                                   formatted("fit_result.prof_wr_factor", *record.prof_wr_factor, form),
+                                   units_label("fit_result.prof_wr_factor", form)});
+        }
         for (const auto& experiment : project.experiments) {
             if (!single_crystal && experiment->fit_prof_wr_factor.has_value()) {
                 result.rows.push_back(
@@ -903,27 +908,43 @@ std::string reliability_text(const Project& project, std::size_t experiment) {
     if (project.fit_result.result_kind.empty()) {
         return {};
     }
-    double rwp = project.fit_result.prof_wr_factor;
-    if (experiment < project.experiments.size() && project.experiments[experiment]->fit_prof_wr_factor) {
-        rwp = *project.experiments[experiment]->fit_prof_wr_factor;
+    // A bank with its own share shows its own Rwp. A record with no shares (a single fit saved before them) describes
+    // the first experiment by its pooled factors; one with shares has none for a bank it does not hold. An agreement
+    // factor that was not a number is none, and left out.
+    const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                    [](const auto& item) { return item->fit_share_held(); });
+    const bool own = experiment < project.experiments.size() && project.experiments[experiment]->fit_share_held();
+    if (shares && !own) {
+        return {};
     }
+    std::optional<double> rwp = project.fit_result.prof_wr_factor;
+    if (own) {
+        rwp = project.experiments[experiment]->fit_prof_wr_factor;
+    }
+    std::vector<std::string> parts;
+    const auto factor = [&parts](const char* uid, const std::optional<double>& value, const std::string& form) {
+        if (value) {
+            parts.push_back(label(uid, form) + " " + formatted(uid, *value, form) + " " + units_label(uid, form));
+        }
+    };
     // crysta records a single crystal's R(F²) and wR(F²) as the profile pair, which the dictionary names by the
     // sample form.
     if (experiment < project.experiments.size() && project.experiments[experiment]->reflections.has_value()) {
         const ExperimentBase& crystal = *project.experiments[experiment];
         const std::string form = token(crystal.experiment_type.effective_sample_form());
-        const std::optional<double> r =
-            crystal.fit_prof_r_factor ? crystal.fit_prof_r_factor : project.fit_result.prof_r_factor;
-        const auto factor = [&form](const char* uid, double value) {
-            return label(uid, form) + " " + formatted(uid, value, form) + " " + units_label(uid, form) + " \xC2\xB7 ";
-        };
-        return (r ? factor("fit_result.prof_r_factor", *r) : std::string()) + factor("fit_result.prof_wr_factor", rwp) +
-               label("fit_result.reduced_chi_square") + " " +
-               formatted("fit_result.reduced_chi_square", project.fit_result.reduced_chi_square);
+        factor("fit_result.prof_r_factor", own ? crystal.fit_prof_r_factor : project.fit_result.prof_r_factor, form);
+        factor("fit_result.prof_wr_factor", rwp, form);
+    } else {
+        factor("fit_result.prof_wr_factor", rwp, std::string());
     }
-    return label("fit_result.prof_wr_factor") + " " + formatted("fit_result.prof_wr_factor", rwp) + " " +
-           units_label("fit_result.prof_wr_factor") + " \xC2\xB7 " + label("fit_result.reduced_chi_square") + " " +
-           formatted("fit_result.reduced_chi_square", project.fit_result.reduced_chi_square);
+    if (const std::optional<double>& chi = project.fit_result.reduced_chi_square) {
+        parts.push_back(label("fit_result.reduced_chi_square") + " " + formatted("fit_result.reduced_chi_square", *chi));
+    }
+    std::string text;
+    for (const std::string& part : parts) {
+        text += (text.empty() ? "" : " \xC2\xB7 ") + part;
+    }
+    return text;
 }
 
 namespace {
@@ -1002,7 +1023,7 @@ ReportModel build_report(const Project& input, const ReportOptions& options) {
     }
     const Project& project = scan ? scan->project : input;
     // A report and its CIF round by the IUCr rule whatever the project's own setting (the owner, 2026-10-24).
-    const std::string rule = kDefaultSuRule;
+    const std::string rule = kReportSuRule;
     ReportModel model;
     model.generated = options.generated.empty() ? utc_now() : options.generated;
     // The optional groups (the owner, 2026-10-13): each in the contents, marked whether the options leave it out.

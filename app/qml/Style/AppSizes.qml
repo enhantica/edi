@@ -67,6 +67,9 @@ QtObject {
     readonly property real inputSpacing: toolbarSpacing
     // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
     readonly property real messagesDialogContentWidth: unit * 38
+    // The padding of a dialog's choice rows that read as one group (Save project as: Folder, Zip archive), closer
+    // together than the usual rows (owner, 2026-10-25).
+    readonly property real choiceRowPadding: Math.round(unit * 0.35)
     // The About window's content: room for the third-party table's columns and a licence text below it.
     readonly property real aboutWidth: unit * 52
     readonly property real aboutHeight: unit * 32

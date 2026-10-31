@@ -84,11 +84,13 @@ qt_add_qml_module(edi_app_module
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
+        src/web_storage.hpp src/web_storage.cpp
     QML_FILES
         qml/Main.qml
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
+        qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
@@ -366,6 +368,17 @@ add_dependencies(edi_app_tests edi_app_build_commit)
 # The app names it too: its test observers report the build they observe.
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
+# And carries it as bytes (MARKER), which a receipt reads from the binary without running it, as the latency probes do.
+set(EDI_APP_BUILD_MARKER_CPP "${CMAKE_BINARY_DIR}/edi_app_build_marker.cpp")
+execute_process(COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_MARKER_CPP}
+                        -DMARKER=ON -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake")
+add_custom_target(edi_app_build_marker
+    COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_MARKER_CPP}
+            -DMARKER=ON -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
+    BYPRODUCTS "${EDI_APP_BUILD_MARKER_CPP}"
+    COMMENT "Embedding the source commit in the app as bytes")
+target_sources(edi_app PRIVATE "${EDI_APP_BUILD_MARKER_CPP}")
+add_dependencies(edi_app edi_app_build_marker)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
 # The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).

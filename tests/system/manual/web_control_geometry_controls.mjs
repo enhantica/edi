@@ -1,6 +1,6 @@
 // Protocol controls only; these invented snapshots make no real application claim.
 import assert from 'node:assert/strict';
-import {controlPointer, restoreCanvasViewport} from './web_control_geometry.mjs';
+import {controlPointer, restoreCanvasViewport, waitControlGeometry} from './web_control_geometry.mjs';
 
 const name='structures.load';
 const actual={objectName:name,x:710,y:260,width:270,height:38,visible:true,enabled:true};
@@ -51,3 +51,25 @@ for (const changed of [null, {}, {x:1}, {y:-10}, {width:1279}, {height:769}, {x:
 await assert.rejects(restoreCanvasViewport(async()=>{throw Error('unreadable canvas');}), /unreadable canvas/,
   'Canvas read errors must propagate without an invented fixed viewport');
 console.log('real canvas origin and dimension refusal controls green');
+
+const dialogName='saveAs.zip';
+const dialog={...actual,objectName:dialogName,checked:true};
+let frames=0;
+const pending=[null,{...dialog,visible:false},{...dialog,enabled:false},dialog];
+assert.deepEqual(await waitControlGeometry(async()=>pending.shift(),async()=>++frames,dialogName),dialog,
+  'A real dialog target must wait through absence, hidden state and disabled state without requiring an AX node');
+assert.equal(frames,3,'Readiness must advance frames until the actual native target becomes actionable');
+assert.deepEqual(await waitControlGeometry(async()=>({...dialog,enabled:false}),async()=>{},dialogName,{enabled:false}),
+  {...dialog,enabled:false},'Passive disabled fit-result labels must remain observable without becoming pointer targets');
+for(const state of [{...dialog,objectName:'open.zip'},{...dialog,x:NaN},{...dialog,width:'270'},
+  {...dialog,x:1279},{...dialog,enabled:1}])
+  await assert.rejects(waitControlGeometry(async()=>state,async()=>{},dialogName,{enabled:false}),
+    /Native dialog observations/,'Malformed, retargeted and clipped native observations cannot replace a real dialog witness');
+for(const state of [null,{...dialog,visible:false},{...dialog,enabled:false}])
+  await assert.rejects(waitControlGeometry(async()=>state,async()=>{},dialogName,{timeoutMs:0}),
+    /must expose its declared native control/,'A missing, hidden or disabled dialog must refuse without an AX fallback');
+await assert.rejects(waitControlGeometry(async()=>{throw Error('2 visible items are named saveAs.zip');},async()=>{},dialogName),
+  /2 visible items/,'Ambiguous native controls must propagate their error rather than time out as absent');
+await assert.rejects(waitControlGeometry(async()=>{throw Error('native hook unavailable');},async()=>{},dialogName),
+  /native hook unavailable/,'Native hook failures must propagate rather than invent dialog readiness');
+console.log('dialog readiness and passive-result protocol controls green; no real dialog run claimed');
