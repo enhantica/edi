@@ -57,6 +57,14 @@ TestCase {
         appWindow.height = 720;
         verify(waitForRendering(appWindow.contentItem), "The fit-control window renders before pointer input");
     }
+    function resizeWindow(width, height) {
+        appWindow.width = width;
+        appWindow.height = height;
+        tryCompare(appWindow.contentItem, "width", width, 2000, "The real window resize reaches its content width before layout observations");
+        tryCompare(appWindow.contentItem, "height", height, 2000, "The real window resize reaches its content height before layout observations");
+        verify(waitForRendering(appWindow.contentItem), "The resized application renders a frame before its captions and table are inspected");
+        verify(waitForPolish(appWindow.contentItem), "The resized content finishes its pending layout before observations");
+    }
     function cleanup() {
         if (Session.project && Session.project.fit.running) {
             Session.project.fit.cancel();
@@ -439,9 +447,9 @@ TestCase {
         let compact = false;
         const captionStates = [];
         for (const width of [1000, 800, 640, 500]) {
-            appWindow.width = width;
-            verify(waitForPolish(appWindow.contentItem), "Narrow-window layout settles before checking action captions");
+            resizeWindow(width, appWindow.height);
             const hasCaption = item => View.textItems(item).some(label => label.text === caption(item));
+            console.log("RESIZE AFTER", width, appWindow.width, appWindow.contentItem.width, hasCaption(reset), hasCaption(follow), hasCaption(button));
             captionStates.push("width=" + width + ": Reset=" + hasCaption(reset) + ", Follow=" + hasCaption(follow) + ", Fit=" + hasCaption(button));
             if (!hasCaption(reset) && !hasCaption(follow) && hasCaption(button)) {
                 compact = true;
@@ -449,8 +457,7 @@ TestCase {
             }
         }
         verify(compact, "After a scan is stopped and reset, narrowing the window must show icon-only Reset and Follow while Fit keeps its caption at some width; observed " + captionStates.join("; "));
-        appWindow.width = 1300;
-        verify(waitForPolish(appWindow.contentItem), "The wide status controls are restored before worker input");
+        resizeWindow(1300, appWindow.height);
         Session.project.fit.start();
         verify(Session.project.fit.scanning && actionable(follow), "Follow becomes available while the actual scan runs");
         const previous = Session.project.fit.following;
@@ -556,8 +563,8 @@ TestCase {
         verify(table !== null && slider !== null && Ui.exposed(slider), "The expanded parameter table retains its visible value slider");
         compare(EaStyle.Sizes.statusBarHeight, EaStyle.Sizes.tabBarHeight, "The status bar takes the tab bars' height while retaining the button body height");
         const initial = table.height;
-        appWindow.height += 160;
-        verify(waitForPolish(appWindow.contentItem), "Sidebar resizing finishes before checking table growth");
+        resizeWindow(appWindow.width, appWindow.height + 160);
+        console.log("HEIGHT AFTER", appWindow.height, appWindow.contentItem.height, initial, table.height);
         verify(table.height > initial + 100, "On Analysis, increasing window height from 720 to 880 must grow the parameter table by more than 100 pixels; observed table height " + initial + " -> " + table.height);
         verify(slider.mapToItem(appWindow.contentItem, 0, slider.height).y <= appWindow.contentItem.height, "The value slider remains within the resized application viewport");
         const rows = View.descendants(table).filter(item => /^parameters.row.[0-9]+$/.test(item.objectName));
