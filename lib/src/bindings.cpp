@@ -925,7 +925,8 @@ static void relations_changed(edi::Project& project) {
 // The project a parameter handle belongs to, through the row it is attached to (X12); null for one no
 // project holds. The row's collection names the project that adopted it, which may have been destroyed
 // (the link then reads none) or may no longer hold the row (removed, replaced or moved to another
-// project), so the project must still hold this very parameter.
+// project), so the project must still hold this very parameter: in a fit slot or among the values its
+// pages list, a setup value such as a bank angle included (edi ADR-0053).
 static edi::Project* project_of(const edi::Parameter& parameter) {
     const edi::detail::RowLink* link = parameter.category.get();
     const edi::detail::Membership* record = link != nullptr ? link->record() : nullptr;
@@ -936,6 +937,11 @@ static edi::Project* project_of(const edi::Parameter& parameter) {
     }
     for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
         if (slot.parameter == &parameter) {
+            return project;
+        }
+    }
+    for (const edi::ParameterEntry& entry : edi::parameter_entries(*project)) {
+        if (entry.parameter == &parameter) {
             return project;
         }
     }
@@ -969,12 +975,18 @@ static void fittability_now(edi::Parameter& parameter) {
     parameter.fit_reason = descriptor ? edi::fit_reason(edi::FitBlocker::Descriptor) : std::string();
 }
 
-// A parameter's name in a refusal: its unique name in the project holding it, else its own name.
+// A parameter's name in a refusal: its unique name in the project holding it, or its path there for a value no
+// fit slot names, else its own name.
 static std::string parameter_name(edi::Parameter& parameter) {
     if (edi::Project* project = project_of(parameter); project != nullptr) {
         for (const edi::NamedSlot& slot : edi::named_slots(*project)) {
             if (slot.parameter == &parameter) {
                 return slot.unique_name;
+            }
+        }
+        for (const edi::ParameterEntry& entry : edi::parameter_entries(*project)) {
+            if (entry.parameter == &parameter) {
+                return entry.path;
             }
         }
     }
