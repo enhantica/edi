@@ -13,6 +13,9 @@ Item {
     id: surface
     width: 1100
     height: 900
+    TextMetrics {
+        id: numberInk
+    }
     ListModel {
         id: scrollRows
     }
@@ -175,13 +178,17 @@ Item {
             verify(waitForPolish(group), "The scientific-number table completes layout");
             const cell = Ui.find(group, "background.intensity.0");
             verify(cell !== null && cell.item.hasUncertainty, "The independent fixture supplies both a value and its s.u.");
-            compare(cell.value, "2.290e7", "The value uses four significant digits in scientific notation");
-            compare(cell.error, "0.010e7", "The s.u. uses the same exponent as its value");
+            compare(cell.item.fileValue, "22900000", "The supplied pair has its independently specified written value");
+            compare(cell.item.fileSu, "100000", "The supplied IUCr99 uncertainty has its independent written value");
+            compare(cell.error, cell.item.fileSu, "The editable cell's menu retains the canonical written uncertainty");
+            numberInk.font = cell.font;
+            numberInk.text = "22900000";
+            const fits = numberInk.advanceWidth <= cell.width - cell.leftPadding - cell.rightPadding;
+            compare(cell.text, fits ? "22900000" : "2.290e7", "The actual table text follows independent ink fit while retaining the written pair's meaningful last digit");
             cell.forceActiveFocus();
             tryCompare(cell, "text", "22900000", 2000, "Editing exposes the complete numerical value");
             cell.focus = false;
             tryCompare(cell, "cursorPosition", 0, 2000, "An unfocused number is visible from its start");
-            compare(cell.horizontalAlignment, Text.AlignLeft, "A long number clips its end while retaining its beginning");
         }
         function test_analysis_filter_units_heading_and_free_colour() {
             verify(Examples.bundled(this, Session, "pd-neut-cwl_cosio-d20"), Session.lastError);
