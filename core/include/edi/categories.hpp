@@ -95,17 +95,21 @@ inline void add_optional(std::vector<CategoryField>& fields, const char* name,
     }
 }
 
+// `carried`: listed whether shown or not, a value the experiment carries (the Analysis table's inventory, edi
+// ADR-0053).
 inline void add_if_shown(std::vector<CategoryField>& fields, const char* name, Parameter& field,
-                         bool declared) {
-    if (declared || field.free) {
+                         bool declared, bool carried = false) {
+    if (declared || field.free || carried) {
         fields.push_back({name, &field, declared});
     }
 }
 
 }  // namespace detail
 
-// The peak category's parameter fields and asymmetry subheading for the experiment's profile.
-inline Category peak_category(ExperimentBase& experiment) {
+// The peak category's parameter fields and asymmetry subheading for the experiment's profile. With `every_carried`
+// a time-of-flight experiment lists the coefficients its profile does not use too, as the Analysis table does
+// (edi ADR-0053); the Experiment page shows those only while free.
+inline Category peak_category(ExperimentBase& experiment, bool every_carried = false) {
     Category category{"peak"};
     PeakBase& peak = experiment.peak;
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
@@ -131,7 +135,7 @@ inline Category peak_category(ExperimentBase& experiment) {
     } else {
         for (const auto& [name, member] : detail::tof_peak_fields()) {
             detail::add_if_shown(category.fields, name, peak.*member,
-                                 detail::tof_profile_declares(profile, name));
+                                 detail::tof_profile_declares(profile, name), every_carried);
         }
     }
     return category;
@@ -180,8 +184,8 @@ inline Category absorption_category(ExperimentBase& experiment) {
     return category;
 }
 
-// An experiment's categories in page order (§2b (iii)).
-inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
+// An experiment's categories in page order (§2b (iii)); `every_carried` as for peak_category.
+inline std::vector<Category> experiment_categories(ExperimentBase& experiment, bool every_carried = false) {
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
     std::vector<Category> categories;
     categories.push_back({"experiment_type"});
@@ -221,7 +225,7 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
         categories.push_back(data);
     }
     categories.push_back(instrument_category(experiment));
-    categories.push_back(peak_category(experiment));
+    categories.push_back(peak_category(experiment, every_carried));
     // The declared model's rows — the line-segment points, or a polynomial or Chebyshev model's
     // terms.
     if (experiment.background_type == "line-segment") {
