@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     }
     const std::string role = argv[2];
     const bool dark = std::string(argv[3]) == "dark";
-    for (std::size_t count : {0, 1, 2, 5, 6, 17}) {
+    for (std::size_t count : {0, 1, 2, 5, 6, 11, 12, 17}) {
         for (std::size_t place = 0; place <= count; ++place) {
             const auto positions = edi::colour_positions(*scheme, role == "measured" ? count : 0,
                                                           role == "measured" ? 0 : count);

@@ -1829,9 +1829,14 @@ Rectangle {
             const refs = Approved.reference(SettingsProof).schemes, labels = ["Palette", "Stacked", "Map"], expected = [refs[1].label, refs[2].label, "Inferno"];
             for (let i = 0; i < 3; ++i)
                 choosePreference(labels[i], expected[i]);
-            const fresh = SettingsProof.restart('import QtQuick; import edi.app; Item { AppPreferencesDialog { id: dialog } function walk(item) {let out=[item];for(const child of item.children||[])out=out.concat(walk(child));return out;} readonly property var names:["colours","stackedColours","mapColours"]; function selected(name) {const box=walk(dialog.contentItem).find(item=>item.objectName==="preferences."+name);return box?box.currentText:"";} property bool acceptanceReady:names.every(name=>selected(name)!==""); property string saved:JSON.stringify(names.map(name=>selected(name))) }');
-            verify(!fresh.error && fresh.acceptanceReady, "A fresh actual Preferences engine restores all three real colour selectors");
-            compare(fresh.saved, JSON.stringify(expected), "Figure, Stacked and Map choices are remembered independently across a fresh production settings engine");
+            const fresh = SettingsProof.restart('import QtQuick; import edi.app; QtObject { property string figure:Preferences.colourScheme; property string stacked:Preferences.scanStackedPalette; property string map:Preferences.scanMapColours }');
+            verify(!fresh.error, "A fresh production settings engine restores all three saved colour preferences");
+            compare([fresh.figure, fresh.stacked, fresh.map], [refs[1].id, refs[2].id, "inferno"], "The shared figure palette, Stacked override and Map remain independent across a fresh engine");
+            preferencesDialog.close();
+            preferencesDialog.destroy();
+            preferencesDialog = null;
+            for (let i = 0; i < labels.length; ++i)
+                compare(currentPreference(labels[i]), expected[i], "New actual Preferences controls present the independently persisted colour choices");
         }
         Component {
             id: applicationFactory
