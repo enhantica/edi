@@ -4868,3 +4868,29 @@ The first native presentation bridge retains callback values in the current VM's
 The same pinned Qt implementation is prior art for live QQmlContext QObject-list wrappers. Local count/at callbacks read the current context property by its stored index, retain its exact QList<QObject*> type check and original at() behavior, and keep the wrapper object/type/property capture. They do not snapshot a context list. ProxyObject, ProxyFunctionObject and ProxyConstructorObject all declare Managed::Type_ProxyObject; native member lookup uses that discriminator instead of taking the hidden ProxyObject vtable address. Generic object lookup, proxy dispatch, receiver identity, reentry and error handling retain their existing paths. No Qt implementation symbols are redefined, access restrictions bypassed or missing cases stubbed.
 
 Primary reference: qt/qtdeclarative v6.11.2 src/qml/jsruntime/qv4memberdata.cpp and qv4engine.cpp, src/qml/qml/qqmlcontext.cpp, and installed qv4proxy_p.h/qv4arraydata_p.h declarations. Normal native/browser linking and callback, context-list, proxy and reentry runtime verification remain required.
+
+
+### Receiver-aware lookup uses the current VM's virtual getter
+
+The first native member bridge is `panelUsageGet`, shared by direct reads, ordinary and deferred
+member calls, and chart spread calls. Its QObject branch keeps the captured QML context, import
+handling and method-attachment flags. Other objects now use Qt's receiver-aware `Object::get`
+instead of reproducing an internal-class/prototype lookup. Inherited `resolveLookupGetter` does
+not imply inherited `virtualGet`: QML lists, sequences and variant associations have their own
+getters. An ordinary object can also have an exotic prototype, including a proxy. Qt's
+`Object::internalGet` stops at that boundary and invokes the prototype's virtual getter; a raw
+`resolveProtoGetter` walk does not. Neither a direct-proxy exclusion nor checking only the
+receiver's lookup resolver closes that class.
+
+Named primitive reads use the same virtual prototype lookup with the original primitive as the
+receiver. String length retains its UTF-16 special case; a string's own numeric property is read
+from its boxed view before its prototype. Existing numeric subscript operations remain separate.
+No user getter is read to choose a fast path, no graph is enumerated, and no mutable global
+helper or JavaScript shim is consulted. The native getter owns reference refresh, proxy traps,
+accessor receiver identity and pending exceptions. This fixes a source-proven dispatch defect;
+it does not by itself establish the cause of any particular sidebar or table failure.
+
+Primary prior art: Qt 6.11.2 `qv4object.cpp` `Object::internalGet`/`virtualGet`,
+`qv4object_p.h` receiver-aware `get`, `qqmllistwrapper.cpp` `virtualGet`,
+`qv4sequenceobject.cpp` `Sequence::virtualGet`, `qv4variantassociationobject.cpp`
+`VariantAssociationObject::virtualGet`, and `qv4lookup.cpp` primitive accessor lookup.
