@@ -207,7 +207,6 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     categories_ = new CategoryListModel(this);
     syncCategories();
     connect(structure_view_options_, &StructureViewOptions::changed, this, &ProjectViewModel::keepStructureView);
-    showStructureView();  // the opened project's shown structure, as it saved its view
     render_wait_.setSingleShot(true);
     connect(&render_wait_, &QTimer::timeout, this, [this] { followRendered(false); });
     loadScan();
@@ -224,6 +223,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, report_, &ReportViewModel::refresh);
     current_structure_ = structure_models_.isEmpty() ? -1 : 0;
     current_experiment_ = experiment_models_.isEmpty() ? -1 : 0;
+    showStructureView();  // the opened project's shown structure, as it saved its view, once it is the current one
     syncParameterTable();
     syncCorrelations();
     published_name_ = name();
