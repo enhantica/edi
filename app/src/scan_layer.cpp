@@ -1218,7 +1218,10 @@ void ScanLayer::paint(QPainter* painter) {
     // item pixels, as the pattern chart's lines, whatever the device pixel ratio: a cosmetic pen (Qt's fast stroker) as
     // wide in device pixels as the line is in item pixels times the ratio. Joins round, so a peak keeps its tip; ends
     // stop at their points, as a square cap would reach half the width past a break and fill a one-pixel gap.
-    const qreal ratio = painter->device()->devicePixelRatioF();
+    // The ratio is the painter's whole scale: Qt paints this item into a texture of device pixels through a scaled
+    // transform on a device that reports a ratio of 1, so the device's ratio alone would stroke at item resolution and
+    // the texture would stretch the lines.
+    const qreal ratio = painter->deviceTransform().m11();
     const int device_width = std::max(1, static_cast<int>(std::ceil(width() * ratio)));
     const int device_height = std::max(1, static_cast<int>(std::ceil(height() * ratio)));
     const int forced = qEnvironmentVariableIntValue("EDI_SCAN_PAINT_THREADS");
