@@ -81,6 +81,12 @@ TestCase {
         verify(point !== null, "The actual fit control has an exposed pointer target");
         mouseClick(item, point.x, point.y, Qt.LeftButton, Qt.NoModifier, 0);
     }
+    function pagesReady() {
+        tryVerify(() => {
+            appWindow.update();
+            return appWindow.pagesWanted > 0 && appWindow.pagesBuilt === appWindow.pagesWanted;
+        }, 10000, "The opened project's workflow pages finish loading before navigation or fit input");
+    }
     function open(kind) {
         const path = kind === "scan" ? "tests/fixtures/correlations/scan-sequential" : "tests/fixtures/excluded_display/cw";
         const copy = SettingsProof.copyProject(Probe.repoUrl(path));
@@ -93,6 +99,7 @@ TestCase {
             verify(SettingsProof.write(copy, "experiments/pattern.edi", text), "The disposable fixture declares the intended free scale and measured-data state");
         }
         verify(Session.openProject(copy), "The independently authored fit-control project loads: " + Session.lastError);
+        pagesReady();
         tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 10000, "The actual project publishes its initial dataset before fit input");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
@@ -240,6 +247,7 @@ TestCase {
         const copy = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/correlations/scan-sequential"));
         verify(SettingsProof.remove(copy, "experiments/scan/02.xy"), "The resume witness initially declares one independently stored dataset");
         verify(Session.openProject(copy), "The one-dataset scan opens through the real loader");
+        pagesReady();
         tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 10000, "The resume witness publishes its only initial dataset");
         Session.project.fit.start();
         finish();
@@ -249,6 +257,7 @@ TestCase {
         verify(Session.save(), "The partial scan saves its completed dataset and real result index");
         Session.closeProject();
         verify(Session.openProject(copy), "The partial scan restores its result index alongside the newly added dataset");
+        pagesReady();
         tryVerify(() => !Session.project.calculating && Probe.datasetReady(Session.project), 10000, "The restored partial scan publishes its selected dataset");
         Ui.click(test, Probe, appWindow, "appBar.tab.analysis");
         verify(Session.project.fit.continuable, "The physical resume witness reaches the real resumable state");
