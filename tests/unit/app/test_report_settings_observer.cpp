@@ -14,6 +14,7 @@
 #include <QRegularExpression>
 #include <atomic>
 #include <vector>
+#include <utility>
 #include <QTemporaryDir>
 #include <QDirIterator>
 #include <QScreen>
@@ -223,16 +224,29 @@ public:
         return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString{};
     }
     Q_INVOKABLE QVariantMap fileFacts(const QUrl& location, const QString& relative) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QFile file(QDir(location.toLocalFile()).filePath(relative));
-        if (!file.open(QIODevice::ReadOnly)) return {};
+        const QFileInfo info(file);
+        const bool regular = info.isFile() && !info.isSymLink();
+        const bool readable = regular && file.open(QIODevice::ReadOnly);
+        QVariantMap facts{{"exists", info.exists() || info.isSymLink()},
+                          {"regular", regular},
+                          {"readable", readable}};
+        if (!readable) return facts;
         const auto bytes = file.readAll();
-        return {{"sha256", QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex())},
-                {"bytes", bytes.size()}, {"modified", QFileInfo(file).lastModified().toMSecsSinceEpoch()}};
+        facts.insert("sha256",
+                     QString::fromLatin1(
+                         QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()));
+        facts.insert("bytes", bytes.size());
+        facts.insert("modified", info.lastModified().toMSecsSinceEpoch());
+        return facts;
     }
     Q_INVOKABLE QUrl childUrl(const QUrl& location, const QString& relative) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         return QUrl::fromLocalFile(QDir(location.toLocalFile()).filePath(relative));
     }
     Q_INVOKABLE QVariantMap htmlModel(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QFile file(location.toLocalFile());
         if (!file.open(QIODevice::ReadOnly)) return {{"error", "Actual HTML report cannot be opened"}};
         const auto html = QString::fromUtf8(file.readAll());
@@ -245,6 +259,7 @@ public:
         return document.toVariant().toMap();
     }
     Q_INVOKABLE QVariantMap pdfImageColours(const QUrl& location, const QStringList& colours) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QFile file(location.toLocalFile());
         if (!file.open(QIODevice::ReadOnly)) return {{"error", "Actual saved PDF cannot be opened"}};
         const auto pdf = QString::fromLatin1(file.readAll());
@@ -307,6 +322,7 @@ public:
         return {{"images", images}, {"counts", counts}, {"maxVerticalRun", verticalRuns}};
     }
     Q_INVOKABLE QVariantMap pdfFacts(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
         const auto python = QStandardPaths::findExecutable("python");
         if (python.isEmpty()) return {{"error", "PDF observer requires the runner's Python"}};
@@ -318,6 +334,7 @@ public:
         return json.toVariant().toMap();
     }
     Q_INVOKABLE QVariantMap htmlEvolutionFacts(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
         root.cd("../../..");
         const auto python = QStandardPaths::findExecutable("python");
@@ -331,6 +348,7 @@ public:
         return json.toVariant().toMap();
     }
     Q_INVOKABLE QVariantMap reportHtmlMatrices(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
         root.cd("../../..");
         const auto python = QStandardPaths::findExecutable("python");
@@ -465,9 +483,11 @@ public:
         return result;
     }
     Q_INVOKABLE QUrl copyProject(const QUrl& input) {
+        if (!absoluteLocalFileUrl(input)) return {};
         auto directory = std::make_unique<QTemporaryDir>(QDir::tempPath() + "/edi-settings-XXXXXX");
         if (!directory->isValid()) return {};
         QDir source(input.toLocalFile());
+        if (!source.exists()) return {};
         QDirIterator files(source.absolutePath(), QDir::AllEntries | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
         while (files.hasNext()) {
             const auto from = files.next();
@@ -480,11 +500,13 @@ public:
         return result;
     }
     Q_INVOKABLE QString text(const QUrl& project, const QString& relative) const {
+        if (!absoluteLocalFileUrl(project)) return {};
         QFile file(QDir(project.toLocalFile()).filePath(relative));
         if (!file.open(QIODevice::ReadOnly)) return {};
         return QString::fromUtf8(file.readAll());
     }
     Q_INVOKABLE QVariantMap projectBytes(const QUrl& project) const {
+        if (!absoluteLocalFileUrl(project)) return {{"error", "Expected an absolute local-file URL"}};
         const QDir root(project.toLocalFile());
         if (!root.exists()) return {{"error", "The saved project directory is missing"}};
         QVariantMap result;
@@ -505,15 +527,19 @@ public:
         return result;
     }
     Q_INVOKABLE bool write(const QUrl& project, const QString& relative, const QString& text) const {
+        if (!absoluteLocalFileUrl(project)) return false;
         QFile file(QDir(project.toLocalFile()).filePath(relative));
         if (!QDir().mkpath(QFileInfo(file).absolutePath())) return false;
         return file.open(QIODevice::WriteOnly | QIODevice::Truncate) && file.write(text.toUtf8()) == text.toUtf8().size() && file.flush();
     }
     Q_INVOKABLE bool remove(const QUrl& project, const QString& relative) const {
+        if (!absoluteLocalFileUrl(project)) return false;
         return QFile::remove(QDir(project.toLocalFile()).filePath(relative));
     }
     Q_INVOKABLE QUrl copyProjectArchive(const QUrl& source, bool readOnly = false) {
+        if (!absoluteLocalFileUrl(source)) return {};
         const QUrl root = emptyDirectory();
+        if (!absoluteLocalFileUrl(root) || !QFileInfo(root.toLocalFile()).isDir()) return {};
         const QString path = QDir(root.toLocalFile()).filePath("opened.zip");
         if (!QFile::copy(source.toLocalFile(), path)) return {};
         if (readOnly) {
@@ -526,6 +552,7 @@ public:
         return QUrl::fromLocalFile(path);
     }
     Q_INVOKABLE bool archiveLocationWritable(const QUrl& archive) const {
+        if (!absoluteLocalFileUrl(archive)) return false;
         return QFileInfo(archive.toLocalFile()).isWritable() ||
                QFileInfo(QFileInfo(archive.toLocalFile()).absolutePath()).isWritable();
     }
@@ -574,11 +601,13 @@ public:
         return drop.isAccepted();
     }
     Q_INVOKABLE QString projectArchiveBytes(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QFile file(location.toLocalFile());
         return file.open(QIODevice::ReadOnly) ? QString::fromLatin1(file.readAll().toBase64())
                                               : QString();
     }
     Q_INVOKABLE QVariantMap projectFolderBytes(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QVariantMap result;
         QDir root(location.toLocalFile());
         QDirIterator files(root.absolutePath(), QDir::Files | QDir::Hidden,
@@ -592,7 +621,9 @@ public:
         }
         return result;
     }
-    Q_INVOKABLE QString localPath(const QUrl& location) const { return location.toLocalFile(); }
+    Q_INVOKABLE QString localPath(const QUrl& location) const {
+        return absoluteLocalFileUrl(location) ? location.toLocalFile() : QString();
+    }
     Q_INVOKABLE QVariantMap palette(bool safe) const { return paletteForScheme(safe ? "colourBlindSafe" : "default"); }
     Q_INVOKABLE QVariantMap paletteForScheme(const QString& scheme) const {
         QDir root(QFileInfo(QString::fromUtf8(__FILE__)).absolutePath());
@@ -625,26 +656,32 @@ public:
         return output;
     }
     Q_INVOKABLE QString fileName(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         return QFileInfo(location.toLocalFile()).fileName();
     }
     Q_INVOKABLE QString parentName(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         return QFileInfo(QFileInfo(location.toLocalFile()).absolutePath()).fileName();
     }
     Q_INVOKABLE bool temporary(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return false;
         return QFileInfo(location.toLocalFile()).absoluteFilePath().startsWith(QDir::tempPath() + '/');
     }
     Q_INVOKABLE QUrl legacy(const QUrl& location) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QDir root = QFileInfo(location.toLocalFile()).absoluteDir();
         if (root.dirName() == "EasyScience") root.cdUp();
         return QUrl::fromLocalFile(root.filePath("settings.ini"));
     }
     Q_INVOKABLE void erase(const QUrl& location, const QString& group, const QString& key) const {
+        if (!absoluteLocalFileUrl(location)) return;
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);
         settings.beginGroup(group);
         settings.remove(key);
         settings.sync();
     }
     Q_INVOKABLE QVariantMap settingFacts(const QUrl& location, const QString& group, const QString& key) const {
+        if (!absoluteLocalFileUrl(location)) return {{"error", "Expected an absolute local-file URL"}};
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);
         settings.beginGroup(group);
         const auto value = settings.value(key);
@@ -653,15 +690,143 @@ public:
                 {"value", value}, {"list", value.toStringList()}};
     }
     Q_INVOKABLE QVariant value(const QUrl& location, const QString& group, const QString& key) const {
+        if (!absoluteLocalFileUrl(location)) return {};
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);
         settings.beginGroup(group);
         return settings.value(key);
     }
     Q_INVOKABLE void seed(const QUrl& location, const QString& group, const QString& key, const QVariant& value) const {
+        if (!absoluteLocalFileUrl(location)) return;
         QSettings settings(location.toLocalFile(), QSettings::IniFormat);
         settings.beginGroup(group);
         settings.setValue(key, value);
         settings.sync();
+    }
+    Q_INVOKABLE QVariantMap archiveCreationFailureProof(const QUrl& source, const QUrl& owned) {
+        if (!absoluteLocalFileUrl(source) || !QFileInfo(source.toLocalFile()).isFile() ||
+            !absoluteLocalFileUrl(owned) || !QFileInfo(owned.toLocalFile()).isDir())
+            return {{"error", "Actual owned source and directory are required"}};
+        const QString blocked = QDir(owned.toLocalFile()).filePath("blocked-temp-parent");
+        const QString output = QDir(owned.toLocalFile()).filePath("opened.zip");
+        if (QFileInfo::exists(blocked) || QFileInfo::exists(output))
+            return {{"error", "The owned failure witness must start with absent destinations"}};
+        QFile blocker(blocked);
+        const QByteArray blockerBytes("owned-blocker");
+        if (!blocker.open(QIODevice::WriteOnly) ||
+            blocker.write(blockerBytes) != blockerBytes.size())
+            return {{"error", "The owned non-directory temporary parent could not be armed"}};
+        blocker.close();
+        struct EnvironmentEntry {
+            const char* name;
+            bool set;
+            QByteArray value;
+        };
+        std::vector<EnvironmentEntry> saved;
+        for (const char* name : {"TMPDIR", "TMP", "TEMP"})
+            saved.push_back({name, qEnvironmentVariableIsSet(name), qgetenv(name)});
+        const QString previous = QDir::currentPath();
+        bool environmentRestored = true, cwdRestored = false;
+        QVariantMap facts;
+        {
+            const auto restore = qScopeGuard([&] {
+                for (const auto& entry : saved) {
+                    const bool ok =
+                        entry.set ? qputenv(entry.name, entry.value) : qunsetenv(entry.name);
+                    environmentRestored = ok && environmentRestored;
+                }
+                cwdRestored = QDir::setCurrent(previous);
+            });
+            if (!QDir::setCurrent(owned.toLocalFile()))
+                return {
+                    {"error", "The owned archive ambient-directory witness could not be armed"}};
+            for (const auto& entry : saved)
+                if (!qputenv(entry.name, blocked.toUtf8()))
+                    return {{"error", "The owned temporary-parent failure could not be armed"}};
+            facts.insert("temporaryParentArmed",
+                         QDir::cleanPath(QDir::tempPath()) == QDir::cleanPath(blocked));
+            if (!facts["temporaryParentArmed"].toBool())
+                return {{"error",
+                         "This actual Qt platform did not select the owned temporary parent"}};
+            facts.insert("creatorActuallyFailed", emptyDirectory().isEmpty());
+            if (!facts["creatorActuallyFailed"].toBool())
+                return {{"error", "The actual temporary-directory creator did not refuse"}};
+            facts.insert("archiveCopyRefused", copyProjectArchive(source).isEmpty());
+            facts.insert("noAmbientArchive", !QFileInfo::exists(output));
+        }
+        facts.insert("environmentRestored", environmentRestored);
+        facts.insert("cwdRestored", cwdRestored && QDir::currentPath() == previous);
+        return facts;
+    }
+    Q_INVOKABLE QVariantMap localRootBoundaryProof(const QUrl& owned) {
+        if (!absoluteLocalFileUrl(owned) || !QDir(owned.toLocalFile()).exists())
+            return {{"error", "The boundary proof requires its actual owned directory"}};
+        const QString previous = QDir::currentPath();
+        bool restored = false;
+        QVariantList rows;
+        {
+            if (!QDir::setCurrent(owned.toLocalFile()))
+                return {{"error", "The owned ambient-directory control could not be armed"}};
+            const auto restore = qScopeGuard([&] { restored = QDir::setCurrent(previous); });
+            const std::vector<std::pair<QString, QUrl>> roots{
+                {"empty", QUrl()},
+                {"plain-absolute", QUrl(owned.toLocalFile())},
+                {"relative", QUrl("relative-root")},
+                {"relative-file", QUrl("file:.")},
+                {"https", QUrl("https://invalid.invalid/root")},
+                {"qrc", QUrl("qrc:/not-a-local-file")},
+                {"query", QUrl(owned.toString() + "?not-a-path")},
+                {"fragment", QUrl(owned.toString() + "#not-a-path")}};
+            for (const auto& [name, root] : roots) {
+                const QString marker = QStringLiteral("e11-root-sentinel.txt");
+                const QByteArray expected("independent-owned-sentinel");
+                QFile actual(QDir(owned.toLocalFile()).filePath(marker));
+                if (!actual.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+                    actual.write(expected) != expected.size())
+                    return {{"error", "The independent ambient sentinel could not be written"}};
+                actual.close();
+                QVariantMap row{{"name", name},
+                                {"emptyText", text(root, marker).isEmpty()},
+                                {"emptyFacts", fileFacts(root, marker).isEmpty()},
+                                {"noChild", childUrl(root, marker).isEmpty()},
+                                {"projectRefusal", projectBytes(root).contains("error")},
+                                {"emptyFolder", projectFolderBytes(root).isEmpty()},
+                                {"noCopy", copyProject(root).isEmpty()},
+                                {"writeRefused", !write(root, marker, "CORRUPTION")},
+                                {"removeRefused", !remove(root, marker)}};
+                row.insert("sameBytes",
+                           actual.open(QIODevice::ReadOnly) && actual.readAll() == expected);
+                rows.append(row);
+            }
+            const QUrl remote("file://nonlocal.invalid/owned-root");
+            rows.append(QVariantMap{{"name", "nonlocal-file-authority"},
+                                    {"emptyText", text(remote, "sentinel").isEmpty()},
+                                    {"emptyFacts", fileFacts(remote, "sentinel").isEmpty()},
+                                    {"noChild", childUrl(remote, "sentinel").isEmpty()},
+                                    {"projectRefusal", projectBytes(remote).contains("error")},
+                                    {"emptyFolder", projectFolderBytes(remote).isEmpty()}});
+            QFile ini("owned.ini");
+            const QByteArray expectedIni("[owned]\nkey=original\n");
+            if (!ini.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+                ini.write(expectedIni) != expectedIni.size())
+                return {{"error", "The independent settings sentinel could not be armed"}};
+            ini.close();
+            const QUrl relativeIni("file:owned.ini");
+            QVariantMap settings{
+                {"name", "relative-settings"},
+                {"noValue", !value(relativeIni, "owned", "key").isValid()},
+                {"settingsRefusal", settingFacts(relativeIni, "owned", "key").contains("error")},
+                {"noLegacy", legacy(relativeIni).isEmpty()},
+                {"noParent", parentName(relativeIni).isEmpty()},
+                {"noName", fileName(relativeIni).isEmpty()},
+                {"notTemporary", !temporary(relativeIni)},
+                {"noLocalPath", localPath(relativeIni).isEmpty()}};
+            seed(relativeIni, "owned", "key", "CORRUPTION");
+            erase(relativeIni, "owned", "key");
+            settings.insert("sameBytes",
+                            ini.open(QIODevice::ReadOnly) && ini.readAll() == expectedIni);
+            rows.append(settings);
+        }
+        return {{"rows", rows}, {"cwdRestored", restored && QDir::currentPath() == previous}};
     }
     Q_INVOKABLE QVariantMap incubationOwnership(QObject* context, bool destroyFirst) const {
         auto* caller = qmlEngine(context);
@@ -840,6 +1005,10 @@ public:
         return result;
     }
 private:
+    static bool absoluteLocalFileUrl(const QUrl& url) {
+        return url.isValid() && url.isLocalFile() && url.host().isEmpty() && !url.hasQuery() &&
+               !url.hasFragment() && QDir::isAbsolutePath(url.toLocalFile());
+    }
     mutable QString web_export_error_;
     std::unique_ptr<AcceptanceAnimationDriver> animation_driver_;
     std::vector<std::unique_ptr<QTemporaryDir>> directories_;

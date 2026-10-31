@@ -691,9 +691,112 @@ TestCase {
             }
         ];
     }
+    function resultFileProblems(bytes, facts) {
+        const errors = [], names = ["results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"];
+        if (bytes.length !== names.length || facts.length !== names.length)
+            return ["All four original result slots are required"];
+        const notesAbsent = facts[3].exists === false;
+        for (let i = 0; i < names.length; ++i) {
+            const f = facts[i];
+            if (i === 3 && notesAbsent) {
+                if (f.regular !== false || f.readable !== false || bytes[i] !== "")
+                    errors.push("Absent notes require precise supported-root absence");
+            } else if (f.exists !== true || f.regular !== true || f.readable !== true ||
+                       !(f.bytes > 0) || bytes[i].length === 0) {
+                errors.push(names[i] + " requires actual nonempty regular readable bytes");
+            }
+        }
+        const csv = (index, prefix, completeHeader) => {
+            const lines = bytes[index].split(/\r?\n/);
+            if (lines[lines.length - 1] === "") lines.pop();
+            const header = (lines.shift() ?? "").split(",");
+            if (JSON.stringify(header.slice(0, prefix.length)) !== JSON.stringify(prefix) ||
+                (completeHeader && header.length !== prefix.length))
+                errors.push(names[index] + " does not carry its declared header");
+            const rows = lines.map(line => line.split(","));
+            if (rows.some(row => row.length !== header.length))
+                errors.push(names[index] + " contains an incomplete record");
+            return rows;
+        };
+        const results = csv(0, ["file_path", "fit_result.reduced_chi_square", "fit_result.success", "fit_result.iterations"], false);
+        const provenance = csv(1, ["file_path", "descent", "chi_square_tolerance", "max_iterations", "termination"], true);
+        const paths = ["experiments/scan/01.xy", "experiments/scan/02.xy"];
+        for (const rows of [results, provenance])
+            if (JSON.stringify(rows.map(row => row[0]).sort()) !== JSON.stringify(paths))
+                errors.push("The independently declared scan requires both unique result identities");
+        if (notesAbsent && provenance.some(row => row[4] === "refused"))
+            errors.push("A refused fit requires its declared notes record");
+        let notes = [];
+        if (!notesAbsent) {
+            notes = csv(3, ["file_path", "negative_points", "skipped_dataset", "refusal"], true);
+            const seen = [];
+            for (const row of notes) {
+                if (!paths.includes(row[0]) || seen.includes(row[0]) || !/^\d{1,12}$/.test(row[1]) ||
+                    !["True", "False"].includes(row[2]))
+                    errors.push("Notes retain their declared unique four-cell domain");
+                seen.push(row[0]);
+            }
+        }
+        for (const row of provenance)
+            if (row[4] === "refused" && !notes.some(note => note[0] === row[0] && note[2] === "False"))
+                errors.push("Each refused dataset requires its own non-skipped note");
+        try {
+            const run = JSON.parse(bytes[2]);
+            if (!run || Array.isArray(run) || typeof run.template !== "string" || !run.template ||
+                run.last !== "scan" || typeof run.mixed !== "boolean" ||
+                !["", "success", "maxIterations", "noStep", "notConverged", "stopped", "failed"].includes(run.outcome) ||
+                (run.seconds !== undefined && (typeof run.seconds !== "number" || !isFinite(run.seconds) || run.seconds < 0)))
+                errors.push("The run record retains its declared scan identity and field types");
+        } catch (error) {
+            errors.push("The run record must be actual JSON");
+        }
+        return errors;
+    }
     function resultBytes() {
-        const path = Session.project.path;
-        return ["results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"].map(name => SettingsProof.text(path, "analysis/" + name));
+        const path = Session.projectDirectoryUrl(Session.project.path);
+        const names = ["results.csv", "results-provenance.csv", "scan-run.json", "scan-notes.csv"];
+        const facts = names.map(name => SettingsProof.fileFacts(path, "analysis/" + name));
+        const bytes = names.map(name => SettingsProof.text(path, "analysis/" + name));
+        const problems = resultFileProblems(bytes, facts);
+        compare(problems.length, 0, "Concrete result/provenance identities precede byte comparison: " + JSON.stringify({problems, facts}));
+        return bytes;
+    }
+    function test_result_file_admission_guards() {
+        const bytes = [
+            "file_path,fit_result.reduced_chi_square,fit_result.success,fit_result.iterations\nexperiments/scan/01.xy,1,True,1\nexperiments/scan/02.xy,1,True,1\n",
+            "file_path,descent,chi_square_tolerance,max_iterations,termination\nexperiments/scan/01.xy,qr,0,1,chi_converged\nexperiments/scan/02.xy,qr,0,1,chi_converged\n",
+            '{"template":"independent-control","last":"scan","mixed":false,"outcome":"success"}', ""
+        ];
+        const facts = bytes.map(text => text ? {exists:true, regular:true, readable:true, bytes:text.length} : {exists:false, regular:false, readable:false});
+        compare(resultFileProblems(bytes, facts).length, 0, "Notes may genuinely be absent for this independently positive-input scan");
+        const present = bytes.slice(), presentFacts = facts.slice();
+        present[3] = "file_path,negative_points,skipped_dataset,refusal\nexperiments/scan/01.xy,1,False,\n";
+        presentFacts[3] = {exists:true, regular:true, readable:true, bytes:present[3].length};
+        compare(resultFileProblems(present, presentFacts).length, 0, "Present notes retain a concrete valid schema");
+        const refused = present.slice(), refusedFacts = presentFacts.map(item => Object.assign({}, item));
+        refused[1] = refused[1].replace("chi_converged", "refused");
+        refused[3] = "file_path,negative_points,skipped_dataset,refusal\nexperiments/scan/01.xy,0,False,independent-refusal\n";
+        refusedFacts[3].bytes = refused[3].length;
+        compare(resultFileProblems(refused, refusedFacts).length, 0, "A refused dataset is admitted only with its own declared non-skipped note");
+        for (const kind of ["header-only-refusal-note", "other-dataset-refusal-note", "refusal-note-marked-skipped"]) {
+            const b = refused.slice(), f = refusedFacts.map(item => Object.assign({}, item));
+            if (kind === "header-only-refusal-note") b[3] = b[3].split("\n")[0] + "\n";
+            if (kind === "other-dataset-refusal-note") b[3] = b[3].replace("01.xy", "02.xy");
+            if (kind === "refusal-note-marked-skipped") b[3] = b[3].replace(",False,", ",True,");
+            f[3].bytes = b[3].length;
+            verify(resultFileProblems(b, f).includes("Each refused dataset requires its own non-skipped note"), "The actual missing relation is reached and refused: " + kind);
+        }
+        for (const kind of ["missing-result", "unreadable-notes", "directory", "wrong-header", "malformed-run", "duplicate-path", "refusal-without-notes"]) {
+            const b = bytes.slice(), f = facts.map(item => Object.assign({}, item));
+            if (kind === "missing-result") { b[0] = ""; f[0] = {exists:false, regular:false, readable:false}; }
+            if (kind === "unreadable-notes") f[3] = {exists:true, regular:true, readable:false};
+            if (kind === "directory") f[0].regular = false;
+            if (kind === "wrong-header") b[1] = b[1].replace("termination", "unknown");
+            if (kind === "malformed-run") b[2] = "{";
+            if (kind === "duplicate-path") b[0] = b[0].replace("02.xy", "01.xy");
+            if (kind === "refusal-without-notes") b[1] = b[1].replace("chi_converged", "refused");
+            verify(resultFileProblems(b, f).length > 0, "The concrete admission escape is armed and refused: " + kind);
+        }
     }
     function resultRows() {
         const table = Session.project.fit.results, rows = [];
