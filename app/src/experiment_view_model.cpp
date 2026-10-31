@@ -75,6 +75,7 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     : QObject(parent),
       project_(project),
       experiment_(experiment),
+      made_for_(experiment.experiment_type),
       editor_(editor),
       registry_(registry),
       sample_form_options_(new OptionListModel(this)),
@@ -437,6 +438,14 @@ void ExperimentViewModel::syncEstimate() {
     notify(estimate_.max_terms != before.max_terms, &ExperimentViewModel::backgroundEstimateMaxTermsChanged);
     notify(estimate_.derived_terms != before.derived_terms, &ExperimentViewModel::estimateTermsChanged);
     notify(estimate_.note != before.note, &ExperimentViewModel::estimateNoteChanged);
+}
+
+bool ExperimentViewModel::madeForType() const {
+    const edi::ExperimentType& now = experiment_.experiment_type;
+    return now.effective_sample_form() == made_for_.effective_sample_form() &&
+           now.effective_beam_mode() == made_for_.effective_beam_mode() &&
+           now.effective_radiation_probe() == made_for_.effective_radiation_probe() &&
+           now.effective_scattering_type() == made_for_.effective_scattering_type();
 }
 
 void ExperimentViewModel::sync() {

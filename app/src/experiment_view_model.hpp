@@ -307,6 +307,10 @@ class ExperimentViewModel : public QObject {
     QString lastError() const { return last_error_; }
 
     const edi::ExperimentBase* experiment() const { return &experiment_; }
+    // Whether the experiment still has the type this model was made for. Its options and families follow the type,
+    // so an experiment whose type a text apply changed gets a new model, as one retyped on its page gets a new
+    // experiment.
+    bool madeForType() const;
     void sync();
     // The estimate settings and what they derive, re-read: after an edit (sync) and after a calculation, which
     // changes the calculated pattern use_model reads.
@@ -361,6 +365,7 @@ class ExperimentViewModel : public QObject {
 
     edi::Project& project_;
     edi::ExperimentBase& experiment_;
+    const edi::ExperimentType made_for_;
     QSet<const QObject*> shown_charts_;
     QSet<const QObject*> d_charts_;
     std::uint64_t pattern_generation_ = 0;
