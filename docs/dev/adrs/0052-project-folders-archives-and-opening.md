@@ -270,3 +270,36 @@ Per-place queue selection is native, using the same null-terminated UTF-8 transp
 A separately identified prior defect is corrected: OPFS drop suppresses only NotFoundError. Every other lookup/remove refusal propagates and cannot delete place metadata or report success. If an earlier recovery removal is already proven before a later whole-place removal refuses, the record is retained and its recovery flag is updated only for that proven removal; the original removal refusal remains the reported cause even if recording that partial progress also fails. Normal successful removal order is unchanged. The original distinction in removePath is the first precedent; queue-liveness settlement is not an I/O-error suppression rule.
 
 Browser persistence source completion is subject to normal WASM compilation, reload/recovery/save/partial-refusal/ordering/worker checks and repairs. The previously stated source-completion boundary excluded genuine host bootstrap/I/O; it did not exempt these portable persistence rules, which are now native.
+
+
+## Incubation controllers belong to individual engines
+
+FIRST configure_engine already composes an independent Session for each accepted
+QQmlEngine and rejects repeated composition. The page incubation controller must
+have that same per-engine scope. The previous static PageIncubation was attached
+to every engine. Pinned Qt's setIncubationController changes the controller's
+reverse engine pointer without clearing another engine's old forward pointer.
+Thus configuring B after A left A pointing at a controller that drove B; retiring
+B could null that controller while A still had pending asynchronous pages.
+
+Each accepted engine now gets its own PageIncubation parented as a QObject child.
+Qt does not take controller ownership in setIncubationController; QObject
+parenting supplies that ownership. No controller is shared or restored onto an
+older engine. The existing QTimer interval zero, one timeout connection,
+incubateFor(50), count-based start/stop, page order and readiness protocol remain
+unchanged on desktop and WASM. There is no extra timer, event pump, observer,
+private Qt call, reattachment hook or longer readiness deadline.
+
+Pinned Qt destroys QObject children in QObject's destructor body, before its
+private-data scoped pointer is destroyed. Therefore the engine-owned controller
+normally retires before QQmlEnginePrivate. Its timer member is destroyed before
+its QQmlIncubationController base; the base detaches its native engine link while
+that private data still exists. If detached earlier, its null reverse pointer
+makes that step a no-op. QQmlEnginePrivate's later destructor also clears any
+remaining controller link. No callback is installed on a partly destroyed engine.
+
+The static-link defect is established by native source, not by a claimed cause
+of the observed status timeout. Independent engine A/B ownership, asynchronous
+liveness through either destruction order, explicit replacement/detachment and
+ordinary one-engine workflow verification must precede acceptance. Existing
+Session/model/currentness, page cancellation and readiness gates remain intact.
