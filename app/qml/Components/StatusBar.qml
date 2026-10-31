@@ -362,6 +362,8 @@ EaElements.StatusBar {
                 // Enabled while a scan runs; on, the pattern tab shows the dataset being fitted.
                 clickable: bar.fit !== null && bar.fit.scanning
                 checked: bar.fit !== null && bar.fit.scanning && bar.fit.following
+                Accessible.checkable: true
+                Accessible.checked: checked
                 keyIcon: "crosshairs"
                 valueText: qsTr("Follow")
                 ToolTip.text: qsTr("Show the dataset being fitted")

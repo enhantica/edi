@@ -69,6 +69,25 @@ Control {
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 
+    // A clickable item is a button for the keyboard and assistive tools too, as the sidebar's fit buttons were: Tab
+    // reaches it, Space, Enter or Return activates it, it shows its focus, and an unavailable one does neither.
+    focusPolicy: clickable ? Qt.StrongFocus : Qt.NoFocus
+    Keys.onPressed: event => {
+        const activates = event.key === Qt.Key_Space || event.key === Qt.Key_Return || event.key === Qt.Key_Enter;
+        if (control.clickable && activates && !event.isAutoRepeat) {
+            event.accepted = true;
+            control.clicked();
+        }
+    }
+    Accessible.role: clickable ? Accessible.Button : Accessible.StaticText
+    Accessible.name: framed ? valueText : keyText + " " + valueText
+    Accessible.description: ToolTip.text
+    Accessible.focusable: clickable
+    Accessible.onPressAction: {
+        if (control.clickable)
+            control.clicked();
+    }
+
     contentItem: Row {
         id: contentRow
         spacing: control.framed ? Math.round(control.font.pixelSize * 0.4) : control.font.pixelSize * 0.5
@@ -140,8 +159,9 @@ Control {
             Behavior on color {
                 EaAnimations.ThemeChange {}
             }
-            border.width: outline
-            border.color: control.frameBorderColor
+            // The keyboard focus: an accent border, inside a frame that has none of its own.
+            border.width: control.visualFocus && control.clickable ? Math.max(outline, 1) : outline
+            border.color: control.visualFocus && control.clickable ? EaStyle.Colors.themeAccent : control.frameBorderColor
         }
     }
 
