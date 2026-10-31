@@ -13,6 +13,7 @@ import edi
 import pytest
 
 from tests.fixtures.ncaf_free_flags import canonicalize
+from tests.fixtures.project_save.reference import six_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURE = ROOT / 'tests/fixtures/e02_t2_ncaf_5bank'
@@ -206,7 +207,7 @@ def _canonical_project_reference() -> dict[str, object]:
     return reference
 
 
-def _reference_structure(*, canonical_followers=False) -> dict[str, object]:
+def _reference_structure(*, canonical_followers=False, published=False) -> dict[str, object]:
     reference = (
         _canonical_project_reference()
         if canonical_followers
@@ -220,6 +221,8 @@ def _reference_structure(*, canonical_followers=False) -> dict[str, object]:
     metadata = {
         key: value for key, value in reference['metadata'].items() if key.startswith('structure.')
     }
+    if published:
+        parameters = [[path, six_digits(value), 0.0] for path, value, _esd in parameters]
     return {'parameters': parameters, 'metadata': metadata}
 
 
@@ -354,7 +357,7 @@ def test_e02_t2_cif_and_edi_structures_are_model_equivalent(method_name: str) ->
     assert _structure_snapshot(from_edi) == _reference_structure(canonical_followers=True), (
         'the EDI project must retain its frozen physical values with canonical follower metadata'
     )
-    assert _structure_snapshot(from_cif) == _reference_structure(), (
+    assert _structure_snapshot(from_cif) == _reference_structure(published=True), (
         'both CIF entry points must parse the real IUCr NCAF twin into the independent snapshot'
     )
 
@@ -372,14 +375,14 @@ def test_e02_t2_published_cod_structure_matches_hand_pinned_values(
     assert structure.space_group.name_h_m == 'I 21 3', (
         'COD 1000236 revision 130149 reports space group I 21 3'
     )
-    for name, (expected_value, expected_uncertainty) in PUBLISHED_CELL.items():
+    for name, (expected_value, _expected_uncertainty) in PUBLISHED_CELL.items():
         parameter = getattr(structure.cell, name)
         assert float(parameter.value) == pytest.approx(expected_value, abs=1e-12), (
             'cell values must come from COD 1000236 revision 130149',
             name,
         )
-        assert float(parameter.uncertainty) == pytest.approx(expected_uncertainty, abs=1e-12), (
-            'cell uncertainties must come from COD 1000236 revision 130149',
+        assert float(parameter.uncertainty) == pytest.approx(0.0, abs=1e-12), (
+            'Published COD CIF values import fixed without a standard uncertainty (ADR-0054)',
             name,
         )
 

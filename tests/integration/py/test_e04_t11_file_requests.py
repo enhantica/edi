@@ -134,7 +134,7 @@ def violations(text, case):
         ],
         'structure-cardinality': [
             (text['structure'], r'openFiles\("\.cif,\.edi", false\)', 'one Structure file'),
-            (text['experiment'], r'openFiles\("\.edi", true\)', 'Experiment batch'),
+            (text['experiment'], r'openFiles\("\.cif,\.edi", true\)', 'Experiment batch'),
             (
                 text['source'],
                 (

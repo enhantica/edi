@@ -21,6 +21,7 @@ import edi
 import pytest
 import yaml
 
+from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.project_save.agreement import rounded_model_reference
 from tests.fixtures.project_save.reference import (
     declared_rule,
@@ -96,7 +97,7 @@ def test_cli_fixture_inventory():
         if str(edi.Project.load(ROOT / 'docs/user/cli' / row['id'] / 'project').fitting_mode)
         in {'single', 'joint'}
         and scalars(
-            (ROOT / 'docs/user/cli' / row['id'] / 'project/project.edi').read_text(),
+            read_previous(ROOT / 'docs/user/cli' / row['id'] / 'project/project.edi').decode(),
             '_metadata.',
         ).get('_metadata.purpose')
         != 'simulation'

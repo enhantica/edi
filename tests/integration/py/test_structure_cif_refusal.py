@@ -25,14 +25,16 @@ def test_structure_factories_preserve_main_cif_admission(tmp_path, api, style, m
     path = tmp_path / 'input.cif'
     path.write_text(text)
     before = case.snapshot(tmp_path)
-    if style == 'underscore':
+    if style != 'multiblock':
         checks.main_values(
             getattr(api.StructureFactory, method)(text if method.endswith('str') else path)
         )
     else:
         with pytest.raises((ValueError, RuntimeError)) as caught:
             getattr(api.StructureFactory, method)(text if method.endswith('str') else path)
-        checks.reason(str(caught.value))
+        assert '2 structure blocks' in str(caught.value), (
+            'A singular CIF structure entrance refuses multiple structure blocks'
+        )
     assert case.snapshot(tmp_path) == before, 'A factory refusal never writes partial import files'
 
 
@@ -46,17 +48,19 @@ def test_structure_collection_preserves_main_cif_admission_and_model(tmp_path, a
     path = tmp_path / 'input.cif'
     path.write_text(case.text(style))
     argument = case.text(style) if method.endswith('str') else path
-    if style == 'underscore':
+    if style != 'multiblock':
         getattr(project.structures, method)(argument)
         checks.main_values(project.structures['cif_only'])
     else:
         with pytest.raises((ValueError, RuntimeError)) as caught:
             getattr(project.structures, method)(argument)
-        checks.reason(str(caught.value))
-    assert len(project.structures) == count + (style == 'underscore'), (
+        assert '2 structure blocks' in str(caught.value), (
+            'A singular CIF structure entrance refuses multiple structure blocks'
+        )
+    assert len(project.structures) == count + (style != 'multiblock'), (
         'Main-accepted CIF adds one structure; a refused CIF retains every existing structure'
     )
-    if style == 'underscore':
+    if style != 'multiblock':
         project.structures.remove('cif_only')
     project.save_as(tmp_path / 'after')
     after = case.saved_model(tmp_path / 'after')

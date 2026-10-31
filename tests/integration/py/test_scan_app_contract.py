@@ -760,7 +760,9 @@ console.log(JSON.stringify(calls));"""
             .replace('RECEIVED', received)
         )
         expected = (
-            [['web', '.edi', True], ['loaded', ['a.edi', 'b.edi']]] if available else [['desktop']]
+            [['web', '.cif,.edi', True], ['loaded', ['a.edi', 'b.edi']]]
+            if available
+            else [['desktop']]
         )
         assert javascript(program) == expected, (
             'Load wiring: each platform opens its multi-file route and '
@@ -846,15 +848,10 @@ console.log(JSON.stringify([calls,currentIndex]));"""
 
 def test_disabled_placeholders_and_load_data_are_present():
     types = source('qml/Pages/Experiment/ExperimentTypeGroup.qml')
-    for placeholder in ('dimensionality', 'polarization'):
-        assert (
-            property_value(item(types, 'experimentType.' + placeholder), 'enabled') == 'false'
-        ), 'Type wiring: each placeholder is disabled on its own control'
-    assert (
-        property_value(item(types, 'experimentType.polarization'), 'visible')
-        == 'row.experiment !== null && row.experiment.radiationProbe ==='
-        ' ExperimentViewModel.Neutron'
-    ), 'Type wiring: polarization is restricted to neutron experiments'
+    for placeholder in ('dimensionality', 'polarisation'):
+        assert property_value(item(types, 'experimentType.polarisation'), 'options') == (
+            'row.experiment ? row.experiment.polarisationOptions : null'
+        ), 'ADR-0054 displays the selected experiment polarisation for each probe'
     require_availability(source('qml/Pages/Experiment/ExperimentsGroup.qml'))
 
 
@@ -1156,8 +1153,8 @@ def test_forwarding_controls_reject_wrong_selected_index_token_range_and_visibil
         ),
         (
             'qml/Pages/Experiment/ExperimentTypeGroup.qml',
-            'row.experiment.radiationProbe === ExperimentViewModel.Neutron',
-            'row.experiment.radiationProbe === ExperimentViewModel.Neutron || true',
+            'row.experiment.polarisationOptions',
+            'row.experiment.dimensionalityOptions',
             test_disabled_placeholders_and_load_data_are_present,
             (),
         ),

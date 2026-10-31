@@ -1,7 +1,6 @@
 """Existing experiment CIF factories stay live; native-only discovery stays unchanged."""
 
 import importlib
-import warnings
 
 import gemmi
 import pytest
@@ -45,9 +44,7 @@ def test_experiment_factories_preserve_main_cif_admission(tmp_path, api, style, 
     if style == 'main-classic':
         checks.main_values(factory(argument))
     else:
-        with pytest.raises((ValueError, RuntimeError)) as caught:
-            factory(argument)
-        checks.reason(str(caught.value))
+        checks.imported_values(factory(argument))
     assert native.snapshot(tmp_path) == before, (
         'An experiment factory refusal leaves all input and output bytes intact'
     )
@@ -56,7 +53,7 @@ def test_experiment_factories_preserve_main_cif_admission(tmp_path, api, style, 
 @pytest.mark.parametrize('style', case.FACTORY_STYLES)
 @pytest.mark.parametrize('method', ['add_from_cif_str', 'add_from_cif_path', 'add_from_edi_path'])
 def test_experiment_collection_preserves_main_cif_admission_and_model(
-    tmp_path, capfd, api, style, method
+    tmp_path, api, style, method
 ):
     project = api.Project.load(native.project(tmp_path))
     project.save_as(tmp_path / 'before')
@@ -64,37 +61,18 @@ def test_experiment_collection_preserves_main_cif_admission_and_model(
     count = len(project.experiments)
     path = tmp_path / 'input.edi'
     path.write_text(case.text(style))
-    if style == 'main-classic':
-        argument = case.text(style) if method.endswith('str') else path
-        add_experiment(project, api, method, argument)
-        checks.main_values(project.experiments['main_cwl'])
-        project.save_as(tmp_path / 'after')
-        after = native.saved_model(tmp_path / 'after')
-        del after['experiments/main_cwl.edi']
-        assert after == before, (
-            'An accepted experiment CIF leaves every pre-existing native model byte intact'
-        )
-        assert len(project.experiments) == count + 1, (
-            'The supported collection entrance adds one accepted experiment as on main'
-        )
-        assert path.read_text() == case.text(style), 'An accepted CIF never rewrites its input'
-        return
-    capfd.readouterr()
-    with warnings.catch_warnings(record=True) as notices:
-        warnings.simplefilter('always')
-        argument = case.text(style) if method.endswith('str') else path
-        with pytest.raises((ValueError, RuntimeError)) as caught:
-            add_experiment(project, api, method, argument)
-    checks.reason(str(caught.value))
-    checks.no_warnings(notices, capfd.readouterr().err)
-    assert len(project.experiments) == count, (
-        'A refused collection addition retains every existing experiment'
+    argument = case.text(style) if method.endswith('str') else path
+    add_experiment(project, api, method, argument)
+    name = 'main_cwl' if style == 'main-classic' else 'cif_experiment'
+    (checks.main_values if style == 'main-classic' else checks.imported_values)(
+        project.experiments[name]
     )
     project.save_as(tmp_path / 'after')
-    assert native.saved_model(tmp_path / 'after') == before, (
-        'Every native structure, experiment and analysis byte survives experiment refusal'
-    )
-    assert path.read_text() == case.text(style), 'Refusing an experiment never rewrites its CIF'
+    after = native.saved_model(tmp_path / 'after')
+    del after['experiments/' + name + '.edi']
+    assert after == before, 'CIF import preserves all pre-existing native model bytes'
+    assert len(project.experiments) == count + 1, 'CIF import adds exactly one experiment'
+    assert path.read_text() == case.text(style), 'CIF import never rewrites the input'
 
 
 @pytest.mark.parametrize('style', case.STYLES)
@@ -105,9 +83,9 @@ def test_project_experiment_cif_discovery_preserves_main_selection_and_refusal(
     source = case.poisoned_project(tmp_path, style, layout)
     before = native.snapshot(source)
     if layout == 'native-suffix':
-        with pytest.raises((ValueError, RuntimeError)) as caught:
-            api.Project.load(source)
-        checks.reason(str(caught.value))
+        project = api.Project.load(source)
+        checks.imported_values(project.experiments['cif_experiment'])
+        assert len(project.experiments) == 2, 'Native-suffix CIF content imports one experiment'
     else:
         control = tmp_path / 'control'
         control.mkdir()
