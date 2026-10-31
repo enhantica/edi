@@ -82,7 +82,9 @@ EaComponents.ListViewTextInput {
     function cancelAssistantEdit() {
         ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.TextCellEditor);
     }
-    Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.TextCellEditor, event)
+    function cancelTextEdit(event) {
+        ApplicationInfo.editorEscape(ApplicationInfo.TextCellEditor, event);
+    }
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.

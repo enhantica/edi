@@ -246,6 +246,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void editorAllowAssistantCommit(EditorKind kind) const;
     Q_INVOKABLE void parameterEditorReset() const;
     Q_INVOKABLE void editorCancelAssistantEdit(EditorKind kind) const;
+    Q_INVOKABLE void listTextInputEscape(const QJSValue& control, const QJSValue& event) const;
     Q_INVOKABLE void editorEscape(EditorKind kind, const QJSValue& event) const;
     Q_INVOKABLE void editorCommit(EditorKind kind) const;
     Q_INVOKABLE void parameterEditorFocusChanged(EditorKind kind) const;

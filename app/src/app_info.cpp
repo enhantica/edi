@@ -3231,6 +3231,11 @@ void ApplicationInfo::editorCancelAssistantEdit(EditorKind kind) const {
     if (!current()) return;
     panelUsageContextWrite(f, "draft", consentNull());
 }
+void ApplicationInfo::listTextInputEscape(const QJSValue& control, const QJSValue& event) const {
+    const auto f = panelUsageEngine(this);
+    assistantMemberWrite(f, control, "focus", QJSValue(false));
+    assistantMemberWrite(f, event, "accepted", QJSValue(true));
+}
 void ApplicationInfo::editorEscape(EditorKind kind, const QJSValue& event) const {
     const auto f = panelUsageEngine(this);
     if (!editorNull(f, "commitInProgress") || editorFlag(f, "inputMethodComposing") || !panelUsageReady(f)) return;
@@ -3250,6 +3255,8 @@ void ApplicationInfo::editorEscape(EditorKind kind, const QJSValue& event) const
     panelUsageContextWrite(f, "refusal", QJSValue(QString{}));
     if (!editorOriginal(f, life, original, owner)) return;
     panelUsageContextWrite(f, "draft", consentNull());
+    // Cancel before the base control's ordinary focus-loss completion can commit.
+    if (editorOriginal(f, life, consentNull(), owner)) panelUsageContextWrite(f, "focus", QJSValue(false));
 }
 void ApplicationInfo::editorCommit(EditorKind kind) const {
     const auto f = panelUsageEngine(this);
