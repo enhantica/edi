@@ -5392,6 +5392,33 @@ QJSValue tableCallback(const PanelUsageFrame& f, uint operation, const QJSValueL
 }
 QJSValue tableNullish(const QJSValue& value, const QJSValue& fallback) { return value.isNull() || value.isUndefined() ? fallback : value; }
 bool tableAlive(const PanelUsageFrame& f, const QJSValue& life) { return panelUsageTruth(life) && editorLife(f, life); }
+// A retained script token does not keep its QML owner alive. Inspect the native
+// wrapper before consulting that token, without resolving a retired QML scope.
+bool tableDeferredLive(const QPointer<QObject>& owner) {
+    if (!owner || QQmlData::wasDeleted(owner.data())) return false;
+    const auto* data = QQmlData::get(owner.data());
+    return data && !data->isQueuedForDeletion;
+}
+QPointer<QObject> tableDeferredOwner(const PanelUsageFrame& f, const QJSValue& table) {
+    if (!panelUsageReady(f)) return {};
+    QV4::Scope scope(f.vm());
+    QV4::ScopedValue value(scope, QJSValuePrivate::convertToReturnedValue(f.vm(), table));
+    const auto* wrapper = value->as<QV4::QObjectWrapper>();
+    return QPointer<QObject>(wrapper ? wrapper->object() : nullptr);
+}
+bool tableDeferredCurrent(const PanelUsageFrame& f, const QJSValue& table, const QJSValue& life) {
+    const auto owner = tableDeferredOwner(f, table);
+    QObject* scopeObject = nullptr;
+    if (f.qmlScope) scopeObject = f.qmlScope->qml()->scopeObject;
+    const QPointer<QObject> scopeOwner(scopeObject);
+    const auto current = [&] {
+        return panelUsageReady(f) && tableDeferredLive(owner) && tableDeferredLive(scopeOwner)
+            && f.context && f.context->isValid();
+    };
+    // Check native owner and captured scope before reading even the plain token.
+    // A lifetime property may run script, so recheck both after that read.
+    return current() && tableAlive(f, life) && current();
+}
 QJSValue tableArrayFrom(const PanelUsageFrame& f, const QJSValue& value) {
     const auto array = panelUsageContextRead(f, "Array"); return panelUsageMemberCall(f, array, "from", {value});
 }
@@ -5527,8 +5554,11 @@ QJSValue tableProcedureCallback(const PanelUsageFrame& f, uint operation,
     if (operation == 142) {
         const auto math = panelUsageContextRead(f, "Math"); return panelUsageMemberCall(f, math, "max", {arg(0), arg(1)});
     }
-    if (editorLife(f, saved(0))) {
-        assistantMemberWrite(f, saved(0), "queued", QJSValue(false)); return projectInvoke(f, "table", "fitColumns");
+    if (operation == 144) {
+        const auto life = saved(0), table = saved(1);
+        if (!tableDeferredCurrent(f, table, life)) return {};
+        assistantMemberWrite(f, life, "queued", QJSValue(false));
+        if (tableDeferredCurrent(f, table, life)) return panelUsageMemberCall(f, table, "fitColumns");
     }
     return {};
 }
@@ -5595,8 +5625,11 @@ void ApplicationInfo::tableAlignCell(const QJSValue& cell, const QJSValue& kind)
 void ApplicationInfo::tableScheduleFitColumns() const {
     const auto f = panelUsageEngine(this); const auto life = panelUsageContextRead(f, "columnFitLife");
     if (!tableAlive(f, life) || panelUsageTruth(panelUsageRead(f, life, "queued"))) return;
+    const auto table = panelUsageContextRead(f, "table");
+    if (!tableDeferredCurrent(f, table, life)) return;
     assistantMemberWrite(f, life, "queued", QJSValue(true));
-    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {tableCallback(f, 144, {life}, 0)});
+    if (!tableDeferredCurrent(f, table, life)) return;
+    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageMemberCall(f, qt, "callLater", {tableCallback(f, 144, {life, table}, 0)});
 }
 QJSValue ApplicationInfo::tableColumnWidths() const {
     const auto f = panelUsageEngine(this); const auto fitted = panelUsageContextRead(f, "fittedWidths");
@@ -8442,8 +8475,16 @@ QJSValue recentRowCallback(const PanelUsageFrame& f, uint operation,
         panelUsageWrite(f, row.value, "available", panelUsageDeferredMemberCall(f, panelUsageContextRead(f, "Session"), "projectDirectoryExists", [&] { return QJSValueList({path}); })); return panelUsageComplete(f, row);
     }
     if (operation == 322) return QJSValue(!arg(0).strictlyEquals(saved(0)));
-    if (operation == 323) panelUsageDeferredMemberCall(f, saved(0), "applyWidths", [&] { return QJSValueList({saved(1)}); });
-    const auto qt = panelUsageContextRead(f, "Qt"); panelUsageDeferredMemberCall(f, qt, "callLater", [&] { return QJSValueList({panelUsageRead(f, saved(0), "fitColumns")}); }); return {};
+    if (operation == 323 || operation == 324) {
+        const auto table = saved(0), life = saved(2);
+        if (!tableDeferredCurrent(f, table, life)) return {};
+        if (operation == 323) panelUsageDeferredMemberCall(f, table, "applyWidths", [&] { return QJSValueList({saved(1)}); });
+        if (!tableDeferredCurrent(f, table, life)) return {};
+        const auto qt = panelUsageContextRead(f, "Qt");
+        if (!tableDeferredCurrent(f, table, life)) return {};
+        panelUsageDeferredMemberCall(f, qt, "callLater", [&] { return QJSValueList({panelUsageRead(f, table, "fitColumns")}); });
+    }
+    return {};
 }
 } // namespace
 
@@ -8541,14 +8582,16 @@ void ApplicationInfo::tableRowCompleted(const QJSValue& installOpacity) const {
     panelUsageEach(f, assistantContextField(f, "row", "contentRowData"), [&](const QJSValue& cell) { rowFocusOnClick(f, cell); return panelUsageReady(f); });
     const auto table = chartAs(f, assistantContextField(f, "row", "listView"), "DataTable");
     if (!table.isNull()) {
+        const auto life = panelUsageRead(f, table, "columnFitLife");
         const auto array = panelUsageContextRead(f, "Array"); const auto children = panelUsageDeferredMemberCall(f, array, "from", [&] { return QJSValueList({assistantContextField(f, "row", "contentRowData")}); });
         const auto first = panelUsageDeferredMemberCall(f, children, "find", [&] { return QJSValueList({panelUsageClosure(f, 131, {}, 1)}); });
         const auto cells = panelUsageTruth(first) ? panelUsageRead(f, first, "parent") : consentNull();
-        if (!cells.isNull()) panelUsageDeferredMemberCall(f, panelUsageRead(f, cells, "childrenChanged"), "connect", [&] { return QJSValueList({panelUsageClosure(f, 323, {table, cells}, 0)}); });
+        if (tableDeferredCurrent(f, table, life) && !cells.isNull()) panelUsageDeferredMemberCall(f, panelUsageRead(f, cells, "childrenChanged"), "connect", [&] { return QJSValueList({panelUsageClosure(f, 323, {table, cells, life}, 0)}); });
         panelUsageEach(f, assistantContextField(f, "row", "contentRowData"), [&](const QJSValue& cell) {
+            if (!tableDeferredCurrent(f, table, life)) return false;
             if (!panelUsageTruth(rowInstanceOf(f, cell, "Item"))) return panelUsageReady(f);
-            panelUsageDeferredMemberCall(f, panelUsageRead(f, cell, "implicitWidthChanged"), "connect", [&] { return QJSValueList({panelUsageClosure(f, 324, {table}, 0)}); });
-            if (tableHas(f, cell, "numberChanged")) panelUsageDeferredMemberCall(f, panelUsageRead(f, cell, "numberChanged"), "connect", [&] { return QJSValueList({panelUsageClosure(f, 324, {table}, 0)}); });
+            panelUsageDeferredMemberCall(f, panelUsageRead(f, cell, "implicitWidthChanged"), "connect", [&] { return QJSValueList({panelUsageClosure(f, 324, {table, consentNull(), life}, 0)}); });
+            if (tableHas(f, cell, "numberChanged")) panelUsageDeferredMemberCall(f, panelUsageRead(f, cell, "numberChanged"), "connect", [&] { return QJSValueList({panelUsageClosure(f, 324, {table, consentNull(), life}, 0)}); });
             return panelUsageReady(f);
         });
     }
