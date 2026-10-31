@@ -20,10 +20,10 @@ class EdiTextHighlighter : public QObject {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QQuickTextDocument* document READ document WRITE setDocument NOTIFY documentChanged)
-    Q_PROPERTY(QColor datablockColor MEMBER datablock_ NOTIFY colorsChanged)
-    Q_PROPERTY(QColor itemColor MEMBER item_ NOTIFY colorsChanged)
-    Q_PROPERTY(QColor loopColumnColor MEMBER loop_column_ NOTIFY colorsChanged)
-    Q_PROPERTY(QColor loopColor MEMBER loop_ NOTIFY colorsChanged)
+    Q_PROPERTY(QColor datablockColor MEMBER datablock_ NOTIFY datablockColorChanged)
+    Q_PROPERTY(QColor itemColor MEMBER item_ NOTIFY itemColorChanged)
+    Q_PROPERTY(QColor loopColumnColor MEMBER loop_column_ NOTIFY loopColumnColorChanged)
+    Q_PROPERTY(QColor loopColor MEMBER loop_ NOTIFY loopColorChanged)
 
    public:
     explicit EdiTextHighlighter(QObject* parent = nullptr);
@@ -36,6 +36,10 @@ class EdiTextHighlighter : public QObject {
    signals:
     void documentChanged();
     void colorsChanged();
+    void datablockColorChanged();
+    void itemColorChanged();
+    void loopColumnColorChanged();
+    void loopColorChanged();
 
    private:
     friend class EdiTextRules;

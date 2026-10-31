@@ -3399,7 +3399,7 @@ struct AssistantViewModel::State {
             // This is the actual notifier of both consent properties. Publish
             // it synchronously, before exposing the new Preferences rows; a
             // later timer/queued render is not a disclosure identity bond.
-            emit owner.contextPreviewChanged();
+            publish_context_preview();
             if(!current())return;
             if(!retired_source.isEmpty())emit owner.skillSourceSelectionRetired(retired_source);
             if(!current())return;
@@ -3412,7 +3412,7 @@ struct AssistantViewModel::State {
             if(!current())return;
             // The source fact remains invalid/committed even if optional model
             // projection fails. Retire the real disclosure binding directly.
-            try { emit owner.contextPreviewChanged(); } catch(...) {}
+            try { publish_context_preview(); } catch(...) {}
         }
     }
     bool load_source_preference(bool force = false) noexcept {
@@ -13929,7 +13929,13 @@ struct AssistantViewModel::State {
             if(resumed && restore_last_target==actual_thread)retire_startup_restore();
             if(session_selection_target==actual_thread) {
                 session_selection_target.clear();session_restore_target.clear();sessions_loading=false;
-                const auto record=saved_session(actual_thread);session_draft=record.value("draft").toString();
+                const auto record=saved_session(actual_thread);
+                observe_session_draft();
+                const QPointer<AssistantViewModel> draftOwner(&owner);
+                const auto draftChanged = qScopeGuard([draftOwner, originalState = this] {
+                    if (draftOwner && draftOwner->state_.get() == originalState) originalState->publish_session_draft();
+                });
+                session_draft=record.value("draft").toString();
                 auto filesProof=file_projection();(void)flush_selected_rows(filesProof);
                 if(!publication.input_current())return;
                 emit owner.sessionDraftRestored(actual_thread,session_draft);
@@ -15661,6 +15667,72 @@ struct AssistantViewModel::State {
         return false;
     }
 
+    template<typename Getter>
+    bool publish_property(const FileProjection& projection, const QString& name, Getter getter,
+                          void (AssistantViewModel::*signal)(), bool legacyContext = false) {
+        if (!projection.publication_current()) return false;
+        const QString versionKey = name + QStringLiteral("/notification-version");
+        const auto before = observed.value(versionKey).toULongLong();
+        const auto value = (projection.receiver.data()->*getter)();
+        if (!projection.publication_current()) return false;
+        if (observed.value(versionKey).toULongLong() != before) return true;
+        const QVariant next = QVariant::fromValue(value);
+        if (!observed.contains(name) || observed.value(name) != next) {
+            const auto publication = before + quint64(1);
+            observed[name] = next;
+            observed[versionKey] = publication;
+            if (legacyContext) {
+                emit projection.receiver->contextPreviewChanged();
+                if (!projection.publication_current()) return false;
+                if (observed.value(versionKey).toULongLong() != publication) return true;
+            }
+            (projection.receiver.data()->*signal)();
+        }
+        return projection.publication_current();
+    }
+#ifndef __EMSCRIPTEN__
+    void observe_session_draft() {
+        if (!observed.contains("sessionDraft")) observed["sessionDraft"] = session_draft;
+    }
+    void publish_session_draft() {
+        if (observed.contains("sessionDraft") && observed.value("sessionDraft").toString() == session_draft) return;
+        observed["sessionDraft"] = session_draft;
+        emit owner.sessionDraftChanged();
+    }
+#endif
+    void publish_related_properties(int group) {
+        const auto projection = file_projection();
+        if (group == 0) {
+            if (!publish_property(projection, "skillSourceRevision", &AssistantViewModel::skillSourceRevision, &AssistantViewModel::skillSourceRevisionChanged)) return;
+            if (!publish_property(projection, "skillSourceError", &AssistantViewModel::skillSourceError, &AssistantViewModel::skillSourceErrorChanged)) return;
+            if (!publish_property(projection, "skillSourceImporting", &AssistantViewModel::skillSourceImporting, &AssistantViewModel::skillSourceImportingChanged)) return;
+        }
+        if (group == 1) {
+            if (!publish_property(projection, "sessionsLoading", &AssistantViewModel::sessionsLoading, &AssistantViewModel::sessionsLoadingChanged)) return;
+            if (!publish_property(projection, "sessionsHaveMore", &AssistantViewModel::sessionsHaveMore, &AssistantViewModel::sessionsHaveMoreChanged)) return;
+            if (!publish_property(projection, "sessionsError", &AssistantViewModel::sessionsError, &AssistantViewModel::sessionsErrorChanged)) return;
+            if (!publish_property(projection, "sessionSelection", &AssistantViewModel::sessionSelection, &AssistantViewModel::sessionSelectionChanged)) return;
+        }
+        if (group == 2) {
+            if (!publish_property(projection, "cachedHistoryClearing", &AssistantViewModel::cachedHistoryClearing, &AssistantViewModel::cachedHistoryClearingChanged)) return;
+            if (!publish_property(projection, "cachedHistoryError", &AssistantViewModel::cachedHistoryError, &AssistantViewModel::cachedHistoryErrorChanged)) return;
+        }
+        if (group == 3) {
+            if (!publish_property(projection, "contextConsentIdentity", &AssistantViewModel::contextConsentIdentity, &AssistantViewModel::contextConsentIdentityChanged)) return;
+            if (!publish_property(projection, "contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextConsentRequiredChanged)) return;
+            if (!publish_property(projection, "contextApprovalBlocked", &AssistantViewModel::contextApprovalBlocked, &AssistantViewModel::contextApprovalBlockedChanged)) return;
+        }
+    }
+    void publish_context_preview() {
+        const auto projection = file_projection();
+        emit owner.contextPreviewChanged();
+        if (projection.publication_current()) publish_related_properties(3);
+    }
+    void initialize_property_notifications() {
+        QObject::connect(&owner, &AssistantViewModel::skillSourcesChanged, &owner, [this] { publish_related_properties(0); });
+        QObject::connect(&owner, &AssistantViewModel::sessionsChanged, &owner, [this] { publish_related_properties(1); });
+        QObject::connect(&owner, &AssistantViewModel::cachedHistoryChanged, &owner, [this] { publish_related_properties(2); });
+    }
     void notify() {
         QElapsedTimer elapsed;
         const bool observeElapsed=lcAssistantElapsed().isDebugEnabled();
@@ -15706,16 +15778,8 @@ struct AssistantViewModel::State {
             else if(question_id!=chat_reveal_question) {
                 chat_reveal_question=question_id;chat_reveal_requested=true;
             }
-            const auto property = [&](const QString& name, auto getter, auto signal) {
-                if (!current()) return false;
-                const auto value = (projection.receiver.data()->*getter)();
-                if (!current()) return false;
-                const QVariant next = QVariant::fromValue(value);
-                if (!observed.contains(name) || observed.value(name) != next) {
-                    observed[name] = next;
-                    (projection.receiver.data()->*signal)();
-                }
-                return current();
+            const auto property = [&](const QString& name, auto getter, auto signal, bool legacyContext = false) {
+                return publish_property(projection, name, getter, signal, legacyContext);
             };
             if (!property("state", &AssistantViewModel::state, &AssistantViewModel::stateChanged)) return;
             if (!property("connected", &AssistantViewModel::connected, &AssistantViewModel::connectedChanged)) return;
@@ -15733,9 +15797,18 @@ struct AssistantViewModel::State {
             if (!property("lastError", &AssistantViewModel::lastError, &AssistantViewModel::lastErrorChanged)) return;
             if (!property("contextPreview", &AssistantViewModel::contextPreview, &AssistantViewModel::contextPreviewChanged)) return;
             if (!property("draftAdmissionReady", &AssistantViewModel::draftAdmissionReady, &AssistantViewModel::draftAdmissionReadyChanged)) return;
-            if (!property("contextConsentIdentity", &AssistantViewModel::contextConsentIdentity, &AssistantViewModel::contextPreviewChanged)) return;
-            if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextPreviewChanged)) return;
-            if (!property("contextApprovalBlocked", &AssistantViewModel::contextApprovalBlocked, &AssistantViewModel::contextPreviewChanged)) return;
+            if (!property("contextConsentIdentity", &AssistantViewModel::contextConsentIdentity, &AssistantViewModel::contextConsentIdentityChanged, true)) return;
+            if (!property("contextConsentRequired", &AssistantViewModel::contextConsentRequired, &AssistantViewModel::contextConsentRequiredChanged, true)) return;
+            if (!property("contextApprovalBlocked", &AssistantViewModel::contextApprovalBlocked, &AssistantViewModel::contextApprovalBlockedChanged, true)) return;
+            if (!property("skillSourceRevision", &AssistantViewModel::skillSourceRevision, &AssistantViewModel::skillSourceRevisionChanged)) return;
+            if (!property("skillSourceError", &AssistantViewModel::skillSourceError, &AssistantViewModel::skillSourceErrorChanged)) return;
+            if (!property("skillSourceImporting", &AssistantViewModel::skillSourceImporting, &AssistantViewModel::skillSourceImportingChanged)) return;
+            if (!property("sessionsLoading", &AssistantViewModel::sessionsLoading, &AssistantViewModel::sessionsLoadingChanged)) return;
+            if (!property("sessionsHaveMore", &AssistantViewModel::sessionsHaveMore, &AssistantViewModel::sessionsHaveMoreChanged)) return;
+            if (!property("sessionsError", &AssistantViewModel::sessionsError, &AssistantViewModel::sessionsErrorChanged)) return;
+            if (!property("sessionSelection", &AssistantViewModel::sessionSelection, &AssistantViewModel::sessionSelectionChanged)) return;
+            if (!property("cachedHistoryClearing", &AssistantViewModel::cachedHistoryClearing, &AssistantViewModel::cachedHistoryClearingChanged)) return;
+            if (!property("cachedHistoryError", &AssistantViewModel::cachedHistoryError, &AssistantViewModel::cachedHistoryErrorChanged)) return;
         } catch (...) {
             if (current()) throw; // Never unwind into an old caller after deletion/rebind.
         }
@@ -16995,6 +17068,7 @@ bool AssistantViewModel::commitNativeProject(ProjectViewModel* target) noexcept 
 }
 
 AssistantViewModel::AssistantViewModel(QObject* parent, AssistantWorkReportOptions options) : QObject(parent), state_(std::make_unique<State>(*this, options)) {
+    state_->initialize_property_notifications();
     state_->bind(nullptr);
     auto* session=qobject_cast<Session*>(parent);
     if(!session || session->assistant())finishHistoryInitialization();
@@ -17002,6 +17076,7 @@ AssistantViewModel::AssistantViewModel(QObject* parent, AssistantWorkReportOptio
 #ifndef __EMSCRIPTEN__
 AssistantViewModel::AssistantViewModel(edi::assistant::native::NativeDependencies dependencies, QObject* parent, AssistantWorkReportOptions options)
     : QObject(parent), state_(std::make_unique<State>(*this, std::move(dependencies), options)) {
+    state_->initialize_property_notifications();
     state_->bind(nullptr);
     auto* session=qobject_cast<Session*>(parent);
     if(!session || session->assistant())finishHistoryInitialization();
@@ -17345,7 +17420,10 @@ QString AssistantViewModel::sessionDraft() const {
 }
 void AssistantViewModel::setSessionDraft(const QString& text) {
 #ifndef __EMSCRIPTEN__
+    if (state_->session_draft == text) return;
+    state_->observe_session_draft();
     state_->session_draft=text;
+    state_->publish_session_draft();
 #else
     Q_UNUSED(text);
 #endif

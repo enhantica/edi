@@ -8,6 +8,7 @@
 #include <QTextDocumentFragment>
 #include <QPainter>
 #include <QQuickWindow>
+#include <QScopeGuard>
 #include <QTextImageFormat>
 #include <QUuid>
 #include <QEvent>
@@ -444,12 +445,35 @@ QSGNode* AssistantMarkdown::updatePaintNode(QSGNode* old, UpdatePaintNodeData*) 
         return nullptr;
     }
 }
+quint64 AssistantMarkdown::beginPropertyNotification(const QString& name, const QVariant& before) {
+    if (!property_notifications_.contains(name)) property_notifications_[name] = before;
+    const QString versionKey = name + QStringLiteral("/notification-version");
+    const auto publication = property_notifications_.value(versionKey).toULongLong() + quint64(1);
+    property_notifications_[versionKey] = publication;
+    return publication;
+}
+void AssistantMarkdown::completePropertyNotification(const QString& name, quint64 publication,
+                                                      const QVariant& value, void (AssistantMarkdown::*signal)()) {
+    const QString versionKey = name + QStringLiteral("/notification-version");
+    if (property_notifications_.value(versionKey).toULongLong() != publication
+        || property_notifications_.value(name) == value) return;
+    property_notifications_[name] = value;
+    property_notifications_[versionKey] = publication + quint64(1);
+    (this->*signal)();
+}
 QQuickTextDocument* AssistantMarkdown::document() const { return target_; }
 QString AssistantMarkdown::source() const { return source_; }
 bool AssistantMarkdown::markdown() const { return markdown_; }
 QColor AssistantMarkdown::textColor() const {return text_color_;}
 void AssistantMarkdown::setTextColor(const QColor& color) {
-    if(text_color_==color)return;text_color_=color;++presentation_revision_;render();
+    if(text_color_==color)return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("textColor", QVariant::fromValue(text_color_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("textColor", publication,
+            QVariant::fromValue(notifyReceiver->text_color_), &AssistantMarkdown::textColorChanged);
+    });
+text_color_=color;++presentation_revision_;render();
 }
 QString AssistantMarkdown::selectedSource(int start,int end) const {
     const QPointer<QTextDocument> document(document_);if(!document)return {};
@@ -466,7 +490,28 @@ QString AssistantMarkdown::selectedSource(int start,int end) const {
     return result;
 }
 QQuickItem* AssistantMarkdown::editor() const {return editor_;}
-void AssistantMarkdown::setEditor(QQuickItem* editor) {editor_=editor;}
+void AssistantMarkdown::setEditor(QQuickItem* editor) {
+    if (editor_ == editor) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("editor", QVariant::fromValue(editor_.data()));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("editor", publication,
+            QVariant::fromValue(notifyReceiver->editor_.data()), &AssistantMarkdown::editorChanged);
+    });
+    QObject::disconnect(editor_destroyed_);
+    if (!notifyReceiver || property_notifications_.value("editor/notification-version").toULongLong() != publication) return;
+    editor_ = editor;
+    const auto destroyedConnection = editor ? connect(editor, &QObject::destroyed, this, [this, originalTarget = QPointer<QQuickItem>(editor)] {
+        if (editor_ != originalTarget) return;
+        const auto destroyedPublication = beginPropertyNotification("editor", QVariant::fromValue(editor_.data()));
+        completePropertyNotification("editor", destroyedPublication, QVariant::fromValue(editor_.data()), &AssistantMarkdown::editorChanged);
+    }) : QMetaObject::Connection{};
+    if (!notifyReceiver || property_notifications_.value("editor/notification-version").toULongLong() != publication) {
+        QObject::disconnect(destroyedConnection);
+        return;
+    }
+    editor_destroyed_ = destroyedConnection;
+}
 void AssistantMarkdown::restoreClipboardSource(int requestedMode) noexcept {
 #ifndef __EMSCRIPTEN__
     if(copying_ || !editor_ || !document_)return;
@@ -520,6 +565,13 @@ void AssistantMarkdown::restoreClipboardSource(int requestedMode) noexcept {
 QColor AssistantMarkdown::accentColor() const { return accent_color_; }
 void AssistantMarkdown::setAccentColor(const QColor& color) {
     if (accent_color_ == color) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("accentColor", QVariant::fromValue(accent_color_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("accentColor", publication,
+            QVariant::fromValue(notifyReceiver->accent_color_), &AssistantMarkdown::accentColorChanged);
+    });
+
     accent_color_ = color;
     ++presentation_revision_;
     if (document_ && markdown_) {
@@ -533,6 +585,13 @@ QColor AssistantMarkdown::tableShadeColor() const { return table_shade_color_; }
 QColor AssistantMarkdown::tableBaseColor() const { return table_base_color_; }
 void AssistantMarkdown::setBodyFont(const QFont& font) {
     if (body_font_set_ && body_font_ == font) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("bodyFont", QVariant::fromValue(body_font_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("bodyFont", publication,
+            QVariant::fromValue(notifyReceiver->body_font_), &AssistantMarkdown::bodyFontChanged);
+    });
+
     body_font_ = font; body_font_set_ = true;
     ++presentation_revision_;
     if (document_) {
@@ -546,24 +605,52 @@ void AssistantMarkdown::setBodyFont(const QFont& font) {
 }
 void AssistantMarkdown::setMonoFontFamily(const QString& family) {
     if (mono_font_family_ == family) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("monoFontFamily", QVariant::fromValue(mono_font_family_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("monoFontFamily", publication,
+            QVariant::fromValue(notifyReceiver->mono_font_family_), &AssistantMarkdown::monoFontFamilyChanged);
+    });
+
     mono_font_family_ = family;
     ++presentation_revision_;
     if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
 }
 void AssistantMarkdown::setTableBorderColor(const QColor& color) {
     if (table_border_color_ == color) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("tableBorderColor", QVariant::fromValue(table_border_color_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("tableBorderColor", publication,
+            QVariant::fromValue(notifyReceiver->table_border_color_), &AssistantMarkdown::tableBorderColorChanged);
+    });
+
     table_border_color_ = color;
     ++presentation_revision_;
     if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
 }
 void AssistantMarkdown::setTableBaseColor(const QColor& color) {
     if (table_base_color_ == color) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("tableBaseColor", QVariant::fromValue(table_base_color_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("tableBaseColor", publication,
+            QVariant::fromValue(notifyReceiver->table_base_color_), &AssistantMarkdown::tableBaseColorChanged);
+    });
+
     table_base_color_ = color;
     ++presentation_revision_;
     if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
 }
 void AssistantMarkdown::setTableShadeColor(const QColor& color) {
     if (table_shade_color_ == color) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("tableShadeColor", QVariant::fromValue(table_shade_color_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("tableShadeColor", publication,
+            QVariant::fromValue(notifyReceiver->table_shade_color_), &AssistantMarkdown::tableShadeColorChanged);
+    });
+
     table_shade_color_ = color;
     ++presentation_revision_;
     if (document_ && markdown_) try { formatPresentation(); } catch (...) {}
@@ -682,7 +769,25 @@ void AssistantMarkdown::formatPresentation() {
 }
 void AssistantMarkdown::setDocument(QQuickTextDocument* target) {
     if (target_ == target) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("document", QVariant::fromValue(target_.data()));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("document", publication,
+            QVariant::fromValue(notifyReceiver->target_.data()), &AssistantMarkdown::documentChanged);
+    });
+    QObject::disconnect(target_destroyed_);
+    if (!notifyReceiver || property_notifications_.value("document/notification-version").toULongLong() != publication) return;
     target_ = target;
+    const auto destroyedConnection = target ? connect(target, &QObject::destroyed, this, [this, originalTarget = QPointer<QQuickTextDocument>(target)] {
+        if (target_ != originalTarget) return;
+        const auto destroyedPublication = beginPropertyNotification("document", QVariant::fromValue(target_.data()));
+        completePropertyNotification("document", destroyedPublication, QVariant::fromValue(target_.data()), &AssistantMarkdown::documentChanged);
+    }) : QMetaObject::Connection{};
+    if (!notifyReceiver || property_notifications_.value("document/notification-version").toULongLong() != publication) {
+        QObject::disconnect(destroyedConnection);
+        return;
+    }
+    target_destroyed_ = destroyedConnection;
     ++presentation_revision_;
     document_ = nullptr;
     decorations_.clear(); update();
@@ -716,12 +821,26 @@ void AssistantMarkdown::setDocument(QQuickTextDocument* target) {
 }
 void AssistantMarkdown::setSource(const QString& source) {
     if (source_ == source) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("source", QVariant::fromValue(source_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("source", publication,
+            QVariant::fromValue(notifyReceiver->source_), &AssistantMarkdown::sourceChanged);
+    });
+
     source_ = source;
     ++presentation_revision_;
     render();
 }
 void AssistantMarkdown::setMarkdown(bool markdown) {
     if (markdown_ == markdown) return;
+    const QPointer<AssistantMarkdown> notifyReceiver(this);
+    const auto publication = beginPropertyNotification("markdown", QVariant::fromValue(markdown_));
+    const auto changedNotice = qScopeGuard([notifyReceiver, publication] {
+        if (notifyReceiver) notifyReceiver->completePropertyNotification("markdown", publication,
+            QVariant::fromValue(notifyReceiver->markdown_), &AssistantMarkdown::markdownChanged);
+    });
+
     markdown_ = markdown;
     ++presentation_revision_;
     render();

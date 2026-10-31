@@ -19,6 +19,10 @@ int token_length(const QString& line) {
 }  // namespace
 
 EdiTextHighlighter::EdiTextHighlighter(QObject* parent) : QObject(parent) {
+    connect(this, &EdiTextHighlighter::datablockColorChanged, this, &EdiTextHighlighter::colorsChanged);
+    connect(this, &EdiTextHighlighter::itemColorChanged, this, &EdiTextHighlighter::colorsChanged);
+    connect(this, &EdiTextHighlighter::loopColumnColorChanged, this, &EdiTextHighlighter::colorsChanged);
+    connect(this, &EdiTextHighlighter::loopColorChanged, this, &EdiTextHighlighter::colorsChanged);
     connect(this, &EdiTextHighlighter::colorsChanged, this, [this] {
         if (rules_ != nullptr) {
             rules_->rehighlight();
