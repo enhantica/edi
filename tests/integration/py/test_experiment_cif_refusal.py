@@ -1,6 +1,7 @@
-"""Existing experiment CIF factories stay live; native-only discovery stays unchanged."""
+"""CIF experiment factories and project members follow the content contract."""
 
 import importlib
+import warnings
 
 import gemmi
 import pytest
@@ -78,35 +79,42 @@ def test_experiment_collection_preserves_main_cif_admission_and_model(
 @pytest.mark.parametrize('style', case.STYLES)
 @pytest.mark.parametrize('layout', case.LAYOUTS)
 def test_project_experiment_cif_discovery_preserves_main_selection_and_refusal(
-    tmp_path, api, style, layout
+    tmp_path, api, style, layout, capfd
 ):
+    control = tmp_path / 'control'
+    control.mkdir()
+    api.Project.load(native.project(control)).save_as(tmp_path / 'before')
     source = case.poisoned_project(tmp_path, style, layout)
     before = native.snapshot(source)
-    if layout == 'native-suffix':
+    capfd.readouterr()
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
         project = api.Project.load(source)
-        checks.imported_values(project.experiments['cif_experiment'])
-        assert len(project.experiments) == 2, 'Native-suffix CIF content imports one experiment'
-    else:
-        control = tmp_path / 'control'
-        control.mkdir()
-        api.Project.load(native.project(control)).save_as(tmp_path / 'before')
-        project = api.Project.load(source)
-        project.save_as(tmp_path / 'after')
-        after = native.saved_model(tmp_path / 'after')
-        assert {
-            path: data for path, data in after.items() if path.endswith('.edi')
-        } == native.saved_model(tmp_path / 'before'), (
-            'Main discovers native .edi files only, ignoring same-stem and uppercase CIF sidecars'
+    notes = [str(w.message) for w in caught] + capfd.readouterr().err.splitlines()
+    if layout == 'shadow':
+        assert len(project.experiments) == 1, (
+            'I12 reads the native member once when CIF is shadowed'
         )
-        assert len(project.experiments) == 1, 'Main does not import a sidecar as a new experiment'
-        assert {path: data for path, data in after.items() if not path.endswith('.edi')} == {
-            path: data
-            for path, data in before.items()
-            if path.startswith('experiments/') and not path.endswith('.edi')
-        }, 'Main retains ignored experiment CIF sidecars byte-for-byte as saved project assets'
-    assert native.snapshot(source) == before, (
-        'Main-compatible experiment discovery preserves every native and CIF input byte'
+        assert any('bank.cif' in n and 'not read' in n for n in notes), (
+            'I12 names the shadowed experiment CIF in the load report'
+        )
+    else:
+        assert len(project.experiments) == 2, 'I12 discovers lower and uppercase CIF members'
+        checks.imported_values(project.experiments['cif_experiment'])
+    project.save_as(tmp_path / 'after')
+    after = native.saved_model(tmp_path / 'after')
+    if layout != 'shadow':
+        assert 'experiments/cif_experiment.edi' in after, (
+            'I12 regenerates the CIF member as a native entity'
+        )
+        del after['experiments/cif_experiment.edi']
+    assert after == native.saved_model(tmp_path / 'before'), (
+        'I12 preserves pre-existing entity bytes and regenerates CIF members without sidecars'
     )
+    assert not any(p.suffix.lower() == '.cif' for p in (tmp_path / 'after').rglob('*')), (
+        'I12 saves no lower or uppercase CIF entity documents'
+    )
+    assert native.snapshot(source) == before, 'I12 discovery leaves every source byte intact'
 
 
 def test_native_experiment_control_still_loads_and_saves(tmp_path, api):
