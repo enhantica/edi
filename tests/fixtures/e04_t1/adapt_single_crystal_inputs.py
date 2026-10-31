@@ -15,6 +15,12 @@ from pathlib import Path
 import generate as category_inputs
 import generate_display as display_inputs
 
+from tests.fixtures.example_catalogue.migrate_single_crystal_ids import (
+    historical_path,
+    renamed,
+    same_science,
+)
+
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 BASE = '379901ca'
@@ -24,16 +30,22 @@ PROJECT_IDS = (
     'sc-neut-cwl_tb2ti2o7-heidi_basic',
     'sc-neut-cwl_tb2ti2o7-heidi_isotropic-extinction',
     'sc-neut-cwl_tb2ti2o7-heidi_anisotropic-adp',
-    'sc-neut-cwl_tb2ti2o7-heidi_fit',
-    'sc-neut-cwl_pr2nio4-5c2_fit',
+    'sc-neut-cwl_tb2ti2o7-heidi',
+    'sc-neut-cwl_pr2nio4-5c2',
     'sc-neut-tof_taurine-unknown_basic',
-    'sc-neut-tof_taurine_fit',
+    'sc-neut-tof_taurine-senju',
 )
 PATHS = {'docs/user/cli/' + name + '/project' for name in PROJECT_IDS}
 
 
 def archived(rev, relative):
-    return subprocess.check_output(['git', '-C', str(ROOT), 'show', rev + ':' + relative])
+    return subprocess.check_output([
+        'git',
+        '-C',
+        str(ROOT),
+        'show',
+        rev + ':' + historical_path(relative),
+    ])
 
 
 def read(text):
@@ -62,7 +74,7 @@ def replace_rows(previous, fresh, key):
 def generate():
     baseline = archived(BASE, 'tests/fixtures/e04_t1/oracle.js').decode()
     display_baseline = archived(BASE, 'tests/fixtures/e04_t1/display_oracle.js').decode()
-    oracle, display = read(baseline), read(display_baseline)
+    oracle, display = renamed(read(baseline)), renamed(read(display_baseline))
     selected = [p for p in oracle['projects'] if p['id'] in PROJECT_IDS]
     assert len(selected) == len(PROJECT_IDS), (
         'Source adaptation must name all and only the existing eight single-crystal projects'
@@ -78,9 +90,11 @@ def generate():
             )
     for path in PATHS:
         for current in (ROOT / path).rglob('*.edi'):
-            assert current.read_bytes() == archived(BASE, current.relative_to(ROOT).as_posix()), (
-                'Source adaptation must use only the reviewed committed current input bytes'
-            )
+            before = archived(BASE, current.relative_to(ROOT).as_posix())
+            after = current.read_bytes()
+            assert (
+                same_science(before, after) if current.name == 'project.edi' else before == after
+            ), 'Source adaptation must use only the reviewed committed current input bytes'
     # Independently reviewed zero-effect case named by the conductor: the
     # entire reflection body and every other byte are identical.
     relative = 'docs/user/cli/sc-neut-cwl_pr2nio4-5c2_basic/project/experiments/pr2nio4.edi'

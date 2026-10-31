@@ -157,6 +157,15 @@ void ExampleListModel::setFilterValue(const QString& value) {
     refresh();
     emit filterValueChanged();
 }
+QString ExampleListModel::titleOf(const QString& id) const {
+    for (const auto& entry : entries_) {
+        if (entry.id == id) {
+            return entry.sample + QStringLiteral(" · ") + entry.origin;
+        }
+    }
+    return {};
+}
+
 void ExampleListModel::refresh() {
     const auto words = normalize(search_text_)
                            .split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);

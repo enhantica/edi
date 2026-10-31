@@ -47,7 +47,10 @@ class IoError : public std::runtime_error {
 // unless the caller passes `on_warning`; then each message goes only to the sink. The app passes
 // one so it can show the warnings to its user.
 using WarningSink = std::function<void(const std::string&)>;
-Project load_project(const std::string& directory, const WarningSink& on_warning = {});
+// `path` is the project's folder, its `project.edi`, or a `.zip` of the folder (edi ADR-0052). An archive unpacks into a
+// new temporary folder first; the project then has no directory of its own (`path` empty), so its first save needs one,
+// and it reads its scan data from the unpacked folder.
+Project load_project(const std::string& path, const WarningSink& on_warning = {});
 
 // Structures and experiments enter an open project from files. Every structure and experiment
 // text these loads and the project loader read goes through one check first: crysta decides once,
@@ -156,13 +159,28 @@ void save_project_as(Project& project, const std::string& directory);
 // After a save, the open project takes what its saved files hold, exactly what a reopen of `directory` reads: each
 // parameter's value and s.u., which the IUCr rule rounds, and the coefficients of the correlation rows the save wrote,
 // rounded too; a scan's template then reads its pairs from those rows. Nothing is recalculated; whether anything
-// changed. A report saved next stays current after the project is reopened. A project the loader refuses (one
-// without a structure) is left as it is.
+// changed. A report saved next stays current after the project is reopened. A project still being built (no
+// structure yet, or an experiment without data) is read back as written; a save that cannot be read back throws IoError.
 bool adopt_saved_values(Project& project, const std::string& directory);
+// The same from `saved`, a project already holding what the files hold (a staged save's copy), with the fit's
+// agreement records: no file is read or written. Whether anything changed.
+bool adopt_values(Project& project, const Project& saved);
+
+// The save sequence after a successful write of `project` to `directory`, the same on every surface (edi ADR-0052):
+// adopt_saved_values, then, when the project holds results (calculated here, or read from its file), calculate
+// it from the adopted values and write it again, so the files, the open project and a reopen agree, the calculated
+// pattern and R factors included; a project without results whose values changed is written again too, so what the
+// save derives from those values follows them. Returns whether any value changed. A project still being built is
+// adopted the same way. Throws IoError when the save cannot be read back.
+bool adopt_saved_project(Project& project, const std::string& directory);
 
 // The delegated write — converts the model and calls crysta::save_project. Implemented in
 // the adapter (the one crysta-touching TU); edi-only signature (ADR-0003).
 void save_project_via_crysta(const Project& project, const std::string& directory);
+// The fit's agreement records (each bank's, its phases' and every bank's together) recomputed by crysta from the
+// project's values, with due background estimates deferred, as a save that adopted rounded values keeps them. A project
+// holding no fit result, or one crysta cannot calculate, is left as it is.
+void refresh_agreement_records(Project& project);
 
 // The project's report as a CIF, written by crysta from the project a save would write: every item under its default
 // CIF name, values with their s.u. Throws std::invalid_argument when crysta cannot convert the project.

@@ -5,6 +5,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QEventLoop>
 #include <QFile>
 #include <QGuiApplication>
 #include <QKeyEvent>
@@ -15,6 +16,8 @@
 #include <QQuickWindow>
 #include <QThread>
 #include <QUrl>
+#include <atomic>
+#include <cmath>
 #include <cstdio>
 #include <filesystem>
 #include <system_error>
@@ -26,6 +29,7 @@
 #include "fit_view_model.hpp"
 #include "project_view_model.hpp"
 #include "scan_session.hpp"
+#include "scan_view_model.hpp"
 #include "session.hpp"
 #include "structure_view_model.hpp"
 
@@ -41,6 +45,8 @@ constexpr int kFitWaitMs = 300000;
 // The timed scenario's idle poll: fine enough not to blur a measured interval.
 constexpr int kIdlePollMs = 5;
 constexpr int kUnsettledCaptureMs = 150;
+// A timed change whose frame has not been swapped within this counts as none.
+constexpr int kFrameWaitMs = 5000;
 
 // Open a bundled example from the Project page: scroll its row into view, click it.
 QStringList open_example(const QString& id) {
@@ -323,7 +329,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // A single crystal (Tb2Ti2O7 on HEiDi): the reflections chart and table on Experiment and Analysis, in both themes,
     // before and after a fit of its scale.
     steps_.push_back({"sc-01-tb2ti2o7-experiment-light",
-                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-02-tb2ti2o7-analysis-light", {analysis, basic}});
     steps_.push_back({"sc-03-tb2ti2o7-fit-results-light", {"fitting.start", "wait-fit"}});
@@ -339,7 +345,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
                                                                   + QStringList{analysis, basic, "fitting.start", "wait-fit"}});
     steps_.push_back({"sc-05g-tb2ti2o7-isotropic-extinction-fitted", {"choose:OK", experiment, basic, "expand:group.extinction"}});
     steps_.push_back({"sc-06-pr2nio4-experiment-light",
-                      QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                      QStringList{"theme:light"} + start + open_example("sc-neut-cwl_pr2nio4-5c2")
                           + QStringList{experiment, basic}});
     steps_.push_back({"sc-07-pr2nio4-analysis-dark", {"theme:dark", analysis, basic}});
     steps_.push_back({"sc-07a-pr2nio4-fit-results-dark", {"fitting.start", "wait-fit"}});
@@ -367,10 +373,10 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     const QStringList fit_sc{analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit", "choose:OK"};
     const QStringList sc_report_steps{QStringLiteral("appBar.tab.report"), "reveal:report.singleCrystal"};
     steps_.push_back({"sccheck-01-tb2ti2o7-report-loaded",
-                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                      QStringList{"resize:1280x768", "theme:light"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi")
                           + sc_report_steps});
     steps_.push_back({"sccheck-02-tb2ti2o7-report-fitted", fit_sc + sc_report_steps});
-    steps_.push_back({"sccheck-03-pr2nio4-report-loaded", start + open_example("sc-neut-cwl_pr2nio4-5c2_fit") + sc_report_steps});
+    steps_.push_back({"sccheck-03-pr2nio4-report-loaded", start + open_example("sc-neut-cwl_pr2nio4-5c2") + sc_report_steps});
     steps_.push_back({"sccheck-04-pr2nio4-report-fitted", fit_sc + sc_report_steps});
     steps_.push_back({"sccheck-05-pr2nio4-extinction-free-fitted",
                       QStringList{analysis, basic, "parameters.nameFilter", "type:extinction", "parameters.free.0", "parameters.free.1",
@@ -381,37 +387,37 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-07-pr2nio4-reflections-extras", {experiment, extras, "expand:group.refln"}});
     steps_.push_back({"sccheck-08-pr2nio4-reflections-taller", {"resize:1280x1000"}});
     steps_.push_back({"sccheck-09-created-single-crystal",
-                      QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+                      QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2")
                           + QStringList{experiment, basic, "expand:group.experiments", "experiments.create",
                                         "experimentType.sampleForm", "choose:single crystal"}});
     steps_.push_back({"sccheck-09b-created-back-to-powder", {"experimentType.sampleForm", "choose:powder"}});
     // A single crystal saved in another project, loaded where its structure is missing: the message, the link in
     // red, the structure's own text, then the link pointed at the project's structure.
     steps_.push_back({"sccheck-09c-loaded-missing-link",
-                      start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+                      start + open_example("sc-neut-cwl_tb2ti2o7-heidi")
                           + QStringList{experiment, basic, "expand:group.experiments",
-                                        "load-experiments:sc-neut-cwl_pr2nio4-5c2_fit/project/experiments/llb_5c2.edi"}});
+                                        "load-experiments:sc-neut-cwl_pr2nio4-5c2/project/experiments/llb_5c2.edi"}});
     steps_.push_back({"sccheck-09d-missing-link-message", {"statusBar.warnings"}});
     steps_.push_back({"sccheck-09e-missing-link-red", {"choose:OK", "expand:group.linked_structure"}});
     steps_.push_back({"sccheck-09f-structure-text", {"appBar.tab.structure", text}});
     steps_.push_back({"sccheck-09g-relinked", {experiment, basic, "linkedStructure.structureId.0", "choose:tb2ti2o7"}});
     // A time-of-flight single crystal's Instrument group: its reflections' wavelength band, read-only.
     steps_.push_back({"sccheck-14-taurine-instrument",
-                      start + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic, "group.instrument"}});
+                      start + open_example("sc-neut-tof_taurine-senju") + QStringList{experiment, basic, "group.instrument"}});
     // A single crystal's reflections through the row's Load data: FullProf's .int (its wavelength taken), a plain
     // h k l F² su file, then a malformed one; each into a created experiment linked to the project's structure.
     // The files are named by EDI_DEMO_SC_FILES, a folder holding prnio.int, tbti.dat and malformed.dat.
     const QString sc_files = qEnvironmentVariable("EDI_DEMO_SC_FILES");
     const QStringList create_sc{experiment, basic, "expand:group.experiments", "experiments.create",
                                 "experimentType.sampleForm", "choose:single crystal"};
-    steps_.push_back({"sccheck-10a-int-loaded", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2_fit")
+    steps_.push_back({"sccheck-10a-int-loaded", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_pr2nio4-5c2")
                                                     + create_sc + QStringList{"load-reflections:" + sc_files + "/prnio.int"}});
     steps_.push_back({"sccheck-10b-int-message", {"statusBar.warnings"}});
     steps_.push_back({"sccheck-10c-int-wavelength", {"choose:OK", "expand:group.instrument"}});
     steps_.push_back({"sccheck-10d-int-reflections", {extras, "expand:group.refln"}});
     // The two single crystals fit together, each with its own scale.
     steps_.push_back({"sccheck-10e-int-joint-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
-    steps_.push_back({"sccheck-10f-dat-loaded", QStringList{"choose:OK"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+    steps_.push_back({"sccheck-10f-dat-loaded", QStringList{"choose:OK"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi")
                                                     + create_sc + QStringList{"load-reflections:" + sc_files + "/tbti.dat"}});
     steps_.push_back({"sccheck-10g-dat-message", {"statusBar.warnings"}});
     steps_.push_back({"sccheck-10h-malformed", {"choose:OK", experiment, basic, "experiments.create", "experimentType.sampleForm",
@@ -420,11 +426,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // type II with the domain radius alone.
     // Taurine's six datasets: every experiment on one chart on the Stacked tabs, its legend shown, and the Pattern
     // chart's legend behind its button.
-    steps_.push_back({"sccheck-15a-taurine-stacked-experiment", QStringList{"resize:1280x768"} + start + open_example("sc-neut-tof_taurine_fit")
+    steps_.push_back({"sccheck-15a-taurine-stacked-experiment", QStringList{"resize:1280x768"} + start + open_example("sc-neut-tof_taurine-senju")
                                                                     + QStringList{experiment, basic, "mainArea.experiment.tab.stacked"}});
     steps_.push_back({"sccheck-15b-taurine-stacked-analysis", {analysis, basic, "mainArea.analysis.tab.stacked"}});
     steps_.push_back({"sccheck-15c-taurine-pattern-legend", {"mainArea.analysis.tab.fitting", "chart.toolbar.legend"}});
-    steps_.push_back({"sccheck-11-extinction-mixed", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi_fit")
+    steps_.push_back({"sccheck-11-extinction-mixed", QStringList{"resize:1280x768"} + start + open_example("sc-neut-cwl_tb2ti2o7-heidi")
                                                          + QStringList{experiment, basic, "expand:group.extinction"}});
     steps_.push_back({"sccheck-11b-extinction-types", {"extinction.type"}});
     steps_.push_back({"sccheck-11c-extinction-type-2", {"choose:Isotropic Becker-Coppens type II (analytical)"}});
@@ -433,7 +439,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     steps_.push_back({"sccheck-11f-extinction-larson-anisotropic", {"extinction.type", "choose:Anisotropic Larson (empirical)"}});
     // Taurine on time of flight: the example's chart, its reflections with their wavelengths, and its fit.
     steps_.push_back({"sccheck-12a-taurine-experiment", QStringList{"resize:1280x768"} + start
-                                                            + open_example("sc-neut-tof_taurine_fit") + QStringList{experiment, basic}});
+                                                            + open_example("sc-neut-tof_taurine-senju") + QStringList{experiment, basic}});
     steps_.push_back({"sccheck-12b-taurine-reflections", {extras, "expand:group.refln"}});
     steps_.push_back({"sccheck-12c-taurine-fitted", {analysis, basic, "reveal:fitting.start", "fitting.start", "wait-fit"}});
     // The fit's cutoff (FullProf's Rmub 3), and the observed threshold above the reflection table switched to F.
@@ -762,6 +768,42 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
     // d-spacing; a narrow zoom drawn from the measured points, reset by a secondary click; only the included range,
     // on and off; a narrow chart's toolbar on two centred lines. Then a joint fit, the WISH 5-bank example, on d-spacing,
     // Stacked and Map, in both themes. Run only when asked (`--demo-only scanviews-`).
+    // Every page at the supported minimum (AppSizes.minimumAppWidth × minimumAppHeight), its sidebar scrolled to its
+    // last inputs, to check every control can be reached. Run only when asked (`--demo-only minimum-`).
+    if (only.startsWith(QLatin1String("minimum-"))) {
+        steps_.push_back({"minimum-1-home", {"resize:1024x640", "theme:light", "appBar.tab.home"}});
+        steps_.push_back({"minimum-2-project", {"open-cli-project:pd-neut-cwl_lbco-hrpt_start-4", "appBar.tab.project", basic}});
+        steps_.push_back({"minimum-3-structure", {"appBar.tab.structure", basic}});
+        steps_.push_back({"minimum-4-structure-space-group", {"expand:group.space_group", "reveal:spaceGroup.crystalSystem"}});
+        steps_.push_back({"minimum-5-experiment", {"appBar.tab.experiment", basic}});
+        steps_.push_back({"minimum-6-experiment-background", {"expand:group.background", "reveal:background.type"}});
+        steps_.push_back({"minimum-7-analysis", {"appBar.tab.analysis", basic}});
+        steps_.push_back({"minimum-8-report", {"appBar.tab.report"}});
+    }
+    // A click on the Pattern chart's legend hides the measured curve, keeping the y range; with the range fitted to the
+    // visible curves, showing it and hiding it again fits the range each time (the owner, 2026-10-25). Run only when
+    // asked (`--demo-only legendhide-`).
+    if (only.startsWith(QLatin1String("legendhide-"))) {
+        steps_.push_back({"legendhide-1-keep", {"resize:1280x960", "theme:light", "preference:chartHiddenRange=keep",
+                                                "open-cli-project:pd-neut-cwl_lbco-hrpt_start-4", "appBar.tab.analysis", basic,
+                                                "mainArea.analysis.tab.fitting", "chart.toolbar.legend", "chart.legend.toggle"}});
+        steps_.push_back({"legendhide-2-shown", {"preference:chartHiddenRange=fit", "chart.legend.toggle"}});
+        steps_.push_back({"legendhide-3-fit", {"chart.legend.toggle"}});
+        // The Bragg row, the legend's last: its structure icon and the tick strip's label disabled with it.
+        steps_.push_back({"legendhide-4-bragg", {"preference:chartHiddenRange=keep", "drag:chart.legend:0.5,0.9,0.5,0.9"}});
+    }
+    // The same three patterns as lines on the Pattern chart and on Stacked at full height, drawn on the GPU and then by
+    // the painter, to compare the two charts' line quality (edi ADR-0041 §9). Run only when asked (`--demo-only
+    // lines-`), at any QT_SCALE_FACTOR with EDI_DEMO_ANY_RATIO set.
+    if (only.startsWith(QLatin1String("lines-"))) {
+        steps_.push_back({"lines-1-pattern", {"resize:1280x960", "theme:light", "preference:scanRenderer=gpu",
+                                              "open-cli-project:pd-neut-cwl_cosio-d20_scan-3f", "appBar.tab.analysis", basic,
+                                              "mainArea.analysis.tab.fitting"}});
+        steps_.push_back({"lines-2-stacked", {"preference:scanStackedSize=100", "mainArea.analysis.tab.stacked",
+                                              "wait-scan:stacked"}});
+        // The same drawn by the painter, as a machine without a GPU draws it.
+        steps_.push_back({"lines-3-stacked-painter", {"preference:scanRenderer=software", "wait-scan:stacked"}});
+    }
     if (only.startsWith(QLatin1String("scanviews-"))) {
         steps_.push_back({"scanviews-01-stacked-light", QStringList{"resize:1280x960", "theme:light"} + start
                                                             + open_example("pd-neut-cwl_cosio-d20_scan")
@@ -958,6 +1000,56 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"perf-162f", {scan, "timed-fit:162", "timed-reset"}});
         steps_.push_back({"perf-control-partial", {scan, "timed-fit:162:40"}});
         steps_.push_back({"perf-control-refused", {scan, "remove-scan-data", "timed-fit:162"}});
+        // The scan views' frames on the 324-file scan, a 162-file scan's fit with every pattern drawn (the fit waiting
+        // for each, or the display catching up) against the adaptive rule (edi ADR-0029), and slider steps on LBCO
+        // before and after a fit (edi ADR-0041).
+        const QString analysis = QStringLiteral("appBar.tab.analysis");
+        QStringList views{"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
+                          "mainArea.analysis.tab.stacked", "wait-scan:stacked"};
+        for (const QString mode : {QStringLiteral("stacked"), QStringLiteral("map")}) {
+            if (mode == QLatin1String("map")) {
+                views << "mainArea.analysis.tab.map" << "wait-scan:map";
+            }
+            views << "timed-frames:" + mode + ":zoom:40" << "timed-frames:" + mode + ":pan:50"
+                  << "timed-frames:" + mode + ":restyle:20" << "timed-frames:" + mode + ":select:20"
+                  << "timed-frames:" + mode + ":data:10" << "timed-frames:" + mode + ":rows:10";
+        }
+        steps_.push_back({"perf-views-324f", views});
+        // A data change alone on the Stacked view, to profile it.
+        steps_.push_back({"perf-data-324f", {"resize:1280x800", "open-cli-project:pd-neut-cwl_cosio-d20_scan-324f", analysis,
+                                             "mainArea.analysis.tab.stacked", "wait-scan:stacked",
+                                             "timed-frames:stacked:data:10"}});
+        // The same with the Stacked lines on the GPU, chosen as a user chooses it in Develop.
+        views.insert(1, QStringLiteral("preference:scanRenderer=gpu"));
+        steps_.push_back({"perf-gpu-views-324f", views});
+        const QStringList updates{"resize:1280x800", scan, analysis, "sideBar.tab.settings", "expand:group.patternUpdates",
+                                  "analysis.patternUpdates"};
+        for (const auto& [name, choice] : {std::pair{"every", "Every pattern, fit waits for the display"},
+                                           std::pair{"catchup", "Every pattern, display catches up"},
+                                           std::pair{"adaptive", "Adaptive"}}) {
+            steps_.push_back({QStringLiteral("perf-fit-%1-pattern").arg(QLatin1String(name)),
+                              updates + QStringList{QStringLiteral("choose:") + QLatin1String(choice), "mainArea.analysis.tab.fitting",
+                                                    "timed-fit:162"}});
+            steps_.push_back({QStringLiteral("perf-fit-%1-stacked").arg(QLatin1String(name)),
+                              updates + QStringList{QStringLiteral("choose:") + QLatin1String(choice), "mainArea.analysis.tab.stacked",
+                                                    "wait-scan:stacked", "timed-fit:162"}});
+        }
+        const QStringList lbco{"resize:1280x800", "open-cli-project:pd-neut-cwl_lbco-hrpt_start-4", analysis,
+                               "sideBar.tab.basic", "mainArea.analysis.tab.fitting", "parameters.nameFilter",
+                               "type:length_a"};
+        steps_.push_back({"perf-slider-lbco-1-before-fit", lbco + QStringList{"timed-slider:30"}});
+        // The same steps again and again with no fit: what a growing edit history alone costs.
+        steps_.push_back({"perf-slidernofit-1", lbco + QStringList{"timed-slider:30"}});
+        for (int batch = 2; batch <= 4; ++batch) {
+            steps_.push_back({QStringLiteral("perf-slidernofit-%1").arg(batch), {"timed-slider:30"}});
+        }
+        steps_.push_back({"perf-slider-lbco-2-after-fit", {"fitting.start", "wait-fit", "choose:OK", "timed-slider:30"}});
+        // Note 45 says "after the fits": four more, five in all, from where the slider left the model each time.
+        QStringList fits;
+        for (int fit = 0; fit < 4; ++fit) {
+            fits << "fitting.start" << "wait-fit" << "choose:OK";
+        }
+        steps_.push_back({"perf-slider-lbco-3-after-five-fits", fits + QStringList{"timed-slider:30"}});
     }
     if (!only.isEmpty()) {
         std::erase_if(steps_, [&only](const Step& step) { return !step.image.startsWith(only); });
@@ -1004,6 +1096,20 @@ void DemoDriver::next_action() {
         if (action.startsWith(QLatin1String("timed-fit:"))) {
             const QStringList parts = action.split(QLatin1Char(':'));
             timed_fit_then([this] { next_action(); }, parts.value(1).toInt(), parts.size() > 2 ? parts.at(2).toInt() : -1);
+            return;
+        }
+        if (action.startsWith(QLatin1String("wait-scan:"))) {
+            wait_scan_then([this] { next_action(); }, action.mid(10));
+            return;
+        }
+        if (action.startsWith(QLatin1String("timed-frames:")) || action.startsWith(QLatin1String("timed-slider:"))) {
+            const QStringList parts = action.split(QLatin1Char(':'));
+            const bool done = parts.at(0) == QLatin1String("timed-frames")
+                                  ? timed_frames(parts.value(1), parts.value(2), parts.value(3).toInt())
+                                  : timed_slider(parts.value(1).toInt());
+            if (done) {
+                settle_then([this] { next_action(); });
+            }
             return;
         }
         if (action == QLatin1String("timed-reset")) {
@@ -1136,6 +1242,18 @@ bool DemoDriver::perform(const QString& action) {
             return false;
         }
         return click_item(candidates.last());
+    }
+    if (action.startsWith(QLatin1String("preference:"))) {
+        // One of edi's Preferences, as its dialog sets it: preference:<name>=<value>, a string value.
+        const QString setting = action.mid(11);
+        QQmlEngine* engine = qmlEngine(window_.contentItem());
+        QObject* preferences = engine == nullptr ? nullptr : engine->singletonInstance<QObject*>("edi.app", "Preferences");
+        if (preferences == nullptr || !setting.contains(QLatin1Char('=')) ||
+            !preferences->setProperty(qPrintable(setting.section(QLatin1Char('='), 0, 0)), setting.section(QLatin1Char('='), 1))) {
+            fail(QStringLiteral("step %1: cannot apply '%2'").arg(steps_[current_].image, action));
+            return false;
+        }
+        return true;
     }
     if (action.startsWith(QLatin1String("theme:")) || action.startsWith(QLatin1String("platform:"))) {
         // The base's theme values (Colors.Themes) and Qt's colour schemes (Qt::ColorScheme).
@@ -1554,6 +1672,19 @@ void DemoDriver::idle_then(std::function<void()> next, int waited_ms) {
     QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { idle_then(next, waited_ms + kIdlePollMs); });
 }
 
+void DemoDriver::drawn_then(std::function<void()> next, int waited_ms) {
+    ProjectViewModel* project = open_project(window_);
+    if (project == nullptr || project->fit() == nullptr || !project->fit()->catchingUp()) {
+        idle_then(std::move(next));
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: the display did not catch up").arg(steps_[current_].image));
+        return;
+    }
+    QTimer::singleShot(kIdlePollMs, this, [this, next, waited_ms] { drawn_then(next, waited_ms + kIdlePollMs); });
+}
+
 void DemoDriver::timed_fit_then(std::function<void()> next, int files, int stop_after) {
     ProjectViewModel* project = open_project(window_);
     FitViewModel* fit = project != nullptr ? project->fit() : nullptr;
@@ -1573,8 +1704,10 @@ void DemoDriver::timed_fit_then(std::function<void()> next, int files, int stop_
         for (const QMetaObject::Connection& connection : *connections) {
             QObject::disconnect(connection);
         }
-        idle_then([this, next, files, refusal] {
-            const qint64 ms = timer_.elapsed();
+        // The fit's time ends with the fit: a display catching up draws on after it, and is waited for before the
+        // next action.
+        const qint64 ms = timer_.elapsed();
+        drawn_then([this, next, files, refusal, ms] {
             QString problem = refusal->isEmpty() ? scan_work(files) : QStringLiteral("refused: ") + *refusal;
             if (!problem.isEmpty()) {
                 fail(QStringLiteral("step %1: the timed fit did not do its work: %2").arg(steps_[current_].image, problem));
@@ -1647,6 +1780,192 @@ bool DemoDriver::timed_reset() {
         next_action();
     });
     return false;
+}
+
+void DemoDriver::record_samples(const QString& label, std::vector<double> samples) {
+    QFile all(output_dir_.filePath(QStringLiteral("frames.tsv")));
+    if (all.open(QIODevice::Append | QIODevice::Text)) {
+        for (const double ms : samples) {
+            all.write(QStringLiteral("%1\t%2\t%3\n").arg(steps_[current_].image, label).arg(ms, 0, 'f', 3).toUtf8());
+        }
+    }
+    const auto missing = std::count_if(samples.begin(), samples.end(), [](double ms) { return ms < 0.0; });
+    std::erase_if(samples, [](double ms) { return ms < 0.0; });
+    std::sort(samples.begin(), samples.end());
+    const auto at = [&samples](double share) {
+        return samples.empty() ? -1.0 : samples[static_cast<std::size_t>(share * static_cast<double>(samples.size() - 1))];
+    };
+    QFile file(output_dir_.filePath(QStringLiteral("timings.tsv")));
+    if (file.open(QIODevice::Append | QIODevice::Text)) {
+        file.write(QStringLiteral("%1\t%2 median\t%3\n%1\t%2 p95\t%4\n%1\t%2 max\t%5\n%1\t%2 missing\t%6\n")
+                       .arg(steps_[current_].image, label)
+                       .arg(at(0.5), 0, 'f', 3)
+                       .arg(at(0.95), 0, 'f', 3)
+                       .arg(at(1.0), 0, 'f', 3)
+                       .arg(missing)
+                       .toUtf8());
+    }
+}
+
+void DemoDriver::wait_scan_then(std::function<void()> next, const QString& mode, int waited_ms) {
+    QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
+    auto* model = layer != nullptr ? layer->property("model").value<ScanViewModel*>() : nullptr;
+    if (model != nullptr && model->count() > 0 && model->loaded() == model->count()) {
+        next();
+        return;
+    }
+    if (waited_ms > kFitWaitMs) {
+        fail(QStringLiteral("step %1: the scan's datasets were not read").arg(steps_[current_].image));
+        return;
+    }
+    QTimer::singleShot(kSettleIntervalMs, this,
+                       [this, next, mode, waited_ms] { wait_scan_then(next, mode, waited_ms + kSettleIntervalMs); });
+}
+
+double DemoDriver::frame_after(const std::function<void()>& change, const std::function<bool()>& ready) {
+    std::atomic<bool> synced{false};
+    std::atomic<qint64> swapped_ns{-1};
+    QElapsedTimer clock;
+    QEventLoop loop;
+    // Both on the render thread, while the GUI thread waits for the synchronisation.
+    const QMetaObject::Connection sync = connect(
+        &window_, &QQuickWindow::afterSynchronizing, &window_,
+        [&] {
+            if (!ready || ready()) {
+                synced = true;
+            }
+        },
+        Qt::DirectConnection);
+    const QMetaObject::Connection swap = connect(
+        &window_, &QQuickWindow::frameSwapped, &window_,
+        [&] {
+            if (synced && swapped_ns < 0) {
+                swapped_ns = clock.nsecsElapsed();
+                QMetaObject::invokeMethod(&loop, &QEventLoop::quit, Qt::QueuedConnection);
+            }
+        },
+        Qt::DirectConnection);
+    // A state that turns ready after its last frame (a calculation ending after its pattern was drawn) asks for one.
+    QTimer poll;
+    connect(&poll, &QTimer::timeout, this, [&] {
+        if (ready && !synced && ready()) {
+            window_.update();
+        }
+    });
+    QTimer guard;
+    guard.setSingleShot(true);
+    connect(&guard, &QTimer::timeout, &loop, &QEventLoop::quit);
+    guard.start(kFrameWaitMs);
+    if (ready) {
+        poll.start(kIdlePollMs);
+    }
+    clock.start();
+    change();
+    loop.exec();
+    disconnect(sync);
+    disconnect(swap);
+    return swapped_ns < 0 ? -1.0 : static_cast<double>(swapped_ns.load()) / 1e6;
+}
+
+bool DemoDriver::timed_frames(const QString& mode, const QString& kind, int count) {
+    QQuickItem* chart = find(QStringLiteral("scanView.") + mode, false);
+    QQuickItem* layer = find(QStringLiteral("scanView.%1.layer").arg(mode), false);
+    auto* model = layer != nullptr ? layer->property("model").value<ScanViewModel*>() : nullptr;
+    if (chart == nullptr || model == nullptr || model->count() == 0) {
+        fail(QStringLiteral("step %1: no %2 view with datasets to time").arg(steps_[current_].image, mode));
+        return false;
+    }
+    const double x_min = model->xMin(), x_max = model->xMax(), span = x_max - x_min;
+    const auto zoom = [chart](const QVariantList& x) {
+        QMetaObject::invokeMethod(chart, "setZoom", Q_ARG(QVariant, QVariant(x)), Q_ARG(QVariant, QVariant(QVariantList{})));
+    };
+    std::vector<double> samples;
+    for (int i = 0; i < count; ++i) {
+        std::function<void()> change;
+        if (kind == QLatin1String("zoom")) {
+            // In to the middle half and out again.
+            change = [&, i] { zoom(i % 2 == 0 ? QVariantList{x_min + span / 4, x_max - span / 4} : QVariantList{}); };
+        } else if (kind == QLatin1String("pan")) {
+            // A window of half the range moved by a fiftieth of the range each frame, back and forth.
+            const int place = i % 50 < 25 ? i % 50 : 50 - i % 50;
+            const double from = x_min + span * static_cast<double>(place) / 50.0;
+            change = [&, from] { zoom(QVariantList{from, from + span / 2}); };
+        } else if (kind == QLatin1String("restyle")) {
+            const char* property = mode == QLatin1String("map") ? "reversed" : "stackedReversed";
+            change = [layer, property] { layer->setProperty(property, !layer->property(property).toBool()); };
+        } else if (kind == QLatin1String("select")) {
+            change = [layer, i, model] { layer->setProperty("current", (i * 37) % model->count()); };
+        } else if (kind == QLatin1String("data")) {
+            // Every dataset's points published again (the x axis placed anew: d and back where a calculation gives d,
+            // else the same axis): each trace is reduced and drawn from scratch, as for a dataset that changed.
+            change = [model] { model->setDSpacing(!model->dSpacing()); };
+        } else if (kind == QLatin1String("rows")) {
+            // The rows placed again (by file, by scan value): every dataset's row moves, its trace kept.
+            change = [model] { model->setRowsByIndex(!model->rowsByIndex()); };
+        } else {
+            fail(QStringLiteral("step %1: no timed change '%2'").arg(steps_[current_].image, kind));
+            return false;
+        }
+        const int built = layer->property("traceBuildCount").toInt();
+        samples.push_back(frame_after(change));
+        if (kind == QLatin1String("data") && mode == QLatin1String("stacked") &&
+            layer->property("traceBuildCount").toInt() - built < model->count()) {
+            fail(QStringLiteral("step %1: a data change rebuilt %2 of %3 traces")
+                     .arg(steps_[current_].image)
+                     .arg(layer->property("traceBuildCount").toInt() - built)
+                     .arg(model->count()));
+            return false;
+        }
+        // Each change from an idle window, so one frame's work does not run into the next change's.
+        QThread::msleep(20);
+        QCoreApplication::processEvents();
+    }
+    if (kind == QLatin1String("data")) {
+        // What the data change republished: the points on d and back, or on the same axis.
+        std::fprintf(stderr, "edi_app --demo: %s data changes %s\n", qPrintable(mode),
+                     model->dAvailable() ? "alternate the x axis with d" : "republish the same axis (no d)");
+    }
+    record_samples(mode + QLatin1Char(' ') + kind, samples);
+    return true;
+}
+
+bool DemoDriver::timed_slider(int count) {
+    ProjectViewModel* project = open_project(window_);
+    QQuickItem* slider = find(QStringLiteral("parameters.slider"), true);
+    if (project == nullptr || slider == nullptr) {
+        fail(QStringLiteral("step %1: no slider to move").arg(steps_[current_].image));
+        return false;
+    }
+    const double from = slider->property("from").toDouble(), to = slider->property("to").toDouble();
+    const double centre = slider->property("value").toDouble();
+    std::vector<double> shown, calculated;
+    for (int i = 0; i < count; ++i) {
+        // Small steps either side of where the slider was, as a drag makes them.
+        const double value = std::clamp(centre + (to - from) * 0.01 * static_cast<double>(i % 2 == 0 ? 1 : -1) *
+                                                     static_cast<double>(1 + i % 5),
+                                        from, to);
+        QElapsedTimer clock;
+        std::atomic<qint64> ended_ns{-1};
+        const QMetaObject::Connection ended = connect(project, &ProjectViewModel::calculatingChanged, this, [&] {
+            if (!project->calculating() && ended_ns < 0) {
+                ended_ns = clock.nsecsElapsed();
+            }
+        });
+        clock.start();
+        shown.push_back(frame_after(
+            [slider, value] {
+                slider->setProperty("value", value);
+                QMetaObject::invokeMethod(slider, "moved");
+            },
+            [&] { return ended_ns >= 0; }));
+        disconnect(ended);
+        calculated.push_back(ended_ns < 0 ? -1.0 : static_cast<double>(ended_ns.load()) / 1e6);
+        QThread::msleep(20);
+        QCoreApplication::processEvents();
+    }
+    record_samples(QStringLiteral("slider shown"), shown);
+    record_samples(QStringLiteral("slider calculated"), calculated);
+    return true;
 }
 
 void DemoDriver::fail(const QString& message) {

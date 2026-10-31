@@ -55,12 +55,12 @@ def follow_diagnostic(event):
 """.replace('EVENT', event)
 
 
-def worker_diagnostic(event, remaining='-1'):
+def worker_diagnostic(event, remaining='-1', file='record.file_name'):
     return (
-        f'\nscan_screen_worker("{event}", record.file_name, '
+        f'\nscan_screen_worker("{event}", {file}, '
         'self->frame_wanted.load(std::memory_order_acquire), '
         'self->wait_patterns.load(std::memory_order_acquire), token.cancelled(), '
-        f'file_frame && file_frame->first == record.file_name, {remaining});\n'
+        f'file_frame && file_frame->first == {file}, {remaining});\n'
     )
 
 
@@ -94,7 +94,7 @@ def observer_sources(source):
     marker = matches[0].group()
     text = text.replace(
         marker,
-        marker
+        marker.replace('&file_frame]', '&file_frame, &token]')
         + '\nscan_screen_completed(record.file_name);'
         + worker_diagnostic('worker-file-complete'),
         1,
@@ -102,7 +102,7 @@ def observer_sources(source):
     for marker, replacement in (
         (
             '#if !EDI_WORKER_OWNER_THREAD\n                    if (self->wait_patterns',
-            worker_diagnostic('worker-frame-emitted')
+            worker_diagnostic('worker-frame-emitted', file='file')
             + '#if !EDI_WORKER_OWNER_THREAD\n                    if (self->wait_patterns',
         ),
         (
@@ -111,6 +111,7 @@ def observer_sources(source):
                 'worker-wait-begin',
                 'std::chrono::duration_cast<std::chrono::milliseconds>('
                 'deadline - std::chrono::steady_clock::now()).count()',
+                file='file',
             )
             + '                        std::unique_lock lock(self->shown_mutex);',
         ),
@@ -126,6 +127,7 @@ def observer_sources(source):
                 'worker-wait-end',
                 'std::chrono::duration_cast<std::chrono::milliseconds>('
                 'deadline - std::chrono::steady_clock::now()).count()',
+                file='file',
             ),
         ),
     ):
@@ -190,6 +192,14 @@ def snapshot(root, output, fixture):
         ['git', '-C', str(root), 'rev-parse', 'HEAD'], text=True
     ).strip()
     (output / 'source-sha.txt').write_text(source_sha + '\n')
+    (output / 'source-policy.json').write_text(
+        json.dumps({
+            'kind': 'git-archive',
+            'revision': source_sha,
+            'includes_uncommitted_changes': False,
+        })
+        + '\n'
+    )
     archive = output / 'source.tar'
     with archive.open('wb') as stream:
         run(['git', '-C', root, 'archive', source_sha], stdout=stream)
@@ -320,6 +330,7 @@ def build(root, output, sdk, engine_source, backend):  # noqa: PLR0914 - qualifi
         'production': production,
         'compiled_inputs': {'production': production, 'sdk': compiled_sdk},
         'source_sha': (output / 'source-sha.txt').read_text().strip(),
+        'source_policy': json.loads((output / 'source-policy.json').read_text()),
         'engine_sha': subprocess.check_output(
             ['git', '-C', engine_source, 'rev-parse', 'HEAD'], text=True
         ).strip(),

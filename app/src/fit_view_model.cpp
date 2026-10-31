@@ -19,6 +19,8 @@ namespace {
 
 // The goodness-of-fit and the fit-results table show χ² in its dictionary format.
 QString chi(double value) { return QString::fromStdString(edi::display_text("fit_result.reduced_chi_square", value)); }
+// A recorded χ² that was not a number is none, and shows as nothing.
+QString chi(const std::optional<double>& value) { return value.has_value() ? chi(*value) : QString(); }
 // The goodness-of-fit's dictionary label (`reduced χ²`).
 QString chi_label() { return QString::fromStdString(edi::label("fit_result.reduced_chi_square")); }
 
@@ -131,18 +133,23 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
         const std::string form = edi::token(edi::SampleFormEnum::SINGLE_CRYSTAL);
         column(QString::fromStdString(edi::label("fit_result.prof_r_factor", form)));
         column(QString::fromStdString(edi::label("fit_result.prof_wr_factor", form)));
+        // A crystal with its own share shows its own factors; a record with no shares, its pooled ones. One with shares
+        // has none for a crystal it does not hold.
+        const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
+                                        [](const auto& item) { return item->fit_share_held(); });
         QList<Row> rows;
         for (std::size_t i = 0; i < project.experiments.size(); ++i) {
             const edi::ExperimentBase& experiment = *project.experiments[i];
-            const bool own = experiment.fit_prof_wr_factor.has_value();
+            const bool own = experiment.fit_share_held();
+            const auto shown = [own, shares](const std::optional<double>& bank, const std::optional<double>& pooled) {
+                return own ? bank : shares ? std::nullopt : pooled;
+            };
             rows.append({reinterpret_cast<const void*>(static_cast<std::uintptr_t>(i + 1)),
                          {QString::fromStdString(experiment.name.value()), static_cast<int>(i),
                           QStringList{percent("fit_result.prof_r_factor",
-                                              own ? experiment.fit_prof_r_factor : result.prof_r_factor, form),
+                                              shown(experiment.fit_prof_r_factor, result.prof_r_factor), form),
                                       percent("fit_result.prof_wr_factor",
-                                              own ? experiment.fit_prof_wr_factor
-                                                  : std::optional<double>(result.prof_wr_factor),
-                                              form)}}});
+                                              shown(experiment.fit_prof_wr_factor, result.prof_wr_factor), form)}}});
         }
         if (columns != columns_) {
             columns_ = columns;
@@ -192,9 +199,9 @@ void FitAgreementModel::setRecord(const edi::Project& project) {
     // first experiment, as the experiment selector reads it (ExperimentListModel).
     const bool shares =
         std::any_of(project.experiments.begin(), project.experiments.end(),
-                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+                    [](const auto& experiment) { return experiment->fit_share_held(); });
     const auto in_fit = [&](std::size_t i) {
-        return shares ? project.experiments[i]->fit_prof_wr_factor.has_value() : i == 0;
+        return shares ? project.experiments[i]->fit_share_held() : i == 0;
     };
     std::size_t datasets = 0;
     for (std::size_t i = 0; i < project.experiments.size(); ++i) {
@@ -321,6 +328,7 @@ constexpr int kEveryPattern = 0;
 constexpr int kOncePerSecond = 1;
 constexpr int kAdaptive = 2;
 constexpr int kAtEnd = 3;
+constexpr int kCatchUp = FitViewModel::kCatchUpMode;
 }  // namespace
 
 FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, ProjectViewModel& owner, QObject* parent)
@@ -344,7 +352,8 @@ FitViewModel::FitViewModel(edi::Project& project, edi::work::Worker& worker, Pro
     hooks.file_completed = [this](const edi::ScanFileRecord& record) { fileCompleted(record); };
     hooks.file_frame = [this](const std::string& file, const edi::FitFrame& shown) { scanFrame(file, shown); };
     job_ = std::make_unique<edi::FitJob>(project_, worker, std::move(hooks));
-    job_->wait_for_patterns(pattern_updates_ == kEveryPattern && owner_.patternShown());
+    job_->wait_for_patterns(waitsForView(pattern_updates_));
+    job_->send_every_pattern(pattern_updates_ == kCatchUp);
     showRecord();
     sync();
 }
@@ -413,6 +422,8 @@ void FitViewModel::showScanRefused(const QString& error, const QString& run_outc
 FitViewModel::~FitViewModel() { close(); }
 
 void FitViewModel::close() {
+    catch_up_.clear();
+    caught_up_pending_ = false;
     frame_timer_.stop();
     follow_timer_.stop();
     clock_timer_.stop();
@@ -434,6 +445,14 @@ void FitViewModel::start() {
     // A scan runs from the template. With no dataset fitted it starts afresh (the previous result files, if any, go
     // to Undo); otherwise it continues from the first dataset without a row (edi ADR-0017 §17).
     const bool scan = edi::is_scan_fitting_mode(edi::effective_fitting_mode(project_));
+    // Patterns of an earlier scan still waiting to be drawn are not, and its view is not shown again after them.
+    if (catchingUp()) {
+        dropHandedFile();
+        frame_shown_ = true;
+    }
+    catch_up_.clear();
+    caught_up_pending_ = false;
+    syncBehind();
     if (scan) {
         const QString error = owner_.prepareScan(scan_.processed() == 0);
         if (!error.isEmpty()) {
@@ -583,8 +602,13 @@ void FitViewModel::scanStarted(const edi::ScanPreamble& preamble) {
     followed_file_.clear();
     follow_clock_.invalidate();
     scan_pattern_updates_ = 0;
+    scan_received_ = 0;
+    catch_up_.clear();
+    caught_up_pending_ = false;
     emit scanPatternUpdatesChanged();
     emit scanShownFileChanged();
+    emit scanReceivedChanged();
+    syncBehind();
     setScanCounts(counts, preamble.completed_rows.empty()
                               ? QString()
                               : QString::fromStdString(preamble.completed_rows.back().file_name));
@@ -619,8 +643,9 @@ void FitViewModel::fileCompleted(const edi::ScanFileRecord& record) {
     setScanCounts(counts, QString::fromStdString(record.file_name));
     setProgress(QString(), chi(record.reduced_chi_square), tr("Running"));
     latest_file_ = record.file_name;
-    if (following()) {
-        // The cheap indicators follow every finished file; only the pattern waits for the view (edi ADR-0029).
+    if (following() && pattern_updates_ != kCatchUp) {
+        // The cheap indicators follow every finished file; only the pattern waits for the view (edi ADR-0029). A
+        // display catching up shows them with the file it draws.
         owner_.markScanFile(latest_file_);
     }
     followLatest();
@@ -632,9 +657,39 @@ void FitViewModel::scanFrame(const std::string& file, const edi::FitFrame& frame
     if (!following() || pattern_updates_ == kAtEnd) {
         return;
     }
+    if (pattern_updates_ == kCatchUp) {
+        // Every file's pattern waits its turn; the fit has gone on already.
+        catch_up_.emplace_back(file, frame);
+        ++scan_received_;
+        emit scanReceivedChanged();
+        drainFollowed();
+        syncBehind();
+        return;
+    }
     frame_shown_ = false;
     follow_clock_.start();
-    owner_.followScanFrame(file, frame, handOver(file));
+    const std::uint64_t token = handOver(file);
+    if (owner_.patternShown() || pattern_updates_ != kEveryPattern) {
+        owner_.followScanFrame(file, frame, token);
+    } else {
+        // Every pattern on a Stacked view or Map: the file is shown as the current dataset (edi ADR-0029, 8).
+        owner_.followScanSelection(file, token);
+    }
+}
+
+bool FitViewModel::waitsForView(int mode) const {
+    // Fit waits: while a pattern chart, a Stacked view or a Map is on screen, which shows every file; with none, as
+    // on the Correlations or Evolution tab or another page, there is nothing to wait for.
+    return mode == kEveryPattern && (owner_.patternShown() || owner_.scanViewShown());
+}
+
+bool FitViewModel::viewReady() const {
+    // A pattern chart once the last view asked for is applied; with every pattern and no pattern chart, a Stacked view
+    // or Map with no dataset read pending.
+    if (owner_.patternShown()) {
+        return owner_.followReady();
+    }
+    return pattern_updates_ == kEveryPattern && owner_.scanViewShown() && owner_.viewSettled();
 }
 
 std::uint64_t FitViewModel::handOver(const std::string& file) {
@@ -647,6 +702,7 @@ void FitViewModel::dropHandedFile() {
     // A receipt still on its way for the file handed over last no longer counts.
     if (handed_token_ != 0) {
         handed_token_ = 0;
+        presented_token_ = 0;
         handed_file_.clear();
         owner_.releaseFollow();
     }
@@ -659,9 +715,43 @@ void FitViewModel::patternDrawn(const std::string& file) {
     emit scanShownFileChanged();
 }
 
+void FitViewModel::drainFollowed() {
+    if (pattern_updates_ != kCatchUp || !frame_shown_ || catch_up_.empty()) {
+        return;
+    }
+    // A pattern chart draws the file's pattern; without one (the Stacked or the Map view) the file is shown as the
+    // current dataset.
+    const bool chart = owner_.patternShown();
+    if (chart ? !owner_.followReady() : !owner_.scanViewShown() || !owner_.viewSettled()) {
+        return;  // shown once a view that shows it is on screen
+    }
+    auto [file, frame] = std::move(catch_up_.front());
+    catch_up_.pop_front();
+    frame_shown_ = false;
+    const std::uint64_t token = handOver(file);
+    if (chart) {
+        owner_.followScanFrame(file, frame, token);
+    } else {
+        owner_.followScanSelection(file, token);
+    }
+}
+
+void FitViewModel::syncBehind() {
+    const bool behind = pattern_updates_ == kCatchUp && !catch_up_.empty();
+    if (behind != behind_) {
+        behind_ = behind;
+        emit scanBehindChanged();
+    }
+    // The scan ended while its patterns were drawn: the view it held back is shown now that they are.
+    if (!scanning_ && !catchingUp() && caught_up_pending_) {
+        caught_up_pending_ = false;
+        owner_.scanCaughtUp();
+    }
+}
+
 void FitViewModel::followLatest() {
-    if (!following() || frame_requested_ || !frame_shown_ || !job_ || !owner_.followReady() ||
-        pattern_updates_ == kAtEnd) {
+    if (!following() || frame_requested_ || !frame_shown_ || !job_ || !viewReady() ||
+        pattern_updates_ == kAtEnd || pattern_updates_ == kCatchUp) {
         return;
     }
     const int interval = pattern_updates_ == kEveryPattern    ? 0
@@ -681,25 +771,42 @@ void FitViewModel::followLatest() {
 void FitViewModel::patternShownChanged() {
     // Every pattern: the worker waits for a drawing only while a chart can draw one.
     if (job_) {
-        job_->wait_for_patterns(pattern_updates_ == kEveryPattern && owner_.patternShown());
+        job_->wait_for_patterns(waitsForView(pattern_updates_));
+        job_->send_every_pattern(pattern_updates_ == kCatchUp);
     }
     followShown();
 }
 
 void FitViewModel::followShown() {
+    if (pattern_updates_ == kCatchUp) {
+        drainFollowed();
+        syncBehind();
+        return;
+    }
     if (following() && !follow_timer_.isActive()) {
         followLatest();
     }
+}
+
+void FitViewModel::followPresented(std::uint64_t token, const std::string& file) {
+    if (token == 0 || token != handed_token_ || presented_token_ == token) {
+        return;
+    }
+    presented_token_ = token;
+    // The interval runs from the drawing, so no two drawn patterns are closer than it.
+    follow_clock_.start();
+    patternDrawn(file);
 }
 
 void FitViewModel::followRendered(std::uint64_t token, const std::string& file, bool drawn) {
     if (token == 0 || token != handed_token_) {
         return;  // a receipt for a file handed over before the one awaited, or one already dropped
     }
+    const bool presented = presented_token_ == token;
     handed_token_ = 0;
     handed_file_.clear();
-    if (drawn) {
-        // The interval runs from the drawing, so no two drawn patterns are closer than it.
+    presented_token_ = 0;
+    if (drawn && !presented) {
         follow_clock_.start();
         patternDrawn(file);
     }
@@ -838,10 +945,14 @@ void FitViewModel::ended(const edi::FitReport& report) {
     clock_timer_.stop();
     pending_frame_.reset();
     frame_requested_ = false;
-    frame_shown_ = true;
+    // Catching up, the pattern being drawn still is.
+    frame_shown_ = pattern_updates_ != kCatchUp || handed_token_ == 0;
     if (scanning_) {
-        // A followed scan always ends on its last file, whatever the interval skipped.
-        if (following() && !latest_file_.empty() && latest_file_ != followed_file_ && latest_file_ != handed_file_) {
+        // A followed scan always ends on its last file, whatever the interval skipped; catching up, it ends on it
+        // once the patterns before it are drawn.
+        caught_up_pending_ = catchingUp();
+        if (following() && !caught_up_pending_ && !latest_file_.empty() && latest_file_ != followed_file_ &&
+            latest_file_ != handed_file_) {
             owner_.followScanFile(latest_file_, handOver(latest_file_));
         }
         // Files skipped after the last row have sent no event: the counts are settled first, so the running bar
@@ -895,29 +1006,39 @@ void FitViewModel::setFollowing(bool following) {
         // Follow turned on again: the newest finished file is shown now, calculated beside the scan, and the next
         // ones as they come.
         if (this->following() && !latest_file_.empty() && latest_file_ != followed_file_ &&
-            pattern_updates_ != kAtEnd) {
+            pattern_updates_ != kAtEnd && !catchingUp()) {
             frame_shown_ = false;
             follow_clock_.start();
             owner_.followScanFile(latest_file_, handOver(latest_file_));
         }
-        // Follow turned off: a file still waiting to be drawn is not counted.
+        // Follow turned off: a file still waiting to be drawn is not counted, nor drawn.
         if (!this->following()) {
+            catch_up_.clear();
             dropHandedFile();
             frame_shown_ = true;
+            syncBehind();
         }
     }
     followLatest();
 }
 
 void FitViewModel::setPatternUpdates(int mode) {
-    mode = mode >= kEveryPattern && mode <= kAtEnd ? mode : kAdaptive;
+    mode = mode >= kEveryPattern && mode <= kCatchUp ? mode : kAdaptive;
     if (job_) {
-        job_->wait_for_patterns(mode == kEveryPattern && owner_.patternShown());
+        job_->wait_for_patterns(waitsForView(mode));
+        job_->send_every_pattern(mode == kCatchUp);
     }
     if (mode != pattern_updates_) {
+        // Another mode draws the newest file from here on: the patterns still waiting are not drawn.
+        catch_up_.clear();
         pattern_updates_ = mode;
         emit patternUpdatesChanged();
-        followLatest();
+        syncBehind();
+        if (mode == kCatchUp) {
+            drainFollowed();
+        } else {
+            followLatest();
+        }
     }
 }
 

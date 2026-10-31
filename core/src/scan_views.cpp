@@ -176,6 +176,77 @@ ScanTrace scan_trace(std::span<const double> x, std::span<const double> intensit
     return trace;
 }
 
+ScanTrace scan_polyline(std::span<const double> x, std::span<const double> intensity, double x_min, double x_max,
+                        std::size_t columns) {
+    if (columns == 0 || !(x_max > x_min)) {
+        return {};
+    }
+    const Inside inside = points_inside(x, intensity, x_min, x_max);
+    if (inside.count <= 4 * columns) {
+        return scan_trace(x, intensity, x_min, x_max, std::max(columns, inside.count));
+    }
+    constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();
+    ScanTrace trace;
+    const auto add = [&](std::size_t i) {
+        trace.x.push_back(x[i]);
+        trace.low.push_back(static_cast<float>(intensity[i]));
+        trace.high.push_back(static_cast<float>(intensity[i]));
+    };
+    // The column being gathered: its first, lowest, highest and last point.
+    constexpr std::size_t kNone = std::numeric_limits<std::size_t>::max();
+    std::size_t column = kNone;
+    std::array<std::size_t, 4> kept{};
+    const auto flush = [&] {
+        if (column == kNone) {
+            return;
+        }
+        std::sort(kept.begin(), kept.end());
+        for (std::size_t k = 0; k < kept.size(); ++k) {
+            if (k == 0 || kept[k] != kept[k - 1]) {
+                add(kept[k]);
+            }
+        }
+        column = kNone;
+    };
+    const double width = (x_max - x_min) / static_cast<double>(columns);
+    const std::size_t points = std::min(x.size(), intensity.size());
+    // The points inside, and the one beyond each end of the run inside, so the line leaves the plot at its edges.
+    const std::size_t from = inside.first > 0 ? inside.first - 1 : 0;
+    const std::size_t to = std::min(points, inside.last + 2);
+    for (std::size_t i = from; i < to; ++i) {
+        if (!std::isfinite(x[i]) || !std::isfinite(intensity[i])) {
+            flush();
+            if (!trace.x.empty() && !std::isnan(trace.x.back())) {
+                trace.x.push_back(std::numeric_limits<double>::quiet_NaN());
+                trace.low.push_back(kNaN);
+                trace.high.push_back(kNaN);
+            }
+            continue;
+        }
+        if (x[i] < x_min || x[i] > x_max) {
+            flush();
+            add(i);
+            continue;
+        }
+        const auto at = std::min(columns - 1, static_cast<std::size_t>((x[i] - x_min) / width));
+        if (at != column) {
+            flush();
+            column = at;
+            kept = {i, i, i, i};
+            continue;
+        }
+        if (intensity[i] < intensity[kept[1]]) {
+            kept[1] = i;
+        }
+        if (intensity[i] > intensity[kept[2]]) {
+            kept[2] = i;
+        }
+        kept[3] = i;
+    }
+    flush();
+    return trace;
+}
+
 std::vector<float> scan_pixel_values(std::span<const double> x, std::span<const double> intensity, double x_min,
                                      double x_max, std::size_t columns) {
     constexpr float kNaN = std::numeric_limits<float>::quiet_NaN();

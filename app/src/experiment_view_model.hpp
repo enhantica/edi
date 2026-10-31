@@ -45,7 +45,7 @@ class ExperimentViewModel : public QObject {
     Q_PROPERTY(QString beamModeToken READ beamModeToken CONSTANT)
     Q_PROPERTY(QString radiationProbeToken READ radiationProbeToken CONSTANT)
     Q_PROPERTY(QString scatteringTypeToken READ scatteringTypeToken CONSTANT)
-    // ADR-0052: the experiment's description, its effective values.
+    // ADR-0053: the experiment's description, its effective values.
     Q_PROPERTY(QString dimensionalityToken READ dimensionalityToken CONSTANT)
     Q_PROPERTY(QString polarisationToken READ polarisationToken CONSTANT)
     Q_PROPERTY(QString instrumentName READ instrumentName CONSTANT)
@@ -313,6 +313,15 @@ class ExperimentViewModel : public QObject {
     // reports stale and the chart's source reports that it no longer describes the model, until the newest
     // request's publication captures the pattern again.
     void markPatternStale();
+    // A parameter's slider is held (ProjectViewModel::adjusting): a pattern chart holds its y range while the
+    // calculated curve stays inside it, and fits it once again when the slider is let go.
+    bool adjusting() const { return adjusting_; }
+    void setAdjusting(bool adjusting) {
+        if (adjusting != adjusting_) {
+            adjusting_ = adjusting;
+            emit adjustingChanged();
+        }
+    }
     // Pattern charts showing this experiment's pattern register here while they are shown (on the page and the tab
     // the window shows): a followed scan file counts as drawn only while one is (edi ADR-0029).
     bool patternShown() const { return !shown_charts_.isEmpty(); }
@@ -370,6 +379,7 @@ class ExperimentViewModel : public QObject {
     void lastErrorChanged();
     void patternSourceChanged();
     void patternWentStale();
+    void adjustingChanged();
     void patternShownChanged();
 
    private:
@@ -383,6 +393,7 @@ class ExperimentViewModel : public QObject {
     QSet<const QObject*> shown_charts_;
     QSet<const QObject*> d_charts_;
     std::uint64_t pattern_generation_ = 0;
+    bool adjusting_ = false;
     std::optional<std::size_t> colour_place_;
     std::size_t colour_count_ = 0;
     std::uint64_t presented_generation_ = 0;

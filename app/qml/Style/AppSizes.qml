@@ -15,6 +15,11 @@ QtObject {
     // the same on Home and in About (WordmarkWithVersion, edi ADR-0017 §1).
     readonly property real homeMarkDiameter: unit * 5
 
+    // The smallest app area every page is made for (the owner, 2026-10-25): the desktop window cannot be made smaller,
+    // and the browser's page shows only a request to make it larger below it (Main.qml). In logical pixels.
+    readonly property int minimumAppWidth: 1024
+    readonly property int minimumAppHeight: 640
+
     // Home page (easydiffractionbeta Pages/Home/Page.qml)
     readonly property real homeBlockSpacer: unit * 2.5
     readonly property real homeLinkColumnsSpacing: unit * 3
@@ -62,6 +67,9 @@ QtObject {
     readonly property real inputSpacing: toolbarSpacing
     // The messages dialog's fixed width (edi ADR-0017 §14): about the Preferences dialog's.
     readonly property real messagesDialogContentWidth: unit * 38
+    // The padding of a dialog's choice rows that read as one group (Save project as: Folder, Zip archive), closer
+    // together than the usual rows (owner, 2026-10-25).
+    readonly property real choiceRowPadding: Math.round(unit * 0.35)
     // The About window's content: room for the third-party table's columns and a licence text below it.
     readonly property real aboutWidth: unit * 52
     readonly property real aboutHeight: unit * 32

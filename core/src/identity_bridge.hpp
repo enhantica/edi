@@ -64,7 +64,7 @@ class Project;
 
 namespace edi::detail {
 
-// Whether `tag` is one of the project record's five retired `_metadata` tags (ADR-0052).
+// Whether `tag` is one of the project record's five retired `_metadata` tags (ADR-0053).
 bool is_retired_metadata_tag(const std::string& tag);
 
 // The retired tags a project record carries (tag and value as written), converted onto the

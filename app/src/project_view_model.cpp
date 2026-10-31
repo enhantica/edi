@@ -78,13 +78,13 @@ void ExperimentListModel::setExperiments(const QList<ExperimentViewModel*>& expe
     // and fitted the first.
     const QString outcome = recorded_outcome(project.fit_result);
     const bool shares = std::any_of(project.experiments.begin(), project.experiments.end(),
-                                    [](const auto& experiment) { return experiment->fit_prof_wr_factor.has_value(); });
+                                    [](const auto& experiment) { return experiment->fit_share_held(); });
     dataset_row_ = nullptr;
     dataset_experiment_ = nullptr;
     QList<Row> rows;
     for (int i = 0; i < experiments.size(); ++i) {
         ExperimentViewModel* experiment = experiments[i];
-        const bool fitted = shares ? experiment->experiment()->fit_prof_wr_factor.has_value() : i == 0;
+        const bool fitted = shares ? experiment->experiment()->fit_share_held() : i == 0;
         experiment->setFitOutcome(fitted ? outcome : QString());
         // Its last fit's reliability follows its name and file on the selector's line (Rwp and χ²).
         const std::string reliability = fitted ? edi::reliability_text(project, static_cast<std::size_t>(i)) : std::string();
@@ -259,6 +259,12 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     hooks.calculated = [this](std::uint64_t /*generation*/) { emit calculationFinished(); };
     preview_ = std::make_unique<edi::LivePreview>(*project_, *worker_, std::move(hooks));
     fit_ = new FitViewModel(*project_, *worker_, *this, this);
+    // A fit's patterns and its end are not a parameter being adjusted: the charts fit their y range again.
+    connect(fit_, &FitViewModel::runningChanged, this, [this] {
+        if (fit_->running()) {
+            setAdjusting(false);
+        }
+    });
     // A fit is the newest undoable change once it ends with a result (finished, cancelled or stopped
     // early), as is a fit start state the loaded project already holds; its undo is one level, so a
     // second fit in a row is the same entry.
@@ -1300,10 +1306,16 @@ void ProjectViewModel::syncDataset(int index) {
 }
 
 std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vector<std::string>& row) const {
+    return datasetValues(row, scanTemplateOrModel(), scan_session_->index());
+}
+
+std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vector<std::string>& row,
+                                                                  const edi::Project& template_project,
+                                                                  const edi::ScanResultIndex& index) const {
     // Every parameter at the template's state, then the results row's value and uncertainty over it. The row was
     // checked as it was read: a cell that does not convert now refuses, never falling back to the template's value.
     std::vector<edi::Edit::ScanValue> values;
-    edi::Project& from = const_cast<edi::Project&>(scanTemplateOrModel());
+    edi::Project& from = const_cast<edi::Project&>(template_project);
     for (const edi::NamedSlot& slot : edi::named_slots(from)) {
         values.push_back({slot.unique_name, slot.parameter->value.get(), slot.parameter->uncertainty.get()});
     }
@@ -1311,7 +1323,7 @@ std::vector<edi::Edit::ScanValue> ProjectViewModel::datasetValues(const std::vec
         return values;
     }
     std::map<std::string, const edi::ScanParameterColumns*> columns;
-    for (const edi::ScanParameterColumns& parameter : scan_session_->index().parameters) {
+    for (const edi::ScanParameterColumns& parameter : index.parameters) {
         columns.emplace(parameter.name, &parameter);
     }
     for (edi::Edit::ScanValue& value : values) {
@@ -1451,6 +1463,22 @@ void ProjectViewModel::startViewRead() {
     const edi::BeamModeEnum mode = project_->experiment().effective_beam_mode();
     // A chart on d draws the shown dataset's d-spacing capture too.
     const bool d_spacing = !experiment_models_.isEmpty() && experiment_models_.front()->dSpacingWanted();
+#ifndef __EMSCRIPTEN__
+    // A file a followed scan has just fitted, its pattern sent with it, is read here, about a millisecond: the file is
+    // applied in this event, with the current dataset it moves, so one frame draws both (edi ADR-0029). The browser
+    // reads its files off the page's thread (edi ADR-0030).
+    if (follow_frame_ && follow_frame_->first == index && !shown) {
+        DatasetView view;
+        view.values = std::move(values);
+        try {
+            view.data = edi::read_scan_dataset(directory, file, mode);
+        } catch (const std::exception& refusal) {
+            view.error = QString::fromUtf8(refusal.what());
+        }
+        applyDatasetView(request, index, std::move(view));
+        return;
+    }
+#endif
     view_reading_ = true;
     const QPointer<ProjectViewModel> self(this);
     run_in_background([self, request, index, directory, file, mode, d_spacing, values = std::move(values),
@@ -1499,8 +1527,10 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
         return;
     }
     view_applied_ = request;
-    // The fit's pattern of a followed file goes with that file's view, and only while the scan runs.
-    if (follow_frame_ && follow_frame_->first == index && fit_ != nullptr && fit_->scanning() && !view.frame) {
+    // The fit's pattern of a followed file goes with that file's view, and only while the scan runs or its patterns
+    // are drawn after it.
+    if (follow_frame_ && follow_frame_->first == index && fit_ != nullptr && (fit_->scanning() || fit_->catchingUp()) &&
+        !view.frame) {
         view.frame = std::move(follow_frame_->second);
     }
     follow_frame_.reset();
@@ -1549,7 +1579,7 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     }
     // A followed scan may have marked newer files while this one was read: the current dataset stays the newest
     // finished one, and only the pattern shown is this file's (edi ADR-0029).
-    if (fit_ == nullptr || !fit_->following()) {
+    if (fit_ == nullptr || !(fit_->following() || fit_->catchingUp())) {
         current_dataset_ = index;
     }
     projected_dataset_ = index;
@@ -1557,8 +1587,16 @@ void ProjectViewModel::applyDatasetView(std::uint64_t request, int index, Datase
     publishCurrent();
     if (view.frame) {
         showFitFrame(*view.frame, std::move(view.d_frame));
-    } else if (!view.error.isEmpty()) {
-        setLastError(view.error);
+    } else {
+        if (!view.error.isEmpty()) {
+            setLastError(view.error);
+        }
+        // The chart shows the dataset the model now holds at once, its calculation not current until the next one
+        // arrives: never one file's points while the model holds another's (the template's at a scan's first swap,
+        // or an earlier followed file's when a finished scan settles on its last file, which comes with no frame).
+        if (ExperimentViewModel* experiment = currentExperiment()) {
+            experiment->capturePattern();
+        }
     }
     applied = true;
 }
@@ -1830,6 +1868,24 @@ void ProjectViewModel::followScanFrame(const std::string& file, const edi::FitFr
     }
 }
 
+void ProjectViewModel::followScanSelection(const std::string& file, std::uint64_t token) {
+    const int index = scan_ && scan_session_ != nullptr ? scan_session_->place(file) : -1;
+    if (index < 0) {
+        if (fit_ != nullptr) {
+            fit_->followRendered(token, file, false);
+        }
+        return;
+    }
+    handFollowed(index, file, token);
+    follow_selection_ = true;
+    if (index != current_dataset_) {
+        current_dataset_ = index;
+        syncDataset(index);
+        emit currentExperimentIndexChanged();
+    }
+    awaitRender();
+}
+
 namespace {
 
 constexpr int kRenderWaitMs = 2000;
@@ -1860,6 +1916,7 @@ void ProjectViewModel::handFollowed(int index, const std::string& file, std::uin
     follow_file_ = file;
     follow_token_ = token;
     follow_generation_ = 0;
+    follow_selection_ = false;
     const ExperimentViewModel* experiment = currentExperiment();
     follow_before_ = experiment != nullptr ? experiment->patternGeneration() : 0;
     render_swaps_ = -1;
@@ -1867,11 +1924,28 @@ void ProjectViewModel::handFollowed(int index, const std::string& file, std::uin
 }
 
 bool ProjectViewModel::presentedFollowed() const {
+    // Presented as the current dataset: it still is.
+    if (follow_selection_) {
+        // As the current dataset on a shown Stacked view or Map.
+        return current_dataset_ == follow_index_ && scanViewShown();
+    }
     // The model still holds the followed dataset, and a shown chart has drawn its pattern (the one its application
     // set, or a later calculation of the same dataset).
     const ExperimentViewModel* experiment = currentExperiment();
     return experiment != nullptr && experiment->patternShown() && follow_generation_ != 0 &&
            projected_dataset_ == follow_index_ && experiment->presentedGeneration() >= follow_generation_;
+}
+
+void ProjectViewModel::setScanViewShown(QObject* view, bool shown) {
+    const bool was = scanViewShown();
+    if (shown) {
+        scan_views_shown_.insert(view);
+    } else {
+        scan_views_shown_.erase(view);
+    }
+    if (scanViewShown() != was && fit_ != nullptr) {
+        fit_->patternShownChanged();
+    }
 }
 
 bool ProjectViewModel::patternShown() const {
@@ -1890,25 +1964,49 @@ void ProjectViewModel::awaitRender() {
         return;
     }
     if (!render_connection_) {
-        // Swaps can be reported on the render thread; the count is kept on this one. The first swap may be a frame
-        // already under way when the dataset was applied, so one more is asked for and the second one counts.
-        render_connection_ = connect(
-            window, &QQuickWindow::frameSwapped, this,
-            [this, window] {
-                if (render_swaps_ <= 0) {
-                    return;
-                }
-                if (!presentedFollowed()) {
-                    followRendered(false);  // hidden, or another pattern replaced it, before it was drawn
-                } else if (--render_swaps_ == 0) {
-                    followRendered(true);
-                } else {
-                    window->update();
+        // The pattern is in the scene now, so the next frame synchronises it. Its file name and count change at the
+        // start of that frame, on this thread before its polish and synchronisation, so the name a user reads changes in
+        // the frame that shows the file's points (edi ADR-0029). The receipt that releases the next file comes once that
+        // frame is synchronised: the render thread signals it, and it reaches this thread after the frame has taken the
+        // points, so the next file is applied while the render thread draws this one, never in the same frame.
+        render_connection_ = connect(window, &QQuickWindow::afterAnimating, this, [this] {
+            if (!render_armed_.exchange(false) || render_swaps_ <= 0) {
+                return;
+            }
+            if (!presentedFollowed()) {
+                // Hidden, or another pattern replaced it, before its frame: not drawn.
+                followRendered(false);
+                return;
+            }
+            // This frame synchronises the file's points: its name and count go with them now, and the receipt that
+            // releases the next file once the frame has taken them.
+            render_token_.store(follow_token_);
+            render_synced_.store(true);
+            if (fit_ != nullptr) {
+                fit_->followPresented(follow_token_, follow_file_);
+            }
+        });
+        render_sync_connection_ = connect(
+            window, &QQuickWindow::afterSynchronizing, this,
+            [this] {
+                // The receipt names the hand-over its frame took: by the time it reaches this thread another file may
+                // have been handed over, and that one has not been drawn.
+                if (render_synced_.exchange(false)) {
+                    const std::uint64_t token = render_token_.load();
+                    QMetaObject::invokeMethod(
+                        this,
+                        [this, token] {
+                            if (token == follow_token_ && render_swaps_ > 0) {
+                                followRendered(presentedFollowed());
+                            }
+                        },
+                        Qt::QueuedConnection);
                 }
             },
-            Qt::QueuedConnection);
+            Qt::DirectConnection);
     }
-    render_swaps_ = 2;
+    render_swaps_ = 1;
+    render_armed_.store(true);
     render_wait_.start(kRenderWaitMs);
     window->update();
 }
@@ -1923,7 +2021,10 @@ void ProjectViewModel::followRendered(bool drawn) {
     follow_index_ = -1;
     follow_token_ = 0;
     follow_generation_ = 0;
+    follow_selection_ = false;
     render_swaps_ = -1;
+    render_armed_.store(false);
+    render_synced_.store(false);
     render_wait_.stop();
     if (fit_ != nullptr) {
         fit_->followRendered(token, file, drawn);
@@ -1968,7 +2069,29 @@ void ProjectViewModel::scanEnded(edi::FitStatus status, double seconds) {
         return;
     }
     showScanResults();
-    // The shown dataset as the rows on disk now give it.
+    // The shown dataset as the rows on disk now give it, once a display catching up has drawn every pattern.
+    if (!fit_->catchingUp()) {
+        viewDataset(std::max(0, current_dataset_), true);
+    }
+}
+
+void ProjectViewModel::setAdjusting(bool adjusting) {
+    if (adjusting == adjusting_) {
+        return;
+    }
+    adjusting_ = adjusting;
+    for (ExperimentViewModel* experiment : experiment_models_) {
+        experiment->setAdjusting(adjusting);
+    }
+    emit adjustingChanged();
+}
+
+void ProjectViewModel::scanCaughtUp() {
+    // The last pattern drawn was the newest dataset's, its row read as it was applied: nothing to show again.
+    if (scan_session_ == nullptr || !scan_session_->index().error.empty() ||
+        (projected_dataset_ == current_dataset_ && view_applied_ == view_request_)) {
+        return;
+    }
     viewDataset(std::max(0, current_dataset_), true);
 }
 
@@ -2462,53 +2585,180 @@ void ProjectViewModel::syncUndo() {
 }
 
 void ProjectViewModel::setModified(bool modified) {
+    if (modified) {
+        ++revision_;
+        emit edited();
+    }
     if (modified != modified_) {
         modified_ = modified;
         emit modifiedChanged();
     }
 }
 
-QString ProjectViewModel::saveTo(const QString& directory) {
+
+void ProjectViewModel::workIn(const QString& folder) {
+    project_->path = folder.toStdString();
+    project_->metadata.path = project_->path;
+    project_->scan_data_root.clear();
+    emit pathChanged();
+}
+
+QString ProjectViewModel::saveRefusal() const {
     // A running fit owns the project's output (a scan appends its results there): nothing is saved under it.
     if (fit_ != nullptr && fit_->running()) {
-        const QString message = tr("The project cannot be saved while a fit is running");
-        setLastError(message);
-        return message;
+        return tr("The project cannot be saved while a fit is running");
+    }
+    return {};
+}
+
+QString ProjectViewModel::saveTo(const QString& directory) {
+    if (const QString refusal = saveRefusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return refusal;
     }
     // While a scan dataset is shown, the template is what a save writes; the shown model follows it to the new
     // directory, so a scan started next reads and writes there.
+    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
     try {
-        if (scan_template_) {
-            edi::save_project_as(*scan_template_, directory.toStdString());
-        } else {
-            edi::save_project_as(*project_, directory.toStdString());
-        }
+        edi::save_project_as(saved, directory.toStdString());
     } catch (const std::exception& refusal) {
         const QString message = QString::fromUtf8(refusal.what());
         setLastError(message);
         return message;
     }
+    return adoptSave(directory, saved.metadata);
+}
+
+QString ProjectViewModel::stageScan(const QString& directory, const edi::Project& staged, StagedScan& scan) {
+    if (scan_session_ == nullptr) {
+        return {};
+    }
+    // A processed scan's results are part of what a save writes: written into a staged save's folder before it is
+    // published, so taking the save afterwards writes nothing.
+    if (scanProcessed() && !scan_session_->run().identity.empty()) {
+        edi::Project shown = *project_;
+        shown.path = directory.toStdString();
+        shown.metadata.path = shown.path;
+        shown.scan_data_root.clear();
+        if (const QString refusal = scan_session_->writeRun(shown, scan_session_->run()); !refusal.isEmpty()) {
+            return refusal;
+        }
+    }
+    // What the project will read there, read now: the folder's listing, and the shown dataset's values over the
+    // staged copy, which is what the template takes.
+    scan.listing = std::make_shared<ScanSession>(nullptr);
+    scan.refusal = scan.listing->load(staged);
+    if (scan_template_ && current_dataset_ >= 0 && project_->experiment().data && scan.refusal.isEmpty()) {
+        try {
+            scan.shown = datasetValues(scan.listing->row(staged, current_dataset_), staged, scan.listing->index());
+        } catch (const std::exception& refusal) {
+            return QString::fromUtf8(refusal.what());
+        }
+    }
+    return {};
+}
+
+void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& staged, StagedScan scan) {
+    // The staged save already wrote, adopted and calculated what the project takes: nothing here reads or writes a
+    // file, so nothing can refuse after the save was published.
+    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
+    saved.metadata = staged.metadata;
+    saved.path = directory.toStdString();
+    saved.metadata.path = saved.path;
+    saved.scan_data_root.clear();
+    if (scan_template_) {
+        project_->path = scan_template_->path;
+        project_->metadata = scan_template_->metadata;
+        project_->scan_data_root = scan_template_->scan_data_root;
+    }
+    const bool changed = edi::adopt_values(saved, staged);
+    // A shown dataset is the template with that dataset's values over it, as a view builds it: built again over the
+    // template the save adopted.
+    if (scan_template_ && scan.shown && project_->experiment().data) {
+        edi::Edit::scan_view(*project_, project_->experiment(), std::move(*scan.shown), *project_->experiment().data)();
+        project_->refresh_calculated_pattern(edi::DueEstimates::Defer);
+    }
+    if (changed) {
+        // Calculated with due background estimates deferred, as the staged save was (ADR-0040).
+        saved.refresh_calculated_pattern(edi::DueEstimates::Defer);
+    }
+    if (changed || scan.shown) {
+        publish(false);
+        // The save's own calculation reaches the charts as a preview's does.
+        published(edi::PreviewResult{});
+    }
+    setLastError({});
+    emit pathChanged();
+    if (scan_session_ != nullptr && scan.listing) {
+        scan_session_->take(*scan.listing);
+        scan_refusal_ = scan.refusal;
+        syncScanAdmission();
+        showScanResults();
+    }
+    publishMetadata();
+    saved_files_.reset();
+    invalidateTexts();
+    report_->refresh();
+    setModified(false);
+    // The shown dataset was built again above; a read still in flight is dropped and read again.
+    viewAfterSave(false);
+}
+
+void ProjectViewModel::viewAfterSave(bool shown) {
+    if (!scan_ || !scan_template_) {
+        return;
+    }
+    // The newest selection is read again: its values are taken from the template when that read starts, so after the
+    // save, and the read already in flight, which took them before, delivers nothing.
+    if (view_applied_ != view_request_ && view_wanted_ >= 0) {
+        viewDataset(view_wanted_, true);
+    } else if (shown && current_dataset_ >= 0) {
+        viewDataset(current_dataset_, true);
+    }
+}
+
+QString ProjectViewModel::adoptSave(const QString& directory, const edi::ProjectMetadata& metadata) {
+    if (const QString refusal = saveRefusal(); !refusal.isEmpty()) {
+        setLastError(refusal);
+        return refusal;
+    }
+    // The project works where the save was written, with the metadata it wrote, and reads its scan data from there.
+    edi::Project& saved = scan_template_ ? *scan_template_ : *project_;
+    saved.metadata = metadata;
+    saved.path = directory.toStdString();
+    saved.metadata.path = saved.path;
+    saved.scan_data_root.clear();
     if (scan_template_) {
         project_->path = scan_template_->path;
         project_->metadata = scan_template_->metadata;
         project_->scan_data_root = scan_template_->scan_data_root;
     }
     // The saved project then holds what its files hold, as a reopen reads them (values and correlations rounded by
-    // the IUCr rule), and is calculated once from that: not an edit, so it stays unmodified with nothing to undo.
+    // the project's rule), calculated from that and written again (edi ADR-0052): not an edit, so it stays unmodified
+    // with nothing to undo.
     try {
-        if (edi::adopt_saved_values(scan_template_ ? *scan_template_ : *project_, directory.toStdString())) {
-            if (scan_template_) {
+        if (edi::adopt_saved_project(saved, directory.toStdString())) {
+            // A due background is estimated only by a calculation the user asks for (ADR-0040): the save calculated the
+            // project with it deferred, and those results are published as they are.
+            const bool estimate_due = edi::background_estimates_due(saved);
+            if (!estimate_due && scan_template_) {
                 scan_template_->refresh_calculated_pattern();
-            } else {
+            } else if (!estimate_due) {
                 preview_->recalculate();
             }
             publish(false);
-            publishCalculating();
+            // The save's own calculation reaches the charts as a preview's does.
+            published(edi::PreviewResult{});
         }
     } catch (const std::exception& error) {
+        // The first write succeeded, so the project works where it was written, with the metadata it wrote. What it
+        // holds may differ from those files (unread, or adopted and not written again): it is unsaved.
         const QString message =
             tr("The project was saved, but reading it back failed: %1").arg(QString::fromUtf8(error.what()));
         setLastError(message);
+        emit pathChanged();
+        publishMetadata();
+        setModified(true);
         return message;
     }
     setLastError({});
@@ -2532,6 +2782,8 @@ QString ProjectViewModel::saveTo(const QString& directory) {
     invalidateTexts();
     report_->refresh();
     setModified(false);
+    // The shown dataset is built again over the template the save adopted (a dataset view is not an edit).
+    viewAfterSave(true);
     return {};
 }
 

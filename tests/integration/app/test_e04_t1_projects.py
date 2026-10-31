@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tests.fixtures.e04_t1.project_actor import run_projects
+from tests.fixtures.fast_chart_redraws.startup import split_renderer_reports
 
 ROOT = Path(__file__).resolve().parents[3]
 APP_TESTS = ROOT / 'tests/unit/app'
@@ -62,8 +63,10 @@ def test_existing_projects_open_and_populate_pages(existing_projects_run):
     assert run.returncode == 0, (
         f'I19: all registered examples and legacy directories open: {output}'
     )
-    assert not run.stderr, (
-        'I10/I19: app project loads route diagnostics to the warning model, not stderr'
+    _, diagnostics = split_renderer_reports(run.stderr)
+    assert not diagnostics, (
+        'App project loads route diagnostics to the warning model; stderr permits only '
+        'the declared startup renderer report: ' + diagnostics
     )
     assert (
         'E04T1ExistingProjects' in output

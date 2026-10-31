@@ -25,13 +25,15 @@ EaElements.GroupBox {
 
     // A Basic category with an Extras part has a group in each tab; `contents` is the tab's own.
     readonly property bool shown: model.tier === shownTier || (shownTier === "Extras" && model.extrasPart)
+    // Among the groups its tab lists (SideBarGroups).
+    readonly property bool listed: shown
 
     objectName: `group.${categoryId}`
     visible: shown
     // Folded at first, as every foldable group (the base's default), then as the user left it, also when the
     // page shows another block; the tab's last shown one has no bottom border (edi ADR-0017 §3; SideBarGroups).
-    collapsed: !SideBarGroups.isOpen(openKey)
-    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed)
+    collapsed: !SideBarGroups.isOpen(openKey, group)
+    onCollapsedChanged: SideBarGroups.setOpen(openKey, !collapsed, group)
     last: SideBarGroups.isLast(group)
     title: model.isLoop ? `${model.title} (${model.itemCount})` : model.title
     icon: model.icon

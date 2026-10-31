@@ -9,7 +9,7 @@ import edi.app
 
 // `experiment_type` (easydiffractionbeta's Diffraction radiation group), in the Experiments explorer under its
 // table: the selected experiment's four type axes, editable while it has no measured data and fixed once it has
-// (its data sets them), and its dimensionality and polarisation, each with the one value it admits (ADR-0052). A choice makes the experiment anew with that type
+// (its data sets them), and its dimensionality and polarisation, each with the one value it admits (ADR-0053). A choice makes the experiment anew with that type
 // (ProjectViewModel.setExperimentType). The four axes show their values by the dictionary's names (edi ADR-0051).
 // A grid three wide, so each name fits (edi ADR-0017 §2): each box sets its own width, as the base's divides the
 // row by its parent's children.
@@ -105,7 +105,7 @@ Grid {
         }
     }
     // One admitted value each, so the boxes show it and take no choice: the dimensionality, and the polarisation of
-    // the probe (ADR-0052).
+    // the probe (ADR-0053).
     SelectorField {
         id: dimensionality
         objectName: "experimentType.dimensionality"

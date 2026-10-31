@@ -71,6 +71,8 @@ qt_add_qml_module(edi_app_module
         src/evolution_view_model.hpp src/evolution_view_model.cpp
         src/scan_view_model.hpp src/scan_view_model.cpp
         src/scan_layer.hpp src/scan_layer.cpp
+        src/scan_lines.hpp src/scan_lines.cpp
+        src/rendering_info.hpp src/rendering_info.cpp
         src/correlation_view_model.hpp src/correlation_view_model.cpp
         src/scan_session.hpp src/scan_session.cpp
         src/experiment_view_model.hpp src/experiment_view_model.cpp
@@ -82,11 +84,13 @@ qt_add_qml_module(edi_app_module
         src/project_view_model.hpp src/project_view_model.cpp
         src/session.hpp src/session.cpp
         src/web_files.hpp src/web_files.cpp
+        src/web_storage.hpp src/web_storage.cpp
     QML_FILES
         qml/Main.qml
         qml/Components/AppDialog.qml
         qml/Components/AppPreferencesDialog.qml
         qml/Components/BlockSelector.qml
+        qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
@@ -96,6 +100,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/FitProgressBar.qml
         qml/Components/FitResultsDialog.qml
         qml/Components/ChartLegend.qml
+        qml/Components/ChartTheme.qml
         qml/Components/FigureColors.qml
         qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
@@ -116,7 +121,6 @@ qt_add_qml_module(edi_app_module
         qml/Components/SingleCrystalTable.qml
         qml/Components/CorrelationChart.qml
         qml/Components/SearchableComboBox.qml
-        qml/Components/SelectedPatternBox.qml
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
@@ -128,6 +132,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/TextCell.qml
         qml/Components/TextTab.qml
         qml/Components/ToolbarComboBox.qml
+        qml/Components/ToolbarLines.qml
         qml/Components/ValueField.qml
         qml/Components/WarningToolTip.qml
         qml/Components/WarningsDialog.qml
@@ -205,6 +210,8 @@ qt_add_qml_module(edi_app_module
     RESOURCES
         resources/logo/App.svg
 )
+# The Stacked view's line shader (edi ADR-0041), compiled for every graphics API Qt Quick runs on.
+qt_add_shaders(edi_app_module "edi_scan_shaders" PREFIX "/edi" FILES shaders/scan_line.vert shaders/scan_line.frag)
 target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR})
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
@@ -327,6 +334,19 @@ target_include_directories(edi_app_chart_bench PRIVATE ${PROJECT_SOURCE_DIR}/tes
 target_link_libraries(edi_app_chart_bench PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
 set_target_properties(edi_app_chart_bench PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
 
+# The scan views' renderer benchmark (edi ADR-0041): test tooling, never part of the host.
+qt_add_executable(edi_app_scan_bench tools/scan_bench.cpp)
+qt_add_resources(edi_app_scan_bench "edi_scan_bench" PREFIX "/edi/bench" BASE tools FILES tools/ScanBench.qml)
+target_link_libraries(edi_app_scan_bench PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
+set_target_properties(edi_app_scan_bench PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+
+# The plotting benchmark (edi ADR-0041): every way of feeding Qt Graphs on the Stacked and Pattern charts' workloads.
+# Test tooling, never part of the host.
+qt_add_executable(edi_app_plot_bench tools/plot_bench.cpp)
+qt_add_resources(edi_app_plot_bench "edi_plot_bench" PREFIX "/edi/bench" BASE tools FILES tools/PlotBench.qml)
+target_link_libraries(edi_app_plot_bench PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS})
+set_target_properties(edi_app_plot_bench PROPERTIES WIN32_EXECUTABLE FALSE MACOSX_BUNDLE FALSE)
+
 # The page-image comparator: test tooling, QtGui only, never part of the host.
 qt_add_executable(edi_app_ui_compare tools/ui_compare.cpp)
 target_link_libraries(edi_app_ui_compare PRIVATE Qt6::Gui)
@@ -352,6 +372,17 @@ add_dependencies(edi_app_tests edi_app_build_commit)
 # The app names it too: its test observers report the build they observe.
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_COMMIT_CPP}")
 add_dependencies(edi_app edi_app_build_commit)
+# And carries it as bytes (MARKER), which a receipt reads from the binary without running it, as the latency probes do.
+set(EDI_APP_BUILD_MARKER_CPP "${CMAKE_BINARY_DIR}/edi_app_build_marker.cpp")
+execute_process(COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_MARKER_CPP}
+                        -DMARKER=ON -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake")
+add_custom_target(edi_app_build_marker
+    COMMAND "${CMAKE_COMMAND}" -DSOURCE_DIR=${PROJECT_SOURCE_DIR} -DOUT=${EDI_APP_BUILD_MARKER_CPP}
+            -DMARKER=ON -DMARK_DIRTY=ON -P "${PROJECT_SOURCE_DIR}/cmake/build_commit.cmake"
+    BYPRODUCTS "${EDI_APP_BUILD_MARKER_CPP}"
+    COMMENT "Embedding the source commit in the app as bytes")
+target_sources(edi_app PRIVATE "${EDI_APP_BUILD_MARKER_CPP}")
+add_dependencies(edi_app edi_app_build_marker)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
                                             Qt6::QuickTest)
 # The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).

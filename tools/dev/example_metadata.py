@@ -3,7 +3,7 @@
 """Generate/check the Examples presentation index from committed project records.
 
 The project record gives the title and description; the experiment axes, the description
-(dimensionality, polarisation, instrument and facility, ADR-0052) and the fitting mode
+(dimensionality, polarisation, instrument and facility, ADR-0053) and the fitting mode
 come from their ordinary native categories, and the purpose from whether any experiment has
 measured data.
 """

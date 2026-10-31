@@ -6,6 +6,8 @@ import subprocess
 from functools import cache
 from pathlib import Path
 
+from tests.fixtures.fast_chart_redraws.rendering import native_arguments
+
 ROOT = Path(__file__).resolve().parents[3]
 ORACLE = json.loads(
     (ROOT / 'tests/fixtures/e04_t1/oracle.js')
@@ -38,6 +40,7 @@ PROJECT_CASES = [
 
 @cache
 def _projects_result(_session, binary, reference):
+    binary = native_arguments([binary])[0]
     environment = {
         **os.environ,
         'QT_QPA_PLATFORM': 'offscreen',
@@ -49,6 +52,7 @@ def _projects_result(_session, binary, reference):
     environment.pop('PYTEST_CURRENT_TEST', None)
     runs = []
     for case in PROJECT_CASES:
+        print('Project acceptance actor: ' + case, flush=True)
         try:
             result = subprocess.run(
                 [
@@ -67,6 +71,7 @@ def _projects_result(_session, binary, reference):
             )
         except subprocess.TimeoutExpired as error:
             return error
+        print(f'Project acceptance actor complete: {case}; status={result.returncode}', flush=True)
         runs.append(result)
     return subprocess.CompletedProcess(
         args=[run.args for run in runs],

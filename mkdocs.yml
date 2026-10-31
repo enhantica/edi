@@ -81,7 +81,8 @@ nav:
           - dev/adrs/0049-single-crystal-experiments.md
           - dev/adrs/0050-observed-reflections-and-fit-cutoff.md
           - dev/adrs/0051-names-and-numbers-from-the-dictionary.md
-          - dev/adrs/0052-experiment-description.md
+          - dev/adrs/0052-project-folders-archives-and-opening.md
+          - dev/adrs/0053-experiment-description.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md
@@ -90,6 +91,9 @@ nav:
           - dev/design/diffraction-lib-parity.md
           - dev/design/modern-qt-guidelines.md
           - dev/design/scan-folder-loading.md
+          - dev/design/scan-view-timings.md
+          - dev/design/scan-renderer-interface.md
+          - dev/design/scan-update-interface.md
           - dev/public-release-checklist.md
           - dev/design/where-tests-live.md
       - Requirements:
@@ -145,6 +149,9 @@ nav:
           - user/cli/pd-neut-xray-cwl_pbso4-d1a-lab/index.md
           - user/cli/pd-neut-cwl_cosio-d20_scan/index.md
           - user/cli/pd-xray-cwl_latp-bm01_scan/index.md
+          - user/cli/sc-neut-cwl_tb2ti2o7-heidi/index.md
+          - user/cli/sc-neut-cwl_pr2nio4-5c2/index.md
+          - user/cli/sc-neut-tof_taurine-senju/index.md
       - Guides:
           - user/guides/complete-project-loading.md
           - user/guides/reading-cif-files.md
@@ -152,6 +159,7 @@ nav:
           - user/guides/projects-from-scratch-in-the-app.md
           - user/guides/the-report.md
           - user/guides/background-estimate.md
+          - user/guides/open-save-and-export.md
           - user/guides/fit-quality.md
       - Tutorials:
           - user/tutorials/index.md
@@ -175,6 +183,9 @@ nav:
           - user/tutorials/pd-neut-xray-cwl_pbso4-d1a-lab.ipynb
           - user/tutorials/pd-neut-cwl_cosio-d20_scan.ipynb
           - user/tutorials/pd-xray-cwl_latp-bm01_scan.ipynb
+          - user/tutorials/sc-neut-cwl_tb2ti2o7-heidi.ipynb
+          - user/tutorials/sc-neut-cwl_pr2nio4-5c2.ipynb
+          - user/tutorials/sc-neut-tof_taurine-senju.ipynb
 
 # The verification notebook PAGES live in the docs tree; their FullProf reference DATA stays
 # at knowledge/verification/fullprof beside the tests that read it. Jupytext .py sources

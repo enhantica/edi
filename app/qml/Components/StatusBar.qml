@@ -18,6 +18,11 @@ EaElements.StatusBar {
     id: bar
 
     readonly property ProjectViewModel project: Session.project
+    // The pages built after a project opened, of those it shows (edi ADR-0052): while they build, the bar shows the
+    // opening's progress in the fit area's place.
+    property int pagesBuilt: 0
+    property int pagesWanted: 0
+    readonly property bool opening: pagesWanted > 0 && pagesBuilt < pagesWanted
 
     visible: EaGlobals.Vars.appBarCurrentIndex !== 0
 
@@ -36,14 +41,14 @@ EaElements.StatusBar {
             }
         }
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const fitWidth = fitArea.visible ? fitArea.labelledWidth + spacing : 0;
+        const fitWidth = fitArea.visible ? fitArea.labelledWidth + spacing : openingProgress.visible ? openingProgress.width + spacing : 0;
         return width + Math.max(0, shown - 1) * spacing + fitWidth <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
     }
     // How many of the items, in their order, fit beside the fit area with their icons and values only: the
     // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
     readonly property int roomFor: {
         const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.compactWidth + spacing : 0);
+        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (fitArea.visible ? fitArea.compactWidth + spacing : openingProgress.visible ? openingProgress.width + spacing : 0);
         let width = 0;
         for (let i = 0; i < items.length; ++i) {
             if (!items[i].shown)
@@ -144,7 +149,7 @@ EaElements.StatusBar {
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         spacing: EaStyle.Sizes.fontPixelSize * 1.2
-        visible: bar.fit !== null && (running || bar.fit.outcome !== "")
+        visible: !bar.opening && bar.fit !== null && (running || bar.fit.outcome !== "")
 
         readonly property bool running: bar.fit !== null && bar.fit.running
         readonly property bool scanning: bar.fit !== null && bar.fit.scanning
@@ -169,7 +174,7 @@ EaElements.StatusBar {
                     shown += 1;
                 }
             }
-            for (const extra of [outOfDate, progress]) {
+            for (const extra of [outOfDate, showing, progress]) {
                 if (extra.visible) {
                     width += extra.width;
                     shown += 1;
@@ -289,6 +294,17 @@ EaElements.StatusBar {
             color: EaStyle.Colors.orange
             text: qsTr("out of date")
         }
+        // Every pattern, display catches up: the patterns drawn of those the scan has sent, while some wait.
+        Text {
+            id: showing
+            objectName: "statusBar.fit.showing"
+            anchors.verticalCenter: parent.verticalCenter
+            visible: bar.fit !== null && bar.fit.scanBehind
+            font.family: EaStyle.Fonts.fontFamily
+            font.pixelSize: EaStyle.Sizes.fontPixelSize
+            color: EaStyle.Colors.themeForeground
+            text: bar.fit !== null ? qsTr("Showing %1 of %2").arg(bar.fit.scanPatternUpdates).arg(bar.fit.scanReceived) : ""
+        }
         // Last, at the far right: the live values before it change width, and the bar stays where it is.
         FitProgressBar {
             id: progress
@@ -304,6 +320,22 @@ EaElements.StatusBar {
             fontFamily: EaStyle.Fonts.ptMono.name
             text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
         }
+    }
+
+    // The opening's progress, right-aligned where the fit area is, until every page is built: in the app's font and
+    // only as wide as its text, so the items beside it keep their keys wherever they can.
+    FitProgressBar {
+        id: openingProgress
+        objectName: "statusBar.opening"
+        parent: bar
+        anchors.right: parent.right
+        anchors.rightMargin: EaStyle.Sizes.fontPixelSize
+        anchors.verticalCenter: parent.verticalCenter
+        visible: bar.opening
+        width: Math.ceil(openingProgress.textWidth + 2 * openingProgress.height)
+        height: Math.round(EaStyle.Sizes.fontPixelSize * 1.3)
+        fraction: bar.pagesWanted > 0 ? bar.pagesBuilt / bar.pagesWanted : 0
+        text: qsTr("Opening project… %1 of %2 pages").arg(bar.pagesBuilt).arg(bar.pagesWanted)
     }
 
     WarningsDialog {
