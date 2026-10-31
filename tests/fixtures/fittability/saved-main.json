@@ -4137,9 +4137,6 @@
       "iucr_19": {
         "ListViewParameter.qml": "cf508fd6f91ec9666bd80e124488dd7d6bebb7d91b4752c814a49627ceb61821",
         "README.md": "035f0fc9f8c4973c610eb11be21ef3889973349be68e76e83013a848fe23b34a",
-        "__pycache__/gui_base.cpython-314.pyc": "6d91305fa5db2566b31b3674e3d84609576fc093faa7131acfcb9f1fb1067ab8",
-        "__pycache__/metadata_bytes.cpython-314.pyc": "0780674d31cc32e7cd199b849d0a30a7e35fe89a6e035033caafceeda8c939d0",
-        "__pycache__/stored_id_bytes.cpython-314.pyc": "e3dbbcf31aa5dae3ce0eb6b3d77322b3340cc87c2909cf9425ffcca4a77e8272",
         "analysis/analysis.edi": "2cd008f01804da217ad833c30b668e648768e2181ad7877a104b90df8a3d2f88",
         "experiments/experiment.edi": "90ac674ec547d5af155d70e3ee9ce619301f16c433e3c680b7a17e75276eadae",
         "fraction_bridge.cpp": "70df6aa3d41aeeff591c91fa50407d9b96f14245a3d6cf29497caf818868ce0c",
@@ -4163,9 +4160,6 @@
       "iucr_99": {
         "ListViewParameter.qml": "cf508fd6f91ec9666bd80e124488dd7d6bebb7d91b4752c814a49627ceb61821",
         "README.md": "035f0fc9f8c4973c610eb11be21ef3889973349be68e76e83013a848fe23b34a",
-        "__pycache__/gui_base.cpython-314.pyc": "6d91305fa5db2566b31b3674e3d84609576fc093faa7131acfcb9f1fb1067ab8",
-        "__pycache__/metadata_bytes.cpython-314.pyc": "0780674d31cc32e7cd199b849d0a30a7e35fe89a6e035033caafceeda8c939d0",
-        "__pycache__/stored_id_bytes.cpython-314.pyc": "e3dbbcf31aa5dae3ce0eb6b3d77322b3340cc87c2909cf9425ffcca4a77e8272",
         "analysis/analysis.edi": "2cd008f01804da217ad833c30b668e648768e2181ad7877a104b90df8a3d2f88",
         "experiments/experiment.edi": "90ac674ec547d5af155d70e3ee9ce619301f16c433e3c680b7a17e75276eadae",
         "fraction_bridge.cpp": "70df6aa3d41aeeff591c91fa50407d9b96f14245a3d6cf29497caf818868ce0c",
