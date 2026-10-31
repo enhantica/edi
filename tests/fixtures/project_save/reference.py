@@ -38,10 +38,10 @@ def declared_rule(folder):
 
 
 def saved_triplet(value, uncertainty, free, rule='iucr_99'):
-    """Independent persisted parameter state, including optional-uncertainty distinctions."""
+    """Independent Edi persisted state; bare fixed tokens read back as engaged zero."""
     if free and uncertainty is not None and math.isfinite(uncertainty) and uncertainty > 0:
         return (*expected_pair(value, uncertainty, rule), free)
-    su = 0.0 if (not free and uncertainty is not None) or uncertainty == 0 else None
+    su = 0.0 if not free or uncertainty == 0 else None
     return six_digits(value), su, free
 
 
