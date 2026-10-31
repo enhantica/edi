@@ -4894,3 +4894,27 @@ Primary prior art: Qt 6.11.2 `qv4object.cpp` `Object::internalGet`/`virtualGet`,
 `qv4object_p.h` receiver-aware `get`, `qqmllistwrapper.cpp` `virtualGet`,
 `qv4sequenceobject.cpp` `Sequence::virtualGet`, `qv4variantassociationobject.cpp`
 `VariantAssociationObject::virtualGet`, and `qv4lookup.cpp` primitive accessor lookup.
+
+
+### Private QObject member lookup requires an identifier key
+
+The first native member and QML context bridges construct their names with `ExecutionEngine::newString`.
+Qt 6.11.2 distinguishes that allocation from `newIdentifier`: the latter also calls `toPropertyKey`.
+Ordinary `Object::get(name)` performs that conversion before virtual dispatch, but the bridge's direct
+`QObjectWrapper::getQmlProperty` call bypasses it. The private getter's missing-member fallback uses
+`name->propertyKey()`, whose precondition is an already valid identifier. Both bridge entry points now
+establish that precondition before any private context or QObject lookup. This is internal key
+normalization, with no user conversion, property read or enumeration.
+
+Passing an invalid key is not a missing-property query. In the pinned implementation, the hash's
+empty slot has an invalid key and index zero; querying it with an invalid key can select that unrelated
+index rather than report absence. This explains why absent QObject members can incorrectly produce
+`ObjectCtor`, including a child without `children` and a sidebar child without `gradient`. The ordinary
+missing-member result must remain `undefined`; the sidebar fade selector and focus recursion keep their
+original predicates and callbacks. Context/import/method flags, receiver identity, getter count,
+exception propagation, virtual-dispatch repair and destruction-only stored reads remain unchanged.
+
+Primary prior art: Qt 6.11.2 `qv4engine.cpp` `newString`/`newIdentifier`, installed
+`qv4string_p.h` `propertyKey`/`toPropertyKey`, `qv4object_p.h` `get(StringOrSymbol*)`,
+`qv4qobjectwrapper.cpp` `getQmlProperty`, and `qv4internalclass.cpp`/`qv4internalclass_p.h`
+`PropertyHashData`/`lookup`. Actual sidebar and full UI/runtime verification remain required.
