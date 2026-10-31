@@ -63,11 +63,31 @@ Control {
     Accessible.description: accessibleAction ? control.ToolTip.text : ""
     Accessible.focusable: accessibleAction
     Accessible.focused: accessibleAction && activeFocus
+    // Web accessibility uses a fresh fixed-role object for each actual action lifetime.
+    Accessible.ignored: Qt.platform.os === "wasm"
     onAccessibleActionChanged: ApplicationInfo.statusItemActionChanged(control, control.Accessible, accessibleAction)
     Component.onCompleted: ApplicationInfo.statusItemActionChanged(control, control.Accessible, accessibleAction)
     Component.onDestruction: ApplicationInfo.statusItemActionChanged(control, control.Accessible, false)
     function pressAccessibleAction() {
         ApplicationInfo.statusItemPress(control);
+    }
+
+    Loader {
+        anchors.fill: parent
+        active: Qt.platform.os === "wasm" && control.accessibleAction
+        sourceComponent: Component {
+            Item {
+                id: accessibleButton
+                objectName: control.objectName + ".accessibleAction"
+                anchors.fill: parent
+                Accessible.role: Accessible.Button
+                Accessible.name: control.valueText
+                Accessible.description: control.ToolTip.text
+                Accessible.focusable: true
+                Accessible.focused: accessibleButton.activeFocus
+                Accessible.onPressAction: ApplicationInfo.statusItemPress(control)
+            }
+        }
     }
 
     visible: shown

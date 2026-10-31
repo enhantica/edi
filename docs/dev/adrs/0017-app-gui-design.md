@@ -1022,15 +1022,16 @@ project to one `accessibleAction` binding: a live action exposes its existing
 value text and tooltip as button name/description, and ignores its decorative or
 duplicate labels. Passive/unavailable items keep readable child text and no
 button role. Accessibility focusable/focused metadata explicitly follows that
-same availability, including true-to-false transitions; actual focus policy,
-Control.enabled, hover and tooltips are unchanged.
+same availability, including true-to-false transitions. Desktop focus remains
+on the original control; the web representation below reports its own actual
+focus. Control.enabled, hover and tooltips are unchanged.
 
 ApplicationInfo owns the exact Qt Accessible press-signal connection to one thin
 QML forwarding method on the SAME control. Availability changes first disconnect
 that route synchronously, reconnecting only while live; component destruction
 retires it too. This avoids both an always-connected no-op press action and a
 notifying QML Connections endpoint waiting for deferred deletion. Qt owns the
-connection lifetime, without a proxy item, retained connection map or new input
+connection lifetime without a retained connection map or new scientific input
 source. The original guarded `statusItemPress` bridge rechecks the actual owner,
 context, visible/enabled state and live `clickable` property before emitting its
 same `clicked` signal. The original pointer TapHandler and QML fit/start/cancel,
@@ -1042,6 +1043,47 @@ labels, fitting policy, geometry, colours, animations, clocks, scientific result
 or Undo. Source-defined action enumeration and focus metadata must be exercised
 through initial passive/unavailable, available, retired and reentrant states;
 a guarded native no-op alone is not evidence of truthful accessibility.
+
+#### Web status actions follow actual accessible-object lifetime
+
+Pinned Qt's web accessibility bridge creates its HTML button or generic element
+from the initial native role and caches it by interface. Later attached-role
+changes do not rebuild that element. A real available Fit action was therefore
+still exposed as generic after its initial passive state; changing the browser
+selector or press-connection spelling would not repair that representation.
+
+On WebAssembly only, the original FitStatusItem is ignored in the accessibility
+tree while a nonvisual Loader child exists exactly for its existing
+accessibleAction interval. That child has a fixed Button role before its first
+component-complete ObjectShow, with the original value text and tooltip. It fills
+the same full control rectangle but contributes no layout, painting, pointer or
+key handler. Its sole accessibility Press calls the existing guarded C++
+statusItemPress on the original control; the original native role/NoRole,
+connection retirement, physical TapHandler and scientific clicked path remain.
+Desktop creates no child and retains its original accessibility representation.
+
+Qt's accessible tree flattens ignored ancestors, so the sole child action remains
+reachable and passive labels remain readable. Loader retirement invalidates its
+own component context, detaches and hides the child before deferred deletion;
+normal Qt hide/destruction retires the browser node. There is no fake QObject
+destruction, manual interface/cache surgery, global Qt patch, new timer or
+helper flag. Name changes while actionable retain the same fixed-role child.
+Inactive/passive fit metrics instantiate no Button child and expose no new Press.
+
+Accessibility SetFocus truthfully focuses that web child and reports the child's
+actual activeFocus. It does not fake focus on the ignored outer control or force
+a focus relay. The first status controls have no focus-driven visual, keyboard or
+business consumer beyond their accessibility metadata. Public outer identity,
+physical input and native focus behavior remain; web assistive focus belongs to
+its sole platform representation. No nonfocusable shortcut conceals this choice.
+
+This shared lifetime covers outcome/results, Reset, Follow and
+Fit/Stop/Continue/Refit, including visibility, enabled and fit-availability changes.
+Passive fit statistics remain passive. Plain StatusBarItem's always-active
+Messages action is its separate existing path, not another dynamic-role owner;
+its pointer/layout behavior is unchanged. Independent actual focus, one-action,
+press, same-geometry, availability, reentry/retirement and both-kit web coverage
+are required; source repair is not final browser or scientific acceptance.
 
 ### 18. Creating experiments
 
