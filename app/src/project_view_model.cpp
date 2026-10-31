@@ -3104,7 +3104,7 @@ void ProjectViewModel::syncBlocks() {
             edi::ExperimentBase& block = *project_->experiments[i];
             ExperimentViewModel* found = nullptr;
             for (ExperimentViewModel* model : experiment_models_) {
-                found = model->experiment() == &block ? model : found;
+                found = model->experiment() == &block && model->madeForType() ? model : found;
             }
             if (found == nullptr) {
                 found = new ExperimentViewModel(savedFileFunction(), *project_, block, *this, *registry_, this);
