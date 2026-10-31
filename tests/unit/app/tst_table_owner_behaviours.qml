@@ -148,13 +148,14 @@ TestCase {
         open();
         pane("analysis", "basic");
         const table = named(Ui.page(appWindow), "parameters.list");
-        const headerAlignments = [Text.AlignHCenter, Text.AlignLeft, Text.AlignRight, Text.AlignLeft, Text.AlignRight, Text.AlignRight, Text.AlignRight, Text.AlignHCenter];
+        const headerAlignments = [Text.AlignHCenter, Text.AlignLeft, Text.AlignRight, Text.AlignLeft, Text.AlignRight, Text.AlignRight, Text.AlignRight, Text.AlignRight];
         const delegateAlignments = [Text.AlignHCenter, Text.AlignLeft, Text.AlignRight, Text.AlignLeft, Text.AlignRight, Text.AlignRight, Text.AlignRight, Text.AlignHCenter];
         // Beta v0.9.9 ec1d04ee: Fittables.qml:135-319 supplies these headers.
         // gui-components v0.9.1 a573a969 TableView.qml:38,79,129 assigns their
         // alignment to each delegate after creation; centered cell defaults
         // are initial state, not the settled reference-row layout.
         const header = Render.cells(table.headerItem);
+        verify(header[7].keepsAlignment === true, "The declared free-title owner retains its right-aligned action caption");
         compare(header.length, headerAlignments.length, "Analysis retains all Beta scientific columns");
         for (let i = 0; i < header.length; ++i)
             compare(header[i].horizontalAlignment, headerAlignments[i], "Analysis header follows the Beta alignment reference");
