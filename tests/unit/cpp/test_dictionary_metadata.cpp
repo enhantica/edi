@@ -27,7 +27,9 @@ TEST_CASE("The core metadata bridge retains every dictionary label unit and file
                       "Every core item has a dictionary description");
     }
     edi::Project project;
-    project.experiments.push_back(edi::BraggPdExperiment{});
+    project.experiment().experiment_type.beam_mode = edi::BeamModeEnum::TIME_OF_FLIGHT;
+    project.experiment().peak.type = std::string("tof-jorgensen");
+    project.experiment().instrument.setup_twotheta_bank.value = 91.25;
     edi::refresh_fittability(project);
     const auto& angle = project.experiment().instrument.setup_twotheta_bank;
     CHECK_MESSAGE(edi::is_descriptor("instrument.setup_twotheta_bank"),

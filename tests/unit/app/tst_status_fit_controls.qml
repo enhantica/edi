@@ -36,6 +36,7 @@ TestCase {
         if (available)
             verify(item.activeFocus, "An available status action accepts keyboard focus");
         keyboardSpy.target = item;
+        verify(keyboardSpy.valid, "Every real status action exposes its pointer activation signal to the keyboard observer");
         keyboardSpy.clear();
         verify(SettingsProof.key(item, key), "The activation key is delivered to the real application window");
         compare(keyboardSpy.count, available ? 1 : 0, "Space and Enter use the status action's same clicked signal as pointer input and respect availability");

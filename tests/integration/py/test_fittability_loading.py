@@ -149,6 +149,8 @@ def test_descriptor_python_refusal_uses_shared_reason(api, tmp_path, case):
                     failures.append(owner + ': wrong descriptor refusal: ' + str(error))
             else:
                 failures.append(owner + ': descriptor assignment admitted')
+            if angle.free:
+                failures.append(owner + ': descriptor flag remains free')
             if angle.value != before:
                 failures.append(owner + ': refusing a flag changed the angle')
             angle.free = False
