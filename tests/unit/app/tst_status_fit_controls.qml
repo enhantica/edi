@@ -327,6 +327,13 @@ TestCase {
         verify(found.length > 0, "The fit button has a visible filled background even without hovering");
         return found[0];
     }
+    function bodyFrame(control, outline) {
+        const fill = rectangle(control);
+        compare(fill.border.width, outline, "The declared outer outline is separate from the two-font-size body");
+        fuzzyCompare(fill.height, 2 * control.font.pixelSize + 2 * outline, 1, "The status body is two font sizes with the explicit outline outside it");
+        fuzzyCompare(fill.radius, fill.height / 2, .5, "The complete framed pill retains its declared rounded corners");
+        return fill;
+    }
     function luminance(color) {
         return .2126 * color.r + .7152 * color.g + .0722 * color.b;
     }
@@ -352,7 +359,7 @@ TestCase {
         if (light)
             tryVerify(() => paintedGrayMatches(fill, 1), 1500, "Secondary status buttons have a rendered white background in light mode");
         else
-            tryVerify(() => paintedLuminance(fill) > luminance(EaStyle.Colors.statusBarBackground), 1500, "Secondary status buttons are slightly lighter than the dark status bar");
+            tryVerify(() => paintedGrayMatches(fill, 0), 1500, "Secondary status buttons have the declared rendered black background in dark mode");
         compare(fill.border.width, 1, "Secondary status buttons have a one-pixel border");
         tryVerify(() => colorsMatch(fill.border.color, EaStyle.Colors.appBarBorder), 1500, "Secondary button borders match the status bar's own border line");
         if (light)
@@ -365,7 +372,7 @@ TestCase {
         verify(glyphs.length > 0, "The secondary status action renders its icon even when its caption is compacted");
         const oldInk = item.valueColor, oldIcon = item.iconColor;
         mouseMove(item, item.width / 2, item.height / 2, 0);
-        tryVerify(() => colorsMatch(item.valueColor, EaStyle.Colors.themeAccent) && colorsMatch(item.iconColor, EaStyle.Colors.themeAccent) && glyphs.some(glyph => colorsMatch(glyph.color, EaStyle.Colors.themeAccent)), 1500, "Hovering an available secondary status action turns its caption and visible icon accent blue");
+        tryVerify(() => colorsMatch(item.valueColor, oldInk) && colorsMatch(item.iconColor, oldIcon) && glyphs.some(glyph => colorsMatch(glyph.color, EaStyle.Colors.themeAccent)), 1500, "Hovering an available secondary action tints its actual drawn icon while preserving its base palette");
         if (label !== undefined)
             tryVerify(() => colorsMatch(label.color, EaStyle.Colors.themeAccent), 1500, "An expanded secondary caption visibly turns accent blue on hover");
         if (light)
@@ -382,12 +389,12 @@ TestCase {
         const button = shortcut(), status = findChild(appWindow, "statusBar.fit.outcome");
         verify(status !== null && status.visible, "A real fit provides its outcome button beside the status Fit shortcut");
         mouseMove(appWindow.contentItem, 1, 1);
-        const fill = rectangle(button), outcome = rectangle(status);
+        const fill = bodyFrame(button, 0), outcome = bodyFrame(status, 1);
         const idleChannel = data.tag === "light" ? 0 : 1;
         tryVerify(() => paintedGrayMatches(fill, idleChannel), 1500, "The enabled status Fit background is pure black in light mode and pure white in dark mode");
         tryVerify(() => data.tag === "light" ? paintedLuminance(outcome) > paintedLuminance(fill) : paintedLuminance(outcome) < paintedLuminance(fill), 1500, "The drawn outcome button has a lighter light-mode background and an inverse dark-mode hierarchy after overlay compositing");
-        fuzzyCompare(fill.height, outcome.height, 1, "Fit and outcome buttons have the same background height");
-        fuzzyCompare(fill.radius, outcome.radius, .5, "Fit and outcome buttons have the same rounded corners");
+        fuzzyCompare(fill.height, outcome.height - 2, 1, "Fit and outcome buttons have equal bodies after the explicit outer outline");
+        fuzzyCompare(fill.radius, outcome.radius - 1, .5, "Fit and outcome buttons have equal body rounding inside the explicit outer outline");
         verify(fill.radius > 0, "The status Fit button has rounded corners");
         const label = View.textItems(button).filter(item => item.text === "Fit");
         compare(label.length, 1, "The status shortcut renders the white or inverse Fit caption");
@@ -429,9 +436,9 @@ TestCase {
             return;
         verify(reset.mapToItem(area(), reset.width, 0).x <= follow.mapToItem(area(), 0, 0).x && follow.mapToItem(area(), follow.width, 0).x <= button.mapToItem(area(), 0, 0).x, "The scan actions are ordered Reset, Follow, Fit at the right end");
         for (const item of [reset, follow]) {
-            const fill = rectangle(item), fitFill = rectangle(button);
-            fuzzyCompare(fill.height, fitFill.height, 1, "Scan actions have Fit's framed height");
-            fuzzyCompare(fill.radius, fitFill.radius, .5, "Scan actions have Fit's corner radius");
+            const fill = bodyFrame(item, 1), fitFill = bodyFrame(button, 0);
+            fuzzyCompare(fill.height - 2, fitFill.height, 1, "Scan actions have Fit's body height inside their explicit outer outline");
+            fuzzyCompare(fill.radius - 1, fitFill.radius, .5, "Scan actions have Fit's body corner radius inside their explicit outer outline");
             fuzzyCompare(item.leftPadding, button.leftPadding, .5, "Scan actions have Fit's left padding");
             fuzzyCompare(item.rightPadding, button.rightPadding, .5, "Scan actions have Fit's right padding");
         }
