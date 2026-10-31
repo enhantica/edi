@@ -4324,6 +4324,11 @@
       "category": "_data_source"
     },
     {
+      "member": "ExperimentBase::description_chosen",
+      "type": "bool",
+      "not_storage": "whether the user may choose its description (ADR-0053)"
+    },
+    {
       "member": "ExperimentBase::background_estimate_mode",
       "type": "std::optional<std::string>",
       "category": "_background_estimate"
