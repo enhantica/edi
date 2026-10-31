@@ -1,7 +1,9 @@
-"""Compare paired Qt rasters without resampling their physical pixel grids."""
+"""Independent stroke area coverage and comparisons on physical pixel grids."""
 
+import math
 import struct
 import zlib
+from operator import itemgetter
 from pathlib import Path
 
 import numpy as np
@@ -65,6 +67,95 @@ def coverage(rgb, colour):
     return np.clip(((255 - rgb.astype(float)) @ direction) / (direction @ direction), 0, 1)
 
 
+def physical_points(receipt):
+    """Map the fixture's hand-written knots to its observed physical plot rectangle."""
+    dpr = receipt['dpr']
+    h, w = round(receipt['height'] * dpr), round(receipt['width'] * dpr)
+    x0, x1 = receipt['x_range']
+    y0, y1 = receipt['y_range']
+    if dpr not in {1, 2} or w <= 0 or h <= 0 or x1 <= x0 or y1 <= y0:
+        raise ValueError('The stroke reference requires a valid physical grid and plot ranges')
+    points = np.asarray(receipt['points'], dtype=float)
+    if points.ndim != 2 or points.shape[0] < 2 or points.shape[1] != 2:
+        raise ValueError('The independent stroke requires at least two planar points')
+    if not np.isfinite(points).all() or np.any(np.all(np.diff(points, axis=0) == 0, axis=1)):
+        raise ValueError('The independent stroke requires finite distinct consecutive points')
+    return np.column_stack((
+        (points[:, 0] - x0) / (x1 - x0) * w,
+        (y1 - points[:, 1]) / (y1 - y0) * h,
+    ))
+
+
+def _stroke_cells(points, size, radius):
+    cells = []
+    for a, b in zip(points[:-1], points[1:], strict=True):
+        delta = b - a
+        axis = int(abs(delta[1]) > abs(delta[0]))
+        sweep = np.arange(
+            max(0, math.floor(min(a[axis], b[axis]) - radius)),
+            min(size[axis], math.ceil(max(a[axis], b[axis]) + radius)),
+        )
+        centre = (
+            a[1 - axis] + np.clip((sweep + 0.5 - a[axis]) / delta[axis], 0, 1) * delta[1 - axis]
+        )
+        for offset in range(
+            -math.ceil(radius * math.sqrt(2) + 1), math.ceil(radius * math.sqrt(2) + 1) + 1
+        ):
+            across = np.floor(centre).astype(int) + offset
+            xy = (sweep, across) if axis == 0 else (across, sweep)
+            valid = (xy[0] >= 0) & (xy[0] < size[0]) & (xy[1] >= 0) & (xy[1] < size[1])
+            cells.extend((xy[1][valid] * size[0] + xy[0][valid]).tolist())
+    return np.unique(cells)
+
+
+def _stroke_area(points, size, radius, samples):
+    coordinates = np.divmod(_stroke_cells(points, size, radius), size[0])
+    offsets = np.meshgrid(
+        (np.arange(samples) + 0.5) / samples, (np.arange(samples) + 0.5) / samples
+    )
+    grid = (
+        coordinates[1][:, None] + offsets[0].ravel(),
+        coordinates[0][:, None] + offsets[1].ravel(),
+    )
+    inside = np.zeros(grid[0].shape, dtype=bool)
+    for a, b in zip(points[:-1], points[1:], strict=True):
+        delta = b - a
+        projection = np.clip(
+            ((grid[0] - a[0]) * delta[0] + (grid[1] - a[1]) * delta[1]) / np.dot(delta, delta),
+            0,
+            1,
+        )
+        inside |= (grid[0] - a[0] - projection * delta[0]) ** 2 + (
+            grid[1] - a[1] - projection * delta[1]
+        ) ** 2 <= radius * radius
+    return coordinates, inside.mean(axis=1)
+
+
+def stroke_reference(receipt, samples=16):
+    """Box-filter a round stroke's geometric union, never blending its joins twice.
+
+    Distance to a finite segment defines its round-ended stroke. Uniform midpoint
+    integration measures the union inside each physical pixel square; it does not
+    use Qt or either production renderer. Only the narrow segment corridors need
+    integration. Closed-form area/flat-profile and convergence controls bound it.
+    """
+    points = physical_points(receipt)
+    dpr = receipt['dpr']
+    opacity, width = receipt['reference_opacity'], receipt['stroke_width']
+    if not 0 < opacity <= 1 or not math.isfinite(width) or width <= 0 or samples < 2:
+        raise ValueError('The independent stroke needs a positive width, opacity and sample grid')
+    coordinates, area = _stroke_area(
+        points,
+        (round(receipt['width'] * dpr), round(receipt['height'] * dpr)),
+        width * dpr / 2,
+        samples,
+    )
+    canvas = np.zeros((round(384 * dpr), round(512 * dpr)))
+    canvas[coordinates] = area * opacity
+    colour = np.array([int(receipt['colour'][i : i + 2], 16) for i in (1, 3, 5)])
+    return np.round(255 - (255 - colour) * canvas[..., None]).astype(np.uint8)
+
+
 def smooth(values):
     for axis in (0, 1):
         pad = [(0, 0), (0, 0)]
@@ -97,14 +188,15 @@ def metrics(reference, candidate, receipt):
     if reference.shape[:2] != (round(384 * dpr), round(512 * dpr)):
         raise ValueError('The native quality capture must use the requested physical DPR')
     h, w = round(receipt['height'] * dpr), round(receipt['width'] * dpr)
-    ref = coverage(reference[:h, :w], receipt['colour'])
-    got = coverage(candidate[:h, :w], receipt['colour'])
+    opacity = receipt['reference_opacity']
+    if not 0 < opacity <= 1:
+        raise ValueError('Raster comparison requires the independently declared positive opacity')
+    ref = coverage(reference[:h, :w], receipt['colour']) / opacity
+    got = coverage(candidate[:h, :w], receipt['colour']) / opacity
     # The independently declared viewport maps 0..255 inside -25.5..280.5.
-    peak_x = receipt['points'][1 if receipt['shape'] == 'peak' else 2][0]
-    px = (peak_x - 10) / 70 * w
-    py = (280.5 - 255) / 306 * h
+    vertex = min(physical_points(receipt), key=itemgetter(1))
     yy, xx = np.ogrid[:h, :w]
-    join = (xx - px) ** 2 + (yy - py) ** 2 <= (5 * dpr) ** 2
+    join = (xx - vertex[0]) ** 2 + (yy - vertex[1]) ** 2 <= (5 * dpr) ** 2
     nearby = np.maximum.reduce([
         np.roll(np.roll(got, dy, axis=0), dx, axis=1) for dy in (-1, 0, 1) for dx in (-1, 0, 1)
     ])
@@ -115,7 +207,7 @@ def metrics(reference, candidate, receipt):
     blurred_ref, blurred_got = smooth(ref), smooth(got)
     return {
         'width_ratio': float(got.sum() / ref.sum()),
-        'local_width_error': local_width_error(ref, got, px, dpr),
+        'local_width_error': local_width_error(ref, got, vertex[0], dpr),
         'coverage_error': float(np.abs(blurred_got - blurred_ref).sum() / ref.sum()),
         'missing_core_pixels': int(np.count_nonzero((ref > 0.24) & (nearby < 0.04))),
         'missing_join_pixels': int(np.count_nonzero(join & (ref > 0.16) & (nearby < 0.04))),

@@ -168,3 +168,27 @@ then obtain zero ink when directly calling its real paint entry while inactive.
 Activation must add exactly one reduction per dataset, actually draw the latest
 independent shape, and leave both work counts unchanged on later unchanged
 frames. Requested activity values never supply the expected work result.
+
+## Fractional stroke reference
+
+Line quality compares Stacked with an independent area-coverage stroke, not Qt
+Graphs' quantised fractional-width raster. The scene declares a 1.5 logical-pixel
+width and opacity 0.75 (0.225 with its 0.3 item opacity). Its hand-written knots
+map into the observed physical plot rectangle without shifting or resizing the
+captured image. The Qt Graphs capture remains an input/decimation observer.
+
+The reference is the geometric union of round-ended segments, integrated on a
+16-by-16 midpoint grid inside each physical pixel. Segment corridors limit the
+work; joins contribute opacity once. Controls independently check an exact flat
+pixel-overlap profile at quarter-pixel phase, length-times-width plus circular
+end-cap area for a slanted segment, convergence on a doubled grid, and equality
+when a straight segment is split. The RGB-rounding bound is derived from the
+known colour and declared opacity. These controls run at both physical DPRs.
+
+Comparison coverage is divided by the declared opacity. Core, join and missing
+ink masks therefore mean fractions of that opacity; a low-opacity reference
+still has a nonempty core. Each gap control locates and erases known stroke-core
+pixels before requiring a gap violation. Thin, uneven, gap, notch, double-alpha
+and two-physical-pixel-shift controls run for both shapes, both renderers and both
+DPRs. Width, coverage-error and join limits retain their existing values; no
+image registration or renderer-derived reference values are used.
