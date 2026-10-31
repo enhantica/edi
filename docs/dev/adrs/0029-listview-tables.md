@@ -223,3 +223,27 @@ capture; this exception applies only to retirement and introduces no saved copy 
 
 This repairs destruction-time binding activation. It does not establish that every earlier QML
 lookup avoided activation, or qualify unrelated layout, parameter, or persistence behavior.
+
+## Numeric text cells follow the existing parameter-cell sizing boundary
+
+FIRST `ParameterCell` already keeps its displayed token in presentation state and
+refits through `ApplicationInfo` when the room, token or font changes. Binding that
+token to width while width still follows implicitWidth closes a cycle through the
+base TextInput's contentWidth and its text binding. `TextCell.shown` had retained
+that cycle for numeric cells. It now uses the same native refitter and initial
+full-token sizing rule, with the original `NumberText.fitted` policy once sized.
+
+The read-only `shown` surface remains, backed by the same kind of `shownValue`
+presentation property as the first parameter cell. Written/numeric/room changes
+and the actual FontMetrics font change request refitting. The full written token,
+text-cell numeric rule, nonnumeric spelling, clean-text Binding, manual/assistant
+drafts, IME, commit ordering and tooltip spelling remain their existing owners.
+This adds no model cache, width policy, font scaling or scientific write. Existing
+parameter-cell/field refitting branches and native current-owner checks carry.
+
+This repairs the source-confirmed text/implicit-size dependency cycle. It does not
+claim that every table resolved-width warning has the same cause: the separate
+header implicit-width callback's synchronous sizing edge needs its actual active
+stack before changing the shared deferred table lifecycle. The three-spacing
+margin, natural chrome, identifier cap, equal/spread/custom Analysis distribution,
+last filler and fixed action columns are unchanged.

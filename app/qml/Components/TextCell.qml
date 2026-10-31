@@ -26,7 +26,17 @@ EaComponents.ListViewTextInput {
     // in full without an item, on hover.
     readonly property bool numeric: accepts === "number" && typeof value === "number" && isFinite(value)
     readonly property string written: numeric ? (uid !== "" ? Session.written(uid, value) : NumberText.plain(value, 8)) : String(value)
-    readonly property string shown: numeric ? NumberText.fitted(written, width - leftPadding - rightPadding, metrics) : written
+    readonly property real room: width - leftPadding - rightPadding
+    // Like ParameterCell, do not bind displayed text back to its own implicit width.
+    property string shownValue: written
+    readonly property string shown: shownValue
+    function refit() {
+        ApplicationInfo.textCellRefit();
+    }
+    onRoomChanged: refit()
+    onWrittenChanged: refit()
+    onNumericChanged: refit()
+    Component.onCompleted: refit()
     // Existing row declarations supply their actual delegate/model/index. The
     // visual parent is the base's internal contentRow, not the data delegate.
     // Original project/row/model/index changes retire a draft's ownership token.
@@ -106,6 +116,7 @@ EaComponents.ListViewTextInput {
     FontMetrics {
         id: metrics
         font: cell.font
+        onFontChanged: cell.refit()
     }
     EaElements.ToolTip {
         text: cell.uid !== "" ? cell.written : NumberText.plainFull(cell.value)

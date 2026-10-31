@@ -278,6 +278,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue derivedBackgroundValue(const QJSValue& value) const;
     Q_INVOKABLE void parameterCellRefit() const;
     Q_INVOKABLE void parameterFieldRefit() const;
+    Q_INVOKABLE void textCellRefit() const;
     Q_INVOKABLE QJSValue parameterCellScaledPixelSize() const;
     /// Remaining form, picker, preference and shared view procedures on the current QML engine.
     Q_INVOKABLE void loadFormFiles(bool experiments) const;
