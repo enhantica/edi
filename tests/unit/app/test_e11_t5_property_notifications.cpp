@@ -410,14 +410,13 @@ class PropertyNotificationProof : public QObject {
             check.require(secondTarget && secondTarget->textDocument(),
                           "Second real owned document");
             if (!secondTarget || !secondTarget->textDocument()) return check.result();
-            const auto roundtripConnection =
-                QObject::connect(secondTarget->textDocument(), &QTextDocument::contentsChanged,
-                                 &callbackContext, [&] {
-                                     if (entered) return;
-                                     entered = true;
-                                     owner.setDocument(target);
-                                     owner.setDocument(secondTarget);
-                                 });
+            const auto roundtripConnection = QObject::connect(
+                secondTarget, &QQuickTextDocument::textDocumentChanged, &callbackContext, [&] {
+                    if (entered) return;
+                    entered = true;
+                    owner.setDocument(target);
+                    owner.setDocument(secondTarget);
+                });
             owner.setDocument(secondTarget);
             QObject::disconnect(roundtripConnection);
             check.require(entered && owner.document() == secondTarget,
