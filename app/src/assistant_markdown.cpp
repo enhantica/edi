@@ -306,18 +306,25 @@ class PassiveDocument final : public QTextDocument {
     quint64 newBytes_=0,resourceBytes_=0;
 };
 }
-AssistantMarkdown::AssistantMarkdown(QQuickItem* parent) : QQuickItem(parent) {
+AssistantMarkdown::AssistantMarkdown(QQuickItem* parent)
+    : QQuickItem(parent), callback_context_(std::make_unique<QObject>()) {
     setFlag(ItemHasContents, true);
     setAcceptedMouseButtons(Qt::NoButton);
     setZ(-1);
 #ifndef __EMSCRIPTEN__
-    if(auto* clipboard=QGuiApplication::clipboard())connect(clipboard,&QClipboard::changed,this,[this](QClipboard::Mode mode){restoreClipboardSource(static_cast<int>(mode));});
+    if(auto* clipboard=QGuiApplication::clipboard())connect(clipboard,&QClipboard::changed,callback_context_.get(),[this](QClipboard::Mode mode){restoreClipboardSource(static_cast<int>(mode));});
 #endif
-    connect(this,&QQuickItem::windowChanged,this,[this](QQuickWindow* next) {
+    connect(this,&QQuickItem::windowChanged,callback_context_.get(),[this](QQuickWindow* next) {
         if(observed_window_)observed_window_->removeEventFilter(this);
         observed_window_=next;if(next)next->installEventFilter(this);
         ++presentation_revision_;render();
     });
+}
+AssistantMarkdown::~AssistantMarkdown() {
+    if (observed_window_) observed_window_->removeEventFilter(this);
+    // QQuickItem teardown can emit windowChanged after the derived members are gone.
+    // Destroying the private context retires every past/current owned functor and queued call.
+    callback_context_.reset();
 }
 bool AssistantMarkdown::eventFilter(QObject* object,QEvent* event) {
     if(object==observed_window_ && event->type()==QEvent::DevicePixelRatioChange) {++presentation_revision_;render();}
@@ -501,7 +508,7 @@ void AssistantMarkdown::setEditor(QQuickItem* editor) {
     QObject::disconnect(editor_destroyed_);
     if (!notifyReceiver || property_notifications_.value("editor/notification-version").toULongLong() != publication) return;
     editor_ = editor;
-    const auto destroyedConnection = editor ? connect(editor, &QObject::destroyed, this, [this, originalTarget = QPointer<QQuickItem>(editor)] {
+    const auto destroyedConnection = editor ? connect(editor, &QObject::destroyed, callback_context_.get(), [this, originalTarget = QPointer<QQuickItem>(editor)] {
         if (editor_ != originalTarget) return;
         const auto destroyedPublication = beginPropertyNotification("editor", QVariant::fromValue(editor_.data()));
         completePropertyNotification("editor", destroyedPublication, QVariant::fromValue(editor_.data()), &AssistantMarkdown::editorChanged);
@@ -778,7 +785,7 @@ void AssistantMarkdown::setDocument(QQuickTextDocument* target) {
     QObject::disconnect(target_destroyed_);
     if (!notifyReceiver || property_notifications_.value("document/notification-version").toULongLong() != publication) return;
     target_ = target;
-    const auto destroyedConnection = target ? connect(target, &QObject::destroyed, this, [this, originalTarget = QPointer<QQuickTextDocument>(target)] {
+    const auto destroyedConnection = target ? connect(target, &QObject::destroyed, callback_context_.get(), [this, originalTarget = QPointer<QQuickTextDocument>(target)] {
         if (target_ != originalTarget) return;
         const auto destroyedPublication = beginPropertyNotification("document", QVariant::fromValue(target_.data()));
         completePropertyNotification("document", destroyedPublication, QVariant::fromValue(target_.data()), &AssistantMarkdown::documentChanged);
@@ -809,12 +816,12 @@ void AssistantMarkdown::setDocument(QQuickTextDocument* target) {
     target->setTextDocument(replacement);
     if (!receiver || !original || receiver->target_ != original || receiver->presentation_revision_ != revision) return;
     document_ = replacement;
-    connect(replacement, &QTextDocument::contentsChanged, this, [this,replacement] {
+    connect(replacement, &QTextDocument::contentsChanged, callback_context_.get(), [this,replacement] {
         if (document_ == replacement) polish();
     });
     const QPointer<QAbstractTextDocumentLayout> layout(replacement->documentLayout());
     if (!receiver || !original || receiver->target_ != original || receiver->document_ != replacement || receiver->presentation_revision_ != revision || !layout) return;
-    connect(layout, &QAbstractTextDocumentLayout::update, this, [this,replacement](const QRectF&) {
+    connect(layout, &QAbstractTextDocumentLayout::update, callback_context_.get(), [this,replacement](const QRectF&) {
         if (document_ == replacement) polish();
     });
     render();
