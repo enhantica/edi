@@ -5508,6 +5508,16 @@ QJSValue tableCellsOf(const PanelUsageFrame& f, const QJSValue& row) {
 QJSValue tableControlWidth(const PanelUsageFrame& f, const QJSValue& child) {
     return tableHas(f, child, "fittedWidth") ? panelUsageRead(f, child, "fittedWidth") : tableNullish(panelUsageRead(f, child, "implicitWidth"), QJSValue(0));
 }
+// Normalize actual cell padding against its owned natural chrome. The current
+// column projection may already describe a different filler than this cell.
+QJSValue tableAppliedFiller(const PanelUsageFrame& f, const QJSValue& cell) {
+    const auto paddings = panelUsageContextRead(f, "basePaddings");
+    if (!panelUsageTruth(panelUsageMemberCall(f, paddings, "has", {cell}))) return QJSValue(0);
+    const auto base = panelUsageMemberCall(f, paddings, "get", {cell});
+    const auto natural = panelUsageRead(f, base, "naturalRight");
+    if (natural.isUndefined()) return QJSValue(0);
+    return viewArithmetic(f, panelUsageRead(f, cell, "rightPadding"), natural, 0);
+}
 QJSValue tablePadded(const PanelUsageFrame& f, const QJSValue& cell, const QJSValue& width) {
     const auto left = tableNullish(panelUsageRead(f, cell, "leftPadding"), QJSValue(0));
     const auto first = panelUsageAdd(f, width, left);
@@ -5644,12 +5654,9 @@ QJSValue tableProcedureCallback(const PanelUsageFrame& f, uint operation,
     }
     if (operation == 132) return QJSValue(true);
     if (operation == 133) {
-        const auto cell = arg(0), index = arg(1); const auto math = panelUsageContextRead(f, "Math");
-        const auto width = panelUsageRead(f, cell, "implicitWidth"); QJSValue filler(0);
-        if (assistantSameName(f, index, "fillerIndex")) {
-            const auto paddings = panelUsageContextRead(f, "basePaddings");
-            if (panelUsageTruth(panelUsageMemberCall(f, paddings, "has", {cell}))) filler = panelUsageContextRead(f, "fillerWidth");
-        }
+        const auto cell = arg(0); const auto math = panelUsageContextRead(f, "Math");
+        const auto width = panelUsageRead(f, cell, "implicitWidth");
+        const auto filler = tableAppliedFiller(f, cell);
         return panelUsageMemberCall(f, math, "ceil", {viewArithmetic(f, width, filler, 0)});
     }
     if (operation == 134) {
@@ -5710,9 +5717,15 @@ void ApplicationInfo::tablePadForFiller(const QJSValue& cell, const QJSValue& co
     const auto left = panelUsageAdd(f, panelUsageRead(f, base, "left"), kind.strictlyEquals(QJSValue(QStringLiteral("text"))) ? spacing : QJSValue(0));
     auto right = panelUsageRead(f, base, "right");
     right = panelUsageAdd(f, right, kind.strictlyEquals(QJSValue(QStringLiteral("number"))) || kind.strictlyEquals(QJSValue(QStringLiteral("check"))) ? spacing : QJSValue(0));
+    const auto naturalRight = right;
     right = panelUsageAdd(f, right, assistantSameName(f, column, "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0));
     if (!panelUsageTruth(projectCall(f, owns))) return; assistantMemberWrite(f, cell, "leftPadding", left);
-    if (!panelUsageTruth(projectCall(f, owns))) return; assistantMemberWrite(f, cell, "rightPadding", right);
+    if (!panelUsageTruth(projectCall(f, owns))) return;
+    // Publish the non-filler baseline before notifications. Measurement uses the
+    // actual padding, never a claim that the requested filler was applied.
+    panelUsageWrite(f, base, "naturalRight", naturalRight);
+    if (!panelUsageReady(f)) return;
+    assistantMemberWrite(f, cell, "rightPadding", right);
 }
 QJSValue ApplicationInfo::tableCellKind(const QJSValue& cell) const {
     const auto f = panelUsageEngine(this);
@@ -5838,7 +5851,7 @@ void ApplicationInfo::tableFitColumns() const {
             if (!panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
             const auto math = panelUsageContextRead(f, "Math"), previous = textIndex(f, widths, QJSValue(index)), inner = panelUsageContextRead(f, "Math");
             const auto measured = tableMeasure(f, textIndex(f, cells, QJSValue(index)));
-            const auto filler = assistantSameName(f, QJSValue(index), "fillerIndex") ? panelUsageContextRead(f, "fillerWidth") : QJSValue(0);
+            const auto filler = tableAppliedFiller(f, textIndex(f, cells, QJSValue(index)));
             const auto rounded = panelUsageMemberCall(f, inner, "ceil", {viewArithmetic(f, measured, filler, 0)});
             textIndexWrite(f, widths, QJSValue(index), panelUsageMemberCall(f, math, "max", {previous, rounded}));
         }
