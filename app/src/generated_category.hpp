@@ -3,6 +3,7 @@
 #define EDI_APP_GENERATED_CATEGORY_HPP
 
 #include <QObject>
+#include <QVariantMap>
 #include <QPointer>
 #include <QStringList>
 #include <QVariantList>
@@ -20,16 +21,16 @@ class GeneratedCategory : public QObject {
     QML_ELEMENT
     Q_PROPERTY(edi_app::BlockText* source READ source WRITE setSource NOTIFY sourceChanged)
     Q_PROPERTY(QString categoryId READ categoryId WRITE setCategoryId NOTIFY categoryIdChanged)
-    Q_PROPERTY(bool loop READ loop NOTIFY changed)
+    Q_PROPERTY(bool loop READ loop NOTIFY loopChanged)
     // What the program or a data file supplies is shown, never edited.
-    Q_PROPERTY(bool output READ output NOTIFY changed)
-    Q_PROPERTY(QStringList names READ names NOTIFY changed)
-    Q_PROPERTY(QStringList labels READ labels NOTIFY changed)
-    Q_PROPERTY(QStringList units READ units NOTIFY changed)
+    Q_PROPERTY(bool output READ output NOTIFY outputChanged)
+    Q_PROPERTY(QStringList names READ names NOTIFY namesChanged)
+    Q_PROPERTY(QStringList labels READ labels NOTIFY labelsChanged)
+    Q_PROPERTY(QStringList units READ units NOTIFY unitsChanged)
     // The items the program writes, shown and never edited (the project's times and location).
-    Q_PROPERTY(QStringList setByProgram READ setByProgram NOTIFY changed)
+    Q_PROPERTY(QStringList setByProgram READ setByProgram NOTIFY setByProgramChanged)
     // A list of rows, each a list of values in the order of `names`.
-    Q_PROPERTY(QVariantList rows READ rows NOTIFY changed)
+    Q_PROPERTY(QVariantList rows READ rows NOTIFY rowsChanged)
 
    public:
     explicit GeneratedCategory(QObject* parent = nullptr);
@@ -53,8 +54,17 @@ class GeneratedCategory : public QObject {
     void sourceChanged();
     void categoryIdChanged();
     void changed();
+    void loopChanged();
+    void outputChanged();
+    void namesChanged();
+    void labelsChanged();
+    void unitsChanged();
+    void setByProgramChanged();
+    void rowsChanged();
 
    private:
+    QVariantMap property_notifications_;
+    quint64 notification_publication_ = 0;
     void read();
 
     QPointer<BlockText> source_;

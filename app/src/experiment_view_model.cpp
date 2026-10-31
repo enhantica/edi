@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_view_model.hpp"
 #include <QPointer>
+#include <QScopeGuard>
 #include <string_view>
 
 #include <QStringList>
@@ -282,6 +283,31 @@ QString ExperimentViewModel::facility() const {
 // The selectors' state from the experiment: its names, the instruments of its facility for its sample form, and
 // whether they can be chosen, which they can for an experiment made from a data file.
 void ExperimentViewModel::sync_description() {
+    const QPointer<ExperimentViewModel> receiver(this);
+    if (!property_notifications_.contains("facilityToken")) property_notifications_["facilityToken"] = QVariant::fromValue(facility_token_);
+    if (!property_notifications_.contains("instrumentToken")) property_notifications_["instrumentToken"] = QVariant::fromValue(instrument_token_);
+    if (!property_notifications_.contains("descriptionEditable")) property_notifications_["descriptionEditable"] = QVariant::fromValue(description_editable_);
+    quint64 publication = 0;
+    const auto propertyNotifications = qScopeGuard([receiver, &publication] {
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant facilityToken = QVariant::fromValue(receiver->facility_token_);
+        if (receiver->property_notifications_.value("facilityToken") != facilityToken) {
+            receiver->property_notifications_["facilityToken"] = facilityToken;
+            emit receiver->facilityTokenChanged();
+        }
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant instrumentToken = QVariant::fromValue(receiver->instrument_token_);
+        if (receiver->property_notifications_.value("instrumentToken") != instrumentToken) {
+            receiver->property_notifications_["instrumentToken"] = instrumentToken;
+            emit receiver->instrumentTokenChanged();
+        }
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant descriptionEditable = QVariant::fromValue(receiver->description_editable_);
+        if (receiver->property_notifications_.value("descriptionEditable") != descriptionEditable) {
+            receiver->property_notifications_["descriptionEditable"] = descriptionEditable;
+            emit receiver->descriptionEditableChanged();
+        }
+    });
     const std::string held_facility = facility().toStdString();
     const std::string held_instrument = instrumentName().toStdString();
     const bool single_crystal = experiment_.experiment_type.effective_sample_form() != edi::SampleFormEnum::POWDER;
@@ -305,6 +331,8 @@ void ExperimentViewModel::sync_description() {
     }
     set_description_options(facility_options_, facilities, held_facility);
     set_description_options(instrument_options_, instruments, held_instrument);
+    publication = ++notification_publication_;
+    if (publication == 0) publication = ++notification_publication_;
     facility_token_ = facility_token;
     instrument_token_ = instrument_token;
     description_editable_ = editable;

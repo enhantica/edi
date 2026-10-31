@@ -32,9 +32,9 @@ class AssistantViewModel : public QObject {
     QML_ELEMENT
     QML_UNCREATABLE("Belongs to Session")
     Q_PROPERTY(edi_app::RowTableModel* skillSources READ skillSources CONSTANT)
-    Q_PROPERTY(QString skillSourceRevision READ skillSourceRevision NOTIFY skillSourcesChanged)
-    Q_PROPERTY(QString skillSourceError READ skillSourceError NOTIFY skillSourcesChanged)
-    Q_PROPERTY(bool skillSourceImporting READ skillSourceImporting NOTIFY skillSourcesChanged)
+    Q_PROPERTY(QString skillSourceRevision READ skillSourceRevision NOTIFY skillSourceRevisionChanged)
+    Q_PROPERTY(QString skillSourceError READ skillSourceError NOTIFY skillSourceErrorChanged)
+    Q_PROPERTY(bool skillSourceImporting READ skillSourceImporting NOTIFY skillSourceImportingChanged)
     Q_PROPERTY(bool showActions READ showActions WRITE setShowActions NOTIFY showActionsChanged)
     Q_PROPERTY(bool showingActions READ showingActions NOTIFY showingActionsChanged)
     Q_PROPERTY(QQuickWindow* actionWindow READ actionWindow WRITE setActionWindow NOTIFY actionWindowChanged)
@@ -48,13 +48,13 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QStringList availableEfforts READ availableEfforts NOTIFY availableEffortsChanged)
     Q_PROPERTY(edi_app::RowTableModel* messages READ messages CONSTANT)
     Q_PROPERTY(edi_app::RowTableModel* sessions READ sessions CONSTANT)
-    Q_PROPERTY(bool sessionsLoading READ sessionsLoading NOTIFY sessionsChanged)
-    Q_PROPERTY(bool sessionsHaveMore READ sessionsHaveMore NOTIFY sessionsChanged)
-    Q_PROPERTY(QString sessionsError READ sessionsError NOTIFY sessionsChanged)
-    Q_PROPERTY(QString sessionSelection READ sessionSelection NOTIFY sessionsChanged)
-    Q_PROPERTY(QString sessionDraft READ sessionDraft WRITE setSessionDraft)
-    Q_PROPERTY(bool cachedHistoryClearing READ cachedHistoryClearing NOTIFY cachedHistoryChanged)
-    Q_PROPERTY(QString cachedHistoryError READ cachedHistoryError NOTIFY cachedHistoryChanged)
+    Q_PROPERTY(bool sessionsLoading READ sessionsLoading NOTIFY sessionsLoadingChanged)
+    Q_PROPERTY(bool sessionsHaveMore READ sessionsHaveMore NOTIFY sessionsHaveMoreChanged)
+    Q_PROPERTY(QString sessionsError READ sessionsError NOTIFY sessionsErrorChanged)
+    Q_PROPERTY(QString sessionSelection READ sessionSelection NOTIFY sessionSelectionChanged)
+    Q_PROPERTY(QString sessionDraft READ sessionDraft WRITE setSessionDraft NOTIFY sessionDraftChanged)
+    Q_PROPERTY(bool cachedHistoryClearing READ cachedHistoryClearing NOTIFY cachedHistoryClearingChanged)
+    Q_PROPERTY(QString cachedHistoryError READ cachedHistoryError NOTIFY cachedHistoryErrorChanged)
     Q_PROPERTY(edi_app::RowTableModel* selectedFiles READ selectedFiles CONSTANT)
     Q_PROPERTY(edi_app::RowTableModel* skills READ skills CONSTANT)
     Q_PROPERTY(QString selectedSkill READ selectedSkill NOTIFY selectedSkillChanged)
@@ -67,10 +67,10 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
     Q_PROPERTY(QVariantMap account READ account NOTIFY accountChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
-    Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextPreviewChanged)
+    Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextConsentIdentityChanged)
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
-    Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextPreviewChanged)
-    Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextPreviewChanged)
+    Q_PROPERTY(bool contextConsentRequired READ contextConsentRequired NOTIFY contextConsentRequiredChanged)
+    Q_PROPERTY(bool contextApprovalBlocked READ contextApprovalBlocked NOTIFY contextApprovalBlockedChanged)
 
    public:
     explicit AssistantViewModel(QObject* parent = nullptr, AssistantWorkReportOptions options = {});
@@ -200,11 +200,24 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool removeSelectedFile(const QString& id);
 
    signals:
+    void skillSourceRevisionChanged();
+    void skillSourceErrorChanged();
+    void skillSourceImportingChanged();
+    void sessionsLoadingChanged();
+    void sessionsHaveMoreChanged();
+    void sessionsErrorChanged();
+    void sessionSelectionChanged();
+    void cachedHistoryClearingChanged();
+    void cachedHistoryErrorChanged();
+    void contextConsentIdentityChanged();
+    void contextConsentRequiredChanged();
+    void contextApprovalBlockedChanged();
     void sessionsChanged();
     void sessionSelected(const QString& threadId);
     void cachedHistoryChanged();
     void sessionSelectionStarted(const QString& threadId);
     void sessionDraftRestored(const QString& threadId,const QString& text);
+    void sessionDraftChanged();
     void sessionProjectRequested(const QString& threadId,const QUrl& location,const QString& intent);
     void sessionConsentRequested(const QString& threadId);
     void workReportFinished(QVariantMap receipt);
