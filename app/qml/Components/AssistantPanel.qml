@@ -646,7 +646,7 @@ Popup {
                     objectName: "assistant.signInPrompt"
                     anchors.centerIn: parent
                     width: Math.max(0, parent.width - AppSizes.unit * 2)
-                    text: qsTr("No ChatGPT connection")
+                    text: panel.assistant.state === "connecting" ? panel.assistant.connectionLabel : qsTr("No ChatGPT connection")
                 }
             }
             // One real file boundary covers transcript and composer, not ordinary text or the header.
