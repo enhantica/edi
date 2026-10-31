@@ -191,3 +191,17 @@ ApplicationInfo executes DataTable's column projection, fitting/measurement, row
 The procedures call the current engine's real property, method, coercion, array and intrinsic iterator operations. For-in follows the pinned compiler's enumeration path without IteratorClose; for-of retains original completion/close behavior. Literal construction bypasses inherited setters while original later writes retain them. Native callback values preserve formal arity, original captures and function/lifetime identity; width fitting remains queued by Qt's existing delayed-call queue. Original model notifications and exact text-cache invalidation order remain, including read/measurement dependencies. Scientific models and Undo writes are untouched.
 
 QML keeps state declarations, visual delegates, direct bindings and named one-call forwarding methods. Complete desktop/browser compilation and live row/model mutation, destruction, geometry, font, key and error verification remain required after the full migration.
+
+
+## Retiring a table during QML destruction
+
+The existing `DataTable` cleanup first disables its rows' connections to the table and then clears
+those rows' `listView` references. The native implementation retains both passes, row identity checks,
+and the column-fit lifetime token. During this destruction callback, QObject properties used to find
+those connections are read through the native meta-object's stored value, rather than the general
+script getter. Qt's general getter flushes pending bindings, which can try to enable a binding while
+its QML context is being destroyed. Live table reads keep the normal script getter and dependency
+capture; this exception applies only to retirement and introduces no saved copy or second owner.
+
+This repairs destruction-time binding activation. It does not establish that every earlier QML
+lookup avoided activation, or qualify unrelated layout, parameter, or persistence behavior.
