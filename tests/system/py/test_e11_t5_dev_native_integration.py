@@ -2064,7 +2064,13 @@ def test_actual_manual_text_editor_preserves_composition_escape_and_real_commit(
     original = actor.last['ui']['project']['structure_rows'][0]['id']
     wait_positive_tab(actor, 'appBar.tab.structure')
     actor.command('click', name='appBar.tab.structure')
+    if _original_toolbar_pane_state(actor)['visible']:
+        actor.command('click', name='assistant.toggle')
+    actor.until(lambda _value: not _original_toolbar_pane_state(actor)['visible'])
     actor.command('click', name='structures.name.0')
+    assert actor.command('focused_input')['reply']['name'] == 'structures.name.0', (
+        'The original physical click reaches the actual uncovered manual editor before typing'
+    )
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text='uncommitted_owner')
     actor.command('manual_ime', preedit='Q', commit='')
@@ -2097,9 +2103,15 @@ def test_actual_parameter_cell_clean_publication_and_recycling_keep_original_mem
     actor.until(lambda row: not row['ui']['project']['calculating'])
     wait_positive_tab(actor, 'appBar.tab.analysis')
     actor.command('click', name='appBar.tab.analysis')
+    if _original_toolbar_pane_state(actor)['visible']:
+        actor.command('click', name='assistant.toggle')
+    actor.until(lambda _value: not _original_toolbar_pane_state(actor)['visible'])
     table = control_expression('parameters.list')
     qml(actor, f'{table}.sourceModel.nameFilter = "length_a"')
     actor.command('click', name='parameters.value.0')
+    assert actor.command('focused_input')['reply']['name'] == 'parameters.value.0', (
+        'The original physical click reaches the actual uncovered manual editor before typing'
+    )
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text='9.125')
     actor.command('manual_ime', preedit='7', commit='')
