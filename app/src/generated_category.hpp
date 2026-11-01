@@ -3,7 +3,9 @@
 #define EDI_APP_GENERATED_CATEGORY_HPP
 
 #include <QAbstractListModel>
+#include <QHash>
 #include <QObject>
+#include <QQmlListProperty>
 #include <QPointer>
 #include <QStringList>
 #include <QtQml/qqmlregistration.h>
@@ -52,6 +54,9 @@ class GeneratedCategory : public QObject {
     Q_PROPERTY(int rowCount READ rowCount NOTIFY rowCountChanged)
     // Each item's control, from its dictionary type: "choice" (a selector), "flag", "number" or "text".
     Q_PROPERTY(QStringList kinds READ kinds NOTIFY kindsChanged)
+    // Each item's options, in the order of `names`: a selector's, null for any other item. An item keeps its options
+    // across reads, so a selector showing them keeps them while the text changes.
+    Q_PROPERTY(QQmlListProperty<edi_app::OptionListModel> options READ options NOTIFY optionsChanged)
 
    public:
     explicit GeneratedCategory(QObject* parent = nullptr);
@@ -71,8 +76,7 @@ class GeneratedCategory : public QObject {
     // The value at `column` of `names` in row `row`, as written; empty past the rows.
     Q_INVOKABLE QString value(int row, int column) const { return rows_->value(row, column); }
     QStringList kinds() const { return kinds_; }
-    // The options of the item at `index` of `names`, a selector's; null for any other item.
-    Q_INVOKABLE edi_app::OptionListModel* optionsAt(int index) const;
+    QQmlListProperty<OptionListModel> options() { return {this, &options_}; }
 
     // The block's text with one value replaced.
     Q_INVOKABLE QString editedText(int row, const QString& name, const QString& value) const;
@@ -88,6 +92,7 @@ class GeneratedCategory : public QObject {
     void setByProgramChanged();
     void rowCountChanged();
     void kindsChanged();
+    void optionsChanged();
 
    private:
     void read();
@@ -99,6 +104,7 @@ class GeneratedCategory : public QObject {
     QStringList names_, labels_, units_, set_by_program_, kinds_;
     GeneratedRows* rows_ = new GeneratedRows(this);
     QList<OptionListModel*> options_;  // one per item, null but for a selector
+    QHash<QString, OptionListModel*> options_by_uid_;  // every selector's options, made once per item
 };
 
 }  // namespace edi_app

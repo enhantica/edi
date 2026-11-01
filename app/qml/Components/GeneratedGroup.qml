@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Qt.labs.qmlmodels
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Elements as EaElements
@@ -64,7 +65,7 @@ Column {
                     id: choiceField
                     SelectorField {
                         objectName: `generated.${group.categoryId}.${field.modelData}`
-                        options: category.optionsAt(field.index)
+                        options: category.options[field.index] ?? null
                         uid: `${group.categoryId}.${field.modelData}`
                         token: field.value
                         writable: field.editable
@@ -137,22 +138,56 @@ Column {
                         marksCurrentRow: true
                         text: row.index + 1
                     }
+                    // Each item in the cell its dictionary type asks for: a selector with the dictionary's labels, or
+                    // a text cell, a number of a dictionary item a number cell, aligned and written as the dictionary's.
                     Repeater {
-                        model: category.names
-                        delegate: TextCell {
-                            required property int index
-                            required property string modelData
-                            readonly property string cellText: row.values[index] ?? ""
-                            // A number of a dictionary item is a number cell, aligned and written as the dictionary's.
-                            readonly property bool isNumber: category.kinds[index] === "number" && cellText !== "" && isFinite(Number(cellText))
+                        model: category.names.map((name, column) => ({
+                                    "name": name,
+                                    "column": column,
+                                    "kind": category.kinds[column] ?? "text"
+                                }))
+                        delegate: DelegateChooser {
+                            role: "kind"
+                            DelegateChoice {
+                                roleValue: "choice"
+                                ComboCell {
+                                    id: choice
 
-                            objectName: `generated.${group.categoryId}.${modelData}.${row.index}`
-                            horizontalAlignment: Text.AlignHCenter
-                            accepts: category.kinds[index] === "number" ? "number" : "text"
-                            uid: isNumber ? `${group.categoryId}.${modelData}` : ""
-                            value: isNumber ? Number(cellText) : cellText
-                            readOnly: category.output || group.source === null || group.source.file === ""
-                            onCommitted: text => group.apply(row.index, modelData, text)
+                                    required property var modelData
+                                    readonly property bool editable: !category.output && group.source !== null && group.source.file !== ""
+
+                                    SearchableComboBox {
+                                        readonly property OptionListModel options: category.options[choice.modelData.column] ?? null
+
+                                        objectName: `generated.${group.categoryId}.${choice.modelData.name}.${row.index}`
+                                        inTable: true
+                                        horizontalAlignment: Text.AlignLeft
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        enabled: choice.editable
+                                        model: options
+                                        textRole: "label"
+                                        valueRole: "token"
+                                        currentIndex: options ? options.indexOf(row.values[choice.modelData.column] ?? "") : -1
+                                        displayText: currentIndex >= 0 ? currentText : (row.values[choice.modelData.column] ?? "")
+                                        onActivated: index => group.apply(row.index, choice.modelData.name, currentValue)
+                                    }
+                                }
+                            }
+                            DelegateChoice {
+                                TextCell {
+                                    required property var modelData
+                                    readonly property string cellText: row.values[modelData.column] ?? ""
+                                    readonly property bool isNumber: modelData.kind === "number" && cellText !== "" && isFinite(Number(cellText))
+
+                                    objectName: `generated.${group.categoryId}.${modelData.name}.${row.index}`
+                                    horizontalAlignment: Text.AlignHCenter
+                                    accepts: modelData.kind === "number" ? "number" : "text"
+                                    uid: isNumber ? `${group.categoryId}.${modelData.name}` : ""
+                                    value: isNumber ? Number(cellText) : cellText
+                                    readOnly: category.output || group.source === null || group.source.file === ""
+                                    onCommitted: text => group.apply(row.index, modelData.name, text)
+                                }
+                            }
                         }
                     }
                 }

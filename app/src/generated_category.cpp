@@ -54,6 +54,10 @@ void GeneratedCategory::read() {
     const std::string id = id_.toStdString();
     const edi::TextCategory category =
         source_ != nullptr && !id.empty() ? edi::text_category(source_->text().toStdString(), id) : edi::TextCategory{};
+    // What did not change is not signalled, so the controls showing it stay as they are; the values always are.
+    const bool loop = loop_;
+    const bool output = output_;
+    const QStringList names = names_, labels = labels_, units = units_, set_by_program = set_by_program_, kinds = kinds_;
     loop_ = category.loop;
     output_ = edi::category_is_output(id);
     names_.clear();
@@ -61,11 +65,7 @@ void GeneratedCategory::read() {
     units_.clear();
     set_by_program_.clear();
     kinds_.clear();
-    for (OptionListModel* options : options_) {
-        if (options != nullptr) {
-            options->deleteLater();
-        }
-    }
+    const QList<OptionListModel*> shown = options_;
     options_.clear();
     for (const std::string& name : category.names) {
         const std::string uid = id + "." + name;
@@ -77,12 +77,16 @@ void GeneratedCategory::read() {
         const std::string dtype = edi::item_dtype(uid);
         OptionListModel* options = nullptr;
         if (dtype == "enum") {
-            std::vector<std::string> tokens;
-            for (const edi::DisplayOption& option : edi::options(uid)) {
-                tokens.push_back(option.token);
+            OptionListModel*& held = options_by_uid_[QString::fromStdString(uid)];
+            if (held == nullptr) {
+                std::vector<std::string> tokens;
+                for (const edi::DisplayOption& option : edi::options(uid)) {
+                    tokens.push_back(option.token);
+                }
+                held = new OptionListModel(this);
+                held->setItemOptions(uid, tokens);
             }
-            options = new OptionListModel(this);
-            options->setItemOptions(uid, tokens);
+            options = held;
         }
         options_.append(options);
         kinds_.append(dtype == "enum"                       ? QStringLiteral("choice")
@@ -102,18 +106,31 @@ void GeneratedCategory::read() {
         rows.append(values);
     }
     rows_->setRows(std::move(rows));
-    emit loopChanged();
-    emit outputChanged();
-    emit namesChanged();
-    emit labelsChanged();
-    emit unitsChanged();
-    emit setByProgramChanged();
-    emit rowCountChanged();
-    emit kindsChanged();
-}
-
-OptionListModel* GeneratedCategory::optionsAt(int index) const {
-    return index >= 0 && index < options_.size() ? options_.at(index) : nullptr;
+    if (loop_ != loop) {
+        emit loopChanged();
+    }
+    if (output_ != output) {
+        emit outputChanged();
+    }
+    if (names_ != names) {
+        emit namesChanged();
+    }
+    if (labels_ != labels) {
+        emit labelsChanged();
+    }
+    if (units_ != units) {
+        emit unitsChanged();
+    }
+    if (set_by_program_ != set_by_program) {
+        emit setByProgramChanged();
+    }
+    emit rowCountChanged();  // a field reads its value through value(), which this signal has it read again
+    if (kinds_ != kinds) {
+        emit kindsChanged();
+    }
+    if (options_ != shown) {
+        emit optionsChanged();
+    }
 }
 
 QString GeneratedCategory::editedText(int row, const QString& name, const QString& value) const {
