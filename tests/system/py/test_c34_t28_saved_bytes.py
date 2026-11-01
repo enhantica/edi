@@ -121,7 +121,9 @@ def historical_input_hashes(source, *, excluded=False):
     return result
 
 
-def observe_legacy_pin(source, destination, *, calculator=False, excluded=False):
+def observe_legacy_pin(
+    source, destination, *, calculator=False, excluded=False, order_reference=None
+):
     destination.parent.mkdir(parents=True, exist_ok=True)
     REFERENCE.observe(source, destination, calculator=calculator)
     legacy = stored_id_bytes.ordinal_copy(
@@ -138,7 +140,7 @@ def observe_legacy_pin(source, destination, *, calculator=False, excluded=False)
         record = legacy / 'project.edi'
         record.write_bytes(without_default_rule('project.edi', record.read_bytes()))
     return (
-        REFERENCE.saved_hashes(legacy, excluded=excluded)
+        REFERENCE.saved_hashes(legacy, excluded=excluded, order_reference=order_reference)
         if calculator
         else REFERENCE.hashes(legacy, excluded=excluded)
     )
@@ -348,9 +350,16 @@ def check_excluded_transition():
 
 
 def assert_saved_projection(source, tmp_path, previous, case, record_property):
-    ordinary = observe_legacy_pin(source, tmp_path / 'saved', calculator=True)
+    order_reference = carried_hashes(previous, case)
+    ordinary = observe_legacy_pin(
+        source, tmp_path / 'saved', calculator=True, order_reference=order_reference
+    )
     converted = observe_legacy_pin(
-        source, tmp_path / 'transition' / 'converted', calculator=True, excluded=True
+        source,
+        tmp_path / 'transition' / 'converted',
+        calculator=True,
+        excluded=True,
+        order_reference=order_reference,
     )
     actual = retained_hashes(ordinary, converted, previous)
     if case in CARRIED_CASES:

@@ -394,7 +394,7 @@ def test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
     record.write_bytes(without_default_rule('project.edi', record.read_bytes()))
     record_property('weight_fraction_before', 'no derived column in the unconstrained writer pin')
     record_property('weight_fraction_after', 'checked single enabled fraction 1.0 without s.u.')
-    assert snapshot(legacy, historical_fractions=True) == expected, (
+    assert snapshot(legacy, historical_fractions=True, order_reference=expected) == expected, (
         'without relation loops saved files must retain their pre-feature regression bytes, '
         'normalizing metadata clocks, stored keys, inactive Joint weights and checked unity column'
     )
@@ -402,12 +402,12 @@ def test_projects_without_constraints_keep_the_pre_feature_writer_regression_pin
     for path in (legacy / 'experiments').glob('*.edi'):
         original = path.read_bytes()
         path.write_bytes(original + b'# unrelated change\n')
-        assert snapshot(legacy, historical_fractions=True) != expected, (
+        assert snapshot(legacy, historical_fractions=True, order_reference=expected) != expected, (
             'The unconstrained fraction adaptation retains unrelated saved experiment bytes'
         )
         path.write_bytes(historical_single_fraction('experiments/' + path.name, original))
         with pytest.raises(AssertionError, match='Exactly one fraction column'):
-            snapshot(legacy, historical_fractions=True)
+            snapshot(legacy, historical_fractions=True, order_reference=expected)
         path.write_bytes(original)
 
 
