@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Controls
+import QtQml.Models
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
@@ -100,30 +102,36 @@ EaComponents.ListView {
     property var wideEdges: []
     // A cell's padding: its own, a spacing more on the side it aligns to, so a right-aligned number and a
     // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it. A
-    // check box, which centres itself in its room, is pushed to the right edge by its left padding.
-    function padForFiller(cell, column) {
+    // check box, which centres itself in its room, is pushed to the right edge by its left padding. A `fresh` cell, made
+    // only to be measured, still has its own paddings and goes in no map: a JS map lookup scans every entry, and with a
+    // thousand rows measured the maps made each measure take minutes.
+    function padForFiller(cell, column, kind = undefined, fresh = false) {
         if (!("rightPadding" in cell) || "keepsAlignment" in cell)
             return;
-        if (!basePaddings.has(cell))
+        if (!fresh && !basePaddings.has(cell))
             basePaddings.set(cell, {
                 "left": cell.leftPadding,
                 "right": cell.rightPadding
             });
-        const base = basePaddings.get(cell);
-        const kind = cellKinds.get(cell) ?? "";
+        const base = fresh ? {
+            "left": cell.leftPadding,
+            "right": cell.rightPadding
+        } : basePaddings.get(cell);
+        kind = (fresh ? kind : cellKinds.get(cell)) ?? "";
         const gap = EaStyle.Sizes.tableColumnSpacing;
         const right = kind === "number" || kind === "check";
         cell.rightPadding = base.right + (right ? gap : 0) + (right && wideEdges[column] ? EaStyle.Sizes.fontPixelSize : 0) + (column === fillerIndex ? fillerWidth : 0);
         if (kind === "check" && cell.indicator) {
             // Set, not bound: the box's implicit width follows its padding, and its column's width its implicit one.
             cell.leftPadding = Math.max(base.left, cell.width - cell.rightPadding - cell.indicator.width);
-            if (!checkCells.has(cell)) {
+            if (!fresh && !checkCells.has(cell)) {
                 checkCells.add(cell);
                 cell.widthChanged.connect(() => table.padForFiller(cell, column));
             }
         } else {
             cell.leftPadding = base.left + (kind === "text" ? gap : 0);
         }
+        return base;
     }
     property var checkCells: new Set()
     // A cell's kind, which sets how it aligns: a number, an icon or button, or text. A row button is checkable too, so
@@ -137,10 +145,11 @@ EaComponents.ListView {
             return "number";
         return "text";
     }
-    function alignCell(cell, kind) {
+    function alignCell(cell, kind, fresh = false) {
         if ("keepsAlignment" in cell)
             return;
-        cellKinds.set(cell, kind);
+        if (!fresh)
+            cellKinds.set(cell, kind);
         const alignment = kind === "number" || kind === "check" ? Text.AlignRight : kind === "icon" ? Text.AlignHCenter : Text.AlignLeft;
         if ("columnAlignment" in cell)
             cell.columnAlignment = alignment;
@@ -152,8 +161,9 @@ EaComponents.ListView {
     }
     // Styles the cells of `rows` (alignment and padding) and, with `measure`, fits the columns to them and the header.
     // Only the whole model is measured (fitWholeModel); a row the view makes, scrolled into view, is only styled and
-    // takes the widths the model was measured to (the owner, 2026-10-27).
-    function fitColumns(measure = false, rows = null) {
+    // takes the widths the model was measured to (the owner, 2026-10-27). Without `measure` it returns the widths
+    // `rows` need, at least `from` (a part of the model measured before).
+    function fitColumns(measure = false, rows = null, from = null) {
         const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths.filter((w, i) => true) : [];
         // A cell is measured by its whole text: a number cell by the number it would show if it fitted (it shortens
         // itself to the width it is given), a label by its natural width, an editor by its text (its implicit width
@@ -164,7 +174,7 @@ EaComponents.ListView {
         const control = child => "fittedWidth" in child ? child.fittedWidth : child.implicitWidth ?? 0;
         const held = cell => Array.from(cell.children).reduce((widest, child) => Math.max(widest, control(child)), cell.implicitWidth);
         // A check box by its box and its own paddings, never the padding that pushes it right.
-        const measured = cell => cellKinds.get(cell) === "check" && cell.indicator ? (basePaddings.get(cell)?.left ?? 0) + cell.indicator.width + cell.rightPadding : "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : padded(cell, held(cell));
+        const measured = (cell, kind, base) => kind === "check" && cell.indicator ? (base?.left ?? 0) + cell.indicator.width + cell.rightPadding : "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : padded(cell, held(cell));
         // The cells of a row's inner Row, in column order, the filler left out.
         const cellsOf = row => {
             const first = row && row.contentRowData ? Array.from(row.contentRowData).find(cell => cell instanceof Item) : null;
@@ -172,8 +182,9 @@ EaComponents.ListView {
         };
         const headerCells = cellsOf(headerItem);
         const headerWidths = headerCells ? headerCells.map((cell, i) => Math.ceil(cell.implicitWidth - (i === fillerIndex && basePaddings.has(cell) ? fillerWidth : 0))) : header;
-        const widths = columns.map((w, i) => Math.max(headerWidths[i] ?? 0, refitting ? 0 : (fittedWidths[i] ?? 0)));
+        const widths = from ? from.slice() : columns.map((w, i) => Math.max(headerWidths[i] ?? 0, refitting ? 0 : (fittedWidths[i] ?? 0)));
         let kinds = null;
+        const fresh = rows !== null;
         for (const item of rows ?? contentItem.children) {
             const cells = cellsOf(item);
             if (!cells || item === headerItem)
@@ -186,10 +197,11 @@ EaComponents.ListView {
                     wideEdges = edges;
             }
             for (let i = 0; i < cells.length && i < widths.length; ++i) {
-                if (i > 0 && kinds[i])
-                    alignCell(cells[i], kinds[i]);
-                padForFiller(cells[i], i);
-                widths[i] = Math.max(widths[i], Math.ceil(measured(cells[i]) - (i === fillerIndex ? fillerWidth : 0)));
+                const kind = i > 0 && kinds[i] && !("keepsAlignment" in cells[i]) ? kinds[i] : undefined;
+                if (kind)
+                    alignCell(cells[i], kind, fresh);
+                const base = padForFiller(cells[i], i, kind, fresh);
+                widths[i] = Math.max(widths[i], Math.ceil(measured(cells[i], fresh ? kind : cellKinds.get(cells[i]), fresh ? base : basePaddings.get(cells[i])) - (i === fillerIndex ? fillerWidth : 0)));
             }
         }
         if (kinds && headerCells) {
@@ -199,7 +211,7 @@ EaComponents.ListView {
             }
         }
         if (!measure)
-            return;
+            return widths;
         refitting = false;
         if (!sameValues(widths, fittedWidths))
             fittedWidths = widths;
@@ -211,35 +223,73 @@ EaComponents.ListView {
     }
     // The cells of rows the view made, styled as the measured ones are.
     function styleCells() {
-        if (typeof fitColumns === "function")  // a call queued before the table went
+        if (!gone)
             fitColumns(false);
     }
-    // Every row of the model is made at once, beside the view, measured with the header, and dropped: the columns fit
-    // the widest row wherever it is, and scrolling changes no width. A table not shown waits until it is.
+    // Set as the table is destroyed. Its rows going queue calls (Qt.callLater) that run after its context is gone,
+    // where reading any of its functions is an error; a property can still be read.
+    property bool gone: false
+    Component.onDestruction: gone = true
+    // Every row of the model is made beside the view, measured with the header, and dropped: the columns fit the widest
+    // row wherever it is, and scrolling changes no width. A table not shown waits until it is.
     function fitWholeModel() {
-        if (!refitting)
+        if (!refitting || gone)
             return;
-        if (!visible) {
+        if (!visible || !(onScreen || count <= measuredAtOnce)) {
             refitting = false;
             unfitted = true;
             return;
         }
         unfitted = false;
-        measuringRows.model = model;
-        const rows = [];
-        for (let row = 0; row < measuringRows.count; ++row)
-            rows.push(measuringRows.itemAt(row));
-        fitColumns(true, rows);
-        for (const row of rows) {
-            const first = row && row.contentRowData ? Array.from(row.contentRowData).find(cell => cell instanceof Item) : null;
-            for (const cell of first && first.parent ? first.parent.children : []) {
-                basePaddings.delete(cell);
-                cellKinds.delete(cell);
-                checkCells.delete(cell);
-            }
+        measuredWidths = null;
+        measureRows(++measureRun, 0);
+    }
+    // A model of up to this many rows is measured at once. A larger one (a pattern's points) is measured a frame's
+    // worth of rows at a time, so the window keeps responding; a new change of the content starts it again.
+    readonly property int measuredAtOnce: 100
+    property int measureRun: 0
+    property var measuredWidths: null
+    function measureRows(run, from) {
+        if (gone || run !== measureRun)
+            return;
+        if (!visible || !(onScreen || count <= measuredAtOnce)) {
+            refitting = false;
+            unfitted = true;
+            return;
         }
+        measuringRows.model = model;
+        const total = measuringRows.count;
+        const started = Date.now();
+        const rows = [];
+        let next = from;
+        // A row is null while what it is in is still being made in the background; it is not measured, as the view's
+        // rows are not, and a later change of the content measures it.
+        while (next < total && (total <= measuredAtOnce || Date.now() - started < 20)) {
+            const row = measuringRows.items.create(next++);
+            if (row !== null)
+                row.parent = measuringHost;
+            rows.push(row);
+        }
+        measuredWidths = fitColumns(false, rows, measuredWidths);
+        // Drops the rows, and stops making any still being made.
         measuringRows.model = null;
+        if (next < total) {
+            measureLater.run = run;
+            measureLater.from = next;
+            measureLater.start();
+            return;
+        }
+        refitting = false;
+        if (!sameValues(measuredWidths, fittedWidths))
+            fittedWidths = measuredWidths;
         styleCells();
+    }
+    Timer {
+        id: measureLater
+        property int run: 0
+        property int from: 0
+        interval: 0
+        onTriggered: table.measureRows(run, from)
     }
     // Content that changed while the table was not shown, measured once it is.
     property bool unfitted: false
@@ -247,10 +297,30 @@ EaComponents.ListView {
         if (visible && unfitted)
             refit();
     }
-    Item {
-        visible: false
+    onOnScreenChanged: {
+        if (visible && onScreen && unfitted)
+            refit();
+    }
+    // Whether the table can be seen: in no collapsed group, and on the current item of every SwipeView it is in (a page,
+    // a sidebar tab). A SwipeView keeps its other items visible and a collapsed group only clips its content. A large
+    // model waits until its table can be seen: a pattern's points kept the window busy for many seconds after a project
+    // opened. A small one is measured as soon as it is visible, as it takes little time.
+    readonly property bool onScreen: {
+        const chain = [];
+        for (let item = table; item !== null; item = item.parent) {
+            if (item["collapsed"] === true)
+                return false;
+            if (item instanceof SwipeView && !chain.includes((item as SwipeView).currentItem))
+                return false;
+            chain.push(item);
+        }
+        return true;
+    }
+    // Outside the window: its rows are only measured, and a row in a window costs far more to make and to drop (each
+    // cell joins and leaves the window's signals, a scan of all of them).
+    readonly property Item measuringHost: Item {
         width: table.width
-        Repeater {
+        DelegateModel {
             id: measuringRows
             model: null
             delegate: table.delegate

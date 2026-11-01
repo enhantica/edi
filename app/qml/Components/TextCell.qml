@@ -27,6 +27,9 @@ EaComponents.ListViewTextInput {
     readonly property bool numeric: accepts === "number" && typeof value === "number" && isFinite(value)
     readonly property string written: numeric ? (uid !== "" ? Session.written(uid, value) : NumberText.plain(value, 8)) : String(value)
     readonly property string shown: numeric ? NumberText.fitted(written, width - leftPadding - rightPadding, metrics) : written
+    // As wide as the whole number, not the shown text: a cell no table has sized (DataTable's measuring rows) takes this
+    // width, and a width that followed `shown` would feed back into it.
+    implicitWidth: Math.ceil(metrics.advanceWidth(written)) + leftPadding + rightPadding
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.
