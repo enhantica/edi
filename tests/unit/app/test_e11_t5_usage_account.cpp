@@ -1050,10 +1050,25 @@ class UsageAccountProof final : public QObject {
         return result;
     }
 
-    Q_INVOKABLE QVariantMap actualContextLookups(QObject* applicationInfo) const {
+    Q_INVOKABLE QVariantMap actualContextLookups(QObject* applicationInfo,
+                                                 bool retirementCharacterization = false) const {
         UsageChecks check;
         QVariantList trace;
         try {
+            const auto phase = e11_usage_phase::phase();
+            prerequisite((phase == "native" || phase == "original") &&
+                             qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == phase,
+                         "actual context matrix requires the explicit selected source phase");
+            const auto selected = qgetenv("EDI_E11_CONTEXT_RETIREMENT_CHARACTERIZATION");
+            prerequisite(
+                retirementCharacterization ? selected == "selected" : selected.isEmpty(),
+                "retirement characterization is a separate explicitly selected invocation");
+            retainUsageContextAdmission(
+                trace,
+                {{"stage", "context-validation-mode"},
+                 {"phase", QString::fromLatin1(phase)},
+                 {"mode",
+                  retirementCharacterization ? "external-retirement-characterization" : "live"}});
             const auto engineGlobal = engine_->globalObject();
             const auto make = engine_->evaluate(QStringLiteral(R"JS(
 (function(engineGlobal, tag, minutes, invalidDate, finiteMode, expectedReceiver) {
@@ -1224,7 +1239,8 @@ class UsageAccountProof final : public QObject {
                     const auto explicitMath = bundle("explicit-Math", 39, false, "delegate");
                     context->setContextProperty(
                         "Math", QVariant::fromValue(explicitMath.property("Math")));
-                    requireUsageContextReadback(context.get(), "Math", explicitMath.property("Math"), true, trace);
+                    requireUsageContextReadback(context.get(), "Math",
+                                                explicitMath.property("Math"), true, trace);
                     snapshot("explicit-over-object");
                     check.require(
                         owner->property("unitResetText").toString() == "Resets in 39 min",
@@ -1241,24 +1257,45 @@ class UsageAccountProof final : public QObject {
                 check.require(
                     owner->property("accountInitial").toString().isEmpty(),
                     "the genuine disconnected account keeps the original empty-email branch");
-                // No unsupported direct method call is made after context destruction.
-                // The public context contract invalidates existing bindings without destroying
-                // objects.
-                trace.append(QVariantMap{{"stage", "before-context-destroy"},
-                                         {"text", owner->property("unitResetText")}});
-                const int calls = yes.property("state").property("finite").toInt();
-                QPointer<QObject> retainedOwner(owner.get());
-                context.reset();
-                prerequisite(owner->setProperty("unitResetValue", 180),
-                             "a surviving object input remains writable");
-                object.set("Math", a.property("Math"));
-                snapshot("context-destroyed");
-                check.require(
-                    retainedOwner && yes.property("state").property("finite").toInt() == calls,
-                    "destroyed creation context stops bindings while the genuine object survives");
-                check.require(
-                    warnings.isEmpty() && !engine_->hasError(),
-                    "supported context updates/reentry/invalidation add no unrelated QML errors");
+                check.require(warnings.isEmpty() && !engine_->hasError(),
+                              "the complete live context matrix adds no unrelated QML error");
+                if (retirementCharacterization) {
+                    retainUsageContextAdmission(
+                        trace, {{"stage", "external-retirement-characterization-begin"},
+                                {"object_context", objectMode}});
+                    // No unsupported direct method call is made after context destruction.
+                    // The public context contract invalidates existing bindings without destroying
+                    // objects.
+                    trace.append(QVariantMap{{"stage", "before-context-destroy"},
+                                             {"text", owner->property("unitResetText")}});
+                    const int calls = yes.property("state").property("finite").toInt();
+                    QPointer<QObject> retainedOwner(owner.get());
+                    context.reset();
+                    prerequisite(owner->setProperty("unitResetValue", 180),
+                                 "a surviving object input remains writable");
+                    object.set("Math", a.property("Math"));
+                    snapshot("context-destroyed");
+                    check.require(
+                        retainedOwner && yes.property("state").property("finite").toInt() == calls,
+                        "destroyed creation context stops bindings while the genuine object "
+                        "survives");
+                    check.require(warnings.isEmpty() && !engine_->hasError(),
+                                  "supported context updates/reentry/invalidation add no "
+                                  "unrelated QML errors");
+                } else {
+                    // This live control chooses an enclosing context lifetime; Qt's public
+                    // surviving-object contract remains independently characterized below.
+                    QPointer<QObject> closedOwner(owner.get());
+                    owner.component.reset();
+                    prerequisite(closedOwner.isNull(), "ordinary live Panel teardown completes");
+                    context.reset();
+                    check.require(warnings.isEmpty() && !engine_->hasError(),
+                                  "ordinary live fixture teardown adds no unrelated QML error");
+                    retainUsageContextAdmission(trace,
+                                                {{"stage", "live-context-normal-teardown"},
+                                                 {"object_context", objectMode},
+                                                 {"panel_destroyed", closedOwner.isNull()}});
+                }
             }
             // A real scope method outranks the surrounding context/global function.
             UsageLookupContext object;
@@ -1297,6 +1334,14 @@ class UsageAccountProof final : public QObject {
         }
         auto result = check.result();
         result.insert("context_lookup_trace", trace);
+        result.insert("context_lookup_mode", retirementCharacterization
+                                                 ? "external-retirement-characterization"
+                                                 : "live");
+        result.insert("retirement_qualification",
+                      retirementCharacterization ? "characterization only; consult actual "
+                                                   "terminal outcome, never expected-crash success"
+                                                 : "not exercised here; separate external "
+                                                   "characterization remains FAILED/UNQUALIFIED");
         return result;
     }
     Q_INVOKABLE QVariantMap contextStorageLifetime(QObject* applicationInfo,
