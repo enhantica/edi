@@ -673,10 +673,11 @@ class UsageAccountProof final : public QObject {
             prerequisite(
                 usageChanges.isValid() && assistantChanges.isValid() && warnings.isValid(),
                 "actual publication and engine warning observers are valid");
+            const auto engineGlobal = engine_->globalObject();
             const auto install = engine_->evaluate(QStringLiteral(R"JS(
-(function(owner, mode, thrown) {
-    const json = globalThis.JSON;
-    const globalDescriptor = Object.getOwnPropertyDescriptor(globalThis, 'JSON');
+(function(engineGlobal, owner, mode, thrown) {
+    const json = engineGlobal.JSON;
+    const globalDescriptor = Object.getOwnPropertyDescriptor(engineGlobal, 'JSON');
     const parseDescriptor = Object.getOwnPropertyDescriptor(json, 'parse');
     const stringifyDescriptor = Object.getOwnPropertyDescriptor(json, 'stringify');
     const parse = json.parse, stringify = json.stringify;
@@ -713,7 +714,7 @@ class UsageAccountProof final : public QObject {
                     get:function() { step('stringify-get'); return stringifyCall; }
                 });
                 proof.replacement = replacement;
-                globalThis.JSON = replacement;
+                engineGlobal.JSON = replacement;
             }
             return function(value) {
                 proof.parseReceiver = this === json;
@@ -725,7 +726,7 @@ class UsageAccountProof final : public QObject {
     proof.restore = function() {
         Object.defineProperty(json, 'parse', parseDescriptor);
         Object.defineProperty(json, 'stringify', stringifyDescriptor);
-        Object.defineProperty(globalThis, 'JSON', globalDescriptor);
+        Object.defineProperty(engineGlobal, 'JSON', globalDescriptor);
     };
     return proof;
 })
@@ -760,7 +761,7 @@ class UsageAccountProof final : public QObject {
             const auto exercise = [&](const QString& mode, const QJSValue& thrown,
                                       int expectedSteps, bool catches,
                                       const QString& sourceLabel) {
-                auto proof = install.call({scriptOwner, QJSValue(mode), thrown});
+                auto proof = install.call({engineGlobal, scriptOwner, QJSValue(mode), thrown});
                 prerequisite(proof.isObject() && !engine_->hasError(),
                              "same-engine instrument installed without a pending error");
                 const auto restore =
@@ -946,11 +947,12 @@ class UsageAccountProof final : public QObject {
         UsageChecks check;
         QVariantList trace;
         try {
+            const auto engineGlobal = engine_->globalObject();
             const auto make = engine_->evaluate(QStringLiteral(R"JS(
-(function(tag, minutes, invalidDate, finiteMode, expectedReceiver) {
-    const originalJSON=globalThis.JSON, originalDate=globalThis.Date;
-    const originalMath=globalThis.Math, originalArray=globalThis.Array;
-    const originalFinite=globalThis.isFinite;
+(function(engineGlobal, tag, minutes, invalidDate, finiteMode, expectedReceiver) {
+    const originalJSON=engineGlobal.JSON, originalDate=engineGlobal.Date;
+    const originalMath=engineGlobal.Math, originalArray=engineGlobal.Array;
+    const originalFinite=engineGlobal.isFinite;
     const state={json:0,jsonReceiver:true,mathReceiver:true,date:0,constructed:0,finite:0,receiver:true,reentered:0,array:0,owner:null};
     const json=Object.create(originalJSON);
     json.stringify=function() { 'use strict'; ++state.json; state.jsonReceiver=state.jsonReceiver&&this===json; return originalJSON.stringify.apply(originalJSON,arguments); };
@@ -999,8 +1001,8 @@ class UsageAccountProof final : public QObject {
                 const auto bundle = [&](const char* tag, int minutes, bool invalid,
                                         const char* finite) {
                     const auto value = make.call(
-                        {QJSValue(QString::fromLatin1(tag)), QJSValue(minutes), QJSValue(invalid),
-                         QJSValue(QString::fromLatin1(finite)), receiver});
+                        {engineGlobal, QJSValue(QString::fromLatin1(tag)), QJSValue(minutes),
+                         QJSValue(invalid), QJSValue(QString::fromLatin1(finite)), receiver});
                     requireUsageContextBundle(engine_, value, tag, objectMode, trace);
                     return value;
                 };
@@ -1151,9 +1153,9 @@ class UsageAccountProof final : public QObject {
             UsageLookupContext object;
             QJSEngine::setObjectOwnership(&object, QJSEngine::CppOwnership);
             QQmlContext context(engine_->rootContext());
-            const auto values = make.call({QJSValue(QStringLiteral("scope-context")), QJSValue(37),
-                                           QJSValue(false), QJSValue(QStringLiteral("true")),
-                                           engine_->newQObject(&object)});
+            const auto values = make.call(
+                {engineGlobal, QJSValue(QStringLiteral("scope-context")), QJSValue(37),
+                 QJSValue(false), QJSValue(QStringLiteral("true")), engine_->newQObject(&object)});
             requireUsageContextBundle(engine_, values, "scope-context", true, trace);
             context.setContextObject(&object);
             for (const auto& name : {"JSON", "Array", "Date", "Math", "isFinite"}) {
