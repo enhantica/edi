@@ -3285,33 +3285,29 @@ void ProjectViewModel::publishCalculating() {
 }
 
 namespace {
-// Every file a save of `project` writes; when the whole save refuses, its refusal, and the files of a save without the
-// experiments linking a structure the project lacks, which refuse it: only their blocks show the refusal.
-ProjectViewModel::SavedFiles save_files(const edi::Project& project) {
+// After a save of `project` refused: the refusal, and the files of a save without the experiments linking a structure
+// the project lacks, which refuse it, so only their blocks show the refusal.
+ProjectViewModel::SavedFiles refused_save(const edi::Project& project, const std::string& refusal) {
+    ProjectViewModel::SavedFiles saved{{}, refusal};
     try {
-        return {edi::project_edi_files(project), {}};
-    } catch (const std::exception& refusal) {
-        ProjectViewModel::SavedFiles saved{{}, refusal.what()};
-        try {
-            edi::Project resolved = project;
-            for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
-                const auto& links = resolved.experiments[index]->linked_structures;
-                const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
-                    const std::string& id = link->structure_id.value();
-                    return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
-                                                       [&id](const auto& structure) { return structure->name.value() == id; });
-                });
-                if (missing) {
-                    resolved.experiments.erase_at(index);
-                }
+        edi::Project resolved = project;
+        for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
+            const auto& links = resolved.experiments[index]->linked_structures;
+            const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
+                const std::string& id = link->structure_id.value();
+                return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
+                                                   [&id](const auto& structure) { return structure->name.value() == id; });
+            });
+            if (missing) {
+                resolved.experiments.erase_at(index);
             }
-            if (resolved.experiments.size() < project.experiments.size()) {
-                saved.files = edi::project_edi_files(resolved);
-            }
-        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
         }
-        return saved;
+        if (resolved.experiments.size() < project.experiments.size()) {
+            saved.files = edi::project_edi_files(resolved);
+        }
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
     }
+    return saved;
 }
 
 std::string file_of(const ProjectViewModel::SavedFiles& saved, const std::string& relative) {
@@ -3331,7 +3327,11 @@ const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedF
     // One save of the whole project serves every Text tab until the next change (D7). It is of the model the pages
     // show: while a scan dataset is shown, that dataset's values, though a save writes the template (edi ADR-0015).
     if (!saved_files_.has_value()) {
-        saved_files_ = save_files(*project_);
+        try {
+            saved_files_ = SavedFiles{edi::project_edi_files(*project_), {}};
+        } catch (const std::exception& refusal) {
+            saved_files_ = refused_save(*project_, refusal.what());
+        }
     }
     if (!saved_files_->refusal.empty()) {
         throw std::runtime_error(saved_files_->refusal);
@@ -3343,7 +3343,12 @@ std::string ProjectViewModel::discoveredFile(const std::string& relative) const 
     // A copy is never current, so its save calculates nothing and writes no computed category: what the sidebar's
     // generated groups are found from. A calculation leaves it as it is; an edit makes it again.
     if (!discovered_files_.has_value()) {
-        discovered_files_ = save_files(edi::Project(*project_));
+        const edi::Project copy = *project_;
+        try {
+            discovered_files_ = SavedFiles{edi::project_edi_files(copy), {}};
+        } catch (const std::exception& refusal) {
+            discovered_files_ = refused_save(copy, refusal.what());
+        }
     }
     return file_of(*discovered_files_, relative);
 }
@@ -3355,8 +3360,9 @@ SavedFile ProjectViewModel::savedFileFunction() const {
 
 std::string ProjectViewModel::savedFile(const std::string& relative) const {
     // A block the save could not write shows why; the others show their text (savedFiles).
-    if (!saved_files_.has_value()) {
-        saved_files_ = save_files(*project_);
+    try {
+        savedFiles();
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — file_of throws it for a block without a file
     }
     return file_of(*saved_files_, relative);
 }
