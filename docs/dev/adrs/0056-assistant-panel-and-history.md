@@ -4784,6 +4784,16 @@ remain pending except the original JSON projection catch. Interruption completio
 synchronous operation frame, never persisted application state. There is no evaluated JavaScript
 shim or mutable-global Symbol/Reflect shortcut.
 
+The shared named and member call entrances check engine readiness immediately after their
+original callee lookup, before invocation, callable classification or non-callable error formatting.
+This extends the FIRST guarded deferred-member and spread-call entrances to both direct call
+paths. Qt's object `toQStringNoThrow` may consume an already-pending exception while making an
+error description; it must not replace the original getter failure. The check preserves every
+thrown value, including false, undefined and ordinary objects, without another getter, catch,
+conversion, value-type test or special case. Original no-exception non-callable descriptions,
+receiver/argument order and the JSON projection's explicit catch remain unchanged. Interruption
+uses the same existing synchronous-frame readiness latch; no controller or retention changes.
+
 Actual Array.from, split/map/filter, casing/slice/join, Date, Math and String.arg calls are retained.
 Map/filter consume native callable values holding the original QML context; the filter's Panel is
 held with Qt's guarded-pointer mechanism, so retaining a callback does not retain the widget or a

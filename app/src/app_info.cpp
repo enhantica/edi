@@ -1172,6 +1172,8 @@ QJSValue panelUsageGlobalCall(const PanelUsageFrame& frame, const char* name, co
         call.args[i] = QJSValuePrivate::convertToReturnedValue(frame.vm(), arguments[i]);
     QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
     QV4::ScopedValue callable(scope, panelUsageResolveContext(frame, key, call.thisObject, true));
+    frame.checked();
+    if (!panelUsageReady(frame)) return {};
     QV4::ScopedValue result(scope);
     if (const auto* function = callable->as<QV4::FunctionObject>()) result = function->call(call);
     else result = frame.vm()->throwTypeError(QStringLiteral("Property '%1' of object %2 is not a function").arg(key->toQString(), call.thisObject->toQStringNoThrow()));
@@ -1193,6 +1195,8 @@ QJSValue panelUsageMemberCall(const PanelUsageFrame& frame, const QJSValue& rece
             .arg(key->toQString(), call.thisObject->toQStringNoThrow()));
     } else {
         QV4::ScopedValue callable(scope, panelUsageGet(frame, *call.thisObject, key, true));
+        frame.checked();
+        if (!panelUsageReady(frame)) return {};
         if (const auto* function = callable->as<QV4::FunctionObject>()) result = function->call(call);
         else if (const auto* handler = callable->as<QV4::QmlSignalHandler>())
             result = handler->call(call.thisObject, call.args, static_cast<int>(arguments.size()));

@@ -532,7 +532,9 @@ Saving is active:
 - **Every dialog sits on whole pixels** (`Components/AppDialog.qml`: About, Preferences, Messages and the
   save refusal; the base's project-description dialog is placed the same way where edi opens it). The base
   centres a dialog with a half, so one of odd height lay on a half pixel and its edges were drawn differently
-  on Linux and macOS (edi PR 97, the three-row Messages dialog); edi rounds the centred position.
+  on Linux and macOS (edi PR 97, the three-row Messages dialog); edi rounds the centred position. A closed dialog
+  that has no parent item yet stays at (0, 0); attaching a parent restores the same rounded
+  centring bindings. It is not opened, reparented or given a window merely to measure geometry.
 - **A click opens the Messages dialog**, the same dialog as About and Preferences (the base `Dialog`: title
   bar, padding, background without an outline, OK). **Width fixed**: 38 font units
   (`AppSizes.messagesDialogContentWidth`, about Preferences' width), whatever the messages. **Height fits the
