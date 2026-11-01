@@ -2,7 +2,9 @@
 
 import copy
 from pathlib import Path
+from types import SimpleNamespace
 
+import numpy as np
 import pytest
 
 from tests.fixtures.e04_t11_wasm import written
@@ -273,3 +275,64 @@ def test_only_the_two_declared_headerless_records_get_observer_wrapping(tmp_path
     for name in ('structures/unowned.edi', 'experiments/unowned.edi', 'other.edi'):
         with pytest.raises((RuntimeError, ValueError)):
             written.document(project, name)
+
+
+def test_native_value_iterable_collection_captures_named_banks_and_refuses_inventory_escape(
+    tmp_path,
+):
+    class ValueIterable:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def __iter__(self):
+            return iter(self.rows.values())
+
+        def keys(self):
+            return iter(self.rows.keys())
+
+        def items(self):
+            return iter(self.rows.items())
+
+    data = SimpleNamespace(
+        intensity_meas=[2.25, 4.5],
+        intensity_meas_su=[0.5, 0.75],
+        intensity_calc=[2.0, 4.0],
+        intensity_bkg=[0.25, 0.5],
+        calc_status=['incl', 'excl'],
+        axis=lambda: [10.5, 11.5],
+    )
+    rows = {'bank-a': SimpleNamespace(data=data), 'bank-b': SimpleNamespace(data=data)}
+    collection = ValueIterable(rows)
+    assert all(actual is rows[name] for actual, name in zip(collection, rows, strict=True)), (
+        'The native keyed collection iterates real fixture values, never dictionary keys'
+    )
+    assert list(collection.keys()) == ['bank-a', 'bank-b'], (
+        'Only the declared keys() protocol supplies the bank inventory'
+    )
+    banks = {'experiments/a.edi': ('bank-a', ('s',)), 'experiments/b.edi': ('bank-b', ('s',))}
+    owner = SimpleNamespace(experiments=collection)
+    captured = written.capture_arrays(owner, tmp_path, banks, 'positive.npz')
+    wanted = {name + '__' + field for name in rows for field in (*written.ARRAY_FIELDS, 'axis')}
+    assert captured.keys() == wanted, 'The complete named public array population must be captured'
+    with np.load(tmp_path / 'positive.npz', allow_pickle=False) as saved:
+        assert set(saved.files) == wanted, 'The actual NPZ must retain every named array'
+        for name in rows:
+            assert np.array_equal(
+                saved[name + '__intensity_meas'], np.array(data.intensity_meas)
+            ), 'Value iteration must not replace the measured data or its bank identity'
+            assert np.array_equal(saved[name + '__calc_status'], np.array(data.calc_status)), (
+                'The captured bank must preserve its actual inclusion/exclusion statuses'
+            )
+    for label, changed in [
+        ('missing', {'bank-a': rows['bank-a']}),
+        ('extra', {**rows, 'bank-c': SimpleNamespace(data=data)}),
+    ]:
+        owner.experiments = ValueIterable(changed)
+        target = label + '.npz'
+        with pytest.raises(
+            ValueError, match='live native arrays changed experiment bank inventory'
+        ):
+            written.capture_arrays(owner, tmp_path, banks, target)
+        assert not (tmp_path / target).exists(), (
+            'An incomplete or extra bank inventory must refuse before writing any capture'
+        )

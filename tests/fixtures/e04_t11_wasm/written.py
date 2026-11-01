@@ -513,7 +513,7 @@ def validate_arrays(reference, banks, fixture):
 
 def capture_arrays(owner, output, banks, name):
     data = {}
-    if set(owner.experiments) != {block for block, _ in banks.values()}:
+    if set(owner.experiments.keys()) != {block for block, _ in banks.values()}:
         raise ValueError('live native arrays changed experiment bank inventory')
     for bank, experiment in owner.experiments.items():
         for field in ARRAY_FIELDS:
