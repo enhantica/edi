@@ -43,6 +43,10 @@
 #include <functional>
 #include <initializer_list>
 #include <iterator>
+#include <atomic>
+#include <limits>
+#include <map>
+#include <memory>
 #include <optional>
 #include <string_view>
 
@@ -66,6 +70,7 @@
 #include <private/qv4mm_p.h>
 #include <private/qv4regexpobject_p.h>
 #include <private/qv4qmlcontext_p.h>
+#include <private/qv4persistent_p.h>
 #include <private/qv4qobjectwrapper_p.h>
 #include <private/qv4runtime_p.h>
 #include <private/qv4runtimeapi_p.h>
@@ -904,18 +909,118 @@ QJSValue panelUsageConstruct(const PanelUsageFrame& frame, const QJSValue& const
     return QJSValuePrivate::fromReturnedValue(result->asReturnedValue());
 }
 QJSValue panelUsageMemberCall(const PanelUsageFrame&, const QJSValue&, const char*, const QJSValueList&);
-// Keep context-list wrappers live: each access reads the current property at its original index.
+// Context metadata can outlive its public QObject and that QObject's property storage.
+QQmlContextPrivate* panelUsageContextStorage(const QQmlRefPointer<QQmlContextData>& source,
+    const QPointer<QQmlContext>& owner, int index) {
+    if (!owner || source->publicContext() != owner.data()
+        || QObjectPrivate::get(owner.data())->wasDeleted) return nullptr;
+    auto* storage = QQmlContextPrivate::get(owner.data());
+    return index >= 0 && index < storage->numPropertyValues() ? storage : nullptr;
+}
+struct PanelContextListSlot {
+    QQmlRefPointer<QQmlContextData> source;
+    QPointer<QQmlContext> owner;
+    QPointer<QJSEngine> engine;
+    int index = -1;
+    std::vector<QV4::WeakValue> wrappers;
+    QMetaObject::Connection ownerRetirement, engineRetirement;
+    ~PanelContextListSlot() {
+        QObject::disconnect(ownerRetirement);
+        QObject::disconnect(engineRetirement);
+    }
+};
+// Only active context/slot metadata is retained, never values or strong VM roots.
+// All operations run on the original QML engine/QQmlContext owner thread.
+thread_local std::map<quintptr, std::shared_ptr<PanelContextListSlot>> panelContextListSlots;
+std::atomic<quintptr> panelContextListNextToken{1};
+void panelUsageRetireContextList(quintptr token) {
+    const auto found = panelContextListSlots.find(token);
+    if (found == panelContextListSlots.end()) return;
+    const auto slot = std::move(found->second);
+    panelContextListSlots.erase(found); // Reentrant callbacks can no longer find this token.
+    // Qt's ordinary toVariant is weak-owner-aware; typed list-reference conversion also
+    // reads the raw property.object. Retire that pointer on every still-live wrapper.
+    for (const auto& weak : slot->wrappers) {
+        if (auto* wrapper = weak.as<QV4::QmlListWrapper>())
+            wrapper->d()->property()->object = nullptr;
+    }
+}
+QVariant panelUsageContextListValue(const QQmlListProperty<QObject>* property) {
+    const auto found = panelContextListSlots.find(quintptr(property->data));
+    if (found == panelContextListSlots.end()) return {};
+    const auto slot = found->second;
+    if (!slot->engine || property->object != slot->owner.data()) return {};
+    auto* storage = panelUsageContextStorage(slot->source, slot->owner, slot->index);
+    if (!storage) return {};
+    const auto value = storage->propertyValue(slot->index);
+    // A custom QVariant copy may reenter too; do not promote a retired owner.
+    return panelUsageContextStorage(slot->source, slot->owner, slot->index) == storage
+        ? value : QVariant();
+}
 qsizetype panelUsageContextListCount(QQmlListProperty<QObject>* property) {
-    auto* context = static_cast<QQmlContext*>(property->object);
-    const auto value = QQmlContextPrivate::get(context)->propertyValue(static_cast<int>(quintptr(property->data)));
+    const auto value = panelUsageContextListValue(property);
     return value.userType() == qMetaTypeId<QList<QObject*>>()
         ? static_cast<const QList<QObject*>*>(value.constData())->size() : 0;
 }
 QObject* panelUsageContextListAt(QQmlListProperty<QObject>* property, qsizetype index) {
-    auto* context = static_cast<QQmlContext*>(property->object);
-    const auto value = QQmlContextPrivate::get(context)->propertyValue(static_cast<int>(quintptr(property->data)));
-    return value.userType() == qMetaTypeId<QList<QObject*>>()
-        ? static_cast<const QList<QObject*>*>(value.constData())->at(index) : nullptr;
+    const auto value = panelUsageContextListValue(property);
+    if (value.userType() != qMetaTypeId<QList<QObject*>>()) return nullptr;
+    const auto* list = static_cast<const QList<QObject*>*>(value.constData());
+    return index >= 0 && index < list->size() ? list->at(index) : nullptr;
+}
+QV4::ReturnedValue panelUsageContextList(const PanelUsageFrame& frame,
+    const QQmlRefPointer<QQmlContextData>& source, const QPointer<QQmlContext>& owner, int index) {
+    auto* vm = frame.vm();
+    QV4::Scope scope(vm);
+    QV4::Scoped<QV4::QmlListWrapper> wrapper(scope);
+    // The exported Qt factory accepts a raw QObject. Defer GC only until its weak
+    // retirement bookkeeping is installed; the rooted result survives exit-time GC.
+    std::optional<QV4::GCCriticalSection<>> critical;
+    if (vm->memoryManager->gcBlocked != QV4::MemoryManager::InCriticalSection)
+        critical.emplace(vm);
+    if (!panelUsageContextStorage(source, owner, index)) return QV4::Encode::undefined();
+    quintptr token = 0;
+    std::shared_ptr<PanelContextListSlot> slot;
+    for (const auto& entry : panelContextListSlots) {
+        if (entry.second->source.data() == source.data() && entry.second->owner == owner
+            && entry.second->engine.data() == frame.data() && entry.second->index == index) {
+            token = entry.first;
+            slot = entry.second;
+            break;
+        }
+    }
+    if (!slot) {
+        token = panelContextListNextToken.load(std::memory_order_relaxed);
+        for (;;) {
+            if (!token) return vm->throwRangeError(QStringLiteral("Context list lifetime token space is exhausted"));
+            const auto next = token == std::numeric_limits<quintptr>::max() ? 0 : token + 1;
+            if (panelContextListNextToken.compare_exchange_weak(token, next, std::memory_order_relaxed)) break;
+        }
+        slot = std::make_shared<PanelContextListSlot>();
+        slot->source = source;
+        slot->owner = owner;
+        slot->engine = frame.data();
+        slot->index = index;
+        slot->ownerRetirement = QObject::connect(owner.data(), &QObject::destroyed,
+            [token] { panelUsageRetireContextList(token); });
+        slot->engineRetirement = QObject::connect(frame.data(), &QObject::destroyed,
+            [token] { panelUsageRetireContextList(token); });
+        if (!slot->ownerRetirement || !slot->engineRetirement)
+            return vm->throwError(QStringLiteral("Context list lifetime tracking could not be installed"));
+        if (!slot->engine || !panelUsageContextStorage(source, owner, index))
+            return QV4::Encode::undefined();
+        panelContextListSlots.emplace(token, slot);
+    }
+    auto& wrappers = slot->wrappers;
+    wrappers.erase(std::remove_if(wrappers.begin(), wrappers.end(),
+        [](const QV4::WeakValue& weak) { return weak.isUndefined(); }), wrappers.end());
+    QQmlListProperty<QObject> list(owner.data(), reinterpret_cast<void*>(token),
+        panelUsageContextListCount, panelUsageContextListAt);
+    wrapper = QV4::QmlListWrapper::create(vm, list, QMetaType::fromType<QQmlListProperty<QObject>>());
+    wrappers.emplace_back();
+    wrappers.back().set(vm, wrapper->asReturnedValue());
+    QV4::WriteBarrier::markCustom(vm, [&](QV4::MarkStack* stack) { wrapper->d()->mark(stack); });
+    return wrapper->asReturnedValue();
 }
 QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::String* name,
                                            QV4::Value* base, bool forCall = false) {
@@ -953,15 +1058,16 @@ QV4::ReturnedValue panelUsageResolveContext(const PanelUsageFrame& frame, QV4::S
             if (ep->propertyCapture) ep->propertyCapture->captureProperty(source->idValueBindings(index));
             return QV4::QObjectWrapper::wrap(vm, source->idValue(index));
         }
-        auto* cp = source->asQQmlContextPrivate();
+        const QPointer<QQmlContext> owner(source->publicContext());
+        auto* cp = panelUsageContextStorage(source, owner, index);
+        if (!cp) return QV4::Encode::undefined(); // The known name still shadows later scopes.
         if (ep->propertyCapture)
-            ep->propertyCapture->captureProperty(source->asQQmlContext(), -1, index + cp->notifyIndex());
-        const auto& value = cp->propertyValue(index);
-        if (value.userType() == qMetaTypeId<QList<QObject*>>()) {
-            QQmlListProperty<QObject> list(source->asQQmlContext(), reinterpret_cast<void*>(qintptr(index)),
-                panelUsageContextListCount, panelUsageContextListAt);
-            return QV4::QmlListWrapper::create(vm, list, QMetaType::fromType<QQmlListProperty<QObject>>());
-        }
+            ep->propertyCapture->captureProperty(owner.data(), -1, index + cp->notifyIndex());
+        if (panelUsageContextStorage(source, owner, index) != cp) return QV4::Encode::undefined();
+        const auto value = cp->propertyValue(index);
+        if (panelUsageContextStorage(source, owner, index) != cp) return QV4::Encode::undefined();
+        if (value.userType() == qMetaTypeId<QList<QObject*>>())
+            return panelUsageContextList(frame, source, owner, index);
         return vm->fromVariant(value);
     };
     if (context && context->imports() && (name->startsWithUpper() || context->valueTypesAreAddressable())) {
