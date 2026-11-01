@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQuick.Controls
 import QtQml.Models
 
 import EasyApplication.Gui.Style as EaStyle
@@ -234,7 +235,7 @@ EaComponents.ListView {
     function fitWholeModel() {
         if (!refitting || gone)
             return;
-        if (!visible) {
+        if (!visible || !(onScreen || count <= measuredAtOnce)) {
             refitting = false;
             unfitted = true;
             return;
@@ -251,6 +252,11 @@ EaComponents.ListView {
     function measureRows(run, from) {
         if (gone || run !== measureRun)
             return;
+        if (!visible || !(onScreen || count <= measuredAtOnce)) {
+            refitting = false;
+            unfitted = true;
+            return;
+        }
         measuringRows.model = model;
         const total = measuringRows.count;
         const started = Date.now();
@@ -290,6 +296,25 @@ EaComponents.ListView {
     onVisibleChanged: {
         if (visible && unfitted)
             refit();
+    }
+    onOnScreenChanged: {
+        if (visible && onScreen && unfitted)
+            refit();
+    }
+    // Whether the table can be seen: in no collapsed group, and on the current item of every SwipeView it is in (a page,
+    // a sidebar tab). A SwipeView keeps its other items visible and a collapsed group only clips its content. A large
+    // model waits until its table can be seen: a pattern's points kept the window busy for many seconds after a project
+    // opened. A small one is measured as soon as it is visible, as it takes little time.
+    readonly property bool onScreen: {
+        const chain = [];
+        for (let item = table; item !== null; item = item.parent) {
+            if (item["collapsed"] === true)
+                return false;
+            if (item instanceof SwipeView && !chain.includes((item as SwipeView).currentItem))
+                return false;
+            chain.push(item);
+        }
+        return true;
     }
     // Outside the window: its rows are only measured, and a row in a window costs far more to make and to drop (each
     // cell joins and leaves the window's signals, a scan of all of them).
