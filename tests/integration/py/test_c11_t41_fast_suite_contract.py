@@ -332,7 +332,7 @@ def _partition_transport(groups, omitted, *, core=False):
         }
         result = subprocess.run(
             (
-                ['/bin/bash', str(ROOT / 'tools/ci/core-tests.sh')]
+                ['/bin/bash', str(ROOT / 'tools/ci/core-tests.sh'), '--collect-only']
                 if core
                 else ['/bin/bash', str(ROOT / 'tools/ci/system-tests-part.sh'), '1', '3']
             ),
@@ -516,6 +516,7 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
             '--ignore=tests/integration/app',
             '-q',
             *ignores,
+            '--collect-only',
         ], 'The production core runner excludes exactly nightly files before PR collection'
         ignores.append('--ignore=' + LICENCE_MODULE)
         assert json.loads(result.stdout) == [
