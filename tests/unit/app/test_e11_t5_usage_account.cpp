@@ -902,80 +902,150 @@ class UsageAccountProof final : public QObject {
         UsageChecks check;
         QVariantList trace;
         try {
-            const auto install = engine_->evaluate(QStringLiteral(R"JS(
+            // Ordinary real Panel admission is retained; adversaries use the public operand domain
+            // below.
+            auto ordinaryPanel = panel(applicationInfo);
+            check.require(ordinaryPanel->property("accountPlanLabel").toString().isEmpty(),
+                          "the actual disconnected Panel keeps its ordinary empty plan label");
+            const auto phase = e11_usage_phase::phase();
+            prerequisite(phase == "native" || phase == "original",
+                         "the public operand gate has an explicit closed source phase");
+            const QString source =
+                phase == "native"
+                    ? QStringLiteral("ApplicationInfo.assistantAccountPlanLabel(unitOwner)")
+                    : QStringLiteral(
+                          "accountPlan.split(/[_ -]+/).map(word => word.length ? "
+                          "word[0].toUpperCase() + word.slice(1) : \"\").join(\" \")");
+            const auto make = engine_->evaluate(QStringLiteral(R"JS(
 (function(stage, receiver) {
-    const descriptor = Object.getOwnPropertyDescriptor(String.prototype, 'split');
-    const original = descriptor.value;
-    const proof = {splits:0, maps:0};
-    Object.defineProperty(String.prototype, 'split', {
-        configurable:descriptor.configurable, enumerable:descriptor.enumerable, writable:descriptor.writable,
+    const proof = {splits:0, maps:0, splitReceiver:true, mapReceiver:true, separator:true};
+    const plan = {};
+    Object.defineProperty(plan, 'split', {configurable:true, enumerable:true, writable:true,
         value:function(separator) {
-            if (String(this) !== '' || !(separator instanceof RegExp) || separator.source !== '[_ -]+')
-                return original.apply(this, arguments);
+            'use strict';
             ++proof.splits;
+            proof.splitReceiver = proof.splitReceiver && this === plan;
+            proof.separator = proof.separator && separator instanceof RegExp
+                && separator.source === '[_ -]+';
+            if (stage === 'ordinary') return String.prototype.split.call('plus_pro', separator);
             if (stage === 'map') return receiver;
-            return {map:function() { ++proof.maps; return receiver; }};
+            const mapped = {map:function() {
+                'use strict'; ++proof.maps;
+                proof.mapReceiver = proof.mapReceiver && this === mapped;
+                return receiver;
+            }};
+            return mapped;
         }
     });
-    proof.restore = function() { Object.defineProperty(String.prototype, 'split', descriptor); };
+    proof.plan = plan;
     return proof;
 })
 )JS"));
-            prerequisite(install.isCallable(), "same-engine split receiver control is callable");
-            for (const auto& member : {"map", "join"}) {
-                for (const auto& value : {"null", "undefined"}) {
-                    // A scope guard restores the exact prototype descriptor on all exits.
-                    // For a completed lease, restoration precedes Panel teardown.
-                    UsagePanelLease owner;
-                    auto proof = install.call({QJSValue(QString::fromLatin1(member)),
-                                               engine_->evaluate(QString::fromLatin1(value))});
-                    prerequisite(proof.isObject() && !engine_->hasError(),
-                                 "the original String split receiver fixture installs cleanly");
-                    const auto restore =
-                        qScopeGuard([&] { proof.property("restore").callWithInstance(proof); });
-                    QSignalSpy warnings(engine_, &QQmlEngine::warnings);
-                    prerequisite(warnings.isValid(), "actual binding warnings are observed");
-                    owner = panel(applicationInfo);
-                    QStringList descriptions;
-                    QVariantList locations;
-                    bool actualPanelLocations = true;
-                    for (const auto& notification : warnings)
-                        for (const auto& error : notification.at(0).value<QList<QQmlError>>()) {
-                            descriptions.append(error.description());
-                            locations.append(QVariantMap{{"url", error.url().toString()},
-                                                         {"line", error.line()},
-                                                         {"column", error.column()}});
-                            actualPanelLocations =
-                                actualPanelLocations &&
-                                error.url().fileName() == "AssistantPanel.qml" && error.line() > 0;
-                        }
-                    const QString expected =
-                        QStringLiteral("TypeError: Cannot read property '%1' of %2")
-                            .arg(QString::fromLatin1(member), QString::fromLatin1(value));
-                    trace.append(QVariantMap{{"member", QString::fromLatin1(member)},
-                                             {"receiver", QString::fromLatin1(value)},
-                                             {"descriptions", descriptions},
-                                             {"locations", locations},
-                                             {"splits", proof.property("splits").toInt()},
-                                             {"maps", proof.property("maps").toInt()}});
-                    check.require(actualPanelLocations,
-                                  "the actual original Panel binding reports its failure");
-                    check.require(
-                        proof.property("splits").toInt() == 1 &&
-                            proof.property("maps").toInt() ==
-                                (QString::fromLatin1(member) == "join" ? 1 : 0),
-                        "the actual split/map chain reaches its independently armed receiver");
-                    check.require(
-                        descriptions == QStringList{expected},
-                        "CallPropertyLookup retains the first exact read-property TypeError");
-                    check.require(!engine_->hasError(),
-                                  "the ordinary QML binding reporter consumes the reported error");
+            prerequisite(make.isCallable() && !engine_->hasError(),
+                         "test-owned public operand factory is callable in the actual engine");
+            QSignalSpy warnings(engine_, &QQmlEngine::warnings);
+            prerequisite(warnings.isValid(), "unrelated QML warnings remain observed");
+            const auto exercise = [&](const char* member, const char* receiver) {
+                auto proof = make.call({QJSValue(QString::fromLatin1(member)),
+                                        engine_->evaluate(QString::fromLatin1(receiver))});
+                const auto plan = proof.property("plan");
+                retainUsageContextAdmission(trace,
+                                            {{"stage", "public-plan-operand-admission"},
+                                             {"phase", QString::fromLatin1(phase)},
+                                             {"member", QString::fromLatin1(member)},
+                                             {"receiver", QString::fromLatin1(receiver)},
+                                             {"proof", usageValueKind(proof)},
+                                             {"plan", usageValueKind(plan)},
+                                             {"pending_engine_error", engine_->hasError()}});
+                prerequisite(
+                    proof.isObject() && !proof.isError() && !engine_->hasError() &&
+                        proof.hasOwnProperty("plan") && plan.isObject() && !plan.isError() &&
+                        !plan.isCallable() && plan.hasOwnProperty("split") &&
+                        plan.property("split").isCallable() &&
+                        proof.property("splits").isNumber() &&
+                        proof.property("splits").toInt() == 0 &&
+                        proof.property("maps").isNumber() && proof.property("maps").toInt() == 0,
+                    "own callable operand and zero live counters admit before use");
+                const QUrl location(QStringLiteral("qrc:/tests/UsagePublicPlanOperand.qml"));
+                QQmlComponent component(engine_);
+                component.setData(
+                    "import QtQml\nimport edi.app\n"
+                    "QtObject { id: operand; property var accountPlan; "
+                    "readonly property var unitOwner: operand }",
+                    location);
+                prerequisite(!component.isError(), "real public operand component imports");
+                std::unique_ptr<QObject> owner(component.createWithInitialProperties(
+                    {{"accountPlan", QVariant::fromValue(plan)}}));
+                prerequisite(
+                    owner && QQmlEngine::contextForObject(owner.get()) &&
+                        QQmlEngine::contextForObject(owner.get())->engine() == engine_ &&
+                        engine_->newQObject(owner.get()).property("unitOwner").toQObject() ==
+                            owner.get() &&
+                        engine_->newQObject(owner.get())
+                            .property("accountPlan")
+                            .strictlyEquals(plan),
+                    "actual same-engine QML owner holds the exact admitted var operand");
+                QQmlExpression expression(QQmlEngine::contextForObject(owner.get()), owner.get(),
+                                          source);
+                expression.setSourceLocation(location.toString(), 1);
+                const auto value = expression.evaluate();
+                const auto error = expression.error();
+                const bool ordinary = QByteArray(member) == "ordinary";
+                const QString expected =
+                    QStringLiteral("TypeError: Cannot read property '%1' of %2")
+                        .arg(QString::fromLatin1(member), QString::fromLatin1(receiver));
+                trace.append(
+                    QVariantMap{{"scope",
+                                 "public bridge operand / frozen original expression; not "
+                                 "readonly Panel adversary"},
+                                {"phase", QString::fromLatin1(phase)},
+                                {"member", QString::fromLatin1(member)},
+                                {"receiver", QString::fromLatin1(receiver)},
+                                {"source", source},
+                                {"value", value},
+                                {"has_error", expression.hasError()},
+                                {"description", error.description()},
+                                {"url", error.url().toString()},
+                                {"line", error.line()},
+                                {"splits", proof.property("splits").toInt()},
+                                {"maps", proof.property("maps").toInt()},
+                                {"split_receiver", proof.property("splitReceiver").toBool()},
+                                {"map_receiver", proof.property("mapReceiver").toBool()}});
+                const bool armed =
+                    proof.property("splits").toInt() == 1 &&
+                    proof.property("maps").toInt() == (QByteArray(member) == "join" ? 1 : 0) &&
+                    proof.property("splitReceiver").toBool() &&
+                    proof.property("mapReceiver").toBool() && proof.property("separator").toBool();
+                check.require(
+                    armed, "the real public expression reaches exact operand calls and receivers");
+                if (ordinary) {
+                    const bool positive = !expression.hasError() && value.toString() == "Plus Pro";
+                    check.require(positive,
+                                  "the admitted ordinary operand retains the original plan label");
+                    prerequisite(
+                        positive && armed,
+                        "null-member gates require an actual positive public invocation first");
+                } else {
+                    check.require(expression.hasError() && error.description() == expected &&
+                                      error.url() == location && error.line() > 0,
+                                  "the public member boundary retains its first exact "
+                                  "read-property TypeError");
                 }
-            }
+                check.require(!engine_->hasError(),
+                              "the actual QQmlExpression holds the reported error without a "
+                              "pending exception");
+            };
+            exercise("ordinary", "undefined");
+            for (const auto& member : {"map", "join"})
+                for (const auto& receiver : {"null", "undefined"}) exercise(member, receiver);
+            check.require(warnings.isEmpty(),
+                          "supported public operand expressions add no unrelated QML warning");
         } catch (const std::exception& error) {
             check.require(false, QString::fromUtf8(error.what()));
         }
         auto result = check.result();
+        result.insert("member_receiver_scope",
+                      "public operand boundary, not readonly actual Panel binding");
         result.insert("member_receiver_trace", trace);
         return result;
     }
