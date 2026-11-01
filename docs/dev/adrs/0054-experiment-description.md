@@ -23,7 +23,7 @@ and converts the retired tags in one place, `legacy_project_metadata`.
    retired tag warns once and is never written back. The committed records were migrated with crysta's
    `tools/dev/migrate_project_metadata.py`, its ledger in `tests/fixtures/metadata_migration.tsv`.
 3. **Python.** `ExperimentType.dimensionality` and `.polarisation`, and the instrument's `name` and `facility`, read the
-   effective values and set a declared one (deviation D90).
+   effective values and set a declared one (deviation D92).
 4. **The app.** The experiment-type group shows the dimensionality and the polarisation, each with its one admitted
    value. The instrument group starts with two selectors, Facility and Instrument, each listing "Not specified" first,
    then the facilities of edi's and diffraction-lib's examples and a Laboratory entry, and the instruments of the chosen

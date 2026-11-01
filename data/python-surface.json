@@ -1189,7 +1189,7 @@
     "facility": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1198,7 +1198,7 @@
     "name": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1283,7 +1283,7 @@
     "facility": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1292,7 +1292,7 @@
     "name": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1339,7 +1339,7 @@
     "facility": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1348,7 +1348,7 @@
     "name": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1404,7 +1404,7 @@
     "facility": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -1413,7 +1413,7 @@
     "name": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2278,7 +2278,7 @@
     "dimensionality": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2287,7 +2287,7 @@
     "polarisation": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2764,7 +2764,7 @@
     "facility": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -2773,7 +2773,7 @@
     "name": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5687,7 +5687,7 @@
     "facility": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
@@ -5696,7 +5696,7 @@
     "name": {
      "need": {
       "by": "deviation",
-      "ref": "D90",
+      "ref": "D92",
       "verdict": "keep"
      },
      "reason": "C",
