@@ -14,9 +14,11 @@ on:
   push:
     branches: [main]
   # Every night the declared group runs on main on both platforms, with the nightly-only group's files that
-  # pull requests and main pushes leave out (tests/test-groups.json).
+  # pull requests and main pushes leave out (tests/test-groups.json). The Sunday run also takes the
+  # weekly-only group, the CIF import matrix, which alone adds about two hours to the core job.
   schedule:
     - cron: '45 1 * * *'
+    - cron: '15 2 * * 0'
   pull_request:
     types: [ready_for_review]
   workflow_dispatch:
@@ -269,6 +271,7 @@ jobs:
           # Name every test over a second, so a slow one shows in the log.
           PYTEST_ADDOPTS: --durations=0 --durations-min=1
           EDI_RUN_NIGHTLY_ONLY: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.core_only != true) }}
+          EDI_RUN_WEEKLY_ONLY: ${{ github.event.schedule == '15 2 * * 0' }}
       # It takes about 8 minutes, so it runs on main pushes, the nightly and manual runs, not on pull requests.
       - name: The two-thread witness (ThreadSanitizer)
         if: matrix.platform == 'Linux' && github.event_name != 'pull_request'

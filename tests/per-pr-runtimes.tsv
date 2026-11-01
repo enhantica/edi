@@ -2,7 +2,7 @@
 # per-tier bounds and the committed breach RATCHET
 # (tests/threshold-breaches.md). It selects NOTHING: the retired `heavy` split is
 # gone and test selection lives in the three named groups (tests/test-groups.json),
-# PR coverage excludes declared nightly-only files; their banked rows are retained.
+# PR coverage leaves out the nightly-only and weekly-only files; their rows are kept.
 # Rows are BANKED: an unchanged collection is never
 # re-measured; `pixi run per-pr-measure` measures ONLY the added nodes, once, and a
 # named node on request. No expiry, no budget. Seconds are setup+call+teardown, serial.
@@ -31,7 +31,7 @@
 # inventory_cpp = 396
 # inventory_measured = 165953
 # inventory_unmeasured = 43392
-# Inventory totals retain nightly rows; PR-required Python inventory follows.
+# Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.
 # inventory_pr_python = 65547
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
