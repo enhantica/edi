@@ -198,11 +198,10 @@ TestCase {
                 tryVerify(() => table.height > heights[heights.length - 1], 2000, "The taller window lays out its larger Analysis table before inspection");
             table.positionViewAtBeginning();
             table.forceLayout();
-            const fitting = named(Ui.page(appWindow), "group.fitting");
             const group = named(Ui.page(appWindow), "group.parameters");
             const sidebar = group.parent;
             tryVerify(() => Math.abs(group.height - (group.titleArea.height + group.spacing + group.contentHeight + group.bottomPadding)) < 0.01, 2000, "The Analysis group finishes resizing before its ancestor clip is inspected");
-            const bottom = fitting.mapToItem(sidebar, 0, fitting.height).y;
+            const bottom = group.mapToItem(sidebar, 0, group.height).y;
             verify(Math.abs(sidebar.height - bottom) <= Style.Sizes.tableRowHeight + Style.Sizes.fontPixelSize * 2, "The Analysis controls fill the actual available sidebar height to within one row");
             const first = table.itemAtIndex(0);
             verify(first !== null, "The Analysis table has a rendered first row");
