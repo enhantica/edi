@@ -295,6 +295,8 @@ class ExperimentViewModel : public QObject {
         return axis == edi::PatternAxis::DSpacing && d_source_ ? *d_source_ : pattern_source_;
     }
     void capturePattern();
+    // The sidebar's categories as the experiment holds them now (edi::experiment_categories).
+    void syncCategories();
     // A running fit's pattern at one iteration: shown until the fit ends and the pattern is captured
     // again. A scan dataset's view brings its d-spacing capture too; a fit's frame does not, and the chart on d
     // keeps the last one until the fit's result is captured.
@@ -340,6 +342,10 @@ class ExperimentViewModel : public QObject {
     QString lastError() const { return last_error_; }
 
     const edi::ExperimentBase* experiment() const { return &experiment_; }
+    // Whether the experiment still has the type this model was made for. Its options and families follow the type,
+    // so an experiment whose type a text apply changed gets a new model, as one retyped on its page gets a new
+    // experiment.
+    bool madeForType() const;
     void sync();
     // The estimate settings and what they derive, re-read: after an edit (sync) and after a calculation, which
     // changes the calculated pattern use_model reads.
@@ -399,6 +405,7 @@ class ExperimentViewModel : public QObject {
 
     edi::Project& project_;
     edi::ExperimentBase& experiment_;
+    const edi::ExperimentType made_for_;
     QSet<const QObject*> shown_charts_;
     QSet<const QObject*> d_charts_;
     std::uint64_t pattern_generation_ = 0;

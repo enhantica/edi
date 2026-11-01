@@ -2101,6 +2101,27 @@
       ]
     },
     {
+      "name": "_structure_view",
+      "form": "aggregate",
+      "columns": [
+        {
+          "member": "Structure::view",
+          "type": "detail::Written<std::map<std::string, std::string>>",
+          "items": [
+            "adp_probability",
+            "atom_scale",
+            "atom_view",
+            "atoms",
+            "axes",
+            "bonds",
+            "cell",
+            "colour_scheme",
+            "labels"
+          ]
+        }
+      ]
+    },
+    {
       "name": "carried_refln",
       "form": "aggregate",
       "columns": [
@@ -3324,6 +3345,11 @@
       "member": "Structure::scattering_lengths_fm",
       "type": "detail::Written<std::map<std::string, double>>",
       "category": "_scattering_length"
+    },
+    {
+      "member": "Structure::view",
+      "type": "detail::Written<std::map<std::string, std::string>>",
+      "category": "_structure_view"
     },
     {
       "member": "Structure::epoch",
@@ -5385,6 +5411,9 @@
     ],
     "_space_group": [
       "_space_group"
+    ],
+    "_structure_view": [
+      "_structure_view"
     ],
     "_su_format": [
       "_su_format"

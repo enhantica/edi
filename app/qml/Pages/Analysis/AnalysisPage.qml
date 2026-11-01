@@ -23,6 +23,8 @@ WorkflowPage {
     // there is no Map.
     readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
     readonly property bool scanMode: project !== null && project.fit.scanMode
+    // Some experiment holds measured data: without any there is nothing to fit, and what only a fit uses is hidden.
+    readonly property bool measured: project !== null && project.fit.measured
     // Leaving the scan modes hides Evolution: a page showing it goes back to the pattern.
     onScanModeChanged: {
         if (!scanMode)
@@ -55,6 +57,7 @@ WorkflowPage {
         IconTabButton {
             objectName: "mainArea.analysis.tab.correlations"
             text: qsTr("Correlations")
+            enabled: page.measured
         },
         // A fitted parameter across a scan's datasets (edi ADR-0017 §19). Shown only in the sequential and
         // independent fitting modes, and enabled in a scan project (edi ADR-0046).
@@ -146,8 +149,10 @@ WorkflowPage {
             Repeater {
                 model: page.analysis ? page.analysis.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.analysis ? page.analysis.text : null
                     shownTier: "Extras"
                     contents: page.contents
+                    measured: page.measured
                 }
             }
         }
@@ -159,7 +164,9 @@ WorkflowPage {
             ShownParametersGroup {
                 project: page.project
             }
-            PatternUpdatesGroup {}
+            PatternUpdatesGroup {
+                visible: page.measured
+            }
         }
     }
     textItem: Component {

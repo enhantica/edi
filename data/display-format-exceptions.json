@@ -214,6 +214,16 @@
    "file": "lib/edi/verification.py",
    "match": "metrics.correlation:.9f",
    "reason": "the verification report correlation against a reference engine, not a value of an item"
+  },
+  {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(options_.atom_scale, 'g', 6)",
+   "reason": "the `_structure_view.atom_scale` value a save writes, not a displayed value"
+  },
+  {
+   "file": "app/src/structure_view_options.cpp",
+   "match": "QString::number(options_.adp_probability, 'g', 6)",
+   "reason": "the `_structure_view.adp_probability` value a save writes, not a displayed value"
   }
  ],
  "names": [
@@ -396,6 +406,16 @@
    "file": "app/qml/Pages/Report/ReportTable.qml",
    "literal": ".",
    "reason": "the decimal point of a number aligned on its point, not the inapplicable polarisation token"
+  },
+  {
+   "file": "app/qml/Components/AppPreferencesDialog.qml",
+   "literal": "Appearance",
+   "reason": "the preferences page of the app's look, not the structure view category"
+  },
+  {
+   "file": "app/qml/Pages/Analysis/RefinementGroup.qml",
+   "literal": "all",
+   "reason": "the empty threshold's placeholder: every reflection is used, not the atoms option"
   }
  ]
 }

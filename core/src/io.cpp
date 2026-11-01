@@ -12,6 +12,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/fittability.hpp"
 #include "edi/validation.hpp"
 
@@ -986,6 +987,18 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         }
         structure.scattering_lengths_fm = std::move(declared);
     }
+    // How the Structure view shows it, as saved: each value one its dictionary entry admits, as crysta reads it.
+    std::map<std::string, std::string> view;
+    for (const auto& [tag, value] : block.items) {
+        if (tag.starts_with("_structure_view.")) {
+            const std::string item = tag.substr(std::string_view("_structure_view.").size());
+            if (const std::string why = detail::structure_view_refusal(item, value); !why.empty()) {
+                fail_schema(where, "invalid-structure-view", why);
+            }
+            view[item] = value;
+        }
+    }
+    structure.view = std::move(view);
     return structure;
 }
 
@@ -3294,7 +3307,11 @@ std::vector<std::string> registered_peak_types() {
 // `whole` holds the loader's rules for a project as a whole: one structure or more, one experiment or more, each
 // declaring what it computes over and linking structures the project holds. A save's readback lifts them, since a save
 // writes a project still being built too, and its values must still be adopted (edi ADR-0052).
-static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true) {
+std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
+
+// `data_root`, when given, is where a scan's data files are, for a project read from a scratch save of one.
+static Project load_project_folder(const std::string& directory, const WarningSink& on_warning, bool whole = true,
+                                   const std::string& data_root = {}) {
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
         if (on_warning) {
@@ -4013,6 +4030,31 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                         throw IoError("project.edi declares " + tag +
                                       " more than once: " + record_where);
                     }
+                    // A long description is a semicolon text field after its tag, as crysta writes it (crysta's
+                    // ADR on display metadata, item 12): a line break inside a paragraph is a space, and an empty
+                    // line a paragraph break.
+                    if (line.find_first_not_of(" \t\r", tag.size()) == std::string::npos) {
+                        std::string opening;
+                        if (std::getline(record_lines, opening) && opening.starts_with(';')) {
+                            std::vector<std::string> field;
+                            field.push_back(opening.substr(1));
+                            bool closed = false;
+                            for (std::string next; std::getline(record_lines, next);) {
+                                if (next.starts_with(';')) {
+                                    closed = true;
+                                    break;
+                                }
+                                field.push_back(next);
+                            }
+                            if (!closed) {
+                                throw IoError("project.edi " + tag + " has an unterminated text field: " +
+                                              record_where);
+                            }
+                            restored.emplace(tag, text_field_paragraphs(field));
+                            break;
+                        }
+                        throw IoError("project.edi " + tag + " has no value: " + record_where);
+                    }
                     restored.emplace(tag, lexical_value(line, tag.size(), tag));
                     break;
                 }
@@ -4152,6 +4194,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
 
     project.path = directory;
     project.metadata.path = directory;
+    project.scan_data_root = data_root;
     // A declared template dataset must be one of the scan's files.
     if (!project.sequential_fit.template_file.empty()) {
         check_scan_template_file(project, project.sequential_fit.template_file);
@@ -4182,6 +4225,28 @@ static Project load_project_folder(const std::string& directory, const WarningSi
         warn("crysta.domain.unfittable_free_ignored: " + note);
     }
     return project;
+}
+
+// A semicolon text field's lines as one text: a line break inside a paragraph is a space, an empty line a
+// paragraph break (crysta's ADR on display metadata, item 12).
+std::string text_field_paragraphs(const std::vector<std::string>& lines) {
+    std::string text;
+    std::size_t breaks = 0;
+    for (std::string line : lines) {
+        while (!line.empty() && (line.back() == '\r' || line.back() == ' ' || line.back() == '\t')) {
+            line.pop_back();
+        }
+        if (line.empty()) {
+            breaks += text.empty() ? 0 : 1;
+            continue;
+        }
+        if (!text.empty()) {
+            text += breaks > 0 ? std::string(breaks, '\n') : std::string(" ");
+        }
+        breaks = 0;
+        text += line;
+    }
+    return text;
 }
 
 Project load_project(const std::string& path, const WarningSink& on_warning) {
@@ -4776,7 +4841,11 @@ namespace {
 // A save of the project into a fresh scratch directory, removed when this object goes.
 class ScratchSave {
    public:
-    explicit ScratchSave(const Project& project) {
+    // A read of the scratch save is as complete as the project (one still being built has no structure or experiment
+    // yet), and a scan's data files are read where the project's are.
+    explicit ScratchSave(const Project& project)
+        : whole_(!project.structures.empty() && !project.experiments.empty()),
+          data_root_(project.scan_data_root.empty() ? project.path : project.scan_data_root) {
         std::random_device random;
         for (int attempt = 0; root_.empty(); ++attempt) {
             const fs::path candidate =
@@ -4796,10 +4865,17 @@ class ScratchSave {
             std::error_code absent;
             fs::copy_file(fs::path(project.path) / "project.edi", source / "project.edi", absent);
         }
-        Project unseeded = project;
-        unseeded.path = source.string();
-        unseeded.scan_data_root.clear();
-        save_project(unseeded, (root_ / "project").string());
+        // The project itself, not a copy: a copy is never calculated, so its computed columns and categories would
+        // be left out of the texts. Its files come from the source folder, with no scan data, through the writer a
+        // save delegates to (save_project).
+        const std::string from = source.string();
+        try {
+            save_project_via_crysta(project, (root_ / "project").string(), &from);
+        } catch (const IoError&) {
+            throw;
+        } catch (const std::exception& error) {
+            throw IoError(error.what());
+        }
     }
     ~ScratchSave() {
         std::error_code ignored;
@@ -4814,7 +4890,37 @@ class ScratchSave {
         return fs::is_regular_file(path) ? read_file(path.string()) : std::string();
     }
 
+    // The saved project with the file at `relative` holding `text`, read back as an open reads it. The
+    // report's settings file may be one the save did not write, as the project stated none yet.
+    Project load_with(const std::string& relative, const std::string& text, const WarningSink& on_warning) const {
+        const fs::path path = root_ / "project" / relative;
+        fs::create_directories(path.parent_path());
+        detail::replace_file((root_ / "project").string(), path.string(), text);
+        // A refusal or a warning names the project's own file, never the scratch folder.
+        const std::string folder = (root_ / "project").string() + "/";
+        const auto local = [&folder](std::string message) {
+            for (std::size_t at = message.find(folder); at != std::string::npos; at = message.find(folder, at)) {
+                message.erase(at, folder.size());
+            }
+            return message;
+        };
+        try {
+            return load_project_folder(
+                (root_ / "project").string(),
+                [&on_warning, &local](const std::string& warning) {
+                    if (on_warning) {
+                        on_warning(local(warning));
+                    }
+                },
+                whole_, data_root_);
+        } catch (const std::exception& refusal) {
+            throw IoError(local(refusal.what()));
+        }
+    }
+
    private:
+    bool whole_;
+    std::string data_root_;
     fs::path root_;
 };
 
@@ -4837,6 +4943,53 @@ std::vector<std::string> saved_file_order(const Project& project) {
 
 }  // namespace
 
+namespace {
+// Every item `text` gives, scalar items and loop columns, as the reader's tokenizer finds them (several on a line, a loop
+// header anywhere), each by its current name in lower case and as often as it is given.
+std::vector<std::string> given_item_names(const std::string& text, bool every_name) {
+    std::vector<std::string> names;
+    for (const Token& token : tokenize(text, "text")) {
+        if (is_tag(token)) {
+            std::string name = detail::current_edi_name(token.text, every_name);
+            std::ranges::transform(name, name.begin(),
+                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            names.push_back(std::move(name));
+        }
+    }
+    return names;
+}
+}  // namespace
+
+UnappliedItems unapplied_items(const Project& read, const std::string& relative, const std::string& text,
+                               const std::string& current) {
+    const bool block = relative.starts_with("structures/") || relative.starts_with("experiments/");
+    const std::string written =
+        relative == "reports/report.edi" ? report_settings_text(read) : ScratchSave(read).text(relative);
+    const std::vector<std::string> kept = given_item_names(written, block);
+    const std::vector<std::string> held = given_item_names(current, block);
+    const auto among = [](const std::vector<std::string>& names, const std::string& name) {
+        return std::ranges::find(names, name) != names.end();
+    };
+    UnappliedItems refused;
+    std::set<std::string> seen;
+    for (const std::string& name : given_item_names(text, block)) {
+        // The header's version is the one item a text may repeat, as the reader allows.
+        if (!seen.insert(name).second) {
+            if (name != "_edi.schema_version" && !among(refused.repeated, name)) {
+                refused.repeated.push_back(name);
+            }
+            continue;
+        }
+        // An output the file holds now is kept as it is, though a read nobody calculated writes none; any other item
+        // must be one the read writes back.
+        const bool output = category_is_output(name.substr(1, name.find('.') - 1));
+        if (!among(kept, name) && !(output && among(held, name))) {
+            refused.unknown.push_back(name);
+        }
+    }
+    return refused;
+}
+
 std::string block_edi_text(const Project& project, BlockKind kind, const std::string& name) {
     const ScratchSave save(project);
     switch (kind) {
@@ -4846,6 +4999,29 @@ std::string block_edi_text(const Project& project, BlockKind kind, const std::st
         case BlockKind::ANALYSIS: break;
     }
     return save.text("analysis/analysis.edi");
+}
+
+Project project_with_file_text(const Project& project, const std::string& relative, const std::string& text,
+                               const WarningSink& on_warning) {
+    const std::vector<std::string> files = saved_file_order(project);
+    if (std::find(files.begin(), files.end(), relative) == files.end()) {
+        throw IoError("the project has no file " + relative);
+    }
+    const ScratchSave save(project);
+    Project read = save.load_with(relative, text, on_warning);
+    // The copy lives where the project does, so a later save writes back to it, and keeps what the scratch save
+    // stamped: the project's record is the project's unless the edit is of it, and its times always are.
+    read.path = project.path;
+    read.scan_data_root = project.scan_data_root;
+    if (relative != "project.edi") {
+        read.metadata = project.metadata;
+    } else {
+        read.metadata.path = project.metadata.path;
+        read.metadata.created = project.metadata.created;
+        read.metadata.last_modified = project.metadata.last_modified;
+        read.metadata.timestamp = project.metadata.timestamp;
+    }
+    return read;
 }
 
 std::vector<std::pair<std::string, std::string>> project_edi_files(const Project& project) {

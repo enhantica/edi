@@ -2905,6 +2905,9 @@ struct Structure : std::enable_shared_from_this<Structure> {
     // default table (load_neutron_scattering); a non-empty map overrides it (isotopes / custom lengths).
     // A loop category held in one cell; written whole or with `modify`.
     detail::Written<std::map<std::string, double>> scattering_lengths_fm;
+    // How the Structure view shows this structure (`_structure_view`, by item name: atom_view, atom_scale, ...),
+    // saved with it; empty: the view's defaults. No calculation reads it. Written whole.
+    detail::Written<std::map<std::string, std::string>> view;
 
     // The cell's parameters, then every site's, in collection order.
     std::vector<Parameter*> parameters();
@@ -2945,6 +2948,7 @@ inline Structure::Structure(const Structure& other)
       atom_sites(other.atom_sites),
       atom_site_aniso(other.atom_site_aniso),
       scattering_lengths_fm(other.scattering_lengths_fm),
+      view(other.view),
       epoch(other.epoch),
       geom(other.geom),
       geometry(other.geometry),
@@ -5550,6 +5554,14 @@ struct ScatteringLengthCategory {
     static constexpr std::array items{"type_symbol length_fm"};
 };
 static_assert(detail::one_entry_per_column(ScatteringLengthCategory::columns, ScatteringLengthCategory::items));
+
+// How the Structure view shows a structure: its `_structure_view` items by name, in one cell.
+struct StructureViewCategory {
+    static constexpr const char* name = "_structure_view";
+    static constexpr auto columns = std::tuple{&Structure::view};
+    static constexpr std::array items{"adp_probability atom_scale atom_view atoms axes bonds cell colour_scheme labels"};
+};
+static_assert(detail::one_entry_per_column(StructureViewCategory::columns, StructureViewCategory::items));
 
 // An imported file's own `_refln` loop, kept as read: the item names, and each row's cells as
 // written. It is written back until a calculation publishes the computed `_refln` (ReflnCategory).

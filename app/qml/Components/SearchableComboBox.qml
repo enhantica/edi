@@ -40,6 +40,18 @@ EaElements.ComboBox {
         else
             list.positionViewAtIndex(Math.max(0, control.currentIndex), ListView.Contain);
     }
+    // In a table, as wide as its widest option (or what it shows), a small gap and the arrow, the arrow right after
+    // the text (the owner, 2026-10-27); a wider column keeps the space after it.
+    readonly property real fittedWidth: {
+        let widest = optionMetrics.advanceWidth(displayText);
+        for (let index = 0; index < count; ++index)
+            widest = Math.max(widest, optionMetrics.advanceWidth(textAt(index)));
+        // What the shown content draws besides its text: the label's padding, or an icon before the text.
+        const label = contentItemLabel ? contentItemLabel.leftPadding + contentItemLabel.rightPadding : 0;
+        const besides = contentItem ? contentItem.implicitWidth - optionMetrics.advanceWidth(displayText) : label;
+        // A small gap keeps the text off the arrow.
+        return Math.ceil(widest + Math.max(label, besides) + font.pixelSize * 0.5) + leftPadding + rightPadding;
+    }
     readonly property real optionWidth: {
         let widest = 0;
         for (let index = 0; index < count; ++index)
@@ -195,8 +207,22 @@ EaElements.ComboBox {
     }
 
     Component.onCompleted: {
-        if (control.contentItemLabel)
+        if (control.contentItemLabel) {
             control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
+            // In a table the shown value starts where its column's header does (the owner, 2026-10-24); the list keeps
+            // its own padding.
+            if (control.inTable) {
+                control.contentItemLabel.leftPadding = 0;
+                control.contentItemLabel.rightPadding = 0;
+            }
+        }
+        // In a table the value starts at the box's left edge, where its cell puts its header's text, and the arrow sits
+        // in the padding kept for it: the base draws it over the end of the text's room (the owner, 2026-10-27).
+        if (control.inTable) {
+            control.leftPadding = 0;
+            if (control.indicator)
+                control.indicator.x = Qt.binding(() => control.width - control.indicator.width - control.padding);
+        }
         control.popup.contentItem.header = searchHeader;
         // The list holds its entries only while it shows: a closed one sized to the window kept a screenful of
         // entries, and every change of the model's rows (a scan's Reset relabels all its datasets) laid them out again.

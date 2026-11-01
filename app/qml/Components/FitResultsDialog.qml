@@ -148,7 +148,7 @@ AppDialog {
             selectable: false
             sourceModel: dialog.results
 
-            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, dialog.metricColumnWidth, dialog.valueColumnWidth]
+            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, dialog.metricColumnWidth, dialog.valueColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -235,7 +235,7 @@ AppDialog {
             sourceModel: dialog.agreement
 
             // The icon, the dataset, then one real column per factor.
-            columnWidths: [AppSizes.iconOnlyColumnWidth, -1].concat(dialog.factorColumns.map(() => dialog.factorWidth))
+            columns: [AppSizes.iconOnlyColumnWidth, -1].concat(dialog.factorColumns.map(() => dialog.factorWidth))
 
             header: EaComponents.ListViewHeader {
                 height: (dialog.structureHeaders ? 2 : 1) * EaStyle.Sizes.tableRowHeight

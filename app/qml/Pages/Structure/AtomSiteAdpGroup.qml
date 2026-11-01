@@ -59,7 +59,9 @@ Column {
             }
             return Math.ceil(widest) + AppSizes.fieldSpacing * 2;
         }
-        columnWidths: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), group.typeWidth, isoWidth, -1, -1, -1, -1, -1, -1]
+        // Equal-width numeric columns, the one exception to the table rule (the owner, 2026-10-24).
+        equalColumns: true
+        columns: [numberColumnWidth, textColumnWidth("label", Session.label("atom_site.id")), Math.max(group.typeWidth, (fittedWidths[2] ?? 0) + autoColumnPadding / 2), isoWidth, -1, -1, -1, -1, -1, -1]
 
         header: EaComponents.ListViewHeader {
             EaComponents.ListViewLabel {
@@ -130,13 +132,9 @@ Column {
                 readOnly: true
                 value: row.label
             }
-            Item {
-                property int horizontalAlignment: Text.AlignHCenter
-                height: parent.height
+            ComboCell {
                 SearchableComboBox {
-                    width: Math.min(parent.width, implicitWidth)
-                    x: parent.horizontalAlignment === Text.AlignRight ? parent.width - width : parent.horizontalAlignment === Text.AlignLeft ? 0 : (parent.width - width) / 2
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignLeft
                     objectName: `atomSiteAdp.type.${row.index}`
                     inTable: true
                     anchors.verticalCenter: parent.verticalCenter
@@ -154,13 +152,13 @@ Column {
                 }
             }
             // The isotropic value in the site's type; an anisotropic site's equivalent value, which follows its
-            // tensor, is shown disabled.
+            // tensor, and a value a constraint sets are shown disabled.
             ParameterCell {
                 columnAlignment: Text.AlignHCenter
                 significantDigits: 5
                 objectName: `atomSiteAdp.iso.${row.index}`
                 item: row.adpIso
-                enabled: !row.anisotropic
+                enabled: !row.anisotropic && refinable
                 ToolTip.text: row.adpIso ? (row.anisotropic ? qsTr("Equivalent isotropic displacement %1, %2 (%3)") : qsTr("Isotropic displacement %1, %2 (%3)")).arg(row.adpIso.shortName).arg(row.adpIso.displayUnits).arg("_atom_site.adp_iso") : ""
                 // Help, hidden while the cell shows why its value is red.
                 helpToolTip: true

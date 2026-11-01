@@ -30,6 +30,14 @@ std::string wavelength_domain_message(double wavelength);
 // structure or experiment block) any name an item lists, `.edi` or CIF, in either notation; else `tag` itself.
 std::string current_edi_name(const std::string& tag, bool every_name);
 
+// Why `value` cannot be the `_structure_view` item `item` by crysta's dictionary (its tokens, a flag, a number in the
+// range the view draws), or empty when it can.
+std::string structure_view_refusal(const std::string& item, const std::string& value);
+
+// Replaces `file`, inside the folder `root`, with `text`, whole or not at all, by crysta's writer (its
+// output::replace_file); throws std::invalid_argument when it cannot write.
+void replace_file(const std::string& root, const std::string& file, const std::string& text);
+
 // The one-row category (`_peak`, `_cell`) whose item `tag` names by crysta's dictionary, by any of its names; empty for
 // an item of a loop category or a name no item lists. Such an item written as a loop column is refused.
 std::string one_row_category(const std::string& tag);

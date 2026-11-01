@@ -12,6 +12,7 @@
 // So is a field a declared constraint sets (ADR-0024), from the dependence crysta marks it with.
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <map>
 #include <string>
@@ -184,6 +185,33 @@ inline Category absorption_category(ExperimentBase& experiment) {
     return category;
 }
 
+namespace detail {
+// Whether a save writes an experiment's calculation, as crysta's writer decides it (writes_computed): its calculation
+// current, with a value for every reflection of a single crystal and no infinite value anywhere. A powder whose
+// calculation range is declared (`_data_range`) is written as that declaration, without the calculation.
+inline bool writes_calculation(const ExperimentBase& experiment) {
+    const auto infinite = [](const auto& column) {
+        return std::any_of(column.begin(), column.end(), [](double value) { return std::isinf(value); });
+    };
+    if (experiment.reflections.has_value()) {
+        const ReflnDataBase& reflections = *experiment.reflections;
+        return !reflections.intensity_calc.empty() && reflections.intensity_calc.size() == reflections.size() &&
+               experiment.computed_current() && !infinite(reflections.intensity_calc) &&
+               !infinite(reflections.d_spacing) && !infinite(reflections.sin_theta_over_lambda);
+    }
+    if (!experiment.data.has_value() || experiment.data->intensity_calc.empty() || experiment.calculation_only ||
+        !experiment.computed_current()) {
+        return false;
+    }
+    const PdDataBase& data = *experiment.data;
+    const PowderReflnDataBase& refln = experiment.refln;
+    return !infinite(data.d_spacing) && !infinite(data.intensity_calc) && !infinite(data.intensity_bkg) &&
+           !infinite(data.component_intensities_net) && !infinite(data.residual) && !infinite(refln.d_spacing) &&
+           !infinite(refln.sin_theta_over_lambda) && !infinite(refln.f_calc) && !infinite(refln.f_squared_calc) &&
+           !infinite(refln.position);
+}
+}  // namespace detail
+
 // An experiment's categories in page order (§2b (iii)); `every_carried` as for peak_category.
 inline std::vector<Category> experiment_categories(ExperimentBase& experiment, bool every_carried = false) {
     const bool constant_wavelength = experiment.effective_beam_mode() == BeamModeEnum::CONSTANT_WAVELENGTH;
@@ -260,8 +288,12 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment, b
         categories.push_back(texture);
     }
     categories.push_back({"scattering_source"});
-    // The file's reflections, read-only: shown when the file carried them.
-    if (experiment.carried_reflections.has_value()) {
+    // The file's reflections, read-only: the calculation's while a save writes it, else those the file carried.
+    if (detail::writes_calculation(experiment)) {
+        if (experiment.refln.size() > 0) {
+            categories.push_back({"refln", true, experiment.refln.size()});
+        }
+    } else if (experiment.carried_reflections.has_value()) {
         categories.push_back({"refln", true, experiment.carried_reflections->rows.size()});
     }
     detail::mark_dependents(categories);
@@ -372,6 +404,41 @@ inline std::vector<Category> analysis_categories(const Project& project) {
 
 // The project block's one category.
 inline std::vector<Category> project_categories(const Project&) { return {{"metadata"}}; }
+
+// The categories a block's file holds only while its calculation is current, with their rows, by the rule the save
+// follows (the adapter's save_project): a structure's when its geometry is current, an experiment's when its
+// calculation is. A save writes them after calculating; these are read from the model, so a list of the file's
+// categories needs no save. Empty while nothing is current.
+inline std::vector<Category> calculated_categories(const Structure& structure) {
+    if (!structure.geometry_current()) {
+        return {};
+    }
+    // The writer writes the symmetry operators and the expanded sites always, a structure without sites with no rows,
+    // and the bonds only when there is one in the cutoffs (crysta's write_geometry).
+    const StructureGeometry& geometry = structure.geometry;
+    std::vector<Category> categories{{"atom_sites_cartn_transform"},
+                                     {"space_group_symop", true, geometry.space_group_symop.size()},
+                                     {"expanded_atom_site", true, geometry.expanded_atom_sites.size()}};
+    if (geometry.geom_bond.size() > 0) {
+        categories.push_back({"geom_bond", true, geometry.geom_bond.size()});
+    }
+    return categories;
+}
+
+inline std::vector<Category> calculated_categories(const ExperimentBase& experiment) {
+    if (!detail::writes_calculation(experiment)) {
+        return {};
+    }
+    if (experiment.reflections.has_value()) {  // the single crystal's agreement and its observed-reflection counts
+        return {{"refine_ls"}, {"reflns"}};
+    }
+    // A powder's reflections are its designed group's (experiment_categories). Each structure's curve is written with
+    // two structures or more: a single one's is the calculated pattern less the background, already in the file.
+    if (experiment.data->component_order.size() >= 2) {
+        return {{"pd_calc", true, experiment.data->intensity_calc.size()}, {"pd_calc_overall"}};
+    }
+    return {};
+}
 
 }  // namespace edi
 

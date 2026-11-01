@@ -66,7 +66,7 @@ EaElements.GroupBox {
             maxRowCountShow: 6
             defaultInfoText: qsTr("No matching examples")
             sourceModel: Session.examples
-            columnWidths: [numberColumnWidth, -1]
+            columns: [numberColumnWidth, -1]
             header: EaComponents.ListViewHeader {
                 visible: false
                 implicitHeight: 0
