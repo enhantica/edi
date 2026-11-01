@@ -5013,3 +5013,47 @@ clears the resuming owner, and sign-out, account/project retirement, Clear, arch
 or different-thread selection invalidate their original owners. Cold login,
 unknown/different account or stale scope cannot use retained rows as display
 proof. Browser/unmanaged paths keep the original connected-only availability.
+
+
+### Scientific stage acceptance is distinct from flag setup
+
+FIRST is the existing shared delegated refinement developerInstructions in
+AssistantViewModel::State::generic_start_thread, refinement-strategy's implicated
+group/accepted-work loop, assistant_native_tools run_fit/set_free descriptions,
+and widget_free_group_range/matches plus the ordinary ParameterFilterModel Free
+menu. These owners already distinguish one new unvalidated group from retained
+accepted work and route an exact whole eligible uniform category through its
+original bulk control. No alternate stage controller or optimizer is introduced.
+
+The guidance now makes acceptance explicit at the existing run_fit boundary:
+reconcile the complete actual free population before fitting. Native eligibility,
+default free flags, earlier setup and a successful edit do not scientifically
+accept a group. A single batch or several edits before the first fit do not merge
+distinct new categories into one assessment. New background and profile blocks,
+and new coordinates and ADPs, are introduced separately; other unvalidated
+categories stay fixed until the current assessment. Earlier accepted useful
+eligible groups remain cumulative. A failed new block is diagnosed/repaired
+without discarding accepted stages or adding unrelated categories. Explicit user
+combined groups/subsets/order and native automatic-background ownership retain
+priority. Evidence-justified within-profile groups and simultaneous X/Y remain
+available; there is no universal category order, fixed stage count or all-free
+background requirement.
+
+This is app-owned delivered guidance, not a native scientific-acceptance detector
+or hard free-category veto. Normal native edits still preserve explicit arrays,
+atomic/partial receipts, native eligibility and original Undo/currentness. The
+bulk matcher is unchanged: exact current displayed eligible membership plus one
+uniform flag admits the original Free/Fixed menu; subsets and explicit order keep
+their ordinary paths. The existing summary-first/windowed inspection, unchanged
+fact reuse, own offered syntax before unnecessary web lookup and failed-fit Undo
+rules are retained; no raw-data quota, omitted-view reinterpretation or syntax
+search proxy is added. refinement-strategy carries its new body version/hash in
+the existing index, with other skills/capabilities/references unchanged.
+
+A supplied bounded real-provider observation introduced several new unvalidated
+blocks before one assessment despite the prior guidance. This motivates the
+clarification; source wording cannot prove future adherence, optimal scientific
+judgment or a successful provider/mode matrix. Actual delivered requests,
+assessment order, accepted-stage retention, bulk-control use and compact evidence
+choices still need independent observation. No hidden transcript/oracle was read
+and no provider/model response is treated as a backend guarantee.
