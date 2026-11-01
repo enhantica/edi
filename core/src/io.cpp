@@ -5318,7 +5318,7 @@ class ScratchSave {
     Project load_with(const std::string& relative, const std::string& text, const WarningSink& on_warning) const {
         const fs::path path = root_ / "project" / relative;
         fs::create_directories(path.parent_path());
-        std::ofstream(path, std::ios::binary | std::ios::trunc) << text;
+        detail::replace_file((root_ / "project").string(), path.string(), text);
         // A refusal or a warning names the project's own file, never the scratch folder.
         const std::string folder = (root_ / "project").string() + "/";
         const auto local = [&folder](std::string message) {

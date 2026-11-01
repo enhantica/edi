@@ -62,6 +62,7 @@
 #include "crysta/dictionary_items.hpp"
 #endif
 #if __has_include("crysta/report_settings.hpp")
+#include "crysta/project_output.hpp"
 #include "crysta/report_settings.hpp"
 #endif
 #include "crysta/scattering.hpp"
@@ -2602,6 +2603,10 @@ std::string current_edi_name(const std::string& tag, bool every_name) {
 
 std::string structure_view_refusal(const std::string& item, const std::string& value) {
     return crysta::structure_view_refusal(item, value);
+}
+
+void replace_file(const std::string& root, const std::string& file, const std::string& text) {
+    crysta::output::replace_file(root, file, text);
 }
 
 std::string one_row_category(const std::string& tag) {
