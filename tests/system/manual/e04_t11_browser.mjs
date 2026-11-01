@@ -179,7 +179,7 @@ try {
     await waitControlGeometry(evaluate,frame,objectName);
     return controlPointer(evaluate,objectName);
   };
-  const click = async (regex, role, nativeObjectName, containerName, expectedAXNodeId) => {
+  const click = async (regex, role, nativeObjectName, containerName) => {
     await restoreCanvasViewport(evaluate);
     const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
       /Open project/.test(regex.source)?'project.open':/Create a new project/.test(regex.source)?'project.create':null;
@@ -209,8 +209,6 @@ try {
       await frame();return;
     }
     const node = await waitAX(regex, true, role);
-    if (expectedAXNodeId !== undefined) assert.equal(node.nodeId, expectedAXNodeId,
-      'The physical input must still address the uniquely admitted dialog button');
     console.log(`browser ${mode}: click ${node.name?.value}`);
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
     if (node.role?.value === 'tab' && /^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || ''))
@@ -263,33 +261,36 @@ try {
 
   };
   const discardResetGuard = async () => {
-    const dialog = await waitAX(/^Save the changes\?$/, true, 'dialog');
-    const discard = await waitAX(/^Discard$/, true, 'button');
-    const tree = await send('Accessibility.getFullAXTree');
-    const named = (node, role, name) => !node.ignored && node.role?.value === role &&
-      node.name?.value === name && !(node.properties || []).some(p => p.name === 'disabled' && p.value.value);
-    const dialogs = tree.nodes.filter(node => named(node, 'dialog', 'Save the changes?'));
-    const buttons = tree.nodes.filter(node => named(node, 'button', 'Discard'));
-    assert(dialogs.length === 1 && dialogs[0].nodeId === dialog.nodeId &&
-      buttons.length === 1 && buttons[0].nodeId === discard.nodeId && discard.backendDOMNodeId,
-      'Reset must expose exactly its real unsaved-changes dialog and enabled Discard button');
-    const byId = new Map(tree.nodes.map(node => [node.nodeId, node]));
-    let ancestor = byId.get(discard.nodeId);
-    const visited = new Set();
-    while (ancestor && ancestor.nodeId !== dialog.nodeId && !visited.has(ancestor.nodeId)) {
-      visited.add(ancestor.nodeId);
-      ancestor = byId.get(ancestor.parentId);
+    await restoreCanvasViewport(evaluate);
+    const title = await waitControlGeometry(evaluate, frame, 'unsavedChanges.title', {enabled:false});
+    assert.equal(title.text, 'Save the changes?',
+      'Reset must expose the exact native unsaved-changes title before Discard');
+    await waitControlGeometry(evaluate, frame, 'unsavedChanges.discard');
+    // The existing geometry helper refuses missing/ambiguous/nonpositive/outside-viewport controls.
+    const point = await controlPointer(evaluate, 'unsavedChanges.discard');
+    console.log(`browser ${mode}: real unsaved Discard pointer ${point.x},${point.y}`);
+    await send('Input.dispatchMouseEvent', {type:'mouseMoved', ...point});
+    for (const type of ['mousePressed','mouseReleased']) {
+      await send('Input.dispatchMouseEvent', {type, ...point, button:'left', clickCount:1});
+      await frame();
     }
-    assert(ancestor?.nodeId === dialog.nodeId,
-      'Discard must belong to the admitted Save-the-changes dialog, not another action');
-    // Qt Dialog.Discard has DestructiveRole; only the real button continues this Reset.
-    await click(/^Discard$/, 'button', undefined, undefined, discard.nodeId);
+    await frame();
   };
   const requireResetGuardClosed = async () => {
-    const tree = await send('Accessibility.getFullAXTree');
-    assert(!tree.nodes.some(node => !node.ignored && node.role?.value === 'dialog' &&
-      node.name?.value === 'Save the changes?'),
-      'The Discarded guard must retire before the unchanged Reset state checks and navigation');
+    for (const name of ['unsavedChanges.title','unsavedChanges.discard']) {
+      const exposed = await evaluate(`(() => {
+        const name=${JSON.stringify(name)};
+        try { window.ediControlGeometry(name); return true; }
+        catch(error) {
+          const message=error?.message;
+          if(message===\`ediControlGeometry: no item is named '\${name}'\` ||
+             message===\`ediControlGeometry: no visible item is named '\${name}'\`) return false;
+          throw error;
+        }
+      })()`);
+      assert.equal(exposed, false,
+        'The admitted unsaved control must retire before unchanged Reset-effect checks: '+name);
+    }
   };
   const openExampleRow = async (exampleId, exampleName) => {
     // Filter through real keyboard input so the requested row is materialised and unclipped.
