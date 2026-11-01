@@ -1149,20 +1149,12 @@ void ProjectViewModel::loadScan() {
         emit refused(message);
     });
     const edi::Project& project = *project_;
+    scan_declaration_ = scanDeclaration(project);
     if (!project.sequential_fit.declared()) {
         return;
     }
-    for (const auto& rule : project.sequential_fit.extract) {
-        const QString id = QString::fromStdString(rule->id.value());
-        const QString unit = QString::fromStdString(edi::scan_target_unit(rule->target));
-        scan_columns_.append(unit.isEmpty() ? id : QStringLiteral("%1 (%2)").arg(id, unit));
-    }
-    scan_session_ = new ScanSession(this);
-    connect(scan_session_, &ScanSession::metadataLoaded, this, [this](int first, int last) {
-        for (int index = first; index <= last; ++index) {
-            syncDataset(index);
-        }
-    });
+    scan_columns_ = scanColumns(project);
+    makeScanSession();
     scan_refusal_ = scan_session_->load(project);
     // Results no run of the app described (no provenance file at all) are taken as this template's: an edit from
     // here marks them out of date, and the provenance is written with the next save. A provenance file that is
@@ -1179,6 +1171,70 @@ void ProjectViewModel::loadScan() {
             scan_session_->want(row);
         }
     });
+}
+
+std::string ProjectViewModel::scanDeclaration(const edi::Project& project) {
+    const edi::SequentialFitConfig& scan = project.sequential_fit;
+    std::string declared = scan.data_dir + '\x1f' + scan.file_pattern + '\x1f' + (scan.reverse ? "1" : "0") + '\x1f' +
+                           scan.template_file;
+    for (const auto& rule : scan.extract) {
+        declared += '\x1e' + rule->id.value() + '\x1f' + rule->target.value() + '\x1f' + rule->pattern.value() + '\x1f' +
+                    (rule->required.get() ? "1" : "0");
+    }
+    return declared;
+}
+
+QStringList ProjectViewModel::scanColumns(const edi::Project& project) {
+    QStringList columns;
+    for (const auto& rule : project.sequential_fit.extract) {
+        const QString id = QString::fromStdString(rule->id.value());
+        const QString unit = QString::fromStdString(edi::scan_target_unit(rule->target));
+        columns.append(unit.isEmpty() ? id : QStringLiteral("%1 (%2)").arg(id, unit));
+    }
+    return columns;
+}
+
+void ProjectViewModel::makeScanSession() {
+    scan_session_ = new ScanSession(this);
+    connect(scan_session_, &ScanSession::metadataLoaded, this, [this](int first, int last) {
+        for (int index = first; index <= last; ++index) {
+            syncDataset(index);
+        }
+    });
+}
+
+void ProjectViewModel::followScanDeclaration() {
+    // The scan as the project declares it now, whichever door the edit came through (a page, an applied text, an
+    // undo): a changed declaration lists its datasets, reads its results and extraction and is admitted again, as
+    // opening the edited project does. A read the previous listing asked for delivers nothing (ScanSession::load).
+    const std::string declared = scanDeclaration(*project_);
+    if (declared == scan_declaration_) {
+        return;
+    }
+    scan_declaration_ = declared;
+    scan_columns_ = scanColumns(*project_);
+    if (!project_->sequential_fit.declared()) {
+        if (scan_session_ != nullptr) {
+            evolution_->setScan(nullptr, project_.get(), {});
+            scan_views_->setScan(nullptr, project_.get(), {});
+            scan_session_->deleteLater();
+            scan_session_ = nullptr;
+        }
+        scan_refusal_.clear();
+        syncDatasets();
+        return;
+    }
+    if (scan_session_ == nullptr) {
+        makeScanSession();
+    }
+    scan_refusal_ = scan_session_->load(*project_);
+    syncScanAdmission();
+    showScanResults();
+    // The dataset shown is read again from the new listing, the first one if the listing no longer reaches it.
+    const int count = scan_ ? static_cast<int>(scan_session_->datasets().files.size()) : 0;
+    if (current_dataset_ >= 0 && count > 0) {
+        viewDataset(std::min(current_dataset_, count - 1), true);
+    }
 }
 
 void ProjectViewModel::syncScanAdmission() {
@@ -2694,6 +2750,12 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
                 .arg(QString::fromStdString(held.name.value()));
         }
     }
+    // While a dataset is shown the model holds that dataset's data: a text ending the scan keeps the template's, as any
+    // edit made there does (apply), since nothing is left to take it back from once the scan has gone.
+    if (scan_template_ && !read->sequential_fit.declared() && read->experiments.size() == 1) {
+        read->experiment().data = scan_template_->experiment().data;
+        read->experiment().calculation_only = scan_template_->experiment().calculation_only;
+    }
     auto before = std::make_shared<const edi::Project>(*project_);
     const QString error = apply(edi::Edit::replace_project(*project_, std::move(*read)), true);
     if (!error.isEmpty()) {
@@ -2945,6 +3007,7 @@ void ProjectViewModel::publish(bool structural) {
         showStructureView();  // an apply or an undo can change what the structure saved
     }
     registry_->publish(*project_);
+    followScanDeclaration();
     for (StructureViewModel* structure : structure_models_) {
         structure->sync();
     }

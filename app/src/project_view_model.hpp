@@ -648,6 +648,7 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // Each experiment's pattern colour: its place and count (a scan's template: the shown dataset's).
     void syncPatternColours();
     QStringList scan_columns_;
+    std::string scan_declaration_;  // what the session was listed from (scanDeclaration)
     ScanSession* scan_session_ = nullptr;
     int current_dataset_ = -1;
     std::optional<edi::Project> scan_template_;
@@ -698,6 +699,12 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // A Continue's earlier provenance (its rows stay), for the run's own at its end.
     std::optional<ScanSession::Run> previous_run_;
     void loadScan();
+    // The scan declaration (_sequential_fit and its extraction rules) as one string, and the result columns it names.
+    static std::string scanDeclaration(const edi::Project& project);
+    static QStringList scanColumns(const edi::Project& project);
+    void makeScanSession();
+    // A changed declaration lists, reads and admits the scan again (publish).
+    void followScanDeclaration();
     // Re-derives whether the scan modes can run (a single template experiment and a listed scan).
     void syncScanAdmission();
     // Shows a dataset: its projection is read off the GUI thread and applied when ready. `refresh`: again, even

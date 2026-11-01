@@ -294,8 +294,8 @@ and `stepMaximum`.
   Editable. Leaving an unapplied edit (another block, page or Show choice) asks "Discard changes?": Apply applies it
   as ✓ does and leaves, a refused apply staying on the text; Don't apply drops it; Cancel keeps it and returns to it.
   ✓ is red with a white check while enabled, and Show and ✓ float over the text's top right. One category's items
-  follow each other without blank lines, one blank line between categories. A scan project is edited on its pages
-  only.
+  follow each other without blank lines, one blank line between categories. A scan project's text applies too: an
+  edit reaches its template as a page's edit does, and a changed scan declaration lists and reads the scan again.
 - **Continue is a pill** (the owner, 2026-09-29), on every page and tab that shows it: the base button's own
   background (`themeBackground`, hovered `themeBackgroundHovered1`) and 1-px border (`appBarComboBoxBorder`)
   shown, fully rounded ends (radius half its height, `sideBarButtonHeight`), as wide as its icon and text plus
