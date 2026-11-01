@@ -11,7 +11,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 768,
+        "line": 579,
         "description": "TypeError: Cannot read property 'connected' of null"
       },
       "count": 1
@@ -26,7 +26,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 971,
+        "line": 766,
         "description": "TypeError: Cannot read property 'canCancel' of null"
       },
       "count": 1
@@ -41,7 +41,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 972,
+        "line": 767,
         "description": "TypeError: Cannot read property 'connected' of null"
       },
       "count": 1
@@ -56,8 +56,23 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 932,
+        "line": 729,
         "description": "TypeError: Cannot read property 'canCancel' of null"
+      },
+      "count": 1
+    },
+    {
+      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
+      "warning": {
+        "phase": "command",
+        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
+        "column": -1,
+        "message_type": 1,
+        "object_available": false,
+        "object_name": "",
+        "operation": "evaluate",
+        "line": 29,
+        "description": "TypeError: Cannot read property 'models' of null"
       },
       "count": 1
     },
@@ -72,21 +87,6 @@
         "object_name": "",
         "operation": "evaluate",
         "line": 28,
-        "description": "TypeError: Cannot read property 'models' of null"
-      },
-      "count": 1
-    },
-    {
-      "step": "test_original_composer_revision_effects_precede_null_owner_text_publication:603:evaluate:1",
-      "warning": {
-        "phase": "command",
-        "url": "qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml",
-        "column": -1,
-        "message_type": 1,
-        "object_available": false,
-        "object_name": "",
-        "operation": "evaluate",
-        "line": 26,
         "description": "TypeError: Cannot read property 'availableEfforts' of null"
       },
       "count": 1
@@ -101,7 +101,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 33,
+        "line": 31,
         "description": "TypeError: Cannot read property 'selectedEffort' of null"
       },
       "count": 1
@@ -116,7 +116,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 24,
+        "line": 26,
         "description": "TypeError: Cannot read property 'connected' of null"
       },
       "count": 1
@@ -131,7 +131,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 744,
+        "line": 556,
         "description": "TypeError: Cannot read property 'showActions' of null"
       },
       "count": 1
@@ -146,7 +146,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 724,
+        "line": 536,
         "description": "TypeError: Cannot read property 'connected' of null"
       },
       "count": 1
@@ -161,7 +161,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 648,
+        "line": 462,
         "description": "TypeError: Cannot read property 'selectedFiles' of null"
       },
       "count": 1
@@ -176,7 +176,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 448,
+        "line": 348,
         "description": "TypeError: Cannot read property 'selectedFiles' of null"
       },
       "count": 1
@@ -191,7 +191,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 443,
+        "line": 339,
         "description": "TypeError: Cannot read property 'messages' of null"
       },
       "count": 1
@@ -206,7 +206,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 271,
+        "line": 228,
         "description": "TypeError: Cannot read property 'selectedEffort' of null"
       },
       "count": 1
@@ -221,7 +221,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 77,
+        "line": 73,
         "description": "TypeError: Cannot read property 'models' of null"
       },
       "count": 1
@@ -236,7 +236,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 201,
+        "line": 150,
         "description": "TypeError: Cannot read property 'models' of null"
       },
       "count": 1
@@ -251,7 +251,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 365,
+        "line": 312,
         "description": "TypeError: Cannot read property 'state' of null"
       },
       "count": 1
@@ -266,7 +266,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 32,
+        "line": 30,
         "description": "TypeError: Cannot read property 'models' of null"
       },
       "count": 1
@@ -281,7 +281,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "evaluate",
-        "line": 290,
+        "line": 248,
         "description": "TypeError: Cannot read property 'selectedEffort' of null"
       },
       "count": 2
@@ -296,7 +296,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "manual_ime",
-        "line": 608,
+        "line": 429,
         "description": "TypeError: Value is null and could not be converted to an object"
       },
       "count": 1
@@ -311,7 +311,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "manual_ime",
-        "line": 608,
+        "line": 429,
         "description": "TypeError: Value is null and could not be converted to an object"
       },
       "count": 1
@@ -326,7 +326,7 @@
         "object_available": false,
         "object_name": "",
         "operation": "manual_text",
-        "line": 608,
+        "line": 429,
         "description": "TypeError: Value is null and could not be converted to an object"
       },
       "count": 17

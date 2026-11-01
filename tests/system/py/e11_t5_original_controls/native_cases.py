@@ -554,14 +554,14 @@ _ORIGINAL_NULL_PUBLICATION = {
     'column': -1,
     'description': 'TypeError: Value is null and could not be converted to an object',
     'event': 'warning',
-    'line': 608,
+    'line': 429,
     'message_type': 1,
     'object_available': False,
     'object_name': '',
     'operation': 'manual_ime',
     'phase': 'command',
     'rendered': (
-        'qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml:608'
+        'qrc:/qt/qml/edi/app/qml/Components/AssistantComposer.qml:429'
         ': TypeError: Value is null and could not be converted to an '
         'object'
     ),
