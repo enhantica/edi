@@ -1214,7 +1214,17 @@ void ProjectViewModel::followScanDeclaration() {
     }
     scan_declaration_ = declared;
     scan_columns_ = scanColumns(*project_);
+    const edi::ScanDatasets listed = scan_session_ != nullptr ? scan_session_->datasets() : edi::ScanDatasets{};
+    // What the model holds was read from a file of the old listing: it is not the shown dataset's any more, and a read
+    // the old listing asked for delivers nothing (startViewRead).
+    const auto forgetProjection = [this] {
+        projected_dataset_ = -1;
+        ++view_request_;
+        view_applied_ = view_request_;
+        publishCalculating();
+    };
     if (!project_->sequential_fit.declared()) {
+        forgetProjection();
         if (scan_session_ != nullptr) {
             evolution_->setScan(nullptr, project_.get(), {});
             scan_views_->setScan(nullptr, project_.get(), {});
@@ -1229,6 +1239,11 @@ void ProjectViewModel::followScanDeclaration() {
         makeScanSession();
     }
     scan_refusal_ = scan_session_->load(*project_);
+    // Other files at the same rows (another folder or pattern, the order reversed): the shown dataset is read from its
+    // new file. Rules that only extract other values keep the files, and the shown dataset only takes its new row.
+    if (scan_session_->datasets().files != listed.files || scan_session_->datasets().directory != listed.directory) {
+        forgetProjection();
+    }
     syncScanAdmission();
     showScanResults();
     // The dataset shown is read again from the new listing, the first one if the listing no longer reaches it.
