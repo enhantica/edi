@@ -51,4 +51,28 @@ TestCase {
         verify(result.ok, JSON.stringify(result));
     }
 
+    function test_native_context_storage_lifetime_data() {
+        return [
+            {tag: "scalar-known-retired"}, {tag: "scalar-found-undefined"},
+            {tag: "scalar-absent-global"},
+            {tag: "id-precedence"}, {tag: "scalar-reentry-replace"},
+            {tag: "list-replace"},
+            {tag: "list-negative-index"}, {tag: "list-at-end"},
+            {tag: "list-maximum-index"}, {tag: "list-shrink"},
+            {tag: "list-type-change"}, {tag: "list-type-change-pending"},
+            {tag: "list-owner-destroyed"}
+        ];
+    }
+    function test_native_context_storage_lifetime(data) {
+        const result = UsageAccountProof.contextStorageLifetime(ApplicationInfo, data.tag);
+        verify(result.ok, JSON.stringify(result));
+    }
+
+    function test_native_context_conversion_lifetime_data() {
+        return [{tag: "default-conversion"}, {tag: "native-reference-gc"}];
+    }
+    function test_native_context_conversion_lifetime(data) {
+        const result = UsageAccountProof.contextConversionLifetime(ApplicationInfo, data.tag);
+        verify(result.ok, JSON.stringify(result));
+    }
 }
