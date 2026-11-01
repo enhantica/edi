@@ -316,8 +316,14 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     void pinTimestamps(const QString& timestamp);
     // The files a save of the project writes (path relative to the project, text), from one save
     // per change; a writer refusal is thrown as its message.
+    struct SavedFiles {
+        std::vector<std::pair<std::string, std::string>> files;
+        std::string refusal;
+    };
     const std::vector<std::pair<std::string, std::string>>& savedFiles() const;
     std::string savedFile(const std::string& relative) const;
+    // The same file as a save writes it without calculating: what finds the generated groups.
+    std::string discoveredFile(const std::string& relative) const;
     SavedFile savedFileFunction() const;
 
     // A Stacked view or Map says whether it is on screen: with every pattern waited for, a followed scan shows each
@@ -722,11 +728,8 @@ class ProjectViewModel : public QObject, public ProjectEditor {
     // The results' outdated state, from their provenance against the template.
     void syncOutOfDate();
     void markTemplateChanged();
-    struct SavedFiles {
-        std::vector<std::pair<std::string, std::string>> files;
-        std::string refusal;
-    };
     mutable std::optional<SavedFiles> saved_files_;
+    mutable std::optional<SavedFiles> discovered_files_;  // a save of a copy: nothing calculated (discoveredFile)
     // ADR-0020: the calculation runs on the worker; every edit goes through the preview, which publishes a
     // result only if no newer request exists. Deliveries arrive here by a queued call, so every model write
     // and every signal of a publication happens on this object's (the GUI) thread. The preview goes first

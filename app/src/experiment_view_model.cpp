@@ -110,7 +110,8 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       pattern_(new PatternModel(experiment, this)),
       text_(new BlockText([saved, &experiment] { return saved(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); }, this,
                           [&experiment] { return std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string(); },
-                          [&experiment] { return edi::fixed_categories(experiment); })) {
+                          [&experiment] { return edi::fixed_categories(experiment); },
+                          [saved, &experiment] { return saved.discovered(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); })) {
     capturePattern();  // the measured data shows before the first calculation is published
     // The options follow the experiment's type, which is read-only, so they are set once.
     const edi::BeamModeEnum mode = experiment_.effective_beam_mode();
@@ -510,7 +511,7 @@ void ExperimentViewModel::sync() {
             category.rows = static_cast<std::size_t>(measured_range_->points());
         }
     }
-    categories_->setCategories(categories, [this] { return text_->text().toStdString(); });
+    categories_->setCategories(categories, [this] { return text_->discoveryText().toStdString(); });
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();

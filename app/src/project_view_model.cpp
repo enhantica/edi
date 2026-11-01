@@ -189,10 +189,11 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     completeSymmetry();
     registry_->rebuild(*project_);
     parameters_ = new ParameterTableModel(*registry_, this);
-    const SavedFile saved = [this](const std::string& relative) { return savedFile(relative); };
+    const SavedFile saved = savedFileFunction();
     analysis_ = new AnalysisViewModel(*project_, *this, saved, this);
     (void)model;
-    metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this, [] { return std::string("project.edi"); });
+    metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this, [] { return std::string("project.edi"); },
+                                   {}, [this] { return discoveredFile("project.edi"); });
     report_text_ = new BlockText([this] { return edi::report_settings_text(*project_); }, this,
                                  [] { return std::string("reports/report.edi"); });
     project_text_ = new BlockText(
@@ -493,6 +494,7 @@ void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
         scan_template_->report_files = project.report_files;
     }
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
 }
 
@@ -2379,6 +2381,7 @@ QString ProjectViewModel::write_report_settings(const edi::Edit& change) {
     publishMetadata();
     syncCorrelations();
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     report_->refresh();
     return {};
@@ -2591,7 +2594,7 @@ void ProjectViewModel::refreshCategories() {
 void ProjectViewModel::syncCategories() {
     // The standard uncertainties have their designed group here, the report's settings theirs on the Report page.
     categories_->setCategories({edi::Category{"su_format"}, edi::Category{"report"}},
-                               [this] { return metadata_text_->text().toStdString(); });
+                               [this] { return metadata_text_->discoveryText().toStdString(); });
     // The report's settings have their designed group on the Report page; what else its file holds (the saved
     // reports) gets a group made from the dictionary there.
     report_categories_->setCategories({edi::Category{"report"}}, [this] { return report_text_->text().toStdString(); });
@@ -2615,6 +2618,7 @@ void ProjectViewModel::keepStructureView() {
     if (view != shown.view.get()) {
         shown.view = std::move(view);
         saved_files_.reset();
+        discovered_files_.reset();
         invalidateTexts();
         setModified(true);
     }
@@ -2819,6 +2823,7 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
     }
     publishMetadata();
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     report_->refresh();
     setModified(false);
@@ -2901,6 +2906,7 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
     // The saved project's last-modified time advanced: its metadata and every text a save writes show it.
     publishMetadata();
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     report_->refresh();
     setModified(false);
@@ -2914,6 +2920,7 @@ void ProjectViewModel::publishTemplate() {
     // results' outdated state follow.
     setModified(true);
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     report_->refresh();
     markTemplateChanged();
@@ -2947,6 +2954,7 @@ void ProjectViewModel::publish(bool structural) {
     publishMetadata();
     // What a save writes changed now, not at the recalculation: a Text read in this same turn sees it.
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     report_->refresh();
     if (fit_ != nullptr) {
@@ -3203,35 +3211,54 @@ void ProjectViewModel::publishCalculating() {
     }
 }
 
+namespace {
+// Every file a save of `project` writes; when the whole save refuses, its refusal, and the files of a save without the
+// experiments linking a structure the project lacks, which refuse it: only their blocks show the refusal.
+ProjectViewModel::SavedFiles save_files(const edi::Project& project) {
+    try {
+        return {edi::project_edi_files(project), {}};
+    } catch (const std::exception& refusal) {
+        ProjectViewModel::SavedFiles saved{{}, refusal.what()};
+        try {
+            edi::Project resolved = project;
+            for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
+                const auto& links = resolved.experiments[index]->linked_structures;
+                const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
+                    const std::string& id = link->structure_id.value();
+                    return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
+                                                       [&id](const auto& structure) { return structure->name.value() == id; });
+                });
+                if (missing) {
+                    resolved.experiments.erase_at(index);
+                }
+            }
+            if (resolved.experiments.size() < project.experiments.size()) {
+                saved.files = edi::project_edi_files(resolved);
+            }
+        } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
+        }
+        return saved;
+    }
+}
+
+std::string file_of(const ProjectViewModel::SavedFiles& saved, const std::string& relative) {
+    for (const auto& [path, body] : saved.files) {
+        if (path == relative) {
+            return body;
+        }
+    }
+    if (!saved.refusal.empty()) {
+        throw std::runtime_error(saved.refusal);
+    }
+    return {};
+}
+}  // namespace
+
 const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedFiles() const {
     // One save of the whole project serves every Text tab until the next change (D7). It is of the model the pages
     // show: while a scan dataset is shown, that dataset's values, though a save writes the template (edi ADR-0015).
     if (!saved_files_.has_value()) {
-        try {
-            saved_files_ = SavedFiles{edi::project_edi_files(*project_), {}};
-        } catch (const std::exception& refusal) {
-            saved_files_ = SavedFiles{{}, refusal.what()};
-            // An experiment linking a structure the project lacks refuses the whole save; every other block keeps
-            // its text, from a save without those experiments, and only theirs shows the refusal.
-            try {
-                edi::Project resolved = *project_;
-                for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
-                    const auto& links = resolved.experiments[index]->linked_structures;
-                    const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
-                        const std::string& id = link->structure_id.value();
-                        return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
-                                                           [&id](const auto& structure) { return structure->name.value() == id; });
-                    });
-                    if (missing) {
-                        resolved.experiments.erase_at(index);
-                    }
-                }
-                if (resolved.experiments.size() < project_->experiments.size()) {
-                    saved_files_->files = edi::project_edi_files(resolved);
-                }
-            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
-            }
-        }
+        saved_files_ = save_files(*project_);
     }
     if (!saved_files_->refusal.empty()) {
         throw std::runtime_error(saved_files_->refusal);
@@ -3239,27 +3266,26 @@ const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedF
     return saved_files_->files;
 }
 
+std::string ProjectViewModel::discoveredFile(const std::string& relative) const {
+    // A copy is never current, so its save calculates nothing and writes no computed category: what the sidebar's
+    // generated groups are found from. A calculation leaves it as it is; an edit makes it again.
+    if (!discovered_files_.has_value()) {
+        discovered_files_ = save_files(edi::Project(*project_));
+    }
+    return file_of(*discovered_files_, relative);
+}
+
 SavedFile ProjectViewModel::savedFileFunction() const {
-    return [this](const std::string& relative) { return savedFile(relative); };
+    return {[this](const std::string& relative) { return savedFile(relative); },
+            [this](const std::string& relative) { return discoveredFile(relative); }};
 }
 
 std::string ProjectViewModel::savedFile(const std::string& relative) const {
     // A block the save could not write shows why; the others show their text (savedFiles).
-    std::string refusal;
-    try {
-        savedFiles();
-    } catch (const std::exception& error) {
-        refusal = error.what();
+    if (!saved_files_.has_value()) {
+        saved_files_ = save_files(*project_);
     }
-    for (const auto& [path, body] : saved_files_->files) {
-        if (path == relative) {
-            return body;
-        }
-    }
-    if (!refusal.empty()) {
-        throw std::runtime_error(refusal);
-    }
-    return {};
+    return file_of(*saved_files_, relative);
 }
 
 void ProjectViewModel::setLastError(const QString& error) {

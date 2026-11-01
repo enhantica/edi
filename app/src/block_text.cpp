@@ -9,8 +9,12 @@
 
 namespace edi_app {
 
-BlockText::BlockText(Source source, QObject* parent, File file, Fixed fixed)
-    : QObject(parent), source_(std::move(source)), file_(std::move(file)), fixed_(std::move(fixed)) {}
+BlockText::BlockText(Source source, QObject* parent, File file, Fixed fixed, Source discovery)
+    : QObject(parent),
+      source_(std::move(source)),
+      file_(std::move(file)),
+      fixed_(std::move(fixed)),
+      discovery_(std::move(discovery)) {}
 
 QString BlockText::file() const { return file_ ? QString::fromStdString(file_()) : QString(); }
 
@@ -23,6 +27,17 @@ QString BlockText::withOutputs(const QString& edited) const {
     compute();
     return QString::fromStdString(edi::with_output_categories(edited.toStdString(), text_.toStdString(),
                                                               fixed_ ? fixed_() : std::vector<std::string>{}));
+}
+
+QString BlockText::discoveryText() const {
+    if ((valid_ && error_.isEmpty()) || !discovery_) {
+        return text();
+    }
+    try {
+        return QString::fromStdString(discovery_());
+    } catch (const std::exception&) {
+        return {};
+    }
 }
 
 QString BlockText::text() const {
