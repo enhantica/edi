@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 import QtQuick
+import QtQml.Models
 
 import EasyApplication.Gui.Style as EaStyle
 import EasyApplication.Gui.Components as EaComponents
@@ -72,7 +73,8 @@ EaComponents.ListView {
     property var wideEdges: []
     // A cell's padding: its own, a spacing more on the side it aligns to, so a right-aligned number and a
     // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it. A
-    // check box, which centres itself in its room, is pushed to the right edge by its left padding.
+    // check box, which centres itself in its room, is pushed to the right edge by its left padding. A `fresh` cell, made
+    // only to be measured, keeps its own paddings in no map, and the base paddings are returned.
     function columnRowOwner(row) {
         return ApplicationInfo.tableColumnRowOwner(row);
     }
@@ -81,8 +83,8 @@ EaComponents.ListView {
     function applyWidths(row) {
         ApplicationInfo.tableApplyWidths(row);
     }
-    function padForFiller(cell, column) {
-        ApplicationInfo.tablePadForFiller(cell, column);
+    function padForFiller(cell, column, kind = undefined, fresh = false) {
+        return ApplicationInfo.tablePadForFiller(cell, column, kind, fresh);
     }
     property var checkCells: new Set()
     // A cell's kind, which sets how it aligns: a number, an icon or button, or text. A row button is checkable too, so
@@ -90,8 +92,8 @@ EaComponents.ListView {
     function kindOf(cell) {
         return ApplicationInfo.tableCellKind(cell);
     }
-    function alignCell(cell, kind) {
-        ApplicationInfo.tableAlignCell(cell, kind);
+    function alignCell(cell, kind, fresh = false) {
+        ApplicationInfo.tableAlignCell(cell, kind, fresh);
     }
     property var columnFitLife: ({
             alive: true,
@@ -104,9 +106,10 @@ EaComponents.ListView {
 
     // Styles the cells of `rows` (alignment and padding) and, with `measure`, fits the columns to them and the header.
     // Only the whole model is measured (fitWholeModel); a row the view makes, scrolled into view, is only styled and
-    // takes the widths the model was measured to (the owner, 2026-10-27).
-    function fitColumns(measure = false, rows = null) {
-        ApplicationInfo.tableFitColumns(measure, rows);
+    // takes the widths the model was measured to (the owner, 2026-10-27). Without `measure` it returns the widths
+    // `rows` need, at least `from` (a part of the model measured before).
+    function fitColumns(measure = false, rows = null, from = null) {
+        return ApplicationInfo.tableFitColumns(measure, rows, from);
     }
     // A change of the content fits the columns afresh to every row of the model (fitWholeModel), once the table shows.
     function refit() {
@@ -116,18 +119,39 @@ EaComponents.ListView {
     function styleCells() {
         ApplicationInfo.tableStyleCells();
     }
-    // Every row of the model is made at once, beside the view, measured with the header, and dropped: the columns fit
-    // the widest row wherever it is, and scrolling changes no width. A table not shown waits until it is.
+    // Every row of the model is made beside the view, measured with the header, and dropped: the columns fit the widest
+    // row wherever it is, and scrolling changes no width. A table not shown waits until it is.
     function fitWholeModel() {
         ApplicationInfo.tableFitWholeModel();
+    }
+    // A model of up to this many rows is measured at once. A larger one (a pattern's points) is measured a frame's
+    // worth of rows at a time, so the window keeps responding; a new change of the content starts it again.
+    readonly property int measuredAtOnce: 100
+    property int measureRun: 0
+    property var measuredWidths: null
+    function measureRows(run, from) {
+        ApplicationInfo.tableMeasureRows(run, from);
+    }
+    Timer {
+        id: measureLater
+        property int run: 0
+        property int from: 0
+        interval: 0
+        onTriggered: table.measureRows(run, from)
     }
     // Content that changed while the table was not shown, measured once it is.
     property bool unfitted: false
     onVisibleChanged: ApplicationInfo.tableVisibleChanged()
-    Item {
-        visible: false
+    onOnScreenChanged: ApplicationInfo.tableOnScreenChanged()
+    // Whether the table can be seen: in no collapsed group, and on the current item of every SwipeView it is in (a page,
+    // a sidebar tab). A large model waits until its table can be seen: a pattern's points kept the window busy for many
+    // seconds after a project opened. A small one is measured as soon as it is visible, as it takes little time.
+    readonly property bool onScreen: ApplicationInfo.tableOnScreen()
+    // Outside the window: its rows are only measured, and a row in a window costs far more to make and to drop (each
+    // cell joins and leaves the window's signals, a scan of all of them).
+    readonly property Item measuringHost: Item {
         width: table.width
-        Repeater {
+        DelegateModel {
             id: measuringRows
             model: null
             delegate: table.delegate

@@ -85,6 +85,9 @@ EaComponents.ListViewTextInput {
     function cancelTextEdit(event) {
         ApplicationInfo.editorEscape(ApplicationInfo.TextCellEditor, event);
     }
+    // As wide as the whole number, not the shown text: a cell no table has sized (DataTable's measuring rows) takes this
+    // width, and a width that followed `shown` would feed back into it.
+    implicitWidth: Math.ceil(metrics.advanceWidth(written)) + leftPadding + rightPadding
     // "text", "number" or "integer": what the cell accepts before anything reaches the model.
     property string accepts: "text"
     // Why the last commit was refused; empty once a commit takes or the value changes.

@@ -407,14 +407,17 @@ class ApplicationInfo : public QObject {
     /// Shared table procedures; the original view maps, row ownership and model notifications remain authoritative.
     Q_INVOKABLE QJSValue tableColumnRowOwner(const QJSValue& row) const;
     Q_INVOKABLE void tableApplyWidths(const QJSValue& row) const;
-    Q_INVOKABLE void tablePadForFiller(const QJSValue& cell, const QJSValue& column) const;
+    Q_INVOKABLE QJSValue tablePadForFiller(const QJSValue& cell, const QJSValue& column, const QJSValue& freshKind = QJSValue(), bool fresh = false) const;
     Q_INVOKABLE QJSValue tableCellKind(const QJSValue& cell) const;
-    Q_INVOKABLE void tableAlignCell(const QJSValue& cell, const QJSValue& kind) const;
+    Q_INVOKABLE void tableAlignCell(const QJSValue& cell, const QJSValue& kind, bool fresh = false) const;
     Q_INVOKABLE void tableScheduleFitColumns() const;
     Q_INVOKABLE QJSValue tableColumnWidths() const;
-    Q_INVOKABLE void tableFitColumns(bool measure, const QJSValue& rows) const;
+    Q_INVOKABLE QJSValue tableFitColumns(bool measure, const QJSValue& rows, const QJSValue& from = QJSValue()) const;
     Q_INVOKABLE void tableStyleCells() const;
     Q_INVOKABLE void tableFitWholeModel() const;
+    Q_INVOKABLE void tableMeasureRows(int run, int from) const;
+    Q_INVOKABLE bool tableOnScreen() const;
+    Q_INVOKABLE void tableOnScreenChanged() const;
     Q_INVOKABLE void tableVisibleChanged() const;
     Q_INVOKABLE void tableRefit() const;
     Q_INVOKABLE void tableColumnsChanged(bool widthsChanged) const;
