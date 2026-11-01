@@ -79,11 +79,13 @@ TestCase {
         verify(waitForRendering(appWindow.contentItem), "The fit-control window renders before pointer input");
     }
     function cleanup() {
+        SettingsProof.releaseScanStop();
         clickedSpy.target = null;
         if (Session.project && Session.project.fit.running) {
             Session.project.fit.cancel();
             tryVerify(() => !Session.project.fit.running, 10000, "The real worker stops before its application window is destroyed");
         }
+        const scanStopCleared = SettingsProof.clearScanStop();
         Session.closeProject();
         Preferences.dialogShown = false;
         Object.keys(savedBooleans).forEach(key => {
@@ -95,6 +97,7 @@ TestCase {
         appWindow.destroy();
         appWindow = null;
         Probe.releaseScratchProjects();
+        verify(scanStopCleared, "The test-owned scan hold exits without expiry before owner teardown");
     }
     function click(item) {
         verify(item !== null && item !== undefined, "The requested production fit control exists before pointer input");
@@ -145,11 +148,11 @@ TestCase {
         // equated to the full Window: the app/status bars remain their owners.
         return appWindow.height === requestedHeight && appWindow.header === null && appWindow.footer === null && appWindow.menuBar === null && appWindow.contentItem.height === Math.max(0, requestedHeight - appWindow.topPadding - appWindow.bottomPadding) && host.height === appWindow.contentItem.height && container.y + container.height === host.height && bar.height === container.height && group.width === group.implicitWidth && !isPolishScheduled(appWindow);
     }
-    function rightmostFitAction() {
+    function rightmostFitAction(requireScanHold = false) {
         const requestedHeight = appWindow.height, requestedWidth = appWindow.width;
         // QtTest's existing waitForPolish default is 5000ms. One combined
         // owning-Window/Row boundary replaces that same budget, not a new wait.
-        tryVerify(() => footerGeometryReady(requestedWidth) && windowLayoutReady(requestedHeight), 5000, "The actual Window, footer host and fit Row settle before the unchanged Fit ordering checks");
+        tryVerify(() => footerGeometryReady(requestedWidth) && windowLayoutReady(requestedHeight) && (!requireScanHold || SettingsProof.scanStopReady(Session.project)), 5000, "The actual Window, footer host and fit Row settle before the unchanged Fit ordering checks");
         verify(!windowLayoutReady(requestedHeight + 1), "A polished Window cannot satisfy a different requested resize");
         const group = area(), button = shortcut();
         const left = button.mapToItem(group, 0, 0).x;
@@ -320,17 +323,45 @@ TestCase {
             AppState.open(AppState.Page.Structure);
         const button = shortcut();
         fitState("Fit");
-        Session.project.fit.start();
-        verify(Session.project.fit.running, "The actual worker enters its running state synchronously before stop input");
-        fitState("Stop");
-        const progress = findChild(appWindow, "statusBar.fit.progress");
-        verify(progress !== null && progress.visible, "The running position witness includes the actual fit progress bar");
-        rightmostFitAction();
-        verify(actionable(button), "The running status action stays available to stop the worker on either page");
-        click(button);
-        finish();
-        compare(Session.project.fit.outcome, "stopped", "The status action stops the actual fit worker from Analysis and other pages");
-        fitState(Session.project.fit.continuable ? "Continue" : "Fit");
+        verify(!SettingsProof.armScanStop(null) && !SettingsProof.armScanStop(button), "Only the actual current scan project can own the worker hold");
+        verify(SettingsProof.armScanStop(Session.project), "The genuine next scan-file hook is owned before the unchanged fit start");
+        verify(!SettingsProof.armScanStop(Session.project), "A second arm cannot replace the first generation");
+        try {
+            Session.project.fit.start();
+            verify(Session.project.fit.running, "The actual worker enters its running state synchronously before stop input");
+            fitState("Stop");
+            const progress = findChild(appWindow, "statusBar.fit.progress");
+            verify(progress !== null && progress.visible, "The running position witness includes the actual fit progress bar");
+            rightmostFitAction(true);
+            verify(actionable(button), "The running status action stays available to stop the worker on either page");
+            verify(!SettingsProof.scanStopReady(null) && !SettingsProof.scanStopReady(button), "A different or absent owner cannot borrow this live worker admission");
+            verify(!SettingsProof.clearScanStop(), "Clearing a live held callback refuses without releasing it");
+            const held = SettingsProof.scanStopFacts(Session.project);
+            console.info("E11_SCAN_STOP_BEFORE", JSON.stringify(held));
+            verify(held.ready, "The same real worker is still held and cancellable immediately before physical Stop");
+            clickedSpy.target = button;
+            verify(clickedSpy.valid, "The original physical Stop observes the actual clicked publication");
+            clickedSpy.clear();
+            try {
+                click(button);
+            } finally {
+                SettingsProof.releaseScanStop();
+            }
+            compare(clickedSpy.count, 1, "Exactly one original physical Stop dispatches while the real worker is held");
+            SettingsProof.releaseScanStop();
+            verify(!SettingsProof.scanStopReady(Session.project), "Repeated release is idempotent and cannot retain running admission");
+            finish();
+            const ended = SettingsProof.scanStopFacts(Session.project);
+            console.info("E11_SCAN_STOP_AFTER", JSON.stringify(ended));
+            compare(Session.project.fit.outcome, "stopped", "The status action stops the actual fit worker from Analysis and other pages");
+            verify(ended.owner_current && !ended.native_running && ended.entered === 1 && ended.exited === 1 && !ended.blocked && ended.released && !ended.expired && ended.distinct_thread && ended.file_owned && ended.starts.length > 0,
+                "The single actual callback exited without watchdog expiry after the real worker finished");
+            verify(ended.run_identity_matches && !ended.run_invalid && ended.run_error === "" && ended.run_outcome === "stopped",
+                "The actual current persisted run records the uniquely core-CANCELLED-derived stopped outcome");
+            fitState(Session.project.fit.continuable ? "Continue" : "Fit");
+        } finally {
+            SettingsProof.releaseScanStop();
+        }
     }
     function test_button_style_data() {
         return [
