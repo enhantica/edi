@@ -6135,7 +6135,10 @@ void ApplicationInfo::tableFitWholeModel() const {
     if (!editorLife(f, life)) return;
     // The measuring rows go: their cells leave the table's records with them.
     panelUsageEach(f, rows, [&](const QJSValue& row) {
-        return panelUsageEach(f, tableCellsOf(f, row), [&](const QJSValue& cell) {
+        // A row without cells has nothing to forget. Iterating its null cells threw, which left the measuring rows made.
+        const auto cells = tableCellsOf(f, row);
+        if (!panelUsageTruth(cells)) return panelUsageReady(f);
+        return panelUsageEach(f, cells, [&](const QJSValue& cell) {
             panelUsageMemberCall(f, panelUsageContextRead(f, "basePaddings"), "delete", {cell});
             panelUsageMemberCall(f, panelUsageContextRead(f, "cellKinds"), "delete", {cell});
             panelUsageMemberCall(f, panelUsageContextRead(f, "checkCells"), "delete", {cell});
