@@ -267,6 +267,30 @@ class UsageCallLookupContext final : public QObject {
     void finiteChanged();
 };
 
+// The reserved QML function name is legal as an ordinary native meta-object member.
+// Non-final: qmlRegisterType creates the normal QQmlElement subclass.
+class UsageScopeItem : public QQuickItem {
+    Q_OBJECT
+    Q_PROPERTY(QVariantMap unitScopeStats READ scopeStats)
+    int calls_ = 0;
+    QObject* receiver_ = nullptr;
+    QJSValue argument_;
+
+   public:
+    explicit UsageScopeItem(QQuickItem* parent = nullptr) : QQuickItem(parent) {}
+    Q_INVOKABLE bool isFinite(const QJSValue& value) {
+        ++calls_;
+        receiver_ = this;
+        argument_ = value;
+        return false;
+    }
+    QVariantMap scopeStats() const {
+        return {{"calls", calls_},
+                {"receiver", receiver_ == this},
+                {"argument", argument_.isNumber() && argument_.toNumber() == 60000}};
+    }
+};
+
 // Per-case recorder, kept alive across the genuine QML destruction handler.
 class UsageContextResult final : public QObject {
     Q_OBJECT
@@ -692,7 +716,52 @@ class UsageAccountProof final : public QObject {
     const json = Object.create(engineGlobal.JSON);
     const parse = engineGlobal.JSON.parse, stringify = engineGlobal.JSON.stringify;
     const proof = {events:[], throws:0, parseReceiver:false, stringifyReceiver:false,
-                   seenOwner:null, raw:undefined, reentered:0, replacement:null};
+                   seenOwner:null, raw:undefined, reentered:0, replacement:null,
+                   coercions:0,coercionReceiver:true};
+    function coerce(hint) {
+        ++proof.coercions;
+        proof.coercionReceiver=proof.coercionReceiver && this===json;
+        proof.events.push('receiver-coerce:'+hint);
+        return 'owned-json378';
+    }
+    Object.defineProperty(json, 'toString', {configurable:true,value:function(){
+        return coerce.call(this,'string');
+    }});
+    const primitive=engineGlobal.Symbol.toPrimitive;
+    Object.defineProperty(json, primitive, {configurable:true,value:function(hint){
+        return coerce.call(this,hint);
+    }});
+    proof.coercionsOwned=typeof primitive==='symbol'
+        && typeof Object.getOwnPropertyDescriptor(json,'toString').value==='function'
+        && typeof Object.getOwnPropertyDescriptor(json,primitive).value==='function';
+    // NoThrow can consume a pending error, then convert the THROWN object.
+    // These hooks observe that separate interval, not the blocked receiver.
+    proof.managedThrown=thrown!==null && typeof thrown==='object';
+    proof.sentinelCoercions=0;
+    proof.sentinelReceiver=true;
+    function sentinelCoerce(hint) {
+        ++proof.sentinelCoercions;
+        proof.sentinelReceiver=proof.sentinelReceiver && this===thrown;
+        proof.events.push('sentinel-coerce:'+hint);
+        return 'owned-thrown380';
+    }
+    if(proof.managedThrown) {
+        Object.defineProperty(thrown,'toString',{configurable:true,value:function(){
+            return sentinelCoerce.call(this,'string');
+        }});
+        Object.defineProperty(thrown,primitive,{configurable:true,value:function(hint){
+            return sentinelCoerce.call(this,hint);
+        }});
+    }
+    proof.sentinelHooksOwned=!proof.managedThrown || (
+        typeof Object.getOwnPropertyDescriptor(thrown,'toString').value==='function'
+        && typeof Object.getOwnPropertyDescriptor(thrown,primitive).value==='function');
+    proof.sentinelControl=function(channel){
+        if(!proof.managedThrown)return null;
+        if(channel==='symbol')return String(thrown);
+        if(channel==='toString')return thrown.toString();
+        throw new Error('unknown managed sentinel control channel');
+    };
     function step(name) {
         proof.events.push(name);
         if (mode === name + '-throw') { ++proof.throws; throw thrown; }
@@ -711,12 +780,17 @@ class UsageAccountProof final : public QObject {
     }
     Object.defineProperty(json, 'stringify', {
         configurable:true,
-        get:function() { step('stringify-get'); return stringifyCall; }
+        get:function() {
+            step('stringify-get');
+            if(mode==='stringify-noncallable')return false;
+            return stringifyCall;
+        }
     });
     Object.defineProperty(json, 'parse', {
         configurable:true,
         get:function() {
             step('parse-get');
+            if(mode==='parse-noncallable')return false;
             if (mode === 'replace-json') {
                 const replacement = {};
                 Object.defineProperty(replacement, 'stringify', {
@@ -736,6 +810,15 @@ class UsageAccountProof final : public QObject {
     proof.json = json;
     proof.gettersOwned = typeof Object.getOwnPropertyDescriptor(json, 'parse').get === 'function'
         && typeof Object.getOwnPropertyDescriptor(json, 'stringify').get === 'function';
+    // Direct Qt-JS contrast after the real projection; never another production call.
+    proof.noncallableControl=function(){
+        try {
+            if(mode==='parse-noncallable')json.parse('null');
+            else if(mode==='stringify-noncallable')json.stringify({});
+            else return null;
+        } catch(error) { return {name:error.name,description:String(error)}; }
+        return null;
+    };
     proof.restore = function() { contextOwner.JSON = previousJSON; };
     return proof;
 })
@@ -791,7 +874,16 @@ class UsageAccountProof final : public QObject {
                         proof.property("gettersOwned").toBool() &&
                         proof.hasOwnProperty("events") && proof.property("events").isArray() &&
                         proof.hasOwnProperty("throws") && proof.property("throws").isNumber() &&
-                        proof.property("throws").toInt() == 0,
+                        proof.property("throws").toInt() == 0 &&
+                        proof.property("coercionsOwned").toBool() &&
+                        proof.property("coercions").isNumber() &&
+                        proof.property("coercions").toInt() == 0 &&
+                        proof.property("noncallableControl").isCallable() &&
+                        proof.property("sentinelHooksOwned").toBool() &&
+                        proof.property("managedThrown").isBool() &&
+                        proof.property("sentinelCoercions").isNumber() &&
+                        proof.property("sentinelCoercions").toInt() == 0 &&
+                        proof.property("sentinelControl").isCallable(),
                     "same-engine own JSON getters and restore admit before live use");
                 const auto restore = qScopeGuard([&] {
                     const auto restored = proof.property("restore").callWithInstance(proof);
@@ -813,6 +905,11 @@ class UsageAccountProof final : public QObject {
                     {"sentinel", sourceLabel},
                     {"events", proof.property("events").toVariant()},
                     {"throws", proof.property("throws").toInt()},
+                    {"coercions", proof.property("coercions").toInt()},
+                    {"coercion_receiver", proof.property("coercionReceiver").toBool()},
+                    {"managed_thrown", proof.property("managedThrown").toBool()},
+                    {"sentinel_coercions", proof.property("sentinelCoercions").toInt()},
+                    {"sentinel_receiver", proof.property("sentinelReceiver").toBool()},
                     {"value", value.toVariant()},
                     {"owner_current", scriptOwner.property("assistant").toQObject() == next},
                     {"parse_receiver", proof.property("parseReceiver").toBool()},
@@ -825,6 +922,14 @@ class UsageAccountProof final : public QObject {
                     "original Qt resolves stringify before parse on its captured JSON receiver");
                 check.require(proof.property("throws").toInt() == (catches ? 1 : 0),
                               "the armed original boundary really throws exactly once");
+                check.require(proof.property("coercions").toInt() == 0 &&
+                                  proof.property("coercionReceiver").toBool(),
+                              "a first thrown getter never reaches receiver coercion or "
+                              "secondary noncallable error formatting");
+                check.require(proof.property("sentinelCoercions").toInt() == 0 &&
+                                  proof.property("sentinelReceiver").toBool(),
+                              "the first managed thrown sentinel is never converted by a "
+                              "secondary error formatter before the presentation catch");
                 check.require(!engine_->hasError(),
                               "the original JSON presentation catch consumes any thrown value");
                 if (catches) {
@@ -869,6 +974,71 @@ class UsageAccountProof final : public QObject {
             for (const auto& mode : {"ordinary", "replace-json", "reenter-color"})
                 exercise(QString::fromLatin1(mode), QJSValue(QJSValue::UndefinedValue), 4, false,
                          QStringLiteral("ordinary control"));
+            // Independent Qt-JS positive controls arm both coercion channels without
+            // another migrated procedure call, owner publication, or trace row.
+            for (const auto* member : {"parse", "stringify"}) {
+                const auto control =
+                    install.call({engineGlobal, contextOwner, scriptOwner,
+                                  QJSValue(QString::fromLatin1(member) + "-noncallable"),
+                                  QJSValue(QJSValue::UndefinedValue)});
+                prerequisite(control.isObject() && !control.isError() && !engine_->hasError() &&
+                                 control.property("coercionsOwned").toBool() &&
+                                 control.property("coercions").toInt() == 0 &&
+                                 control.property("throws").toInt() == 0 &&
+                                 control.property("noncallableControl").isCallable(),
+                             "the direct Qt-JS noncallable source control admits before use");
+                const auto direct =
+                    control.property("noncallableControl").callWithInstance(control);
+                const auto description =
+                    QStringLiteral(
+                        "TypeError: Property '%1' of object owned-json378 is not a function")
+                        .arg(QString::fromLatin1(member));
+                const QStringList expected{QString::fromLatin1(member) + "-get",
+                                           QStringLiteral("receiver-coerce:string")};
+                check.require(
+                    direct.isObject() && !direct.isError() &&
+                        direct.property("name").toString() == "TypeError" &&
+                        direct.property("description").toString() == description &&
+                        control.property("events").toVariant().toStringList() == expected &&
+                        control.property("coercions").toInt() == 1 &&
+                        control.property("coercionReceiver").toBool() &&
+                        control.property("throws").toInt() == 0 && !engine_->hasError(),
+                    "the owned receiver's direct Qt-JS false-callee contrast has its "
+                    "source-declared description and actual receiver coercion");
+            }
+            // Fresh instances of the existing Error/object source sentinels calibrate
+            // BOTH conversion hooks outside the production exercise and trace roster.
+            for (const auto& source : {sentinels.at(0), sentinels.at(1)}) {
+                const auto thrown = engine_->evaluate(source);
+                prerequisite(thrown.isObject() && !engine_->hasError(),
+                             "the managed source-control sentinel is real and same-engine");
+                const auto control = install.call({engineGlobal, contextOwner, scriptOwner,
+                                                   QJSValue(QStringLiteral("ordinary")), thrown});
+                prerequisite(control.isObject() && !control.isError() && !engine_->hasError() &&
+                                 control.property("managedThrown").toBool() &&
+                                 control.property("sentinelHooksOwned").toBool() &&
+                                 control.property("sentinelCoercions").toInt() == 0 &&
+                                 control.property("sentinelControl").isCallable(),
+                             "managed sentinel hooks are admitted before their direct controls");
+                int conversions = 0;
+                QStringList expected;
+                for (const auto* channel : {"symbol", "toString"}) {
+                    const auto converted =
+                        control.property("sentinelControl")
+                            .callWithInstance(control, {QJSValue(QString::fromLatin1(channel))});
+                    ++conversions;
+                    expected.append(QStringLiteral("sentinel-coerce:string"));
+                    check.require(
+                        converted.isString() && converted.toString() == "owned-thrown380" &&
+                            control.property("sentinelCoercions").toInt() == conversions &&
+                            control.property("sentinelReceiver").toBool() &&
+                            control.property("events").toVariant().toStringList() == expected &&
+                            control.property("throws").toInt() == 0 &&
+                            control.property("coercions").toInt() == 0 && !engine_->hasError(),
+                        "direct managed sentinel conversion reaches its exact owned "
+                        "hook and receiver without a migrated call or pending error");
+                }
+            }
             // Detach before destroying the genuine former Session. Old-owner cleanup must
             // not clear or republish the now-current original owner.
             scriptOwner.setProperty("assistant", engine_->newQObject(original.data()));
@@ -1148,7 +1318,50 @@ class UsageAccountProof final : public QObject {
                     assign(QString::fromLatin1(name), a.property(QString::fromLatin1(name)));
                 QSignalSpy warnings(engine_, &QQmlEngine::warnings);
                 prerequisite(warnings.isValid(), "actual context binding warnings are observed");
+                // Declare restoration before the lease so every Panel is destroyed first,
+                // including when a later fixture prerequisite throws.
+                QPointer<QObject> presentationPreferences;
+                QVariant savedPresentation;
+                bool restorePresentation = false;
+                const auto restoreShown = qScopeGuard([&] {
+                    if (!restorePresentation) return;
+                    const bool restored =
+                        presentationPreferences &&
+                        presentationPreferences->setProperty("assistantShown", savedPresentation);
+                    check.require(
+                        restored && presentationPreferences &&
+                            presentationPreferences->property("assistantShown") ==
+                                savedPresentation,
+                        "the real public shown preference is restored after Panel teardown");
+                    check.require(warnings.isEmpty() && !engine_->hasError(),
+                                  "shown-state restoration adds no unrelated QML error");
+                });
                 auto owner = panel(applicationInfo, context.get());
+                if (!retirementCharacterization) {
+                    auto* actualPreferences = engine_->singletonInstance<QObject*>(
+                        QStringLiteral("edi.app"), QStringLiteral("Preferences"));
+                    prerequisite(
+                        actualPreferences && QQmlEngine::contextForObject(actualPreferences) &&
+                            QQmlEngine::contextForObject(actualPreferences)->engine() == engine_,
+                        "shown setup uses the real same-engine Preferences singleton");
+                    const auto previous = actualPreferences->property("assistantShown");
+                    prerequisite(previous.metaType() == QMetaType::fromType<bool>(),
+                                 "the public presentation preference has its declared bool type");
+                    savedPresentation = previous;
+                    presentationPreferences = actualPreferences;
+                    restorePresentation = true;
+                    prerequisite(presentationPreferences->setProperty("assistantShown", true),
+                                 "the real public shown preference admits the live Panel");
+                    prerequisite(
+                        owner->property("shown").toBool() && owner->property("visible").toBool(),
+                        "unchanged Panel bindings enter the ordinary shown lifecycle");
+                    const QPointer<QQuickItem> content =
+                        owner->property("contentItem").value<QQuickItem*>();
+                    prerequisite(
+                        content && content->window() == host_->window() && content->parentItem() &&
+                            content->parentItem()->window() == host_->window(),
+                        "normal Popup entry attaches content and PopupItem to the real window");
+                }
                 auto scriptOwner = engine_->newQObject(owner.get());
                 const auto counters = [](const QJSValue& state) {
                     return QVariantMap{{"json", state.property("json").toInt()},
@@ -1297,7 +1510,8 @@ class UsageAccountProof final : public QObject {
                                                  {"panel_destroyed", closedOwner.isNull()}});
                 }
             }
-            // A real scope method outranks the surrounding context/global function.
+            // Legal native scope method versus context/global function at the public reset
+            // bridge / frozen-original procedure boundary; not a Panel-declared QML method.
             UsageLookupContext object;
             QJSEngine::setObjectOwnership(&object, QJSEngine::CppOwnership);
             QQmlContext context(engine_->rootContext());
@@ -1314,11 +1528,46 @@ class UsageAccountProof final : public QObject {
             }
             QSignalSpy scopeWarnings(engine_, &QQmlEngine::warnings);
             prerequisite(scopeWarnings.isValid(), "scope-method warning observer is valid");
-            auto owner = panel(
-                applicationInfo, &context,
-                "id: unitLookupScope; property var unitScopeStats: ({calls:0,receiver:true});"
-                "function isFinite(value) { const s=unitScopeStats; ++s.calls;"
-                "s.receiver=s.receiver&&(this===unitLookupScope); return false; }");
+            const auto scopePhase = e11_usage_phase::phase();
+            prerequisite(scopePhase == "native" || scopePhase == "original",
+                         "scope invocation has an explicit source phase");
+            const QString scopeMethod =
+                scopePhase == "native"
+                    ? QStringLiteral(
+                          "function usageResetLabel(value, now) { return "
+                          "ApplicationInfo.assistantUsageResetLabel(value, now); }")
+                    : QStringLiteral(R"QML(
+    function usageResetLabel(value, now) {
+        if (typeof value !== "number" || !isFinite(new Date(value * 1000).getTime())) return qsTr("Reset unavailable");
+        const minutes = Math.ceil((value * 1000 - now) / 60000);
+        if (minutes <= 0) return qsTr("Reset time reached");
+        const days = Math.floor(minutes / 1440);
+        const hours = Math.floor((minutes % 1440) / 60);
+        if (days > 0) return qsTr("Resets in %1d %2h").arg(days).arg(hours);
+        if (hours > 0) return qsTr("Resets in %1h %2 min").arg(hours).arg(minutes % 60);
+        return qsTr("Resets in %1 min").arg(minutes);
+    }
+)QML");
+            QQmlComponent scopeComponent(engine_);
+            scopeComponent.setData(
+                ("import QtQuick\nimport edi.app\nimport UsageAccountAcceptance 1.0\n"
+                 "UsageScopeItem { property var unitResetValue: 60; property real unitNow: 0;"
+                 "readonly property string unitResetText: usageResetLabel(unitResetValue, "
+                 "unitNow);" +
+                 scopeMethod + "}")
+                    .toUtf8(),
+                QUrl("qrc:/tests/UsageNativeScopeOperand.qml"));
+            if (scopeComponent.isError())
+                throw std::runtime_error(scopeComponent.errorString().toStdString());
+            std::unique_ptr<QObject> owner(scopeComponent.createWithInitialProperties(
+                {{"parent", QVariant::fromValue(host_.data())}}, &context));
+            if (!owner) throw std::runtime_error(scopeComponent.errorString().toStdString());
+            auto* scope = qobject_cast<UsageScopeItem*>(owner.get());
+            prerequisite(scope && scope->parentItem() == host_ &&
+                             scope->window() == host_->window() &&
+                             QQmlEngine::contextForObject(scope) &&
+                             QQmlEngine::contextForObject(scope)->engine() == engine_,
+                         "real native scope Item belongs to the genuine host/window/engine");
             const auto stats = engine_->newQObject(owner.get()).property("unitScopeStats");
             trace.append(QVariantMap{{"stage", "scope-method"},
                                      {"stats", stats.toVariant()},
@@ -1326,7 +1575,11 @@ class UsageAccountProof final : public QObject {
             check.require(owner->property("unitResetText").toString() == "Reset unavailable" &&
                               stats.property("calls").toInt() > 0 &&
                               stats.property("receiver").toBool(),
-                          "actual Panel scope function wins and receives its real QObject base");
+                          "native scope member wins and receives its real QObject base");
+            check.require(
+                stats.property("argument").toBool() &&
+                    values.property("state").property("finite").toInt() == 0,
+                "the actual scope receives the Date value without calling context isFinite");
             check.require(scopeWarnings.isEmpty() && !engine_->hasError(),
                           "the supported scope member adds no unrelated QML error");
         } catch (const std::exception& error) {
@@ -2076,6 +2329,7 @@ class UsageAccountProof final : public QObject {
 };
 
 static void registerUsageAccountProof() {
+    qmlRegisterType<UsageScopeItem>("UsageAccountAcceptance", 1, 0, "UsageScopeItem");
     qmlRegisterSingletonType<UsageAccountProof>(
         "UsageAccountAcceptance", 1, 0, "UsageAccountProof",
         [](QQmlEngine* engine, QJSEngine*) -> QObject* { return new UsageAccountProof(engine); });

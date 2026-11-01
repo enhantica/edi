@@ -13,8 +13,8 @@ EaElements.Dialog {
     // of their own, where Enter has nothing else to do.
     property bool enterAccepts: false
 
-    x: Math.round((parent.width - width) / 2)
-    y: Math.round((parent.height - height) / 2)
+    x: parent ? Math.round((parent.width - width) / 2) : 0
+    y: parent ? Math.round((parent.height - height) / 2) : 0
 
     Shortcut {
         sequences: ["Return", "Enter"]
