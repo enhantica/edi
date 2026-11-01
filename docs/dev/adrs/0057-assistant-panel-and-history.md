@@ -2128,7 +2128,7 @@ neither a provider-token lifetime setting nor a week-long operation promise.
 
 ## Completed generic private reasoning is not display history
 
-FIRST is ADR0054 generic_item/generic_release_settled and the original public
+FIRST is ADR0055 generic_item/generic_release_settled and the original public
 archive owner. Completed private reasoning never creates a chat/activity row,
 clipboard/export body, file grant or scientific/native input. After all item
 frames unwind, its unused body can therefore release while the bounded actual
@@ -2419,7 +2419,7 @@ Corrected compile/link and native behavior remain separate pending validations;
 this source change and the prior failure do not establish Mac or whole-task success.
 
 
-### Local work-report evidence and native terminal ownership (E11-T5,684)
+### Local work-report evidence and native terminal ownership
 
 Extends the FIRST panel/composer, retained history, NativeRecord, immutable skill/input disclosure, protected assistant-result file primitives and existing gated test observer. One local collector projects bounded same-owner retained rows across actual turns; legacy or other-owner history is excluded with coverage. Canonical arguments, purpose and native outcomes remain in the original row. Only missing exact projected replies, original UI first-cause snapshots, immutable identity and turn metadata supplement that row. Optional diagnostic admission yields to original terminal/history promises and cannot fence, retry or change science. Public agent assessments stay unverified. Original terminal capture precedes cleanup; actual pending work is settlement unknown, never invented completion. Early Main sidebar lookup and later relation reveal are distinct original phases.
 
@@ -4477,7 +4477,7 @@ remains a retained failed baseline, not an original product defect or a repaired
 post result. Independent corrected original/post qualification is still owed.
 
 
-### E11-T5 B3: preserve history attachment metadata admission in the existing C++ owner
+### B3: preserve history attachment metadata admission in the existing C++ owner
 
 Prior art is AssistantMessage.inputFiles and its actual widestSentFile/sentFiles/Repeater
 consumers. Move only that procedural property body into stateless ApplicationInfo::
@@ -4507,7 +4507,7 @@ remain unchanged. This source batch requires independent original/post character
 public Qt/QML qualification; source preparation is not a runtime pass or whole-migration completion.
 
 
-### E11-T5 B2: move the existing lazy message body, copy and reset procedures into their C++ owners
+### B2: move the existing lazy message body, copy and reset procedures into their C++ owners
 
 Prior art is AssistantMessage's readHumanDetails/refreshHumanDetails, fullHumanDescription/
 humanActivityText/activityDescription, activity/user copy and resetDetails, together with both
@@ -4604,3 +4604,471 @@ The temporary boundary diagnostic is removed completely. The source correction
 requires a freshly bound actual native comparison, all previously unreached body,
 refresh, Copy/reset and unit suffixes, plus malformed/plain-carrier noninterference
 coverage. Source review or a diagnostic run alone does not qualify this correction.
+
+
+### Opaque snapshot metadata across compiled QML calls
+
+The first owner remains the existing HumanActivitySnapshot publication and
+ApplicationInfo description formatter. RetainJSObjects preserves nontraversal in
+the formatter, but cannot recover a carrier already lost before native entry.
+Actual generated AssistantMessage description code uses QVariant argument frames.
+Pinned Qt6.11.2 coerces those frames before invoking the QJSValue signature; its
+VariantObject path can fail to construct that argument, leaving undefined. The
+actual formatter diagnostic observed null/undefined arguments, while a later row
+observation retained the native type. That later state does not prove the timing
+of a particular call.
+
+Give the existing native snapshot an empty Q_GADGET metaobject. Qt can then carry
+it as a value-type wrapper through the compiled QVariant-to-QJSValue coercion.
+The header already participates in the existing QML module's automoc sources.
+No Q_PROPERTY, QML element/value-type name, invokable, QObject, instance field,
+store or global conversion callback is added. C++ fields and canonical identity
+remain internal; exact metatype admission and RetainJSObjects remain unchanged.
+This deliberately changes Qt value metadata, without exposing the payload.
+
+The production source removes every temporary formatter diagnostic. Source
+analysis identifies the conversion defect and supports this correction; actual
+full display/refresh/copy/privacy and malformed-carrier qualification still must
+compare the rebuilt application. Keep all original expectations and reached or
+unreached suffixes; neither a bounded diagnostic nor passing direct unit calls
+qualifies compiled real UI transport.
+
+
+### composer draft handoff uses the stable ApplicationInfo UI actor
+
+Prior art is AssistantComposer's session-selection/restore and Clear requested/committed signal
+handlers, retirement reset and text/preedit/IME revision publication, together with the original
+AVM sessionDraft getter/setter and session/history signal producers. The existing ApplicationInfo UI actor executes those
+view procedures through stable dispatch with the actual composer/editor handles. Canonical
+sessionDraft persistence and session/Clear signal producers remain in the existing AVM. QML retains
+its original declared view data, controls and direct signal bindings; no new store/controller,
+canonical draft, timer, registry, source-file read or consent/admission policy is introduced.
+
+Keep the original sessionDraftIntent and clearDraft record shapes and plain object references.
+Capture actual editor text/revision at the original event, clear a matching consumed record before
+editor mutation, preserve changed successor text and active IME/preedit, and publish actual editor
+text through the then-current original sessionDraft property. An unmatched restore still retires
+its captured intent and preserves current text; an unmatched Clear commit keeps its record. A
+failed Clear without commit never consumes the text. Retirement increments draftOwnerRevision,
+then empties submittedDrafts and clears workReportDraft, without introducing extra resets. Only
+text events publish sessionDraft; text/preedit/composition events retain their original revision
+increment order and the QML int property's original numeric conversion.
+
+The public managed Qt engine boundary belongs to the actual QML composer. Property/call throws
+remain pending; no JavaScript function/evaluator or compatibility algorithm is introduced. Draft
+record construction uses ordinary engine objects and restores the original object prototype before
+publication. While constructing still-unpublished fields, own data properties bypass inherited
+setters as the original object literal did. No field is normalized or given extra validation.
+Weak QObject/engine survival prevents an operation from continuing through a destroyed control;
+no new account/project/window eligibility is added.
+
+This family does not complete the full inventory212 migration: consent/Share/Send ownership,
+pending-ACK handling, work-report submission, chooser/model-effort state, selection/navigation and
+all other recorded app families remain explicit subsequent work. Independent original-control
+characterization must precede source application, then the same assertions must qualify the CPP
+path; private source preparation is not a build/runtime/CI or complete-migration result.
+
+
+The stable ApplicationInfo dispatch deliberately does not resolve composer.assistant or
+panel.assistant before entering owner-independent, guarded or late-owner view operations.
+This preserves original record/revision/reset/IME effects, popup-open and activated effects,
+closed-prefetch coldness and owner-independent footer geometry up to the original later error
+boundary. Current-view AVM lookup still occurs only at the original canonical publication,
+refresh or selection point inside the unchanged native body. No nonnull guard, silent skip,
+stale-owner capture, changed expectation, new policy/store/controller or compatibility JavaScript
+is added. The previous private per-view-AVM dispatch candidates and their mechanical union remain
+historical unelected source; disjoint hashes did not clear this semantic entrance class.
+
+
+### saved-session browser view procedures use the stable ApplicationInfo UI actor
+
+Prior art is AssistantPanel's session-button open/refresh sequence, sessionsTable prefetch and
+its scroll/height triggers, activated/select row sequence and sessionButtons naturalButtonWidth
+loop. The existing ApplicationInfo UI actor executes these view procedures through stable dispatch
+with actual panel/popup/table/row/button-box handles. The existing AVM sessions/refresh/select/archive
+owner retains canonical session operations and all original guards. QML retains direct dispatch and declaration;
+no new controller/store, cached geometry, timer, pagination cursor or session policy is introduced.
+
+Open the original popup before reading the actual current owner for the existing refresh call.
+Prefetch retains opened, more, not-loading and contentY+height >= contentHeight-height checks in
+that order, including the original two height reads; only then enter refreshSessions(true).
+Activate the actual row first, then resolve the current panel owner, selection method and current
+row ID in the original order. Native selection/archive/account/project/last-session safeguards
+remain unchanged; direct existing archive/refresh and Qt accept/reject dispatch remain frontend.
+
+Footer width reads the actual box count on every iteration, original itemAt/visible/implicitWidth
+properties, and the final count/spacing/Math.max operation in original order. The managed public
+Qt property/call boundary keeps the real QML binding's dependencies and pending thrown-value
+semantics; it adds no JavaScript helper/function/evaluator. No width snapshot, per-row mirror,
+notifier, clock or debounce replaces the existing binding. All original display strings, tr
+contexts, native session name/modified labels, usage/account timer and locale behavior stay as
+before; their actual count/visibility/font/translation/theme dependency behavior still requires
+independent original/post qualification, not inference from source.
+
+This family leaves usage/account formatting, notice/consent/tail/navigation procedures and the
+other full inventory212 obligations explicit. It does not complete all procedural migration or
+change provider/scientific/input/disclosure/Undo behavior. Private source preparation is not an
+original-control characterization, build/runtime/CI result or source application election.
+
+
+The stable ApplicationInfo dispatch deliberately does not resolve composer.assistant or
+panel.assistant before entering owner-independent, guarded or late-owner view operations.
+This preserves original record/revision/reset/IME effects, popup-open and activated effects,
+closed-prefetch coldness and owner-independent footer geometry up to the original later error
+boundary. Current-view AVM lookup still occurs only at the original canonical publication,
+refresh or selection point inside the unchanged native body. No nonnull guard, silent skip,
+stale-owner capture, changed expectation, new policy/store/controller or compatibility JavaScript
+is added. The previous private per-view-AVM dispatch candidates and their mechanical union remain
+historical unelected source; disjoint hashes did not clear this semantic entrance class.
+
+## Selected-file presentation keeps its original published-model scan
+
+FIRST AssistantViewModel::State owns selected_rows, file selection/admission and the selected_files
+RowTableModel projection. Its refresh_file_presentation publishes canonical pending flags. Composer
+only counts that already-published display model for pendingFileCount; it does not request another
+native projection refresh or change file admission. The public RowTableModel::text method keeps its
+original QVariant-to-QString conversion, followed by the strict literal string false comparison.
+
+The existing stable ApplicationInfo entrance borrows the actual Composer, without eagerly consuming
+its assistant/model in QML. Count and data changes each advance consentFileRevision before scanning;
+component completion scans without a revision increment. Each numeric loop condition rereads actual
+assistant, selectedFiles and count, and each text call separately rereads actual assistant/model and
+uses its real method receiver, index and pending role. The local numeric count is published only when
+the complete original scan succeeds. No snapshot, new canonical owner, cap, role filter, reset,
+coalescing, account/currentness guard, content read, timer, cache or compatibility JavaScript is added.
+
+Existing engine-backed managed reads/calls retain thrown values pending and the original earlier
+revision survives a later failure; a partial scan does not publish its local count. The existing
+Composer bridge's invocation-local control/thread/lifetime handling remains shared with draft edits.
+Error reporting must retain the actual QML forwarding/binding boundary, rather than substitute a bare
+native invocation or infer source positions/counts from output. Full same-dependency original/post
+controls over real selected-file notifications, revision/order/reentry, display state, errors and
+lifetime remain required before election. Broader accepted-input/admission/ACK/closure lifecycle and
+all other procedural QML remain in scope; this finite presentation extraction does not qualify them.
+
+
+### Desktop-only assistant availability and native toolbar dispatch
+
+Prior art is ApplicationInfo's captured availability, the Main toolbar robot/pane toggle and the
+AI assistance tab in AppPreferencesDialog. Browser builds now report unavailable unconditionally;
+the navigator classification/probe is retired. Desktop availability remains true. The preferences
+tab is disabled in browsers, while the robot remains clickable on every page and opens the ordinary
+centered AppDialog explaining that AI assistance requires the desktop version. That branch returns
+before reading the view assistant, requesting a pane, changing preferences or inspecting the device.
+
+The complete existing desktop toolbar click procedure moves to the existing ApplicationInfo UI
+actor. Its QML handler is one direct dispatch with actual controls/singletons, not eager assistant
+snapshots. Keep the enabled check, show/hide admission calls, current Session reads, manual takeover
+reset, focus-epoch/capture ordering and final manual-pane/preferences publication. No new backend controller,
+store, cache, timer or permission authority is introduced. Existing file presentation, activity,
+copy/disclosure/account/scientific/Undo behavior remains additive. This source change implements the
+platform requirement; actual desktop/browser builds, UI/runtime and remaining full checks follow.
+
+
+### Native usage and account presentation
+
+Prior art is AssistantPanel's JSON projection, maximum/allowance scans, labels, account plan/initial,
+plan-word map, allowance descriptor filter, reset clock and account-disconnect close branch. The
+existing AssistantViewModel remains canonical usage/account owner. ApplicationInfo now executes the
+view procedures; QML retains bindings, layout, its existing Timer and a one-call allowanceWindow
+forwarder used by the actual filter callback. No second data store, controller, timer or refresh/
+identity/admission policy is introduced. Translations retain AssistantPanel context and the original
+branch/read ordering, with existing native translation-binding capture.
+
+Script values retain identity in the same engine. Desktop code uses the declared Qt QML private
+interface for rooted VM values, default-hint addition, relational comparison and intrinsic for-of
+acquisition/next/close. Nested unwind closes inner then outer on body failure; iterator protocol
+failure skips that iterator's close and propagates through an active outer body. Named/member calls
+retain primitive accessor receivers and the pinned VM's late getter/call order. Pending exceptions
+remain pending except the original JSON projection catch. Interruption completion is local to the
+synchronous operation frame, never persisted application state. There is no evaluated JavaScript
+shim or mutable-global Symbol/Reflect shortcut.
+
+The shared named and member call entrances check engine readiness immediately after their
+original callee lookup, before invocation, callable classification or non-callable error formatting.
+This extends the FIRST guarded deferred-member and spread-call entrances to both direct call
+paths. Qt's object `toQStringNoThrow` may consume an already-pending exception while making an
+error description; it must not replace the original getter failure. The check preserves every
+thrown value, including false, undefined and ordinary objects, without another getter, catch,
+conversion, value-type test or special case. Original no-exception non-callable descriptions,
+receiver/argument order and the JSON projection's explicit catch remain unchanged. Interruption
+uses the same existing synchronous-frame readiness latch; no controller or retention changes.
+
+A direct member call on a null or undefined receiver uses Qt's `CallProperty` description,
+“Cannot call method”, while read-only property access keeps “Cannot read property”. Only that
+direct call description changes; callee lookup, arguments and the first-error guard above remain
+unchanged. This does not copy Qt's error-formatting behavior over an earlier getter failure.
+
+Actual Array.from, split/map/filter, casing/slice/join, Date, Math and String.arg calls are retained.
+Map/filter consume native callable values holding the original QML context; the filter's Panel is
+held with Qt's guarded-pointer mechanism, so retaining a callback does not retain the widget or a
+C++ stack frame. Its existing allowanceWindow forwarder preserves the actual method call and scope.
+Primitive string indexes use the VM numeric operation: pinned primitive Array.from still uses UTF16
+indexed fallback, while for-of uses its actual string iterator. Uppercase expansions are not cut.
+The history attachment reader's prior primitive-string numeric index uses the existing numeric
+bridge only for primitive strings; object/array-like reads and all original metadata/limit/reference
+rules remain unchanged.
+
+Qt6::QmlPrivate is a normal explicit desktop dependency. Browser availability is already disabled;
+its public presentation invokables supply valid empty/unavailable bindings without Qt private WASM
+headers or backend queries. This does not remove other browser file, transport or rendering code.
+The source migration is implemented before full verification; desktop/WASM builds, actual UI,
+callback/reentry/lifetime, locale/clock and final app/native/scientific/platform/CI checks still follow.
+
+
+### Native acknowledgement and window focus dispatch
+
+The existing Composer acknowledgement transaction and Main assistant focus procedures execute in ApplicationInfo, extending the earlier draft, selected-file and usage moves. Composer still owns submittedDrafts, revisions and editor state; AssistantViewModel and its message table remain the admission and history authorities. Native iteration uses the current engine's intrinsic iterator protocol, including custom iterators and abrupt-completion closure. Bookkeeping is published before editor clearing, with the original successor, revision and IME checks and repeated current-owner reads.
+
+Main retains its named one-call forwarding functions so existing callers and Qt.callLater coalescing keep their function identities. The two original deferred arrows become distinct native function values per invocation, retaining only their original lexical values and QML creation context; Qt's existing delayed-call queue still owns scheduling. No additional window-retirement guard, timer, controller or state store is introduced. Focus ancestry, geometry dependency reads, opener fallback and original effect order stay in the native procedure.
+
+The shared script bridge resolves unqualified names through the original QML scope, context properties, imports and global fallback, preserving dependency capture and call bases. Native map/filter callbacks retain their creation scope. Panel presentation functions keep thin forwarding methods where their original function scope is observable. Null member reads use the original property-read error wording. Browser builds keep the assistant unavailable and do not acquire a private Qt dependency. Desktop/private-Qt compilation, complete runtime and malformed/reentrant carrier checks remain required after the migration.
+
+
+### Native consent and admission procedures
+
+ApplicationInfo executes the original Composer capture/ownership/submission, Panel consent-send and ConnectionDialog offer/acceptance procedures. This extends the earlier draft and acknowledgement moves; AssistantViewModel remains the sole backend disclosure and admission authority. Existing records remain in their original view properties. Thin QML forwarding functions retain the original creation scopes and callable identities. Current-owner, revision, IME, file, account, model, project and context checks execute in their original order, including repeated reads around synchronous callbacks. Waiting retains the existing record; retirement and uncertain/native results keep their original handling.
+
+The existing native callback type retains the accepted offer's original lexical references and QML context through marked VM member storage. The offer's currentDraft callback and accepted-offer current callback remain real function values; no evaluated JavaScript, mutable-global iterator substitute, extra store, controller or admission policy is added. The original explicit disclosure/projection catches remain the only places that consume script exceptions. Native and browser compilation and the complete post-migration runtime and reentrancy checks remain required.
+
+
+### Native common project transactions
+
+Main and AppState retain declarative view state and thin named dispatch methods. ApplicationInfo executes their Save, Save As, picker, unsaved-question, deferred close/reset, native Create and session-project continuation procedures. Session remains the existing project owner and performs every actual save, open, discard and creation. The original action values, abandoned callbacks, intent identities and notification/effect ordering remain in the original view fields; no transaction store or controller is added. This brings the ordinary and assistant-originated paths to the same native dispatch design.
+
+Common stateless VM operations and native callback storage compile on desktop and browser builds through the declared Qt6::QmlPrivate dependency. Both pinned WebAssembly kits ship that normal target and its private headers. Assistant-only public methods retain unavailable browser definitions, including an error-shaped disclosure object, without querying the assistant backend. Non-capturing delayed project actions use the VM's QML-scope function representation so Qt's existing delayed-call queue owns its original QObject guard; captured continuations retain distinct function identities and original lexical values. No JavaScript source is evaluated.
+
+Truth testing throughout the migrated usage, focus, consent and common transaction procedures uses the VM's raw Boolean operation, including directly stored QString values. It does not pass through public managed conversions that can consume an already-pending exception. Explicit original projection/disclosure catches remain explicit; admission and property errors remain pending. The previous consent browser-definition omission is corrected for the whole declared family. Full desktop/browser compilation, error attribution and complete runtime/reentry verification remain required after migration.
+
+
+### Native editor lifecycle and commit completion
+
+ParameterField is the first parameter editor; ParameterCell and TextCell share its draft ownership and reentry design. ApplicationInfo now executes their procedural focus, draft capture, assistant edit/allow/cancel, Escape, commit and lifetime transitions. The existing view fields and declarative clean-text bindings retain their ownership; IME, owner/project/item identity and original in-progress tokens still determine each transition. Parameter writes still use ParameterItem.value/free, and text cells still emit the original committed signal to their model owner. No scientific calculation, validation policy or Undo route is replaced. The descriptors distinguish the original field/cell lock and item rules rather than imposing a new common restriction.
+
+Commit's original finally cleanup is native too: a pending script exception is suspended with its exact value and stack trace while the original latch-release predicate runs, then restored unless cleanup throws its replacement. This is completion transport, not a new catch/refusal policy. Original typed refusals retain each component's translation context. ParameterCell sizing/refit and shared TypedInput validation execute through the existing engine and formatting providers. Native/browser compilation and full input, reentrant publication, destruction, successor-draft and error checks remain required after migration.
+
+
+### Native remaining form and picker dispatch
+
+ValueField and SelectorField now execute commit, refusal, lifetime/current-owner and selection sequencing in ApplicationInfo, following the earlier parameter/text editors. Their original compiled Qt.binding restoration stays as an inline declarative callback at the final native-controlled step. Structure and experiment file pickers retain their actual request/project/experiment records and original cancellation/admission order; scientific loads still go through the existing ProjectViewModel. Physical experiment-input gestures retain their one-use proof, press identity and consume-before-action order through the existing AssistantViewModel APIs. No input authority, new store/controller, backend guard or Undo policy is added.
+
+This migration preserves the current structure picker's actual property accesses, including its previously undeclared webRequestProject and loadDialog.intent references; those pre-existing defects require separate identification in the full checks rather than a silent ownership-policy change. Native/browser builds and full physical-input, picker-reentry and error checks remain pending.
+
+
+### Native remaining Composer input and work-report procedures
+
+ApplicationInfo executes Composer's remaining work-report capture/completion, file chooser admission/cancellation/retirement, focus/selection and owner-reset procedures. Existing AssistantViewModel receipts and file-selection tokens remain authoritative; records remain in their original Composer/dialog fields. Successor revision, IME, owner, binding and scope checks keep their original order. Selection is consumed before callbacks, and file answers still reach their original owner or its cancellation route. The remaining model/effort popup and Panel presentation procedures are separate migration work; this section does not claim their completion.
+
+
+### Native assistant choices, notices and conversation presentation
+
+ApplicationInfo executes the remaining model/effort choice construction, sorting/selection, reconciliation, keyboard navigation and deferred focus/scroll procedures. AssistantViewModel remains the actual model/effort authority; the popup's original intent/current-owner and available-model checks keep their original order, and selection presentation follows the actual setters, including refusal/no-op. Delayed row focus retains its original lexical values and checks, with no extra window/retirement guard. Original named forwarding functions retain their callable identities.
+
+Panel notice capture/anchor projection, session restoration, report links, file drops, focus and conversation user navigation, admission observation, notice reveal and tail following now execute in the same existing native UI owner. The original view fields, message table, one-use file-selection receipts and clipboard/report owners remain authoritative. URL regular-expression literals are created by the pinned VM and invoke its actual test method; there is no replacement URL policy or native-regex approximation. Message table-tone and sent-file presentation retain original translation, font and array iteration dependencies. Intrinsic iterator/error handling and native callback arity/scope/identity follow the preceding moves. No controller, message cache or script shim is introduced.
+
+Native/browser compilation and complete actual input, model-change/reentry, history geometry, privacy, link and error verification remain required. Remaining general controls/preferences actions and chart, scene and report procedures are separate source work; this section does not mark the full migration complete.
+
+
+### Native preference actions and skill-source selection completion
+
+ApplicationInfo executes the existing preference dialog's diagnostics-copy procedure, assistant-change reset, skill-source press/click records, folder/web selection opening and retirement, choice actions and engine-thread list construction. The first implementations are AppPreferencesDialog's assistant diagnostics and skill-source controls, with the existing AssistantViewModel selection IDs, revisions and cancel/add methods remaining authoritative. No selection record, source collection or preference store is duplicated. The source-row gesture and dialog selection records stay on their original views.
+
+Native dispatch preserves original reads, guards, repeated field access, literal fields, cancellation/reentry order and explicit copy catch. Only that original catch discards a pending exception; recovery checks and writes may still throw. Currentness is checked at the original points before/after report creation and clipboard publication. Script arrays, context names, coercions and callbacks continue through the current VM; preference writes still use the original setters. Translations keep the dialog context and extraction markers. The browser keeps all invokable definitions, with its assistant UI unavailable; ordinary preferences remain active. Full compilation and runtime verification follow the complete source migration.
+
+
+### Linkable native script bridge storage and context lists
+
+The first native presentation bridge retains callback values in the current VM's garbage-collected heap. Qt 6.11.2 does not export MemberData::allocate or its vtable. The bridge therefore uses the exported ExecutionEngine::newArrayObject(values, length) allocator for that same private retained-value vector. Input values are rooted on the VM stack during allocation; the callback's traced ArrayObject pointer roots the vector afterward. Direct ArrayData reads and write-barrier writes preserve references, update ordering and exception state without consulting global Array, prototype properties or user script. The array is never exposed to script. Empty captures do not require array data access.
+
+The same pinned Qt implementation is prior art for live QQmlContext QObject-list wrappers. Native context lookup distinguishes absent names, IDs and selected external slots. IDs retain their own original capture/read path, independent of public property storage. For an external slot, the bridge uses only the existing public context, weakly guards its identity, and checks its current index before and after the original property capture and QVariant copy. It never recreates empty public storage from retained context metadata. A known name whose original public storage is absent, replaced or out of range returns undefined with the name still found: it does not expose a later global, keep an earlier value, invent a new invalid-context error or clear an already-pending script exception. This is an explicit safety definition for retired storage, not a claim that upstream unchecked reads had defined behavior there. Valid aliases, explicit undefined shadowing, imports, QObject notifications, method receivers and original capture ordering remain.
+
+Local count/at callbacks continue to read the current exact QList<QObject*> value; they do not snapshot it. One lifetime entry per active context/slot/engine holds only weak owner/engine identities, retained context metadata, the slot index and weak VM wrapper handles. Each new read prunes expired handles. A non-reused numeric token travels in the list's native data field, so old aliases cannot bind an unrelated new QObject at the same address. Count/at resolve that token before touching any raw QObject, verify the current public storage/index/type, and check each requested element against the current list size. Retired owner/engine/slot/type yields count zero or null at; a live alias observes replacement and shrink. No forever registry, list-value cache or second model is created.
+
+Owner/engine destruction removes the entry before any reentrant cleanup and clears the raw property.object field on its still-live wrappers. This preserves valid native list-reference object identity while making normal QVariant conversion and typed list-reference conversion of directly bridge-created wrappers safe after retirement. Native list-reference copies keep their own existing Qt weak owner and the numeric token, never a pointer into GC-owned bookkeeping. The ordinary exported QmlListWrapper factory/type/prototype remains. Qt's existing GC critical section covers only raw-owner factory construction and weak-handle registration, with the result rooted before collection resumes; it does not disable ordinary collection or depend on mutable script globals. Ownership metadata is confined to the original QML context/engine thread and removed on either QObject's destruction. Its dedicated lifetime connections do not replace original property-capture notifications.
+
+This repair owns the Edi native context resolver, its default QVariant conversions and directly bridge-created wrappers. It does not claim to repair every Qt typed export/reimport: public qjsvalue_cast<QQmlListReference> followed by toScriptValue can create a generic Qt wrapper outside this bridge, and a later typed conversion after owner death still reaches Qt's unchecked raw property.object path. Edi currently has no QQmlListReference/fromScriptValue consumer or external context-list producer; its existing typed QML lists are declared model/property lists or native-array projections, not this export/reimport route. The retained source-bound census/escape guard must reopen this design and its gates for a new typed-reference consumer, context-list producer or typed-list conversion route. No vendor patch, global Qt interception or new engine framework is authorized by this repair. This concrete public Qt limitation remains explicit rather than being described as universal lifetime safety.
+
+ProxyObject, ProxyFunctionObject and ProxyConstructorObject all declare Managed::Type_ProxyObject; native member lookup uses that discriminator instead of taking the hidden ProxyObject vtable address. Generic object lookup, proxy dispatch, receiver identity, reentry and error handling retain their existing paths. No Qt implementation symbols are redefined, access restrictions bypassed or missing cases stubbed.
+
+Primary reference: qt/qtdeclarative v6.11.2 src/qml/jsruntime/qv4memberdata.cpp and qv4engine.cpp, src/qml/qml/qqmlcontext.cpp, and installed qv4proxy_p.h/qv4arraydata_p.h declarations. Normal native/browser linking and callback, context-list, proxy and reentry runtime verification remain required.
+
+
+### Receiver-aware lookup uses the current VM's virtual getter
+
+The first native member bridge is `panelUsageGet`, shared by direct reads, ordinary and deferred
+member calls, and chart spread calls. Its QObject branch keeps the captured QML context, import
+handling and method-attachment flags. Other objects now use Qt's receiver-aware `Object::get`
+instead of reproducing an internal-class/prototype lookup. Inherited `resolveLookupGetter` does
+not imply inherited `virtualGet`: QML lists, sequences and variant associations have their own
+getters. An ordinary object can also have an exotic prototype, including a proxy. Qt's
+`Object::internalGet` stops at that boundary and invokes the prototype's virtual getter; a raw
+`resolveProtoGetter` walk does not. Neither a direct-proxy exclusion nor checking only the
+receiver's lookup resolver closes that class.
+
+Named primitive reads use the same virtual prototype lookup with the original primitive as the
+receiver. String length retains its UTF-16 special case; a string's own numeric property is read
+from its boxed view before its prototype. Existing numeric subscript operations remain separate.
+No user getter is read to choose a fast path, no graph is enumerated, and no mutable global
+helper or JavaScript shim is consulted. The native getter owns reference refresh, proxy traps,
+accessor receiver identity and pending exceptions. This fixes a source-proven dispatch defect;
+it does not by itself establish the cause of any particular sidebar or table failure.
+
+Primary prior art: Qt 6.11.2 `qv4object.cpp` `Object::internalGet`/`virtualGet`,
+`qv4object_p.h` receiver-aware `get`, `qqmllistwrapper.cpp` `virtualGet`,
+`qv4sequenceobject.cpp` `Sequence::virtualGet`, `qv4variantassociationobject.cpp`
+`VariantAssociationObject::virtualGet`, and `qv4lookup.cpp` primitive accessor lookup.
+
+
+### Private QObject member lookup requires an identifier key
+
+The first native member and QML context bridges construct their names with `ExecutionEngine::newString`.
+Qt 6.11.2 distinguishes that allocation from `newIdentifier`: the latter also calls `toPropertyKey`.
+Ordinary `Object::get(name)` performs that conversion before virtual dispatch, but the bridge's direct
+`QObjectWrapper::getQmlProperty` call bypasses it. The private getter's missing-member fallback uses
+`name->propertyKey()`, whose precondition is an already valid identifier. Both bridge entry points now
+establish that precondition before any private context or QObject lookup. This is internal key
+normalization, with no user conversion, property read or enumeration.
+
+Passing an invalid key is not a missing-property query. In the pinned implementation, the hash's
+empty slot has an invalid key and index zero; querying it with an invalid key can select that unrelated
+index rather than report absence. This explains why absent QObject members can incorrectly produce
+`ObjectCtor`, including a child without `children` and a sidebar child without `gradient`. The ordinary
+missing-member result must remain `undefined`; the sidebar fade selector and focus recursion keep their
+original predicates and callbacks. Context/import/method flags, receiver identity, getter count,
+exception propagation, virtual-dispatch repair and destruction-only stored reads remain unchanged.
+
+Primary prior art: Qt 6.11.2 `qv4engine.cpp` `newString`/`newIdentifier`, installed
+`qv4string_p.h` `propertyKey`/`toPropertyKey`, `qv4object_p.h` `get(StringOrSymbol*)`,
+`qv4qobjectwrapper.cpp` `getQmlProperty`, and `qv4internalclass.cpp`/`qv4internalclass_p.h`
+`PropertyHashData`/`lookup`. Actual sidebar and full UI/runtime verification remain required.
+
+
+### Deferred table work belongs to its actual QObject
+
+The first table implementation is DataTable's `columnFitLife` scheduling token and TableRow's
+cell-width/children signal callbacks. The token is a retained script object; its `alive` field
+does not prove that the table QObject or its QML context still exists. A callback that only
+checks that field can later resolve a null `table` id. The row signal callbacks had the same
+missing boundary: their retained table wrapper can outlive its QObject, then a signal from
+remaining cells reads `fitColumns` on that retired wrapper. This is a common lifecycle defect
+also observed before the procedure migration, not a reason to suppress delayed warnings.
+
+Queued fit callbacks now retain their actual table alongside the existing token. Before
+reading the token or any table/context member, the callback inspects that retained native
+QObject wrapper and its captured QML scope owner with QPointer and QQmlData, refusing a
+deleted or deletion-queued owner or an invalidated QQmlContextData. These are native state
+checks, with no context-name lookup. It rechecks both owners after token reads and queued-state
+publication, then invokes that same retained table rather than looking up an id in a retired scope. This bookkeeping does not
+retain the QObject or introduce a replacement table/model authority.
+
+Both row signal callback forms retain the same token and apply the same owner check before
+member/context access and after `applyWidths`, which may reenter teardown. The existing
+`Qt.callLater(table.fitColumns)` method remains the queued row action; its identity and Qt's
+per-function coalescing are retained. Qt 6.11.2's delayed queue itself guards QObject methods
+and JavaScript functions with an immediate QML scope against deleted/deletion-queued owners.
+The native closure scheduled by DataTable is not one of those automatically guarded function
+representations, so it must perform its own explicit captured-owner check.
+
+The destruction-only stored-property reads, connection disabling, row detachment, virtual
+member dispatch and identifier normalization repairs remain intact. Live fitting, width
+assignment, pending exceptions and reentry keep their existing operations. The owner-file
+strict warning gate and normal UI/teardown suites must verify the repair; no warning budget
+or numerical expectation is changed. Primary prior art: Qt 6.11.2
+`src/qml/qml/qqmldelayedcallqueue.cpp` `addUniquelyAndExecuteLater`/`execute`, and the installed
+`qv4qobjectwrapper_p.h`/`qv4qmlcontext_p.h`/`qqmldata_p.h`/`qqmlcontextdata_p.h`
+native wrapper, guarded scope, deletion-state and context-validity interfaces.
+
+## Pending connection caption uses the actual connection owner
+
+FIRST AssistantViewModel already exposes the authoritative connecting state and
+its localized connectionLabel. The signed-out panel remains visible while a real
+connection is being prepared, since connected stays false until the existing
+native ready/authentication conditions hold. Its central prompt now shows that
+existing pending label while state is connecting, rather than incorrectly saying
+No ChatGPT connection during that operation. Every other disconnected state
+retains the original translated No ChatGPT connection prompt.
+
+This is a declarative caption projection, not authentication or selected-file
+approval. Connected/readiness, outgoing-data admission, consent, account identity,
+errors/notices, cancellation and actual process/transport settlement remain their
+existing backend owners. No timer, retained account, synthetic connected flag,
+new state or hidden error is introduced. A pending attempt, successful readiness,
+refusal/error/cancel and genuine disconnected state must retain their actual
+visible meanings under normal independent UI verification.
+
+## Conversation display and transport readiness are separate projections
+
+FIRST ViewedSession already retains a verified conversation independently of its
+disposable execution process. The existing account projection likewise retains
+that verified account during an approved same-session resume. After Share installs
+new skill instructions, generic_prepare_thread retires only that settled process
+and resumes the same thread. Connected correctly remains false until the original
+native authentication/ready proof completes; replacing the whole chat with a
+connection prompt during this owned transfer misrepresents the retained view.
+
+AssistantViewModel.conversationAvailable exposes display availability separately:
+an actually connected conversation, or the still-current ViewedSession paired
+with its exact approved ResumeCheckpoint. The latter checks thread/email,
+project/model/controller, generation, account epoch, history owner, workspace and
+structurally identical approved disclosure. The getter reads existing immutable
+identities only. It never calls current_disclosure, resume_identity_current,
+staged-skill/file checks, provider operations or model mutation. Its dedicated
+notification uses the existing per-property observed/version publication owner.
+No history-nonempty test, presentation latch or new retained account is added.
+
+The transcript/composer pane uses this display property and the signed-out overlay
+its inverse. Every connected/send/drop/model/auth/approval guard remains unchanged;
+retained display does not grant input or claim a ready connection. The existing
+header continues to show the real connection/cancel state. Conversation error
+notices and the original Stop/cancel actions remain visible through their normal
+channels. A local same-approved-scope preparation failure may retain the verified
+chat with its actual error and honest Connect retry header; it is not an account
+failure and does not require destroying the retained view. Real transport failure
+clears the resuming owner, and sign-out, account/project retirement, Clear, archive
+or different-thread selection invalidate their original owners. Cold login,
+unknown/different account or stale scope cannot use retained rows as display
+proof. Browser/unmanaged paths keep the original connected-only availability.
+
+
+### Scientific stage acceptance is distinct from flag setup
+
+FIRST is the existing shared delegated refinement developerInstructions in
+AssistantViewModel::State::generic_start_thread, refinement-strategy's implicated
+group/accepted-work loop, assistant_native_tools run_fit/set_free descriptions,
+and widget_free_group_range/matches plus the ordinary ParameterFilterModel Free
+menu. These owners already distinguish one new unvalidated group from retained
+accepted work and route an exact whole eligible uniform category through its
+original bulk control. No alternate stage controller or optimizer is introduced.
+
+The guidance now makes acceptance explicit at the existing run_fit boundary:
+reconcile the complete actual free population before fitting. Native eligibility,
+default free flags, earlier setup and a successful edit do not scientifically
+accept a group. A single batch or several edits before the first fit do not merge
+distinct new categories into one assessment. New background and profile blocks,
+and new coordinates and ADPs, are introduced separately; other unvalidated
+categories stay fixed until the current assessment. Earlier accepted useful
+eligible groups remain cumulative. A failed new block is diagnosed/repaired
+without discarding accepted stages or adding unrelated categories. Explicit user
+combined groups/subsets/order and native automatic-background ownership retain
+priority. Evidence-justified within-profile groups and simultaneous X/Y remain
+available; there is no universal category order, fixed stage count or all-free
+background requirement.
+
+This is app-owned delivered guidance, not a native scientific-acceptance detector
+or hard free-category veto. Normal native edits still preserve explicit arrays,
+atomic/partial receipts, native eligibility and original Undo/currentness. The
+bulk matcher is unchanged: exact current displayed eligible membership plus one
+uniform flag admits the original Free/Fixed menu; subsets and explicit order keep
+their ordinary paths. The existing summary-first/windowed inspection, unchanged
+fact reuse, own offered syntax before unnecessary web lookup and failed-fit Undo
+rules are retained; no raw-data quota, omitted-view reinterpretation or syntax
+search proxy is added. refinement-strategy carries its new body version/hash in
+the existing index, with other skills/capabilities/references unchanged.
+
+A supplied bounded real-provider observation introduced several new unvalidated
+blocks before one assessment despite the prior guidance. This motivates the
+clarification; source wording cannot prove future adherence, optimal scientific
+judgment or a successful provider/mode matrix. Actual delivered requests,
+assessment order, accepted-stage retention, bulk-control use and compact evidence
+choices still need independent observation. No hidden transcript/oracle was read
+and no provider/model response is treated as a backend guarantee.

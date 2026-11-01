@@ -66,3 +66,10 @@ crysta to calculate them (ADR-0003), so a single crystal needs a model, a reader
 |---|---|
 | A separate experiment class in a heterogeneous collection | Deferred: every holder of the experiment collection would change, with nothing gained in what is shown |
 | Draw the chart in the pattern chart component | Rejected: its axes, series and toolbar are a pattern's; a scatter of two intensities shares little with them |
+
+
+## Native single-crystal chart procedures
+
+ApplicationInfo executes SingleCrystalChart's model/hidden/range projections, report range and used/unused point splitting, legend and redraw/diagonal sequencing, model-change notifications, nearest-reflection/hover projection and pointer zoom/pan/pick transactions. The first owners remain SingleCrystalReflectionModel in experiment_models and the core reflection/presentation functions; they supply scientific values, uncertainties, calculated/used flags, hover data and native layers. Existing chart fields retain hidden rows, zoom, revision and pointer state. No reflection model, scientific conversion, result store or controller is duplicated.
+
+The current VM retains script arrays, custom iteration/spread, getter/method/context access, callback captures and arity, coercion, finite/range checks and setter/reentry order. Spread extrema call the pinned VM's actual spread-call operation. Report and live points keep their original admission, reads and dimming; model notifications still advance the original revision before redraw. Pattern and single-crystal hover placement share the exact preceding native rule without a duplicate text write. QML retains visual QtGraphs/layer/delegate declarations, bindings and named one-call forwarding surfaces. Complete compilation and scientific, input, lifecycle, report, reentry and error verification follows the complete source migration.

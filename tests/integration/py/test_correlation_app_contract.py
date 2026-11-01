@@ -239,20 +239,23 @@ def test_experiment_data_header_and_link_are_declared():
         ['blue', 'Load data…', True],
         ['blue', 'Load data…', True],
     ], 'The existing filename must turn blue on hover and the empty link must stay blue'
-    widths = re.search(r'columnWidths:\s*(\[[^\n]+\])', source)
-    assert widths, 'The Experiments table must declare each column width'
+    widths = re.search(r'(?m)^\s*columns:\s*(\[[^\n]+\])', source)
+    assert widths, 'The Experiments table must declare each column through the shared width rule'
+    common = text('Components/DataTable.qml')
+    filler = re.search(r'(?m)^\s*readonly property int fillerIndex:\s*([^\n]+)', common)
+    assert filler, 'The shared table declares which fitted text column holds the spare width'
     script = (
-        'const numberColumnWidth=20, group={scan:false,scanColumns:[]};'
-        'const AppSizes={iconColumnWidth:25,dataColumnWidth:80};'
-        'const qsTr=value=>value;'
-        'const textColumnWidth=()=>73;'
-        'process.stdout.write(JSON.stringify(' + widths[1] + '));'
+        'const numberColumnWidth=20,group={scan:false,scanColumns:[],fitColumnWidth:35};'
+        'const AppSizes={iconColumnWidth:25,iconOnlyColumnWidth:17,dataColumnWidth:80};'
+        'const columns=(' + widths[1] + ');const equalColumns=false,spreadColumns=[];'
+        'process.stdout.write(JSON.stringify([columns,(' + filler[1] + ')]));'
     )
     result = subprocess.run(['node', '-e', script], capture_output=True, text=True, check=False)
-    assert result.returncode == 0, 'The production Experiments column widths must evaluate'
-    actual = json.loads(result.stdout)
-    assert actual[3] == 73 and actual[4] == -1 and actual.count(-1) == 1, (
-        'Data file must take the sole free width while Datablock takes its measured text width'
+    assert result.returncode == 0, 'The production Experiments column declarations must evaluate'
+    actual, filler_index = json.loads(result.stdout)
+    assert actual == [20, 17, 35, -1, -1, 0.001, 25] and filler_index == 4, (
+        'Datablock and Data file fit their content through the shared table rule; '
+        'Data file holds the spare width before the fixed action column'
     )
 
 

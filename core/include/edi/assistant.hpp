@@ -51,7 +51,7 @@ struct Hooks {
     std::function<std::unique_ptr<TerminalRetention>(const JsonText& prospective)> reserve_terminal;
 };
 
-/// Shared conversation, approval and trial policy (ADR-0054). The worker outlives this owner-thread object.
+/// Shared conversation, approval and trial policy (ADR-0055). The worker outlives this owner-thread object.
 class Controller {
    public:
     Controller(edi::work::Worker& worker, Hooks hooks);

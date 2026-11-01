@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "experiment_view_model.hpp"
 #include <QPointer>
+#include <QScopeGuard>
 #include <string_view>
 
 #include <QStringList>
@@ -100,7 +101,7 @@ constexpr std::array<KnownInstrument, 28> kKnownInstruments{{
     {"Laboratory", "Bruker D8 Advance", false},
     {"Laboratory", "Bruker D2 Phaser", false},
     {"Laboratory", "Malvern Panalytical Empyrean", false},
-    {"Laboratory", "Malvern Panalytical X'Pert³ Powder", false},
+    {"Laboratory", "Malvern Panalytical X'Pert3 Powder", false},
     {"Laboratory", "Malvern Panalytical Aeris", false},
     {"Laboratory", "Rigaku SmartLab", false},
     {"Laboratory", "Rigaku MiniFlex", false},
@@ -131,6 +132,7 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
     : QObject(parent),
       project_(project),
       experiment_(experiment),
+      made_for_(experiment.experiment_type),
       editor_(editor),
       registry_(registry),
       sample_form_options_(new OptionListModel(this)),
@@ -168,7 +170,9 @@ ExperimentViewModel::ExperimentViewModel(SavedFile saved, edi::Project& project,
       measured_range_(new RangeViewModel(experiment, this)),
       pattern_(new PatternModel(experiment, this)),
       text_(new BlockText([saved, &experiment] { return saved(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); }, this,
-                          [&experiment] { return std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string(); })) {
+                          [&experiment] { return std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string(); },
+                          [&experiment] { return edi::fixed_categories(experiment); },
+                          [saved, &experiment] { return saved.discovered(std::filesystem::path(edi::entity_path("", "experiment", experiment.name)).generic_string()); })) {
     capturePattern();  // the measured data shows before the first calculation is published
     // The options follow the experiment's type, which is read-only, so they are set once.
     const edi::BeamModeEnum mode = experiment_.effective_beam_mode();
@@ -280,8 +284,34 @@ QString ExperimentViewModel::facility() const {
 }
 
 // The selectors' state from the experiment: its names, the instruments of its facility for its sample form, and
-// whether they can be chosen, which they can for an experiment made from a data file.
+// whether they can be chosen, which they can once a data file was loaded into it in this session. The saved data file
+// name is not that: it comes back when the project is reopened, and then the file's description stands.
 void ExperimentViewModel::sync_description() {
+    const QPointer<ExperimentViewModel> receiver(this);
+    if (!property_notifications_.contains("facilityToken")) property_notifications_["facilityToken"] = QVariant::fromValue(facility_token_);
+    if (!property_notifications_.contains("instrumentToken")) property_notifications_["instrumentToken"] = QVariant::fromValue(instrument_token_);
+    if (!property_notifications_.contains("descriptionEditable")) property_notifications_["descriptionEditable"] = QVariant::fromValue(description_editable_);
+    quint64 publication = 0;
+    const auto propertyNotifications = qScopeGuard([receiver, &publication] {
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant facilityToken = QVariant::fromValue(receiver->facility_token_);
+        if (receiver->property_notifications_.value("facilityToken") != facilityToken) {
+            receiver->property_notifications_["facilityToken"] = facilityToken;
+            emit receiver->facilityTokenChanged();
+        }
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant instrumentToken = QVariant::fromValue(receiver->instrument_token_);
+        if (receiver->property_notifications_.value("instrumentToken") != instrumentToken) {
+            receiver->property_notifications_["instrumentToken"] = instrumentToken;
+            emit receiver->instrumentTokenChanged();
+        }
+        if (!receiver || publication == 0 || receiver->notification_publication_ != publication) return;
+        const QVariant descriptionEditable = QVariant::fromValue(receiver->description_editable_);
+        if (receiver->property_notifications_.value("descriptionEditable") != descriptionEditable) {
+            receiver->property_notifications_["descriptionEditable"] = descriptionEditable;
+            emit receiver->descriptionEditableChanged();
+        }
+    });
     const std::string held_facility = facility().toStdString();
     const std::string held_instrument = instrumentName().toStdString();
     const bool single_crystal = experiment_.experiment_type.effective_sample_form() != edi::SampleFormEnum::POWDER;
@@ -297,18 +327,30 @@ void ExperimentViewModel::sync_description() {
     }
     const QString facility_token = QString::fromStdString(held_facility);
     const QString instrument_token = QString::fromStdString(held_instrument);
-    const bool editable = !experiment_.data_file.empty();
-    const bool changed = facility_token != facility_token_ || instrument_token != instrument_token_ ||
-                         editable != description_editable_ || facility_options_->count() == 0;
-    if (!changed) {
+    const bool editable = experiment_.description_chosen;
+    const bool facility_changed = facility_token != facility_token_;
+    const bool instrument_changed = instrument_token != instrument_token_;
+    const bool editable_changed = editable != description_editable_;
+    if (!facility_changed && !instrument_changed && !editable_changed && facility_options_->count() != 0) {
         return;
     }
     set_description_options(facility_options_, facilities, held_facility);
     set_description_options(instrument_options_, instruments, held_instrument);
+    publication = ++notification_publication_;
+    if (publication == 0) publication = ++notification_publication_;
     facility_token_ = facility_token;
     instrument_token_ = instrument_token;
     description_editable_ = editable;
-    emit descriptionChanged();
+    if (facility_changed) {
+        emit facilityTokenChanged();
+    }
+    // The instrument options follow the facility, so the instrument selector looks again when either changes.
+    if (facility_changed || instrument_changed) {
+        emit instrumentTokenChanged();
+    }
+    if (editable_changed) {
+        emit descriptionEditableChanged();
+    }
 }
 
 // A facility chosen: its instrument stays when the new facility has it, else it becomes "Not specified".
@@ -596,6 +638,14 @@ void ExperimentViewModel::syncEstimate() {
     notify(estimate_.note != before.note, &ExperimentViewModel::estimateNoteChanged);
 }
 
+bool ExperimentViewModel::madeForType() const {
+    const edi::ExperimentType& now = experiment_.experiment_type;
+    return now.effective_sample_form() == made_for_.effective_sample_form() &&
+           now.effective_beam_mode() == made_for_.effective_beam_mode() &&
+           now.effective_radiation_probe() == made_for_.effective_radiation_probe() &&
+           now.effective_scattering_type() == made_for_.effective_scattering_type();
+}
+
 void ExperimentViewModel::sync() {
     const auto update = [this](auto& member, const auto& value, void (ExperimentViewModel::*signal)()) {
         if (member != value) {
@@ -649,17 +699,8 @@ void ExperimentViewModel::sync() {
     update(dataset_weight_, experiment_.dataset_weight, &ExperimentViewModel::datasetWeightChanged);
     update(scale_, one_link ? registry_.find(&experiment_.linked_structure().scale) : nullptr,
            &ExperimentViewModel::scaleChanged);
-    // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
-    // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
     measured_range_->sync();
-    std::vector<edi::Category> categories = edi::experiment_categories(experiment_);
-    for (edi::Category& category : categories) {
-        if (category.id == "data") {
-            category.is_loop = true;
-            category.rows = static_cast<std::size_t>(measured_range_->points());
-        }
-    }
-    categories_->setCategories(categories, [this] { return text_->text().toStdString(); });
+    syncCategories();
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();
@@ -688,8 +729,26 @@ std::size_t ExperimentViewModel::place() const {
     return place;
 }
 
+void ExperimentViewModel::syncCategories() {
+    // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
+    // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
+    std::vector<edi::Category> categories = edi::experiment_categories(experiment_);
+    for (edi::Category& category : categories) {
+        if (category.id == "data") {
+            category.is_loop = true;
+            category.rows = static_cast<std::size_t>(measured_range_->points());
+        }
+    }
+    categories_->setCategories(categories, [this] { return text_->discoveryText().toStdString(); },
+                               [this] { return edi::calculated_categories(experiment_); });
+}
+
 void ExperimentViewModel::capturePattern() {
-    single_crystal_reflections_->sync();  // a single crystal's calculated F², published with the pattern
+    // What the calculation publishes with the pattern: a single crystal's calculated F², a powder's reflections, and
+    // the categories its file holds with them, with their counts.
+    single_crystal_reflections_->sync();
+    reflections_->sync();
+    syncCategories();
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {

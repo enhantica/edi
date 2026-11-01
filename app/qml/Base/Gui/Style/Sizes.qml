@@ -5,6 +5,7 @@
 pragma Singleton
 
 import QtQuick
+import edi.app
 import QtQuick.Window
 
 QtObject {
@@ -102,6 +103,6 @@ QtObject {
 
     // Functions
     function scalePx(size) {
-        return Math.round(size * (defaultScale / 100));
+        return ApplicationInfo.styleScalePx(size);
     }
 }

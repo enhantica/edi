@@ -38,17 +38,11 @@ DataTable {
         objectName: "singleCrystal.reflections.sort." + role
         horizontalAlignment: Text.AlignHCenter
         // The header lays a mouse area over its row of titles, which would take the click: the row goes above it.
-        Component.onCompleted: {
-            if (parent)
-                parent.z = 1;
-        }
+        Component.onCompleted: ApplicationInfo.finishUiEvent(4, undefined)
         text: label + (table.sourceModel && table.sourceModel.sortRole === role ? (table.sourceModel.sortAscending ? " ˄" : " ˅") : "")
 
         TapHandler {
-            onTapped: {
-                if (table.sourceModel)
-                    table.sourceModel.sortBy(title.role);
-            }
+            onTapped: ApplicationInfo.finishUiEvent(5, undefined)
         }
         EaElements.ToolTip {
             text: title.uid !== "" ? Session.tooltip(title.uid) : ""
@@ -59,10 +53,10 @@ DataTable {
     // A reflection's values, each in its item's display format (edi ADR-0051); the normalised residual, no item's
     // value, to two decimals.
     function shown(uid, value) {
-        return value === undefined || isNaN(value) ? "" : Session.display(uid, value);
+        return ApplicationInfo.reflectionShown(uid, value, false);
     }
     function residual(value) {
-        return value === undefined || isNaN(value) ? "" : value.toFixed(2);
+        return ApplicationInfo.reflectionShown(undefined, value, true);
     }
 
     objectName: "singleCrystal.reflections"

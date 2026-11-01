@@ -205,7 +205,7 @@ std::unique_ptr<edi::Project> opened(edi::Project project) {
 
 }  // namespace
 
-ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
+ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent, const QString& colourScheme)
     : QObject(parent),
       project_(opened(std::move(project))),
       registry_(new ParameterRegistry(*this, this)),
@@ -216,15 +216,17 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
       metadata_text_(nullptr),
       project_text_(nullptr),
       report_(nullptr),
-      structure_view_options_(new StructureViewOptions(this)) {
+      structure_view_options_(new StructureViewOptions(this)),
+      colour_scheme_(colourScheme) {
     const edi::Project& model = *project_;
     completeSymmetry();
     registry_->rebuild(*project_);
     parameters_ = new ParameterTableModel(*registry_, this);
-    const SavedFile saved = [this](const std::string& relative) { return savedFile(relative); };
+    const SavedFile saved = savedFileFunction();
     analysis_ = new AnalysisViewModel(*project_, *this, saved, this);
     (void)model;
-    metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this, [] { return std::string("project.edi"); });
+    metadata_text_ = new BlockText([this] { return savedFile("project.edi"); }, this, [] { return std::string("project.edi"); },
+                                   {}, [this] { return discoveredFile("project.edi"); });
     report_text_ = new BlockText([this] { return edi::report_settings_text(*project_); }, this,
                                  [] { return std::string("reports/report.edi"); });
     project_text_ = new BlockText(
@@ -237,9 +239,9 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
         },
         this);
     categories_ = new CategoryListModel(this);
+    report_categories_ = new CategoryListModel(this);
     syncCategories();
     connect(structure_view_options_, &StructureViewOptions::changed, this, &ProjectViewModel::keepStructureView);
-    showStructureView();  // the opened project's shown structure, as it saved its view
     render_wait_.setSingleShot(true);
     connect(&render_wait_, &QTimer::timeout, this, [this] { followRendered(false); });
     loadScan();
@@ -256,6 +258,7 @@ ProjectViewModel::ProjectViewModel(edi::Project project, QObject* parent)
     connect(this, &ProjectViewModel::currentExperimentIndexChanged, report_, &ReportViewModel::refresh);
     current_structure_ = structure_models_.isEmpty() ? -1 : 0;
     current_experiment_ = experiment_models_.isEmpty() ? -1 : 0;
+    showStructureView();  // the opened project's shown structure, as it saved its view, once it is the current one
     syncParameterTable();
     syncCorrelations();
     published_name_ = name();
@@ -585,6 +588,7 @@ void ProjectViewModel::recordReportFiles(std::vector<edi::ReportFile> rows) {
         scan_template_->report_files = project.report_files;
     }
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
 }
 
@@ -685,11 +689,23 @@ void ProjectViewModel::restoreViewSettings() {
     if (project_->path.empty() || settings_file_path().isEmpty()) {
         return;
     }
+    // Both values are read before either is applied, and applied without storing: a setter writes both
+    // fields, so applying the spacing first would overwrite the saved direction with the current one.
     QSettings store(settings_file_path(), QSettings::IniFormat);
     store.beginGroup(QStringLiteral("ProjectViews"));
     store.beginGroup(selectionKey());
-    setStackedSpacing(store.value(QStringLiteral("stackedSpacing"), QStringLiteral("wide")).toString());
-    setMapDirection(store.value(QStringLiteral("mapDirection"), QStringLiteral("auto")).toString());
+    const QString spacing = QString::fromStdString(edi::stacked_spacing_names()[static_cast<std::size_t>(
+        edi::stacked_spacing_or_default(store.value(QStringLiteral("stackedSpacing")).toString().toStdString()))]);
+    const QString direction = QString::fromStdString(edi::scan_map_direction_names()[static_cast<std::size_t>(
+        edi::scan_map_direction_or_default(store.value(QStringLiteral("mapDirection")).toString().toStdString()))]);
+    if (spacing != stacked_spacing_) {
+        stacked_spacing_ = spacing;
+        emit stackedSpacingChanged();
+    }
+    if (direction != map_direction_) {
+        map_direction_ = direction;
+        emit mapDirectionChanged();
+    }
 }
 
 void ProjectViewModel::storeViewSettings() const {
@@ -1743,20 +1759,19 @@ void ProjectViewModel::loadScan() {
         emit refused(message);
     });
     const edi::Project& project = *project_;
+    scan_declaration_ = scanDeclaration(project);
+    // A dataset row a view shows gets its extract values read, if its results row has none: for every project, as a
+    // scan declared later lists its datasets in the same rows.
+    experiment_list_->setShownHook([this](int row) {
+        if (scan_ && scan_session_ != nullptr) {
+            scan_session_->want(row);
+        }
+    });
     if (!project.sequential_fit.declared()) {
         return;
     }
-    for (const auto& rule : project.sequential_fit.extract) {
-        const QString id = QString::fromStdString(rule->id.value());
-        const QString unit = QString::fromStdString(edi::scan_target_unit(rule->target));
-        scan_columns_.append(unit.isEmpty() ? id : QStringLiteral("%1 (%2)").arg(id, unit));
-    }
-    scan_session_ = new ScanSession(this);
-    connect(scan_session_, &ScanSession::metadataLoaded, this, [this](int first, int last) {
-        for (int index = first; index <= last; ++index) {
-            syncDataset(index);
-        }
-    });
+    scan_columns_ = scanColumns(project);
+    makeScanSession();
     scan_refusal_ = scan_session_->load(project);
     // Results no run of the app described (no provenance file at all) are taken as this template's: an edit from
     // here marks them out of date, and the provenance is written with the next save. A provenance file that is
@@ -1767,12 +1782,85 @@ void ProjectViewModel::loadScan() {
         scan_session_->assumeIdentity(ScanSession::templateIdentity(project));
     }
     syncScanAdmission();
-    // A dataset row a view shows gets its extract values read, if its results row has none.
-    experiment_list_->setShownHook([this](int row) {
-        if (scan_) {
-            scan_session_->want(row);
+}
+
+std::string ProjectViewModel::scanDeclaration(const edi::Project& project) {
+    const edi::SequentialFitConfig& scan = project.sequential_fit;
+    std::string declared = scan.data_dir + '\x1f' + scan.file_pattern + '\x1f' + (scan.reverse ? "1" : "0") + '\x1f' +
+                           scan.template_file;
+    for (const auto& rule : scan.extract) {
+        declared += '\x1e' + rule->id.value() + '\x1f' + rule->target.value() + '\x1f' + rule->pattern.value() + '\x1f' +
+                    (rule->required.get() ? "1" : "0");
+    }
+    return declared;
+}
+
+QStringList ProjectViewModel::scanColumns(const edi::Project& project) {
+    QStringList columns;
+    for (const auto& rule : project.sequential_fit.extract) {
+        const QString id = QString::fromStdString(rule->id.value());
+        const QString unit = QString::fromStdString(edi::scan_target_unit(rule->target));
+        columns.append(unit.isEmpty() ? id : QStringLiteral("%1 (%2)").arg(id, unit));
+    }
+    return columns;
+}
+
+void ProjectViewModel::makeScanSession() {
+    scan_session_ = new ScanSession(this);
+    connect(scan_session_, &ScanSession::metadataLoaded, this, [this](int first, int last) {
+        for (int index = first; index <= last; ++index) {
+            syncDataset(index);
         }
     });
+}
+
+void ProjectViewModel::followScanDeclaration() {
+    // The scan as the project declares it now, whichever door the edit came through (a page, an applied text, an
+    // undo): a changed declaration lists its datasets, reads its results and extraction and is admitted again, as
+    // opening the edited project does. A read the previous listing asked for delivers nothing (ScanSession::load).
+    const std::string declared = scanDeclaration(*project_);
+    if (declared == scan_declaration_) {
+        return;
+    }
+    scan_declaration_ = declared;
+    scan_columns_ = scanColumns(*project_);
+    const edi::ScanDatasets listed = scan_session_ != nullptr ? scan_session_->datasets() : edi::ScanDatasets{};
+    // What the model holds was read from a file of the old listing: it is not the shown dataset's any more, and a read
+    // the old listing asked for delivers nothing (startViewRead).
+    const auto forgetProjection = [this] {
+        projected_dataset_ = -1;
+        ++view_request_;
+        view_applied_ = view_request_;
+        publishCalculating();
+    };
+    if (!project_->sequential_fit.declared()) {
+        forgetProjection();
+        if (scan_session_ != nullptr) {
+            evolution_->setScan(nullptr, project_.get(), {});
+            scan_views_->setScan(nullptr, project_.get(), {});
+            scan_session_->deleteLater();
+            scan_session_ = nullptr;
+        }
+        scan_refusal_.clear();
+        syncDatasets();
+        return;
+    }
+    if (scan_session_ == nullptr) {
+        makeScanSession();
+    }
+    scan_refusal_ = scan_session_->load(*project_);
+    // Other files at the same rows (another folder or pattern, the order reversed): the shown dataset is read from its
+    // new file. Rules that only extract other values keep the files, and the shown dataset only takes its new row.
+    if (scan_session_->datasets().files != listed.files || scan_session_->datasets().directory != listed.directory) {
+        forgetProjection();
+    }
+    syncScanAdmission();
+    showScanResults();
+    // The dataset shown is read again from the new listing, the first one if the listing no longer reaches it.
+    const int count = scan_ ? static_cast<int>(scan_session_->datasets().files.size()) : 0;
+    if (current_dataset_ >= 0 && count > 0) {
+        viewDataset(std::min(current_dataset_, count - 1), true);
+    }
 }
 
 void ProjectViewModel::syncScanAdmission() {
@@ -3344,6 +3432,7 @@ QString ProjectViewModel::write_report_settings(const edi::Edit& change, bool re
         syncCorrelations();
         if (retired_) return {};
         saved_files_.reset();
+        discovered_files_.reset();
         invalidateTexts();
         if (retired_) return {};
         report_->refresh();
@@ -3859,10 +3948,31 @@ void ProjectViewModel::undo() {
     syncUndo();
 }
 
+void ProjectViewModel::refreshCategories() {
+    if (retired_) return;
+    // Each block's generated groups follow its file as it is now (invalidateTexts).
+    for (StructureViewModel* structure : structure_models_) {
+        structure->categories()->refresh();
+        if (retired_) return;
+    }
+    for (ExperimentViewModel* experiment : experiment_models_) {
+        experiment->categories()->refresh();
+        if (retired_) return;
+    }
+    analysis_->categories()->refresh();
+    if (retired_) return;
+    categories_->refresh();
+    if (retired_) return;
+    report_categories_->refresh();
+}
+
 void ProjectViewModel::syncCategories() {
     // The standard uncertainties have their designed group here, the report's settings theirs on the Report page.
     categories_->setCategories({edi::Category{"su_format"}, edi::Category{"report"}},
-                               [this] { return metadata_text_->text().toStdString(); });
+                               [this] { return metadata_text_->discoveryText().toStdString(); });
+    // The report's settings have their designed group on the Report page; what else its file holds (the saved
+    // reports) gets a group made from the dictionary there.
+    report_categories_->setCategories({edi::Category{"report"}}, [this] { return report_text_->text().toStdString(); });
 }
 
 void ProjectViewModel::showStructureView() {
@@ -3870,7 +3980,7 @@ void ProjectViewModel::showStructureView() {
     // the structure, and a change is saved with it.
     const StructureViewModel* shown = currentStructure();
     showing_view_ = true;
-    structure_view_options_->setFromView(shown != nullptr ? shown->structure()->view : std::map<std::string, std::string>{});
+    structure_view_options_->setFromView(shown != nullptr ? shown->structure()->view.get() : std::map<std::string, std::string>{});
     showing_view_ = false;
 }
 
@@ -3880,19 +3990,16 @@ void ProjectViewModel::keepStructureView() {
     }
     edi::Structure& shown = *project_->structures[static_cast<std::size_t>(current_structure_)];
     std::map<std::string, std::string> view = structure_view_options_->toView();
-    if (view != shown.view) {
+    if (view != shown.view.get()) {
         shown.view = std::move(view);
         saved_files_.reset();
+        discovered_files_.reset();
         invalidateTexts();
         setModified(true);
     }
 }
 
 QString ProjectViewModel::applyText(const QString& file, const QString& text) {
-    // A scan's datasets read their data from its files, which a project read from text does not carry.
-    if (scan_) {
-        return tr("A scan project is edited on its pages, not as text");
-    }
     // A category the dictionary does not hold is a mistake, which the reader would pass over.
     for (const std::string& id : edi::text_category_ids(text.toStdString())) {
         if (edi::category_label(id).empty()) {
@@ -3914,6 +4021,29 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     if (!warnings.isEmpty()) {
         return warnings.join(QLatin1Char('\n'));
     }
+    // An item the read project does not write back (one no reader takes, in any category) is refused, not lost.
+    // An item given twice is refused too: which one would apply is not the user's to guess.
+    try {
+        const edi::UnappliedItems refused =
+            edi::unapplied_items(*read, file.toStdString(), text.toStdString(),
+                                 file == QLatin1String("reports/report.edi") ? edi::report_settings_text(*project_)
+                                                                             : savedFile(file.toStdString()));
+        const auto listed = [](const std::vector<std::string>& names) {
+            QStringList list;
+            for (const std::string& name : names) {
+                list.append(QString::fromStdString(name));
+            }
+            return list.join(QStringLiteral(", "));
+        };
+        if (!refused.unknown.empty()) {
+            return tr("Not an item this file holds: %1").arg(listed(refused.unknown));
+        }
+        if (!refused.repeated.empty()) {
+            return tr("An item given more than once: %1").arg(listed(refused.repeated));
+        }
+    } catch (const std::exception& refusal) {
+        return QString::fromUtf8(refusal.what());
+    }
     // A block keeps its name: a rename is made on its page, where its references follow it.
     const auto names = [](const auto& blocks) {
         QStringList out;
@@ -3924,6 +4054,26 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
     };
     if (names(read->structures) != names(project_->structures) || names(read->experiments) != names(project_->experiments)) {
         return tr("A block's name is changed on its page, not in the text");
+    }
+    // An experiment's fixed categories keep their values, whichever surface wrote the text (edi::fixed_categories).
+    for (std::size_t index = 0; index < project_->experiments.size(); ++index) {
+        const edi::ExperimentBase& held = *project_->experiments[index];
+        const edi::ExperimentType& was = held.experiment_type;
+        const edi::ExperimentType& now = read->experiments[index]->experiment_type;
+        const bool fixed = !edi::fixed_categories(held).empty();
+        if (fixed && (was.effective_sample_form() != now.effective_sample_form() ||
+                      was.effective_beam_mode() != now.effective_beam_mode() ||
+                      was.effective_radiation_probe() != now.effective_radiation_probe() ||
+                      was.effective_scattering_type() != now.effective_scattering_type())) {
+            return tr("The type of experiment '%1' is fixed once it holds measured data")
+                .arg(QString::fromStdString(held.name.value()));
+        }
+    }
+    // While a dataset is shown the model holds that dataset's data: a text ending the scan keeps the template's, as any
+    // edit made there does (apply), since nothing is left to take it back from once the scan has gone.
+    if (scan_template_ && !read->sequential_fit.declared() && read->experiments.size() == 1) {
+        read->experiment().data = scan_template_->experiment().data;
+        read->experiment().calculation_only = scan_template_->experiment().calculation_only;
     }
     auto before = std::make_shared<const edi::Project>(*project_);
     const QString error = apply(edi::Edit::replace_project(*project_, std::move(*read)), true);
@@ -4085,6 +4235,7 @@ void ProjectViewModel::takeStaged(const QString& directory, const edi::Project& 
     }
     publishMetadata();
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     report_->refresh();
     setModified(false);
@@ -4168,6 +4319,7 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
             // Invalidate stale exports even when broader publication refuses;
             // the original Save error remains the primary failure text.
             saved_files_.reset();
+            discovered_files_.reset();
             try{invalidateTexts();}catch(...) {}
             if(retired_)return message;
             holdPublicationFailure(message);
@@ -4194,6 +4346,7 @@ QString ProjectViewModel::adoptSave(const QString& directory, const edi::Project
     // The saved project's last-modified time advanced: its metadata and every text a save writes show it.
     publishMetadata();
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     report_->refresh();
     setModified(false);
@@ -4210,6 +4363,7 @@ void ProjectViewModel::publishTemplate() {
     setModified(true);
     if (retired_) return;
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     if (retired_) return;
     report_->refresh();
@@ -4229,6 +4383,7 @@ void ProjectViewModel::publish(bool structural) {
         showStructureView();  // an apply or an undo can change what the structure saved
     }
     registry_->publish(*project_);
+    followScanDeclaration();
     for (StructureViewModel* structure : structure_models_) {
         structure->sync();
     }
@@ -4256,6 +4411,7 @@ void ProjectViewModel::publish(bool structural) {
     if (retired_) return;
     // What a save writes changed now, not at the recalculation: a Text read in this same turn sees it.
     saved_files_.reset();
+    discovered_files_.reset();
     invalidateTexts();
     if (retired_) return;
     report_->refresh();
@@ -4436,6 +4592,9 @@ void ProjectViewModel::invalidateTexts() {
     if (retired_) return;
     project_text_->invalidate();
     if (retired_) return;
+    // A file's categories follow it too: a calculation adds the computed ones, a first appearance setting or a saved
+    // report its own.
+    refreshCategories();
 }
 
 void ProjectViewModel::syncBlocks() {
@@ -4467,7 +4626,7 @@ void ProjectViewModel::syncBlocks() {
             edi::ExperimentBase& block = *project_->experiments[i];
             ExperimentViewModel* found = nullptr;
             for (ExperimentViewModel* model : experiment_models_) {
-                found = model->experiment() == &block ? model : found;
+                found = model->experiment() == &block && model->madeForType() ? model : found;
             }
             if (found == nullptr) {
                 found = new ExperimentViewModel(savedFileFunction(), *project_, block, *this, *registry_, this);
@@ -4565,6 +4724,45 @@ void ProjectViewModel::publishCalculating() {
     }
 }
 
+namespace {
+// After a save of `project` refused: the refusal, and the files of a save without the experiments linking a structure
+// the project lacks, which refuse it, so only their blocks show the refusal.
+ProjectViewModel::SavedFiles refused_save(const edi::Project& project, const std::string& refusal) {
+    ProjectViewModel::SavedFiles saved{{}, refusal};
+    try {
+        edi::Project resolved = project;
+        for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
+            const auto& links = resolved.experiments[index]->linked_structures;
+            const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
+                const std::string& id = link->structure_id.value();
+                return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
+                                                   [&id](const auto& structure) { return structure->name.value() == id; });
+            });
+            if (missing) {
+                resolved.experiments.erase_at(index);
+            }
+        }
+        if (resolved.experiments.size() < project.experiments.size()) {
+            saved.files = edi::project_edi_files(resolved);
+        }
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
+    }
+    return saved;
+}
+
+std::string file_of(const ProjectViewModel::SavedFiles& saved, const std::string& relative) {
+    for (const auto& [path, body] : saved.files) {
+        if (path == relative) {
+            return body;
+        }
+    }
+    if (!saved.refusal.empty()) {
+        throw std::runtime_error(saved.refusal);
+    }
+    return {};
+}
+}  // namespace
+
 const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedFiles() const {
     // One save of the whole project serves every Text tab until the next change (D7). It is of the model the pages
     // show: while a scan dataset is shown, that dataset's values, though a save writes the template (edi ADR-0015).
@@ -4572,27 +4770,7 @@ const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedF
         try {
             saved_files_ = SavedFiles{edi::project_edi_files(*project_), {}};
         } catch (const std::exception& refusal) {
-            saved_files_ = SavedFiles{{}, refusal.what()};
-            // An experiment linking a structure the project lacks refuses the whole save; every other block keeps
-            // its text, from a save without those experiments, and only theirs shows the refusal.
-            try {
-                edi::Project resolved = *project_;
-                for (std::size_t index = resolved.experiments.size(); index-- > 0;) {
-                    const auto& links = resolved.experiments[index]->linked_structures;
-                    const bool missing = std::any_of(links.begin(), links.end(), [&resolved](const auto& link) {
-                        const std::string& id = link->structure_id.value();
-                        return !id.empty() && std::none_of(resolved.structures.begin(), resolved.structures.end(),
-                                                           [&id](const auto& structure) { return structure->name.value() == id; });
-                    });
-                    if (missing) {
-                        resolved.experiments.erase_at(index);
-                    }
-                }
-                if (resolved.experiments.size() < project_->experiments.size()) {
-                    saved_files_->files = edi::project_edi_files(resolved);
-                }
-            } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — the whole save's refusal stands
-            }
+            saved_files_ = refused_save(*project_, refusal.what());
         }
     }
     if (!saved_files_->refusal.empty()) {
@@ -4601,27 +4779,32 @@ const std::vector<std::pair<std::string, std::string>>& ProjectViewModel::savedF
     return saved_files_->files;
 }
 
+std::string ProjectViewModel::discoveredFile(const std::string& relative) const {
+    // A copy is never current, so its save calculates nothing and writes no computed category: what the sidebar's
+    // generated groups are found from. A calculation leaves it as it is; an edit makes it again.
+    if (!discovered_files_.has_value()) {
+        const edi::Project copy = *project_;
+        try {
+            discovered_files_ = SavedFiles{edi::project_edi_files(copy), {}};
+        } catch (const std::exception& refusal) {
+            discovered_files_ = refused_save(copy, refusal.what());
+        }
+    }
+    return file_of(*discovered_files_, relative);
+}
+
 SavedFile ProjectViewModel::savedFileFunction() const {
-    return [this](const std::string& relative) { return savedFile(relative); };
+    return {[this](const std::string& relative) { return savedFile(relative); },
+            [this](const std::string& relative) { return discoveredFile(relative); }};
 }
 
 std::string ProjectViewModel::savedFile(const std::string& relative) const {
     // A block the save could not write shows why; the others show their text (savedFiles).
-    std::string refusal;
     try {
         savedFiles();
-    } catch (const std::exception& error) {
-        refusal = error.what();
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — file_of throws it for a block without a file
     }
-    for (const auto& [path, body] : saved_files_->files) {
-        if (path == relative) {
-            return body;
-        }
-    }
-    if (!refusal.empty()) {
-        throw std::runtime_error(refusal);
-    }
-    return {};
+    return file_of(*saved_files_, relative);
 }
 
 void ProjectViewModel::setLastError(const QString& error) {

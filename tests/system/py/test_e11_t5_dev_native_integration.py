@@ -2064,7 +2064,13 @@ def test_actual_manual_text_editor_preserves_composition_escape_and_real_commit(
     original = actor.last['ui']['project']['structure_rows'][0]['id']
     wait_positive_tab(actor, 'appBar.tab.structure')
     actor.command('click', name='appBar.tab.structure')
+    if _original_toolbar_pane_state(actor)['visible']:
+        actor.command('click', name='assistant.toggle')
+    actor.until(lambda _value: not _original_toolbar_pane_state(actor)['visible'])
     actor.command('click', name='structures.name.0')
+    assert actor.command('focused_input')['reply']['name'] == 'structures.name.0', (
+        'The original physical click reaches the actual uncovered manual editor before typing'
+    )
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text='uncommitted_owner')
     actor.command('manual_ime', preedit='Q', commit='')
@@ -2097,9 +2103,15 @@ def test_actual_parameter_cell_clean_publication_and_recycling_keep_original_mem
     actor.until(lambda row: not row['ui']['project']['calculating'])
     wait_positive_tab(actor, 'appBar.tab.analysis')
     actor.command('click', name='appBar.tab.analysis')
+    if _original_toolbar_pane_state(actor)['visible']:
+        actor.command('click', name='assistant.toggle')
+    actor.until(lambda _value: not _original_toolbar_pane_state(actor)['visible'])
     table = control_expression('parameters.list')
     qml(actor, f'{table}.sourceModel.nameFilter = "length_a"')
     actor.command('click', name='parameters.value.0')
+    assert actor.command('focused_input')['reply']['name'] == 'parameters.value.0', (
+        'The original physical click reaches the actual uncovered manual editor before typing'
+    )
     actor.command('manual_key', key='select_all')
     actor.command('manual_text', text='9.125')
     actor.command('manual_ime', preedit='7', commit='')
@@ -2207,13 +2219,49 @@ def test_on_native_parameter_target_is_revealed_from_real_virtualized_or_clipped
     if position == 'offscreen':
         target = next(row for path, row in reversed(list(eligible.items())) if path not in exposed)
     else:
+        layout_proof = {
+            'before_scroll': [row for row in controls if row['parameter_path'] in eligible],
+        }
         row = next(row for row in controls if row['exposed'] and row['parameter_path'] in eligible)
         qml(actor, f'{table}.contentY += {row["height"] / 2}')
         controls = actor.last['ui']['controls']
-        target_control = next(
+        candidates = [
             row
             for row in controls
-            if row['parameter_path'] in eligible and row['exposed'] and not row['fully_exposed']
+            if row['parameter_path'] in eligible
+            and row['exposed'] and row['fully_exposed']
+            and row.get('interaction_row', {}).get('valid')
+            and row['interaction_row']['row_exposed']
+            and not row['interaction_row']['row_fully_exposed']
+        ]
+        layout_proof.update({
+            'after_half_row_scroll': [
+                row for row in controls if row['parameter_path'] in eligible
+            ],
+            'candidates': candidates,
+        })
+        (actor.folder / 'clipped-row-layout.json').write_text(
+            json.dumps(layout_proof, indent=2)
+        )
+        assert candidates, (
+            'The unchanged half-row input must expose an eligible partial interaction row even '
+            'when its ink fits; a missing constructed entrance is a fixture failure'
+        )
+        target_control = candidates[0]
+        row = target_control['interaction_row']
+        assert row['parameter_path'] == target_control['parameter_path'], (
+            'The actual value control and ancestor row retain the same current parameter identity'
+        )
+        assert row['table_name'] == 'parameters.list' and target_control['same_window'], (
+            'The partial row belongs to the actual parameter table in the current real window'
+        )
+        assert row['row_rect'] != row['visible_rect'] or all(
+            row['header_overlap'][index] > 0 for index in (2, 3)
+        ), (
+            'Actual row/window/clip/header geometry independently witnesses the clipping boundary'
+        )
+        assert target_control['fully_exposed'] and not row['row_fully_exposed'], (
+            'Complete ink visibility cannot stand in for complete interaction-row exposure'
         )
         target = eligible[target_control['parameter_path']]
     before = actor.last['ui']['project']['parameters']
@@ -2241,6 +2289,32 @@ def test_on_native_parameter_target_is_revealed_from_real_virtualized_or_clipped
         row['parameter_path'] == target['path'] and row['exposed']
         for row in actor.last['ui']['controls']
     ), 'The actual native ON route realizes and exposes its originally virtualized target'
+    if position == 'clipped':
+        revealed = [
+            row for row in actor.last['ui']['controls']
+            if row['parameter_path'] == target['path']
+            and row.get('interaction_row', {}).get('valid')
+            and row['visible'] and row['same_window']
+        ]
+        layout_proof['after_native_reveal'] = revealed
+        (actor.folder / 'clipped-row-layout.json').write_text(
+            json.dumps(layout_proof, indent=2)
+        )
+        assert len(revealed) == 1, (
+            'Native reveal exposes exactly one current value control for the original member'
+        )
+        row = revealed[0]['interaction_row']
+        assert row['parameter_path'] == target['path'], (
+            'The revealed interaction row still observes the original parameter path'
+        )
+        assert row['row_fully_exposed'] and row['field_fully_exposed'], (
+            'The native ON route must expose the complete original interaction row and control'
+        )
+        assert row['row_rect'] == row['visible_rect'] and not all(
+            row['header_overlap'][index] > 0 for index in (2, 3)
+        ), (
+            'The revealed whole row fits its actual window/ancestor clips without header overlap'
+        )
 
 
 @pytest.mark.parametrize('show_actions', [False, True], ids=['off', 'on'])
@@ -6324,34 +6398,157 @@ def test_session_selection_preserves_required_current_disclosure_until_real_dial
                     if row.get('id') == resumes[-1]['id'] and 'result' in row]
         assert len(accepted) == 1 and accepted[0]['result']['thread']['id'] == original, (
             'The view-only failure occurs AFTER matching runtime acceptance of the exact genuine selected thread')
+        reconnect_facts = {
+            'before_transport': actor.command('usage_transport_snapshot')['reply'],
+            'account_reply': {
+                'account': {
+                    'type': 'chatgpt',
+                    'email': original_account['email'],
+                    'planType': 'plus',
+                },
+                'requiresOpenaiAuth': False,
+            },
+        }
+        reconnect_facts['barrier'] = _original_usage_fifo_reply(
+            actor, 'view-only-auto-reconnect', result=reconnect_facts['account_reply']
+        )
+        _session_configure(actor, fixture_account_read_response=reconnect_facts['barrier'])
         before_fault = len(_session_wire(actor))
         fault = actor.command('close_owned_transport_write')['reply']
         assert fault['original_vm_child'] and fault['public_close_write_channel_invoked'], (
             'Only the actual current fixture-owned runtime child receives the ordinary transport EOF')
-        actor.until(lambda value: not value['ui']['connected'])
+        actor.until(
+            lambda value: (
+                not value['ui']['connected']
+                and Path(reconnect_facts['barrier']['ready']).is_file()
+            )
+        )
+        reconnect_facts['held'] = {
+            'request': json.loads(
+                Path(reconnect_facts['barrier']['ready']).read_text(encoding='utf-8')
+            ),
+            'transport': actor.command('usage_transport_snapshot')['reply'],
+            'ui': actor.last['ui'],
+            'wire': _session_wire(actor)[before_fault:],
+            'inputs': _session_state(actor)['inputs'],
+            'draft': qml(actor, '(' + _scene_control_expression('assistant.composer') + ').text'),
+            'emitted': [
+                json.loads(line)
+                for line in actor.trace
+                .with_suffix('.sent.jsonl')
+                .read_text(encoding='utf-8')
+                .splitlines()
+            ],
+        }
+        (actor.folder / 'view-only-reconnect-held-account.json').write_text(
+            json.dumps(reconnect_facts, indent=2), encoding='utf-8'
+        )
+        assert (
+            reconnect_facts['held']['request']['method'] == 'account/read'
+            and reconnect_facts['held']['request']['pid']
+            == reconnect_facts['held']['transport']['peer_pid']
+            and reconnect_facts['held']['request']['parent_pid']
+            == reconnect_facts['held']['transport']['host_pid']
+            and reconnect_facts['held']['transport']['original_vm_child']
+            and reconnect_facts['held']['request']['pid']
+            != reconnect_facts['before_transport']['peer_pid']
+        ), (
+            'The automatic retry reaches a genuine NEW owned helper and its '
+            'original correlated account/read'
+        )
+        assert (
+            not reconnect_facts['held']['ui']['connected']
+            and not any(
+                row.get('id') == reconnect_facts['held']['request']['request_id']
+                for row in reconnect_facts['held']['emitted']
+            )
+            and not any(
+                row.get('method') in {'thread/start', 'turn/start'}
+                for row in reconnect_facts['held']['wire']
+            )
+        ), (
+            'The withheld account response proves real pre-auth automatic '
+            'recovery without early model input'
+        )
+        assert reconnect_facts['held']['draft'] == a_draft and any(
+            row == pending_file
+            for row in reconnect_facts['held']['ui']['selected_files']
+            if row['pending']
+        ), (
+            'The actual disconnected retry preserves the exact unapproved A '
+            'draft and physical input descriptor'
+        )
         assert len(_session_state(actor)['inputs']) == 2, (
             'The original idle view fails before any fresh user turn or genuine outgoing approval')
-        actor.until(lambda value: _unique_input_control(value, 'assistant.connection') is not None)
-        actor.command('click', name='assistant.connection')
-        actor.until(lambda value: value['ui']['connected'] and not qml(actor, 'Session.assistant.sessionsLoading'))
+        reconnect_facts['release'] = _release_original_usage_reply(
+            actor,
+            reconnect_facts['barrier'],
+            reconnect_facts['held']['request']['request_id'],
+            method='account/read',
+        )
+        # The original response envelope was captured before ready. Future
+        # deliberate Share restarts use the peer's unchanged normal account path.
+        _session_configure(actor, fixture_account_read_response=None)
+        actor.until(
+            lambda value: (
+                value['ui']['connected'] and not qml(actor, 'Session.assistant.sessionsLoading')
+            )
+        )
         recovered_wire = _session_wire(actor)[before_fault:]
         recovered_resumes = [row for row in recovered_wire if row.get('method') == 'thread/resume']
-        sent_after = [json.loads(line) for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()]
-        confirmed = [row for row in sent_after if recovered_resumes and row.get('id') == recovered_resumes[-1]['id'] and 'result' in row]
-        reconnect_facts = {'accepted_view_resume': accepted[0], 'physical_fault': fault,
-                          'reconnect_wire': recovered_wire, 'confirmed_resume': confirmed,
-                          'actual_current_ui': actor.last['ui']}
-        (actor.folder / 'view-only-transport-reconnect.json').write_text(json.dumps(reconnect_facts, indent=2))
-        assert recovered_resumes and recovered_resumes[-1]['params']['threadId'] == original \
-            and len(confirmed) == 1 and confirmed[0]['result']['thread']['id'] == original, (
-                'One ordinary visible Connect recovers the exact accepted view-only runtime identity, rather than merely displaying cached rows')
+        sent_after = [
+            json.loads(line)
+            for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()
+        ]
+        confirmed = [
+            row
+            for row in sent_after
+            if recovered_resumes
+            and row.get('id') == recovered_resumes[-1]['id']
+            and 'result' in row
+        ]
+        reconnect_facts.update({
+            'accepted_view_resume': accepted[0],
+            'physical_fault': fault,
+            'reconnect_wire': recovered_wire,
+            'confirmed_resume': confirmed,
+            'actual_current_ui': actor.last['ui'],
+            'account_response': [
+                row
+                for row in sent_after
+                if row.get('id') == reconnect_facts['held']['request']['request_id']
+            ],
+        })
+        (actor.folder / 'view-only-transport-reconnect.json').write_text(
+            json.dumps(reconnect_facts, indent=2)
+        )
+        assert (
+            len(reconnect_facts['account_response']) == 1
+            and reconnect_facts['account_response'][0].get('result')
+            == reconnect_facts['account_reply']
+        ), 'The exact originally held same-account response actually reaches the automatic retry'
+        assert (
+            recovered_resumes
+            and recovered_resumes[-1]['params']['threadId'] == original
+            and len(confirmed) == 1
+            and confirmed[0]['result']['thread']['id'] == original
+        ), (
+            'Source-owned automatic recovery confirms the exact accepted '
+            'view-only runtime identity, rather than merely displaying cached rows'
+        )
         assert not any(row.get('method') in ('thread/start', 'turn/start') for row in recovered_wire) \
             and qml(actor, 'Session.assistant.account') == original_account, (
                 'Transport recovery cannot create a replacement thread, replay prior input or borrow a different account')
-        assert actor.last['ui']['context_consent_required'] and any( \
-            row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']) \
-            and not _original_context_disclosure_present(actor.last), (
-                'View-only Connect neither asks for new Share nor retroactively approves or loses the still-unapproved changed input')
+        assert (
+            actor.last['ui']['context_consent_required']
+            and any(
+                row == pending_file for row in actor.last['ui']['selected_files'] if row['pending']
+            )
+            and not _original_context_disclosure_present(actor.last)
+        ), (
+            'View-only automatic recovery neither asks for new Share nor '
+            'retroactively approves or loses the still-unapproved changed input'
+        )
         recovered_rows = {row['id']: row for row in actor.last['ui']['messages']}
         assert all(recovered_rows.get(row['id']) == row for row in history), (
             'The same accepted runtime recovery retains every original selected history identity and content')
@@ -12887,3 +13084,355 @@ def test_original_a2b_expanded_web_completion_refreshes_body_and_default_copy(ma
     finally:
         _a2b_finish_observation(actor, marker, facts, 'a2b-original-web-consumption.json',
                                 failed=sys.exc_info()[0] is not None)
+
+
+@pytest.mark.parametrize('consumer', ['ParameterCell', 'ParameterField'])
+def test_actual_written_parameter_consumers_keep_ime_and_original_member(main_actor, consumer):
+    actor = main_actor([[]])
+    assert actor.command('open', path=str(ROOT / 'tests/fixtures/constraint_expressions/project'))[
+        'reply'
+    ]['opened'], 'Written display controls retain real input and scientific ownership'
+    actor.until(lambda row: not row['ui']['project']['calculating'])
+    wait_positive_tab(actor, 'appBar.tab.analysis')
+    actor.command('click', name='appBar.tab.analysis')
+    label = 'label: "";' if consumer == 'ParameterField' else ''
+    source = (
+        'import QtQuick\nimport edi.app\n'
+        + consumer
+        + ' { objectName: "e11.precision.editor"; x: 200; y: 100; z: 10000; '
+        'width: 300; height: 40; item: Session.project.currentStructure.cell.lengthA; '
+        + label
+        + ' }'
+    )
+    qml(
+        actor,
+        f'(function(){{Qt.createQmlObject({json.dumps(source)}, contentItem); return null;}})()',
+    )
+    editor = control_expression('e11.precision.editor')
+    actor.command('click', name='e11.precision.editor')
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text='9.125')
+    actor.command('manual_ime', preedit='7', commit='')
+    qml(actor, f'{editor}.width = 45')
+    qml(actor, 'Session.project.currentStructure.cell.lengthA.value = 5.375')
+    focused = actor.command('focused_input')['reply']
+    assert focused['text'] == '9.125' and focused['preedit'] == '7', (
+        'Width fitting and native publication preserve the original real manual draft and IME'
+    )
+    actor.command('manual_ime', preedit='', commit='')
+    actor.command('manual_key', key='escape')
+    actor.command('click', name='e11.precision.editor')
+    assert float(actor.command('focused_input')['reply']['text']) == 5.375, (
+        'Cancelling real composition exposes the current full canonical value'
+    )
+    original_b = next(
+        row
+        for row in actor.last['ui']['project']['parameters']
+        if row['path'].endswith('cell.length_b')
+    )['value']
+    actor.command('manual_key', key='select_all')
+    actor.command('manual_text', text='11.625')
+    replacement = f'{editor}.item = Session.project.currentStructure.cell.lengthB'
+    qml(actor, f'(function(){{{replacement}; return null;}})()')
+    actor.command('manual_key', key='return')
+    after_b = next(
+        row
+        for row in actor.last['ui']['project']['parameters']
+        if row['path'].endswith('cell.length_b')
+    )['value']
+    assert after_b == original_b, (
+        'A supported consumer cannot graft an older manual draft onto a replacement typed item'
+    )
+    qml(actor, f'(function(){{{editor}.destroy(); return null;}})()')
+
+
+# A real provider restart is held at its original correlated account/read. This
+# display contract grants neither authentication nor permission to send input.
+def _held_view_scene(actor):
+    return qml(
+        actor,
+        r"""(function(){const all=testAppObjects.snapshot();
+        function one(name){const matches=all.filter(x=>x.objectName===name&&
+            typeof x.mapToItem==='function'&&x.Window.window===window);
+            if(matches.length!==1)throw new Error('Expected one actual current-window '+name);
+            return matches[0];}
+        const view=one('assistant.messages'),signedOut=one('assistant.signedOut');
+        const composer=one('assistant.composer'),send=one('assistant.send');
+        const files=one('assistant.files.add'),choices=one('assistant.modelEffort');
+        function visibleInside(x){if(!x.visible||!(x.width>0&&x.height>0))return false;
+            let belongs=false;for(let p=x;p;p=p.parent)if(p===view){belongs=true;break;}
+            if(!belongs)return false;const a=x.mapToItem(view,0,0);
+            return a.x<view.width&&a.y<view.height&&a.x+x.width>0&&a.y+x.height>0;}
+        return {viewVisible:view.visible,signedOutVisible:signedOut.visible,
+            width:view.width,height:view.height,sameWindow:view.Window.window===window,
+            renderedTexts:all.filter(x=>typeof x.text==='string'&&visibleInside(x)).map(x=>x.text),
+            draft:composer.text,composerEnabled:composer.enabled,sendEnabled:send.enabled,
+            filesEnabled:files.enabled,choicesEnabled:choices.enabled,
+            connected:Session.assistant.connected,ready:Session.assistant.draftAdmissionReady,
+            account:Session.assistant.account,error:Session.assistant.lastError};})()""",
+    )
+
+
+def _held_view_original_restart(main_actor, tmp_path, monkeypatch):
+    actor = main_actor([[]])
+    _session_configure(
+        actor, session_fixture={'threads': [], 'page_size': 12}, observe_context_continuity=True
+    )
+    actor.connect()
+    original = 'Keep this genuine conversation visible while its approved helper restarts.'
+    _session_request_with_original_disclosure(actor, original)
+    _session_completed(actor, 1)
+    rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
+    assert {'user', 'assistant'} <= {row['kind'] for row in rows}, (
+        'The retained transcript originates from an actual admitted user turn and real peer reply'
+    )
+    _capture_genuine_archive(actor, 'held-view-original')
+    manifest = _capture_exact_cache_manifest(actor, 'held-view-original')
+    sources = _finish_genuine_restart_sources(actor, manifest)
+    restored = _start_exact_original_fixture_restart(tmp_path, monkeypatch, sources, [])
+    try:
+        _ordinary_expose_automatically_restored_composer(restored, original)
+        restored.until(
+            lambda value: (
+                value['ui']['connected']
+                and any(
+                    row['name'] == 'assistant.composer' and row['enabled'] and row['fully_exposed']
+                    for row in value['ui']['controls']
+                )
+            )
+        )
+    except BaseException:
+        _close_explicit_restart_actor(restored)
+        raise
+    return restored, {
+        'sources': sources,
+        'original_text': original,
+        'original_rows': rows,
+        'thread': sources['actual_inputs'][0]['threadId'],
+    }
+
+
+def _held_view_retain(actor, facts, stage):
+    facts[stage] = {
+        'scene': _held_view_scene(actor),
+        'wire': _session_wire(actor),
+        'inputs': _session_state(actor)['inputs'],
+        'files': _attachment_rows(actor),
+    }
+    facts[stage]['emitted'] = [
+        json.loads(line)
+        for line in actor.trace.with_suffix('.sent.jsonl').read_text().splitlines()
+    ]
+    (actor.folder / 'held-view-restart.json').write_text(
+        json.dumps(facts, indent=2), encoding='utf-8'
+    )
+    return facts[stage]
+
+
+def _held_view_arm_send(actor, tmp_path, facts, outcome):
+    source = _attachment_fixtures(tmp_path, 1)[0]
+    facts['source'] = {
+        'path': str(source),
+        'sha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+        'inode': source.stat().st_ino,
+    }
+    token = actor.begin_current_file_selection()
+    assert actor.command('selected_add', token=token, paths=[str(source)])['reply']['added'], (
+        'A genuinely new physical file requires fresh sharing approval in the actual '
+        'restored conversation'
+    )
+    facts['pending'] = [row for row in _attachment_rows(actor) if row['pending']]
+    facts['text'] = (
+        'Use this newly selected literal file after the same conversation becomes ready.'
+    )
+    actor.command('click', name='assistant.composer')
+    actor.command('manual_text', text=facts['text'])
+    before = _held_view_retain(actor, facts, 'before')['scene']
+    assert before['draft'] == facts['text'] and before['connected'], (
+        'One physical composer edit reaches the actually connected restored owner before Send'
+    )
+    facts['old_transport'] = actor.command('usage_transport_snapshot')['reply']
+    account_reply = {
+        'account': {'type': 'chatgpt', 'email': 'integration@example.invalid', 'planType': 'plus'},
+        'requiresOpenaiAuth': False,
+    }
+    if outcome == 'account-mismatch':
+        account_reply['account']['email'] = 'different-held-view-account@example.invalid'
+    spec = _original_usage_fifo_reply(actor, 'held-view-account', result=account_reply)
+    _session_configure(actor, fixture_account_read_response=spec)
+    actor.until(
+        lambda value: _unique_input_control(value, 'assistant.send', fully=True) is not None
+    )
+    actor.command('click', name='assistant.send')
+    actor.until(
+        lambda value: (
+            _unique_input_control(value, 'AssistantConnectionDialog', fully=True) is not None
+        )
+    )
+    facts['share'] = actor.command('dialog_ok', name='AssistantConnectionDialog', role='ok')[
+        'reply'
+    ]
+    assert facts['share']['pressed_changes'] > 0, (
+        'One real Share action approves the captured new input without a second Send or '
+        'injected consent'
+    )
+    actor.until(lambda _value: Path(spec['ready']).is_file())
+    facts['held_request'] = json.loads(Path(spec['ready']).read_text(encoding='utf-8'))
+    facts['held_transport'] = actor.command('usage_transport_snapshot')['reply']
+    return spec
+
+
+def _held_view_finish_ready(actor, facts):
+    _session_completed(actor, 2)
+    current = _held_view_retain(actor, facts, 'ready')
+    records = current['inputs']
+    assert (
+        len(records) == 2
+        and records[-1]['threadId'] == facts['thread']
+        and records[-1]['actual_prior_input_count'] == 1
+    ), (
+        'Only the next genuine input continues the exact retained thread with its actual '
+        'prior input'
+    )
+    assert len(_session_wire(actor, 'turn/start')) == 1 and not _session_wire(
+        actor, 'thread/start'
+    ), 'One Send and one Share admit exactly one continuation, never a fresh thread or replay'
+    assert _assert_exact_original_admitted_user_input(
+        actor, records[-1], facts['text'], expected_thread_prior_inputs=1
+    ), 'The current draft is sent once as its exact literal, separately from approved context data'
+    assert (
+        current['scene']['connected']
+        and current['scene']['account'] == facts['sources']['actual_account']
+        and not current['scene']['draft']
+        and not any(row['pending'] for row in current['files'])
+    ), 'Only actual same-account admission consumes the draft and new pending file'
+    rows = [_rows_values(actor, 'messages', index) for index in range(_rows_probe(actor)['count'])]
+    by_id = {row['id']: row for row in rows}
+    assert all(by_id.get(row['id']) == row for row in facts['original_rows']), (
+        'Successful readiness preserves every original canonical row identity, status and literal'
+    )
+    resumes = _session_wire(actor, 'thread/resume')
+    assert resumes and resumes[-1]['params']['threadId'] == facts['thread'], (
+        'The newly ready helper genuinely resumes the exact original provider thread'
+    )
+
+
+@pytest.mark.parametrize('outcome', ['ready', 'account-mismatch', 'transport-failure'])
+def test_viewed_transcript_survives_only_owned_approved_restart_before_real_account_readiness(
+    main_actor, tmp_path, monkeypatch, outcome
+):
+    actor, facts = _held_view_original_restart(main_actor, tmp_path, monkeypatch)
+    try:
+        spec = _held_view_arm_send(actor, tmp_path, facts, outcome)
+        held = _held_view_retain(actor, facts, 'held')
+        # Deliberately BEFORE accessing the newly introduced API: the retained
+        # genuine old binary must fail on the actual visible conversation flash.
+        assert (
+            held['scene']['viewVisible']
+            and held['scene']['sameWindow']
+            and held['scene']['width'] > 0
+            and held['scene']['height'] > 0
+            and facts['original_text'] in held['scene']['renderedTexts']
+            and not held['scene']['signedOutVisible']
+        ), (
+            'The actual current-window original transcript remains visible during its '
+            'approved execution restart'
+        )
+        request, owned = facts['held_request'], facts['held_transport']
+        assert (
+            request['method'] == 'account/read'
+            and request['pid'] == owned['peer_pid']
+            and request['parent_pid'] == owned['host_pid']
+            and owned['original_vm_child']
+            and request['pid'] != facts['old_transport']['peer_pid']
+        ), (
+            'The barrier is a genuine correlated account read from a NEW current owned '
+            'helper, not an old verification request'
+        )
+        assert not any(row.get('id') == request['request_id'] for row in held['emitted']), (
+            'The captured account/read response is still genuinely withheld at the '
+            'visible transcript observation'
+        )
+        assert (
+            not held['scene']['connected']
+            and not held['scene']['ready']
+            and not held['scene']['sendEnabled']
+            and not held['scene']['filesEnabled']
+            and not held['scene']['choicesEnabled']
+            and held['scene']['draft'] == facts['text']
+            and held['files'] == facts['pending']
+            and len(held['inputs']) == 1
+            and not _session_wire(actor, 'turn/start')
+        ), (
+            'Visible conversation never grants auth or early input; the exact pending '
+            'draft survives the held account boundary'
+        )
+        assert (
+            qml(actor, 'Session.assistant.conversationAvailable') is True
+            and qml(actor, 'typeof Session.assistant.conversationAvailableChanged') == 'function'
+        ), (
+            'The dedicated public presentation property describes the owned visible '
+            'restart without replacing connected'
+        )
+        if outcome == 'transport-failure':
+            facts['fault'] = actor.command('close_owned_transport_write')['reply']
+            assert (
+                facts['fault']['original_vm_child']
+                and facts['fault']['public_close_write_channel_invoked']
+            ), (
+                'Terminal contrast actually closes the current owned transport through '
+                'its public QProcess channel'
+            )
+        else:
+            facts['release'] = _release_original_usage_reply(
+                actor, spec, request['request_id'], method='account/read'
+            )
+        if outcome == 'ready':
+            _held_view_finish_ready(actor, facts)
+        else:
+            actor.until(
+                lambda _value: (
+                    bool(qml(actor, 'Session.assistant.lastError'))
+                    and not qml(actor, 'Session.assistant.conversationAvailable')
+                )
+            )
+            terminal = _held_view_retain(actor, facts, 'terminal')
+            assert (
+                not terminal['scene']['viewVisible']
+                and terminal['scene']['signedOutVisible']
+                and not terminal['scene']['connected']
+                and not terminal['scene']['sendEnabled']
+                and len(terminal['inputs']) == 1
+                and not _session_wire(actor, 'turn/start')
+            ), (
+                'A proved transport failure or different correlated account retires '
+                'old-scope display and cannot send its captured draft'
+            )
+        if outcome != 'transport-failure':
+            emitted = [
+                row
+                for row in facts['ready' if outcome == 'ready' else 'terminal']['emitted']
+                if row.get('id') == request['request_id']
+            ]
+            expected_email = (
+                'different-held-view-account@example.invalid'
+                if outcome == 'account-mismatch'
+                else 'integration@example.invalid'
+            )
+            assert (
+                len(emitted) == 1 and emitted[0]['result']['account']['email'] == expected_email
+            ), (
+                'The genuine captured matching or mismatched account response actually '
+                'reached the current helper protocol'
+            )
+        source = Path(facts['source']['path'])
+        assert (
+            hashlib.sha256(source.read_bytes()).hexdigest() == facts['source']['sha256']
+            and source.stat().st_ino == facts['source']['inode']
+        ), (
+            'Sharing, waiting and terminal/successful readiness preserve the actual '
+            'original file bytes and physical identity'
+        )
+        _held_view_retain(actor, facts, 'final')
+    finally:
+        _close_explicit_restart_actor(actor)

@@ -198,11 +198,7 @@ WorkflowPage {
                 // new row count cannot move the room it was taken from (a half-pixel rounding made it flicker).
                 // Set after the column has laid out: the table's place is read, not bound.
                 function place() {
-                    const column = page.extrasColumn;
-                    if (!column || !column.contentItem)
-                        return;
-                    const top = mapToItem(column.contentItem, 0, 0).y;
-                    spareHeight = Math.floor(column.height - top - EaStyle.Sizes.fontPixelSize);
+                    ApplicationInfo.placeReflectionTable();
                 }
 
                 experiment: page.experiment

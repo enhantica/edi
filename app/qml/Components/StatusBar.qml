@@ -10,8 +10,9 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home. The
-// first item, always present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
+// The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home unless the
+// Analysis page is enabled, so its Fit button is there on every page (the owner, 2026-10-26). The first item, always
+// present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
 // The fit area on the right follows the running fit and then summarises the last one (§17), as status items like the
 // ones on the left: the live values with the progress bar at the far right, then the outcome and the values.
 EaElements.StatusBar {
@@ -20,49 +21,24 @@ EaElements.StatusBar {
     readonly property ProjectViewModel project: Session.project
     property bool assistantChatShown: false
     property bool assistantManualTakeover: false
-    readonly property bool assistantStatusNeeded: assistantArea.working
-        || Session.assistant.showingActions || assistantManualTakeover && Session.assistant.canCancel || visibleStop.pressed || visibleMode.pressed
+    readonly property bool assistantStatusNeeded: assistantArea.working || Session.assistant.showingActions || assistantManualTakeover && Session.assistant.canCancel || visibleStop.pressed || visibleMode.pressed
     // The pages built after a project opened, of those it shows (edi ADR-0052): while they build, the bar shows the
     // opening's progress in the fit area's place.
     property int pagesBuilt: 0
     property int pagesWanted: 0
     readonly property bool opening: pagesWanted > 0 && pagesBuilt < pagesWanted
 
-    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || assistantStatusNeeded
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
     // any window size, font and value; the base's row margins and spacing are its own.
     readonly property list<StatusBarItem> items: [warningsItem, projectItem, structuresItem, experimentsItem, calculatorItem, minimizerItem, parametersItem]
     readonly property FitViewModel fit: project ? project.fit : null
-    readonly property bool keysFit: {
-        let width = 0;
-        let shown = 0;
-        for (const item of items) {
-            if (item.shown) {
-                width += item.labelledWidth;
-                shown += 1;
-            }
-        }
-        const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const fitWidth = fitArea.visible ? fitArea.labelledWidth + spacing : openingProgress.visible ? openingProgress.width + spacing : 0;
-        return width + Math.max(0, shown - 1) * spacing + fitWidth + (assistantGroup.visible ? assistantGroup.width + spacing : 0) <= bar.width - 2 * EaStyle.Sizes.fontPixelSize;
-    }
+    readonly property bool keysFit: ApplicationInfo.statusKeysFit()
     // How many of the items, in their order, fit beside the fit area with their icons and values only: the
     // rest give way, the last first (owner, 2026-10-05: the items never run into the fit area).
-    readonly property int roomFor: {
-        const spacing = EaStyle.Sizes.fontPixelSize * 1.2;
-        const available = bar.width - 2 * EaStyle.Sizes.fontPixelSize - (assistantGroup.visible ? assistantGroup.width + spacing : 0) - (fitArea.visible ? fitArea.compactWidth + spacing : openingProgress.visible ? openingProgress.width + spacing : 0);
-        let width = 0;
-        for (let i = 0; i < items.length; ++i) {
-            if (!items[i].shown)
-                continue;
-            width += (width > 0 ? spacing : 0) + items[i].compactWidth;
-            if (width > available)
-                return i;
-        }
-        return items.length;
-    }
+    readonly property int roomFor: ApplicationInfo.statusRoomFor()
 
     StatusBarItem {
         id: warningsItem
@@ -148,15 +124,11 @@ EaElements.StatusBar {
         readonly property bool stopShown: assistantArea.working || Session.assistant.showingActions || bar.assistantManualTakeover && Session.assistant.canCancel || visibleMode.pressed
         readonly property real gap: EaStyle.Sizes.fontPixelSize * 0.5
         readonly property real buttonExtent: AppSizes.assistantIconExtent
-        readonly property real contentSpacing: Math.max(0,
-            (assistantArea.visible ? 1 : 0) + (visibleMode.visible ? 1 : 0) + (visibleStop.visible ? 1 : 0) - 1) * gap
+        readonly property real contentSpacing: Math.max(0, (assistantArea.visible ? 1 : 0) + (visibleMode.visible ? 1 : 0) + (visibleStop.visible ? 1 : 0) - 1) * gap
         // Keep the original Stop receiver and its text slot in place through
         // manual takeover and the native press/release which caused it.
         visible: bar.assistantStatusNeeded
-        implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-            + (assistantArea.visible ? assistantArea.implicitWidth : 0)
-            + (visibleMode.visible ? visibleMode.implicitWidth : 0)
-            + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
+        implicitWidth: (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) + (assistantArea.visible ? assistantArea.implicitWidth : 0) + (visibleMode.visible ? visibleMode.implicitWidth : 0) + (visibleStop.visible ? visibleStop.implicitWidth : 0) + contentSpacing
         width: Math.min(implicitWidth, Math.max(0, bar.width - 2 * EaStyle.Sizes.fontPixelSize))
         height: Math.max(assistantArea.implicitHeight, assistantArea.iconExtent, visibleStop.implicitHeight)
         anchors.right: fitArea.visible ? fitArea.left : openingProgress.visible ? openingProgress.left : parent.right
@@ -178,9 +150,7 @@ EaElements.StatusBar {
             objectName: "statusBar.assistant.working"
             assistant: Session.assistant
             presented: ApplicationInfo.assistantAvailable && !bar.assistantChatShown
-            width: visible ? Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0)
-                - (visibleStop.visible ? visibleStop.width : 0)
-                - (visibleMode.visible ? visibleMode.width : 0) - assistantGroup.contentSpacing) : 0
+            width: visible ? Math.max(0, parent.width - (assistantRule.visible ? assistantRule.width + fitArea.spacing : 0) - (visibleStop.visible ? visibleStop.width : 0) - (visibleMode.visible ? visibleMode.width : 0) - assistantGroup.contentSpacing) : 0
             height: Math.max(implicitHeight, iconExtent)
             anchors.left: parent.left
             anchors.leftMargin: assistantRule.visible ? assistantRule.width + fitArea.spacing : 0
@@ -238,9 +208,7 @@ EaElements.StatusBar {
                 height: width
                 anchors.centerIn: parent
                 radius: width / 2
-                color: !visibleStop.enabled ? EaStyle.Colors.sideBarButtonBackgroundHovered
-                    : visibleStop.hovered || visibleStop.down || visibleStop.visualFocus ? EaStyle.Colors.themeAccent
-                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                color: !visibleStop.enabled ? EaStyle.Colors.sideBarButtonBackgroundHovered : visibleStop.hovered || visibleStop.down || visibleStop.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                 border.width: 0
             }
             contentItem: EaElements.Label {
@@ -268,7 +236,8 @@ EaElements.StatusBar {
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         spacing: Math.round(EaStyle.Sizes.fontPixelSize * 1.2)
-        // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one.
+        // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one; hidden while a
+        // project opens.
         visible: !bar.opening && bar.fit !== null && (AppState.analysisPageEnabled || running || bar.fit.outcome !== "")
 
         readonly property bool running: bar.fit !== null && bar.fit.running
@@ -282,29 +251,11 @@ EaElements.StatusBar {
         readonly property string scanShownFile: bar.fit !== null ? bar.fit.scanShownFile : ""
         readonly property list<FitStatusItem> items: [statusItem, filesItem, okItem, failedItem, iterationsItem, timeItem, etaItem, chiItem]
         // The area's width with every key shown and with none: what the bar measures, whatever it shows now.
-        readonly property real labelledWidth: widthWith(item => item.labelledWidth)
-        readonly property real compactWidth: widthWith(item => item.compactWidth)
+        readonly property real labelledWidth: ApplicationInfo.statusMeasuredWidth(false)
+        readonly property real compactWidth: ApplicationInfo.statusMeasuredWidth(true)
 
         function widthWith(itemWidth) {
-            let width = rule.width;
-            let shown = 1;
-            for (const item of items) {
-                if (item.shown) {
-                    width += itemWidth(item);
-                    shown += 1;
-                }
-            }
-            for (const extra of [showing, progress]) {
-                if (extra.visible) {
-                    width += extra.width;
-                    shown += 1;
-                }
-            }
-            if (fitButtons.visible) {
-                width += fitButtons.widthWith(itemWidth);
-                shown += 1;
-            }
-            return width + (shown - 1) * spacing;
+            return ApplicationInfo.statusWidthWith(itemWidth, false);
         }
 
         Rectangle {
@@ -341,7 +292,7 @@ EaElements.StatusBar {
             anchors.verticalCenter: parent.verticalCenter
             spacing: fitArea.spacing
             // The values shown, for what reads them.
-            readonly property string text: fitArea.items.slice(1).filter(item => item.shown).map(item => item.valueText).join(" ")
+            readonly property string text: ApplicationInfo.statusFitValues()
 
             FitStatusItem {
                 id: filesItem
@@ -437,7 +388,7 @@ EaElements.StatusBar {
             indeterminate: bar.fit === null || !bar.fit.scanning
             fraction: bar.fit !== null && bar.fit.scanning && bar.fit.scanTotal > 0 ? bar.fit.scanProcessed / bar.fit.scanTotal : 0
             fontFamily: EaStyle.Fonts.ptMono.name
-            text: fitArea.scanning ? bar.fit.scanText : [qsTr("fitting"), bar.fit && bar.fit.iterations !== "" ? qsTr("it %1").arg(bar.fit.iterations) : ""].filter(part => part !== "").join(FitOutcomes.separator)
+            text: ApplicationInfo.statusProgressText()
         }
         // Last, at the bar's right end whatever the area's width (the owner, 2026-10-26): Reset and Follow in a scan
         // project, then the Fit button in the corner. Fitting is run from here only; Reset and Follow give up their words
@@ -449,15 +400,7 @@ EaElements.StatusBar {
             readonly property list<FitStatusItem> buttons: [resetButton, followButton, fitButton]
 
             function widthWith(itemWidth) {
-                let width = 0;
-                let shown = 0;
-                for (const button of buttons) {
-                    if (button.shown) {
-                        width += itemWidth(button);
-                        shown += 1;
-                    }
-                }
-                return width + Math.max(0, shown - 1) * spacing;
+                return ApplicationInfo.statusWidthWith(itemWidth, true);
             }
 
             objectName: "statusBar.fit.buttons"
@@ -486,6 +429,8 @@ EaElements.StatusBar {
                 // Enabled while a scan runs; on, the pattern tab shows the dataset being fitted.
                 clickable: bar.fit !== null && bar.fit.scanning
                 checked: bar.fit !== null && bar.fit.scanning && bar.fit.following
+                Accessible.checkable: true
+                Accessible.checked: checked
                 keyIcon: "crosshairs"
                 valueText: qsTr("Follow")
                 ToolTip.text: qsTr("Show the dataset being fitted")

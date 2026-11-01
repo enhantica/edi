@@ -1,6 +1,6 @@
 {
-  "source": "relay/knowledge/decision-records.md, owner records dated 2026-10-26",
-  "source_sha256": "af0a0172ddec60f8e421caff7d3d002f7fc5311ea55330486fe10bde5b67ba03",
+  "source": "Approved palette design records dated 2026-10-26 and 2026-10-27",
+  "source_sha256": "6e02e84bc876d1b78f0c94f490c71d569a1d5e5087d8578c6832ad628517c1b7",
   "palettes": [
     {
       "name": "Earth",
@@ -167,7 +167,7 @@
       "#C8323C"
     ],
     "dark": [
-      "#444444",
+      "#181818",
       "#6AA6EA",
       "#FC4F81"
     ]

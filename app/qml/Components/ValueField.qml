@@ -67,15 +67,8 @@ EaElements.ParamTextField {
 
     // Return and leaving the field both commit; the second of the two finds nothing new.
     function commit() {
-        if (!editable || text === field.value)
-            return;
-        refusal = clearable && text === "" ? "" : TypedInput.refusal(text, accepts);
-        if (refusal === "" && !typedAdmitted)
-            refusal = admitsRule;
-        if (refusal === "") {
-            committed(text);
-            refusal = Session.project ? Session.project.lastError : "";
-        }
-        text = Qt.binding(() => field.value);
+        ApplicationInfo.commitValueField(() => {
+            text = Qt.binding(() => field.value);
+        });
     }
 }

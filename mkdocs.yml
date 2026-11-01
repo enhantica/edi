@@ -81,9 +81,14 @@ nav:
           - dev/adrs/0049-single-crystal-experiments.md
           - dev/adrs/0050-observed-reflections-and-fit-cutoff.md
           - dev/adrs/0051-names-and-numbers-from-the-dictionary.md
-          - dev/adrs/0052-experiment-description.md
           - dev/adrs/0052-project-folders-archives-and-opening.md
           - dev/adrs/0053-what-a-fit-can-free.md
+          - dev/adrs/0054-experiment-description.md
+          - dev/adrs/0055-assistant-controller-and-tools.md
+          - dev/adrs/0056-subscription-provider-connections.md
+          - dev/adrs/0057-assistant-panel-and-history.md
+          - dev/adrs/0058-assistant-product-skills.md
+          - dev/adrs/0059-defined-background-editing.md
           - dev/adrs/template.md
       - Design:
           - dev/design/api-types.md

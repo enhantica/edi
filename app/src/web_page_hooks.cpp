@@ -130,7 +130,8 @@ extern "C" EMSCRIPTEN_KEEPALIVE const char* edi_control_geometry(const char* obj
                  {QStringLiteral("width"), rect.width()},
                  {QStringLiteral("height"), rect.height()},
                  {QStringLiteral("visible"), true},
-                 {QStringLiteral("enabled"), item->isEnabled()}};
+                 {QStringLiteral("enabled"), item->isEnabled()},
+                 {QStringLiteral("activeFocus"), item->hasActiveFocus()}};
         // What it says: its own text, else its visible descendants' texts in order (a tooltip's column of labels).
         if (item->metaObject()->indexOfProperty("text") >= 0) {
             state[QStringLiteral("text")] = item->property("text").toString();

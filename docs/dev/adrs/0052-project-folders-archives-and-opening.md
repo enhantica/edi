@@ -257,3 +257,74 @@ the first Save error. Normal current/direct/fresh/archive/copy staging paths ret
 their original owners: failed staging copies do not mutate the original live model;
 any live partial adoption through adoptSave receives this same settlement. Actual
 fault/copy/currentness/publication qualification remains required.
+
+
+## Native browser-storage persistence policy
+
+WebStorage now owns the first browser persistence rules previously inside its EM_JS adapter: place-key formatting; per-place write/drop sequencing; project-owned document classification; stale worker file/directory and folder-obsolete-file planning; saved/recovery/time record transitions; load destination selection; drop disposition; and list metadata projection. Its existing QObject/job owner holds the original per-place queue and known-file state. No second persistence controller, metadata store, cache or backend is introduced. Session/project save/open/recovery ownership remains unchanged.
+
+The existing Emscripten val bridge passes actual browser values and opaque handles, without JSON-normalizing records. Native policy controls the original property/primitive operations, truthiness, Date.now points, UTF-16 path identity and output metadata. A one-operation browser-realm addition adapter preserves default-hint coercion for key/path concatenation; native code alone chooses operands and order, and it performs the first key concatenation before reading Math.random. No mutable String-global normalization is added. Known filename collections contain only the original UTF8ToString/FS enumeration strings, with first-occurrence Set ordering retained natively. Browser adapters retain the platform's IndexedDB/OPFS/permission/chooser/FS/worker I/O and actual opaque handles; small array mappings only marshal filenames or dispatch each actual record to its native projection. The worker writes first, enumerates afterward, sends only path/kind metadata to the main-thread native retention planner and applies its reverse-order removal list. Native known-file state advances only after every obsolete-file removal succeeds.
+
+Per-place queue selection is native, using the same null-terminated UTF-8 transport key the original browser queue received, so distinct native spellings that crossed that boundary as the same browser key still serialize together. Browser promise turns only launch stored opaque I/O callbacks and report settlement. Settlement releases the next native-selected job independently of answer delivery, with the original ordering of promise reactions; failed jobs cannot wedge a place or overtake later writes/discards. Answers still enter Qt on the original queued connection. Worker planning replies have their original job ID and a transport-only resolver, not a policy store or a new runtime. Existing worker bootstrap remains browser worker installation, with no code-string policy interpreter.
+
+A separately identified prior defect is corrected: OPFS drop suppresses only NotFoundError. Every other lookup/remove refusal propagates and cannot delete place metadata or report success. If an earlier recovery removal is already proven before a later whole-place removal refuses, the record is retained and its recovery flag is updated only for that proven removal; the original removal refusal remains the reported cause even if recording that partial progress also fails. Normal successful removal order is unchanged. The original distinction in removePath is the first precedent; queue-liveness settlement is not an I/O-error suppression rule.
+
+Browser persistence source completion is subject to normal WASM compilation, reload/recovery/save/partial-refusal/ordering/worker checks and repairs. The previously stated source-completion boundary excluded genuine host bootstrap/I/O; it did not exempt these portable persistence rules, which are now native.
+
+
+## Incubation controllers belong to individual engines
+
+FIRST configure_engine already composes an independent Session for each accepted
+QQmlEngine and rejects repeated composition. The page incubation controller must
+have that same per-engine scope. The previous static PageIncubation was attached
+to every engine. Pinned Qt's setIncubationController changes the controller's
+reverse engine pointer without clearing another engine's old forward pointer.
+Thus configuring B after A left A pointing at a controller that drove B; retiring
+B could null that controller while A still had pending asynchronous pages.
+
+Each accepted engine now gets its own PageIncubation parented as a QObject child.
+Qt does not take controller ownership in setIncubationController; QObject
+parenting supplies that ownership. No controller is shared or restored onto an
+older engine. The existing QTimer interval zero, one timeout connection,
+incubateFor(50), count-based start/stop, page order and readiness protocol remain
+unchanged on desktop and WASM. There is no extra timer, event pump, observer,
+private Qt call, reattachment hook or longer readiness deadline.
+
+Pinned Qt destroys QObject children in QObject's destructor body, before its
+private-data scoped pointer is destroyed. Therefore the engine-owned controller
+normally retires before QQmlEnginePrivate. Its timer member is destroyed before
+its QQmlIncubationController base; the base detaches its native engine link while
+that private data still exists. If detached earlier, its null reverse pointer
+makes that step a no-op. QQmlEnginePrivate's later destructor also clears any
+remaining controller link. No callback is installed on a partly destroyed engine.
+
+The static-link defect is established by native source, not by a claimed cause
+of the observed status timeout. Independent engine A/B ownership, asynchronous
+liveness through either destruction order, explicit replacement/detachment and
+ordinary one-engine workflow verification must precede acceptance. Existing
+Session/model/currentness, page cancellation and readiness gates remain intact.
+
+
+### Existing unsaved-work choices have native view identities
+
+FIRST is Main's ordinary unsavedChanges Save/Discard/Cancel guard and its Save-as
+counterpart: saveAsChoice exposes the actual standardButton(Dialog.Ok), and the
+existing opened callback names that original item saveAs.accept. The unsaved
+choices now follow the same view-identity principle using declarative bindings:
+while the original dialog is opened, its actual native Discard, Save and Cancel
+buttons are named unsavedChanges.discard, .save and .cancel, and its existing
+header label is named unsavedChanges.title. Null/missing native buttons stay
+unnamed; no alternate control is created. Normal Binding target/when retirement
+restores prior names when inactive or retargeted.
+
+Qt's standardButton API returns the existing standard button or null, without
+opening, pressing or constructing one. The title remains the actual translated
+header, and the dialog's flags/order/labels/layout/roles/availability, native
+pointer handling and original accepted/discarded/rejected continuations remain.
+This is metadata on the real controls, not a second input/action path or a new
+backend/export. The existing read-only named geometry hook can report the real
+visible title/button and its scene rectangle; physical input still has to reach
+the original offered choice. Closing/dismissing the guard is not a Discard
+receipt, and Reset never bypasses unsaved work merely because the browser lacks
+an accessibility node. No missing browser accessibility subtree is claimed fixed
+by naming: its Qt/WASM role/lifecycle propagation is a separate platform issue.

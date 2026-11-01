@@ -22,6 +22,7 @@ import pytest
 import yaml
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.metadata_transition.source_bytes import previous_bytes
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
 
@@ -114,6 +115,24 @@ def test_public_webapp_packer_excludes_native_build_outputs(tmp_path):
     )
 
 
+def test_public_webapp_packer_preserves_inventory_through_symlinked_build_parent(tmp_path):
+    physical = tmp_path / 'physical wasm'
+    physical.mkdir()
+    alias = tmp_path / 'source/build/wasm'
+    alias.parent.mkdir(parents=True)
+    alias.symlink_to(physical, target_is_directory=True)
+    assert alias.is_symlink(), 'The actual packer follows an armed external build-parent alias'
+    # Reuse EVERY original actual-packer/archive/vendor/docs-placement assertion,
+    # with the SAME fixture bytes and ordinary subprocess budgets.
+    test_public_webapp_packer_excludes_native_build_outputs(tmp_path)
+    assert (physical / 'edi-webapp.zip').is_file(), (
+        'The normal site zip is published at the actual destination'
+    )
+    assert (physical / 'site').is_dir(), (
+        'The packed site lives under the same physical build parent'
+    )
+
+
 def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
     oracle = json.loads((FIXTURE / 'native.json').read_text())
     digest = hashlib.sha256()
@@ -153,7 +172,7 @@ def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
         for path in sorted(project.rglob('*')):
             if path.is_file():
                 digest.update(path.relative_to(project).as_posix().encode() + b'\0')
-                digest.update(path.read_bytes())
+                digest.update(previous_bytes(path.relative_to(ROOT).as_posix(), path.read_bytes()))
         assert digest.hexdigest() == record['project_sha256'], (
             'Browser catalogue parity: every native regression pin binds its current input bytes'
         )

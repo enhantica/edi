@@ -54,6 +54,7 @@ qt_add_qml_module(edi_app_module
     SOURCES
         src/app_info.hpp src/app_info.cpp
         src/assistant_message_presentation.hpp
+        src/assistant_panel_presentation.hpp
         src/assistant_view_model.hpp src/assistant_view_model.cpp
         src/assistant_widget_input.hpp src/assistant_widget_input.cpp
         src/assistant_result.hpp src/assistant_result.cpp
@@ -122,6 +123,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/BlockSelector.qml
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
+        qml/Components/ComboCell.qml
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
@@ -255,6 +257,8 @@ target_include_directories(edi_app_module PUBLIC src ${CMAKE_CURRENT_BINARY_DIR}
 target_link_libraries(edi_app_module
     PUBLIC Qt6::Quick Qt6::QuickControls2 Qt6::Graphs Qt6::Quick3D Qt6::Concurrent edi::core
     PRIVATE ${EDI_GUI_BASE_TARGETS} Qt6::CorePrivate)
+find_package(Qt6QmlPrivate REQUIRED)
+target_link_libraries(edi_app_module PRIVATE Qt6::QmlPrivate)
 if(NOT EMSCRIPTEN)
     target_link_libraries(edi_app_module PRIVATE EdiMath::JKQTMathTextEdi)
     target_compile_definitions(edi_app_module PRIVATE EDI_HAS_NATIVE_MATH=1)
@@ -431,7 +435,7 @@ add_custom_target(edi_app_build_marker
 target_sources(edi_app PRIVATE "${EDI_APP_BUILD_MARKER_CPP}")
 add_dependencies(edi_app edi_app_build_marker)
 target_link_libraries(edi_app_tests PRIVATE edi_app_module edi_app_moduleplugin ${EDI_GUI_BASE_TARGETS}
-                                            Qt6::QuickTest)
+                                            Qt6::QuickTest Qt6::QmlPrivate)
 # The demo and the test observers open test projects the app does not bundle from the source tree (ADR-0048).
 set_source_files_properties(src/demo_driver.cpp PROPERTIES
                             COMPILE_DEFINITIONS "EDI_CLI_PROJECTS_DIR=\"${PROJECT_SOURCE_DIR}/docs/user/cli\"")

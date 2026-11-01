@@ -28,48 +28,14 @@ EaElements.GroupBox {
     // A save under way, from its start until its files are written or refused. The page keeps the report built and
     // the preview's figures drawn meanwhile, even when another page is shown: a PDF takes those figures.
     property bool saving: false
-    // A save asked for before the project had a place of its own, made once Save as gives it one.
+    // A save asked for before the project had a place of its own, made once that Save as gives it one, and dropped
+    // when it is cancelled or refused.
     property bool afterSaveAs: false
 
     // Writes the ticked formats; with the PDF ticked, once the preview's figures are grabbed. While the project
     // calculates, the report is not yet its outcome, so the save waits for it.
     function saveReport() {
-        const report = group.report;
-        // A project that cannot be written back (an example, a read-only .zip) asks where to keep it first, as Save
-        // does; its report is saved once it has a place (the owner, 2026-10-27).
-        if (!group.inBrowser && Session.needsSaveAs) {
-            group.afterSaveAs = true;
-            AppState.saveAsRequested();
-            return;
-        }
-        if (report.calculating) {
-            group.savePending = true;
-            return;
-        }
-        // First, so the report is rebuilt from the calculation's outcome and the preview drawn before its figures
-        // are grabbed; a save that waited may run after its page was left.
-        group.saving = true;
-        group.savePending = false;
-        const write = () => {
-            try {
-                report.saveReport(EaStyle.Fonts.fontFamily);
-                const refusal = Session.writeBackReports();
-                if (refusal !== "") {
-                    saveError.message = refusal;
-                    saveError.open();
-                }
-            } finally {
-                group.saving = false;
-            }
-        };
-        if (report.writesPdf)
-            group.preview.grabFigures(figures => {
-                for (const name in figures)
-                    report.setFigure(name, figures[name]);
-                write();
-            });
-        else
-            write();
+        ApplicationInfo.saveReportPreview();
     }
 
     // In the browser Save report also downloads the files, and a saved file lasts until the page is reloaded.
@@ -84,14 +50,7 @@ EaElements.GroupBox {
     // file has not been saved (before the first save, or after the project is renamed). Rows of other names keep
     // their files.
     function savedRow(format) {
-        if (!group.report || !group.shown)
-            return null;
-        const name = group.report.fileStem + "." + format;
-        for (const row of group.report.savedReports) {
-            if (row.name === name && row.format === format)
-                return row;
-        }
-        return null;
+        return ApplicationInfo.savedReportRow(format);
     }
 
     // A format's report path, read-only: normal when the saved file is current, red when the project changed since
@@ -229,25 +188,23 @@ EaElements.GroupBox {
     // A report that could not be saved says why, as a project that could not.
     Connections {
         target: Session
-        function onNeedsSaveAsChanged() {
-            if (group.afterSaveAs && !Session.needsSaveAs) {
-                group.afterSaveAs = false;
-                group.saveReport();
-            }
-        }
         function onProjectChanged() {
-            group.afterSaveAs = false;
+            ApplicationInfo.reportExportChanged(1);
+        }
+    }
+    Connections {
+        target: AppState
+        function onSaveAsFinished(saved: bool) {
+            ApplicationInfo.reportSaveAsFinished(saved);
         }
     }
     Connections {
         target: group.report
         function onCalculatingChanged() {
-            if (group.savePending && !group.report.calculating)
-                group.saveReport();
+            ApplicationInfo.reportExportChanged(2);
         }
         function onSaveFailed(message) {
-            saveError.message = message;
-            saveError.open();
+            ApplicationInfo.reportExportFailure(message);
         }
     }
     AppDialog {

@@ -69,6 +69,9 @@
 #include <QMetaMethod>
 #include <QMetaProperty>
 #include <QPointer>
+#include <QQmlError>
+#include <QScopeGuard>
+#include <cstdlib>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QQmlComponent>
@@ -126,6 +129,264 @@ public:
         else if(event->type()==QEvent::InputMethod)kind="input_method";
         if(!kind.isEmpty() && observe)observe(kind,event);
         return false;
+    }
+};
+// Opt-in diagnostic receipts only; never send an input or settle the event loop.
+class PassiveDispatchTrace final {
+    QObject receiver_;
+    QFile file_;
+    QElapsedTimer clock_;
+    QList<QPointer<edi_app::CodexAgent>> agents_;
+    std::vector<QMetaObject::Connection> connections_;
+    quint64 records_ = 0, clicks_ = 0, active_click_ = 0;
+    bool failed_ = false, truncated_ = false;
+    static constexpr quint64 record_limit = 4096;
+    static constexpr int chain_limit = 32;
+    static QString identity(QObject* object) {
+        return object ? QString::number(reinterpret_cast<quintptr>(object), 16) : QString();
+    }
+    static Object object_info(QObject* object) {
+        if (!object) return {{"alive", false}};
+        return {{"alive", true}, {"identity", identity(object)},
+                {"name", object->objectName().left(128)},
+                {"class", QString::fromLatin1(object->metaObject()->className()).left(128)}};
+    }
+    static Array rect(const QRectF& value) { return {value.x(), value.y(), value.width(), value.height()}; }
+    static Object item_info(QQuickItem* item, QQuickWindow* window) {
+        auto out = object_info(item);
+        if (!item) return out;
+        out["visible"] = item->isVisible(); out["enabled"] = item->isEnabled();
+        out["clip"] = item->clip(); out["opacity"] = item->opacity(); out["z"] = item->z();
+        out["local_rect"] = rect(QRectF(0, 0, item->width(), item->height()));
+        out["bounding_rect"] = rect(item->boundingRect());
+        out["window_rect"] = rect(item->mapRectToScene(QRectF(0, 0, item->width(), item->height())));
+        out["same_window"] = item->window() == window;
+        out["active_focus"] = item->hasActiveFocus();
+        out["containment_mask"] = item->containmentMask() != nullptr;
+        return out;
+    }
+    static Object readiness(QObject* object) {
+        // Declared public readiness only; no text, model, payload or arbitrary getter enumeration.
+        const QPointer<QObject> original(object);
+        Object out;
+        for (const char* name : {"preparing", "pageWanted", "current", "assistantCovered",
+                                 "moving", "movingHorizontally", "movingVertically",
+                                 "flicking", "running", "transitionRunning", "status"}) {
+            if (!original) break;
+            const int index = original->metaObject()->indexOfProperty(name);
+            if (index < 0) continue;
+            const auto value = original->metaObject()->property(index).read(original);
+            if (value.metaType().id() == QMetaType::Bool) out[name] = value.toBool();
+            else if (value.metaType().id() == QMetaType::Int || value.metaType().flags().testFlag(QMetaType::IsEnumeration))
+                out[name] = value.toInt();
+        }
+        return out;
+    }
+public:
+    bool open(const QString& path) {
+        if (!QFileInfo(path).isAbsolute()) return false;
+        file_.setFileName(path);
+        if (!file_.open(QIODevice::WriteOnly | QIODevice::NewOnly)) return false;
+        if (!file_.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner)) { file_.close(); return false; }
+        clock_.start();
+        write("capture_started", {{"format", 1}, {"clock", "QElapsedTimer monotonic"},
+                                  {"record_limit", static_cast<int>(record_limit)}, {"chain_limit", chain_limit}});
+        return healthy();
+    }
+    ~PassiveDispatchTrace() {
+        for (const auto& connection : connections_) QObject::disconnect(connection);
+        if (file_.isOpen()) write("capture_finished", {{"io_failed", failed_}, {"truncated", truncated_}}, true);
+    }
+    bool healthy() const { return !failed_ && !truncated_; }
+    void write(const char* event, Object row = {}, bool final = false) {
+        if (!file_.isOpen() || failed_) return;
+        if (!final && records_ >= record_limit) { truncated_ = true; return; }
+        row["event"] = QString::fromLatin1(event);
+        row["ordinal"] = QString::number(++records_);
+        row["monotonic_ns"] = QString::number(clock_.nsecsElapsed());
+        row["click"] = QString::number(active_click_);
+        const auto bytes = QJsonDocument(row).toJson(QJsonDocument::Compact) + '\n';
+        if (file_.write(bytes) != bytes.size() || !file_.flush()) failed_ = true;
+    }
+    void watch(edi_app::AssistantViewModel* owner) {
+        if (!owner || !healthy()) return;
+        agents_.erase(std::remove_if(agents_.begin(), agents_.end(), [](const auto& value) { return !value; }), agents_.end());
+        for (auto* agent : owner->findChildren<edi_app::CodexAgent*>(QString(), Qt::FindDirectChildrenOnly)) {
+            if (!healthy()) return;
+            if (std::any_of(agents_.begin(), agents_.end(), [agent](const auto& value) { return value == agent; })) continue;
+            if (agents_.size() >= 16) { truncated_ = true; return; }
+            agents_.append(agent);
+            const QString id = identity(agent);
+            write("transport_watch_started", {{"agent_identity", id}});
+            connections_.push_back(QObject::connect(agent, &edi_app::CodexAgent::event, &receiver_,
+                [this, id](const QString& method, const QJsonObject&) {
+                    if (method == "turn/completed") write("provider_turn_completed_receipt", {{"agent_identity", id}});
+                    else if (method == "turn/started") write("provider_turn_started_receipt", {{"agent_identity", id}});
+                    else if (method == "error") write("provider_error_receipt", {{"agent_identity", id}});
+                }, Qt::DirectConnection));
+            connections_.push_back(QObject::connect(agent, &edi_app::CodexAgent::failed, &receiver_,
+                [this, id](const QString&) { write("transport_failed_receipt", {{"agent_identity", id}}); }, Qt::DirectConnection));
+        }
+    }
+    void snapshot(const char* event, QQuickItem* target, QQuickWindow* window, const QPoint& point) {
+        const QPointer<QQuickWindow> original_window(window);
+        const QPointer<QQuickItem> original(target);
+        Array chain;
+        QPointer<QQuickItem> parent = original;
+        for (int depth = 0; parent && depth < chain_limit; ++depth) {
+            const QPointer<QQuickItem> current = parent;
+            auto row = item_info(current, original_window);
+            row["readiness"] = readiness(current);
+            if (current) {
+                const auto local = current->mapFromScene(QPointF(point));
+                row["point_local"] = Array{local.x(), local.y()};
+                row["clip_rect"] = rect(current->clipRect());
+                parent = current->parentItem();
+            } else parent.clear();
+            chain.append(row);
+        }
+        auto target_row = item_info(original, original_window);
+        if (original) {
+            const auto local = original->mapFromScene(QPointF(point));
+            target_row["intended_local"] = Array{local.x(), local.y()};
+        }
+        Object row{{"target", target_row}, {"ancestor_chain", chain}, {"chain_truncated", bool(parent)},
+                   {"intended_window_point", Array{point.x(), point.y()}},
+                   {"window", object_info(original_window)}, {"window_active", original_window && original_window->isActive()},
+                   {"qt_focus_object", object_info(QGuiApplication::focusObject())},
+                   {"active_focus_item", object_info(original_window ? original_window->activeFocusItem() : nullptr)},
+                   {"mouse_grabber_item", object_info(original_window ? original_window->mouseGrabberItem() : nullptr)}};
+        if (original_window) row["window_size"] = Array{original_window->width(), original_window->height()};
+        write(event, row);
+    }
+    void mouse_receipt(QEvent* event, QQuickWindow* window) {
+        if (!event || (event->type() != QEvent::MouseButtonPress && event->type() != QEvent::MouseButtonRelease)) return;
+        const auto* mouse = static_cast<QMouseEvent*>(event);
+        write(event->type() == QEvent::MouseButtonPress ? "window_press_receipt" : "window_release_receipt",
+              {{"position", Array{mouse->position().x(), mouse->position().y()}},
+               {"button", static_cast<int>(mouse->button())}, {"window_active", window && window->isActive()},
+               {"active_focus_item", object_info(window ? window->activeFocusItem() : nullptr)},
+               {"mouse_grabber_item", object_info(window ? window->mouseGrabberItem() : nullptr)}});
+    }
+    void begin_click() { active_click_ = ++clicks_; }
+    void end_click() { active_click_ = 0; }
+};
+
+// Finite property-notice observers for same-owner restoration/consent reentry.
+// Read the actual getters at their real notifiers; never emit/copy an app signal.
+class NativePropertyNotice final : public QObject {
+    Q_OBJECT
+    QPointer<QObject> owner_;
+    QMetaProperty property_;
+    QVariant last_;
+
+   public:
+    QString name;
+    Array events;
+    bool duplicate = false;
+    NativePropertyNotice(QObject* owner, const char* property, QObject* parent)
+        : QObject(parent), owner_(owner), name(QString::fromUtf8(property)) {
+        const int index = owner->metaObject()->indexOfProperty(property);
+        if (index < 0) throw std::runtime_error("required actual AVM property missing");
+        property_ = owner->metaObject()->property(index);
+        if (!property_.hasNotifySignal())
+            throw std::runtime_error("new dedicated AVM notifier precondition missing");
+        if (property_.notifySignal().name() != name.toUtf8() + "Changed")
+            throw std::runtime_error("declared dedicated AVM notifier name missing");
+        last_ = property_.read(owner);
+        const auto slot = metaObject()->method(metaObject()->indexOfSlot("announced()"));
+        if (!QObject::connect(owner, property_.notifySignal(), this, slot, Qt::DirectConnection))
+            throw std::runtime_error("actual AVM property observation did not connect");
+    }
+    int signalIndex() const { return property_.notifySignalIndex(); }
+    Object snapshot() const {
+        return {
+            {"name", name},
+            {"events", events},
+            {"duplicate", duplicate},
+            {"last_announced", QJsonValue::fromVariant(last_)},
+            {"current", owner_ ? QJsonValue::fromVariant(property_.read(owner_)) : QJsonValue()},
+            {"owner_alive", !owner_.isNull()}};
+    }
+   private slots:
+    void announced() {
+        if (!owner_) return;
+        const auto current = property_.read(owner_);
+        duplicate = duplicate || (!events.isEmpty() && current == last_);
+        last_ = current;
+        events.append(QJsonValue::fromVariant(current));
+    }
+};
+class NativeNotificationReentry final : public QObject {
+    Q_OBJECT
+    QPointer<edi_app::AssistantViewModel> original_;
+    std::vector<NativePropertyNotice*> properties_;
+    std::function<bool()> current_;
+    std::function<void()> destroy_;
+    QString mode_, action_, replacement_;
+    Object entered_;
+    bool fired_ = false;
+
+   public:
+    NativeNotificationReentry(edi_app::AssistantViewModel* owner, QString mode, QString action,
+                              QString replacement, std::function<bool()> current,
+                              std::function<void()> destroy)
+        : original_(owner),
+          current_(std::move(current)),
+          destroy_(std::move(destroy)),
+          mode_(std::move(mode)),
+          action_(std::move(action)),
+          replacement_(std::move(replacement)) {
+        QSet<int> seen;
+        for (const auto* name : {"sessionDraft", "contextConsentRequired",
+                                 "contextConsentIdentity", "contextApprovalBlocked"}) {
+            auto* notice = new NativePropertyNotice(owner, name, this);
+            if (seen.contains(notice->signalIndex()))
+                throw std::runtime_error("unrelated actual AVM properties share a notifier");
+            seen.insert(notice->signalIndex());
+            properties_.push_back(notice);
+        }
+        if (mode_ == "draft") {
+            QObject::connect(
+                owner, &edi_app::AssistantViewModel::sessionDraftRestored, this,
+                [this](const QString& thread, const QString& text) {
+                    if (fired_) return;
+                    fired_ = true;
+                    entered_ = {
+                        {"thread", thread},
+                        {"restored_text", text},
+                        {"getter_before", original_ ? original_->sessionDraft() : QString()},
+                        {"same_owner_before", current_()}};
+                    if (action_ == "delete")
+                        destroy_();
+                    else if (original_)
+                        original_->setSessionDraft(replacement_);
+                    entered_["same_owner_after"] = current_();
+                },
+                Qt::DirectConnection);
+        } else {
+            QObject::connect(
+                owner, &edi_app::AssistantViewModel::contextPreviewChanged, this,
+                [this] {
+                    if (fired_ || !original_ || !original_->contextConsentRequired()) return;
+                    fired_ = true;
+                    entered_ = {{"required_before", original_->contextConsentRequired()},
+                                {"connected_before", original_->connected()},
+                                {"same_owner_before", current_()}};
+                    if (action_ == "delete")
+                        destroy_();
+                    else
+                        original_->signIn();  // existing public connected-owner consent entrance
+                    entered_["same_owner_after"] = current_();
+                },
+                Qt::DirectConnection);
+        }
+    }
+    Object snapshot() const {
+        Array properties;
+        for (const auto* notice : properties_) properties.append(notice->snapshot());
+        return {{"mode", mode_},     {"action", action_},        {"fired", fired_},
+                {"entry", entered_}, {"same_owner", current_()}, {"properties", properties}};
     }
 };
 class UrlObserver:public QObject {
@@ -233,6 +494,100 @@ QRectF exposed_layout_rect(QQuickItem* item) {
     if(item->window())rect=rect.intersected(item->mapRectFromScene(QRectF(QPointF(),item->window()->size())));
     return rect;
 }
+// Test-owned layout observation; the original ink exposure fields remain separate.
+// No native reveal/target helper, layout setter, hit point or event turn is used.
+Object parameter_interaction_row(QQuickItem* field, QQuickWindow* window) {
+    if (!field || !field->objectName().startsWith("parameters.value.")) return {};
+    const QPointer<QQuickItem> original_field(field);
+    const QPointer<QQuickWindow> original_window(window);
+    QPointer<QQuickItem> row, table;
+    for (auto* parent = field->parentItem(); parent; parent = parent->parentItem()) {
+        if (!row && parent->objectName().startsWith("parameters.row.")) row = parent;
+        if (row && parent->objectName() == "parameters.list") {
+            table = parent;
+            break;
+        }
+    }
+    Object out{{"valid", false}};
+    if (!window || !row || !table || field->window() != window || row->window() != window ||
+        table->window() != window)
+        return out;
+    const QPointer<QObject> parameter(field->property("item").value<QObject*>());
+    if (!original_field || !row || !table || !parameter ||
+        row->property("parameter").value<QObject*>() != parameter)
+        return out;
+    const QString path = parameter->property("path").toString();
+    const QPointer<QQuickItem> header(table->property("headerItem").value<QQuickItem*>());
+    if (!original_field || !row || !table || !parameter || !header || path.isEmpty() ||
+        header->window() != window)
+        return out;
+    const auto rect = [](const QRectF& value) -> Array {
+        return {value.x(), value.y(), value.width(), value.height()};
+    };
+    const auto identity = [](QObject* object) {
+        return QString::number(reinterpret_cast<quintptr>(object), 16);
+    };
+    const auto finite = [](const QRectF& value) {
+        return std::isfinite(value.x()) && std::isfinite(value.y()) &&
+               std::isfinite(value.width()) && std::isfinite(value.height());
+    };
+    const QRectF row_rect = row->mapRectToScene(QRectF(0, 0, row->width(), row->height()));
+    const QRectF field_rect = field->mapRectToScene(QRectF(0, 0, field->width(), field->height()));
+    const QRectF window_rect(QPointF(), window->size());
+    if (!finite(row_rect) || !finite(field_rect) || !finite(window_rect) || row_rect.isEmpty() ||
+        field_rect.isEmpty())
+        return out;
+    QRectF visible = row_rect.intersected(window_rect);
+    Array clips;
+    for (auto* parent = field->parentItem(); parent; parent = parent->parentItem()) {
+        if (!parent->clip()) continue;
+        const auto clip = parent->mapRectToScene(parent->clipRect());
+        if (!finite(clip)) return out;
+        clips.append(Object{
+            {"name", parent->objectName()}, {"identity", identity(parent)}, {"rect", rect(clip)}});
+        visible = visible.intersected(clip);
+    }
+    const auto header_rect =
+        header->mapRectToScene(QRectF(0, 0, header->width(), header->height()));
+    const auto header_visible = header->mapRectToScene(exposed_layout_rect(header));
+    const auto field_visible = field->mapRectToScene(exposed_layout_rect(field));
+    if (!finite(header_rect) || !finite(header_visible) || !finite(field_visible)) return out;
+    const auto header_overlap = visible.intersected(header_visible);
+    const bool exposed = field->isVisible() && row->isVisible() && table->isVisible() &&
+                         !visible.isEmpty() && !header_visible.contains(visible);
+    const bool fully_exposed = exposed && visible == row_rect && header_overlap.isEmpty();
+    const bool field_fully_exposed = field->isVisible() && field_visible == field_rect &&
+                                     !field_rect.intersects(header_visible);
+    if (!original_field || !original_window || !row || !table || !header || !parameter ||
+        original_field->window() != original_window || !row->isAncestorOf(original_field) ||
+        !table->isAncestorOf(row) ||
+        original_field->property("item").value<QObject*>() != parameter ||
+        row->property("parameter").value<QObject*>() != parameter)
+        return out;
+    out = {{"valid", true},
+           {"parameter_path", path},
+           {"parameter_identity", identity(parameter)},
+           {"field_name", field->objectName()},
+           {"field_identity", identity(field)},
+           {"row_name", row->objectName()},
+           {"row_identity", identity(row)},
+           {"table_name", table->objectName()},
+           {"table_identity", identity(table)},
+           {"window_identity", identity(window)},
+           {"content_y", table->property("contentY").toDouble()},
+           {"row_rect", rect(row_rect)},
+           {"field_rect", rect(field_rect)},
+           {"window_rect", rect(window_rect)},
+           {"visible_rect", rect(visible)},
+           {"ancestor_clips", clips},
+           {"header_rect", rect(header_rect)},
+           {"header_visible_rect", rect(header_visible)},
+           {"header_overlap", rect(header_overlap)},
+           {"row_exposed", exposed},
+           {"row_fully_exposed", fully_exposed},
+           {"field_fully_exposed", field_fully_exposed}};
+    return out;
+}
 Array model_rows(edi_app::RowTableModel* model) {
     Array result;
     for(int row=0;row<model->count();++row) {
@@ -259,6 +614,12 @@ int main(int argc,char** argv) {
     user_dirs.close();
 #endif
     QGuiApplication app(argc,argv);
+    std::unique_ptr<PassiveDispatchTrace> dispatch_trace;
+    const auto dispatch_trace_path = qEnvironmentVariable("EDI_TEST_UI_DISPATCH_TRACE");
+    if (!dispatch_trace_path.isEmpty()) {
+        dispatch_trace = std::make_unique<PassiveDispatchTrace>();
+        if (!dispatch_trace->open(dispatch_trace_path)) return EXIT_FAILURE;
+    }
     app.setQuitOnLastWindowClosed(false); // The owned stdin protocol, including EOF, owns this test host lifetime.
     QGuiApplication::setOrganizationName("EdiIndependentAcceptance");
     const auto test_application_name=qEnvironmentVariable("EDI_TEST_ASSISTANT_APPLICATION_NAME");
@@ -348,7 +709,39 @@ int main(int argc,char** argv) {
     }
     FixtureServices fixture; // Outlives all engines, QML, Session, VM and operation teardown.
     UrlObserver urls;
+    // Passive test-carrier receipt; never suppress Qt's original stderr warnings.
+    QFile qml_warning_log;
+    bool qml_warning_log_failed=false;
+    quint64 qml_warning_command=0;
+    QString qml_warning_operation, qml_warning_phase="startup";
+    int qml_warning_count=0;
+    QObject qml_warning_receiver;
+    const auto record_qml_warning=[&](const Object& entry) {
+        if(!codex_mode)return;
+        const auto bytes=encode(entry)+'\n';
+        if(!qml_warning_log.isOpen() || qml_warning_log.write(bytes)!=bytes.size() || !qml_warning_log.flush())
+            qml_warning_log_failed=true;
+    };
+    if(codex_mode) {
+        const QFileInfo config(qEnvironmentVariable("EDI_TEST_CODEX_PEER_INPUT"));
+        if(!config.isAbsolute() || !config.isFile())return EXIT_FAILURE;
+        qml_warning_log.setFileName(config.dir().filePath("qml-warning-events.jsonl"));
+        if(!qml_warning_log.open(QIODevice::WriteOnly|QIODevice::NewOnly))return EXIT_FAILURE;
+    }
     auto engine=std::make_unique<QQmlApplicationEngine>();
+    record_qml_warning(Object{{"event","capture_started"},{"format",1},
+        {"stderr_enabled",engine->outputWarningsToStandardError()}});
+    QObject::connect(engine.get(),&QQmlEngine::warnings,&qml_warning_receiver,[&](const QList<QQmlError>& errors) {
+        for(const auto& error:errors) {
+            const QPointer<QObject> object=error.object();
+            record_qml_warning(Object{{"event","warning"},{"ordinal",qml_warning_count++},
+                {"phase",qml_warning_phase},{"command_sequence",QString::number(qml_warning_command)},
+                {"operation",qml_warning_operation},{"url",error.url().toString()},
+                {"line",error.line()},{"column",error.column()},{"description",error.description()},
+                {"message_type",static_cast<int>(error.messageType())},{"rendered",error.toString()},
+                {"object_available",bool(object)},{"object_name",object?object->objectName():QString()}});
+        }
+    });
     auto owned=codex_mode ? std::make_unique<edi_app::Session>(nullptr)
                           : std::make_unique<edi_app::Session>(fixture.dependencies,nullptr);
     QPointer<edi_app::Session> observed=owned.get();
@@ -415,6 +808,7 @@ int main(int argc,char** argv) {
     Object session_fault_facts;
     unsigned session_notification_hits=0;
     QObject session_fault_observer;
+    std::unique_ptr<NativeNotificationReentry> property_notification_reentry;
     // Test-owned handles of the original public archive owner; no application
     // rows, receipts, permissions or provider data are manufactured here.
     struct PublicArchiveProbe {
@@ -525,6 +919,24 @@ int main(int argc,char** argv) {
         if(current_count>1)return nullptr;
         return count==1?sole:nullptr; // Exact unique observation only; never first-of-many.
     };
+    auto dispatch_click = [&](QQuickItem* target, QQuickWindow* recipient, const QPoint& point) {
+        if (!dispatch_trace) {
+            QTest::mouseClick(recipient, Qt::LeftButton, Qt::NoModifier, point);
+            return;
+        }
+        dispatch_trace->watch(observed ? observed->assistant() : nullptr);
+        const QPointer<QQuickItem> original_target(target);
+        const QPointer<QQuickWindow> original_window(recipient);
+        dispatch_trace->begin_click();
+        const auto boundary = qScopeGuard([&] { dispatch_trace->end_click(); });
+        dispatch_trace->snapshot("click_before_dispatch", original_target, original_window, point);
+        if (!original_target || !original_window) {
+            dispatch_trace->write("observation_owner_retired");
+            throw std::runtime_error("passive dispatch observation owner retired before input");
+        }
+        QTest::mouseClick(recipient, Qt::LeftButton, Qt::NoModifier, point);
+        dispatch_trace->snapshot("click_after_dispatch", original_target, original_window, point);
+    };
     auto click=[&](QObject* object,const std::function<bool()>& original_owner={}) {
         const auto owner_current=capture_input_owner();
         auto* item=qobject_cast<QQuickItem*>(object);
@@ -533,7 +945,7 @@ int main(int argc,char** argv) {
         if(!input_reachable(item)) throw std::runtime_error("requested real UI control is not reachable");
         const auto center=item->mapToScene(QPointF(item->width()/2,item->height()/2)).toPoint();
         if(item->objectName()!=original_name || (original_owner && !original_owner()) || !owner_current())throw std::runtime_error("original input owner retired before physical click; no input was sent");
-        QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,center);drain();
+        dispatch_click(item, window, center);drain();
     };
     auto activate_item_link=[&](QObject* object)->bool {
         auto* item=qobject_cast<QQuickItem*>(object);
@@ -550,7 +962,7 @@ int main(int argc,char** argv) {
             if(!link_at.invoke(object,Qt::DirectConnection,QGenericReturnArgument("QString",&link),QGenericArgument(types[0].constData(),&px),QGenericArgument(types[1].constData(),&py)))
                 throw std::runtime_error("public Qt text link hit-test invocation failed");
             if(link.isEmpty()) continue;
-            QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,item->mapToScene(QPointF(x,y)).toPoint());
+            dispatch_click(item, window, item->mapToScene(QPointF(x,y)).toPoint());
             drain();return true;
         }
         return false;
@@ -598,7 +1010,10 @@ int main(int argc,char** argv) {
         }
         ui_sequence.push_back(row);
     };
-    ui_inputs.observe=ui_record;window->installEventFilter(&ui_inputs);
+    ui_inputs.observe=[&](const QString& kind, QEvent* event) {
+        if (dispatch_trace) dispatch_trace->mouse_receipt(event, window);
+        ui_record(kind, event);
+    };window->installEventFilter(&ui_inputs);
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerShown,&ui_inputs,[&]{ui_record("pointer_shown");});
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerMoved,&ui_inputs,[&]{ui_record("pointer_moved");});
     QObject::connect(observed->assistant(),&edi_app::AssistantViewModel::actionPointerPressed,&ui_inputs,[&]{ui_record("pointer_pressed");});
@@ -620,6 +1035,8 @@ int main(int argc,char** argv) {
                 const QPointer<QQuickItem> original_item=item;
                 const bool reachable=input_reachable(item);
                 if(!owner_current() || !original_item || !original_window || window!=original_window)throw std::runtime_error("original snapshot owner retired during input hit-test");
+                const auto interaction_row=parameter_interaction_row(item,original_window);
+                if(!owner_current() || !original_item || !original_window || window!=original_window)throw std::runtime_error("original snapshot owner retired during row layout observation");
                 controls.push_back(Object{{"name",object->objectName()},{"visible",item->isVisible()},
                     {"enabled",item->isEnabled()},{"same_window",item->window()==window},{"input_reachable",reachable},{"custom_containment_mask",item->containmentMask()!=nullptr},
                     {"text_property_owner",property_owner_reachable(item,"text")},{"layout_exposed",!exposed_layout_rect(item).isEmpty()},
@@ -630,6 +1047,11 @@ int main(int argc,char** argv) {
                     {"fully_exposed",exposed_rect(item).contains(item->boundingRect())},
                     {"parameter_path",object->property("item").value<QObject*>()?
                         object->property("item").value<QObject*>()->property("path").toString():QString()}});
+                if(!interaction_row.isEmpty()) {
+                    auto control=controls.last().toObject();
+                    control["interaction_row"]=interaction_row;
+                    controls[controls.size()-1]=control;
+                }
             }
         }
         auto* assistant=observed->assistant();
@@ -785,9 +1207,18 @@ int main(int argc,char** argv) {
         child->closeWriteChannel();session_fault_facts["public_close_write_channel_invoked"]=true;
     };
     const auto execute_command=[&](const QByteArray& line) {
+        ++qml_warning_command;qml_warning_phase="command";qml_warning_operation="decode";
+        const auto qml_warning_boundary=qScopeGuard([&] {qml_warning_phase="between_commands";qml_warning_operation.clear();});
+        if (dispatch_trace) dispatch_trace->write("command_started", {{"command", QString::number(qml_warning_command)}});
+        const auto dispatch_trace_boundary = qScopeGuard([&] {
+            if (dispatch_trace) dispatch_trace->write("command_finished",
+                {{"command", QString::number(qml_warning_command)}, {"operation", qml_warning_operation.left(64)}});
+        });
         try {
             auto input=decode(line).toObject();
             auto op=input["op"].toString();Object result;
+            qml_warning_operation=op;
+            if (dispatch_trace) dispatch_trace->watch(observed ? observed->assistant() : nullptr);
             if((!observed || !window) && op!="inspect" && op!="destroy" && op!="session_fault_facts")throw std::runtime_error("the original Main owner has retired");
             if(op=="message_snapshot") {
                 e11_a2a_phase::requireDeclaredPhase();
@@ -1569,7 +2000,7 @@ int main(int argc,char** argv) {
                     if(!exposed)result={{"reached",false},{"reason","original session row input center is clipped/inactive"},{"thread_id",id}};
                     else {
                         QSignalSpy pressed(area.data(),SIGNAL(pressedChanged()));
-                        QTest::mouseClick(window,Qt::LeftButton,Qt::NoModifier,scene.toPoint());drain();
+                        dispatch_click(area, window, scene.toPoint());drain();
                         result={{"reached",true},{"thread_id",id},{"actual_pressed_changes",pressed.count()},
                             {"same_row_after",bool(row)&&row->property("threadId").toString()==id},
                             {"same_window_after",bool(area)&&area->window()==window}};
@@ -1777,7 +2208,7 @@ int main(int argc,char** argv) {
                 if(!connection)throw std::runtime_error("the original TextEdit linkActivated signal could not be observed; no input sent");
                 const auto prior=urls.activated.size();
                 if(!reachable())throw std::runtime_error("original link receiver retired before physical delivery; no input sent");
-                QTest::mouseClick(original_window,Qt::LeftButton,Qt::NoModifier,press);drain();
+                dispatch_click(body, original_window, press);drain();
                 QObject::disconnect(connection);
                 const bool delivered=delivery.activations.size()==1 && delivery.activations[0].toObject()["href"]==href
                     && delivery.activations[0].toObject()["row_id"]==identity
@@ -1931,6 +2362,32 @@ int main(int argc,char** argv) {
                 result={{"reached",true},{"row_id",identity},{"mode",mode},{"clipboard",copied},
                     {"selected_start",selected_start},{"selected_end",selected_end},{"formula_start",start},{"formula_end",end},
                     {"same_row",original_row->property("rowId").toString()==identity},{"same_window",body->window()==window}};
+            }
+            else if (op == "property_notification_arm") {
+                if (!observed || !window || !observed->assistant())
+                    throw std::runtime_error(
+                        "current actual Main AVM required for notifier observation");
+                const auto mode = input["mode"].toString(), action = input["action"].toString();
+                if ((mode != "draft" && mode != "consent") ||
+                    (action != "nested" && action != "delete"))
+                    throw std::invalid_argument("closed notification reentry entrance/action");
+                QPointer<edi_app::AssistantViewModel> original = observed->assistant();
+                if (!original->connected())
+                    throw std::runtime_error("genuine connected owner required");
+                property_notification_reentry = std::make_unique<NativeNotificationReentry>(
+                    original.data(), mode, action, input["replacement"].toString(),
+                    [&, original] {
+                        return original && observed && observed->assistant() == original;
+                    },
+                    [&] {
+                        engine.reset();
+                        singleton = nullptr;
+                    });
+                result = {{"armed", true}, {"facts", property_notification_reentry->snapshot()}};
+            } else if (op == "property_notification_read") {
+                if (!property_notification_reentry)
+                    throw std::runtime_error("actual notifier observation not armed");
+                result = property_notification_reentry->snapshot();
             }
             else if(op=="arm_session_notification") {
                 if(!observed || !window)throw std::runtime_error("actual original session notification owner required");
@@ -2166,7 +2623,9 @@ int main(int argc,char** argv) {
                 text.reset();drain(100);urls.image_requests=0;urls.activated=Array{};
             } else if(op=="destroy") {engine.reset();singleton=nullptr;}
             else result=fixture.dispatch(input);
+            if (dispatch_trace) dispatch_trace->watch(observed ? observed->assistant() : nullptr);
             drain();
+            if (dispatch_trace && !dispatch_trace->healthy()) throw std::runtime_error("passive dispatch trace is incomplete");
             auto output=fixture.snapshot();output["reply"]=result;
             output["ui"]=(op=="messages_probe" || op=="message_input") ? Object{{"alive",bool(observed)&&bool(window)},{"state",observed?observed->assistant()->state():QString()},{"connected",observed&&observed->assistant()->connected()},{"can_cancel",observed&&observed->assistant()->canCancel()}} : ui_snapshot();
             output["test_storage"]=storage.path();output["history_restore"]=history_restore_info;output["settings_restore"]=settings_restore_info;output["cache_restore"]=cache_restore_info;output["initial_cache_read_binding"]=initial_cache_read_binding;output["test_settings"]=Object{{"path",edi_app::settings_file_path()},{"native_store_path",edi_app::settings_store_path()},{"default_qsettings_path",QSettings().fileName()},{"application_name",QGuiApplication::applicationName()},{"organization_name",QGuiApplication::organizationName()},{"application_name_override",test_application_name},{"app_local_data",QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation)}};
@@ -2214,8 +2673,10 @@ int main(int argc,char** argv) {
     const int result=app.exec();
     input_ready.setEnabled(false);
     (void)::fcntl(STDIN_FILENO,F_SETFL,original_flags);
+    qml_warning_phase="teardown";qml_warning_operation.clear();
     engine.reset();
-    return result;
+    record_qml_warning(Object{{"event","capture_finished"},{"events",qml_warning_count},{"failed",qml_warning_log_failed}});
+    return qml_warning_log_failed && result==0 ? EXIT_FAILURE : result;
 #else
     std::fputs("Main test host requires POSIX stdin readiness; this platform is not qualified by this carrier\n",stderr);
     engine.reset();

@@ -4,12 +4,14 @@
 #include <QQuickItem>
 #include <QRectF>
 #include <vector>
+#include <memory>
 #include <cstdint>
 #include <QColor>
 #include <QFont>
 #include <QPointer>
 #include <QQuickTextDocument>
 #include <QString>
+#include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
 namespace edi_app {
@@ -17,19 +19,20 @@ namespace edi_app {
 class AssistantMarkdown : public QQuickItem {
     Q_OBJECT
     QML_ELEMENT
-    Q_PROPERTY(QQuickTextDocument* document READ document WRITE setDocument)
-    Q_PROPERTY(QQuickItem* editor READ editor WRITE setEditor)
-    Q_PROPERTY(QString source READ source WRITE setSource)
-    Q_PROPERTY(bool markdown READ markdown WRITE setMarkdown)
-    Q_PROPERTY(QColor textColor READ textColor WRITE setTextColor)
-    Q_PROPERTY(QColor accentColor READ accentColor WRITE setAccentColor)
-    Q_PROPERTY(QFont bodyFont READ bodyFont WRITE setBodyFont)
-    Q_PROPERTY(QString monoFontFamily READ monoFontFamily WRITE setMonoFontFamily)
-    Q_PROPERTY(QColor tableBorderColor READ tableBorderColor WRITE setTableBorderColor)
-    Q_PROPERTY(QColor tableShadeColor READ tableShadeColor WRITE setTableShadeColor)
-    Q_PROPERTY(QColor tableBaseColor READ tableBaseColor WRITE setTableBaseColor)
+    Q_PROPERTY(QQuickTextDocument* document READ document WRITE setDocument NOTIFY documentChanged)
+    Q_PROPERTY(QQuickItem* editor READ editor WRITE setEditor NOTIFY editorChanged)
+    Q_PROPERTY(QString source READ source WRITE setSource NOTIFY sourceChanged)
+    Q_PROPERTY(bool markdown READ markdown WRITE setMarkdown NOTIFY markdownChanged)
+    Q_PROPERTY(QColor textColor READ textColor WRITE setTextColor NOTIFY textColorChanged)
+    Q_PROPERTY(QColor accentColor READ accentColor WRITE setAccentColor NOTIFY accentColorChanged)
+    Q_PROPERTY(QFont bodyFont READ bodyFont WRITE setBodyFont NOTIFY bodyFontChanged)
+    Q_PROPERTY(QString monoFontFamily READ monoFontFamily WRITE setMonoFontFamily NOTIFY monoFontFamilyChanged)
+    Q_PROPERTY(QColor tableBorderColor READ tableBorderColor WRITE setTableBorderColor NOTIFY tableBorderColorChanged)
+    Q_PROPERTY(QColor tableShadeColor READ tableShadeColor WRITE setTableShadeColor NOTIFY tableShadeColorChanged)
+    Q_PROPERTY(QColor tableBaseColor READ tableBaseColor WRITE setTableBaseColor NOTIFY tableBaseColorChanged)
  public:
     explicit AssistantMarkdown(QQuickItem* parent = nullptr);
+    ~AssistantMarkdown() override;
     QQuickTextDocument* document() const;
     QQuickItem* editor() const;
     void setEditor(QQuickItem* editor);
@@ -54,6 +57,18 @@ class AssistantMarkdown : public QQuickItem {
     void setDocument(QQuickTextDocument* document);
     void setSource(const QString& source);
     void setMarkdown(bool markdown);
+ signals:
+    void documentChanged();
+    void editorChanged();
+    void sourceChanged();
+    void markdownChanged();
+    void textColorChanged();
+    void accentColorChanged();
+    void bodyFontChanged();
+    void monoFontFamilyChanged();
+    void tableBorderColorChanged();
+    void tableShadeColorChanged();
+    void tableBaseColorChanged();
  protected:
     bool eventFilter(QObject*,QEvent*) override;
     void updatePolish() override;
@@ -64,12 +79,18 @@ class AssistantMarkdown : public QQuickItem {
     std::vector<Decoration> decorations_;
     std::size_t decoration_high_water_ = 0;
     std::uint64_t presentation_revision_ = 0;
+    QVariantMap property_notifications_;
+    quint64 beginPropertyNotification(const QString& name, const QVariant& before);
+    void completePropertyNotification(const QString& name, quint64 publication, const QVariant& value,
+                                      void (AssistantMarkdown::*signal)());
     void render() noexcept;
     void restoreClipboardSource(int mode) noexcept;
     QPointer<QQuickItem> editor_;
+    QMetaObject::Connection editor_destroyed_;
     bool copying_=false;
     void formatPresentation();
     QPointer<QQuickTextDocument> target_;
+    QMetaObject::Connection target_destroyed_;
     QPointer<QTextDocument> document_;
     QString source_;
     bool markdown_ = false;
@@ -80,5 +101,7 @@ class AssistantMarkdown : public QQuickItem {
     QString mono_font_family_;
     bool body_font_set_ = false;
     qreal math_text_width_ = -1;
+    // Last member: queued/connected functors retire first on construction unwinding too.
+    std::unique_ptr<QObject> callback_context_;
 };
 } // namespace edi_app

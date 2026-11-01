@@ -3,6 +3,8 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 
+import edi.app
+
 import EasyApplication.Gui.Style as EaStyle
 
 // A value whose digits each sit centred in a cell as wide as the font's widest digit, as tabular digits do (the app's
@@ -18,15 +20,9 @@ Row {
         "pixelSize": EaStyle.Sizes.fontPixelSize
     })
     // The widest digit, rounded up.
-    readonly property real cell: {
-        metrics.font;  // measured again when the font changes (a font that loads late)
-        let widest = 0;
-        for (let digit = 0; digit <= 9; ++digit)
-            widest = Math.max(widest, metrics.advanceWidth(String(digit)));
-        return Math.ceil(widest);
-    }
+    readonly property real cell: ApplicationInfo.digitCellWidth()
     // The text as runs: each digit alone, each arrow alone, anything else whole.
-    readonly property var runs: text.match(/[0-9]|→|[^0-9→]+/g) ?? []
+    readonly property var runs: ApplicationInfo.digitTextRuns()
 
     height: metrics.height
     // The runs are plain Text items, which accessibility does not expose, so the value is read as one text.
@@ -55,7 +51,7 @@ Row {
             id: run
 
             required property string modelData
-            readonly property bool digit: /^[0-9]$/.test(modelData)
+            readonly property bool digit: ApplicationInfo.digitRunIsDigit(modelData)
             readonly property bool arrow: modelData === "→"
 
             width: digit ? value.cell : implicitWidth

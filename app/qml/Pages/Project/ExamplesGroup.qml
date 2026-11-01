@@ -17,10 +17,7 @@ EaElements.GroupBox {
     icon: "database"
 
     function choiceIndex(model, value) {
-        for (let i = 0; i < model.count; ++i)
-            if (model.text(i, "value") === value)
-                return i;
-        return 0;
+        return ApplicationInfo.exampleChoiceIndex(model, value);
     }
 
     Column {
@@ -94,15 +91,12 @@ EaElements.GroupBox {
                 Accessible.role: Accessible.Button
                 Accessible.name: `${row.exampleId}: ${row.sample} · ${row.origin}`
                 Accessible.description: row.detail
-                Accessible.onPressAction: AppState.afterChanges(() => Session.openExample(row.exampleId))
+                Accessible.onPressAction: ApplicationInfo.openProjectRow(false, false)
                 MouseArea {
                     parent: row
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        row.activated();
-                        AppState.afterChanges(() => Session.openExample(row.exampleId));
-                    }
+                    onClicked: ApplicationInfo.openProjectRow(false, true)
                 }
                 EaComponents.ListViewLabel {
                     horizontalAlignment: Text.AlignHCenter
@@ -185,7 +179,7 @@ EaElements.GroupBox {
                     }
                     EaElements.ToolTip {
                         visible: hover.hovered && EaGlobals.Vars.showToolTips && text !== ""
-                        text: [identityLabel.truncated ? identityLabel.text : "", tagRow.width > descriptionCell.width ? row.tagLabels.join(" · ") : "", detailLabel.truncated ? row.detail : ""].filter(line => line !== "").join("\n")
+                        text: ApplicationInfo.nativeListProjection(4)
                     }
                 }
             }

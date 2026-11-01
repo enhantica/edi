@@ -48,9 +48,7 @@ QtObject {
     property Connections patternViewReset: Connections {
         target: Session
         function onProjectChanged() {
-            AppState.patternViewRanges = [NaN, NaN, NaN, NaN];
-            AppState.patternViewAxis = "";
-            AppState.scanZoom = {};
+            ApplicationInfo.resetPatternProjectView();
         }
     }
 
@@ -75,16 +73,22 @@ QtObject {
     // Save as, asked for from a page (Get started); the window's folder dialog answers (Main.qml; edi
     // ADR-0017 §13).
     signal saveAsRequested
+    // That Save as ended: saved at the place chosen, or cancelled or refused.
+    signal saveAsFinished(bool saved)
     // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are
     // dealt with: at once when there are none, else after the window asks to save or discard them.
     signal changesQuestion(var action, var abandoned)
     // An action that replaces the project runs on the next turn of the event loop, never inside the handler that asked
     // for it: replacing the project rebuilds the pages, and the page holding that handler with them.
     function afterChanges(action, abandoned) {
-        if (Session.project !== null && Session.project.modified)
-            changesQuestion(action, abandoned);
-        else
-            Qt.callLater(action);
+        ApplicationInfo.afterProjectChanges(action, abandoned);
+    }
+    // The Text tab holding an edit not yet applied, or null. What would replace what it shows (another project,
+    // closing the window, another Show choice) settles the edit first, as leaving the tab does (TextTab.settleEdit).
+    property var textEdit: null
+    // Every Text tab shows `choice` ("editable" or "everything") once an unapplied edit is settled.
+    function setTextShow(choice) {
+        ApplicationInfo.setTextShow(choice);
     }
     // A created project that could not be saved at its location stays open, unsaved: the window says why.
     signal createFailed
@@ -92,15 +96,12 @@ QtObject {
     signal evolutionRequested
 
     function open(page) {
-        reached = Math.max(reached, page);
-        EaGlobals.Vars.appBarCurrentIndex = page;
+        ApplicationInfo.openWorkflowPage(page);
     }
 
     // The app bar's reset: close the project and open the Project page, where a new project starts (the owner,
     // 2026-10-11).
     function reset() {
-        Session.closeProject();
-        reached = AppState.Page.Project;
-        EaGlobals.Vars.appBarCurrentIndex = AppState.Page.Project;
+        ApplicationInfo.resetWorkflow();
     }
 }

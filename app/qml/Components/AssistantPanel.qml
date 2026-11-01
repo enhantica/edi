@@ -14,91 +14,35 @@ Popup {
     id: panel
     objectName: "assistant.popup"
     required property AssistantViewModel assistant
-    // One bounded JSON-domain presentation copy handles Qt QVariant lists.
-    readonly property var usageData: {
-        try { return JSON.parse(JSON.stringify(assistant.usage)); }
-        catch (error) { return { available: false, stale: false, buckets: [] }; }
-    }
-    readonly property var usageWindow: {
-        let selected = null;
-        const buckets = usageData.buckets || [];
-        for (const bucket of buckets) for (const window of bucket.windows || [])
-            if (!selected || window.usedPercent > selected.usedPercent)
-                selected = { usedPercent: window.usedPercent, label: usageWindowLabel(bucket, window) };
-        return selected;
-    }
+    readonly property var usageData: ApplicationInfo.assistantUsageData(panel)
+    readonly property var usageWindow: ApplicationInfo.assistantUsageWindow(panel)
     readonly property real remainingPercent: usageWindow ? Math.max(0, Math.min(100, 100 - usageWindow.usedPercent)) : -1
-    function allowanceColor(remaining) {
-        return remaining >= 0 && remaining < 5 ? EaStyle.Colors.red
-             : remaining >= 0 && remaining < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeForeground;
-    }
     readonly property var accountData: panel.assistant.account
-    readonly property string accountPlan: {
-        if (accountData.planType) return accountData.planType;
-        const known=[];
-        for (const bucket of usageData.buckets || []) if (bucket.planType && known.indexOf(bucket.planType)<0) known.push(bucket.planType);
-        return known.join(", ");
-    }
-    readonly property string accountInitial: accountData.email ? Array.from(accountData.email)[0].toUpperCase() : ""
-    function usageWindowLabel(bucket, window) {
-        const label = window.windowDurationMins === 300 ? qsTr("Session limit")
-                    : window.windowDurationMins === 10080 ? qsTr("Weekly") : qsTr("Other allowance");
-        const name = bucket.limitName || bucket.limitId || bucket.id || "";
-        return name.length ? name + " · " + label : label;
+    readonly property string accountPlan: ApplicationInfo.assistantAccountPlan(panel)
+    readonly property string accountInitial: ApplicationInfo.assistantAccountInitial(panel)
+    function usageResetLabel(value, now) {
+        return ApplicationInfo.assistantUsageResetLabel(value, now);
     }
     function usageCaption() {
-        if (usageWindow) return qsTr("%1 · %2% used").arg(usageWindow.label).arg(usageWindow.usedPercent);
-        return usageData.statusText || qsTr("Usage unavailable");
+        return ApplicationInfo.assistantUsageCaption(panel);
+    }
+    function allowanceColor(remaining) {
+        return ApplicationInfo.assistantAllowanceColor(remaining, EaStyle.Colors);
     }
     function allowanceWindow(minutes) {
-        let selected = null;
-        for (const bucket of usageData.buckets || []) for (const window of bucket.windows || [])
-            if (window.windowDurationMins === minutes && (!selected || window.usedPercent > selected.usedPercent)) selected = window;
-        return selected;
+        return ApplicationInfo.assistantAllowanceWindow(panel, minutes);
     }
-    function usageResetLabel(value, now) {
-        if (typeof value !== "number" || !isFinite(new Date(value * 1000).getTime())) return qsTr("Reset unavailable");
-        const minutes = Math.ceil((value * 1000 - now) / 60000);
-        if (minutes <= 0) return qsTr("Reset time reached");
-        const days = Math.floor(minutes / 1440);
-        const hours = Math.floor((minutes % 1440) / 60);
-        if (days > 0) return qsTr("Resets in %1d %2h").arg(days).arg(hours);
-        if (hours > 0) return qsTr("Resets in %1h %2 min").arg(hours).arg(minutes % 60);
-        return qsTr("Resets in %1 min").arg(minutes);
-    }
-    readonly property string accountPlanLabel: accountPlan.split(/[_ -]+/).map(word => word.length ? word[0].toUpperCase() + word.slice(1) : "").join(" ")
+    readonly property string accountPlanLabel: ApplicationInfo.assistantAccountPlanLabel(panel)
     readonly property color actionBackground: EaStyle.Colors.sideBarButtonBackgroundHovered
     readonly property real headerActionExtent: EaStyle.Sizes.toolButtonHeight * 0.75
     property var noticeState: null
     property var noticeProjection: ({})
     function captureNotice() {
-        const component = panel, original = panel.assistant;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original)) return;
-        const previous = component.noticeState;
-        const message = original.lastError;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original) return;
-        if (!message.length) {
-            if (component.noticeState === previous) component.noticeState = null;
-            return;
-        }
-        if (previous && previous.owner === original && previous.text === message) return;
-        const rows = original.messages, count = rows.count;
-        const anchor = count > 0 ? rows.text(count - 1, "id") : "";
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original
-            || component.noticeState !== previous || original.lastError !== message) return;
-        component.noticeState = { owner: original, text: message, anchor: anchor };
+        ApplicationInfo.panelCaptureNotice();
     }
-    readonly property bool noticeAnchorPresent: {
-        const revision = noticeProjection;
-        const notice = noticeState;
-        if (revision === null) return false;
-        if (!notice || notice.owner !== assistant || !notice.anchor.length) return false;
-        for (let i = 0; i < assistant.messages.count; ++i)
-            if (assistant.messages.text(i, "id") === notice.anchor) return true;
-        return false;
-    }
-    onAssistantChanged: { noticeState = null; captureNotice(); }
-    Component.onCompleted: { captureNotice(); Qt.callLater(function() {if(Qt.isQtObject(panel) && Qt.isQtObject(panel.assistant))panel.assistant.restoreLastSession();}); }
+    readonly property bool noticeAnchorPresent: ApplicationInfo.panelNoticeAnchorPresent()
+    onAssistantChanged: ApplicationInfo.panelNoticeOwnerChanged(0)
+    Component.onCompleted: ApplicationInfo.panelCompleted()
     component EdiNotice: Item {
         id: notice
         required property string noticeText
@@ -130,123 +74,94 @@ Popup {
         }
     }
     property var consentSend: null
-    function retireConsentSend() { consentSend = null; }
+    function retireConsentSend() {
+        ApplicationInfo.panelRetireConsentSend();
+    }
     function ownsConsentSend(intent) {
-        const component = panel, original = panel.assistant, draftComponent = composer, dialog = connectionDialog;
-        if (!Qt.isQtObject(dialog) || intent === null || consentSend !== intent || intent.owner !== original
-            || intent.offer !== dialog.approvalOwner) return false;
-        const draftOwned = draftComponent.ownsConsentDraft(intent.draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !draftOwned
-            || !Qt.isQtObject(dialog) || intent.offer !== dialog.approvalOwner) return false;
-        const context = original.contextConsentIdentity;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-            || !Qt.isQtObject(dialog) || component.consentSend !== intent || intent.owner !== original
-            || intent.offer !== dialog.approvalOwner) return false;
-        if (intent.project !== Session.project || !context.length || context !== intent.context
-            || original.selectedModel !== intent.model || original.selectedEffort !== intent.effort) return false;
-        const stillDraftOwned = draftComponent.ownsConsentDraft(intent.draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return false;
-        return stillDraftOwned && component.consentSend === intent && Qt.isQtObject(dialog) && intent.offer === dialog.approvalOwner;
+        return ApplicationInfo.panelOwnsConsentSend(intent);
     }
     function resumeConsentSend() {
-        const component = panel, original = panel.assistant, draftComponent = composer;
-        const intent = component.consentSend;
-        if (!intent || intent.submitting) return;
-        const owned = component.ownsConsentSend(intent);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
-        if (!owned) { if (component.consentSend === intent) component.retireConsentSend(); return; }
-        if (!intent.approved) return;
-        const required = original.contextConsentRequired;
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant) return;
-        const stillOwned = component.ownsConsentSend(intent);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant || !stillOwned) return;
-        if (!original.connected || required || !original.draftAdmissionReady || original.state !== "idle" || original.canCancel) return;
-        // Guard reentrant readiness, but retain A until the actual admission
-        // result. Only a proven prewrite account wait may continue automatically.
-        intent.submitting = true;
-        const result = draftComponent.submitApprovedDraft(intent.draft);
-        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-            || component.consentSend !== intent) return;
-        intent.submitting = false;
-        if (result !== "waiting") component.retireConsentSend();
+        ApplicationInfo.panelResumeConsentSend();
     }
-    function scheduleConsentSend() { Qt.callLater(resumeConsentSend); }
+    function scheduleConsentSend() {
+        ApplicationInfo.panelScheduleConsentSend();
+    }
     Connections {
         target: panel.assistant
-        function onConversationRetired() { panel.retireConsentSend(); panel.noticeState = null; panel.captureNotice(); }
-        function onConnectedChanged() { panel.scheduleConsentSend(); }
-        function onAccountChanged() { panel.scheduleConsentSend(); panel.noticeState = null; panel.captureNotice(); }
-        function onSelectedModelChanged() { panel.retireConsentSend(); }
-        function onSelectedEffortChanged() { panel.retireConsentSend(); }
-        function onStateChanged() { panel.scheduleConsentSend(); }
-        function onCanCancelChanged() { panel.scheduleConsentSend(); }
-        function onDraftAdmissionReadyChanged() { panel.scheduleConsentSend(); }
-        function onLastErrorChanged() { panel.captureNotice(); }
+        function onConversationRetired() {
+            ApplicationInfo.panelNoticeOwnerChanged(1);
+        }
+        function onConnectedChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onAccountChanged() {
+            ApplicationInfo.panelNoticeOwnerChanged(2);
+        }
+        function onSelectedModelChanged() {
+            panel.retireConsentSend();
+        }
+        function onSelectedEffortChanged() {
+            panel.retireConsentSend();
+        }
+        function onStateChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onCanCancelChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onDraftAdmissionReadyChanged() {
+            panel.scheduleConsentSend();
+        }
+        function onLastErrorChanged() {
+            panel.captureNotice();
+        }
         function onContextPreviewChanged() {
-            const component = panel, original = panel.assistant;
-            const intent = component.consentSend;
-            const owned = intent ? component.ownsConsentSend(intent) : true;
-            if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
-            if (!owned) { if (component.consentSend === intent) component.retireConsentSend(); }
-            else if (component.consentSend === intent) component.scheduleConsentSend();
+            ApplicationInfo.panelConsentContextChanged();
         }
     }
     Connections {
         target: Session
-        function onProjectChanged() { panel.retireConsentSend(); }
+        function onProjectChanged() {
+            panel.retireConsentSend();
+        }
     }
     Connections {
         target: composer
-        function onTextRevisionChanged() { panel.retireConsentSend(); }
-        function onDraftOwnerRevisionChanged() { panel.retireConsentSend(); }
+        function onTextRevisionChanged() {
+            panel.retireConsentSend();
+        }
+        function onDraftOwnerRevisionChanged() {
+            panel.retireConsentSend();
+        }
     }
     Connections {
         target: panel.assistant.selectedFiles
-        function onCountChanged() { panel.retireConsentSend(); }
-        function onDataChanged() { panel.retireConsentSend(); }
+        function onCountChanged() {
+            panel.retireConsentSend();
+        }
+        function onDataChanged() {
+            panel.retireConsentSend();
+        }
     }
     Connections {
         target: panel.assistant
-        function onSessionProjectRequested(threadId,location,intent) {
-            const original=panel.assistant;const originalProject=Session.project;
-            const abandon=() => {if(Qt.isQtObject(original))original.cancelSessionSelection(intent);};
-            AppState.afterChanges(function() {
-                if(!Qt.isQtObject(panel) || !Qt.isQtObject(original) || panel.assistant!==original || original.sessionSelection!==intent || Session.project!==originalProject){abandon();return;}
-                if(!original.beginSessionProjectRestore(intent)){abandon();return;}
-                const opened=Session.openProject(location);
-                if(opened && Qt.isQtObject(original) && panel.assistant===original && original.sessionSelection===intent)original.continueSessionRestore(threadId);
-                else if(!Qt.isQtObject(original) || !original.sessionProjectRestorePending(intent))abandon();
-            },abandon);
+        function onSessionProjectRequested(threadId, location, intent) {
+            ApplicationInfo.restoreSessionProject(threadId, location, intent);
         }
         function onSessionConsentRequested(threadId) {
-            if(!Qt.isQtObject(panel) || !Qt.isQtObject(connectionDialog))return;
-            connectionDialog.beginOffer();connectionDialog.open();
+            ApplicationInfo.panelSessionConsentRequested();
         }
     }
     Component.onDestruction: retireConsentSend()
     // A user navigation link always refers to the current project's normal
     // Report page. Other links retain their completed-row/file ownership checks.
     function openReportLink(sourceRowId, link) {
-        // Explicit clicked web links use the normal system browser. The fixed
-        // scheme/authority check never turns file or application schemes into web.
-        if (typeof link === "string" && /^https?:\/\/[^\s/?#\\]+(?:[/?#][^\s\\]*)?$/i.test(link)
-            && !/[\u0000-\u001f\u007f]/.test(link)) return Qt.openUrlExternally(link);
-        if (link === "edi:report") {
-            if (Session.project !== null && AppState.reportPageEnabled) {
-                AppState.open(AppState.Page.Report);
-                return true;
-            }
-            reportPageUnavailable.open();
-            return false;
-        }
-        return panel.assistant.openReport(sourceRowId, link);
+        return ApplicationInfo.panelOpenReportLink(sourceRowId, link);
     }
     required property Item toggleControl
     readonly property Item firstFocusItem: connectionButton
     property bool shown: Preferences.assistantShown
-    onShownChanged: {
-        if (!shown) { panel.retireConsentSend(); connectionDialog.close(); composer.closeChoices(); }
-    }
+    onShownChanged: ApplicationInfo.panelShownChanged()
     visible: ApplicationInfo.assistantAvailable && shown
     x: 0
     y: 0
@@ -282,10 +197,7 @@ Popup {
         }
     }
     function focusComposer() {
-        if (!ApplicationInfo.assistantAvailable || !visible || !shown)
-            return;
-        if (panel.assistant.connected) composer.focusEditor();
-        else connectionButton.forceActiveFocus();
+        ApplicationInfo.panelFocusComposer();
     }
 
     contentItem: Item {
@@ -327,7 +239,7 @@ Popup {
                     anchors.left: parent.left
                     anchors.leftMargin: EaStyle.Sizes.fontPixelSize * 0.5
                     anchors.verticalCenter: parent.verticalCenter
-                    width: Math.max(0,parent.width-headerActions.implicitWidth-AppSizes.unit*2)
+                    width: Math.max(0, parent.width - headerActions.implicitWidth - AppSizes.unit * 2)
                     elide: Text.ElideRight
                     textFormat: Text.PlainText
                     text: qsTr("Assistant")
@@ -350,8 +262,16 @@ Popup {
                         enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
                         contentItem: RowLayout {
                             spacing: AppSizes.unit * 0.4
-                            EaElements.Label { text: "history"; font.family: EaStyle.Fonts.iconsFamily; color: sessionsButton.foregroundColor(); Accessible.ignored: true }
-                            EaElements.Label { text: sessionsButton.text; color: sessionsButton.foregroundColor() }
+                            EaElements.Label {
+                                text: "history"
+                                font.family: EaStyle.Fonts.iconsFamily
+                                color: sessionsButton.foregroundColor()
+                                Accessible.ignored: true
+                            }
+                            EaElements.Label {
+                                text: sessionsButton.text
+                                color: sessionsButton.foregroundColor()
+                            }
                         }
                         background: Rectangle {
                             border.width: 0
@@ -361,7 +281,7 @@ Popup {
                         }
                         ToolTip.text: qsTr("Browse this application's saved assistant sessions")
                         Accessible.name: text
-                        onClicked: { sessionsDialog.open(); panel.assistant.refreshSessions(); }
+                        onClicked: ApplicationInfo.openSessionBrowser(panel, sessionsDialog)
                     }
                     EaElements.Button {
                         id: clearButton
@@ -380,7 +300,10 @@ Popup {
                                 color: clearButton.foregroundColor()
                                 Accessible.ignored: true
                             }
-                            EaElements.Label { text: clearButton.text; color: clearButton.foregroundColor() }
+                            EaElements.Label {
+                                text: clearButton.text
+                                color: clearButton.foregroundColor()
+                            }
                         }
                         background: Rectangle {
                             border.width: 0
@@ -412,9 +335,7 @@ Popup {
                         contentItem: EaElements.Label {
                             text: usageButton.text
                             font: usageButton.font
-                            color: !usageButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                : usageButton.hovered || usageButton.down || usageButton.visualFocus
-                                    ? EaStyle.Colors.themeAccent : panel.allowanceColor(panel.remainingPercent)
+                            color: !usageButton.enabled ? EaStyle.Colors.themeForegroundDisabled : usageButton.hovered || usageButton.down || usageButton.visualFocus ? EaStyle.Colors.themeAccent : panel.allowanceColor(panel.remainingPercent)
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                         }
@@ -430,8 +351,7 @@ Popup {
                         objectName: "assistant.connection"
                         readonly property bool pendingConnection: panel.assistant.state === "connecting"
                         readonly property bool accountView: !pendingConnection && panel.assistant.connected
-                        text: pendingConnection ? qsTr("Cancel connection")
-                            : accountView ? panel.accountInitial : qsTr("Connect ChatGPT")
+                        text: pendingConnection ? qsTr("Cancel connection") : accountView ? panel.accountInitial : qsTr("Connect ChatGPT")
                         enabled: !pendingConnection || panel.assistant.canCancel
                         leftPadding: connectionButton.accountView ? 0 : AppSizes.unit * 0.75
                         rightPadding: leftPadding
@@ -447,8 +367,7 @@ Popup {
                                 font.pixelSize: EaStyle.Sizes.fontPixelSize
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
-                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                    : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
                             }
                             RowLayout {
                                 id: connectionText
@@ -458,15 +377,13 @@ Popup {
                                 EaElements.Label {
                                     text: connectionButton.pendingConnection ? "times" : "comment-dots"
                                     font.family: EaStyle.Fonts.iconsFamily
-                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                        : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
                                     Accessible.ignored: true
                                 }
                                 EaElements.Label {
                                     text: connectionButton.text
                                     font: connectionButton.font
-                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled
-                                        : EaStyle.Colors.isDarkPalette ? "black" : "white"
+                                    color: !connectionButton.enabled ? EaStyle.Colors.themeForegroundDisabled : EaStyle.Colors.isDarkPalette ? "black" : "white"
                                 }
                             }
                         }
@@ -486,9 +403,7 @@ Popup {
                                 width: connectionButton.accountView ? EaStyle.Sizes.toolButtonHeight * 0.75 : parent.width
                                 height: EaStyle.Sizes.toolButtonHeight * 0.75
                                 radius: height * 0.5
-                                color: !connectionButton.enabled ? panel.actionBackground
-                                    : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent
-                                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                                color: !connectionButton.enabled ? panel.actionBackground : connectionButton.hovered || connectionButton.down || connectionButton.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                         }
                         ToolTip.text: connectionButton.accountView ? qsTr("Account") : text
@@ -496,25 +411,7 @@ Popup {
                         KeyNavigation.priority: KeyNavigation.BeforeItem
                         KeyNavigation.backtab: connectionButton.accountView ? usageButton : panel.toggleControl
                         KeyNavigation.tab: connectionButton.accountView ? composer.firstFocusItem : panel.toggleControl
-                        onClicked: {
-                            if (connectionButton.pendingConnection) {
-                                const component = panel, original = panel.assistant;
-                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || component.assistant !== original
-                                    || original.state !== "connecting" || !original.canCancel) return;
-                                original.cancel();
-                            } else if (connectionButton.accountView) accountDialog.open();
-                            else if (panel.assistant.resumeConnection()) { /* Original approved session owns reconnection. */ }
-                            else {
-                                const component = panel, original = panel.assistant, dialog = connectionDialog;
-                                const offer = dialog.beginOffer();
-                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || !Qt.isQtObject(dialog)
-                                    || component.assistant !== original || dialog.assistant !== original || dialog.approvalOwner !== offer) return;
-                                component.retireConsentSend();
-                                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || !Qt.isQtObject(dialog)
-                                    || component.assistant !== original || dialog.assistant !== original || dialog.approvalOwner !== offer || original.connected) return;
-                                dialog.presentOffer(offer);
-                            }
-                        }
+                        onClicked: ApplicationInfo.panelConnectionActivated()
                     }
                 }
                 Rectangle {
@@ -527,7 +424,7 @@ Popup {
             }
             ColumnLayout {
                 id: chatBody
-                visible: panel.assistant.connected
+                visible: panel.assistant.conversationAvailable
                 enabled: visible
                 z: 1
                 anchors.left: parent.left
@@ -578,8 +475,7 @@ Popup {
                     }
                     header: EdiNotice {
                         width: conversation.width
-                        noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && !panel.noticeAnchorPresent
-                            ? panel.noticeState.text : ""
+                        noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && !panel.noticeAnchorPresent ? panel.noticeState.text : ""
                     }
                     delegate: Column {
                         id: messageDelegate
@@ -607,18 +503,12 @@ Popup {
                             rowId: messageDelegate.rowId
                             stepNumber: messageDelegate.index + 1
                             onReportRequested: (sourceRowId, link) => panel.openReportLink(sourceRowId, link)
-                            onDetailsChanging: {
-                                conversation.cancelFlick();
-                                conversation.followsTail = false;
-                                conversation.jumpedUserId = "";
-                            }
+                            onDetailsChanging: ApplicationInfo.conversationDetailsChanging()
                             highlighted: kind === "user" && rowId === conversation.jumpedUserId
                         }
                         EdiNotice {
                             width: parent.width
-                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant
-                                && panel.noticeAnchorPresent && panel.noticeState.anchor === messageDelegate.rowId
-                                ? panel.noticeState.text : ""
+                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant && panel.noticeAnchorPresent && panel.noticeState.anchor === messageDelegate.rowId ? panel.noticeState.text : ""
                         }
                     }
                     property bool followsTail: true
@@ -626,105 +516,36 @@ Popup {
                     readonly property int previousUserIndex: userTarget(-1)
                     readonly property int nextUserIndex: userTarget(1)
                     function userTarget(direction) {
-                        const count = panel.assistant.messages.count;
-                        const position = contentY;
-                        const layoutHeight = contentHeight;
-                        if (count === 0 || layoutHeight <= 0) return -1;
-                        // An explicit boundary remains the cursor even when the final row clamps at the end.
-                        if (jumpedUserId.length > 0) {
-                            let current = -1;
-                            for (let i = 0; i < count; ++i)
-                                if (panel.assistant.messages.text(i, "id") === jumpedUserId) { current = i; break; }
-                            if (current >= 0) {
-                                for (let i = current + direction; i >= 0 && i < count; i += direction)
-                                    if (panel.assistant.messages.text(i, "kind") === "user") return i;
-                                return -1;
-                            }
-                        }
-                        let first = indexAt(1, position + 1);
-                        if (first < 0) first = indexAt(1, position + spacing + 2);
-                        if (first < 0) first = atYEnd ? count - 1 : 0;
-                        let candidate = -1;
-                        for (let i = 0; i < count; ++i) {
-                            if (panel.assistant.messages.text(i, "kind") !== "user") continue;
-                            const item = itemAtIndex(i);
-                            const before = item ? item.y < position - 0.5 : i < first;
-                            const after = item ? item.y > position + 0.5 : i > first;
-                            if (direction < 0 && before) candidate = i;
-                            if (direction > 0 && after) return i;
-                        }
-                        return direction < 0 ? candidate : -1;
+                        return ApplicationInfo.conversationUserTarget(direction);
                     }
                     function jumpToUser(direction) {
-                        const target = direction < 0 ? previousUserIndex : nextUserIndex;
-                        if (target < 0) return;
-                        jumpedUserId = panel.assistant.messages.text(target, "id");
-                        followsTail = false;
-                        cancelFlick();
-                        positionViewAtIndex(target, ListView.Beginning);
+                        ApplicationInfo.conversationJumpToUser(direction);
                     }
                     property string lastUserId: ""
                     function observeUserAdmission() {
-                        let latest = "";
-                        for (let i = panel.assistant.messages.count - 1; i >= 0; --i) {
-                            if (panel.assistant.messages.text(i, "kind") === "user") {
-                                latest = panel.assistant.messages.text(i, "id");
-                                break;
-                            }
-                        }
-                        if (latest !== lastUserId) {
-                            if (latest.length > 0) {
-                                followsTail = true;
-                                jumpedUserId = "";
-                            }
-                            lastUserId = latest;
-                        }
+                        ApplicationInfo.conversationObserveAdmission();
                     }
                     function revealCurrentNotice() {
-                        const original = panel.assistant, notice = panel.noticeState;
-                        if (!notice || notice.owner !== original || !notice.text.length) return;
-                        let anchor = -1;
-                        for (let i = 0; i < original.messages.count; ++i)
-                            if (original.messages.text(i, "id") === notice.anchor) { anchor = i; break; }
-                        if (!Qt.isQtObject(panel) || !Qt.isQtObject(original) || original !== panel.assistant || panel.noticeState !== notice) return;
-                        cancelFlick(); followsTail = false; jumpedUserId = "";
-                        if (anchor >= 0) positionViewAtIndex(anchor, ListView.End);
-                        else positionViewAtBeginning();
+                        ApplicationInfo.conversationRevealNotice();
                     }
                     function positionAtTail() {
-                        if (!followsTail || moving || historyScrollBar.pressed || height <= 0)
-                            return;
-                        // Columns report after their child geometry settles;
-                        // resolve the view's pending layout before using its end.
-                        forceLayout();
-                        if (followsTail && !moving && !historyScrollBar.pressed)
-                            positionViewAtEnd();
+                        ApplicationInfo.conversationPositionAtTail();
                     }
                     function followOutput() {
-                        if (followsTail)
-                            Qt.callLater(positionAtTail);
+                        ApplicationInfo.conversationFollowOutput();
                     }
-                    onCountChanged: {
-                        observeUserAdmission();
-                        followOutput();
-                    }
+                    onCountChanged: ApplicationInfo.conversationUpdated(false)
                     onContentHeightChanged: followOutput()
                     onHeightChanged: followOutput()
-                    onContentYChanged: {
-                        if (moving || historyScrollBar.pressed) {
-                            jumpedUserId = "";
-                            followsTail = atYEnd;
-                        }
-                    }
-                    onMovementStarted: jumpedUserId = ""
-                    onMovementEnded: { if (jumpedUserId.length === 0) followsTail = atYEnd; }
-                    Component.onCompleted: {
-                        observeUserAdmission();
-                        followOutput();
-                    }
+                    onContentYChanged: ApplicationInfo.conversationContentYChanged()
+                    onMovementStarted: ApplicationInfo.conversationMovementChanged(true)
+                    onMovementEnded: ApplicationInfo.conversationMovementChanged(false)
+                    Component.onCompleted: ApplicationInfo.conversationUpdated(false)
                     Connections {
                         target: panel.assistant.messages
-                        function onDataChanged() { panel.noticeProjection = ({}); conversation.observeUserAdmission(); conversation.followOutput(); }
+                        function onDataChanged() {
+                            ApplicationInfo.conversationUpdated(true);
+                        }
                     }
                     ScrollBar.vertical: EaElements.ScrollBar {
                         id: historyScrollBar
@@ -734,18 +555,8 @@ Popup {
                         height: conversation.height
                         policy: ScrollBar.AsNeeded
                         interactive: false
-                        onPressedChanged: {
-                            if (!pressed)
-                                conversation.followsTail = conversation.atYEnd;
-                        }
-                        onPositionChanged: {
-                            if (activeFocus) {
-                                Qt.callLater(() => {
-                                    if (historyScrollBar.activeFocus)
-                                        conversation.followsTail = conversation.atYEnd;
-                                });
-                            }
-                        }
+                        onPressedChanged: ApplicationInfo.conversationScrollChanged(false)
+                        onPositionChanged: ApplicationInfo.conversationScrollChanged(true)
                     }
                 }
                 Rectangle {
@@ -766,53 +577,14 @@ Popup {
                     hasNextUserMessage: conversation.nextUserIndex >= 0
                     onPreviousUserRequested: conversation.jumpToUser(-1)
                     onNextUserRequested: conversation.jumpToUser(1)
-                    onSubmissionBlocked: {
-                        const component = panel, view = conversation, original = panel.assistant;
-                        component.captureNotice();
-                        if (Qt.isQtObject(component) && Qt.isQtObject(view) && Qt.isQtObject(original)
-                            && original === component.assistant && original.contextApprovalBlocked) view.revealCurrentNotice();
-                    }
-                    onSubmissionRequested: draft => {
-                        const intent = panel.consentSend;
-                        if (intent && draft && intent.draft.owner === draft.owner
-                            && intent.draft.revision === draft.revision && intent.draft.ownerRevision === draft.ownerRevision
-                            && intent.draft.files === draft.files && intent.draft.project === draft.project)
-                            panel.retireConsentSend();
-                    }
-                    onContextApprovalRequested: draft => {
-                        const component = panel, original = panel.assistant, draftComponent = composer, dialog = connectionDialog;
-                        const previous = component.consentSend;
-                        // Retire A before draft capture/getters can reenter, even
-                        // when this same dialog is already visible or entering.
-                        const offer = dialog.beginOffer();
-                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || !Qt.isQtObject(dialog)
-                            || component.assistant !== original || dialog.assistant !== original
-                            || dialog.approvalOwner !== offer || component.consentSend !== previous) return;
-                        const captured = draftComponent.captureConsentDraft();
-                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-                            || !Qt.isQtObject(dialog) || dialog.assistant !== original || dialog.approvalOwner !== offer
-                            || !captured || captured.text !== draft || captured.owner !== original) return;
-                        const owned = draftComponent.ownsConsentDraft(captured);
-                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-                            || !Qt.isQtObject(dialog) || dialog.assistant !== original || dialog.approvalOwner !== offer
-                            || !owned || component.consentSend !== previous) return;
-                        const intent = { owner: original, project: captured.project, draft: captured,
-                            context: captured.context, model: captured.model,
-                            effort: captured.effort, offer: offer, approved: false, submitting: false };
-                        component.consentSend = intent;
-                        offer.currentDraft=() => Qt.isQtObject(component) && component.consentSend===intent && component.ownsConsentSend(intent);
-                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-                            || !Qt.isQtObject(dialog) || dialog.approvalOwner !== offer || component.consentSend !== intent) return;
-                        const stillOwned = component.ownsConsentSend(intent);
-                        if (!Qt.isQtObject(component) || !Qt.isQtObject(draftComponent) || !Qt.isQtObject(original) || original !== component.assistant
-                            || !Qt.isQtObject(dialog) || dialog.approvalOwner !== offer || !stillOwned) return;
-                        dialog.presentOffer(offer);
-                    }
+                    onSubmissionBlocked: ApplicationInfo.panelSubmissionBlocked()
+                    onSubmissionRequested: draft => ApplicationInfo.panelSubmissionRequested(draft)
+                    onContextApprovalRequested: draft => ApplicationInfo.panelContextApprovalRequested(draft)
                 }
             }
             Rectangle {
                 objectName: "assistant.signedOut"
-                visible: !panel.assistant.connected
+                visible: !panel.assistant.conversationAvailable
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: header.bottom
@@ -831,8 +603,7 @@ Popup {
                     flickableDirection: Flickable.VerticalFlick
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
-                    visible: signedOutNotice.noticeText.length > 0
-                        || (panel.assistant.canCancel && panel.assistant.state !== "connecting")
+                    visible: signedOutNotice.noticeText.length > 0 || (panel.assistant.canCancel && panel.assistant.state !== "connecting")
                     Column {
                         id: signedOutControls
                         width: parent.width
@@ -841,8 +612,7 @@ Popup {
                             id: signedOutNotice
                             width: parent.width
                             visible: noticeText.length > 0
-                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant
-                                ? panel.noticeState.text : ""
+                            noticeText: panel.noticeState && panel.noticeState.owner === panel.assistant ? panel.noticeState.text : ""
                         }
                         EaElements.Button {
                             id: authCancel
@@ -857,15 +627,12 @@ Popup {
                                 implicitHeight: panel.assistant.state === "connecting" ? EaStyle.Sizes.toolButtonHeight * 0.75 : 0
                                 radius: height * 0.5
                                 border.width: 0
-                                color: !authCancel.enabled ? panel.actionBackground
-                                    : authCancel.hovered || authCancel.down || authCancel.visualFocus ? EaStyle.Colors.themeAccent
-                                    : (EaStyle.Colors.isDarkPalette ? "white" : "black")
+                                color: !authCancel.enabled ? panel.actionBackground : authCancel.hovered || authCancel.down || authCancel.visualFocus ? EaStyle.Colors.themeAccent : (EaStyle.Colors.isDarkPalette ? "white" : "black")
                             }
                             contentItem: EaElements.Label {
                                 text: authCancel.text
                                 font: authCancel.font
-                                color: panel.assistant.state === "connecting" && authCancel.enabled
-                                    ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : authCancel.foregroundColor()
+                                color: panel.assistant.state === "connecting" && authCancel.enabled ? (EaStyle.Colors.isDarkPalette ? "black" : "white") : authCancel.foregroundColor()
                                 horizontalAlignment: Text.AlignHCenter
                                 verticalAlignment: Text.AlignVCenter
                             }
@@ -878,8 +645,8 @@ Popup {
                     id: signInPrompt
                     objectName: "assistant.signInPrompt"
                     anchors.centerIn: parent
-                    width: Math.max(0,parent.width-AppSizes.unit*2)
-                    text: qsTr("No ChatGPT connection")
+                    width: Math.max(0, parent.width - AppSizes.unit * 2)
+                    text: panel.assistant.state === "connecting" ? panel.assistant.connectionLabel : qsTr("No ChatGPT connection")
                 }
             }
             // One real file boundary covers transcript and composer, not ordinary text or the header.
@@ -888,18 +655,8 @@ Popup {
                 anchors.fill: chatBody
                 z: 2
                 enabled: panel.visible && panel.shown && panel.assistant.connected && ApplicationInfo.assistantAvailable && !WebFiles.available
-                onEntered: drag => drag.accepted = drag.hasUrls && !panel.assistant.canCancel
-                onDropped: drop => {
-                    if (!chatFilesDrop.enabled || !drop.hasUrls || panel.assistant.canCancel) { drop.accepted = false; return; }
-                    const original=panel.assistant;
-                    const files=drop.urls;
-                    const request=original.beginFileSelection(true);
-                    if (!Qt.isQtObject(panel) || !Qt.isQtObject(original) || original!==panel.assistant || !original.connected) {
-                        if (Qt.isQtObject(original)) original.cancelFileSelection(request);
-                        drop.accepted=false;return;
-                    }
-                    drop.accepted=request.length>0 && original.addSelectedFiles(request,files);
-                }
+                onEntered: drag => ApplicationInfo.panelFilesEntered(drag)
+                onDropped: drop => ApplicationInfo.panelFilesDropped(drop)
             }
         }
         AppDialog {
@@ -907,61 +664,64 @@ Popup {
             objectName: "assistant.usageDialog"
             title: qsTr("Usage")
             standardButtons: Dialog.Close
-            property real resetClock: Date.now()
+            property real resetClock: ApplicationInfo.assistantUsageNow()
             readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
             width: Math.min(AppSizes.unit * 30, Math.max(0, parent.width - AppSizes.unit * 2))
             height: Math.min(implicitHeight, viewportHeight)
-            contentWidth: Math.max(0, width-leftPadding-rightPadding)
-            contentHeight: Math.min(Math.max(usageContent.implicitHeight, usageStatus.implicitHeight), Math.max(0, viewportHeight-topPadding-bottomPadding
-                -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: Math.min(Math.max(usageContent.implicitHeight, usageStatus.implicitHeight), Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
             onAboutToShow: panel.assistant.refreshUsage()
-            onOpened: resetClock = Date.now()
+            onOpened: ApplicationInfo.refreshAssistantUsageClock(usageDialog)
             Timer {
                 interval: 60000
                 repeat: true
                 running: usageDialog.visible && panel.assistant.connected
-                onTriggered: usageDialog.resetClock = Date.now()
+                onTriggered: ApplicationInfo.refreshAssistantUsageClock(usageDialog)
             }
             ScrollView {
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                 width: usageDialog.contentWidth
                 height: usageDialog.contentHeight
                 clip: true
-                ScrollBar.vertical: EaElements.ScrollBar { policy: ScrollBar.AsNeeded; interactive: false }
+                ScrollBar.vertical: EaElements.ScrollBar {
+                    policy: ScrollBar.AsNeeded
+                    interactive: false
+                }
                 Column {
                     id: usageContent
-                    width: Math.max(0, usageDialog.contentWidth-AppSizes.unit)
+                    width: Math.max(0, usageDialog.contentWidth - AppSizes.unit)
                     spacing: AppSizes.unit * 1.5
                     EaElements.Label {
                         id: usageStatus
                         objectName: "assistant.usageUnavailable"
                         visible: panel.usageData.loading || panel.usageData.stale || panel.usageData.state !== "ready" || usageAllowances.count === 0
                         width: parent.width
-                        text: panel.usageData.state === "ready" && usageAllowances.count === 0
-                            ? qsTr("Session and weekly usage were not reported.") : panel.usageData.statusText || qsTr("Usage unavailable")
+                        text: panel.usageData.state === "ready" && usageAllowances.count === 0 ? qsTr("Session and weekly usage were not reported.") : panel.usageData.statusText || qsTr("Usage unavailable")
                         wrapMode: Text.WordWrap
                     }
                     Repeater {
                         id: usageAllowances
-                        model: [{title: qsTr("Session limit"), minutes: 300, key: "session"}, {title: qsTr("Weekly"), minutes: 10080, key: "weekly"}]
-                            .filter(row => panel.allowanceWindow(row.minutes) !== null)
+                        model: ApplicationInfo.assistantUsageAllowances(panel)
                         Column {
                             id: allowance
                             required property var modelData
-                            readonly property var window: panel.allowanceWindow(modelData.minutes)
-                            objectName: "assistant.usage."+modelData.key
+                            readonly property var window: ApplicationInfo.assistantAllowanceWindow(panel, modelData.minutes)
+                            objectName: "assistant.usage." + modelData.key
                             width: usageContent.width
                             spacing: AppSizes.unit * 0.35
                             RowLayout {
                                 width: parent.width
-                                EaElements.Label { text: allowance.modelData.title; Layout.fillWidth: true }
                                 EaElements.Label {
-                                    objectName: allowance.objectName+".percent"
+                                    text: allowance.modelData.title
+                                    Layout.fillWidth: true
+                                }
+                                EaElements.Label {
+                                    objectName: allowance.objectName + ".percent"
                                     text: allowance.window ? qsTr("%1% used").arg(allowance.window.usedPercent) : qsTr("Unavailable")
                                 }
                             }
                             Rectangle {
-                                objectName: allowance.objectName+".bar"
+                                objectName: allowance.objectName + ".bar"
                                 width: parent.width
                                 height: AppSizes.unit * 0.5
                                 radius: height * 0.5
@@ -969,20 +729,19 @@ Popup {
                                 border.width: EaStyle.Sizes.borderThickness
                                 border.color: EaStyle.Colors.appBorder
                                 Rectangle {
-                                    objectName: allowance.objectName+".fill"
+                                    objectName: allowance.objectName + ".fill"
                                     x: parent.border.width
                                     y: parent.border.width
-                                    width: allowance.window ? Math.max(0,parent.width-parent.border.width*2) * Math.max(0,Math.min(1,allowance.window.usedPercent/100)) : 0
-                                    height: Math.max(0,parent.height-parent.border.width*2)
+                                    width: allowance.window ? Math.max(0, parent.width - parent.border.width * 2) * Math.max(0, Math.min(1, allowance.window.usedPercent / 100)) : 0
+                                    height: Math.max(0, parent.height - parent.border.width * 2)
                                     radius: height * 0.5
-                                    color: allowance.window && 100-allowance.window.usedPercent < 5 ? EaStyle.Colors.red
-                                         : allowance.window && 100-allowance.window.usedPercent < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent
+                                    color: allowance.window && 100 - allowance.window.usedPercent < 5 ? EaStyle.Colors.red : allowance.window && 100 - allowance.window.usedPercent < 25 ? EaStyle.Colors.orange : EaStyle.Colors.themeAccent
                                 }
                             }
                             EaElements.Label {
-                                objectName: allowance.objectName+".reset"
+                                objectName: allowance.objectName + ".reset"
                                 visible: allowance.window !== null
-                                text: allowance.window ? panel.usageResetLabel(allowance.window.resetsAt,usageDialog.resetClock) : ""
+                                text: allowance.window ? panel.usageResetLabel(allowance.window.resetsAt, usageDialog.resetClock) : ""
                                 color: EaStyle.Colors.themeForegroundMinor
                                 textFormat: Text.PlainText
                                 wrapMode: Text.WordWrap
@@ -1017,11 +776,12 @@ Popup {
             width: Math.min(AppSizes.unit * 24, Math.max(0, parent.width - AppSizes.unit * 2))
             height: Math.min(implicitHeight, viewportHeight)
             contentWidth: Math.max(0, width - leftPadding - rightPadding)
-            contentHeight: Math.min(accountContent.implicitHeight, Math.max(0, viewportHeight-topPadding-bottomPadding
-                -(implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)-(implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+            contentHeight: Math.min(accountContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
             Connections {
                 target: panel.assistant
-                function onConnectedChanged() { if (!panel.assistant.connected) accountDialog.close(); }
+                function onConnectedChanged() {
+                    ApplicationInfo.assistantAccountConnectionChanged(panel, accountDialog);
+                }
             }
             ScrollView {
                 ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
@@ -1030,7 +790,7 @@ Popup {
                 clip: true
                 Column {
                     id: accountContent
-                    width: Math.max(0, accountDialog.contentWidth-AppSizes.unit)
+                    width: Math.max(0, accountDialog.contentWidth - AppSizes.unit)
                     spacing: 0
                     Column {
                         width: parent.width
@@ -1052,7 +812,10 @@ Popup {
                             wrapMode: Text.WrapAnywhere
                         }
                     }
-                    Item { width: 1; height: AppSizes.unit * 1.5 }
+                    Item {
+                        width: 1
+                        height: AppSizes.unit * 1.5
+                    }
                     EaElements.Button {
                         id: signOutButton
                         objectName: "assistant.signOut"
@@ -1065,9 +828,13 @@ Popup {
                                 font.family: EaStyle.Fonts.iconsFamily
                                 color: signOutButton.foregroundColor()
                             }
-                            EaElements.Label { anchors.verticalCenter: parent.verticalCenter; text: signOutButton.text; color: signOutButton.foregroundColor() }
+                            EaElements.Label {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: signOutButton.text
+                                color: signOutButton.foregroundColor()
+                            }
                         }
-                        width: Math.min(implicitWidth,parent.width)
+                        width: Math.min(implicitWidth, parent.width)
                         enabled: panel.assistant.connected
                         Accessible.name: text
                         onClicked: panel.assistant.signOut()
@@ -1080,12 +847,10 @@ Popup {
             objectName: "assistant.sessionsDialog"
             parent: Overlay.overlay
             title: qsTr("Assistant sessions")
-            width: Math.min(AppSizes.unit * 64, Math.max(0, parent.width-AppSizes.unit*2))
-            readonly property real viewportHeight: Math.max(0, parent.height-AppSizes.unit*2)
-            contentWidth: Math.max(0, width-leftPadding-rightPadding)
-            contentHeight: Math.min(sessionsContent.implicitHeight, Math.max(0, viewportHeight-topPadding-bottomPadding
-                - (implicitHeaderHeight > 0 ? implicitHeaderHeight+spacing : 0)
-                - (implicitFooterHeight > 0 ? implicitFooterHeight+spacing : 0)))
+            width: Math.min(AppSizes.unit * 64, Math.max(0, parent.width - AppSizes.unit * 2))
+            readonly property real viewportHeight: Math.max(0, parent.height - AppSizes.unit * 2)
+            contentWidth: Math.max(0, width - leftPadding - rightPadding)
+            contentHeight: Math.min(sessionsContent.implicitHeight, Math.max(0, viewportHeight - topPadding - bottomPadding - (implicitHeaderHeight > 0 ? implicitHeaderHeight + spacing : 0) - (implicitFooterHeight > 0 ? implicitFooterHeight + spacing : 0)))
             standardButtons: Dialog.Close
             Column {
                 id: sessionsContent
@@ -1096,20 +861,22 @@ Popup {
                     objectName: "assistant.sessions.list"
                     width: parent.width
                     maxRowCountShow: 8
-                    function prefetch() {
-                        if(sessionsDialog.opened && panel.assistant.sessionsHaveMore && !panel.assistant.sessionsLoading &&
-                            contentY+height>=contentHeight-height)panel.assistant.refreshSessions(true);
-                    }
-                    onContentYChanged: prefetch()
-                    onContentHeightChanged: prefetch()
-                    onHeightChanged: prefetch()
+                    onContentYChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
+                    onContentHeightChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
+                    onHeightChanged: ApplicationInfo.prefetchSessionBrowser(panel, sessionsDialog, sessionsTable)
                     sourceModel: panel.assistant.sessions
                     defaultInfoText: panel.assistant.sessionsLoading ? qsTr("Loading sessions…") : qsTr("No app-created sessions")
-                    columns: [numberColumnWidth, -1, AppSizes.unit*14, AppSizes.iconColumnWidth]
+                    columns: [numberColumnWidth, -1, AppSizes.unit * 14, AppSizes.iconColumnWidth]
                     header: EaComponents.ListViewHeader {
                         EaComponents.ListViewLabel {}
-                        EaComponents.ListViewLabel { text: qsTr("Session"); horizontalAlignment: Text.AlignLeft }
-                        EaComponents.ListViewLabel { text: qsTr("Last modified"); horizontalAlignment: Text.AlignLeft }
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Session")
+                            horizontalAlignment: Text.AlignLeft
+                        }
+                        EaComponents.ListViewLabel {
+                            text: qsTr("Last modified")
+                            horizontalAlignment: Text.AlignLeft
+                        }
                         EaComponents.ListViewLabel {}
                     }
                     delegate: TableRow {
@@ -1122,21 +889,27 @@ Popup {
                         MouseArea {
                             parent: sessionRow
                             height: sessionRow.height
-                            width: Math.max(0,sessionRow.width-AppSizes.iconColumnWidth-sessionsTable.rowPadding-EaStyle.Sizes.tableColumnSpacing)
+                            width: Math.max(0, sessionRow.width - AppSizes.iconColumnWidth - sessionsTable.rowPadding - EaStyle.Sizes.tableColumnSpacing)
                             cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                             enabled: !panel.assistant.canCancel && !panel.assistant.sessionsLoading
-                            onClicked: {sessionRow.activated();panel.assistant.selectSession(sessionRow.threadId);}
+                            onClicked: ApplicationInfo.activateSessionBrowserRow(panel, sessionRow)
                         }
-                        EaComponents.ListViewLabel { text: sessionRow.index+1; horizontalAlignment: Text.AlignHCenter }
+                        EaComponents.ListViewLabel {
+                            text: sessionRow.index + 1
+                            horizontalAlignment: Text.AlignHCenter
+                        }
                         EaComponents.ListViewLabel {
                             text: sessionRow.name
                             horizontalAlignment: Text.AlignLeft
                             ToolTip.text: text
                         }
-                        EaComponents.ListViewLabel { text: sessionRow.modified; horizontalAlignment: Text.AlignLeft }
+                        EaComponents.ListViewLabel {
+                            text: sessionRow.modified
+                            horizontalAlignment: Text.AlignLeft
+                        }
                         EaComponents.ListViewButton {
                             id: archiveSessionButton
-                            objectName: "assistant.session.archive."+sessionRow.index
+                            objectName: "assistant.session.archive." + sessionRow.index
                             fontIcon: "archive"
                             horizontalAlignment: Text.AlignHCenter
                             contentItem: EaElements.Label {
@@ -1161,7 +934,12 @@ Popup {
                     color: EaStyle.Colors.red
                 }
             }
-            Connections {target: panel.assistant;function onSessionSelected(threadId) {sessionsDialog.accept();}}
+            Connections {
+                target: panel.assistant
+                function onSessionSelected(threadId) {
+                    sessionsDialog.accept();
+                }
+            }
             footer: EaElements.DialogButtonBox {
                 id: sessionButtons
                 EaElements.Button {
@@ -1170,14 +948,7 @@ Popup {
                     enabled: !panel.assistant.sessionsLoading && !panel.assistant.canCancel
                     onClicked: panel.assistant.refreshSessions()
                 }
-                readonly property real naturalButtonWidth: {
-                    let total=0;
-                    for(let index=0;index<count;++index) {
-                        const button=itemAt(index);
-                        if(button && button.visible)total+=button.implicitWidth;
-                    }
-                    return total+Math.max(0,count-1)*spacing;
-                }
+                readonly property real naturalButtonWidth: ApplicationInfo.sessionBrowserButtonsWidth(panel, sessionButtons)
                 contentWidth: naturalButtonWidth
                 contentItem: ListView {
                     implicitWidth: sessionButtons.naturalButtonWidth
@@ -1194,18 +965,8 @@ Popup {
         AssistantConnectionDialog {
             id: connectionDialog
             assistant: panel.assistant
-            onRejected: { panel.retireConsentSend(); if(Qt.isQtObject(panel.assistant))panel.assistant.cancelSessionSelection(); }
-            onContextApproved: offer => {
-                const component = panel, original = panel.assistant, dialog = connectionDialog;
-                const intent = component.consentSend;
-                if (!intent || !Qt.isQtObject(dialog) || intent.offer !== offer || dialog.approvalOwner !== offer) return;
-                const owned = component.ownsConsentSend(intent);
-                if (!Qt.isQtObject(component) || !Qt.isQtObject(original) || original !== component.assistant) return;
-                if (!owned) { if (component.consentSend === intent) component.retireConsentSend(); return; }
-                if (!Qt.isQtObject(dialog) || component.consentSend !== intent || intent.offer !== offer || dialog.approvalOwner !== offer) return;
-                intent.approved = true;
-                component.scheduleConsentSend();
-            }
+            onRejected: ApplicationInfo.panelConnectionRejected()
+            onContextApproved: offer => ApplicationInfo.panelContextApproved(offer)
         }
     }
 }

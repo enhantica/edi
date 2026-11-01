@@ -10,26 +10,10 @@ EaComponents.ListView {
     id: table
 
     function revealRow(index: int): bool {
-        if (index < 0 || index >= count) return false;
-        const originalModel = sourceModel;
-        positionViewAtIndex(index, ListView.Contain);
-        forceLayout();
-        const row = itemAtIndex(index);
-        if (sourceModel !== originalModel || row === null || row.index !== index) return false;
-        const top = row.mapToItem(table, 0, 0).y;
-        const header = headerItem ? headerItem.height : 0;
-        if (top < header) contentY -= header - top;
-        else if (top + row.height > height) contentY += top + row.height - height;
-        forceLayout();
-        return sourceModel === originalModel && itemAtIndex(index) === row && row.index === index;
+        return ApplicationInfo.tableRevealRow(index);
     }
     function revealItem(item: Item): bool {
-        if (item === null) return false;
-        let row = item;
-        while (row !== null && row.parent !== contentItem) row = row.parent;
-        if (row === null || !("index" in row) || itemAtIndex(row.index) !== row) return false;
-        const index = row.index, originalModel = sourceModel;
-        return revealRow(index) && sourceModel === originalModel && itemAtIndex(index) === row;
+        return ApplicationInfo.tableRevealItem(item);
     }
 
     // The selection model needs an explicit empty model while a page is being attached.
@@ -46,27 +30,15 @@ EaComponents.ListView {
     // Up and Down move the current row as a click does (the owner, 2026-10-22): the row is selected in a selectable
     // table and reported as activated, so a page holding its current row moves too. A passive table (nothing
     // selectable and no current row) keeps the keys, and a text editor keeps its own.
-    Keys.onPressed: event => {
-        if ((event.key !== Qt.Key_Up && event.key !== Qt.Key_Down) || table.count === 0 || (!table.selectable && !table.marksCurrentRow))
-            return;
-        const focused = table.Window.activeFocusItem;
-        if (focused !== null && "cursorPosition" in focused)
-            return;
-        const from = table.markerRow;
-        const row = Math.max(0, Math.min(table.count - 1, from < 0 ? 0 : from + (event.key === Qt.Key_Down ? 1 : -1)));
-        table.currentIndex = row;
-        table.positionViewAtIndex(row, ListView.Contain);
-        if (table.selectable)
-            table.selectWithModifiers(row, Qt.NoModifier);
-        table.rowActivated(row);
-        event.accepted = true;
-    }
+    Keys.onPressed: event => ApplicationInfo.tableKeyPressed(event)
     // Rows are made when they come into view, never ahead of it: rows made ahead are built a few per frame in
-    // the background, and a page's tables kept laying out for about a second after a project opened. So the
-    // columns fit the rows measured since the content last changed: scrolling only ever widens a column, for a wider
-    // row, and never moves one back and forth (the owner, 2026-10-27).
+    // the background, and a page's tables kept laying out for about a second after a project opened. The columns fit
+    // every row of the model, measured when the content changes (fitWholeModel), so scrolling never moves one (the
+    // owner, 2026-10-27).
     cacheBuffer: 0
-    readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
+    // The row-number column fits the widest number in the bold the current row's number takes, measured again when
+    // the font changes (a web font arriving after the first layout).
+    readonly property real numberColumnWidth: modelRevision >= 0 ? Math.ceil(boldMetrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2 : 0
     property int modelRevision: 0
     // The one column rule (ADR-0029; the owner, 2026-10-24 and 2026-10-27). The row-number column and every flex
     // column (-1) fit their header and their widest cell, each with the same margin, so every two neighbours sit as
@@ -75,241 +47,115 @@ EaComponents.ListView {
     // which keep their widths at the right. `equalColumns` keeps the flex columns equal instead (atom sites, atomic
     // displacements, the Analysis parameters), and `spreadColumns` shares the rest among those columns after their
     // fitted widths (Measured data). A row too narrow for its texts loses the margins first, then narrows the
-    // texts, where a number shows its short form. Widths follow the content: scrolling only widens a column for a
-    // wider row, and a change of the content fits them again.
+    // texts, where a number shows its short form. Widths follow the content: a change of the content fits them again,
+    // and scrolling changes none.
     property var columns: []
     property bool equalColumns: false
     property var spreadColumns: []
-    autoColumnPadding: EaStyle.Sizes.tableColumnSpacing * 4
+    // The column margin is separate from the cell's own measured insets (ADR-0029).
+    autoColumnPadding: EaStyle.Sizes.tableColumnSpacing * 3
     // The last data column, which holds the spare width as empty space after its content; -1 for none.
     readonly property int fillerIndex: equalColumns || spreadColumns.length > 0 ? -1 : columns.lastIndexOf(-1)
     // Each column's widest text, its header's or a cell's, without the margin.
     property var fittedWidths: []
     property bool refitting: true
-    columnWidths: {
-        const fitted = fittedWidths;
-        // Before the first fit every flex column shares the row, as the base lays it out.
-        if (equalColumns || fitted.length !== columns.length)
-            return columns;
-        // The row-number column keeps the width of its widest number, whichever rows are drawn.
-        const fits = columns.map(w => w === -1);
-        const fitting = fits.filter(Boolean).length;
-        const fixed = columns.reduce((sum, w, i) => sum + (w > 0 && !fits[i] ? w : 0), 0);
-        const texts = fitted.reduce((sum, w, i) => sum + (fits[i] ? w : 0), 0);
-        const gaps = columns.length - 1;
-        const room = width - fixed - EaStyle.Sizes.tableColumnSpacing * gaps - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2;
-        const margin = fitting > 0 ? Math.max(0, Math.min(autoColumnPadding, (room - texts) / fitting)) : 0;
-        const scale = texts > room && texts > 0 ? Math.max(0, room) / texts : 1;
-        const spread = spreadColumns.length > 0 ? Math.max(0, room - texts - margin * fitting) / spreadColumns.length : 0;
-        const widths = columns.map((w, i) => fits[i] ? Math.floor(fitted[i] * scale + margin + (spreadColumns.includes(i) ? spread : 0)) : w);
-        if (fillerIndex >= 0) {
-            const used = widths.reduce((sum, w) => sum + w, 0);
-            const spare = Math.max(0, width - EaStyle.Sizes.tableColumnSpacing * gaps - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2 - used);
-            widths[fillerIndex] += Math.floor(spare);
-        }
-        return widths;
-    }
+    columnWidths: ApplicationInfo.tableColumnWidths()
     // The spare width the last data column holds after its content, as empty space before the row buttons: its
     // cells keep their text where it fits, a right-aligned number by its neighbours.
     property real fillerWidth: 0
     // Each padded cell's own paddings and alignment kind, by cell.
     property var basePaddings: new Map()
     property var cellKinds: new Map()
+    // The columns whose right-aligned values are followed by a combo box or by the row buttons: they keep a font size
+    // more after their values (the owner, 2026-10-27: "WP is too close to z. Occ too close to buttons"). A value's
+    // units column stays beside it.
+    property var wideEdges: []
     // A cell's padding: its own, a spacing more on the side it aligns to, so a right-aligned number and a
-    // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it.
+    // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it. A
+    // check box, which centres itself in its room, is pushed to the right edge by its left padding.
     function columnRowOwner(row) {
-        const life = columnFitLife;
-        if (!life || !life.alive || !Qt.isQtObject(row)) return () => false;
-        const parent = row.parent, source = sourceModel, revision = modelRevision;
-        const cells = Array.from(row.children);
-        return () => {
-            if (!life.alive || !Qt.isQtObject(row) || row.parent !== parent || table.sourceModel !== source || table.modelRevision !== revision) return false;
-            const current = Array.from(row.children);
-            return current.length === cells.length && cells.every((cell, index) => Qt.isQtObject(cell) && current[index] === cell && cell.parent === row);
-        };
+        return ApplicationInfo.tableColumnRowOwner(row);
     }
     // Same width distribution as the pinned base ListView, with the original
     // row/cell lifetime retained across each observable width assignment.
     function applyWidths(row) {
-        const life = columnFitLife;
-        if (!life || !life.alive || !Qt.isQtObject(row)) return;
-        const ownsRow = columnRowOwner(row), cells = Array.from(row.children);
-        for (let i = 0; i < cells.length; ++i) {
-            if (!ownsRow()) return;
-            const widths = resolvedColumnWidths;
-            if (i >= widths.length) return;
-            const cell = cells[i], width = widths[i];
-            if (!ownsRow()) return;
-            cell.width = width;
-        }
+        ApplicationInfo.tableApplyWidths(row);
     }
     function padForFiller(cell, column) {
-        const life = columnFitLife;
-        if (!life || !life.alive || !Qt.isQtObject(cell) || !("rightPadding" in cell) || "keepsAlignment" in cell)
-            return;
-        const ownsRow = columnRowOwner(cell.parent);
-        if (!ownsRow()) return;
-        if (!basePaddings.has(cell))
-            basePaddings.set(cell, {
-                "left": cell.leftPadding,
-                "right": cell.rightPadding
-            });
-        const base = basePaddings.get(cell);
-        const kind = cellKinds.get(cell) ?? "";
-        const gap = EaStyle.Sizes.tableColumnSpacing;
-        const left = base.left + (kind === "text" ? gap : 0);
-        const right = base.right + (kind === "number" || kind === "check" ? gap : 0) + (column === fillerIndex ? fillerWidth : 0);
-        if (!ownsRow()) return;
-        cell.leftPadding = left;
-        if (!ownsRow()) return;
-        cell.rightPadding = right;
+        ApplicationInfo.tablePadForFiller(cell, column);
     }
-    // A cell's kind, which sets how it aligns: a number, an icon or button, or text.
+    property var checkCells: new Set()
+    // A cell's kind, which sets how it aligns: a number, an icon or button, or text. A row button is checkable too, so
+    // it is told from a check box by its icon first.
     function kindOf(cell) {
-        if ("checked" in cell && "horizontalAlignment" in cell)
-            return "check";
-        if ("ring" in cell || "fontIcon" in cell)
-            return "icon";
-        if ("number" in cell || "columnAlignment" in cell || "item" in cell || ("numeric" in cell && cell.numeric))
-            return "number";
-        return "text";
+        return ApplicationInfo.tableCellKind(cell);
     }
     function alignCell(cell, kind) {
-        if ("keepsAlignment" in cell)
-            return;
-        cellKinds.set(cell, kind);
-        const alignment = kind === "number" || kind === "check" ? Text.AlignRight : kind === "icon" ? Text.AlignHCenter : Text.AlignLeft;
-        if ("columnAlignment" in cell)
-            cell.columnAlignment = alignment;
-        else if ("horizontalAlignment" in cell)
-            cell.horizontalAlignment = alignment;
+        ApplicationInfo.tableAlignCell(cell, kind);
     }
-    property var columnFitLife: ({alive: true, queued: false})
+    property var columnFitLife: ({
+            alive: true,
+            queued: false
+        })
     function scheduleFitColumns() {
-        const life = columnFitLife;
-        if (!life || !life.alive || life.queued) return;
-        life.queued = true;
-        Qt.callLater(() => {
-            if (!life.alive) return;
-            life.queued = false;
-            table.fitColumns();
-        });
+        ApplicationInfo.tableScheduleFitColumns();
     }
-    Component.onDestruction: {
-        columnFitLife.alive = false;
-        const owner = table;
-        const rows = [headerItem, ...Array.from(contentItem ? contentItem.children : [])];
-        // Retire the pinned header/delegate Connections before derived QML
-        // methods disappear; no live layout or dependency source is changed.
-        for (const row of rows) {
-            if (!Qt.isQtObject(row) || row.listView !== owner) continue;
-            for (const child of Array.from(row.data ?? []))
-                if (Qt.isQtObject(child) && "ignoreUnknownSignals" in child && "target" in child && child.target === owner) child.enabled = false;
-        }
-        for (const row of rows)
-            if (Qt.isQtObject(row) && row.listView === owner) row.listView = null;
-    }
+    Component.onDestruction: ApplicationInfo.tableDestroyed()
 
-    function fitColumns() {
-        const life = columnFitLife;
-        if (!life || !life.alive) return;
-        const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths.filter((w, i) => true) : [];
-        // A cell is measured by its whole text: a number cell by the number it would show if it fitted (it shortens
-        // itself to the width it is given), a label by its natural width, an editor by its text (its implicit width
-        // is a default, not its text).
-        const padded = (cell, w) => w + (cell.leftPadding ?? 0) + (cell.rightPadding ?? 0);
-        // A cell that only holds a control (a combo box in an Item) is as wide as the control, its arrow and padding
-        // included.
-        const control = child => "fittedWidth" in child ? child.fittedWidth : child.implicitWidth ?? 0;
-        const held = cell => Array.from(cell.children).reduce((widest, child) => Math.max(widest, control(child)), cell.implicitWidth);
-        const measure = cell => "number" in cell ? padded(cell, metrics.advanceWidth(cell.number)) : "elide" in cell ? cell.implicitWidth : "contentWidth" in cell ? padded(cell, cell.contentWidth) : held(cell);
-        // The cells of a row's inner Row, in column order, the filler left out.
-        const cellsOf = row => {
-            const first = row && row.contentRowData ? Array.from(row.contentRowData).find(cell => cell instanceof Item) : null;
-            return first && first.parent ? Array.from(first.parent.children) : null;
-        };
-        const headerCells = cellsOf(headerItem);
-        const headerWidths = headerCells ? headerCells.map((cell, i) => Math.ceil(cell.implicitWidth - (i === fillerIndex && basePaddings.has(cell) ? fillerWidth : 0))) : header;
-        const widths = columns.map((w, i) => Math.max(headerWidths[i] ?? 0, refitting ? 0 : (fittedWidths[i] ?? 0)));
-        let kinds = null;
-        for (const item of contentItem.children) {
-            if (!life.alive) return;
-            const cells = cellsOf(item);
-            if (!cells || cells.length === 0 || item === headerItem)
-                continue;
-            if (!life.alive) return;
-            const ownsRow = columnRowOwner(cells[0].parent);
-            if (!ownsRow()) return;
-            kinds = kinds ?? cells.map(cell => kindOf(cell));
-            for (let i = 0; i < cells.length && i < widths.length; ++i) {
-                if (!ownsRow()) return;
-                if (i > 0 && kinds[i])
-                    alignCell(cells[i], kinds[i]);
-                if (!ownsRow()) return;
-                padForFiller(cells[i], i);
-                if (!ownsRow()) return;
-                widths[i] = Math.max(widths[i], Math.ceil(measure(cells[i]) - (i === fillerIndex ? fillerWidth : 0)));
-            }
-        }
-        if (kinds && headerCells && headerCells.length) {
-            const ownsHeader = columnRowOwner(headerCells[0].parent);
-            for (let i = 1; i < headerCells.length && i < kinds.length; ++i) {
-                if (!ownsHeader()) return;
-                alignCell(headerCells[i], kinds[i]);
-                if (!ownsHeader()) return;
-                padForFiller(headerCells[i], i);
-            }
-        }
-        if (!life.alive) return;
-        refitting = false;
-        if (!life.alive) return;
-        if (JSON.stringify(widths) !== JSON.stringify(fittedWidths))
-            fittedWidths = widths;
+    // Styles the cells of `rows` (alignment and padding) and, with `measure`, fits the columns to them and the header.
+    // Only the whole model is measured (fitWholeModel); a row the view makes, scrolled into view, is only styled and
+    // takes the widths the model was measured to (the owner, 2026-10-27).
+    function fitColumns(measure = false, rows = null) {
+        ApplicationInfo.tableFitColumns(measure, rows);
     }
-    // A change of the content fits the columns afresh; scrolling only adds rows to what was measured.
+    // A change of the content fits the columns afresh to every row of the model (fitWholeModel), once the table shows.
     function refit() {
-        const life = columnFitLife;
-        if (!life || !life.alive) return;
-        refitting = true;
-        if (life.alive) scheduleFitColumns();
+        ApplicationInfo.tableRefit();
     }
-    onColumnsChanged: if (table.columnFitLife && table.columnFitLife.alive) table.refit()
-    // The spare width follows the columns: the last data column's cells take it as padding after their content.
-    onColumnWidthsChanged: {
-        const life = table.columnFitLife;
-        if (!life || !life.alive) return;
-        const spare = fillerIndex >= 0 && fittedWidths.length === columns.length ? Math.max(0, columnWidths[fillerIndex] - (fittedWidths[fillerIndex] ?? 0) - autoColumnPadding) : 0;
-        if (spare !== fillerWidth) {
-            fillerWidth = spare;
-            if (life.alive) scheduleFitColumns();
+    // The cells of rows the view made, styled as the measured ones are.
+    function styleCells() {
+        ApplicationInfo.tableStyleCells();
+    }
+    // Every row of the model is made at once, beside the view, measured with the header, and dropped: the columns fit
+    // the widest row wherever it is, and scrolling changes no width. A table not shown waits until it is.
+    function fitWholeModel() {
+        ApplicationInfo.tableFitWholeModel();
+    }
+    // Content that changed while the table was not shown, measured once it is.
+    property bool unfitted: false
+    onVisibleChanged: ApplicationInfo.tableVisibleChanged()
+    Item {
+        visible: false
+        width: table.width
+        Repeater {
+            id: measuringRows
+            model: null
+            delegate: table.delegate
         }
     }
-    onModelRevisionChanged: if (table.columnFitLife && table.columnFitLife.alive) table.refit()
-    onCountChanged: if (table.columnFitLife && table.columnFitLife.alive) table.refit()
+    onColumnsChanged: ApplicationInfo.tableColumnsChanged(false)
+    // The spare width follows the columns: the last data column's cells take it as padding after their content.
+    onColumnWidthsChanged: ApplicationInfo.tableColumnsChanged(true)
+    onModelRevisionChanged: ApplicationInfo.tableColumnsChanged(false)
+    onCountChanged: ApplicationInfo.tableColumnsChanged(false)
     Component.onCompleted: refit()
     Connections {
         property var ownerLife: null
-        Component.onCompleted: ownerLife = table.columnFitLife
+        Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
         target: table.contentItem
         function onChildrenChanged() {
-            if (!ownerLife || !ownerLife.alive) return;
-            table.scheduleFitColumns();
+            ApplicationInfo.tableOwnerCallback(0);
         }
     }
     // A header whose cells change after it was made (a column per structure arriving with the calculation) has
     // them sized and the columns fitted again.
     Connections {
         property var ownerLife: null
-        Component.onCompleted: ownerLife = table.columnFitLife
+        Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
         target: table.headerItem
         ignoreUnknownSignals: true
         function onImplicitColumnWidthsChanged() {
-            if (!ownerLife || !ownerLife.alive) return;
-            const first = table.headerItem && table.headerItem.contentRowData ? Array.from(table.headerItem.contentRowData).find(cell => cell instanceof Item) : null;
-            if (!ownerLife.alive) return;
-            if (first && first.parent)
-                table.applyWidths(first.parent);
-            if (ownerLife.alive) table.scheduleFitColumns();
+            ApplicationInfo.tableOwnerCallback(1);
         }
     }
     // Long IDs and paths must leave room for the numeric cells and row controls.
@@ -319,37 +165,25 @@ EaComponents.ListView {
     property var rowWidths: ({})
 
     function textWidth(row: int, role: string): real {
-        const text = typeof model.text === "function" ? model.text(row, role) : typeof model.get === "function" ? String(model.get(row)[role] ?? "") : "";
-        return metrics.advanceWidth(text);
+        return ApplicationInfo.tableTextWidth(row, role);
     }
     // The width of `text` in the table's font.
     function advance(text: string): real {
-        return metrics.advanceWidth(text);
+        return ApplicationInfo.tableAdvance(text);
     }
     function textColumnWidth(role: string, title: string): real {
-        return Math.min(naturalTextColumnWidth(role, title), width * maximumTextColumnShare);
+        return ApplicationInfo.tableTextColumnWidth(role, title, false);
     }
     // The widest of the column's texts and its title, with a cell's margins, however wide the table is.
     function naturalTextColumnWidth(role: string, title: string): real {
-        const revision = modelRevision;
-        let widths = rowWidths[role];
-        if (!widths || widths.length !== count) {
-            widths = [];
-            for (let row = 0; model && row < count; ++row)
-                widths.push(textWidth(row, role));
-            rowWidths[role] = widths;
-        }
-        const result = widths.reduce((widest, measured) => Math.max(widest, measured), metrics.advanceWidth(title));
-        return Math.ceil(result) + AppSizes.fieldSpacing * 2;
+        return ApplicationInfo.tableTextColumnWidth(role, title, true);
     }
     // Cleared in place: the bindings that read the cache depend on modelRevision, never on the cache itself.
     function forgetWidths() {
-        for (const role in rowWidths)
-            delete rowWidths[role];
+        ApplicationInfo.tableForgetWidths();
     }
     function remeasure() {
-        forgetWidths();
-        modelRevision++;
+        ApplicationInfo.tableRemeasure();
     }
 
     // A table with a current row (the base's `currentRow`, which its moving accent marker shows; edi ADR-0017 §11)
@@ -363,46 +197,39 @@ EaComponents.ListView {
     FontMetrics {
         id: metrics
         property var ownerLife: null
-        Component.onCompleted: ownerLife = table.columnFitLife
+        Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
-        onFontChanged: if (ownerLife && ownerLife.alive) table.remeasure()
+        onFontChanged: ApplicationInfo.tableOwnerCallback(2)
+    }
+    FontMetrics {
+        id: boldMetrics
+        property var ownerLife: null
+        Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        font.bold: true
+        onFontChanged: ApplicationInfo.tableOwnerCallback(2)
     }
     Connections {
         property var ownerLife: null
-        Component.onCompleted: ownerLife = table.columnFitLife
+        Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
         target: table.model
         ignoreUnknownSignals: true
         function onDataChanged(topLeft, bottomRight) {
-            if (!ownerLife || !ownerLife.alive) return;
-            // A value arriving later (a calculated curve) can widen its column.
-            table.refit();
-            if (!ownerLife.alive) return;
-            let changed = false;
-            for (const role in table.rowWidths) {
-                const widths = table.rowWidths[role];
-                for (let row = topLeft.row; row <= bottomRight.row && row < widths.length; ++row) {
-                    const measured = table.textWidth(row, role);
-                    if (measured !== widths[row]) {
-                        widths[row] = measured;
-                        changed = true;
-                    }
-                }
-            }
-            if (changed)
-                table.modelRevision++;
+            ApplicationInfo.tableDataChanged(topLeft, bottomRight);
         }
         function onCountChanged() {
-            if (ownerLife && ownerLife.alive) table.remeasure();
+            ApplicationInfo.tableOwnerCallback(2);
         }
         function onModelReset() {
-            if (ownerLife && ownerLife.alive) table.remeasure();
+            ApplicationInfo.tableOwnerCallback(2);
         }
         function onRowsMoved() {
-            if (ownerLife && ownerLife.alive) table.remeasure();
+            ApplicationInfo.tableOwnerCallback(2);
         }
         function onLayoutChanged() {
-            if (ownerLife && ownerLife.alive) table.remeasure();
+            ApplicationInfo.tableOwnerCallback(2);
         }
     }
 }

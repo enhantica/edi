@@ -25,8 +25,8 @@ struct ParameterEntry {
     bool refinable = true;   // false: symmetry fixes or ties it (categories.hpp); its value is shown, not typed
 };
 
-// Every shown parameter of the project (the union of the categories' shown fields, §2b (iv), I15)
-// in page order: structures, then experiments. The app's Analysis table lists every entry, with what keeps a fit from
+// Every parameter the project's model carries (the union of the categories' shown fields, §2b (iv), I15, and a
+// time-of-flight experiment's coefficients its profile does not use) in page order: structures, then experiments. The app's Analysis table lists every entry, with what keeps a fit from
 // varying it (fittability.hpp, ADR-0053). Paths come from the fit surface's own grammar
 // functions (core/src/parameter_paths.cpp), so fit results map onto these rows by path.
 std::vector<ParameterEntry> parameter_entries(Project& project);

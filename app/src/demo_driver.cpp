@@ -796,6 +796,16 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         steps_.push_back({"texttab-6-edited-light", {"text.view", "type: "}});
         steps_.push_back({"texttab-7-edited-dark", {"theme:dark"}});
     }
+    // Each page's Text tab at the supported minimum window size. Run only when asked (`--demo-only textmin-`).
+    if (only.startsWith(QLatin1String("textmin-"))) {
+        steps_.push_back({"textmin-1-project", QStringList{"resize:1024x640", "theme:light"} + start +
+                                                   open_example("pd-neut-cwl_lbco-hrpt") +
+                                                   QStringList{"appBar.tab.project", text}});
+        steps_.push_back({"textmin-2-structure", {"appBar.tab.structure", text}});
+        steps_.push_back({"textmin-3-experiment", {"appBar.tab.experiment", text}});
+        steps_.push_back({"textmin-4-analysis", {"appBar.tab.analysis", text}});
+        steps_.push_back({"textmin-5-report", {"appBar.tab.report", text}});
+    }
     // The excluded ranges on Stacked and the Map, shown and hidden (the owner, 2026-10-27): NCAF's five banks. Run only
     // when asked (`--demo-only excluded-`).
     if (only.startsWith(QLatin1String("excluded-"))) {
@@ -1113,7 +1123,7 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
             {"figures-29-ncaf-map-d-light", map, "wait-scan:map"},
             {"figures-30-ncaf-map-d-dark", "theme:dark"},
             {"figures-31-ncaf-stacked-d-dark", stacked, "wait-scan:stacked"},
-            {"figures-32-taurine-atom-sites-dark", "open-cli-project:sc-neut-tof_taurine-senju", "appBar.tab.structure",
+            {"figures-32-taurine-atom-sites-dark", "open-cli-project:sc-neut-tof_taurine_fit", "appBar.tab.structure",
              basic, "expand:group.atom_site", "reveal:atomSite.fractX.8"},
             {"figures-33-taurine-vesta-dark", "structure.toolbar.colors", "choose:VESTA"},
             {"figures-34-taurine-vesta-light", "theme:light"},
@@ -1240,11 +1250,11 @@ DemoDriver::DemoDriver(QQuickWindow& window, const QString& output_dir, const QS
         for (int batch = 2; batch <= 4; ++batch) {
             steps_.push_back({QStringLiteral("perf-slidernofit-%1").arg(batch), {"timed-slider:30"}});
         }
-        steps_.push_back({"perf-slider-lbco-2-after-fit", {"fitting.start", "wait-fit", "choose:OK", "timed-slider:30"}});
+        steps_.push_back({"perf-slider-lbco-2-after-fit", {"statusBar.fit.button", "wait-fit", "choose:OK", "timed-slider:30"}});
         // Note 45 says "after the fits": four more, five in all, from where the slider left the model each time.
         QStringList fits;
         for (int fit = 0; fit < 4; ++fit) {
-            fits << "fitting.start" << "wait-fit" << "choose:OK";
+            fits << "statusBar.fit.button" << "wait-fit" << "choose:OK";
         }
         steps_.push_back({"perf-slider-lbco-3-after-five-fits", fits + QStringList{"timed-slider:30"}});
     }

@@ -160,7 +160,7 @@ def test_project_round_trip_retains_reflections_and_model(tmp_path, case):
     for generation in range(2):
         destination = tmp_path / f'saved-{generation}'
         model.save_as(destination)
-        require_saved_parameters(model.parameters, expected)
+        require_saved_parameters(model.parameters, expected, model=model, phase='completed')
         saved_calc = calculated(model)
         scientific = {
             str(p.relative_to(destination)): p.read_bytes()

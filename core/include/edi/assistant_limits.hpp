@@ -3,7 +3,7 @@
 #include <cstdint>
 
 namespace edi::assistant {
-/// Working-record, protocol/identity and presentation constants (ADR-0054/0056).
+/// Working-record, protocol/identity and presentation constants (ADR-0055/0057).
 /// Historical work totals are not task/output/history/admission quotas; actual
 /// streaming and retained once evidence must not abort merely by growing.
 struct Limits final {

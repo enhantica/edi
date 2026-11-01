@@ -1,0 +1,59 @@
+{
+  "phase": "native",
+  "panel_sha256": null,
+  "app_info_sha256": null,
+  "allowance_call": "p.allowanceWindow(MINUTES)",
+  "files": {
+    "app/qml/Components/AssistantPanel.qml": null,
+    "app/src/app_info.cpp": null,
+    "app/src/assistant_view_model.cpp": null,
+    "tests/system/py/test_e11_t5_dev_native_integration.py": "fab4eed9c8de1113fabca430474b746794d12a3a0da0f4b33768c12c92e932fa",
+    "tests/integration/py/assistant_ui_probe/probe.cpp": "5cace5b63a55b0b373848242d63646121e4532f4a7071d8ac6a4c3e68930bd5c",
+    "tests/integration/py/assistant_ui_probe/codex_peer.py": "b3ac490856539a6f264dab4464780133cb5f934c7aede97b7d4cae76d098acdc",
+    "tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp": "07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe",
+    "app/src/app_info.hpp": null,
+    "app/qml/Components/AssistantComposer.qml": null,
+    "tests/system/py/test_e11_t5_usage_account_original_controls.py": "29df28a7f8f02ca0088e4ba5de92bda570a41a6e5f964bf262a8c798f30a8684",
+    "tests/system/py/e11_t5_usage_canonical_cases.json": "04fce80e34bd354f4ea15c6d2eaaa3d21a4c279d1ad7a807d2ca76cd1b005ed1",
+    "tests/system/py/e11_t5_usage_canonical_observer.js": "44c835b90d624f91c2bac42e38b38842c1404ab0c4d015016d2abdfdc97a481d",
+    "app/qml/Components/AssistantWorking.qml": null,
+    "tests/unit/app/e11_t5_usage_account_phase.hpp": "b726b7b713befaf6cd278810f39985ce65c4caebbc30b4b88a944758fb6305bc"
+  },
+  "original_source": null,
+  "namespace": "fresh-usage-original-native",
+  "native": {
+    "source": null,
+    "tree": null,
+    "archive_sha256": null
+  },
+  "original_bond_sha256": null,
+  "binding_status": "PENDING_ROOT_FINAL_INPUTS",
+  "compiled_source": null,
+  "current_runtime_config_sha256": null,
+  "original_runtime_config_sha256": null,
+  "historical125_source": "dea0543ce45825f5b72ff504373c2bf8829d35e9",
+  "historical125_bond_sha256": "784e9d2cc7ad3aeb302e9a8b1e535b18d44fcc0d550b72db69f84810dd8af7b5",
+  "compiled_caller_proof": {
+    "current": {
+      "generated_inputs": {
+        "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantComposer_qml.cpp": null,
+        "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantPanel_qml.cpp": null
+      },
+      "source_proof": {
+        "path": null,
+        "sha256": null
+      }
+    },
+    "original": {
+      "generated_inputs": {
+        "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantComposer_qml.cpp": null,
+        "graph/app/.rcc/qmlcache/edi_app_module_qml_Components_AssistantPanel_qml.cpp": null
+      },
+      "source_proof": {
+        "path": null,
+        "sha256": null
+      }
+    }
+  },
+  "caller_binding_status": "PENDING_ROOT_COMPILED_CALLER_PROOF"
+}

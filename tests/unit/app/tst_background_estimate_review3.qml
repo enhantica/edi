@@ -115,6 +115,21 @@ TestCase {
             file: SettingsProof.text(destination, "experiments/d20.edi")}));
         console.log("BACKGROUND_REVIEW3 transition " + source + " " + target);
     }
+    function undoSaveParameters() {
+        const e = Session.project.currentExperiment;
+        const points = e.backgroundType === "line-segment";
+        return Probe.rows(points ? e.background : e.backgroundTerms).map(row => {
+            const p = points ? row.intensity : row.coef;
+            return {id: String(row.id), value: p.value, free: p.free,
+                    hasUncertainty: p.hasUncertainty, uncertainty: p.uncertainty,
+                    refinable: p.refinable};
+        });
+    }
+    function backgroundDescriptors(s) {
+        return {type: s.type, mode: s.mode, origin: s.origin, low: s.low, high: s.high,
+                points: s.points.map(row => [row[0], row[1], row[3]]),
+                terms: s.terms.map(row => [row[0], row[1], row[3]])};
+    }
     function undoTransition(source, target) {
         open(source, "single", false, false, true);
         Session.project.currentExperiment.backgroundEstimateMode = "manual";ready();
@@ -133,10 +148,27 @@ TestCase {
             "Estimate Undo after a type edit must restore the entire prior typed background");
         ready();
         const expected = JSON.stringify(state()), destination = Probe.scratchProjectUrl();
+        const preSave = {state: JSON.parse(expected), parameters: undoSaveParameters(),
+                         suRule: Session.project.suRule};
+        console.log("BACKGROUND_REVIEW3_UNDO_BEFORE_SAVE " + JSON.stringify(preSave));
+        verify(preSave.parameters.every(p => p.refinable && isFinite(p.value)
+               && typeof p.hasUncertainty === "boolean" && isFinite(p.uncertainty)),
+               "Typed Undo supplies complete ordinary scalar parameter witnesses before Save");
         verify(Session.saveAs(destination), "Typed Undo must leave a valid saveable background: " + Session.lastError);
-        compare(JSON.stringify(state()), expected, "Saving typed Undo must retain its complete restored host state");
-        console.log("BACKGROUND_REVIEW3_SAVED " + JSON.stringify({kind: state().type, state: state(),
-            file: SettingsProof.text(destination, "experiments/d20.edi")}));
+        const published = state();
+        const parameters = undoSaveParameters();
+        // The complementary existing Python owner judges every value/SU against
+        // PRE-Save numbers and the committed independent decimal reference.
+        console.log("BACKGROUND_REVIEW3_SAVED " + JSON.stringify({kind: published.type, state: published,
+            file: SettingsProof.text(destination, "experiments/d20.edi"),
+            project_file: SettingsProof.text(destination, "project.edi"),
+            before_save: preSave, parameters: parameters, su_rule: Session.project.suRule}));
+        compare(JSON.stringify(backgroundDescriptors(published)),
+                JSON.stringify(backgroundDescriptors(preSave.state)),
+                "Saving typed Undo retains exact type, mode, basis, rows, IDs, positions/orders and free flags");
+        compare(Session.project.suRule, preSave.suRule, "Save retains the actual selected uncertainty rule");
+        verify(parameters.every(p => isFinite(p.value) && isFinite(p.uncertainty)),
+               "Adopted typed Undo values and uncertainty projections stay finite");
         console.log("BACKGROUND_REVIEW3 undo " + source + " " + target);
     }
     function basisEdit(kind, field) {
@@ -153,7 +185,7 @@ TestCase {
         console.log("BACKGROUND_REVIEW3_BASIS " + JSON.stringify({kind: kind, field: field, rows: rows(kind)}));
     }
     function mixedFit(kind, mode) {
-        open(kind, mode, true, true);
+        const input = open(kind, mode, true, true);
         const before = rows(kind), fit = Session.project.fit;
         verify(fit.available, "Mixed measured/simulation fitting must be available: " + fit.unavailableReason);
         fit.start();tryVerify(() => !fit.running, 1000, "The mixed app worker fit must finish");
@@ -169,13 +201,28 @@ TestCase {
         const e = Session.project.currentExperiment;
         const uncertainties = Probe.rows(kind === "line-segment" ? e.background : e.backgroundTerms).map(row =>
             (kind === "line-segment" ? row.intensity : row.coef).uncertainty);
+        const beforeSave = {state: state(), parameters: undoSaveParameters(),
+                            suRule: Session.project.suRule,
+                            project_file: SettingsProof.text(input, "project.edi")};
+        console.log("BACKGROUND_REVIEW3_MIXED_BEFORE_SAVE " + JSON.stringify(beforeSave));
+        verify(beforeSave.suRule === "iucr_19" || beforeSave.suRule === "iucr_99",
+               "Mixed Save captures the actual supported project uncertainty rule");
+        verify(beforeSave.parameters.every(p => p.refinable && isFinite(p.value)
+               && typeof p.hasUncertainty === "boolean" && isFinite(p.uncertainty)),
+               "Mixed Save supplies every original scalar value, free flag and explicit optional-SU witness");
         const destination = Probe.scratchProjectUrl();
         verify(Session.saveAs(destination), "The mixed worker's fitted Auto background must save: " + Session.lastError);
         // Save adopts IUCr-rounded values; the separate loader checks that exact
         // declared rounding against these pre-save values and uncertainties.
         console.log("BACKGROUND_REVIEW3_SAVED " + JSON.stringify({kind: kind, state: state(),
             live_rows: fitted, live_su: uncertainties,
+            before_save: beforeSave, parameters: undoSaveParameters(),
+            su_rule: Session.project.suRule,
+            project_file: SettingsProof.text(destination, "project.edi"),
             file: SettingsProof.text(destination, "experiments/d20.edi")}));
+        compare(Session.project.suRule, beforeSave.suRule, "Mixed Save retains its actual selected uncertainty rule");
+        compare(JSON.stringify(backgroundDescriptors(state())), JSON.stringify(backgroundDescriptors(beforeSave.state)),
+                "Mixed Save retains exact type, mode, basis, population, IDs, positions/orders and free flags");
         console.log("BACKGROUND_REVIEW3 mixed " + kind + " " + mode);
     }
     function delegatedSave(kind) {

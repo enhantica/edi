@@ -28,11 +28,11 @@ def main():
     text = raw.decode()
     light = section(
         text,
-        "## 2026-10-26 — OWNER DECISION: E04-T37's five palettes and the calc red, light mode",
+        'five palettes and the calc red, light mode',
     )
     dark = section(
         text,
-        "## 2026-10-26 — OWNER DECISION: E04-T37's dark colours calmer, shades beyond 11 items",
+        'dark colours calmer, shades beyond 11 items',
     )
     palettes = []
     for old, name in NAMES:
@@ -44,14 +44,14 @@ def main():
                 raise ValueError('Each owner palette must have eleven colours')
         palettes.append(row)
     output = {
-        'source': 'relay/knowledge/decision-records.md, owner records dated 2026-10-26',
+        'source': 'Approved palette design records dated 2026-10-26 and 2026-10-27',
         'source_sha256': hashlib.sha256(raw).hexdigest(),
         'palettes': palettes,
         'calc': {'light': '#AD1A6B', 'dark': '#FC4F81'},
         'maps': ['Blue-Red', 'Viridis', 'Batlow', 'Inferno', 'Lapaz', 'Greys'],
         'blue_red': {
             'light': ['#FFFFFF', '#3F7FBF', '#C8323C'],
-            'dark': ['#444444', '#6AA6EA', '#FC4F81'],
+            'dark': ['#181818', '#6AA6EA', '#FC4F81'],
         },
     }
     Path(__file__).with_name('element-styles.tsv').write_bytes(args.elements.read_bytes())

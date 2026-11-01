@@ -233,6 +233,12 @@ public:
         auto* report = qobject_cast<edi_app::ReportViewModel*>(object);
         return report ? QString::fromStdString(edi::report_digest(report->reportModel(), "html")) : QString{};
     }
+    Q_INVOKABLE QString htmlFromJson(const QString& document, const QString& dataDir) const {
+        const auto model = edi::report_from_json(document.toStdString());
+        const auto libraries =
+            edi::read_report_libraries(std::filesystem::path(dataDir.toStdString()));
+        return QString::fromStdString(edi::report_html(model, libraries));
+    }
     Q_INVOKABLE QString jsonDigest(const QString& document) const {
         return QString::fromStdString(edi::report_digest(edi::report_from_json(document.toStdString()), "html"));
     }

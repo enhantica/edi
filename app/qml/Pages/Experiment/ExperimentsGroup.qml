@@ -21,8 +21,10 @@ import edi.app
 // file in its place. Create, Load and Load data are each one undoable step.
 EaElements.GroupBox {
     id: group
-    property var pickerLife: ({ alive: true })
-    Component.onDestruction: pickerLife.alive = false
+    property var pickerLife: ({
+            alive: true
+        })
+    Component.onDestruction: ApplicationInfo.formPickerDestroyed()
 
     property ProjectViewModel project: null
     // A scan project lists its datasets: No. · Fit · Datablock · File · one column per extract rule, with no
@@ -60,10 +62,7 @@ EaElements.GroupBox {
             sourceModel: group.project ? group.project.experiments : null
             marksCurrentRow: true
             currentRow: group.project ? group.project.currentExperimentIndex : -1
-            onRowActivated: row => {
-                if (group.project)
-                    group.project.currentExperimentIndex = row;
-            }
+            onRowActivated: row => ApplicationInfo.activateFormBlock(row, false)
 
             columns: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
@@ -160,8 +159,7 @@ EaElements.GroupBox {
                     objectName: `experiments.name.${row.index}`
                     horizontalAlignment: Text.AlignLeft
                     value: row.name
-                    onActiveFocusChanged: if (activeFocus)
-                        group.project.currentExperimentIndex = row.index
+                    onActiveFocusChanged: ApplicationInfo.finishUiEvent(12, undefined)
                     onCommitted: text => row.experiment.name = text
                 }
                 // The data's file: the experiment's own `.edi`, which holds its data, or a scan dataset's data file,
@@ -221,48 +219,19 @@ EaElements.GroupBox {
                             cursorShape: Qt.PointingHandCursor
                         }
                         TapHandler {
-                            readonly property var assistantGesture: ({ current: null })
+                            readonly property var assistantGesture: ({
+                                    current: null
+                                })
 
                             function sameGesture(point) {
-                                const retained = assistantGesture.current;
-                                return retained !== null && retained.device === point.device && retained.id === point.id && retained.press === point.pressTimestamp;
+                                return ApplicationInfo.sameExperimentGesture(point);
                             }
                             function discardGesture(point) {
-                                if (sameGesture(point)) {
-                                    assistantGesture.current.closed = true;
-                                    assistantGesture.current.proof = null;
-                                }
+                                ApplicationInfo.discardExperimentGesture(point);
                             }
-                            onGrabChanged: (transition, eventPoint) => {
-                                if (transition === PointerDevice.GrabPassive || transition === PointerDevice.GrabExclusive) {
-                                    if (sameGesture(eventPoint))
-                                        return; // Passive/exclusive transitions cannot rearm this press.
-                                    if (eventPoint.state !== EventPoint.Pressed)
-                                        return;
-                                    const original = { device: eventPoint.device, id: eventPoint.id, press: eventPoint.pressTimestamp, proof: null, closed: false };
-                                    const holder = assistantGesture;
-                                    holder.current = original; // No QML notification before capture/cancellation.
-                                    const proof = Session.assistant.beginManualControlInput(loadData, eventPoint, row.experiment);
-                                    if (holder.current === original && !original.closed)
-                                        original.proof = proof; // An old callback cannot overwrite a newer grab.
-                                } else if (transition === PointerDevice.UngrabPassive || transition === PointerDevice.UngrabExclusive || transition === PointerDevice.CancelGrabPassive || transition === PointerDevice.CancelGrabExclusive) {
-                                    discardGesture(eventPoint);
-                                }
-                            }
-                            onCanceled: eventPoint => {
-                                if (sameGesture(eventPoint))
-                                    discardGesture(eventPoint);
-                            }
-                            onTapped: eventPoint => {
-                                if (!sameGesture(eventPoint) || assistantGesture.current.closed)
-                                    return;
-                                const original = assistantGesture.current;
-                                const proof = original.proof;
-                                original.closed = true;
-                                original.proof = null; // Consume BEFORE validation/action and any reentry.
-                                if (Session.assistant.completeManualControlInput(loadData, eventPoint, row.experiment, proof))
-                                    loadData.clicked();
-                            }
+                            onGrabChanged: (transition, eventPoint) => ApplicationInfo.experimentGrabChanged(transition, eventPoint)
+                            onCanceled: eventPoint => ApplicationInfo.experimentGestureCancelled(eventPoint)
+                            onTapped: eventPoint => ApplicationInfo.experimentGestureTapped(eventPoint)
                         }
                         EaElements.ToolTip {
                             text: qsTr("Load another data file in place of this one")
@@ -329,15 +298,7 @@ EaElements.GroupBox {
                 text: qsTr("Load experiment")
                 ToolTip.text: qsTr("Load experiments from CIF or .edi files, each with its type, data and parameters")
                 // In the browser the files come through the page (edi ADR-0023).
-                onClicked: {
-                    if (WebFiles.available) {
-                        group.webRequestProject = group.project;
-                        group.webDataExperiment = null;
-                        group.webRequest = WebFiles.openFiles(".cif,.edi", true);
-                    } else {
-                        loadDialog.open();
-                    }
-                }
+                onClicked: ApplicationInfo.loadFormFiles(true)
             }
             EaElements.SideBarButton {
                 objectName: "experiments.create"
@@ -366,17 +327,7 @@ EaElements.GroupBox {
     // that experiment wherever its row is by then, and is refused if it has gone.
     readonly property string dataFilter: ".xye,.xy,.dat,.txt,.csv,.int,.hkl"
     function chooseData(experiment) {
-        if (WebFiles.available) {
-            group.webRequestProject = group.project;
-            group.webDataExperiment = experiment;
-            group.webRequest = WebFiles.openFiles(group.dataFilter, false);
-        } else {
-            if (dataDialog.visible) return;
-            dataDialog.intent = { project: group.project, experiment: experiment };
-            dataDialog.experiment = experiment;
-            dataDialog.project = group.project;
-            dataDialog.open();
-        }
+        ApplicationInfo.chooseExperimentData(experiment);
     }
 
     // This page's browser file request and the project it was made for: only its own answer is used, and only
@@ -388,30 +339,13 @@ EaElements.GroupBox {
     Connections {
         target: WebFiles
         function onFilesOpened(request, files) {
-            if (request !== group.webRequest)
-                return;
-            group.webRequest = 0;
-            const experiment = group.webDataExperiment;
-            const forData = experiment !== null;
-            group.webDataExperiment = null;
-            if (group.project !== null && group.project === group.webRequestProject) {
-                if (forData)
-                    group.project.loadDataInto(experiment, files[0]);
-                else
-                    group.project.loadExperiments(files);
-            }
+            ApplicationInfo.formFilesOpened(request, files, true);
         }
         function onFailed(request) {
-            if (request === group.webRequest) {
-                group.webRequest = 0;
-                group.webDataExperiment = null;
-            }
+            ApplicationInfo.formFilesCancelled(request, true);
         }
         function onCancelled(request) {
-            if (request === group.webRequest) {
-                group.webRequest = 0;
-                group.webDataExperiment = null;
-            }
+            ApplicationInfo.formFilesCancelled(request, true);
         }
     }
 
@@ -432,14 +366,7 @@ EaElements.GroupBox {
         property var project: null
         title: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? qsTr("Load measured reflections from FullProf's .int or a plain h k l F² su file (.hkl, .dat or any other)") : qsTr("Load measured data from a plain two- or three-column file")
         nameFilters: dataDialog.experiment && dataDialog.experiment.sampleForm === ExperimentViewModel.SingleCrystal ? [qsTr("Reflection files (*.int *.hkl *.dat *.txt)"), qsTr("All files (*)")] : [qsTr("Data files (*.xye *.xy *.dat *.txt *.csv)"), qsTr("All files (*)")]
-        onAccepted: {
-            const life = group.pickerLife;
-            const original = intent;
-            const file = selectedFile;
-            intent = null;
-            if (life.alive && intent === null && original !== null && original.experiment !== null && group.project === original.project && Session.project === original.project)
-                original.project.loadDataInto(original.experiment, file);
-        }
-        onRejected: intent = null
+        onAccepted: ApplicationInfo.acceptExperimentDataFile()
+        onRejected: ApplicationInfo.rejectExperimentDataFile()
     }
 }

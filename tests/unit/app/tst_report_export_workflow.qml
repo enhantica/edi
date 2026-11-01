@@ -218,8 +218,8 @@ Rectangle {
             return left === right ? [] : [path + ": " + JSON.stringify(left) + " -> " + JSON.stringify(right)];
         }
         function test_app_failed_publication_preserves_bytes_and_successful_rows(data) {
-            const scheme = Approved.getSchemes(Preferences);
-            Approved.setSchemes(Preferences, "ediNatural");
+            const scheme = Approved.getScheme(Preferences);
+            Approved.setScheme(Preferences, "earth");
             prepare("_edi.schema_version 3\n_report.html true\n_report.pdf true\n_report.html_offline false\n");
             const report = Session.project.report;
             if (data.browser)
@@ -270,7 +270,7 @@ Rectangle {
                 failures.push("Live and reopened row states differ: " + JSON.stringify(live) + " versus " + JSON.stringify(disk));
             if (live.length !== original.length)
                 failures.push("A failure duplicated or dropped named tracking rows");
-            Approved.setSchemes(Preferences, scheme);
+            Approved.setScheme(Preferences, scheme);
             publicationFailed.target = null;
             compare(failures.length, 0, "Desktop and browser export preserve failed-format bytes, retain each successful format's row or roll back, and keep live/persisted state coherent on tracking failure; actual " + failures.join("; "));
         }

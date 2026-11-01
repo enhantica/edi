@@ -20,8 +20,7 @@ Rectangle {
     property AssistantViewModel assistant: null
     property color chatBackgroundColor: EaStyle.Colors.appBarBackground
     function tableTone(lift) {
-        const base=chatBackgroundColor;
-        return Qt.rgba(Math.min(1,base.r+lift/255),Math.min(1,base.g+lift/255),Math.min(1,base.b+lift/255),base.a);
+        return ApplicationInfo.assistantMessageTableTone(lift);
     }
     property bool highlighted: false
     readonly property var compactPresentation: ApplicationInfo.assistantActivityPresentation(kind, status, payload, assistant)
@@ -43,7 +42,7 @@ Rectangle {
         interval: EaStyle.Times.introAnimation
         onTriggered: ApplicationInfo.assistantMessageClearFeedback(row, false)
     }
-    signal detailsChanging()
+    signal detailsChanging
     signal reportRequested(string sourceRowId, string link)
     onDisclosureIdentityChanged: ApplicationInfo.assistantMessageReset(row)
     onCommandActivityChanged: ApplicationInfo.assistantMessageReset(row)
@@ -52,22 +51,12 @@ Rectangle {
     ListView.onReused: ApplicationInfo.assistantMessageReset(row)
     color: "transparent"
     function sentFileLabel(file) {
-        return qsTr("%1 (%2)%3").arg(file.name).arg(ApplicationInfo.fileSizeKilobytes(file.bytes))
-            .arg(file.textReadable ? "" : qsTr(" · text export required"));
+        return ApplicationInfo.assistantSentFileLabel(file);
     }
-    readonly property real widestSentFile: {
-        if (kind !== "user" || status !== "completed") return 0;
-        // advanceWidth is a method: read its actual font to track font/theme changes.
-        const metricsFont = historyCopyMetrics.font;
-        let widest = 0;
-        for (const file of inputFiles)
-            widest = Math.max(widest, Math.ceil(historyCopyMetrics.advanceWidth(sentFileLabel(file))));
-        return widest;
-    }
+    readonly property real widestSentFile: ApplicationInfo.assistantWidestSentFile()
     readonly property real historyCopyExtent: Math.ceil(historyCopyMetrics.height)
     readonly property real historyCopyGutter: kind === "user" ? historyCopyExtent + AppSizes.unit : 0
-    implicitHeight: Math.max(content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5),
-        kind === "user" ? historyCopyExtent + AppSizes.unit * 1.5 : 0)
+    implicitHeight: Math.max(content.implicitHeight + (kind === "user" ? AppSizes.unit * 1.5 : AppSizes.unit * 0.5), kind === "user" ? historyCopyExtent + AppSizes.unit * 1.5 : 0)
     FontMetrics {
         id: historyCopyMetrics
         font.family: EaStyle.Fonts.fontFamily
@@ -94,9 +83,7 @@ Rectangle {
         enabled: row.kind === "user"
         acceptedDevices: PointerDevice.AllDevices
         blocking: false
-        readonly property bool overHistory: hovered
-            && point.position.x >= bubble.x && point.position.x <= row.width
-            && point.position.y >= 0 && point.position.y <= row.height
+        readonly property bool overHistory: hovered && point.position.x >= bubble.x && point.position.x <= row.width && point.position.y >= 0 && point.position.y <= row.height
     }
     EaElements.ToolButton {
         id: userCopy
@@ -114,9 +101,7 @@ Rectangle {
             text: userCopy.fontIcon
             font.family: EaStyle.Fonts.iconsFamily
             font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-            color: !userCopy.enabled ? EaStyle.Colors.themeForegroundDisabled
-                : userCopy.hovered || userCopy.down ? EaStyle.Colors.themeForegroundHovered
-                : EaStyle.Colors.themeForegroundMinor
+            color: !userCopy.enabled ? EaStyle.Colors.themeForegroundDisabled : userCopy.hovered || userCopy.down ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForegroundMinor
             horizontalAlignment: Text.AlignHCenter
             verticalAlignment: Text.AlignVCenter
             Accessible.ignored: true
@@ -172,13 +157,11 @@ Rectangle {
             selectionColor: EaStyle.Colors.themeAccent
             selectedTextColor: EaStyle.Colors.themeBackground
             textFormat: TextEdit.PlainText
-            Keys.onPressed: event => {
-                if(event.matches(StandardKey.Copy) && body.selectionStart!==body.selectionEnd) {
-                    ApplicationInfo.copyText(markdownPresentation.selectedSource(body.selectionStart,body.selectionEnd));event.accepted=true;
-                }
-            }
+            Keys.onPressed: event => ApplicationInfo.assistantMessageCopyKey(event)
             onLinkActivated: link => row.reportRequested(row.rowId, link)
-            HoverHandler { cursorShape: body.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.IBeamCursor }
+            HoverHandler {
+                cursorShape: body.hoveredLink.length > 0 ? Qt.PointingHandCursor : Qt.IBeamCursor
+            }
             wrapMode: TextEdit.Wrap
             color: EaStyle.Colors.themeForeground
             font.family: EaStyle.Fonts.fontFamily
@@ -196,19 +179,20 @@ Rectangle {
             Repeater {
                 model: row.inputFiles
                 delegate: RowLayout {
+                    id: sentFileChip
                     required property var modelData
-                    objectName: "assistant.sentFile." + modelData.id
+                    objectName: "assistant.sentFile." + sentFileChip.modelData.id
                     width: sentFiles.width
                     spacing: AppSizes.unit * 0.125
                     EaElements.Label {
                         Layout.fillWidth: true
                         Layout.minimumWidth: 0
-                        text: row.sentFileLabel(modelData)
+                        text: row.sentFileLabel(sentFileChip.modelData)
                         font: historyCopyMetrics.font
                         textFormat: Text.PlainText
                         elide: Text.ElideMiddle
                         color: EaStyle.Colors.themeForegroundMinor
-                        Accessible.name: qsTr("Sent file snapshot: %1, %2").arg(modelData.name).arg(ApplicationInfo.fileSizeKilobytes(modelData.bytes))
+                        Accessible.name: qsTr("Sent file snapshot: %1, %2").arg(sentFileChip.modelData.name).arg(ApplicationInfo.fileSizeKilobytes(sentFileChip.modelData.bytes))
                     }
                 }
             }
@@ -285,9 +269,7 @@ Rectangle {
                     text: activityCopy.fontIcon
                     font.family: EaStyle.Fonts.iconsFamily
                     font.pixelSize: EaStyle.Sizes.fontPixelSize * 0.75
-                    color: !activityCopy.enabled ? EaStyle.Colors.themeForegroundDisabled
-                        : activityCopy.hovered || activityCopy.down ? EaStyle.Colors.themeForegroundHovered
-                        : EaStyle.Colors.themeForegroundMinor
+                    color: !activityCopy.enabled ? EaStyle.Colors.themeForegroundDisabled : activityCopy.hovered || activityCopy.down ? EaStyle.Colors.themeForegroundHovered : EaStyle.Colors.themeForegroundMinor
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     Accessible.ignored: true
@@ -309,8 +291,7 @@ Rectangle {
                 x: AppSizes.unit
                 y: AppSizes.unit * 0.75
                 width: Math.max(0, parent.width - AppSizes.unit * 2)
-                text: visible ? ApplicationInfo.assistantActivityDescription(row.humanDetailsSnapshot,
-                    row.kind, row.compactPresentation, row.payload, row.assistant) : ""
+                text: visible ? ApplicationInfo.assistantActivityDescription(row.humanDetailsSnapshot, row.kind, row.compactPresentation, row.payload, row.assistant) : ""
                 textFormat: TextEdit.PlainText
                 readOnly: true
                 selectByMouse: true

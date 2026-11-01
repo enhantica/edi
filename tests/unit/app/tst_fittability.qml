@@ -58,7 +58,7 @@ TestCase {
         Probe.releaseScratchProjects();
     }
     function open(relative) {
-        verify(Session.openProject(SettingsProof.copyProject(Probe.repoUrl(relative))), "The authored project opens through the real application loader");
+        verify(Session.openProject(SettingsProof.copyProject((String(relative).startsWith("file:") ? relative : Probe.repoUrl(relative)))), "The authored project opens through the real application loader");
         group = parameters.createObject(appWindow.contentItem, {
             project: Session.project
         });
@@ -84,6 +84,113 @@ TestCase {
             row: found[index],
             index: index
         };
+    }
+    function itemDescriptor() {
+        if (group)
+            group.destroy();
+        const table = open("docs/user/cli/pd-neut-tof_diamond-dream_basic/project");
+        const errors = [];
+        const angle = rows().find(row => row.blockName === "dream" && row.category === "instrument" && row.name === "setup_twotheta_bank");
+        verify(angle !== undefined, "Analysis retains the bank angle carried by the committed TOF input");
+        if (angle.fittable || angle.fitReason !== "a descriptor, never fitted")
+            errors.push("bank angle lacks the shared descriptor mark: " + angle.fitReason);
+        const filter = table.sourceModel;
+        for (let i = 1; i <= 4; ++i)
+            filter.setShownGroup(i, false);
+        filter.setShownGroup(4, true);
+        if (!Probe.rows(filter).some(row => row.parameter === angle.parameter))
+            errors.push("Setup values omits the bank angle");
+        filter.setShownGroup(4, false);
+        filter.setShownGroup(1, true);
+        if (Probe.rows(filter).some(row => row.parameter === angle.parameter))
+            errors.push("Not measured incorrectly contains the permanent bank-angle descriptor");
+        compare(errors, [], "The item-backed bank angle has the descriptor reason and belongs only to Setup values");
+    }
+    function unusedTofInputs() {
+        const errors = [];
+        for (const profile of ["tof-jorgensen", "tof-pseudo-voigt"]) {
+            const source = Probe.repoUrl("docs/user/cli/pd-neut-tof_diamond-dream_basic/project");
+            const copy = SettingsProof.copyProject(source);
+            const file = "experiments/dream.edi";
+            const text = SettingsProof.text(copy, file).replace("_peak.type tof-jorgensen", "_peak.type " + profile);
+            verify(SettingsProof.write(copy, file, text), "The TOF inventory witness changes only its declared profile");
+            group.destroy();
+            const table = open(copy);
+            const fields = profile === "tof-jorgensen" ? ["broad_lorentz_gamma_0", "broad_lorentz_gamma_1", "broad_lorentz_gamma_2", "broad_lorentz_size", "broad_lorentz_strain"] : ["rise_alpha_0", "rise_alpha_1", "decay_beta_0", "decay_beta_1"];
+            const filter = table.sourceModel;
+            for (let i = 1; i <= 4; ++i)
+                filter.setShownGroup(i, i === 1);
+            for (const name of fields) {
+                const row = rows().find(item => item.blockName === "dream" && item.category === "peak" && item.name === name);
+                if (!row) {
+                    errors.push(profile + ": missing carried fixed input " + name);
+                    continue;
+                }
+                if (row.free || row.fittable || row.fitReason !== "this fit's data cannot determine it")
+                    errors.push(profile + ": incorrect fixed/blocked reason for " + name);
+                if (!Probe.rows(filter).some(item => item.parameter === row.parameter))
+                    errors.push(profile + ": Not measured omits " + name);
+                filter.setShownGroup(1, false);
+                if (Probe.rows(filter).some(item => item.parameter === row.parameter))
+                    errors.push(profile + ": unselected unused input stays visible: " + name);
+                filter.setShownGroup(1, true);
+            }
+        }
+        compare(errors, [], "Both TOF profiles retain every carried unused coefficient with the shared data reason and reason-group filtering");
+    }
+    function bulkBlockedFlags() {
+        const errors = [];
+        for (const mixed of [false, true]) {
+            group.destroy();
+            const table = open("tests/fixtures/fittability/projects/mixed");
+            const cell = rows().find(row => row.category === "cell" && row.name === "length_a").parameter;
+            const occupancy = rows().find(row => row.category === "atom_site" && row.name === "occupancy").parameter;
+            cell.free = true;
+            occupancy.free = true;
+            const powder = Probe.rows(Session.project.experiments).findIndex(row => row.name === "powder");
+            verify(powder >= 0, "The bulk-clear witness starts with powder linked to the shared cell");
+            Session.project.removeExperiment(powder);
+            const filter = table.sourceModel;
+            filter.datablockFilter = "structure:phase";
+            filter.categoryFilter = mixed ? "" : "cell";
+            filter.variability = ParameterFilterModel.Free;
+            const admitted = Probe.rows(filter);
+            compare(admitted.length, mixed ? 2 : 1, "The authored free-only subset contains the stale cell and optionally its fittable occupancy control");
+            verify(cell.free && !cell.fittable && occupancy.fittable, "Removing powder leaves the cell blocked and free beside an independently fittable occupancy");
+            const before = rows().map(row => [row.parameter, row.value, row.free]);
+            const header = Ui.find(group, "parameters.freeHeader", true);
+            verify(header !== null && Ui.clickPoint(header) !== null, "The bulk-clear header accepts actual pointer input");
+            const hit = Ui.clickPoint(header);
+            mouseClick(header, hit.x, hit.y);
+            let menu;
+            tryVerify(() => {
+                menu = Probe.visiblePopups(appWindow).find(item => item.shown !== undefined);
+                return menu !== undefined;
+            }, 2000, "Clicking the actual free header opens the bulk clearing menu");
+            const fixed = Ui.find(menu.contentItem, "parameters.freeHeader.fixed", true);
+            const free = Ui.find(menu.contentItem, "parameters.freeHeader.free", true);
+            verify(fixed !== null && free !== null, "The production menu exposes distinct Free and Fixed actions");
+            if (!fixed.enabled)
+                errors.push("Fixed disabled for blocked-only free rows");
+            if (fixed.text !== "Fixed · all " + admitted.length || menu.freeCount !== admitted.length)
+                errors.push("Fixed counts omit a shown blocked free flag");
+            if (!mixed && free.enabled)
+                errors.push("Free is available for a blocked-only view");
+            if (fixed.enabled) {
+                mouseClick(fixed);
+                if (cell.free || (mixed && occupancy.free))
+                    errors.push("Fixed left an affected flag free");
+                for (const old of before)
+                    if (old[0].value !== old[1] || (!admitted.some(row => row.parameter === old[0]) && old[0].free !== old[2]))
+                        errors.push("Bulk Fixed changed a value or a hidden flag");
+                Session.project.undo();
+                if (!cell.free || !occupancy.free)
+                    errors.push("One Undo did not restore all affected flags");
+            }
+            menu.close();
+            tryCompare(menu, "visible", false, 2000, "The bulk clearing menu closes before the next independent context");
+        }
+        compare(errors, [], "Bulk Fixed is available for and honestly counts every shown free flag, including blocked rows, as one undoable operation");
     }
     function test_reasons_data() {
         return [
@@ -147,6 +254,12 @@ TestCase {
         ];
     }
     function test_reasons(data) {
+        if (data.tag === "limit")
+            itemDescriptor();
+        if (group) {
+            group.destroy();
+            group = null;
+        }
         const table = open("docs/user/cli/" + data.project + "/project");
         const selected = selectRow(table, data.block, data.category, data.field, data.label);
         compare(selected.row.fittable, false, "A blocked input remains listed with fitting disabled");
@@ -184,6 +297,7 @@ TestCase {
         Session.project.setParametersFree(items, true);
         compare(rows().filter(row => row.free).length, 7, "Free all changes only the seven fittable inputs");
         compare(JSON.stringify(filter.variabilityCounts), JSON.stringify([15, 7, 0, 8]), "Free all preserves the partition and every blocked row");
+        unusedTofInputs();
     }
     function test_readonly_descriptors_data() {
         return [
@@ -248,5 +362,6 @@ TestCase {
         mouseClick(checkbox, point.x, point.y);
         tryCompare(checkbox, "checked", false, 500, "The user can clear the stale free flag");
         tryCompare(checkbox, "enabled", false, 500, "The cleared blocked flag cannot be re-enabled");
+        bulkBlockedFlags();
     }
 }

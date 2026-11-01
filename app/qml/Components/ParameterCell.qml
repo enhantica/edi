@@ -67,13 +67,12 @@ EaComponents.ListViewParameter {
     // Its scientific form: the written token's own digits, every one of them (NumberText.compact); without one, digits
     // that follow the uncertainty and the project's rule when the plain text does not change (9e5 or 9.0e5 for
     // 900000 ± 200000).
-    readonly property string narrowText: item === null || fitDigits ? "" : written ? NumberText.compact(item.fileValue) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits)
+    readonly property string narrowText: item === null || fitDigits ? "" : written ? NumberText.writtenNarrow(item.fileValue, item.fileSu) : NumberText.narrowParameter(item.value, item.hasUncertainty ? item.uncertainty : 0, significantDigits)
     // Set from the changes it follows rather than bound, and only once the table has given the cell its column's width:
     // until then the cell is as wide as its own text, which fits, and following that width back to the text would loop.
     property string shownValue: valueText
     function refit() {
-        const sized = Math.abs(width - implicitWidth) >= 0.5;
-        shownValue = fitDigits || !sized || item === null ? valueText : NumberText.fitted(valueText, room, shownMetrics, narrowText);
+        ApplicationInfo.parameterCellRefit();
     }
     onRoomChanged: refit()
     onValueTextChanged: refit()
@@ -90,13 +89,7 @@ EaComponents.ListViewParameter {
         font.bold: cell.fit && cell.enabled
     }
     // Width scales about linearly with the size; the size found is checked once more, as hinting can differ a pixel.
-    readonly property int scaledPixelSize: {
-        const full = EaStyle.Sizes.fontPixelSize;
-        if (!fitDigits || room <= 0)
-            return full;
-        const needed = fullMetrics.advanceWidth(fullText);
-        return needed > room ? Math.max(1, Math.floor(full * room / needed)) : full;
-    }
+    readonly property int scaledPixelSize: ApplicationInfo.parameterCellScaledPixelSize()
     readonly property FontMetrics scaledMetrics: FontMetrics {
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: cell.scaledPixelSize
@@ -110,20 +103,8 @@ EaComponents.ListViewParameter {
     // The value as edited: the same text, so a cell left as it was changes nothing.
     readonly property string editText: written ? item.fileValue : item !== null ? NumberText.full(item.value) : value
 
-    onActiveFocusChanged: {
-        if (activeFocus) {
-            refreshCleanText();
-        } else {
-            const life = editorLife;
-            const originalOwner = ownerToken, originalProject = editOwner, originalItem = item;
-            commit();
-            if (life.alive && ownerToken === originalOwner && editOwner === originalProject && item === originalItem &&
-                !activeFocus && draft === null && commitInProgress === null && !inputMethodComposing)
-                cursorPosition = 0;
-        }
-    }
-    onTextChanged: if (!activeFocus)
-        cursorPosition = 0
+    onActiveFocusChanged: ApplicationInfo.parameterEditorFocusChanged(ApplicationInfo.ParameterCellEditor)
+    onTextChanged: ApplicationInfo.editorTextChanged()
     // A free value is in the status bar's green, the one green token (EaStyle.Colors.green; the owner, 2026-10-22).
     color: warned ? EaStyle.Colors.red : !enabled || readOnly ? EaStyle.Colors.themeForegroundMinor : item && item.free && canFit ? EaStyle.Colors.green : EaStyle.Colors.themeForeground
 
@@ -166,150 +147,54 @@ EaComponents.ListViewParameter {
     property var ownerToken: ({})
     property var draft: null
     property var commitInProgress: null
-    property var editorLife: ({ alive: true })
+    property var editorLife: ({
+            alive: true
+        })
     property bool assistantEditing: false
     property bool assistantCommitReady: false
     readonly property bool manualEditing: draft !== null && draft.kind === "manual"
     readonly property ParameterItem manualItem: manualEditing ? draft.item : null
     readonly property ParameterItem manualDraftParameter: manualItem
-    readonly property bool assistantManualDraft: inputMethodComposing ||
-        (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
-    onEditOwnerChanged: ownerToken = ({})
-    onObjectNameChanged: ownerToken = ({})
-    Component.onDestruction: editorLife.alive = false
-    onItemChanged: {
-        ownerToken = ({});
-        if (draft !== null)
-            typedRefusal = qsTr("This draft belongs to a different parameter. Escape cancels it.");
-        else
-            refreshCleanText();
-    }
+    readonly property bool assistantManualDraft: inputMethodComposing || (draft !== null && (draft.kind !== "assistant" || draft.owner !== ownerToken))
+    onEditOwnerChanged: ApplicationInfo.editorRetireOwner()
+    onObjectNameChanged: ApplicationInfo.editorRetireOwner()
+    Component.onDestruction: ApplicationInfo.editorDestroyed()
+    onItemChanged: ApplicationInfo.parameterEditorItemChanged(ApplicationInfo.ParameterCellEditor)
     Binding {
         target: cell
         property: "text"
         value: cell.activeFocus ? cell.editText : cell.value
-        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady &&
-              cell.commitInProgress === null && !cell.inputMethodComposing
+        when: cell.draft === null && !cell.assistantEditing && !cell.assistantCommitReady && cell.commitInProgress === null && !cell.inputMethodComposing
         restoreMode: Binding.RestoreNone
     }
     function refreshCleanText() {
-        // The binding follows raw precision as well as display formatting, and
-        // detaches without assigning text while IME or a draft owns the editor.
-        if (draft !== null || commitInProgress !== null || inputMethodComposing ||
-            assistantEditing || assistantCommitReady) return;
-        text = activeFocus ? editText : value;
+        ApplicationInfo.editorRefreshCleanText();
     }
     function rememberManualDraft() {
-        if (assistantEditing && draft !== null && draft.kind === "assistant" && draft.owner === ownerToken)
-            return;
-        const life = editorLife;
-        const context = ownerToken;
-        const original = { owner: draft !== null ? draft.owner : ownerToken,
-                           item: draft !== null ? draft.item : item, kind: "manual" };
-        draft = original;
-        if (!life.alive || draft !== original || ownerToken !== context) return;
-        assistantCommitReady = false;
-        if (!life.alive || draft !== original || ownerToken !== context) return;
-        assistantEditing = false;
+        ApplicationInfo.editorRememberDraft(ApplicationInfo.ParameterCellEditor);
     }
     onTextEdited: rememberManualDraft()
-    onInputMethodComposingChanged: if (inputMethodComposing) rememberManualDraft()
-    onValueChanged: if (draft === null && commitInProgress === null && !inputMethodComposing) typedRefusal = ""
+    onInputMethodComposingChanged: ApplicationInfo.editorCompositionChanged(ApplicationInfo.ParameterCellEditor)
+    onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.ParameterCellEditor)
     onEditTextChanged: refreshCleanText()
     function beginAssistantEdit() {
-        if (commitInProgress !== null || draft !== null || assistantManualDraft) return;
-        const life = editorLife;
-        const originalOwner = ownerToken;
-        const original = { owner: originalOwner, item: item, kind: "assistant" };
-        draft = original;
-        if (!life.alive || ownerToken !== originalOwner || draft !== original) return;
-        assistantEditing = true;
-        if (!life.alive || ownerToken !== originalOwner || draft !== original) return;
-        assistantCommitReady = false;
+        ApplicationInfo.editorBeginAssistantEdit(ApplicationInfo.ParameterCellEditor);
     }
     function allowAssistantCommit() {
-        if (commitInProgress !== null || inputMethodComposing || draft === null ||
-            draft.kind !== "assistant" || draft.owner !== ownerToken || draft.item !== item) return;
-        const life = editorLife;
-        const original = draft;
-        assistantCommitReady = true;
-        if (!life.alive || draft !== original || original.owner !== ownerToken) return;
-        assistantEditing = false;
+        ApplicationInfo.editorAllowAssistantCommit(ApplicationInfo.ParameterCellEditor);
     }
     function resetEditorText() {
-        if (commitInProgress !== null || inputMethodComposing) return;
-        const life = editorLife;
-        const original = draft;
-        const context = ownerToken;
-        assistantCommitReady = false;
-        if (!life.alive || draft !== original || ownerToken !== context) return;
-        assistantEditing = false;
-        if (!life.alive || draft !== original || ownerToken !== context) return;
-        typedRefusal = "";
-        if (!life.alive || draft !== original || ownerToken !== context) return;
-        draft = null;
+        ApplicationInfo.parameterEditorReset();
     }
     function cancelAssistantEdit() {
-        if (draft !== null && draft.kind === "assistant" && draft.owner === ownerToken && draft.item === item)
-            resetEditorText();
+        ApplicationInfo.editorCancelAssistantEdit(ApplicationInfo.ParameterCellEditor);
     }
-    Keys.onEscapePressed: event => {
-        if (commitInProgress !== null || inputMethodComposing) return;
-        event.accepted = true;
-        resetEditorText();
-    }
+    Keys.onEscapePressed: event => ApplicationInfo.editorEscape(ApplicationInfo.ParameterCellEditor, event)
     // editingFinished owns Return as well as focus loss; accepted is the same
     // Return's second signal and cannot acquire a successor draft.
     onEditingFinished: commit()
     function commit() {
-        if (commitInProgress !== null || inputMethodComposing || locked) return;
-        if (assistantEditing) { cancelAssistantEdit(); return; }
-        if (draft === null && !assistantCommitReady) return;
-        if (draft === null || draft.owner !== ownerToken || draft.item !== item || item === null) {
-            typedRefusal = qsTr("This draft no longer belongs to the displayed parameter. Escape cancels it.");
-            return;
-        }
-        const life = editorLife;
-        const originalOwner = ownerToken;
-        const originalProject = editOwner;
-        const originalDraft = draft;
-        const originalItem = item;
-        const originalText = text;
-        const original = {};
-        const current = () => life.alive && cell.ownerToken === originalOwner &&
-            cell.editOwner === originalProject && cell.item === originalItem &&
-            cell.draft === originalDraft && cell.commitInProgress === original;
-        const clearing = () => life.alive && cell.ownerToken === originalOwner &&
-            cell.editOwner === originalProject && cell.item === originalItem &&
-            cell.draft === null && cell.commitInProgress === original;
-        commitInProgress = original;
-        try {
-            if (!current()) return;
-            let message = "";
-            if (originalText !== value && originalText !== editText) {
-                message = TypedInput.refusal(originalText, "number");
-                if (!current()) return;
-                if (message === "") {
-                    originalItem.value = Number(originalText);
-                    if (!current()) return;
-                    message = originalItem.lastError;
-                    if (!current()) return;
-                }
-            }
-            assistantCommitReady = false;
-            if (!current()) return;
-            assistantEditing = false;
-            if (!current()) return;
-            draft = null;
-            if (!clearing()) return;
-            typedRefusal = message;
-        } finally {
-            if (life.alive && cell.commitInProgress === original)
-                cell.commitInProgress = null;
-        }
+        ApplicationInfo.editorCommit(ApplicationInfo.ParameterCellEditor);
     }
-    onFitToggled: checked => {
-        if (item !== null)
-            item.free = checked;
-    }
+    onFitToggled: checked => ApplicationInfo.parameterEditorFitToggled(checked)
 }

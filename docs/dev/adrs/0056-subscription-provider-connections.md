@@ -7,7 +7,7 @@ Priority: High
 
 The first desktop connection implements OpenAI's [open-source local SIWC flow](https://developers.openai.com/siwc/token-sharing-open-source). It uses the user's ChatGPT subscription, dynamic registration, a stable host identifier, a system browser and a loopback callback. It never substitutes an API key or imports another application's credentials. The provider's issued client identifier is retained per verified account. A fresh connection identifier fences every sign-in and reconnect.
 
-`assistant/native/chatgpt_connection.*` owns Qt networking and credential storage; the Qt-free controller (ADR-0054) owns project authority. PKCE, unpredictable state and nonce bind the callback to the current attempt. The callback requires the exact loopback Host, path and unique query fields. Token acceptance verifies the OpenID issuer, audience, nonce, expiry, subject and RS256 signature against the issuer's keys through upstream jwt-cpp. Required direct-use scopes and a bounded positive access-token lifetime are checked. Redirects are refused. Cancellation or sign-out invalidates pending network completions.
+`assistant/native/chatgpt_connection.*` owns Qt networking and credential storage; the Qt-free controller (ADR-0055) owns project authority. PKCE, unpredictable state and nonce bind the callback to the current attempt. The callback requires the exact loopback Host, path and unique query fields. Token acceptance verifies the OpenID issuer, audience, nonce, expiry, subject and RS256 signature against the issuer's keys through upstream jwt-cpp. Required direct-use scopes and a bounded positive access-token lifetime are checked. Redirects are refused. Cancellation or sign-out invalidates pending network completions.
 
 On POSIX, edi's own app-local connection directory and records are owner-only. Credentials are separate from projects, conversation history and exports. Sign-out invalidates active operations, attempts provider revocation and erases only the selected credential record. Nonsecret issued-registration and host mappings remain for provider-prescribed reuse; unconfirmed revocation or failed erasure is visible. Windows subscription sign-in refuses until an OS credential-store adapter exists; permissions must not be claimed there. Additional saved-registration selection UI remains pending.
 
@@ -88,7 +88,7 @@ native-only and is not the preview launch. The production CMake executable targe
 extension or an independent test host. Its current local build prerequisite is the diagnostic integrated SDK;
 the committed SDK pin and official CI qualification remain unresolved. Building this draft branch alone is
 not a promise of a verified preview: real VM terminal-retention/failure-card behavior, current production smoke and live
-subscription verification remain unfinished under ADR0056.
+subscription verification remain unfinished under ADR0057.
 
 Decoder failure status and cause are distinct. Native feed and finish preserve the decoder's bounded
 message/code; they describe an edi decoding failure rather than claiming a provider refusal. The VM

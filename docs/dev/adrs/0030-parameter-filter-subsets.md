@@ -33,3 +33,10 @@ model. Unknown categories retain a readable fallback entry.
 `tst_parameter_groups.qml` exercises CW and TOF membership, isotropic and
 anisotropic displacement, all menu counts, combined name/free filters, future
 categories, duplicate suppression and source-model updates/detachment.
+
+
+## Native selection and form dispatch
+
+ApplicationInfo executes the parameter group's existing selection reconciliation, free/fixed menu row enumeration and action, slider limit/adjusting procedures and picker presentation. ParameterFilterModel remains the source of shown membership; ProjectViewModel.setParametersFree remains the single Undo action. Repeated filter/owner reads and current parameter selection keep their original order, and each model notification still enters the existing named forwarding function. No row cache, eligibility rule or independent selection store is introduced.
+
+The adjacent scientific forms use the same native dispatch design for background type questions, experiment-type changes, generated-category text edits, range/reflection/start-state display and wavelength-band/derived-value formatting. Their existing backend setters and Session dictionary display functions remain authoritative. QML keeps layout, bindings and direct dispatch to existing setters. The common display helpers retain each original undefined/NaN distinction and current engine calls.

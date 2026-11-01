@@ -1,7 +1,7 @@
 # Chart controls references
 
 `owner.json` freezes the light values, calmer dark values, final names and
-Blue-Red stops from relay's committed owner records of 2026-10-26. Regenerate
+Blue-Red stops from approved design records of 2026-10-26 and 2026-10-27. Regenerate
 with `freeze.py <decision-records.md> --elements data/elements/element-styles.tsv`.
 The copied element table preserves the original Jmol and VESTA input colours
 used by the 3D view; the 2D adjustment must not change that table.

@@ -24,12 +24,7 @@ Item {
     readonly property real toolbarRightInset: holder.chart ? holder.chart.toolbarRightInset : AppSizes.mainAreaMargin
 
     function renew() {
-        const old = holder.chart;
-        holder.chart = chartComponent.createObject(holder) as PatternChart;
-        if (old) {
-            old.visible = false;
-            old.destroy();
-        }
+        ApplicationInfo.renewPatternChart();
     }
 
     Component.onCompleted: holder.renew()

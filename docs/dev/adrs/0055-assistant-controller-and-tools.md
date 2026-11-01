@@ -266,7 +266,7 @@ The actual preowned recorded-edit door uses structural publication for this decl
 
 ### Recorded native input through genuine widgets
 
-ADR0056's optional visible mode extends the prior ParameterItem/ProjectEditor and FitViewModel entrances rather than bypassing them. Ordinary manual setters retain their existing apply semantics. A private exact parameter/expected-value-or-free receipt temporarily selects the preowned recorded-edit path only for the genuine final widget event; unrelated setters refuse during that final event, and the original native record/receipt/currentness still owns the outcome and response. The complete finite helper/editor/string roles are charged before animation/input. No operation, path, account grant or tool is added to the native catalog.
+ADR0057's optional visible mode extends the prior ParameterItem/ProjectEditor and FitViewModel entrances rather than bypassing them. Ordinary manual setters retain their existing apply semantics. A private exact parameter/expected-value-or-free receipt temporarily selects the preowned recorded-edit path only for the genuine final widget event; unrelated setters refuse during that final event, and the original native record/receipt/currentness still owns the outcome and response. The complete finite helper/editor/string roles are charged before animation/input. No operation, path, account grant or tool is added to the native catalog.
 
 FitViewModel separates fallible native-completion preparation from its existing start implementation, enabling the real QML Start button to admit the existing job after the original callback is owned. A token can discard only an unsubmitted matching preparation. Actual submitted work keeps cancellation/final-report ownership even when button presentation throws; the public QML entrance contains exceptions and stops admitted work rather than letting exceptions cross Qt. Default native start uses the same preparation and actual worker path. Original response and completion scopes guard UI restoration and all subsequent settlement after synchronous owner replacement. Static source inspection is not a GUI, worker-fault or runtime qualification.
 
@@ -607,7 +607,7 @@ bootstrap requirement is added. Explicit keep-fixed/no-sharing/composition
 instructions remain authoritative; existing free flags and missing declarations
 are initial state, not implied prohibitions. The rejected parallel creation window remains a separate pending replacement,
 not a completed human-route capability. Background follows its original row
-controls as described in ADR-0058.
+controls as described in ADR-0059.
 
 ### Complete the same named empty project
 
@@ -943,7 +943,7 @@ claim of a perfect filesystem compare-and-swap is introduced.
 ### Background through its original row controls
 
 BackgroundGroup's original Add, ID/position/intensity rows, parameter context
-menu and Remove are the manual and visible entrances (ADR-0058). The duplicate
+menu and Remove are the manual and visible entrances (ADR-0059). The duplicate
 background setup form is removed; Add creates the ordinary default editable row
 through the same closed editor and recorded Undo. Native normal mode retains
 one strict operation; genuine visible actions prevalidate the final request and

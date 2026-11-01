@@ -145,15 +145,19 @@ def test_relation_tables_expose_live_append_duplicate_and_remove_actions(compone
 
 
 def test_linked_structures_are_explicitly_moved_to_the_end_of_presentation_order():
+    """The historical linked-group witness now follows dictionary order without an exception."""
     text = source('src/category_list_model.cpp')
     body = text.split('presentation_order(', 1)[1].split(
         'CategoryListModel::CategoryListModel', 1
     )[0]
-    assert '"linked_structure"' in body, (
-        'presentation ordering must explicitly handle Linked structures after all other groups'
+    assert 'std::stable_sort' in body, (
+        'Category presentation preserves declaration order when dictionary numbers tie'
     )
-    assert re.search(r'\{\s*"excluded_region"\s*,\s*"linked_structure"\s*}', body), (
-        'the final ordinary Basic group must precede Linked structures in presentation order'
+    assert re.search(
+        r'return\s+edi::category_order\(a->id\)\s*<\s*edi::category_order\(b->id\)', body
+    ), 'Every sidebar group follows its declared dictionary order number'
+    assert '"linked_structure"' not in body, (
+        'Linked structures have no separate ordering rule outside the dictionary'
     )
 
 

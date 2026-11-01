@@ -101,6 +101,12 @@ Rectangle {
                 failures.push("the reloaded model lost the named saved row");
             compare(failures.length, 0, "Successful report publication stays coherent in live, persisted, scan-template and cached Text models: " + failures.join("; "));
         }
+        function receiptContains(location, relative, event) {
+            const observed = SettingsProof.fileObservation(location, relative);
+            if (observed.error !== undefined)
+                throw new Error(observed.error);
+            return observed.exists === true && observed.text.includes(event);
+        }
         function test_late_failure_preserves_completed_rows_and_refreshes_text_data() {
             const cases = [];
             for (const scan of [false, true])
@@ -142,6 +148,28 @@ Rectangle {
             verify(cached.includes("_report_file"), "The Text snapshot is read before the failing replacement");
             failed.target = report;
             failed.clear();
+            compare(receiptContains(location, "failure-receipt", "write-after-open"), false, "A receipt that has not been created yet keeps the publication poll pending");
+            for (const witness of [
+                {
+                    location: "",
+                    relative: "failure-receipt"
+                },
+                {
+                    location,
+                    relative: "reports"
+                }
+            ]) {
+                let rejected = false;
+                try {
+                    receiptContains(witness.location, witness.relative, "write-after-open");
+                } catch (error) {
+                    rejected = true;
+                }
+                verify(rejected, "Invalid directory URLs and unreadable receipt targets reject instead of looking pending");
+            }
+            verify(SettingsProof.write(location, "failure-receipt", "unrelated event"), "The receipt observer control creates independent nonmatching bytes");
+            compare(receiptContains(location, "failure-receipt", "write-after-open"), false, "A present receipt without the required event cannot complete the poll");
+            verify(SettingsProof.remove(location, "failure-receipt"), "The control receipt is removed before the actual writer starts");
             BoundaryProof.armFailure(location, data.kind);
             if (data.web) {
                 browser = SettingsProof.webExport(page, report, findChild(page, "report.preview"));
@@ -149,7 +177,7 @@ Rectangle {
                 browser.saveReport();
             } else
                 report.saveReport("PT Sans");
-            tryVerify(() => SettingsProof.text(location, "failure-receipt").includes(data.kind === "settings-close" ? "close-after-write" : "write-after-open"), 15000, "The failure reaches a real post-open settings or PDF write");
+            tryVerify(() => receiptContains(location, "failure-receipt", data.kind === "settings-close" ? "close-after-write" : "write-after-open"), 15000, "The failure reaches a real post-open settings or PDF write");
             BoundaryProof.clearFailure();
             verify(failed.count > 0, "The app reports a late output failure before claiming completion");
             const after = SettingsProof.text(location, "reports/report.edi");

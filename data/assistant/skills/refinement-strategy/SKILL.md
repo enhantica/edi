@@ -5,7 +5,7 @@ description: Choose and revise a refinement strategy from actual model, data, na
 
 # Refine from current evidence
 
-Version: 1.6.2. Follow the user's goal, supplied constraints and actually offered
+Version: 1.6.3. Follow the user's goal, supplied constraints and actually offered
 operations. This is a decision loop, not a fixed recipe, family, stage count or
 target statistic. Explicit user groups/subsets/order/flags override delegated
 planning; native eligibility and ownership still apply.
@@ -38,15 +38,24 @@ planning; native eligibility and ownership still apply.
    Estimate alone is not validation. Establish baseline evidence before profile
    interpretation.
    Keep accepted useful eligible free groups in the fit by default while adding
-   ONE new unvalidated group. Introduce background/profile and coordinate/ADP
-   blocks separately: assess the first new block before adding the other, with
-   the other UNVALIDATED block fixed. Already accepted groups remain cumulative.
+   ONE new unvalidated scientific block. Before EACH fit reconcile the COMPLETE
+   actual free population with accepted groups plus that one new block. A group
+   is not accepted merely because its flags were free by default, setup happened
+   earlier, or set_free succeeded; acceptance needs actual scientific assessment.
+   Different new categories do not become one block by putting them in one batch
+   or setting them all up before the first fit. Introduce background separately
+   from profile, and coordinates separately from ADPs; keep other UNVALIDATED
+   categories fixed until the current block is assessed. Already accepted groups
+   remain cumulative. This does not split an evidence-justified within-profile
+   coefficient group or forbid simultaneous X/Y; explicit user groups still win.
    Hold an accepted group only for explicit user/calibration/native-dependence
    requirements or a stated diagnostic based on observed correlation, confounding
    or instability; keep that comparison restorable. Do not routinely freeze and
    re-release successful groups, or require a final fixed/free sweep or extra fit.
    Collect intended eligible members across sites BEFORE constructing flags;
    finish one category/subset rather than alternate categories atom by atom.
+   After a failed new block, repair that implicated block while retaining earlier
+   accepted stages; do not add unrelated groups or restart everything all-free.
    Use one exact uniform eligible group request when justified. Read the COMPLETE
    actual free population: set_free changes listed flags only, not omitted flags.
    No group-first order, all-free background stage or sharing rule is universal;

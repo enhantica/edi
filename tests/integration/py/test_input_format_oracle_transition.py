@@ -9,6 +9,7 @@ import pytest
 
 from tests.fixtures.cwl_family.historical import original_tokens
 from tests.fixtures.loop_parameter_ids import adapt_input_oracles as generator
+from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -26,7 +27,7 @@ def current(key, row):
     return (
         original_tokens(pre_catalogue_bytes(path))
         if key.endswith('#pre-catalogue')
-        else path.read_bytes()
+        else read_previous(path)
     )
 
 

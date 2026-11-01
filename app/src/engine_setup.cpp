@@ -151,7 +151,7 @@ namespace {
 // long again as 50 ms ones.
 class PageIncubation : public QObject, public QQmlIncubationController {
    public:
-    PageIncubation() {
+    explicit PageIncubation(QObject* parent) : QObject(parent) {
         timer_.setInterval(0);
         QObject::connect(&timer_, &QTimer::timeout, &timer_, [this] { incubateFor(50); });
     }
@@ -238,8 +238,8 @@ QByteArray& platform_spec() {
 }  // namespace
 
 static void configure_engine_settings(QQmlEngine& engine) {
-    static PageIncubation incubation;
-    engine.setIncubationController(&incubation);
+    // A controller drives one engine; QObject parenting owns it until this engine retires.
+    engine.setIncubationController(new PageIncubation(&engine));
     // The base's Settings objects write here (Globals/Vars.qml `pySettingsPath`); without it they would
     // point inside the read-only module resources. A demo or a test run uses its fresh directory.
     const QString config_dir = fresh_config_dir().isEmpty()

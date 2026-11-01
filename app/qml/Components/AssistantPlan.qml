@@ -11,13 +11,13 @@ Column {
     visible: Object.keys(assistant.pendingPlan).length > 0
     spacing: AppSizes.unit * 0.5
     EaElements.Label {
-            textFormat: Text.PlainText
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: card.assistant.pendingPlan.summary || ""
     }
     EaElements.Label {
-            textFormat: Text.PlainText
+        textFormat: Text.PlainText
         width: parent.width
         wrapMode: Text.Wrap
         text: qsTr("Approve the listed parameter groups and budget. Each isolated trial fixes all other parameters; only the chosen group is free. The accepted project changes only after a converged comparable improvement.")
@@ -37,13 +37,7 @@ Column {
             width: parent.width
             wrapMode: Text.WrapAnywhere
             textFormat: Text.PlainText
-            text: {
-                const plan = card.assistant.pendingPlan;
-                if (!plan.budget)
-                    return "";
-                const groups = (plan.groups || []).map(group => group.id + ": " + group.paths.join(", ")).join("\n");
-                return groups + "\n" + qsTr("Budget: %1 trials, %2 iterations, %3 seconds").arg(plan.budget.max_trials).arg(plan.budget.max_iterations).arg(plan.budget.max_elapsed_ms / 1000) + "\n" + qsTr("Improvement tolerance: absolute %1, relative %2").arg(plan.objective.absolute_tolerance).arg(plan.objective.relative_tolerance);
-            }
+            text: ApplicationInfo.assistantPlanDescription()
         }
     }
     EaElements.Button {

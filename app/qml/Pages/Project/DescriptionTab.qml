@@ -35,10 +35,7 @@ Rectangle {
         MouseArea {
             width: tab.width
             height: Math.max(tab.height, column.height + 2 * column.y)
-            onPressed: mouse => {
-                tab.forceActiveFocus();
-                mouse.accepted = false;
-            }
+            onPressed: mouse => ApplicationInfo.descriptionPressed(mouse)
         }
 
         Column {
@@ -85,15 +82,9 @@ Rectangle {
                 // Return and leaving the field both commit; the second of the two finds nothing new. A
                 // refused name returns the field to the project's name and shows why, as ParameterField does.
                 function commit() {
-                    if (!tab.project || text === tab.project.name)
-                        return;
-                    if (text === "") {
-                        refusal = qsTr("A project needs a name");
-                    } else {
-                        tab.project.name = text;
-                        refusal = tab.project.lastError;
-                    }
-                    text = Qt.binding(() => tab.project ? tab.project.name : "");
+                    ApplicationInfo.descriptionCommit(0, () => {
+                        text = Qt.binding(() => tab.project ? tab.project.name : "");
+                    });
                 }
             }
 
@@ -114,8 +105,7 @@ Rectangle {
 
                     // Return and leaving the field both commit; the second of the two finds nothing new.
                     function commit() {
-                        if (tab.project && text !== tab.project.title)
-                            tab.project.title = text;
+                        ApplicationInfo.descriptionCommit(1, undefined);
                     }
                 }
             }
@@ -132,26 +122,23 @@ Rectangle {
 
                     // Return and leaving the field both commit; the second of the two finds nothing new.
                     function commit() {
-                        if (tab.project && text !== tab.project.authors)
-                            tab.project.authors = text;
+                        ApplicationInfo.descriptionCommit(2, undefined);
                     }
                 }
             }
+            // Several lines, wrapped, from its start (the owner, 2026-10-27): Return types a line break, and leaving the
+            // field commits.
             DescriptionRow {
                 label: qsTr("Description")
-                EaElements.TextInput {
+                EaElements.TextArea {
                     objectName: "project.description"
                     width: column.width - AppSizes.descriptionNameColumnWidth
+                    padding: 0
+                    backgroundOpacity: 0
+                    wrapMode: TextEdit.Wrap
                     placeholderText: qsTr("Enter project description here")
                     text: tab.project ? tab.project.description : ""
-                    onAccepted: commit()
-                    onEditingFinished: commit()
-
-                    // Return and leaving the field both commit; the second of the two finds nothing new.
-                    function commit() {
-                        if (tab.project && text !== tab.project.description)
-                            tab.project.description = text;
-                    }
+                    onEditingFinished: ApplicationInfo.descriptionCommit(3, undefined)
                 }
             }
 

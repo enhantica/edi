@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "edi/display.hpp"
+#include "report_json.hpp"
 
 // The HTML report (edi ADR-0036): the text sections written here from the model, set after the owner's reference
 // report (diffraction-lib's, 2026-10-13), and report.js drawing the charts from the model's JSON in the same file.
@@ -911,7 +912,7 @@ std::string report_html(const ReportModel& model, const ReportLibraries& librari
     // named in the file at all: its contents entry stays with the app's Contents boxes.
     ReportModel embedded_model = model;
     std::erase_if(embedded_model.contents, [](const ReportContentsItem& item) { return !item.included; });
-    out += "<script type=\"application/json\" id=\"edi-report-model\">" + report_to_json(embedded_model) +
+    out += "<script type=\"application/json\" id=\"edi-report-model\">" + detail::report_html_model_json(embedded_model) +
            "</script>\n";
     if (embedded) {
         out += "<script>" + script_text(libraries.plotly) + "</script>\n";

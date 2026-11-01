@@ -4,7 +4,7 @@
 #
 #   pixi run -e app app-with-crysta <crysta-checkout> [app arguments]
 #
-# crysta's engine is built from the checkout as it is, in crysta's own `cpp-ci` pixi environment, and
+# crysta's engine is built from the checkout as it is, in crysta's own `cpp-toolchain` pixi environment, and
 # installed under <crysta-checkout>/build/edi-local. The app then links that build instead of the pinned
 # crysta SDK. crysta's tests are not run. CI and releases always use the pinned SDK (ADR-0017), so this
 # script refuses to run in CI. See docs/dev/local-crysta.md.
@@ -43,18 +43,10 @@ if [ "$(uname -s)" = Darwin ]; then
     fi
 fi
 echo "app-with-crysta: building crysta from $src ($(git -C "$src" describe --always --dirty 2>/dev/null || echo 'no git')); crysta's tests are not run"
-# The `cpp-ci` environment is brought to crysta's lock file first, so an environment made before a pin
-# moved is updated. Where crysta's own Python package is not installed yet, it stays out: its editable
-# install would build all of crysta a second time. Where it is installed, it is kept as it is (pixi's
-# --skip would remove it).
-env_dir="$src/.pixi/envs/cpp-ci"
-skip=(--skip crysta)
-if compgen -G "$env_dir/lib/python3*/site-packages/crysta-*.dist-info" >/dev/null; then
-    skip=()
-fi
-"${clean[@]}" "$pixi_bin" install --frozen --manifest-path "$src/pixi.toml" -e cpp-ci ${skip[@]+"${skip[@]}"}
+# Install the locked native toolchain, without the Python package or its test extras.
+"${clean[@]}" "$pixi_bin" install --frozen --manifest-path "$src/pixi.toml" -e cpp-toolchain
 # shellcheck disable=SC2016  # expanded by the inner shell
-"${clean[@]}" "$pixi_bin" run --as-is --manifest-path "$src/pixi.toml" -e cpp-ci bash -euo pipefail -c '
+"${clean[@]}" "$pixi_bin" run --as-is --manifest-path "$src/pixi.toml" -e cpp-toolchain bash -euo pipefail -c '
     cmake -S "$1" -B "$2" -G Ninja -DCMAKE_BUILD_TYPE=Release -DCRYSTA_CXX_PACKAGE=ON -DCRYSTA_LTO=OFF \
         -DCMAKE_OSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-}" >/dev/null
     cmake --build "$2" --target crysta_core crysta_cli
