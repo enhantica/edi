@@ -309,7 +309,7 @@ def test_c11_t41_two_pytest_workers_cannot_enter_the_shared_core_build(
         assert 'build' in output.lower() or 'artifact' in output.lower()
 
 
-def _partition_transport(groups, omitted, *, core=False):
+def _partition_transport(groups, omitted, *, core=False, weekly_omitted=True):
     with tempfile.TemporaryDirectory(prefix='system-part-contract-') as scratch:
         replay = Path(scratch)
         (replay / 'tests').mkdir()
@@ -328,6 +328,7 @@ def _partition_transport(groups, omitted, *, core=False):
             **os.environ,
             'PATH': str(bindir) + os.pathsep + os.defpath,
             'EDI_RUN_NIGHTLY_ONLY': 'false' if omitted else 'true',
+            'EDI_RUN_WEEKLY_ONLY': 'false' if weekly_omitted else 'true',
             'EDI_TEST_DURATIONS': str(replay / 'no-prior-durations.json'),
         }
         result = subprocess.run(
@@ -504,20 +505,31 @@ def _assert_platform_nightly_partition(groups, tasks, jobs, active):
         'The core and system runners retain the same schedule and full-manual nightly switch'
     )
     _assert_nightly_inclusion(switch, active)
+    weekly_paths = groups['weekly-only']['paths']
     for omitted in (False, True):
         result = _partition_transport(groups, omitted)
         ignores = ['--ignore=' + path for path in nightly_paths] if omitted else []
-        core_result = _partition_transport(groups, omitted, core=True)
-        assert json.loads(core_result.stdout) == [
-            '-m',
-            'pytest',
-            'tests/unit',
-            'tests/integration',
-            '--ignore=tests/integration/app',
-            '-q',
-            *ignores,
-            '--collect-only',
-        ], 'The production core runner excludes exactly nightly files before PR collection'
+        for weekly_omitted in (False, True):
+            core_result = _partition_transport(
+                groups, omitted, core=True, weekly_omitted=weekly_omitted
+            )
+            weekly_ignores = (
+                ['--ignore=' + path for path in weekly_paths] if weekly_omitted else []
+            )
+            assert json.loads(core_result.stdout) == [
+                '-m',
+                'pytest',
+                'tests/unit',
+                'tests/integration',
+                '--ignore=tests/integration/app',
+                '-q',
+                *ignores,
+                *weekly_ignores,
+                '--collect-only',
+            ], (
+                'The production core runner excludes exactly the declared nightly and weekly '
+                'files unless their respective inclusion switches are true'
+            )
         ignores.append('--ignore=' + LICENCE_MODULE)
         assert json.loads(result.stdout) == [
             '-m',
