@@ -241,15 +241,19 @@ class UsageLookupContext final : public QObject {
 class UsageCallLookupContext final : public QObject {
     Q_OBJECT
     Q_PROPERTY(QJSValue Math READ math WRITE setMath NOTIFY mathChanged)
+    Q_PROPERTY(QJSValue JSON READ json WRITE setJson NOTIFY jsonChanged)
     Q_PROPERTY(QJSValue Date READ date WRITE setDate NOTIFY dateChanged)
     Q_PROPERTY(QJSValue isFinite READ finite WRITE setFinite NOTIFY finiteChanged)
-    QJSValue math_, date_, finite_;
+    QJSValue math_, json_, date_, finite_;
 
    public:
     explicit UsageCallLookupContext(QJSEngine* engine)
         : math_(engine->globalObject().property("Math")),
+          json_(engine->globalObject().property("JSON")),
           date_(engine->globalObject().property("Date")),
           finite_(engine->globalObject().property("isFinite")) {}
+    QJSValue json() const { return json_; }
+    void setJson(const QJSValue& value) { json_ = value; }
     QJSValue date() const { return date_; }
     QJSValue finite() const { return finite_; }
     void setDate(const QJSValue& value) { date_ = value; }
@@ -258,6 +262,7 @@ class UsageCallLookupContext final : public QObject {
     void setMath(const QJSValue& value) { math_ = value; }
    signals:
     void mathChanged();
+    void jsonChanged();
     void dateChanged();
     void finiteChanged();
 };
@@ -657,7 +662,13 @@ class UsageAccountProof final : public QObject {
             prerequisite(foreign && QQmlEngine::contextForObject(foreignContext.get())->engine() ==
                                         foreignEngine.get(),
                          "second AVM is obtained only from its actual imported Session");
-            auto owner = panel(applicationInfo);
+            UsageCallLookupContext jsonContext(engine_);
+            QJSEngine::setObjectOwnership(&jsonContext, QJSEngine::CppOwnership);
+            QQmlContext context(engine_->rootContext());
+            context.setContextObject(&jsonContext);
+            const auto contextOwner = engine_->newQObject(&jsonContext);
+            requireUsageContextReadback(&context, "JSON", jsonContext.json(), true, trace);
+            auto owner = panel(applicationInfo, &context);
             auto scriptOwner = engine_->newQObject(owner.get());
             QPointer<QObject> original = scriptOwner.property("assistant").toQObject();
             prerequisite(original && foreign != original, "genuine Session AVMs are distinct");
@@ -674,13 +685,12 @@ class UsageAccountProof final : public QObject {
                 usageChanges.isValid() && assistantChanges.isValid() && warnings.isValid(),
                 "actual publication and engine warning observers are valid");
             const auto engineGlobal = engine_->globalObject();
+            const auto globalJSON = engineGlobal.property("JSON");
             const auto install = engine_->evaluate(QStringLiteral(R"JS(
-(function(engineGlobal, owner, mode, thrown) {
-    const json = engineGlobal.JSON;
-    const globalDescriptor = Object.getOwnPropertyDescriptor(engineGlobal, 'JSON');
-    const parseDescriptor = Object.getOwnPropertyDescriptor(json, 'parse');
-    const stringifyDescriptor = Object.getOwnPropertyDescriptor(json, 'stringify');
-    const parse = json.parse, stringify = json.stringify;
+(function(engineGlobal, contextOwner, owner, mode, thrown) {
+    const previousJSON = contextOwner.JSON;
+    const json = Object.create(engineGlobal.JSON);
+    const parse = engineGlobal.JSON.parse, stringify = engineGlobal.JSON.stringify;
     const proof = {events:[], throws:0, parseReceiver:false, stringifyReceiver:false,
                    seenOwner:null, raw:undefined, reentered:0, replacement:null};
     function step(name) {
@@ -714,7 +724,7 @@ class UsageAccountProof final : public QObject {
                     get:function() { step('stringify-get'); return stringifyCall; }
                 });
                 proof.replacement = replacement;
-                engineGlobal.JSON = replacement;
+                contextOwner.JSON = replacement;
             }
             return function(value) {
                 proof.parseReceiver = this === json;
@@ -723,11 +733,10 @@ class UsageAccountProof final : public QObject {
             };
         }
     });
-    proof.restore = function() {
-        Object.defineProperty(json, 'parse', parseDescriptor);
-        Object.defineProperty(json, 'stringify', stringifyDescriptor);
-        Object.defineProperty(engineGlobal, 'JSON', globalDescriptor);
-    };
+    proof.json = json;
+    proof.gettersOwned = typeof Object.getOwnPropertyDescriptor(json, 'parse').get === 'function'
+        && typeof Object.getOwnPropertyDescriptor(json, 'stringify').get === 'function';
+    proof.restore = function() { contextOwner.JSON = previousJSON; };
     return proof;
 })
 )JS"));
@@ -761,11 +770,39 @@ class UsageAccountProof final : public QObject {
             const auto exercise = [&](const QString& mode, const QJSValue& thrown,
                                       int expectedSteps, bool catches,
                                       const QString& sourceLabel) {
-                auto proof = install.call({engineGlobal, scriptOwner, QJSValue(mode), thrown});
-                prerequisite(proof.isObject() && !engine_->hasError(),
-                             "same-engine instrument installed without a pending error");
-                const auto restore =
-                    qScopeGuard([&] { proof.property("restore").callWithInstance(proof); });
+                const auto previousJSON = jsonContext.json();
+                auto proof = install.call(
+                    {engineGlobal, contextOwner, scriptOwner, QJSValue(mode), thrown});
+                const auto json = proof.property("json");
+                retainUsageContextAdmission(
+                    trace, {{"stage", "owned-projection-admission"},
+                            {"mode", mode},
+                            {"proof", usageValueKind(proof)},
+                            {"json", usageValueKind(json)},
+                            {"restore", usageValueKind(proof.property("restore"))},
+                            {"pending_engine_error", engine_->hasError()}});
+                prerequisite(
+                    proof.isObject() && !proof.isError() && !engine_->hasError() &&
+                        proof.hasOwnProperty("json") && json.isObject() && !json.isCallable() &&
+                        !json.isError() && proof.hasOwnProperty("restore") &&
+                        proof.property("restore").isCallable() &&
+                        proof.hasOwnProperty("gettersOwned") &&
+                        proof.property("gettersOwned").isBool() &&
+                        proof.property("gettersOwned").toBool() &&
+                        proof.hasOwnProperty("events") && proof.property("events").isArray() &&
+                        proof.hasOwnProperty("throws") && proof.property("throws").isNumber() &&
+                        proof.property("throws").toInt() == 0,
+                    "same-engine own JSON getters and restore admit before live use");
+                const auto restore = qScopeGuard([&] {
+                    const auto restored = proof.property("restore").callWithInstance(proof);
+                    check.require(
+                        !restored.isError() && !engine_->hasError() &&
+                            jsonContext.json().strictlyEquals(previousJSON) &&
+                            engine_->globalObject().property("JSON").strictlyEquals(globalJSON),
+                        "owned JSON restoration leaves the actual locked global unchanged");
+                });
+                jsonContext.setJson(json);
+                requireUsageContextReadback(&context, "JSON", json, true, trace);
                 const int publications = usageChanges.count();
                 scriptOwner.setProperty("assistant", engine_->newQObject(next));
                 prerequisite(scriptOwner.property("assistant").toQObject() == next,
@@ -808,10 +845,10 @@ class UsageAccountProof final : public QObject {
                             proof.property("seenOwner").toQObject() == next,
                         "original method receivers and then-current genuine owner are retained");
                     if (mode == "replace-json")
-                        check.require(engine_->globalObject().property("JSON").strictlyEquals(
-                                          proof.property("replacement")),
-                                      "the late parse getter replaces global JSON without "
-                                      "retargeting prior stringify");
+                        check.require(
+                            jsonContext.json().strictlyEquals(proof.property("replacement")),
+                            "the late parse getter replaces context JSON without "
+                            "retargeting prior stringify");
                     if (mode == "reenter-color") {
                         check.require(
                             proof.property("reentered").toInt() == 1 &&
