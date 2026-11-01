@@ -9,6 +9,8 @@ import edi
 import pytest
 from c11_t40_helpers import experiment_path, make_schema_2_case, make_schema_2_project
 
+from tests.fixtures.project_save.reference import six_digits
+
 PEAK_PARAMETERS = (
     'broad_gauss_sigma_0',
     'broad_gauss_sigma_1',
@@ -279,6 +281,7 @@ def test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b(
     expected_value: float,
     expected_uncertainty: float,
 ) -> None:
+    assert expected_uncertainty >= 0, 'The retained CIF source uncertainty remains nonnegative'
     text = _cif(columns)
     path = tmp_path / f'{name}.cif'
     path.write_text(text, encoding='utf-8')
@@ -290,11 +293,11 @@ def test_c11_t40_cif_adp_spellings_preserve_type_and_prefer_b(
         'an undeclared CIF site must default to Biso regardless of the B/U input spelling'
     )
     parameter = site.adp_iso
-    assert parameter.value == pytest.approx(expected_value, abs=1.0e-12), (
+    assert parameter.value == pytest.approx(float(six_digits(expected_value)), abs=1.0e-12), (
         'undeclared U-only CIF values convert to Biso against cctbx; an explicit B column wins',
         name,
     )
-    assert parameter.uncertainty == pytest.approx(expected_uncertainty, abs=1.0e-12), (
-        'CIF standard uncertainty must follow the same independent U-to-B conversion as its value',
+    assert parameter.uncertainty == pytest.approx(0.0, abs=1.0e-12), (
+        'ADR-0054 imports published CIF values without retaining their standard uncertainty',
         name,
     )

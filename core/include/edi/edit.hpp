@@ -251,6 +251,14 @@ class Edit {
     static Edit chi_square_tolerance(Project& project, double tolerance) {
         return Edit([&project, tolerance] { set_minimizer_chi_square_tolerance(project, tolerance); });
     }
+    // The facility and instrument that measured an experiment (ADR-0054), both at once, as a change of facility
+    // may also clear the instrument. "?" states an unknown one.
+    static Edit instrument_description(ExperimentBase& experiment, std::string facility, std::string instrument) {
+        return Edit([&experiment, facility = std::move(facility), instrument = std::move(instrument)] {
+            experiment.instrument.facility = facility;
+            experiment.instrument.name = instrument;
+        });
+    }
     static Edit peak_profile(ExperimentBase& experiment, std::string token) {
         return Edit([&experiment, token = std::move(token)] { select_peak_profile(experiment, token); });
     }
@@ -570,6 +578,58 @@ class Edit {
             project.structures.assign(std::move(structures));
         });
     }
+    // The whole project replaced by `replacement`, a project read as an open reads it (a Text tab's apply,
+    // project_with_file_text; edi ADR-0017 §7), and its undo, the project as it was: every block is a new one.
+    // A structure or an experiment of the same name stays the same object, its content replaced, so what shows it
+    // keeps showing it; a new one is added and one no longer there removed, as Create and Remove do.
+    static Edit replace_project(Project& project, Project replacement) {
+        auto next = std::make_shared<const Project>(std::move(replacement));
+        return Edit([&project, next] {
+            Project read = *next;  // a copy each time, so the edit can run again
+            const std::vector<ItemVec<Structure>::Ptr> structures_before(project.structures.begin(),
+                                                                        project.structures.end());
+            const std::vector<ItemVec<BraggPdExperiment>::Ptr> experiments_before(project.experiments.begin(),
+                                                                                 project.experiments.end());
+            const auto kept = [](const auto& before, const auto& item) {
+                const auto found = std::find_if(before.begin(), before.end(), [&item](const auto& held) {
+                    return held->name.value() == item->name.value();
+                });
+                return found != before.end() ? *found : nullptr;
+            };
+            std::vector<ItemVec<Structure>::Ptr> structures;
+            for (const auto& structure : read.structures) {
+                auto same = kept(structures_before, structure);
+                structures.push_back(same ? same : structure);
+            }
+            std::vector<ItemVec<BraggPdExperiment>::Ptr> experiments;
+            for (const auto& experiment : read.experiments) {
+                auto same = kept(experiments_before, experiment);
+                experiments.push_back(same ? same : experiment);
+            }
+            // The read blocks' content goes into the kept objects once they have left the project.
+            std::vector<std::pair<ItemVec<Structure>::Ptr, Structure>> structure_content;
+            for (std::size_t i = 0; i < structures.size(); ++i) {
+                if (structures[i] != read.structures[i]) {
+                    structure_content.emplace_back(structures[i], *read.structures[i]);
+                }
+            }
+            std::vector<std::pair<ItemVec<BraggPdExperiment>::Ptr, BraggPdExperiment>> experiment_content;
+            for (std::size_t i = 0; i < experiments.size(); ++i) {
+                if (experiments[i] != read.experiments[i]) {
+                    experiment_content.emplace_back(experiments[i], *read.experiments[i]);
+                }
+            }
+            project = std::move(read);
+            for (auto& [held, content] : structure_content) {
+                *held = std::move(content);
+            }
+            for (auto& [held, content] : experiment_content) {
+                *held = std::move(content);
+            }
+            project.structures.assign(std::move(structures));
+            project.experiments.assign(std::move(experiments));
+        });
+    }
     // The structures, links and texture rows put back as `before` holds them (an undo of Create or Remove
     // structure): each experiment is found by identity first, so one removed since refuses with nothing written.
     static Edit restore_structures(Project& project, StructuresUndo before) {
@@ -605,14 +665,15 @@ class Edit {
     }
 
     // Loaded experiments added, all or none: every name is checked against the project and against
-    // the others (add_loaded_experiment's rule and message), then the collection takes them in one
-    // mutation.
+    // the others, and every linked structure against the project's (add_loaded_experiment's rules
+    // and messages), then the collection takes them in one mutation.
     static Edit add_experiments(Project& project, std::vector<BraggPdExperiment> experiments) {
         auto batch = std::make_shared<std::vector<BraggPdExperiment>>(std::move(experiments));
         return Edit([&project, batch] {
             require_scan_template(project, project.experiments.size() + batch->size());
             std::vector<ItemVec<BraggPdExperiment>::Ptr> all(project.experiments.begin(), project.experiments.end());
             for (const BraggPdExperiment& experiment : *batch) {
+                require_held_links(project, experiment);
                 const std::string key = KeyTraits<BraggPdExperiment>::canonical(experiment.name);
                 for (const auto& held : all) {
                     if (KeyTraits<BraggPdExperiment>::canonical(held->name) == key) {

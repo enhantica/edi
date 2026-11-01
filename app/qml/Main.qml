@@ -359,7 +359,7 @@ EaComponents.ApplicationWindow {
     // project's temporary folder goes with it.
     property bool quitting: false
     onClosing: close => {
-        if (!quitting && Session.project !== null && Session.project.modified) {
+        if (!quitting && Session.project !== null && (Session.project.modified || AppState.textEdit !== null)) {
             close.accepted = false;
             AppState.afterChanges(() => {
                 window.quitting = true;
@@ -455,6 +455,7 @@ EaComponents.ApplicationWindow {
             zip = !diskWritable;
             copy = !diskWritable;
         }
+        onRejected: AppState.saveAsFinished(false)
         onAccepted: {
             if (!diskWritable)
                 Session.downloadWebProject();
@@ -528,9 +529,12 @@ EaComponents.ApplicationWindow {
         fileMode: FileDialog.SaveFile
         acceptLabel: qsTr("Save")
         onAccepted: {
-            if (!Session.saveProjectAs(selectedFile, false, saveAsChoice.copy))
+            const saved = Session.saveProjectAs(selectedFile, false, saveAsChoice.copy);
+            if (!saved)
                 saveError.open();
+            AppState.saveAsFinished(saved);
         }
+        onRejected: AppState.saveAsFinished(false)
     }
 
     FileDialog {
@@ -546,9 +550,12 @@ EaComponents.ApplicationWindow {
         nameFilters: [qsTr("Zip archives (*.zip)")]
         acceptLabel: qsTr("Save")
         onAccepted: {
-            if (!Session.saveProjectAs(selectedFile, true, saveAsChoice.copy))
+            const saved = Session.saveProjectAs(selectedFile, true, saveAsChoice.copy);
+            if (!saved)
                 saveError.open();
+            AppState.saveAsFinished(saved);
         }
+        onRejected: AppState.saveAsFinished(false)
     }
 
     // A folder, a project.edi or a .zip dropped on the window opens it (edi ADR-0052).
@@ -797,13 +804,16 @@ EaComponents.ApplicationWindow {
             refusal.open();
         }
     }
+    // A finished fit opens its results unless the preferences say not to; the status bar's fit status opens them then.
     Connections {
         target: Session.project ? Session.project.fit : null
         function onFinished() {
-            fitResults.open();
+            if (Preferences.showFitResults)
+                fitResults.open();
         }
         function onScanFinished() {
-            fitResults.open();
+            if (Preferences.showFitResults)
+                fitResults.open();
         }
         function onRefused(message) {
             fitError.message = message;

@@ -123,10 +123,10 @@ Rectangle {
                         ];
                     if (entry.selected)
                         return [mark,
-                            // The selected dataset: its name bold in the accent colour.
+                            // The selected dataset: its name bold in its own colour.
                             {
                                 "text": entry.label,
-                                "color": ink(EaStyle.Colors.themeAccent),
+                                "color": ink(entry.color),
                                 "bold": true
                             }
                         ];

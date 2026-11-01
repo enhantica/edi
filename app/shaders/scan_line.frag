@@ -18,6 +18,7 @@ layout(std140, binding = 0) uniform buf {
     float qt_Opacity;
     float halfWidth;
     float pixel;
+    vec4 paper;
 };
 
 float distanceTo(vec2 p, vec2 a, vec2 b) {

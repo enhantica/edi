@@ -42,12 +42,15 @@
 #include "crysta/constraints.hpp"
 #include "crysta/cell_metric.hpp"
 #include "crysta/cell_symmetry.hpp"
+#include "crysta/cif_import.hpp"
 #include "crysta/descent.hpp"
 #include "crysta/experiment_builder.hpp"
 #include "crysta/fit.hpp"
 #include "crysta/fit_quality.hpp"
 #include "crysta/fit_report.hpp"
+#include "crysta/fittability.hpp"
 #include "crysta/identity.hpp"
+#include "crysta/legacy_metadata.hpp"
 #include "crysta/model.hpp"
 #include "crysta/parameter.hpp"
 #include "crysta/partype.hpp"
@@ -62,6 +65,7 @@
 #include "crysta/dictionary_items.hpp"
 #endif
 #if __has_include("crysta/report_settings.hpp")
+#include "crysta/project_output.hpp"
 #include "crysta/report_settings.hpp"
 #endif
 #include "crysta/scattering.hpp"
@@ -72,6 +76,7 @@
 #include "crysta/threading.hpp"
 #include "crysta/tokens.hpp"
 #include "edi/categories.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/model.hpp"
 #include "edi/parameter_walk.hpp"
@@ -185,6 +190,13 @@ crysta::Cell to_completed_crysta_cell(const Cell& c, const crysta::CellFreedom& 
 // the symmetry-COMPLETED cell (fork 2's contract, above): this is the single edi→engine conversion
 // choke point, so every consumer — calculate, fit, fit_joint —
 // crosses the boundary with a cell that satisfies the model's own space-group ties.
+// One `_structure_view` item of a structure, absent while the view has not set it.
+std::optional<std::string> view_item(const Structure& s, const char* name) {
+    const std::map<std::string, std::string>& view = s.view;
+    const auto found = view.find(name);
+    return found != view.end() ? std::optional<std::string>(found->second) : std::nullopt;
+}
+
 crysta::Structure to_crysta_structure(const Structure& s) {
     crysta::SpaceGroup space_group = resolve_group(s);
     const crysta::CellFreedom freedom = crysta::cell_freedom(space_group);
@@ -197,6 +209,14 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                  // A calculation of this structure (a fit's quality) reads the declared
                                  // scattering lengths from it, as the fit reads them from select_scattering.
                                  built.scattering_lengths_fm = s.scattering_lengths_fm;
+                                 // How the view shows it, saved with it: each item crysta's category has.
+                                 using View = crysta::StructureViewCategory;
+                                 std::apply(
+                                     [&](auto... column) {
+                                         std::size_t index = 0;
+                                         ((built.*column = view_item(s, View::items[index++])), ...);
+                                     },
+                                     View::columns);
                                  // The bond cutoffs cross presence-faithfully, so crysta's
                                  // writer saves a declared `_geom` and no other.
                                  built.geom.min_bond_distance_cutoff =
@@ -1418,6 +1438,11 @@ PlainDataRows read_plain_data(const std::string& path) {
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& path,
                                          bool take_file_name) {
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(path).filename().string()};
+    // New data starts with an unknown facility and instrument, which the user chooses (ADR-0054); the previous
+    // data's description does not carry over.
+    load.experiment.description_chosen = true;
+    load.experiment.instrument.name.clear();
+    load.experiment.instrument.facility.clear();
     if (experiment.reflections.has_value()) {
         // A single crystal reads reflections: FullProf's .int or a plain h k l F² su [wavelength] file (crysta's
         // reader), taking a FullProf file's wavelength at constant wavelength.
@@ -2226,7 +2251,8 @@ namespace {
 // start-carrying parameters), fill the persistence-only fields the calculation conversion never
 // needed, and stamp the loader-grade identity with crysta's own exported stamp. crysta::Project
 // cannot move, so it is lent rather than returned.
-void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use) {
+void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use,
+                        const std::string* source = nullptr) {
     BuiltExperiments built_experiments;
     built_experiments.reserve(model.experiments.size());
     for (const auto& e_item : model.experiments) {
@@ -2330,6 +2356,11 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     cproject.path = model.path.empty() ? model.scan_data_root : model.path;
     // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
     cproject.scan_data_root = model.scan_data_root;
+    // A save that carries its files from another folder (a scratch save writing texts) carries no scan data.
+    if (source != nullptr) {
+        cproject.path = *source;
+        cproject.scan_data_root = std::string();
+    }
     // The project identity rides the delegated save. Copy the persisted metadata fields
     // across (the two ProjectMetadata mirrors are distinct C++ types; `path` is engine
     // bookkeeping the record never carries) and ENGAGE persistence — crysta's writer then merges
@@ -2497,16 +2528,19 @@ void refresh_agreement_records(Project& project) {
     });
 }
 
-void save_project_via_crysta(const Project& model, const std::string& directory) {
+void save_project_via_crysta(const Project& model, const std::string& directory, const std::string* source) {
     // crysta::save_project does the write: staging, atomic publish and fail-closed validation are its own.
-    with_saved_project(model, [&directory](crysta::Project& project) {
-        try {
-            crysta::save_project(project, directory);
-        } catch (const std::exception& error) {
-            raise_coded(error);
-            throw;
-        }
-    });
+    with_saved_project(
+        model,
+        [&directory](crysta::Project& project) {
+            try {
+                crysta::save_project(project, directory);
+            } catch (const std::exception& error) {
+                raise_coded(error);
+                throw;
+            }
+        },
+        source);
 }
 
 SaveSpelling save_spelling(const Project& model) {
@@ -2576,6 +2610,14 @@ std::string current_edi_name(const std::string& tag, bool every_name) {
 #endif
 }
 
+std::string structure_view_refusal(const std::string& item, const std::string& value) {
+    return crysta::structure_view_refusal(item, value);
+}
+
+void replace_file(const std::string& root, const std::string& file, const std::string& text) {
+    crysta::output::replace_file(root, file, text);
+}
+
 std::string one_row_category(const std::string& tag) {
 #if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
     return crysta::one_row_category(tag);
@@ -2584,13 +2626,54 @@ std::string one_row_category(const std::string& tag) {
 #endif
 }
 
-// crysta's check that a text's names are not a CIF's; an SDK without it has no such check.
-void refuse_cif_names(const std::vector<std::string>& tags) {
+std::vector<std::string> name_variants(const std::string& tag) {
 #if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
-    crysta::refuse_cif_names(tags);
+    return crysta::name_variants(tag);
 #else
-    static_cast<void>(tags);
+    static_cast<void>(tag);
+    return {};
 #endif
+}
+
+bool is_retired_metadata_tag(const std::string& tag) { return crysta::is_retired_metadata_tag(tag); }
+
+std::vector<std::string> apply_legacy_metadata(
+    const std::vector<std::pair<std::string, std::string>>& record, Project& project) {
+    std::vector<crysta::LegacyExperiment> experiments;
+    for (const auto& experiment : project.experiments) {
+        experiments.push_back(
+            {experiment->name, experiment->experiment_type.effective_radiation_probe() == RadiationProbeEnum::XRAY,
+             experiment->effective_beam_mode() == BeamModeEnum::TIME_OF_FLIGHT});
+    }
+    const crysta::LegacyMetadata converted = crysta::legacy_project_metadata(record, experiments);
+    std::size_t index = 0;
+    for (const auto& experiment : project.experiments) {
+        const crysta::LegacyDescription& description = converted.experiments[index++];
+        for (const auto& [field, value] :
+             {std::pair{&experiment->experiment_type.dimensionality, &description.dimensionality},
+              std::pair{&experiment->experiment_type.polarisation, &description.polarisation},
+              std::pair{&experiment->instrument.name, &description.instrument_name},
+              std::pair{&experiment->instrument.facility, &description.facility}}) {
+            if (field->empty() && !value->empty()) {
+                *field = *value;
+            }
+        }
+    }
+    std::vector<std::string> warnings;
+    for (const crysta::LegacyNotice& notice : converted.notices) {
+        warnings.push_back("project.edi " + notice.tag + " is retired (" + notice.detail + ")");
+    }
+    return warnings;
+}
+
+bool is_cif_names(const std::vector<std::string>& tags) {
+    return crysta::classify_names(tags) == crysta::TextKind::Cif;
+}
+
+std::string cif_to_edi(const std::string& text, bool experiment, const std::string& where,
+                       std::vector<std::string>& notes) {
+    return crysta::cif_to_edi(text, experiment ? crysta::DocumentKind::Experiment : crysta::DocumentKind::Structure,
+                              where, &notes);
 }
 
 #if !__has_include("crysta/dictionary_items.hpp")  // drop with the guards below when the pin moves
@@ -2609,10 +2692,11 @@ static std::vector<std::string> sorted_edi_paths(const std::string& folder) {
 }
 #endif
 
-std::vector<std::string> project_structure_files(const std::string& folder) {
+std::vector<std::string> project_structure_files(const std::string& folder, std::vector<std::string>* hidden) {
 #if __has_include("crysta/dictionary_items.hpp")  // drop the guard when the pin moves
-    return crysta::project_structure_files(folder);
+    return crysta::project_structure_files(folder, hidden);
 #else
+    static_cast<void>(hidden);
     return sorted_edi_paths(folder);
 #endif
 }
@@ -2793,6 +2877,12 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
     // The declared neutron source, so crysta chooses the table.
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
+    // ADR-0054: the description crosses as declared, so a save writes it back.
+    built.dimensionality =
+        crossed(crysta::TokenField::Dimensionality, built, e.experiment_type.dimensionality);
+    built.polarisation = crossed(crysta::TokenField::Polarisation, built, e.experiment_type.polarisation);
+    built.instrument_name = e.instrument.name;
+    built.facility = e.instrument.facility;
     built.dataset_weight = e.dataset_weight;
     built.data_file = e.data_file;
     // ADR-0040: the estimate settings, with the mode in force and, in auto mode, what the points came from, so a save
@@ -2986,7 +3076,6 @@ crysta::BraggPdExperiment to_crysta_cwl_experiment(const ExperimentBase& e, bool
         slot(e.peak.asym_beba_a1, "asym_beba_a1", 0.0);
         slot(e.peak.asym_beba_b1, "asym_beba_b1", 0.0);
         slot(e.peak.asym_beba_limit, "asym_beba_limit", 180.0);
-        peak.back().set_free(false);  // a fixed setting, whatever its flag (is_fixed_setting)
     }
     // Every other slot must be the declared profile's: one it does not carry would be dropped here,
     // from a calculation, a fit and a save alike, so it is refused instead.
@@ -3132,6 +3221,12 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
                                                                       : std::string());
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
+    // ADR-0054: the description crosses as declared, so a save writes it back.
+    built.dimensionality =
+        crossed(crysta::TokenField::Dimensionality, built, e.experiment_type.dimensionality);
+    built.polarisation = crossed(crysta::TokenField::Polarisation, built, e.experiment_type.polarisation);
+    built.instrument_name = e.instrument.name;
+    built.facility = e.instrument.facility;
     built.dataset_weight = e.dataset_weight;
     if (cw) {
         if (!e.instrument.setup_wavelength) {
@@ -3152,7 +3247,6 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
     }
     if (e.extinction.crystal_radius) {
         built.extinction[2] = param(*e.extinction.crystal_radius, crysta::CORRECTION, "crystal_radius");
-        built.extinction[2].set_free(false);  // a descriptor, whatever its flag (is_fixed_setting)
     }
     if (e.extinction.coefficient) {
         built.extinction[3] = param(*e.extinction.coefficient, crysta::CORRECTION, "coefficient");
@@ -3617,10 +3711,11 @@ RelationProject relation_project(const Project& model) {
     for (const auto& bank_item : model.experiments) {
         crysta::BraggPdExperiment& built = build_on_heap(converted.banks, *bank_item, true);
         // crysta's project needs every bank to link a structure. A bank with no link has no scale
-        // of its own, so here it links the first structure under a scale no edi parameter names.
+        // of its own, so here it links the first structure, disabled, under a scale no edi parameter
+        // names: the link reads nothing.
         if (bank_item->linked_structures.empty() && !structures.empty()) {
             built.linked_structures.assign(std::vector<crysta::LinkedStructure>{crysta::LinkedStructure(
-                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), true)});
+                structures.front().name.value(), param(Parameter{}, crysta::SCALE, "scale"), false)});
         }
     }
     converted.project =
@@ -3749,9 +3844,9 @@ void mark_dependents(Project& model, const crysta::RelationGraph& relations, con
             const bool saved_su = from_file && relation.source == crysta::Dependence::Constrained &&
                                   target.uncertainty.get().value_or(0.0) != 0.0;
             if (warn && !saved_su) {
-                warn("crysta.domain.dependent_free_ignored: parameter '" + relation.target_name +
-                     "' is " + dependent_source(relation) +
-                     "; free = True is ignored and it stays dependent");
+                warn("crysta.domain.dependent_free_ignored: parameter '" + relation.target_name + "' is " +
+                     dependent_source(relation) + "; free = True is ignored and it stays dependent (cannot be fitted: " +
+                     std::string(crysta::fit_reason(crysta::dependence_blocker(relation.source))) + ")");
             }
         }
     }
@@ -3775,6 +3870,99 @@ void refresh_relations(Project& project, const WarningSink& warn, bool from_file
         throw coded_refusal(problems);
     }
     mark_dependents(project, crysta::compile_relations(*converted->project, false), warn, from_file);
+}
+
+namespace {
+FitBlocker fit_blocker_of(crysta::FitBlocker blocker) {
+    switch (blocker) {
+        case crysta::FitBlocker::Descriptor: return FitBlocker::Descriptor;
+        case crysta::FitBlocker::Symmetry: return FitBlocker::Symmetry;
+        case crysta::FitBlocker::Constraint: return FitBlocker::Constraint;
+        case crysta::FitBlocker::Data: return FitBlocker::Data;
+        case crysta::FitBlocker::Capability: return FitBlocker::Capability;
+        case crysta::FitBlocker::None: break;
+    }
+    return FitBlocker::None;
+}
+
+// crysta's reason with its detail, or for a blocker given alone its reason; empty when fittable.
+void mark(Parameter& parameter, crysta::FitBlocker blocker, std::string reason = {}, bool idle = false) {
+    parameter.fit_blocker = fit_blocker_of(blocker);
+    parameter.fit_reason = reason.empty() ? std::string(crysta::fit_reason(blocker)) : std::move(reason);
+    parameter.fit_idle = idle;
+}
+}  // namespace
+
+bool is_descriptor(const std::string& uid) { return crysta::is_descriptor(uid); }
+
+std::string fit_reason(FitBlocker blocker) {
+    switch (blocker) {
+        case FitBlocker::Descriptor: return std::string(crysta::fit_reason(crysta::FitBlocker::Descriptor));
+        case FitBlocker::Symmetry: return std::string(crysta::fit_reason(crysta::FitBlocker::Symmetry));
+        case FitBlocker::Constraint: return std::string(crysta::fit_reason(crysta::FitBlocker::Constraint));
+        case FitBlocker::Data: return std::string(crysta::fit_reason(crysta::FitBlocker::Data));
+        case FitBlocker::Capability: return std::string(crysta::fit_reason(crysta::FitBlocker::Capability));
+        case FitBlocker::None: break;
+    }
+    return {};
+}
+
+void refresh_fittability(Project& project) {
+    // Every parameter a page or a fit names, fittable until the rule says otherwise; a descriptor by its entry alone.
+    std::vector<Parameter*> parameters;
+    std::set<const Parameter*> seen;
+    std::vector<std::pair<std::string, Parameter*>> named;
+    for (const NamedSlot& slot : named_slots(project)) {
+        named.emplace_back(slot.unique_name, slot.parameter);
+        if (seen.insert(slot.parameter).second) {
+            parameters.push_back(slot.parameter);
+        }
+    }
+    for (const ParameterEntry& entry : parameter_entries(project)) {
+        if (seen.insert(entry.parameter).second) {
+            parameters.push_back(entry.parameter);
+        }
+    }
+    for (Parameter* parameter : parameters) {
+        mark(*parameter, crysta::FitBlocker::None);
+        const ParameterSpec* spec = parameter->spec;
+        if (spec != nullptr && crysta::is_descriptor(std::string(spec->category) + "." + spec->name)) {
+            mark(*parameter, crysta::FitBlocker::Descriptor);
+        }
+    }
+    if (project.structures.empty()) {
+        return;
+    }
+    std::optional<crysta::Fittability> rule;
+    try {
+        RelationProject converted = relation_project(project);
+        // An experiment that links nothing crosses with a placeholder link to the first structure, which is no use of it.
+        std::vector<std::size_t> fitted;
+        for (const std::size_t index : fit_context(project)) {
+            if (!project.experiments[index]->linked_structures.empty()) {
+                fitted.push_back(index);
+            }
+        }
+        rule = crysta::fittability(*converted.project, fitted);
+    } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a calculation or fit says why
+        return;
+    }
+    std::set<const Parameter*> answered;
+    for (const auto& [unique_name, parameter] : named) {
+        const crysta::FitEligibility* status = rule->status(unique_name);
+        if (parameter->fit_blocker == FitBlocker::Descriptor || status == nullptr) {
+            continue;
+        }
+        mark(*parameter, status->blocker, status->reason(), status->idle);
+        answered.insert(parameter);
+    }
+    // A parameter crysta's model does not hold (an inert slot of the other beam mode), or one of an experiment no fit
+    // uses, is one no fitted experiment can determine.
+    for (Parameter* parameter : parameters) {
+        if (parameter->fit_blocker != FitBlocker::Descriptor && !answered.contains(parameter)) {
+            mark(*parameter, crysta::FitBlocker::Data);
+        }
+    }
 }
 
 void complete_relations(Project& project) {
@@ -5332,6 +5520,7 @@ FitResultBase Project::fit_scan(const IterationCallback& on_iteration,
         throw std::invalid_argument("edi fit_scan: _fitting_mode.type is '" + fitting_mode +
                                     "' - the scan body serves only 'sequential' and 'independent'");
     }
+    require_fittable_free(*this);  // ADR-0053: a free flag the fit cannot honour is refused by name
     if (experiments.size() != 1) {
         throw std::invalid_argument(
             "edi fit_sequential: the project has " + std::to_string(experiments.size()) +

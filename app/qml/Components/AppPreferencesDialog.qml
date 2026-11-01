@@ -183,6 +183,18 @@ AppDialog {
                 onToggled: Preferences.toolTips = checked
             }
 
+            // Fitting works from every page's status bar, so whether a fit opens its results is an app preference
+            // (the owner, 2026-10-26).
+            RowLabel {
+                text: qsTr("Show fit results after fitting") + ":"
+            }
+            RowCheckBox {
+                objectName: "preferences.showFitResults"
+                checked: Preferences.showFitResults
+                onToggled: Preferences.showFitResults = checked
+                ToolTip.text: qsTr("Open the results window when a fit ends; the fit status in the status bar opens it too")
+            }
+
             RowLabel {
                 enabled: false
                 text: qsTr("Enable user guides") + ":"
@@ -221,7 +233,7 @@ AppDialog {
             }
         }
 
-        // Appearance: the theme, the colour scheme, the sidebar's side and auto collapse; no 1D plotting row.
+        // Appearance: the theme, the colour scheme, the sidebar's side and whether one sidebar group is open at a time; no 1D plotting row.
         RowGrid {
             RowLabel {
                 id: themeLabel
@@ -239,41 +251,35 @@ AppDialog {
                 }
             }
 
-            // The colours, one choice for each thing coloured (the owner, 2026-10-22): the structures' and the
-            // patterns' schemes, the Stacked view's lines and the Map's colour map. The schemes' tokens and names
-            // (edi::colour_scheme_names) in the order the core lists them; the scan views' choices as their charts
-            // offer them.
+            // The figure palette, one for experiments and structures (the owner, 2026-10-26), the palettes' tokens and
+            // names (edi::colour_scheme_names) in the order the core lists them, with its colour order under it; then
+            // the Stacked view's lines and the Map's colour map, as their charts offer them.
             RowLabel {
-                text: qsTr("Structures") + ":"
+                text: qsTr("Palette") + ":"
             }
-            RowBox {
-                readonly property var schemes: ApplicationInfo.colourSchemes
+            Column {
+                spacing: dialog.stackSpacing
 
-                objectName: "preferences.structureColours"
-                model: ApplicationInfo.colourSchemeTitles
-                currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.structureColours)))
-                onActivated: index => Preferences.structureColourScheme = schemes[index]
-                ToolTip.text: qsTr("The structures' colours: their icons, Bragg ticks and curves")
-            }
-            RowLabel {
-                text: qsTr("Patterns") + ":"
-            }
-            RowBox {
-                readonly property var schemes: ApplicationInfo.colourSchemes
+                RowBox {
+                    readonly property var schemes: ApplicationInfo.colourSchemes
 
-                objectName: "preferences.patternColours"
-                model: ApplicationInfo.colourSchemeTitles
-                currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.patternColours)))
-                onActivated: index => Preferences.patternColourScheme = schemes[index]
-                ToolTip.text: qsTr("The patterns' colours: the experiments' icons and measured data, and the calculated, background and residual lines")
+                    objectName: "preferences.colours"
+                    model: ApplicationInfo.colourSchemeTitles
+                    currentIndex: Math.max(0, schemes.indexOf(ApplicationInfo.colourSchemeOrDefault(Preferences.colourScheme)))
+                    onActivated: index => Preferences.colourScheme = schemes[index]
+                    ToolTip.text: qsTr("The colours of experiments and structures: their icons, patterns, Bragg ticks and curves")
+                }
+                PaletteStrip {
+                    objectName: "preferences.colourOrder"
+                }
             }
             RowLabel {
                 text: qsTr("Stacked") + ":"
             }
             RowBox {
                 readonly property var choices: Array.from(ApplicationInfo.colourSchemes).concat(Array.from(ApplicationInfo.scanColourMaps))
-                // Empty follows the patterns' scheme.
-                readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.patternColours
+                // Empty follows the palette.
+                readonly property string current: Preferences.scanStackedPalette !== "" ? Preferences.scanStackedPalette : Preferences.colourScheme
 
                 objectName: "preferences.stackedColours"
                 model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
@@ -285,7 +291,7 @@ AppDialog {
                 text: qsTr("Map") + ":"
             }
             RowBox {
-                readonly property var choices: Array.from(ApplicationInfo.scanColourRamps).concat(Array.from(ApplicationInfo.scanColourMaps))
+                readonly property var choices: ApplicationInfo.scanColourMaps
 
                 objectName: "preferences.mapColours"
                 model: choices.map(choice => ApplicationInfo.scanColourTitle(choice))
@@ -317,13 +323,30 @@ AppDialog {
             }
 
             RowLabel {
-                text: qsTr("Auto collapse") + ":"
+                text: qsTr("One sidebar group open at a time") + ":"
             }
             RowCheckBox {
                 objectName: "preferences.autoCollapse"
                 checked: Preferences.autoCollapse
                 onToggled: Preferences.autoCollapse = checked
-                ToolTip.text: qsTr("Auto collapse for side bar groups")
+                ToolTip.text: qsTr("Opening a group in the sidebar closes the other open groups")
+            }
+
+            RowLabel {
+                text: qsTr("Text tab shows") + ":"
+            }
+            RowBox {
+                readonly property list<string> choices: ["editable", "everything"]
+
+                objectName: "preferences.textShow"
+                model: [qsTr("Editable"), qsTr("Everything")]
+                currentIndex: Math.max(0, choices.indexOf(Preferences.textShow))
+                // Through the Text tabs, which settle an unapplied edit first; until then the box shows the setting.
+                onActivated: index => {
+                    AppState.setTextShow(choices[index]);
+                    currentIndex = Qt.binding(() => Math.max(0, choices.indexOf(Preferences.textShow)));
+                }
+                ToolTip.text: qsTr("What every Text tab shows: the categories you can edit, or also the measured data and results, read-only")
             }
         }
 

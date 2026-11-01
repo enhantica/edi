@@ -40,7 +40,7 @@ Rectangle {
         property var chart
         property var app
         readonly property var tokens: ["band", "line", "points", "linePoints"]
-        readonly property var labels: ["band", "line", "points", "line + points"]
+        readonly property var labels: ["Band", "Line", "Points", "Line + points"]
         FontMetrics {
             id: metrics
         }
@@ -193,7 +193,7 @@ Rectangle {
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             standalone();
             select(chart, data.token);
-            const measured = rgb(Approved.colours(SettingsProof, "ediNatural", "measured", 1, data.dark)[0]);
+            const measured = rgb(Approved.colours(SettingsProof, "earth", "measured", 1, data.dark)[0]);
             const line = series(chart, "meas"), layer = findChild(chart, "chart.measured");
             verify(layer !== null, "The measured marker/error-bar layer is independently observable");
             const hasLine = data.token === "line" || data.token === "linePoints", hasPoints = data.token === "points" || data.token === "linePoints";

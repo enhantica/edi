@@ -23,6 +23,8 @@ WorkflowPage {
     // there is no Map.
     readonly property bool singleCrystals: project !== null && project.singleCrystalExperiments.length > 1
     readonly property bool scanMode: project !== null && project.fit.scanMode
+    // Some experiment holds measured data: without any there is nothing to fit, and what only a fit uses is hidden.
+    readonly property bool measured: project !== null && project.fit.measured
     // Leaving the scan modes hides Evolution: a page showing it goes back to the pattern.
     onScanModeChanged: {
         if (!scanMode)
@@ -55,6 +57,7 @@ WorkflowPage {
         IconTabButton {
             objectName: "mainArea.analysis.tab.correlations"
             text: qsTr("Correlations")
+            enabled: page.measured
         },
         // A fitted parameter across a scan's datasets (edi ADR-0017 §19). Shown only in the sequential and
         // independent fitting modes, and enabled in a scan project (edi ADR-0046).
@@ -132,14 +135,12 @@ WorkflowPage {
     basicItem: Component {
         EaComponents.SideBarColumn {
             id: analysisSidebar
-            // The fitted inputs are not edited while a fit runs.
+            // The table fills the sidebar down to its value slider: fitting is run from the status bar (the owner,
+            // 2026-10-26). The fitted inputs are not edited while a fit runs.
             ParametersGroup {
-                tableViewportHeight: analysisSidebar.height - fitting.height
+                tableViewportHeight: analysisSidebar.height
                 project: page.project
                 enabled: !(page.project && page.project.fit.running)
-            }
-            FittingGroup {
-                id: fitting
             }
         }
     }
@@ -148,16 +149,24 @@ WorkflowPage {
             Repeater {
                 model: page.analysis ? page.analysis.categories : null
                 delegate: CategoryGroup {
+                    textSource: page.analysis ? page.analysis.text : null
                     shownTier: "Extras"
                     contents: page.contents
+                    measured: page.measured
                 }
             }
         }
     }
-    // The page's view options (edi ADR-0031 §2): how a followed scan redraws. The chart's own choices are on the chart.
+    // The page's view options (edi ADR-0031 §2): which rows the parameter table shows, and how a followed scan redraws.
+    // The chart's own choices are on the chart.
     settingsItem: Component {
         EaComponents.SideBarColumn {
-            PatternUpdatesGroup {}
+            ShownParametersGroup {
+                project: page.project
+            }
+            PatternUpdatesGroup {
+                visible: page.measured
+            }
         }
     }
     textItem: Component {

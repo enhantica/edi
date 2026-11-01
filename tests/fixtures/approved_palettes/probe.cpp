@@ -1,14 +1,8 @@
 #include "edi/palette.hpp"
+#include <algorithm>
 #include <iostream>
 #include <string>
 
-template<class Scheme>
-std::string structure(Scheme scheme, std::size_t place, std::size_t count, bool dark) {
-    if constexpr (requires { structure_colour(scheme, place, count, dark); })
-        return structure_colour(scheme, place, count, dark);
-    else
-        return "missing-count-aware-structure-colour";
-}
 int main(int argc, char** argv) {
     const auto names = edi::colour_scheme_names();
     if (argc == 1) {
@@ -30,11 +24,14 @@ int main(int argc, char** argv) {
     }
     const std::string role = argv[2];
     const bool dark = std::string(argv[3]) == "dark";
-    for (std::size_t count : {0, 1, 2, 5, 6, 17}) {
+    for (std::size_t count : {0, 1, 2, 5, 6, 11, 12, 17}) {
         for (std::size_t place = 0; place <= count; ++place) {
+            const auto positions = edi::colour_positions(*scheme, role == "measured" ? count : 0,
+                                                          role == "measured" ? 0 : count);
+            const std::size_t position = positions.empty() ? 0 : positions[std::min(place, count - 1)];
+            const std::size_t size = positions.empty() ? 0 : *std::max_element(positions.begin(), positions.end()) + 1;
             std::cout << count << '\t' << place << '\t'
-                      << (role == "measured" ? edi::pattern_colour(*scheme, place, count, dark)
-                                             : structure(*scheme, place, count, dark)) << '\n';
+                      << edi::figure_colour(*scheme, position, size, dark) << '\n';
         }
     }
 }

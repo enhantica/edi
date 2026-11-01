@@ -68,7 +68,7 @@ AppDialog {
             sourceModel: dialog.messages
 
             // The row number first, as in every table: the current row is marked by it (the owner, 2026-10-22).
-            columnWidths: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, AppSizes.iconOnlyColumnWidth, -1, AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 visible: false

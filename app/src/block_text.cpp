@@ -5,9 +5,40 @@
 
 #include <exception>
 
+#include "edi/display.hpp"
+
 namespace edi_app {
 
-BlockText::BlockText(Source source, QObject* parent) : QObject(parent), source_(std::move(source)) {}
+BlockText::BlockText(Source source, QObject* parent, File file, Fixed fixed, Source discovery)
+    : QObject(parent),
+      source_(std::move(source)),
+      file_(std::move(file)),
+      fixed_(std::move(fixed)),
+      discovery_(std::move(discovery)) {}
+
+QString BlockText::file() const { return file_ ? QString::fromStdString(file_()) : QString(); }
+
+QString BlockText::inputText() const {
+    compute();
+    return error_.isEmpty() ? QString::fromStdString(edi::input_categories_text(text_.toStdString(), fixed_ ? fixed_() : std::vector<std::string>{})) : QString();
+}
+
+QString BlockText::withOutputs(const QString& edited) const {
+    compute();
+    return QString::fromStdString(edi::with_output_categories(edited.toStdString(), text_.toStdString(),
+                                                              fixed_ ? fixed_() : std::vector<std::string>{}));
+}
+
+QString BlockText::discoveryText() const {
+    if ((valid_ && error_.isEmpty()) || !discovery_) {
+        return text();
+    }
+    try {
+        return QString::fromStdString(discovery_());
+    } catch (const std::exception&) {
+        return {};
+    }
+}
 
 QString BlockText::text() const {
     compute();
@@ -22,17 +53,24 @@ QString BlockText::error() const {
 void BlockText::invalidate() {
     valid_ = false;
     if (!isSignalConnected(QMetaMethod::fromSignal(&BlockText::textChanged)) &&
-        !isSignalConnected(QMetaMethod::fromSignal(&BlockText::errorChanged))) {
+        !isSignalConnected(QMetaMethod::fromSignal(&BlockText::errorChanged)) &&
+        !isSignalConnected(QMetaMethod::fromSignal(&BlockText::fileChanged)) &&
+        !isSignalConnected(QMetaMethod::fromSignal(&BlockText::inputTextChanged))) {
         return;
     }
     const QString text = text_;
     const QString error = error_;
+    const QString file = this->file();
     compute();
     if (text_ != text) {
         emit textChanged();
+        emit inputTextChanged();
     }
     if (error_ != error) {
         emit errorChanged();
+    }
+    if (this->file() != file) {
+        emit fileChanged();
     }
 }
 

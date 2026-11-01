@@ -11,6 +11,9 @@
     both, and a refusal carries crysta's code.
   - A new place that converts the model for crysta carries the aliases and constraints with it.
 
+**Amended by [ADR-0053](0053-what-a-fit-can-free.md):** the free-flag warning for a dependent also names the reason, and
+the other reasons a fit cannot vary a parameter come from crysta's rule.
+
 ## Context
 
 diffraction-lib names a parameter with `analysis.aliases.create(id=, param=)` and ties parameters with an expression,

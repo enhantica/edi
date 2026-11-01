@@ -91,10 +91,11 @@ def test_owner_cadence_has_only_quick_and_full_entry_points() -> None:
     assert set(groups) == quick | full | {'app', 'nightly-only'}, (
         'Quick/full retain cadence; app and the exclusive nightly cohort name execution groups'
     )
-    assert groups['nightly-only']['tiers'] == ['system'], (
-        'the nightly supplement retains the system tier without inventing another cadence'
+    assert groups['nightly-only']['tiers'] == ['integration/py', 'system'], (
+        'the owner moves the CIF integration matrix alongside the retained nightly system tier'
     )
     assert {
+        'tests/integration/py/test_cif_import_contract.py',
         'tests/system/py/test_scan_app_execution.py',
         'tests/system/py/test_scan_accident_paths.py',
         'tests/system/py/test_plain_data_app.py',

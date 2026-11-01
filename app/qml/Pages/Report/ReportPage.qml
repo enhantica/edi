@@ -48,6 +48,15 @@ WorkflowPage {
                 report: page.report
                 shown: page.current
             }
+            // The rest of `reports/report.edi` (the saved reports), each category in a group made from the
+            // dictionary; the report's settings are the groups above.
+            Repeater {
+                model: page.project ? page.project.reportCategories : null
+                delegate: CategoryGroup {
+                    textSource: page.project ? page.project.reportText : null
+                    visible: shown && categoryId !== "report"
+                }
+            }
         }
     }
     textItem: Component {

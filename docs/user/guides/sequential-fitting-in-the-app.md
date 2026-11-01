@@ -79,6 +79,43 @@ the selector above the chart. A click on a point shows that dataset everywhere.
 After an edit of the template, the old results stay visible and are marked *out of date* in the
 status bar and on the Evolution tab until the next run replaces them.
 
+## Stacked and Map
+
+The Analysis page's **Stacked** tab draws every file's pattern above the others, and **Map** draws them as rows of
+colour. Their toolbars group the boxes: the axes (x, y and z), then on Stacked the spacing, and on the Map the colour
+map and its direction.
+
+- **Spacing** sets how far apart the stacked patterns are: Overlay (every pattern on one baseline, full height),
+  Close, Medium, Wide (the default) or Separate (each pattern in its own band). The change is linear from one end to
+  the other, so Close already separates the patterns a little without shrinking them much. At Separate each pattern
+  fills its band with what the zoom shows, so zooming away from large peaks shows the small ones larger. The project
+  remembers the step on this computer.
+- **Colour map**: Blue-Red (the default), Viridis, Batlow, Inferno, Lapaz or Greys, each shown with its colour bar.
+  In the dark theme the Map's plot area is black. **Direction**: Auto (the default) starts the map at the plot area's
+  colour, white in the light theme and black in the dark one, and follows a theme switch; Normal and Inverted fix it.
+  The project remembers the choice.
+- **Subtract background**, beside the included-range button, here and on the pattern chart: each pattern is drawn
+  less the project's background (its points or terms, fitted or not). It is off by default, and disabled when no
+  shown pattern has a background.
+- **Legend** on Stacked: each file's line and name, or for more than fifteen files the first, the selected one and
+  the last with how many more. Click an entry to hide its pattern, and again to show it.
+- **Highlight the selected dataset**: on Stacked the selected file keeps its colour and every other one is drawn in
+  grey, its curve, name and legend entry alike; off, all keep their colours and the selected name is bold. The Map
+  marks the selected row with its label either way.
+- **Read-outs**: hovering a pattern or a band shows its name in its colour and the intensity there. The speech-bubble
+  button, as on the pattern chart, turns them off and on.
+
+With only the included range shown, the intensity range leaves the excluded points out, on the pattern chart,
+Stacked and the Map's colours.
+
+The colours of experiments, structures and Stacked lines come from the **Palette** in Preferences, Appearance:
+Earth (the default), Classic, Soft, Natural or Colour-blind safe. Under the choice, the palette's eleven colours show
+in the order new blocks take them: a colour the open project uses shows its block's icon, a free one a square, and
+the calculated curve's colour, the same in every palette, shows as the calculator icon. Each new experiment or
+structure takes the next free colour; in Earth the first two are kept for experiments. A scan with more files than
+the palette has colours runs from its first colour to its second. Saved reports and pictures always use the light
+theme's colours.
+
 ## Examples and saving
 
 A bundled example opens as a temporary copy, so a run never writes into the bundle. **Save As**

@@ -27,7 +27,8 @@
 
 namespace edi_app {
 
-ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : QObject(parent), project_(project) {
+ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent)
+    : QObject(parent), project_(project), colour_scheme_(project.colourScheme()) {
     // The project marks the report stale before it announces the end of a calculation, so a save waiting for that
     // end rebuilds from the outcome. A fit's end is announced by the project once the fit has published.
     connect(&project_, &ProjectViewModel::calculatingChanged, this, &ReportViewModel::calculatingChanged);
@@ -35,6 +36,8 @@ ReportViewModel::ReportViewModel(ProjectViewModel& project, QObject* parent) : Q
     if (StructureViewOptions* view = project_.structureViewOptions()) {
         connect(view, &StructureViewOptions::colorSchemeChanged, this, &ReportViewModel::refresh);
     }
+    // The charts take each block's colour at its position in the palette, as the app's pages do.
+    connect(&project_, &ProjectViewModel::colourPositionsChanged, this, &ReportViewModel::refresh);
     refresh();
 }
 
@@ -43,14 +46,6 @@ bool ReportViewModel::calculating() const {
     // fit's outcome.
     const FitViewModel* fit = project_.fit();
     return project_.calculating() || (fit != nullptr && fit->running());
-}
-
-void ReportViewModel::setStructureColourScheme(const QString& scheme) {
-    if (scheme != structure_colour_scheme_) {
-        structure_colour_scheme_ = scheme;
-        emit structureColourSchemeChanged();
-        refresh();
-    }
 }
 
 void ReportViewModel::setColourScheme(const QString& scheme) {
@@ -120,15 +115,13 @@ void ReportViewModel::publishModel() {
 
 bool ReportViewModel::build() const {
     dirty_ = false;
-    // The project's report settings (ADR-0036 §7) and the app's two choices, given as the CLI and Python give them: the
-    // Preferences' colour scheme and, of a fit of several experiments, the experiment the Analysis page shows.
+    // The project's report settings (ADR-0036 §7) and the app's choices, given as the CLI and Python give them: the
+    // Preferences' palette and, of a fit of several experiments, the experiment the Analysis page shows; then the
+    // blocks' positions in the palette and the structure view's element colours.
     const edi::Project& project = project_.project();
     edi::ReportOverrides choices;
     if (edi::colour_scheme_from_name(colour_scheme_.toStdString())) {
         choices.colour_scheme = colour_scheme_.toStdString();
-    }
-    if (edi::colour_scheme_from_name(structure_colour_scheme_.toStdString())) {
-        choices.structure_colour_scheme = structure_colour_scheme_.toStdString();
     }
     const int shown = project_.currentExperimentIndex();
     if (!project_.scan() && shown > 0 && static_cast<std::size_t>(shown) < project.experiments.size()) {
@@ -142,6 +135,7 @@ bool ReportViewModel::build() const {
         const StructureViewOptions* view = project_.structureViewOptions();
         const bool vesta = view != nullptr && view->colorScheme() == QLatin1String("vesta");
         options_.element_colours = vesta ? edi::ColorScheme::Vesta : edi::ColorScheme::Jmol;
+        options_.colour_positions = project_.colourPositions();
         next = edi::build_report(reportInput(), options_);
     } catch (const std::exception&) {  // NOLINT(bugprone-empty-catch) — a project the builder refuses shows no report
         options_ = {};

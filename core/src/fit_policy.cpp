@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <map>
 #include <tuple>
+#include <utility>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -14,8 +15,10 @@
 #include "edi/background_estimate.hpp"
 #include "edi/model.hpp"
 #include "edi/categories.hpp"
+#include "edi/fittability.hpp"
 #include "edi/io.hpp"
 #include "edi/parameter_walk.hpp"
+#include "edi/selectors.hpp"
 
 // Lifted verbatim out of adapter.cpp; see the header for what this file is.
 
@@ -257,6 +260,59 @@ FitResultBase fit_measured_experiments(Project& project, const IterationCallback
 
 }  // namespace
 
+std::vector<std::size_t> fit_context(const Project& project) {
+    const bool scan = is_scan_fitting_mode(effective_fitting_mode(project));
+    const bool mixed = !scan && mixed_experiments(project);
+    std::vector<std::size_t> fitted;
+    for (std::size_t index = 0; index < project.experiments.size(); ++index) {
+        if (!mixed || has_measured_data(*project.experiments[index])) {
+            fitted.push_back(index);
+        }
+    }
+    return fitted;
+}
+
+namespace {
+// The name a refusal or a note gives a parameter: its unique name, or for one no fit names, its path.
+// In the walks' order, so a load's notes come in the file's order.
+std::vector<std::pair<Parameter*, std::string>> parameter_names(Project& project) {
+    std::vector<std::pair<Parameter*, std::string>> names;
+    std::set<const Parameter*> seen;
+    for (const NamedSlot& slot : named_slots(project)) {
+        if (seen.insert(slot.parameter).second) {
+            names.emplace_back(slot.parameter, slot.unique_name);
+        }
+    }
+    for (const ParameterEntry& entry : parameter_entries(project)) {
+        if (seen.insert(entry.parameter).second) {
+            names.emplace_back(entry.parameter, entry.path);
+        }
+    }
+    return names;
+}
+}  // namespace
+
+void require_fittable_free(Project& project) {
+    refresh_fittability(project);
+    for (const auto& [parameter, name] : parameter_names(project)) {
+        if (parameter->free.get() && !parameter->fit_idle && !free_refusal(*parameter).empty()) {
+            throw std::invalid_argument(name + " " + free_refusal(*parameter));
+        }
+    }
+}
+
+std::vector<std::string> clear_unfittable_free(Project& project) {
+    refresh_fittability(project);
+    std::vector<std::string> notes;
+    for (const auto& [parameter, name] : parameter_names(project)) {
+        if (parameter->free.get() && !parameter->fit_idle && !free_refusal(*parameter).empty()) {
+            notes.push_back(name + " " + free_refusal(*parameter) + "; loaded fixed");
+            parameter->free = false;
+        }
+    }
+    return notes;
+}
+
 FitResultBase Project::fit(const IterationCallback& on_iteration,
                            const PreambleCallback& on_start, const CancelCallback& should_cancel) {
     refresh_background_estimates(*this);  // ADR-0040: auto background mode re-estimates first
@@ -274,6 +330,7 @@ FitResultBase Project::fit(const IterationCallback& on_iteration,
             "' - this entry point serves exactly the 'single' mode; use analysis.fit(), which "
             "routes each declared mode to its own entry");
     }
+    require_fittable_free(*this);  // ADR-0053: a free flag the fit cannot honour is refused by name
     if (mixed_experiments(*this)) {
         return fit_measured_experiments(*this, on_iteration, [&](Project& measured, const IterationCallback& forward) {
             return measured.fit(forward, on_start, should_cancel);
@@ -312,6 +369,7 @@ FitResultBase Project::fit_joint(const IterationCallback& on_iteration,
             "' - this entry point serves exactly the 'joint' mode; use analysis.fit(), which "
             "routes each declared mode to its own entry");
     }
+    require_fittable_free(*this);  // ADR-0053
     if (experiments.empty()) {
         throw std::invalid_argument("edi fit_joint: project has no experiments");
     }

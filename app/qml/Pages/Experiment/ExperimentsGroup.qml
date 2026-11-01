@@ -30,8 +30,9 @@ EaElements.GroupBox {
     // by their place among the header's, so the header and each row repeat over the same list.
     readonly property var scanColumns: project ? project.experiments.columns : []
     // The Fit column is as wide as its title or its icon, so the Fit icon sits as close to the colour icon as the
-    // Structures table's icon to its name: one margin between them, not each column's own (the owner, 2026-10-11).
-    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15))
+    // Structures table's icon to its name: one margin between them, not each column's own (the owner, 2026-10-11). A
+    // right margin as wide as a table's edge margin then keeps the datablock names off it (the owner, 2026-10-24).
+    readonly property real fitColumnWidth: Math.ceil(Math.max(fitTitle.advanceWidth, EaStyle.Sizes.fontPixelSize * 1.15)) + EaStyle.Sizes.tableColumnSpacing
 
     objectName: "group.experiments"
     title: qsTr("Experiments (%1)").arg(project ? project.experiments.count : 0)
@@ -62,7 +63,7 @@ EaElements.GroupBox {
                     group.project.currentExperimentIndex = row;
             }
 
-            columnWidths: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, textColumnWidth("name", qsTr("Datablock")), -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
+            columns: [numberColumnWidth, group.scan ? 0.001 : AppSizes.iconOnlyColumnWidth, group.scan ? AppSizes.iconOnlyColumnWidth : group.fitColumnWidth, -1, -1, group.scanColumns.length ? group.scanColumns.length * AppSizes.dataColumnWidth * 1.4 : 0.001, group.scan ? 0.001 : AppSizes.iconColumnWidth]
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -72,7 +73,7 @@ EaElements.GroupBox {
                     horizontalAlignment: Text.AlignHCenter
                 }
                 EaComponents.ListViewLabel {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignLeft
                     text: qsTr("Fit")
                 }
                 EaComponents.ListViewLabel {
@@ -141,7 +142,7 @@ EaElements.GroupBox {
                 }
                 // How the project's last fit ended on this experiment; "Not fitted" when it took no part.
                 IconCell {
-                    horizontalAlignment: Text.AlignHCenter
+                    horizontalAlignment: Text.AlignLeft
                     objectName: `experiments.fit.${row.index}`
                     icon: FitOutcomes.icon(row.fitOutcome)
                     iconColor: String(FitOutcomes.color(row.fitOutcome))
@@ -280,13 +281,13 @@ EaElements.GroupBox {
                 enabled: group.project !== null
                 fontIcon: "upload"
                 text: qsTr("Load experiment")
-                ToolTip.text: qsTr("Load experiments from .edi files, each with its type, data and parameters")
+                ToolTip.text: qsTr("Load experiments from CIF or .edi files, each with its type, data and parameters")
                 // In the browser the files come through the page (edi ADR-0023).
                 onClicked: {
                     if (WebFiles.available) {
                         group.webRequestProject = group.project;
                         group.webDataExperiment = null;
-                        group.webRequest = WebFiles.openFiles(".edi", true);
+                        group.webRequest = WebFiles.openFiles(".cif,.edi", true);
                     } else {
                         loadDialog.open();
                     }
@@ -368,9 +369,9 @@ EaElements.GroupBox {
 
     FileDialog {
         id: loadDialog
-        title: qsTr("Load experiments from .edi block files")
+        title: qsTr("Load experiments from CIF or .edi files")
         fileMode: FileDialog.OpenFiles
-        nameFilters: [qsTr("edi block files (*.edi)")]
+        nameFilters: [qsTr("Experiment files (*.cif *.edi)"), qsTr("CIF files (*.cif)"), qsTr("edi block files (*.edi)")]
         onAccepted: group.project.loadExperiments(selectedFiles)
     }
 

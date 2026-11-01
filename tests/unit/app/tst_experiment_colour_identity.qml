@@ -41,7 +41,7 @@ Item {
         function initTestCase() {
             oldTheme = Style.Colors.theme;
             try {
-                oldScheme = Approved.getSchemes(Preferences);
+                oldScheme = Approved.getScheme(Preferences);
             } catch (error) {
                 oldScheme = null;
             }
@@ -52,7 +52,7 @@ Item {
             Session.closeProject();
             Style.Colors.theme = oldTheme;
             if (oldScheme)
-                Approved.setSchemes(Preferences, oldScheme);
+                Approved.setScheme(Preferences, oldScheme);
             else
                 Preferences.resetToDefaults();
         }
@@ -97,7 +97,7 @@ Item {
             verify(Examples.open(this, Session, data.example, data.fixture === true), "The colour witness opens the real single, joint or 162-file scan example: " + data.example);
             tryCompare(Session.project, "calculating", false, 15000, "The opened colour witness settles its initial calculation");
             compare(Session.project.experiments.count, data.count, "Each colour witness reaches its independently declared experiment or dataset count");
-            Approved.setSchemes(Preferences, data.scheme);
+            Approved.setScheme(Preferences, data.scheme);
             Style.Colors.theme = data.dark ? Style.Colors.DarkTheme : Style.Colors.LightTheme;
             const project = createTemporaryObject(projectFactory, surface, {
                 width: surface.width,
@@ -115,7 +115,11 @@ Item {
                 verify(row !== undefined && icon(row) !== undefined, "The Project list materializes the requested experiment place " + position);
                 expected[position] = ink(icon(row).color);
             }
-            const approved = Approved.colours(SettingsProof, data.scheme, "measured", data.count, data.dark);
+            const approved = Approved.colours(SettingsProof, data.scheme, "measured", data.count, data.dark, {
+                scan: data.kind === "scan",
+                experiments: data.kind === "scan" ? 1 : data.count,
+                structures: Session.project.structures.count
+            });
             for (const position of positions)
                 compare(expected[position], approved[position], "The Project icon equals its independently frozen approved place for the full experiment count");
             project.visible = false;

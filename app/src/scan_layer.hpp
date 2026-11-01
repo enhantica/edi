@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "chart_models.hpp"
 #include "scan_lines.hpp"
 #include "scan_view_model.hpp"
 
@@ -40,23 +41,36 @@ class ScanLayer : public QQuickPaintedItem {
     // The chart's y scale: "linear", "sqrt" or "log".
     Q_PROPERTY(QString scale MEMBER scale_ WRITE setScale NOTIFY scaleChanged)
     Q_PROPERTY(QString colourScheme MEMBER colour_scheme_ WRITE setColourScheme NOTIFY colourSchemeChanged)
-    // The map's colours, one of edi::scan_colour_choices; a ramp starts at `background`. `colourScheme` may name a
-    // ramp too (`ramp:<scheme>`), for the stacked patterns.
+    // The stacked patterns' colours, a palette's token or a colour map's name (edi::scan_colour_choices), and the map's
+    // colour map (edi::scan_colour_map_names; Blue-Red starts at the theme's chart background). In a palette, each
+    // pattern takes its position in `positions` (a joint fit's experiments'), or without one the next position free
+    // of `takenPositions` (a scan's datasets beside the project's structures; edi::free_positions).
+    Q_PROPERTY(QList<int> positions MEMBER positions_ WRITE setPositions NOTIFY positionsChanged)
+    Q_PROPERTY(QList<int> takenPositions MEMBER taken_positions_ WRITE setTakenPositions NOTIFY takenPositionsChanged)
     Q_PROPERTY(QString colourMap MEMBER colour_map_ WRITE setColourMap NOTIFY colourMapChanged)
     Q_PROPERTY(QColor background MEMBER background_ WRITE setBackground NOTIFY backgroundChanged)
     // The map's colour between two datasets' rows: smooth (interpolated) or stepped (each dataset one band).
     Q_PROPERTY(bool smoothRows MEMBER smooth_rows_ WRITE setSmoothRows NOTIFY smoothRowsChanged)
-    // The map's colours run from their high end at the lowest intensity, reversed.
+    // The map's colours run from their high end at the lowest intensity, inverted (edi::scan_map_inverted resolves the
+    // Map's direction).
     Q_PROPERTY(bool reversed MEMBER reversed_ WRITE setReversed NOTIFY reversedChanged)
     // The Stacked colours reversed: the last dataset takes the first colour (colourOf, so its labels and ticks too).
     Q_PROPERTY(bool stackedReversed MEMBER stacked_reversed_ WRITE setStackedReversed NOTIFY stackedReversedChanged)
     Q_PROPERTY(bool dark MEMBER dark_ WRITE setDark NOTIFY darkChanged)
     // Only the included range: the points inside an excluded region are not drawn, which leaves its tint as a gap.
     Q_PROPERTY(bool includedOnly MEMBER included_only_ WRITE setIncludedOnly NOTIFY includedOnlyChanged)
+    // Every pattern drawn less its background where it has one (ScanViewModel::Pattern::background), the intensity
+    // range and the colour bar's ends with it; one without is drawn as it is.
+    Q_PROPERTY(bool subtractBackground MEMBER subtract_background_ WRITE setSubtractBackground NOTIFY
+                   subtractBackgroundChanged)
     // The shown dataset: with `highlight`, drawn on top in its colour while every other is faded to `faded` (on the
     // map, every other row's band blended toward the background); without, the drawing does not depend on it.
     Q_PROPERTY(int current MEMBER current_ WRITE setCurrent NOTIFY currentChanged)
     Q_PROPERTY(bool highlight MEMBER highlight_ WRITE setHighlight NOTIFY highlightChanged)
+    // Highlighting on the Stacked view, every pattern but the shown one is named in this colour, the theme's disabled
+    // one, and drawn thinner in it blended toward the background (the owner, 2026-10-27); the Map fades its other bands
+    // by `faded`.
+    Q_PROPERTY(QColor disabledColour MEMBER disabled_colour_ WRITE setDisabledColour NOTIFY disabledColourChanged)
     Q_PROPERTY(double faded MEMBER faded_ WRITE setFaded NOTIFY fadedChanged)
     // A fit holds the cores: the painter strokes the lines on one thread, not on every core, so the fit is not slowed.
     Q_PROPERTY(bool busy MEMBER busy_ WRITE setBusy NOTIFY busyChanged)
@@ -65,16 +79,14 @@ class ScanLayer : public QQuickPaintedItem {
     Q_PROPERTY(bool active MEMBER active_ WRITE setActive NOTIFY activeChanged)
     // The stacked lines on the GPU (a ScanLines child) rather than painted.
     Q_PROPERTY(bool gpu MEMBER gpu_ WRITE setGpu NOTIFY gpuChanged)
-    // The stacked patterns' placing (edi ADR-0041 §4), on a vertical axis whose 0 to 1 is the plot's height: each
-    // pattern scaled so its lowest to highest value spans `height` (Fit: 0, the height that fills the plot exactly),
-    // the i-th in order with its baseline at i × height × offset. offset 0 puts every baseline on one line, 1 starts
-    // each pattern where the one below it ends.
-    Q_PROPERTY(double offset MEMBER offset_ WRITE setOffset NOTIFY offsetChanged)
-    Q_PROPERTY(double heightShare MEMBER height_share_ WRITE setHeightShare NOTIFY heightShareChanged)
-    // How tall each stacked pattern is, on the vertical axis: heightShare, or the Fit height.
+    // The stacked patterns' placing (edi ADR-0041 §4), on a vertical axis whose 0 to 1 is the plot's height: at spacing
+    // s, from 0 (Overlay) to 1 (Separate), each of N patterns scaled so its lowest to highest value spans
+    // height = (1 - s) + s / N, the i-th in order with its baseline at i s / N (edi::stacked_placement), so the stack
+    // fills the plot exactly.
+    Q_PROPERTY(double spacing MEMBER spacing_ WRITE setSpacing NOTIFY spacingChanged)
+    // How tall each stacked pattern is, on the vertical axis.
     Q_PROPERTY(double patternHeight READ patternHeight NOTIFY placementChanged)
-    // The top of the highest stacked pattern on the vertical axis: above 1 when a fixed height makes the stack taller
-    // than the plot.
+    // The top of the highest stacked pattern on the vertical axis: 1, the plot's top, with any patterns.
     Q_PROPERTY(double stackTop READ stackTop NOTIFY stackTopChanged)
     // The intensities the colour map's ends stand for, on the chart's y scale: what a colour bar labels.
     Q_PROPERTY(double displayMin READ displayMin NOTIFY displayMinChanged)
@@ -82,9 +94,13 @@ class ScanLayer : public QQuickPaintedItem {
     // Bumped whenever the datasets' colours (colourOf) change, for what shows them to read them again.
     Q_PROPERTY(int coloursRevision READ coloursRevision NOTIFY coloursRevisionChanged)
     // Which rows' labels show, true by dataset, while `labelled`: all while they fit; when they would come closer than
-    // `labelGap` pixels, an evenly spread share of them, the current dataset's always among them. Zooming in spreads the
-    // rows, and the rest come back as they fit. Made again when what it depends on changes, announced when it differs.
+    // `labelGap` pixels, an evenly spread share of them, the current dataset's always among them. Zooming in spreads the rows, and the rest come back as they fit. Made
+    // again when what it depends on changes, announced when it differs.
     Q_PROPERTY(bool labelled MEMBER labelled_ WRITE setLabelled NOTIFY labelledChanged)
+    // The Stacked view's legend (ChartLegend; the owner, 2026-10-26): a line in each dataset's colour and its row's
+    // text, in scan order (highlighting, every other one in the disabled colour; not, the current one bold); past
+    // kFullLegend datasets only the first, the current and the last, then how many more there are.
+    Q_PROPERTY(edi_app::ChartLegendModel* legend READ legend CONSTANT)
     Q_PROPERTY(double labelGap MEMBER label_gap_ WRITE setLabelGap NOTIFY labelGapChanged)
     Q_PROPERTY(QList<bool> shownLabels READ shownLabels NOTIFY shownLabelsChanged)
     // Diagnostics, never inputs: how many datasets were reduced (a stacked trace or a map's pixel columns), and how
@@ -112,14 +128,26 @@ class ScanLayer : public QQuickPaintedItem {
     void setDark(bool dark);
     void setCurrent(int dataset);
     void setIncludedOnly(bool on);
+    void setSubtractBackground(bool on);
+    void setPositions(const QList<int>& positions);
+    void setTakenPositions(const QList<int>& positions);
     void setGpu(bool on);
     void setHighlight(bool on);
     void setFaded(double opacity);
     void setBusy(bool busy);
     void setActive(bool active);
-    void setOffset(double offset);
-    void setHeightShare(double share);
+    void setSpacing(double spacing);
     void setLabelled(bool labelled);
+    void setDisabledColour(const QColor& colour);
+    // A click on the Stacked legend hides a pattern, or shows it again: a hidden one is not drawn and its legend entry
+    // is drawn disabled (the owner, 2026-10-27).
+    Q_INVOKABLE void toggleHidden(int dataset);
+    bool hiddenAt(std::size_t dataset) const;
+    QColor recededColour() const;
+    static double recededWidth(double width);
+    ChartLegendModel* legend() const { return legend_; }
+    // The most datasets the legend lists in full.
+    static constexpr int kFullLegend = 15;
     void setLabelGap(double gap);
     QList<bool> shownLabels() const;
     double patternHeight() const { return pattern_height_; }
@@ -137,8 +165,16 @@ class ScanLayer : public QQuickPaintedItem {
     Q_INVOKABLE double peakOf(int dataset) const;
     // The colour the stacked view draws a dataset's line in, by the colour choice: what its row label takes.
     Q_INVOKABLE QColor colourOf(int dataset) const;
-    // A line's colour faded to `faded` over the background, opaque.
-    QColor fadedColour(const QColor& colour) const;
+    // For the hover read-out (the owner, 2026-10-27): a dataset's intensity at `x` on the axis shown, as drawn (less its
+    // background when subtracting), linear between its points and NaN beyond them; where its line is drawn there on the
+    // vertical axis (on the Map, its row); and an intensity as the pattern chart's read-out writes it.
+    Q_INVOKABLE double valueAt(int dataset, double x) const;
+    Q_INVOKABLE double curveAt(int dataset, double x) const;
+    Q_INVOKABLE QString intensityText(double value) const;
+    // A stacked line's colour, with `top` the highlighted dataset (-1 for none), and a colour blended to `keep` over the
+    // background, opaque.
+    QColor lineColour(int dataset, int top) const;
+    QColor blendedColour(const QColor& colour, double keep) const;
     double displayMin() const { return display_min_; }
     double displayMax() const { return display_max_; }
     int coloursRevision() const { return colours_revision_; }
@@ -152,6 +188,7 @@ class ScanLayer : public QQuickPaintedItem {
    signals:
     void modelChanged();
     void labelledChanged();
+    void disabledColourChanged();
     void labelGapChanged();
     void shownLabelsChanged();
     void modeChanged();
@@ -169,13 +206,15 @@ class ScanLayer : public QQuickPaintedItem {
     void darkChanged();
     void currentChanged();
     void includedOnlyChanged();
+    void subtractBackgroundChanged();
+    void positionsChanged();
+    void takenPositionsChanged();
     void gpuChanged();
     void highlightChanged();
     void fadedChanged();
     void busyChanged();
     void activeChanged();
-    void offsetChanged();
-    void heightShareChanged();
+    void spacingChanged();
     void placementChanged();
     void stackTopChanged();
     void displayMinChanged();
@@ -204,6 +243,7 @@ class ScanLayer : public QQuickPaintedItem {
         double x_min = 0.0, x_max = 0.0;
         int columns = 0;
         bool included_only = false;
+        bool subtract_background = false;
         int scale = 0;
         bool operator==(const ReductionKey&) const = default;
     };
@@ -212,6 +252,8 @@ class ScanLayer : public QQuickPaintedItem {
     struct Reduction {
         std::uint64_t generation = 0;  // the dataset's ScanViewModel::Pattern::generation it was made from; 0: none
         std::vector<float> x, v;
+        // Stacked, with the excluded ranges shown: the trace's stretches inside them, drawn dimmed (x, v as above).
+        std::vector<float> excluded_x, excluded_v;
     };
     bool lines_on_gpu() const { return gpu_ && mode_ == QLatin1String("stacked"); }
     // Asks for this frame's drawing: the reductions and the GPU lines at the polish, the painting after it.
@@ -236,7 +278,7 @@ class ScanLayer : public QQuickPaintedItem {
     double x_min_ = 0.0, x_max_ = 1.0, y_min_ = 0.0, y_max_ = 1.0;
     QString scale_ = QStringLiteral("linear");
     QString colour_scheme_;
-    QString colour_map_ = QStringLiteral("viridis");
+    QString colour_map_ = QStringLiteral("blue-red");
     QColor background_ = Qt::white;
     bool smooth_rows_ = true;
     bool reversed_ = false;
@@ -244,13 +286,21 @@ class ScanLayer : public QQuickPaintedItem {
     bool dark_ = false;
     int current_ = -1;
     bool included_only_ = false;
+    bool subtract_background_ = false;
+    QList<int> positions_, taken_positions_;
     bool gpu_ = false;
     bool highlight_ = false;
     double faded_ = 0.3;
     bool busy_ = false;
     bool active_ = true, stale_ = false;
-    double offset_ = 0.1, height_share_ = 0.0;
+    double spacing_ = 0.75;  // Wide
     bool labelled_ = false;
+    QColor disabled_colour_ = QColor(0xBB, 0xBB, 0xBB);
+    std::vector<int> hidden_;
+    ChartLegendModel* legend_ = nullptr;
+    void syncLegend();
+    // At Separate on the Stacked view each pattern spans its values in the x range shown (measure).
+    bool fitsShownRange() const;
     double label_gap_ = 1.0;
     // shownLabels, and whether what it depends on changed since it was made.
     mutable QList<bool> shown_labels_;
@@ -343,7 +393,7 @@ class ScanColourBar : public QQuickPaintedItem {
     void reversedChanged();
 
    private:
-    QString colour_map_ = QStringLiteral("viridis");
+    QString colour_map_ = QStringLiteral("blue-red");
     QColor background_ = Qt::white;
     bool dark_ = false;
     bool reversed_ = false;

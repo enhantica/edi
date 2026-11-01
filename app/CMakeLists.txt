@@ -56,6 +56,8 @@ qt_add_qml_module(edi_app_module
         src/parameter_registry.hpp src/parameter_registry.cpp
         src/option_list_model.hpp src/option_list_model.cpp
         src/block_text.hpp src/block_text.cpp
+        src/edi_text_highlighter.hpp src/edi_text_highlighter.cpp
+        src/generated_category.hpp src/generated_category.cpp
         src/category_list_model.hpp src/category_list_model.cpp
         src/structure_view_model.hpp src/structure_view_model.cpp
         src/structure_view_options.hpp src/structure_view_options.cpp
@@ -92,6 +94,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/BlockSelector.qml
         qml/Components/ChoiceRadioButton.qml
         qml/Components/CategoryGroup.qml
+        qml/Components/ComboCell.qml
         qml/Components/DiagnosticsDialog.qml
         qml/Components/EmptyStateLabel.qml
         qml/Components/DataTable.qml
@@ -105,6 +108,8 @@ qt_add_qml_module(edi_app_module
         qml/Components/HeaderLabel.qml
         qml/Components/ChartToolButton.qml
         qml/Components/ChartToolbar.qml
+        qml/Components/ColourMapBar.qml
+        qml/Components/ColourMapComboBox.qml
         qml/Components/IconCell.qml
         qml/Components/IconLine.qml
         qml/Components/IconTabButton.qml
@@ -113,6 +118,7 @@ qt_add_qml_module(edi_app_module
         qml/Components/ParameterCell.qml
         qml/Components/ParameterField.qml
         qml/Components/ParameterGrid.qml
+        qml/Components/PaletteStrip.qml
         qml/Components/PatternChart.qml
         qml/Components/ProjectPatternChart.qml
         qml/Components/EvolutionChart.qml
@@ -124,12 +130,16 @@ qt_add_qml_module(edi_app_module
         qml/Components/SelectedPatternLine.qml
         qml/Components/SelectorField.qml
         qml/Components/StatusBar.qml
+        qml/Components/StatusBarButton.qml
+        qml/Components/StatusBarFitButton.qml
         qml/Components/StatusBarItem.qml
         qml/Components/StructureScene.qml
         qml/Components/StructureToolbar.qml
         qml/Components/StructureView.qml
         qml/Components/TableRow.qml
         qml/Components/TextCell.qml
+        qml/Components/GeneratedGroup.qml
+        qml/Components/MultiLineField.qml
         qml/Components/TextTab.qml
         qml/Components/ToolbarComboBox.qml
         qml/Components/ToolbarLines.qml
@@ -154,7 +164,6 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/AnalysisPage.qml
         qml/Pages/Analysis/ConstraintsGroup.qml
         qml/Pages/Analysis/FitStartGroup.qml
-        qml/Pages/Analysis/FittingGroup.qml
         qml/Pages/Analysis/FittingModeGroup.qml
         qml/Pages/Analysis/FreeHeaderMenu.qml
         qml/Pages/Analysis/JointFitGroup.qml
@@ -164,6 +173,7 @@ qt_add_qml_module(edi_app_module
         qml/Pages/Analysis/RefinementGroup.qml
         qml/Pages/Analysis/SequentialExtractGroup.qml
         qml/Pages/Analysis/SequentialFitGroup.qml
+        qml/Pages/Analysis/ShownParametersGroup.qml
         qml/Pages/Experiment/AbsorptionGroup.qml
         qml/Pages/Experiment/ExtinctionGroup.qml
         qml/Pages/Experiment/ObservedThresholdRow.qml
@@ -226,9 +236,11 @@ endif()
 # projects only (ADR-0031). Configuration fails when the registry and the project directories disagree.
 set(_cli ${PROJECT_SOURCE_DIR}/docs/user/cli)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${_cli}/projects.yml)
-file(STRINGS ${_cli}/projects.yml _registry_lines REGEX "^  - id: |^    user-facing: |^    app-only: ")
+file(STRINGS ${_cli}/projects.yml _registry_lines
+     REGEX "^  - id: |^    user-facing: |^    app-only: |^    verification: ")
 set(_registered_ids)
 set(EDI_APP_EXAMPLE_IDS)
+set(_verification_ids)
 foreach(line IN LISTS _registry_lines)
     if(line MATCHES "^  - id: *(.+)$")
         set(id ${CMAKE_MATCH_1})
@@ -238,8 +250,14 @@ foreach(line IN LISTS _registry_lines)
         list(APPEND _registered_ids ${id})
     elseif(line MATCHES "^    user-facing: *true$" OR line MATCHES "^    app-only: ")
         list(APPEND EDI_APP_EXAMPLE_IDS ${id})
+    elseif(line MATCHES "^    verification: *true$")
+        list(APPEND _verification_ids ${id})
     endif()
 endforeach()
+# A verification project stays a CLI project (ADR-0031): the registry marks it.
+if(_verification_ids)
+    list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS ${_verification_ids})
+endif()
 file(GLOB _cli_entries LIST_DIRECTORIES true RELATIVE ${_cli} CONFIGURE_DEPENDS ${_cli}/*)
 foreach(entry IN LISTS _cli_entries)
     if(IS_DIRECTORY ${_cli}/${entry} AND NOT entry IN_LIST _registered_ids)
@@ -257,10 +275,8 @@ foreach(id IN LISTS EDI_APP_EXAMPLE_IDS)
     if(_metadata_error)
         message(FATAL_ERROR "Example '${id}' has no app metadata")
     endif()
-    if(_purpose STREQUAL "verification")
-        list(REMOVE_ITEM EDI_APP_EXAMPLE_IDS ${id})
-    elseif(NOT _purpose STREQUAL "refinement" AND NOT _purpose STREQUAL "simulation")
-        message(FATAL_ERROR "Example '${id}' has purpose '${_purpose}', not refinement, simulation or verification")
+    if(NOT _purpose STREQUAL "refinement" AND NOT _purpose STREQUAL "simulation")
+        message(FATAL_ERROR "Example '${id}' has purpose '${_purpose}', not refinement or simulation")
     endif()
 endforeach()
 function(edi_app_bundle_examples root)

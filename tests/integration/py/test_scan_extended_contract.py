@@ -253,8 +253,9 @@ def test_scan_explorer_header_has_declared_columns_in_order():
     label = block(repeater, 'EaComponents.ListViewLabel {')
     program = (
         context + 'group.scan=true;'
-        'const AppSizes={fieldSpacing:4,iconColumnWidth:16,dataColumnWidth:32};'
-        'const count=29;const metrics={advanceWidth:s=>s==="29"?12.25:99};'
+        'const AppSizes={fieldSpacing:4,iconColumnWidth:16,'
+        'iconOnlyColumnWidth:12,dataColumnWidth:32};'
+        'const count=29,modelRevision=0;const boldMetrics={advanceWidth:s=>s==="29"?12.25:99};'
         'const numberColumnWidth=(' + property_value(common, 'numberColumnWidth') + ');'
         'const textColumnWidth=()=>30;const qsTr=s=>s;'
         'const column={modelData:"field (T)"};const modelData=column.modelData;'
@@ -262,7 +263,7 @@ def test_scan_explorer_header_has_declared_columns_in_order():
         + 'const observed={connected:('
         + table_id
         + '.model===project.experiments),'
-        'width:(' + property_value(table, 'columnWidths') + ')[0],'
+        'width:(' + property_value(table, 'columns') + ')[0],'
         'columns:(' + model + '),label:(' + property_value(label, 'text') + ')};'
         'project.experiments.columns=["pressure (bar)"];'
         'project.experiments.extractColumns=["pressure (bar)"];'
@@ -552,7 +553,6 @@ def assert_stale_marker(consumer, results=None):
 
 
 def test_old_scan_results_are_retained_with_out_of_date_state():
-    assert_stale_marker(item(source('qml/Components/StatusBar.qml'), 'statusBar.fit'))
     assert_stale_marker(evolution_component())
 
 

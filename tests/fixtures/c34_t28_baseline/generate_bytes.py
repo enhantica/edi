@@ -24,6 +24,7 @@ from tests.fixtures.c34_t28_baseline.closure import require_baseline_closure
 from tests.fixtures.cwl_family.historical import current_tokens, original_tokens
 from tests.fixtures.excluded_display.historical_bytes import historical_excluded_bytes
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.project_categories.historical_bytes import prior_digest
 from tests.fixtures.report_units.iucr_reference import without_default_rule
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -146,16 +147,18 @@ def without_saved_calculator(name, contents, *, excluded=False):
     return original_tokens(contents.replace(declaration, b'', 1))
 
 
-def saved_hashes(directory, *, excluded=False):
-    return {
-        p.relative_to(directory).as_posix(): hashlib.sha256(
-            without_saved_calculator(
-                p.relative_to(directory).as_posix(), p.read_bytes(), excluded=excluded
+def saved_hashes(directory, *, excluded=False, order_reference=None):
+    result = {}
+    for p in sorted(directory.rglob('*')):
+        if p.is_file():
+            name = p.relative_to(directory).as_posix()
+            data = without_saved_calculator(name, p.read_bytes(), excluded=excluded)
+            result[name] = (
+                hashlib.sha256(data).hexdigest()
+                if order_reference is None
+                else prior_digest(data, order_reference.get(name), name=name)
             )
-        ).hexdigest()
-        for p in sorted(directory.rglob('*'))
-        if p.is_file()
-    }
+    return result
 
 
 def observe(

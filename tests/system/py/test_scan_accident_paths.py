@@ -199,27 +199,28 @@ def test_continue_keeps_old_generation_marks_through_save_reopen_and_reset_undo(
     assert observed['first']['completed'] == 1 and not observed['editError'], (
         'Mixed-generation witness: a stopped prefix precedes a real admitted template edit'
     )
-    assert observed['prefixKept'], (
-        'Continue fitting: every retained prefix byte survives the attempt'
+    assert observed['edited']['stale'] and observed['edited']['available'], (
+        'Refit: a template value, free flag or setting edit enables '
+        'replacement of the old generation'
     )
-    continued = observed['continued']
-    assert continued['completed'] == 2 or (
-        edit == 'free'
-        and continued['completed'] == 0
-        and (continued['refusal'] or continued['after']['lastError'])
-    ), (
-        'Continue fitting: compatible value/settings edits fit only missing files; a changed '
-        'free-column schema either completes or names its refusal without replacing old rows'
+    assert observed['continued']['completed'] == 3 and observed['refitted']['completed'] == 3, (
+        'Refit: every edited template refits all files, including a previously fitted prefix'
     )
-    assert not observed['saveError'], 'Mixed generation: Save As of retained results must succeed'
+    assert observed['refitUndoRestored'], (
+        'Refit Undo: the previous prefix and provenance bytes are restored exactly'
+    )
+    for field in ('rows', 'summary', 'template', 'stale', 'evolutionStale'):
+        assert observed['undoRefit'][field] == observed['edited'][field], (
+            'Refit Undo: the previous result rows, summary, template designation '
+            'and stale state restore'
+        )
+    assert not observed['saveError'], 'Refit: Save As of the new results must succeed'
     for name in ('mixed', 'reopened', 'undoReset'):
-        assert observed[name]['stale'] and observed[name]['evolutionStale'], (
-            'Mixed generation: retained old rows keep their out-of-date warning after Continue, '
-            'Save As, reopening and Reset Undo'
+        assert not observed[name]['stale'] and not observed[name]['evolutionStale'], (
+            'Refit: the new generation stays current through Save As, reopen and Reset Undo'
         )
     assert observed['fresh']['completed'] == 3 and not observed['freshState']['stale'], (
-        'Mixed generation: only Reset followed by a complete fresh run clears the old-generation '
-        'warning'
+        'Reset: clearing results still permits a full fresh fit'
     )
 
 
