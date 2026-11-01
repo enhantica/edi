@@ -2647,14 +2647,24 @@ QString ProjectViewModel::applyText(const QString& file, const QString& text) {
         return warnings.join(QLatin1Char('\n'));
     }
     // An item the read project does not write back (one no reader takes, in any category) is refused, not lost.
+    // An item given twice is refused too: which one would apply is not the user's to guess.
     try {
-        const std::vector<std::string> unread = edi::unread_items(*read, file.toStdString(), text.toStdString());
-        if (!unread.empty()) {
-            QStringList names;
-            for (const std::string& name : unread) {
-                names.append(QString::fromStdString(name));
+        const edi::UnappliedItems refused =
+            edi::unapplied_items(*read, file.toStdString(), text.toStdString(),
+                                 file == QLatin1String("reports/report.edi") ? edi::report_settings_text(*project_)
+                                                                             : savedFile(file.toStdString()));
+        const auto listed = [](const std::vector<std::string>& names) {
+            QStringList list;
+            for (const std::string& name : names) {
+                list.append(QString::fromStdString(name));
             }
-            return tr("Not an item this file holds: %1").arg(names.join(QStringLiteral(", ")));
+            return list.join(QStringLiteral(", "));
+        };
+        if (!refused.unknown.empty()) {
+            return tr("Not an item this file holds: %1").arg(listed(refused.unknown));
+        }
+        if (!refused.repeated.empty()) {
+            return tr("An item given more than once: %1").arg(listed(refused.repeated));
         }
     } catch (const std::exception& refusal) {
         return QString::fromUtf8(refusal.what());

@@ -5367,50 +5367,50 @@ std::vector<std::string> saved_file_order(const Project& project) {
 }  // namespace
 
 namespace {
-// The input items a block's text gives, scalar items and loop columns, each by its current name in lower case: every
-// line outside a text field whose first word, after any blanks, is a name. Computed and supplied categories are left
-// out, as a read nobody calculated writes none.
-std::set<std::string> input_item_names(const std::string& text, bool every_name) {
-    std::set<std::string> names;
-    std::istringstream in(text);
-    bool in_text_field = false;
-    for (std::string line; std::getline(in, line);) {
-        if (in_text_field) {
-            in_text_field = !line.starts_with(';');
-            continue;
-        }
-        if (line.starts_with(';')) {
-            in_text_field = true;
-            continue;
-        }
-        const std::size_t start = line.find_first_not_of(" \t");
-        if (start == std::string::npos || line[start] != '_') {
-            continue;
-        }
-        const std::size_t end = line.find_first_of(" \t\r", start);
-        std::string name = detail::current_edi_name(line.substr(start, end - start), every_name);
-        std::transform(name.begin(), name.end(), name.begin(),
-                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        if (!category_is_output(name.substr(1, name.find('.') - 1))) {
-            names.insert(std::move(name));
+// Every item `text` gives, scalar items and loop columns, as the reader's tokenizer finds them (several on a line, a loop
+// header anywhere), each by its current name in lower case and as often as it is given.
+std::vector<std::string> given_item_names(const std::string& text, bool every_name) {
+    std::vector<std::string> names;
+    for (const Token& token : tokenize(text, "text")) {
+        if (is_tag(token)) {
+            std::string name = detail::current_edi_name(token.text, every_name);
+            std::ranges::transform(name, name.begin(),
+                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            names.push_back(std::move(name));
         }
     }
     return names;
 }
 }  // namespace
 
-std::vector<std::string> unread_items(const Project& read, const std::string& relative, const std::string& text) {
+UnappliedItems unapplied_items(const Project& read, const std::string& relative, const std::string& text,
+                               const std::string& current) {
     const bool block = relative.starts_with("structures/") || relative.starts_with("experiments/");
     const std::string written =
         relative == "reports/report.edi" ? report_settings_text(read) : ScratchSave(read).text(relative);
-    const std::set<std::string> kept = input_item_names(written, block);
-    std::vector<std::string> unread;
-    for (const std::string& name : input_item_names(text, block)) {
-        if (!kept.contains(name)) {
-            unread.push_back(name);
+    const std::vector<std::string> kept = given_item_names(written, block);
+    const std::vector<std::string> held = given_item_names(current, block);
+    const auto among = [](const std::vector<std::string>& names, const std::string& name) {
+        return std::ranges::find(names, name) != names.end();
+    };
+    UnappliedItems refused;
+    std::set<std::string> seen;
+    for (const std::string& name : given_item_names(text, block)) {
+        // The header's version is the one item a text may repeat, as the reader allows.
+        if (!seen.insert(name).second) {
+            if (name != "_edi.schema_version" && !among(refused.repeated, name)) {
+                refused.repeated.push_back(name);
+            }
+            continue;
+        }
+        // An output the file holds now is kept as it is, though a read nobody calculated writes none; any other item
+        // must be one the read writes back.
+        const bool output = category_is_output(name.substr(1, name.find('.') - 1));
+        if (!among(kept, name) && !(output && among(held, name))) {
+            refused.unknown.push_back(name);
         }
     }
-    return unread;
+    return refused;
 }
 
 std::string block_edi_text(const Project& project, BlockKind kind, const std::string& name) {
