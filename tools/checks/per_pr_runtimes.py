@@ -6,8 +6,8 @@
 the per-tier bounds and the committed breach baseline (``tests/threshold-breaches.md``, a
 RATCHET) are what the record enforces. retired the measured runtime split (``heavy``) this
 record used to feed: selection now lives in the three named groups
-(``tests/test-groups.json``), with an explicitly excluded nightly-only cohort. The audit
-REFUSES any marker-based deselection returning to a live config surface.
+(``tests/test-groups.json``), with explicitly excluded nightly-only and weekly-only
+cohorts. The audit REFUSES any marker-based deselection returning to a live config surface.
 
 Two subcommands:
 
@@ -182,13 +182,15 @@ class ManifestError(RuntimeError):
 
 
 def nightly_paths() -> set[str]:
-    """Return the explicitly declared nightly files; malformed policy refuses the audit."""
+    """Return the files the PR run leaves out (the nightly-only and weekly-only groups).
+
+    Malformed policy refuses the audit.
+    """
     try:
-        paths = json.loads((ROOT / 'tests/test-groups.json').read_text())['groups'][
-            'nightly-only'
-        ]['paths']
+        groups = json.loads((ROOT / 'tests/test-groups.json').read_text())['groups']
+        paths = groups['nightly-only']['paths'] + groups['weekly-only']['paths']
     except (OSError, ValueError, KeyError, TypeError) as exc:
-        raise ManifestError(f'invalid nightly-only group: {exc}') from exc
+        raise ManifestError(f'invalid nightly-only or weekly-only group: {exc}') from exc
     if (
         not isinstance(paths, list)
         or not paths
@@ -613,7 +615,7 @@ def render_manifest(
         '# per-tier bounds and the committed breach RATCHET',
         '# (tests/threshold-breaches.md). It selects NOTHING: the retired `heavy` split is',
         '# gone and test selection lives in the three named groups (tests/test-groups.json),',
-        '# PR coverage excludes declared nightly-only files; their banked rows are retained.',
+        '# PR coverage leaves out the nightly-only and weekly-only files; their rows are kept.',
         '# Rows are BANKED: an unchanged collection is never',
         '# re-measured; `pixi run per-pr-measure` measures ONLY the added nodes, once, and a',
         '# named node on request. No expiry, no budget. Seconds are setup+call+teardown, serial.',
@@ -639,7 +641,7 @@ def render_manifest(
             f'# inventory_{key} = {value}'
             for key, value in inventory_counts(runtimes, set(unmeasured or {})).items()
         ],
-        '# Inventory totals retain nightly rows; PR-required Python inventory follows.',
+        '# Inventory totals retain nightly and weekly rows; PR-required Python inventory follows.',
         '# inventory_pr_python = '
         + str(
             sum(
