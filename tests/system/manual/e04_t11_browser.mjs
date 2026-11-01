@@ -249,9 +249,11 @@ try {
       const deadline=Date.now()+45000;
       let selected=false;
       do {
-        const tree=await send('Accessibility.getFullAXTree');
-        selected=tree.nodes.some(n=>!n.ignored && n.role?.value==='tab' &&
-          n.name?.value===node.name.value && (n.properties || []).some(p=>p.name==='selected' && p.value.value));
+        // Pinned Qt/WASM does not publish PageTab aria-selected. Observe the
+        // actual named native tab; a matching label in a retained page is insufficient.
+        const tab=await evaluate(`window.ediControlGeometry(${JSON.stringify(nativeObjectName)})`);
+        selected=tab?.objectName===nativeObjectName && tab.checked===true &&
+          tab.visible===true && tab.enabled===true;
         if (!selected) await frame();
       } while (!selected && Date.now()<deadline);
       assert(selected,'page navigation must select the requested tab, not reuse labels from a hidden page');
