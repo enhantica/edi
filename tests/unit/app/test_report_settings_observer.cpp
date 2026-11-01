@@ -1,63 +1,133 @@
 // SPDX-License-Identifier: BSD-3-Clause
-#include <memory>
-#include <QDebug>
+#include <QtQml/qqml.h>
+#include <QtTest/qtestcase.h>
+#include <QtTest/qtestkeyboard.h>
+
 #include <QAnimationDriver>
-#include <QElapsedTimer>
-#include <QPdfWriter>
-#include <QPainter>
-#include <QProcess>
-#include <QProcessEnvironment>
-#include <QStandardPaths>
-#include <QJsonDocument>
+#include <QCoreApplication>
 #include <QCryptographicHash>
-#include <QJSEngine>
-#include <QRegularExpression>
-#include <atomic>
-#include <vector>
-#include <utility>
-#include <QTemporaryDir>
+#include <QDebug>
+#include <QDir>
 #include <QDirIterator>
-#include <QScreen>
-#include <QSet>
-#include <QGuiApplication>
-#include <QJSValue>
-#include <QKeyEvent>
-#include <QMimeData>
 #include <QDragEnterEvent>
 #include <QDropEvent>
-#include <QQuickItem>
-#include <QQuickWindow>
-#include <QtTest/qtestkeyboard.h>
-#include <QtTest/qtestcase.h>
+#include <QElapsedTimer>
+#include <QFile>
+#include <QFileInfo>
+#include <QGuiApplication>
+#include <QJSEngine>
+#include <QJSValue>
+#include <QJsonDocument>
+#include <QKeyEvent>
 #include <QLoggingCategory>
+#include <QMetaProperty>
+#include <QMimeData>
 #include <QMutex>
 #include <QMutexLocker>
-#include "measured_layer.hpp"
-#include "project_view_model.hpp"
-#include "fit_view_model.hpp"
-#include <QCoreApplication>
-#include <QDir>
-#include <QMetaProperty>
-#include <QFileInfo>
-#include <QFile>
-#include <QTextStream>
-#include <QTextLayout>
-#include <QSettings>
-#include <QUrl>
-#include <QVariantMap>
+#include <QPainter>
+#include <QPdfWriter>
+#include <QPointer>
+#include <QProcess>
+#include <QProcessEnvironment>
 #include <QQmlComponent>
 #include <QQmlEngine>
 #include <QQmlError>
-#include <QtQml/qqml.h>
-#include "engine_setup.hpp"
-
-#include <QPointer>
 #include <QQmlIncubationController>
 #include <QQmlIncubator>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QRegularExpression>
 #include <QScopeGuard>
+#include <QScreen>
+#include <QSet>
+#include <QSettings>
+#include <QStandardPaths>
+#include <QTemporaryDir>
+#include <QTextLayout>
+#include <QTextStream>
+#include <QUrl>
+#include <QVariantMap>
+#include <algorithm>
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <initializer_list>
+#include <memory>
+#include <mutex>
+#include <sstream>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "edi/fit_job.hpp"
+#include "engine_setup.hpp"
+#include "fit_view_model.hpp"
+#include "measured_layer.hpp"
+#include "project_view_model.hpp"
+#include "scan_session.hpp"
+#include "session.hpp"
 
 namespace {
+// Only this normal app-test carrier installs this existing process-wide observer.
+// A callback owns its state lease; it never reads a GUI QObject on the worker.
+struct ScanStopHold {
+    std::mutex mutex;
+    std::condition_variable changed;
+    std::thread::id ownerThread;
+    std::thread::id workerThread;
+    std::string file;
+    std::vector<std::pair<std::string, double>> starts;
+    std::vector<std::string> expectedFiles;
+    std::string expectedIdentity;
+    unsigned long long generation = 0;
+    int entered = 0;
+    int exited = 0;
+    bool blocked = false;
+    bool released = false;
+    bool expired = false;
+};
+std::mutex scan_stop_registry_mutex;
+std::shared_ptr<ScanStopHold> scan_stop_registered;
+unsigned long long scan_stop_generation = 0;
+
+void observe_scan_stop_file(const std::string& file,
+                            const std::vector<std::pair<std::string, double>>& starts) {
+    std::shared_ptr<ScanStopHold> hold;
+    {
+        const std::lock_guard lock(scan_stop_registry_mutex);
+        hold = scan_stop_registered;
+    }
+    if (!hold) return;
+    std::unique_lock lock(hold->mutex);
+    ++hold->entered;
+    if (hold->entered != 1 || hold->released) {
+        ++hold->exited;
+        return;
+    }
+    hold->workerThread = std::this_thread::get_id();
+    hold->file = file;
+    hold->starts = starts;
+    if (hold->workerThread == hold->ownerThread) {
+        // Never block the GUI even if an incorrectly configured worker reaches us.
+        hold->expired = true;
+        ++hold->exited;
+        return;
+    }
+    hold->blocked = true;
+    // Existing completion bound, solely a fatal deadlock guard, not a success wait.
+    const auto safety = std::chrono::steady_clock::now() + std::chrono::milliseconds(12000);
+    if (!hold->changed.wait_until(lock, safety, [&] { return hold->released; }))
+        hold->expired = true;
+    hold->blocked = false;
+    ++hold->exited;
+}
+
+QString scan_stop_thread_name(std::thread::id id) {
+    std::ostringstream text;
+    text << id;
+    return QString::fromStdString(text.str());
+}
+
 QMutex report_console_mutex;
 QVariantList report_console_messages;
 std::atomic<QtMessageHandler> report_previous_handler{nullptr};
@@ -122,6 +192,129 @@ public:
         return result;
     }
     using QObject::QObject;
+    ~ReportSettingsProof() override {
+        releaseScanStop();
+        // If a failed case still owns real work, keep the registry reserved rather
+        // than allowing a new generation to borrow an in-flight callback.
+        clearScanStop();
+    }
+    Q_INVOKABLE bool armScanStop(QObject* object) {
+#if EDI_WORKER_OWNER_THREAD
+        Q_UNUSED(object);
+        return false;  // Blocking is unsupported on an owner-thread worker.
+#else
+        auto* project = qobject_cast<edi_app::ProjectViewModel*>(object);
+        auto* session = project ? qobject_cast<edi_app::Session*>(project->parent()) : nullptr;
+        if (!project || !session || session->project() != project || !project->scan() ||
+            !project->fit() || project->fit()->nativeRunning() || !project->scanSession() ||
+            scan_stop_hold_)
+            return false;
+        const auto* scan = project->scanSession();
+        if (scan->datasets().files.empty() || scan->run().invalid ||
+            !scan->run().outcome.isEmpty())
+            return false;
+        auto hold = std::make_shared<ScanStopHold>();
+        hold->ownerThread = std::this_thread::get_id();
+        hold->expectedFiles = scan->datasets().files;
+        const auto* originalTemplate = project->scanTemplate();
+        hold->expectedIdentity = edi_app::ScanSession::templateIdentity(
+            originalTemplate ? *originalTemplate : project->project());
+        if (hold->expectedIdentity.empty()) return false;
+        {
+            const std::lock_guard lock(scan_stop_registry_mutex);
+            if (scan_stop_registered) return false;
+            hold->generation = ++scan_stop_generation;
+            scan_stop_hold_ = hold;
+            scan_stop_project_ = project;
+            scan_stop_registered = hold;
+            edi::set_scan_file_start_observer(observe_scan_stop_file);
+        }
+        return true;
+#endif
+    }
+    Q_INVOKABLE QVariantMap scanStopFacts(QObject* object) const {
+        const auto hold = scan_stop_hold_;
+        QVariantMap facts{{"armed", bool(hold)}, {"ready", false}};
+        if (!hold) return facts;
+        const auto* project = scan_stop_project_.data();
+        const auto* session =
+            project ? qobject_cast<edi_app::Session*>(project->parent()) : nullptr;
+        const bool current =
+            project && object == project && session && session->project() == project;
+        const bool nativeRunning = project && project->fit() && project->fit()->nativeRunning();
+        const std::lock_guard lock(hold->mutex);
+        const bool fileOwned = std::find(hold->expectedFiles.begin(), hold->expectedFiles.end(),
+                                         hold->file) != hold->expectedFiles.end();
+        const bool distinctThread = hold->workerThread != hold->ownerThread;
+        const bool ready = current && nativeRunning && hold->entered == 1 && hold->exited == 0 &&
+                           hold->blocked && !hold->released && !hold->expired && distinctThread &&
+                           !hold->file.empty() && fileOwned && !hold->starts.empty();
+        QVariantList starts;
+        for (const auto& [name, value] : hold->starts)
+            starts.append(QVariantMap{{"name", QString::fromStdString(name)}, {"value", value}});
+        facts.insert("ready", ready);
+        facts.insert("generation", QString::number(hold->generation));
+        facts.insert("owner_current", current);
+        facts.insert("native_running", nativeRunning);
+        facts.insert("entered", hold->entered);
+        facts.insert("exited", hold->exited);
+        facts.insert("blocked", hold->blocked);
+        facts.insert("released", hold->released);
+        facts.insert("expired", hold->expired);
+        facts.insert("distinct_thread", distinctThread);
+        facts.insert("owner_thread", scan_stop_thread_name(hold->ownerThread));
+        facts.insert("worker_thread", scan_stop_thread_name(hold->workerThread));
+        facts.insert("file", QString::fromStdString(hold->file));
+        facts.insert("file_owned", fileOwned);
+        facts.insert("starts", starts);
+        facts.insert("expected_identity", QString::fromStdString(hold->expectedIdentity));
+        if (current && project->scanSession()) {
+            const auto& run = project->scanSession()->run();
+            facts.insert("run_identity", QString::fromStdString(run.identity));
+            facts.insert("run_identity_matches",
+                         !run.identity.empty() && run.identity == hold->expectedIdentity);
+            facts.insert("run_outcome", run.outcome);
+            facts.insert("run_invalid", run.invalid);
+            facts.insert("run_error", run.error);
+        }
+        return facts;
+    }
+    Q_INVOKABLE bool scanStopReady(QObject* object) const {
+        return scanStopFacts(object).value("ready").toBool();
+    }
+    Q_INVOKABLE void releaseScanStop() {
+        const auto hold = scan_stop_hold_;
+        if (!hold) return;
+        {
+            const std::lock_guard lock(scan_stop_registry_mutex);
+            if (scan_stop_registered == hold) edi::set_scan_file_start_observer(nullptr);
+        }
+        {
+            const std::lock_guard lock(hold->mutex);
+            hold->released = true;
+        }
+        hold->changed.notify_all();
+    }
+    Q_INVOKABLE bool clearScanStop() {
+        const auto hold = scan_stop_hold_;
+        if (!hold) return true;
+        // This never releases a live hold: the negative must not alter its premise.
+        {
+            const std::lock_guard lock(hold->mutex);
+            if (!hold->released || hold->blocked || hold->entered != hold->exited || hold->expired)
+                return false;
+        }
+        if (scan_stop_project_ && scan_stop_project_->fit()->nativeRunning()) return false;
+        {
+            const std::lock_guard lock(scan_stop_registry_mutex);
+            if (scan_stop_registered != hold) return false;
+            edi::set_scan_file_start_observer(nullptr);
+            scan_stop_registered.reset();
+        }
+        scan_stop_hold_.reset();
+        scan_stop_project_.clear();
+        return true;
+    }
     bool webAvailable() const { return true; }
     QString webExportError() const { return web_export_error_; }
     Q_INVOKABLE QObject* creationDialog(QObject* root) const {
@@ -1009,6 +1202,8 @@ private:
         return url.isValid() && url.isLocalFile() && url.host().isEmpty() && !url.hasQuery() &&
                !url.hasFragment() && QDir::isAbsolutePath(url.toLocalFile());
     }
+    std::shared_ptr<ScanStopHold> scan_stop_hold_;
+    QPointer<edi_app::ProjectViewModel> scan_stop_project_;
     mutable QString web_export_error_;
     std::unique_ptr<AcceptanceAnimationDriver> animation_driver_;
     std::vector<std::unique_ptr<QTemporaryDir>> directories_;
