@@ -5,7 +5,6 @@ import os
 import shutil
 import subprocess
 import sys
-from operator import itemgetter
 from pathlib import Path
 
 import pytest
@@ -161,16 +160,19 @@ def observe(tmp_path, route, kind, payloads, *, native=False):
 
 @pytest.mark.parametrize('route', ['cli', 'app'])
 @pytest.mark.parametrize('kind', ['structure', 'experiment'])
-@pytest.mark.parametrize('row', case.inventory(), ids=itemgetter('uid'))
-def test_public_entrances_account_for_every_alias_and_loop_cell(tmp_path, route, kind, row):
+@pytest.mark.parametrize(
+    ('row', 'alias'),
+    [(row, name) for row in case.inventory() for name in row['cif_names']],
+    ids=[row['uid'] + ':' + name for row in case.inventory() for name in row['cif_names']],
+)
+def test_public_entrances_account_for_every_alias_and_loop_cell(tmp_path, route, kind, row, alias):
     declarations = []
     inputs = [case.STRUCTURE if kind == 'structure' else case.EXPERIMENT]
-    for name in row['cif_names']:
-        for spelling in dict.fromkeys([name, name.replace('.', '_', 1).upper()]):
-            for shape in ['item', 'column']:
-                for value in [case.token(row), '?', '.', "'?'", "''"]:
-                    inputs.append(case.payload(kind, row, spelling, shape, value))
-                    declarations.append((spelling, value, shape))
+    for spelling in dict.fromkeys([alias, alias.replace('.', '_', 1).upper()]):
+        for shape in ['item', 'column']:
+            for value in [case.token(row), '?', '.', "'?'", "''"]:
+                inputs.append(case.payload(kind, row, spelling, shape, value))
+                declarations.append((spelling, value, shape))
     results = observe(tmp_path, route, kind, inputs)
     for result, (name, value, shape) in zip(results, declarations, strict=True):
         case.accounted(

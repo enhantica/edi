@@ -4,7 +4,6 @@ import importlib
 import math
 import re
 import warnings
-from operator import itemgetter
 
 import pytest
 import yaml
@@ -20,41 +19,44 @@ if case.API == 'edi':
 @pytest.mark.parametrize('route', ROUTES)
 @pytest.mark.parametrize('kind', ['structure', 'experiment'])
 @pytest.mark.parametrize('shape', ['item', 'column'])
-@pytest.mark.parametrize('row', case.inventory(), ids=itemgetter('uid'))
+@pytest.mark.parametrize(
+    ('row', 'name'),
+    [(row, name) for row in case.inventory() for name in row['cif_names']],
+    ids=[row['uid'] + ':' + name for row in case.inventory() for name in row['cif_names']],
+)
 def test_every_item_alias_variant_and_absence_has_a_saved_outcome(
-    tmp_path, capfd, route, kind, shape, row
+    tmp_path, capfd, route, kind, shape, row, name
 ):
     errors = []
-    for i, name in enumerate(row['cif_names']):
-        for style, spelling in enumerate(dict.fromkeys([name, name.replace('.', '_', 1).upper()])):
-            for j, value in enumerate([case.token(row), '?', '.', "'?'", "''"]):
-                text = case.payload(kind, row, spelling, shape, value)
-                assert case.key(spelling) in case.columns(text), (
-                    'Each inventory probe is present in the actual CIF input'
+    for style, spelling in enumerate(dict.fromkeys([name, name.replace('.', '_', 1).upper()])):
+        for j, value in enumerate([case.token(row), '?', '.', "'?'", "''"]):
+            text = case.payload(kind, row, spelling, shape, value)
+            assert case.key(spelling) in case.columns(text), (
+                'Each inventory probe is present in the actual CIF input'
+            )
+            capfd.readouterr()
+            result = case.observe(
+                kind,
+                text,
+                tmp_path / f'{style}-{j}',
+                route,
+                '.edi' if route == 'collection-edi-path' else '.cif',
+            )
+            result['notes'] += capfd.readouterr().err.splitlines()
+            try:
+                case.accounted(
+                    result,
+                    spelling,
+                    (
+                        str(six_digits(float(value)))
+                        if row.get('dtype') in {'float', 'number'} and value == case.token(row)
+                        else value
+                    ),
+                    row['edi_names'][0],
+                    count=2 if shape == 'column' else 1,
                 )
-                capfd.readouterr()
-                result = case.observe(
-                    kind,
-                    text,
-                    tmp_path / f'{i}-{style}-{j}',
-                    route,
-                    '.edi' if route == 'collection-edi-path' else '.cif',
-                )
-                result['notes'] += capfd.readouterr().err.splitlines()
-                try:
-                    case.accounted(
-                        result,
-                        spelling,
-                        (
-                            str(six_digits(float(value)))
-                            if row.get('dtype') in {'float', 'number'} and value == case.token(row)
-                            else value
-                        ),
-                        row['edi_names'][0],
-                        count=2 if shape == 'column' else 1,
-                    )
-                except AssertionError as error:
-                    errors.append(f'{spelling} {value}: {error}')
+            except AssertionError as error:
+                errors.append(f'{spelling} {value}: {error}')
     assert not errors, (
         'Every declaration reaches a saved value or a named terminal outcome: ' + repr(errors)
     )
