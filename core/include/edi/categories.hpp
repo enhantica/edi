@@ -12,6 +12,7 @@
 // So is a field a declared constraint sets (ADR-0024), from the dependence crysta marks it with.
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <map>
 #include <string>
@@ -183,6 +184,33 @@ inline Category absorption_category(ExperimentBase& experiment) {
     detail::add_optional(category.fields, "mu_r", experiment.absorption.mu_r);
     return category;
 }
+
+namespace detail {
+// Whether a save writes an experiment's calculation, as crysta's writer decides it (writes_computed): its calculation
+// current, with a value for every reflection of a single crystal and no infinite value anywhere. A powder whose
+// calculation range is declared (`_data_range`) is written as that declaration, without the calculation.
+inline bool writes_calculation(const ExperimentBase& experiment) {
+    const auto infinite = [](const auto& column) {
+        return std::any_of(column.begin(), column.end(), [](double value) { return std::isinf(value); });
+    };
+    if (experiment.reflections.has_value()) {
+        const ReflnDataBase& reflections = *experiment.reflections;
+        return !reflections.intensity_calc.empty() && reflections.intensity_calc.size() == reflections.size() &&
+               experiment.computed_current() && !infinite(reflections.intensity_calc) &&
+               !infinite(reflections.d_spacing) && !infinite(reflections.sin_theta_over_lambda);
+    }
+    if (!experiment.data.has_value() || experiment.data->intensity_calc.empty() || experiment.calculation_only ||
+        !experiment.computed_current()) {
+        return false;
+    }
+    const PdDataBase& data = *experiment.data;
+    const PowderReflnDataBase& refln = experiment.refln;
+    return !infinite(data.d_spacing) && !infinite(data.intensity_calc) && !infinite(data.intensity_bkg) &&
+           !infinite(data.component_intensities_net) && !infinite(data.residual) && !infinite(refln.d_spacing) &&
+           !infinite(refln.sin_theta_over_lambda) && !infinite(refln.f_calc) && !infinite(refln.f_squared_calc) &&
+           !infinite(refln.position);
+}
+}  // namespace detail
 
 // An experiment's categories in page order (§2b (iii)).
 inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
@@ -384,35 +412,33 @@ inline std::vector<Category> calculated_categories(const Structure& structure) {
     if (!structure.geometry_current()) {
         return {};
     }
+    // The writer writes no loop without rows (a structure with no bond in its cutoffs has no `_geom_bond`).
     const StructureGeometry& geometry = structure.geometry;
-    std::vector<Category> categories{{"space_group_symop", true, geometry.space_group_symop.size()},
-                                     {"expanded_atom_site", true, geometry.expanded_atom_sites.size()}};
-    if (geometry.geom_bond.size() > 0) {
-        categories.push_back({"geom_bond", true, geometry.geom_bond.size()});
+    std::vector<Category> categories;
+    for (const auto& [id, rows] : {std::pair{"space_group_symop", geometry.space_group_symop.size()},
+                                   std::pair{"expanded_atom_site", geometry.expanded_atom_sites.size()},
+                                   std::pair{"geom_bond", geometry.geom_bond.size()}}) {
+        if (rows > 0) {
+            categories.push_back({id, true, rows});
+        }
     }
     categories.push_back({"atom_sites_cartn_transform"});
     return categories;
 }
 
 inline std::vector<Category> calculated_categories(const ExperimentBase& experiment) {
-    // A powder bank's calculation is in its data, a single crystal's in its reflections.
-    const bool calculated = (experiment.data.has_value() && !experiment.data->intensity_calc.empty()) ||
-                            (experiment.reflections.has_value() && !experiment.reflections->intensity_calc.empty());
-    if (!calculated || !experiment.computed_current()) {
+    if (!detail::writes_calculation(experiment)) {
         return {};
     }
-    if (experiment.reflections.has_value()) {  // the single crystal's agreement and its observed-reflection rule
+    if (experiment.reflections.has_value()) {  // the single crystal's agreement and its observed-reflection counts
         return {{"refine_ls"}, {"reflns"}};
     }
-    std::vector<Category> categories;
-    if (experiment.refln.size() > 0) {
-        categories.push_back({"refln", true, experiment.refln.size()});
+    // A powder's reflections are its designed group's (experiment_categories). Each structure's curve is written with
+    // two structures or more: a single one's is the calculated pattern less the background, already in the file.
+    if (experiment.data->component_order.size() >= 2) {
+        return {{"pd_calc", true, experiment.data->intensity_calc.size()}, {"pd_calc_overall"}};
     }
-    if (experiment.data.has_value() && !experiment.data->component_intensities_net.empty()) {
-        categories.push_back({"pd_calc", true, experiment.data->intensity_calc.size()});
-        categories.push_back({"pd_calc_overall"});
-    }
-    return categories;
+    return {};
 }
 
 }  // namespace edi
