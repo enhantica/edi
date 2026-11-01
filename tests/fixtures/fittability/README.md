@@ -20,3 +20,9 @@ are listed in `excluded`. The fitted extinction witness also requires the
 constrained crystal radius to carry a nonzero propagated uncertainty.
 Regenerate only against the recorded main tree, with the matching built API:
 `python tests/fixtures/fittability/saved_reference.py --api <api> --output tests/fixtures/fittability/saved-main.json`.
+
+The table-display project also carries its fixture helper as a copied asset. After an
+intentional helper change, use `PYTHONPATH=. python tests/fixtures/fittability/adapt_saved_pins.py --before-helper <previous-metadata_bytes.py>`. This reproduces the historical helper
+hash, requires its saved bytes to equal its current source, and refuses any other
+saved path or byte change under either uncertainty rule. The original baseline stays
+unchanged; the two exact asset transitions join the existing transition manifest.

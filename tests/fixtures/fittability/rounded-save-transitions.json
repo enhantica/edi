@@ -1,5 +1,5 @@
 {
-  "claim": "Regression pins for rounded saving and experiment metadata, not physical references",
+  "claim": "Regression pins for rounded saving, experiment metadata and copied fixture helpers, not physical references",
   "before_capture_sha256": "61ddc965028c6906c4a5c1b6c0a066f1c0dd2a9d58acfa79b4987026b2af9bdb",
   "after_capture_sha256": "247c05e307c6c0ee400b09f9c5abd51cc6e2e340a31e2687afcba6597f85b174",
   "changes": [
@@ -2368,6 +2368,20 @@
       "path": "project.edi",
       "before": "c462dc627dec3aa811a10eba6015e9743acb437c4c026972843224e80f5d75cf",
       "after": "b3d32a813de317796c1b17996cb2c33e93996861f47d063007179c728ffc1598"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_19",
+      "path": "metadata_bytes.py",
+      "before": "06f2a2b46b2169e3fa5cd05dd787bd02424ccad8aadf1dcaff2dbf91f84a2da4",
+      "after": "da278754e88332d8536dee183238484e50344ab0e54d1d8b7511adfd714ed39c"
+    },
+    {
+      "case": "tests/fixtures/table_display",
+      "rule": "iucr_99",
+      "path": "metadata_bytes.py",
+      "before": "06f2a2b46b2169e3fa5cd05dd787bd02424ccad8aadf1dcaff2dbf91f84a2da4",
+      "after": "da278754e88332d8536dee183238484e50344ab0e54d1d8b7511adfd714ed39c"
     }
   ],
   "retained_path_mismatches": []

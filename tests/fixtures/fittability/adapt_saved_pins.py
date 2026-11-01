@@ -3,16 +3,67 @@
 import argparse
 import gzip
 import hashlib
+import importlib
 import json
+import tempfile
 from pathlib import Path
+
+from tests.fixtures.fittability.saved_reference import snapshot
+
+
+def advance_table_helper(root, previous):
+    case = 'tests/fixtures/table_display'
+    asset = 'metadata_bytes.py'
+    repo = root.parents[2]
+    old_hash = hashlib.sha256(previous.read_bytes()).hexdigest()
+    new_bytes = (repo / case / asset).read_bytes()
+    new_hash = hashlib.sha256(new_bytes).hexdigest()
+    path = root / 'saved-main.json'
+    pins = json.loads(path.read_text())
+    original = json.loads((root / 'saved-before-rounded.json').read_text())
+    transition_path = root / 'rounded-save-transitions.json'
+    transition = json.loads(transition_path.read_text())
+    for rule in ['iucr_19', 'iucr_99']:
+        expected = pins['projects'][case][rule]
+        if expected[asset] != old_hash or original['projects'][case][rule][asset] != old_hash:
+            raise ValueError('The copied helper must reproduce its historical regression hash')
+        with tempfile.TemporaryDirectory() as folder:
+            scratch = Path(folder)
+            actual = snapshot(importlib.import_module('edi'), repo / case, scratch, rule)
+            if (scratch / 'saved' / asset).read_bytes() != new_bytes:
+                raise ValueError('The saved helper must preserve the source asset bytes exactly')
+        if actual != {**expected, asset: new_hash}:
+            raise ValueError('Any other saved path or byte change refuses the helper transition')
+        expected[asset] = new_hash
+        transition['changes'].append({
+            'case': case,
+            'rule': rule,
+            'path': asset,
+            'before': old_hash,
+            'after': new_hash,
+        })
+    transition['claim'] = (
+        'Regression pins for rounded saving, experiment metadata and copied fixture helpers, '
+        'not physical references'
+    )
+    path.write_text(json.dumps(pins, indent=2, sort_keys=True) + '\n')
+    transition_path.write_text(json.dumps(transition, indent=2) + '\n')
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--before', type=Path, required=True)
-    parser.add_argument('--after', type=Path, required=True)
+    parser.add_argument('--before', type=Path)
+    parser.add_argument('--after', type=Path)
+    parser.add_argument('--before-helper', type=Path)
     args = parser.parse_args()
     root = Path(__file__).resolve().parent
+    if args.before_helper is not None:
+        if args.before is not None or args.after is not None:
+            parser.error('--before-helper cannot be combined with capture inputs')
+        advance_table_helper(root, args.before_helper)
+        return
+    if args.before is None or args.after is None:
+        parser.error('--before and --after are required for capture transitions')
     path = root / 'saved-main.json'
     original = path.read_bytes()
     pins = json.loads(original)
