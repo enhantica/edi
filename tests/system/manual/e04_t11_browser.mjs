@@ -179,7 +179,7 @@ try {
     await waitControlGeometry(evaluate,frame,objectName);
     return controlPointer(evaluate,objectName);
   };
-  const click = async (regex, role, nativeObjectName, containerName) => {
+  const click = async (regex, role, nativeObjectName, containerName, expectedAXNodeId) => {
     await restoreCanvasViewport(evaluate);
     const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
       /Open project/.test(regex.source)?'project.open':/Create a new project/.test(regex.source)?'project.create':null;
@@ -209,6 +209,8 @@ try {
       await frame();return;
     }
     const node = await waitAX(regex, true, role);
+    if (expectedAXNodeId !== undefined) assert.equal(node.nodeId, expectedAXNodeId,
+      'The physical input must still address the uniquely admitted dialog button');
     console.log(`browser ${mode}: click ${node.name?.value}`);
     assert(node.backendDOMNodeId, 'UI actions require a real browser-backed accessible control');
     if (node.role?.value === 'tab' && /^(Home|Project|Structure|Experiment|Analysis|Report)$/.test(node.name?.value || ''))
@@ -259,6 +261,35 @@ try {
       assert(selected,'page navigation must select the requested tab, not reuse labels from a hidden page');
     }
 
+  };
+  const discardResetGuard = async () => {
+    const dialog = await waitAX(/^Save the changes\?$/, true, 'dialog');
+    const discard = await waitAX(/^Discard$/, true, 'button');
+    const tree = await send('Accessibility.getFullAXTree');
+    const named = (node, role, name) => !node.ignored && node.role?.value === role &&
+      node.name?.value === name && !(node.properties || []).some(p => p.name === 'disabled' && p.value.value);
+    const dialogs = tree.nodes.filter(node => named(node, 'dialog', 'Save the changes?'));
+    const buttons = tree.nodes.filter(node => named(node, 'button', 'Discard'));
+    assert(dialogs.length === 1 && dialogs[0].nodeId === dialog.nodeId &&
+      buttons.length === 1 && buttons[0].nodeId === discard.nodeId && discard.backendDOMNodeId,
+      'Reset must expose exactly its real unsaved-changes dialog and enabled Discard button');
+    const byId = new Map(tree.nodes.map(node => [node.nodeId, node]));
+    let ancestor = byId.get(discard.nodeId);
+    const visited = new Set();
+    while (ancestor && ancestor.nodeId !== dialog.nodeId && !visited.has(ancestor.nodeId)) {
+      visited.add(ancestor.nodeId);
+      ancestor = byId.get(ancestor.parentId);
+    }
+    assert(ancestor?.nodeId === dialog.nodeId,
+      'Discard must belong to the admitted Save-the-changes dialog, not another action');
+    // Qt Dialog.Discard has DestructiveRole; only the real button continues this Reset.
+    await click(/^Discard$/, 'button', undefined, undefined, discard.nodeId);
+  };
+  const requireResetGuardClosed = async () => {
+    const tree = await send('Accessibility.getFullAXTree');
+    assert(!tree.nodes.some(node => !node.ignored && node.role?.value === 'dialog' &&
+      node.name?.value === 'Save the changes?'),
+      'The Discarded guard must retire before the unchanged Reset state checks and navigation');
   };
   const openExampleRow = async (exampleId, exampleName) => {
     // Filter through real keyboard input so the requested row is materialised and unclipped.
@@ -659,7 +690,9 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   assert.deepEqual(toolbar.map(button=>button.name),toolbarNames,
     'The actual left app toolbar must name Save, Undo, Redo and Reset in its displayed order');
   await click(/^Reset to initial state without project, model and data$/);
+  await discardResetGuard();
   await settleRenderedPage();
+  await requireResetGuardClosed();
   await click(/^Start$/); await click(/^Project$/);
   await waitAX(/^Save project as/, false, 'button');
   const emptyTree = await send('Accessibility.getFullAXTree');
