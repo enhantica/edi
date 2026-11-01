@@ -4794,6 +4794,11 @@ conversion, value-type test or special case. Original no-exception non-callable 
 receiver/argument order and the JSON projection's explicit catch remain unchanged. Interruption
 uses the same existing synchronous-frame readiness latch; no controller or retention changes.
 
+A direct member call on a null or undefined receiver uses Qt's `CallProperty` description,
+“Cannot call method”, while read-only property access keeps “Cannot read property”. Only that
+direct call description changes; callee lookup, arguments and the first-error guard above remain
+unchanged. This does not copy Qt's error-formatting behavior over an earlier getter failure.
+
 Actual Array.from, split/map/filter, casing/slice/join, Date, Math and String.arg calls are retained.
 Map/filter consume native callable values holding the original QML context; the filter's Panel is
 held with Qt's guarded-pointer mechanism, so retaining a callback does not retain the widget or a
