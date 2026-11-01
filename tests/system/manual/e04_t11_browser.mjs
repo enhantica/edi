@@ -37,6 +37,19 @@ assert(!exampleOnly || (!fileRequestsOnly && !reopenControl && fileRequestCase =
 assert(!statusActionLifetimeOnly || (!fileRequestsOnly && !exampleOnly && !reopenControl && fileRequestCase==='none' &&
   !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only')),
   'The focused action-lifetime scope is explicit, without save/request/example/reopen counterfactual scope aliases');
+// A written-domain counterpart is ephemeral and RAW-qualified; it never replaces
+// the committed live/native physics reference or its conditioning capture.
+const writtenReference = process.argv.find(arg => arg.startsWith('--written-reference='))?.slice('--written-reference='.length);
+const writtenRequired = !fileRequestsOnly && !exampleOnly && !statusActionLifetimeOnly &&
+  !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only');
+const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
+if (writtenRequired) {
+  assert(writtenReference, 'Full browser fitting requires the explicitly owned ordinary-native-written reference directory');
+  const admitted = spawnSync('python', ['-m','tests.fixtures.e04_t11_wasm.written','admit',
+    '--root',sourceRoot,'--case',fitCase,'--reference',join(resolve(writtenReference),fitCase)],
+    {encoding:'utf8',timeout:10000});
+  assert.equal(admitted.status,0,'Written reference custody, raw anchors and reopen captures must qualify before browser actions: '+admitted.stderr);
+}
 console.log(`browser ${mode}: starting`);
 assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(mode),
   'requires the produced site, an explicit thread case and a persistent output directory');
@@ -723,16 +736,11 @@ if sys.argv[3] == 'refuse':
     markers[0].write_text('_edi.schema_version invalid\\n')
 print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encoding: 'utf8', timeout: 10000 });
   assert.equal(unpack.status, 0, 'browser save must produce a real reopenable project archive');
-  const numerical = spawnSync('python', ['-c', `import json, pathlib, sys
-from tests.fixtures.web_parallel.numeric import scientific, compare_scientific
-actual = scientific(pathlib.Path(sys.argv[1]))
-oracle = json.loads(pathlib.Path(sys.argv[2]).read_text())
-conditioning = json.loads(pathlib.Path(sys.argv[2].replace('-native.json', '-conditioning.json')).read_text())
-compare_scientific(actual, oracle['scientific'], oracle['relative_tolerance'], oracle['absolute_tolerance'], conditioning=conditioning, saved_iucr=True)
-pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
-    fileURLToPath(new URL(`../../fixtures/e04_t11_wasm/catalogue_scientific/${fitCase}-native.json`, import.meta.url)),
-    join(output, `${mode}-${fitCase}-scientific.json`)], {encoding:'utf8',timeout:10000});
-  assert.equal(numerical.status, 0, 'browser fitted parameters and pattern arrays must agree with the independent native capture: ' + numerical.stderr);
+  const numerical = spawnSync('python', ['-m','tests.fixtures.e04_t11_wasm.written','compare',
+    '--root',sourceRoot,'--case',fitCase,'--reference',join(resolve(writtenReference),fitCase),
+    '--archive',saved,'--output',join(output, `${mode}-${fitCase}-scientific.json`)],
+    {encoding:'utf8',timeout:10000});
+  assert.equal(numerical.status, 0, 'browser written parameters, SUs, bank fields and pattern arrays must agree with the independently raw-qualified ordinary native Save: ' + numerical.stderr);
   await writeFile(join(output, `${mode}-${fitCase}-measurement.json`), JSON.stringify({
     mode, fitCase, coreCount, fitElapsedMs, isolated, sharedArrayBuffer, kit: expected,
     chiSquare: chi, iterations, rwp, nativeNumerics: true
