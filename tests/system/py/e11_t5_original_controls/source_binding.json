@@ -5,11 +5,11 @@
   "required_files": [
     {
       "path": "tests/system/py/test_e11_t5_dev_native_integration.py",
-      "sha256": "f217a03b7e8f274dc1b3cd140f8268e2edf8d1ef83877eeb424670a3f730046b"
+      "sha256": "fab4eed9c8de1113fabca430474b746794d12a3a0da0f4b33768c12c92e932fa"
     },
     {
       "path": "tests/integration/py/assistant_ui_probe/probe.cpp",
-      "sha256": "1e5d1156dc1704dcb3e3b823427881d02a0964971b72de5875a0fe42f8bcde75"
+      "sha256": "5cace5b63a55b0b373848242d63646121e4532f4a7071d8ac6a4c3e68930bd5c"
     },
     {
       "path": "tests/system/py/e11_t5_original_qml_error_contract.py",
