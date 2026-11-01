@@ -79,12 +79,17 @@ std::vector<const edi::Category*> presentation_order(const std::vector<edi::Cate
 
 CategoryListModel::CategoryListModel(QObject* parent) : QAbstractListModel(parent) {}
 
-void CategoryListModel::refresh() { setCategories(std::vector<edi::Category>(categories_), text_); }
+void CategoryListModel::refresh() {
+    setCategories(std::vector<edi::Category>(categories_), std::function<std::string()>(text_),
+                  std::function<std::vector<edi::Category>()>(calculated_));
+}
 
 void CategoryListModel::setCategories(const std::vector<edi::Category>& categories,
-                                      const std::function<std::string()>& text) {
+                                      const std::function<std::string()>& text,
+                                      const std::function<std::vector<edi::Category>()>& calculated) {
     categories_ = categories;
     text_ = text;
+    calculated_ = calculated;
     std::vector<Row> target;
     for (const edi::Category* shown : presentation_order(categories)) {
         const edi::Category& category = *shown;
@@ -97,24 +102,35 @@ void CategoryListModel::setCategories(const std::vector<edi::Category>& categori
         }
     }
     std::vector<Row> generated;
+    // Only what a user sets or reads gets a group (the owner, 2026-10-27): not the file header, the Cartesian
+    // transform, the calculator (there is one), the curves' presentation order, the block list or the correlations,
+    // which the Correlations tab shows. The bond settings get a designed group of their own later, and the type is
+    // shown elsewhere.
+    static const char* const kNotGenerated[] = {"geom",     "experiment_type",           "edi",
+                                                "calculator", "atom_sites_cartn_transform", "pd_calc_overall",
+                                                "pd_block", "fit_parameter_correlation"};
+    const auto generates = [](const std::string& id) {
+        return std::find(std::begin(kNotGenerated), std::end(kNotGenerated), id) == std::end(kNotGenerated) &&
+               !edi::category_label(id).empty();
+    };
     if (text) {
         const std::string saved = text();
-        // Only what a user sets or reads gets a group (the owner, 2026-10-27): not the file header, the Cartesian
-        // transform, the calculator (there is one), the curves' presentation order, the block list or the
-        // correlations, which the Correlations tab shows. The bond settings get a designed group of their own later,
-        // and the type is shown elsewhere.
-        static const char* const kNotGenerated[] = {"geom",     "experiment_type",           "edi",
-                                                    "calculator", "atom_sites_cartn_transform", "pd_calc_overall",
-                                                    "pd_block", "fit_parameter_correlation"};
         for (const std::string& id : edi::text_category_ids(saved)) {
-            const bool excluded =
-                std::find(std::begin(kNotGenerated), std::end(kNotGenerated), id) != std::end(kNotGenerated);
-            if (excluded || edi::category_label(id).empty()) {
+            if (!generates(id)) {
                 continue;
             }
             const edi::TextCategory category = edi::text_category(saved, id);
             generated.push_back({QString::fromStdString(id),
                                  category.loop ? static_cast<int>(category.rows.size()) : 0, category.loop, true});
+        }
+    }
+    if (calculated) {
+        for (const edi::Category& category : calculated()) {
+            const QString id = QString::fromStdString(category.id);
+            const bool listed = std::any_of(generated.begin(), generated.end(), [&id](const Row& row) { return row.id == id; });
+            if (!listed && generates(category.id)) {
+                generated.push_back({id, static_cast<int>(category.rows), category.is_loop, true});
+            }
         }
     }
     for (const Row& row : generated) {

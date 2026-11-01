@@ -376,6 +376,45 @@ inline std::vector<Category> analysis_categories(const Project& project) {
 // The project block's one category.
 inline std::vector<Category> project_categories(const Project&) { return {{"metadata"}}; }
 
+// The categories a block's file holds only while its calculation is current, with their rows, by the rule the save
+// follows (the adapter's save_project): a structure's when its geometry is current, an experiment's when its
+// calculation is. A save writes them after calculating; these are read from the model, so a list of the file's
+// categories needs no save. Empty while nothing is current.
+inline std::vector<Category> calculated_categories(const Structure& structure) {
+    if (!structure.geometry_current()) {
+        return {};
+    }
+    const StructureGeometry& geometry = structure.geometry;
+    std::vector<Category> categories{{"space_group_symop", true, geometry.space_group_symop.size()},
+                                     {"expanded_atom_site", true, geometry.expanded_atom_sites.size()}};
+    if (geometry.geom_bond.size() > 0) {
+        categories.push_back({"geom_bond", true, geometry.geom_bond.size()});
+    }
+    categories.push_back({"atom_sites_cartn_transform"});
+    return categories;
+}
+
+inline std::vector<Category> calculated_categories(const ExperimentBase& experiment) {
+    // A powder bank's calculation is in its data, a single crystal's in its reflections.
+    const bool calculated = (experiment.data.has_value() && !experiment.data->intensity_calc.empty()) ||
+                            (experiment.reflections.has_value() && !experiment.reflections->intensity_calc.empty());
+    if (!calculated || !experiment.computed_current()) {
+        return {};
+    }
+    if (experiment.reflections.has_value()) {  // the single crystal's agreement and its observed-reflection rule
+        return {{"refine_ls"}, {"reflns"}};
+    }
+    std::vector<Category> categories;
+    if (experiment.refln.size() > 0) {
+        categories.push_back({"refln", true, experiment.refln.size()});
+    }
+    if (experiment.data.has_value() && !experiment.data->component_intensities_net.empty()) {
+        categories.push_back({"pd_calc", true, experiment.data->intensity_calc.size()});
+        categories.push_back({"pd_calc_overall"});
+    }
+    return categories;
+}
+
 }  // namespace edi
 
 #endif  // EDI_CATEGORIES_HPP

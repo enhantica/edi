@@ -511,7 +511,8 @@ void ExperimentViewModel::sync() {
             category.rows = static_cast<std::size_t>(measured_range_->points());
         }
     }
-    categories_->setCategories(categories, [this] { return text_->discoveryText().toStdString(); });
+    categories_->setCategories(categories, [this] { return text_->discoveryText().toStdString(); },
+                               [this] { return edi::calculated_categories(experiment_); });
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();
