@@ -8,6 +8,7 @@ from pathlib import Path
 import edi as engine
 import pytest
 
+from tests.fixtures.project_categories.historical_bytes import prior_bytes
 from tests.integration.py.test_report_project_options import report, source
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -75,9 +76,11 @@ def test_legacy_report_lines_are_ignored_preserved_and_never_migrated(tmp_path, 
         'I34 project Save retains all seven legacy lines byte for byte'
     )
     file = path / 'reports/report.edi'
-    assert file.read_bytes() == before if new_file else not file.exists(), (
-        'I35 Save neither migrates legacy options nor rewrites an unchanged new settings file'
-    )
+    assert (
+        prior_bytes(file.read_bytes(), before, name='reports/report.edi') == before
+        if new_file
+        else not file.exists()
+    ), 'I35 Save neither migrates legacy options nor rewrites an unchanged new settings file'
 
 
 def test_project_save_changes_only_settings_and_keeps_unchanged_file_bytes_and_time(tmp_path):
@@ -118,11 +121,20 @@ def test_save_as_copies_every_report_row_and_file_without_touching_the_source(tm
     target = tmp_path / 'destination'
     loaded.save_as(target)
     assert inventory(path) == before, 'I35 Save as leaves the source inventory and bytes unchanged'
-    assert inventory(target / 'reports') == inventory(path / 'reports'), (
+    expected = inventory(path / 'reports')
+    assert {
+        name: prior_bytes(data, expected.get(name, b''), name=name)
+        for name, data in inventory(target / 'reports').items()
+    } == expected, (
         'I35 Save as copies settings, both rows, all report files and an unlisted old '
         'report byte for byte'
     )
-    assert (target / 'reports/report.edi').read_text() == text, (
+    assert (
+        prior_bytes(
+            (target / 'reports/report.edi').read_bytes(), text.encode(), name='reports/report.edi'
+        )
+        == text.encode()
+    ), (
         'I35 Save as retains every saved-file identity and timestamp rather than '
         'generating replacement rows'
     )

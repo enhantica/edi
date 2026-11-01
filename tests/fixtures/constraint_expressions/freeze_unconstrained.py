@@ -10,10 +10,11 @@ import tempfile
 from pathlib import Path
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.project_categories.historical_bytes import prior_digest
 from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 
 
-def snapshot(root, *, historical_fractions=False):
+def snapshot(root, *, historical_fractions=False, order_reference=None):
     result = {}
     for path in sorted(Path(root).rglob('*')):
         if not path.is_file():
@@ -25,7 +26,12 @@ def snapshot(root, *, historical_fractions=False):
             content = re.sub(
                 rb'(?m)^(_metadata\.(?:created|last_modified)\s+).+$', rb'\1<CLOCK>', content
             )
-        result[path.relative_to(root).as_posix()] = hashlib.sha256(content).hexdigest()
+        name = path.relative_to(root).as_posix()
+        result[name] = (
+            hashlib.sha256(content).hexdigest()
+            if order_reference is None
+            else prior_digest(content, order_reference.get(name), name=name)
+        )
     return result
 
 

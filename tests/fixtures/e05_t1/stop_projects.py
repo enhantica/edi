@@ -3,6 +3,8 @@
 import shutil
 from pathlib import Path
 
+from tests.fixtures.project_categories.historical_bytes import units
+
 
 def materialize(engine, source, target, *, stalled):
     """Write a disposable LBCO input with an independently declared stop condition."""
@@ -23,13 +25,23 @@ def materialize(engine, source, target, *, stalled):
         return target
 
     experiment = target / 'experiments/hrpt.edi'
-    prefix, separator, _old = experiment.read_text().partition('_background.type ')
-    if not separator:
+    head, entries, separators, tail = units(experiment.read_bytes())
+    if not any(key == b'_background.type' for key, _ in entries):
         message = 'the LBCO stop input must declare its background'
         raise ValueError(message)
-    experiment.write_text(
-        prefix
-        + """_background.type line-segment
+    retained = (
+        head
+        + b''.join(
+            separator + body
+            for (key, body), separator in zip(entries, separators, strict=True)
+            if key.removeprefix(b'loop:').split(b'.', 1)[0] not in {b'_background', b'_data'}
+        )
+        + tail
+    )
+    experiment.write_bytes(
+        retained.rstrip(b'\n')
+        + b'\n\n_background.type line-segment\n'
+        + b"""
 
 loop_
 _background.id
