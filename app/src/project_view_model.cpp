@@ -1150,6 +1150,13 @@ void ProjectViewModel::loadScan() {
     });
     const edi::Project& project = *project_;
     scan_declaration_ = scanDeclaration(project);
+    // A dataset row a view shows gets its extract values read, if its results row has none: for every project, as a
+    // scan declared later lists its datasets in the same rows.
+    experiment_list_->setShownHook([this](int row) {
+        if (scan_ && scan_session_ != nullptr) {
+            scan_session_->want(row);
+        }
+    });
     if (!project.sequential_fit.declared()) {
         return;
     }
@@ -1165,12 +1172,6 @@ void ProjectViewModel::loadScan() {
         scan_session_->assumeIdentity(ScanSession::templateIdentity(project));
     }
     syncScanAdmission();
-    // A dataset row a view shows gets its extract values read, if its results row has none.
-    experiment_list_->setShownHook([this](int row) {
-        if (scan_) {
-            scan_session_->want(row);
-        }
-    });
 }
 
 std::string ProjectViewModel::scanDeclaration(const edi::Project& project) {
