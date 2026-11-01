@@ -416,17 +416,15 @@ inline std::vector<Category> calculated_categories(const Structure& structure) {
     if (!structure.geometry_current()) {
         return {};
     }
-    // The writer writes no loop without rows (a structure with no bond in its cutoffs has no `_geom_bond`).
+    // The writer writes the symmetry operators and the expanded sites always, a structure without sites with no rows,
+    // and the bonds only when there is one in the cutoffs (crysta's write_geometry).
     const StructureGeometry& geometry = structure.geometry;
-    std::vector<Category> categories;
-    for (const auto& [id, rows] : {std::pair{"space_group_symop", geometry.space_group_symop.size()},
-                                   std::pair{"expanded_atom_site", geometry.expanded_atom_sites.size()},
-                                   std::pair{"geom_bond", geometry.geom_bond.size()}}) {
-        if (rows > 0) {
-            categories.push_back({id, true, rows});
-        }
+    std::vector<Category> categories{{"atom_sites_cartn_transform"},
+                                     {"space_group_symop", true, geometry.space_group_symop.size()},
+                                     {"expanded_atom_site", true, geometry.expanded_atom_sites.size()}};
+    if (geometry.geom_bond.size() > 0) {
+        categories.push_back({"geom_bond", true, geometry.geom_bond.size()});
     }
-    categories.push_back({"atom_sites_cartn_transform"});
     return categories;
 }
 
