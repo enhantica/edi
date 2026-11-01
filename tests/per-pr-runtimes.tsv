@@ -2,7 +2,7 @@
 # per-tier bounds and the committed breach RATCHET
 # (tests/threshold-breaches.md). It selects NOTHING: the retired `heavy` split is
 # gone and test selection lives in the three named groups (tests/test-groups.json),
-# all equal on selection; `tools/checks/per_pr_runtimes.py --check` gates coverage.
+# PR coverage excludes declared nightly-only files; their banked rows are retained.
 # Rows are BANKED: an unchanged collection is never
 # re-measured; `pixi run per-pr-measure` measures ONLY the added nodes, once, and a
 # named node on request. No expiry, no budget. Seconds are setup+call+teardown, serial.
@@ -10,11 +10,9 @@
 #
 # measurement_platform = linux
 # measurement_source = local
-# measured_utc = 2026-11-01T15:00:24Z
+# measured_utc = 2026-11-01T16:38:28Z
 #
-# Recorded from: measured test run (188800 node(s) measured once, 17153 banked, 0 stale row(s) dropped)
-# Collected tests: 208949; with a reported duration: 70253
-# Module-scoped fixture costs recorded: 95
+# Recorded from: retained 4dde9ceb bank; owner 8c82d0435 moves CIF witnesses to nightly-only; no measurements changed
 #
 # Breaches are decided PER TIER against the table
 # below, which the loader validates against the code constants - a manifest must state
@@ -33,6 +31,8 @@
 # inventory_cpp = 396
 # inventory_measured = 165953
 # inventory_unmeasured = 43392
+# Inventory totals retain nightly rows; PR-required Python inventory follows.
+# inventory_pr_python = 65547
 
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:dark]
 UNMEASURED:failed-in-this-run	tests/integration/app/test_about_components.py::test_actual_dependency_popup[cells_have_standard_margins:light]

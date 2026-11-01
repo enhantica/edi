@@ -549,8 +549,16 @@ def test_shipped_nightly_cohort_is_explicit_nonempty_and_retained():
     old = json.loads(SHIPPED['files']['tests/test-groups.json'])['groups'][group]['paths']
     paths = groups[group]['paths']
     assert paths, 'the shipped nightly cohort stays nonempty'
-    assert set(paths) == set(old), (
-        'accepted-main regression cohort retains the approved nightly deferrals'
+    approved = (
+        {
+            'tests/integration/py/test_cif_import_contract.py',
+            'tests/system/py/test_project_transactions.py',
+        }
+        if BASE['repo'] == 'edi'
+        else set()
+    )
+    assert set(paths) == set(old) | approved, (
+        'accepted-main nightly deferrals and the owner-approved CIF matrix remain explicit'
     )
     assert len(paths) == len(set(paths)), 'nightly paths are unique'
     collected = {n.split('::')[0] for n in nodes()}
@@ -567,6 +575,12 @@ def test_shipped_suite_paths_execute_their_cohort_and_propagate_failures(
     workflow = document(ROOT / '.github/workflows/ci.yml')
     baseline = yaml.safe_load(SHIPPED['files']['.github/workflows/ci.yml'])
     if BASE['repo'] == 'edi':
+        for key, _, step, _ in suite_steps(baseline, event, platform, 'edi'):
+            if key[2] == 'Tests (declared group, C++ unit, unit and integration)':
+                step.setdefault('env', {})['EDI_RUN_NIGHTLY_ONLY'] = (
+                    "${{ github.event_name == 'schedule' || "
+                    "(github.event_name == 'workflow_dispatch' && inputs.core_only != true) }}"
+                )
         system_steps = [
             (job, step, ctx)
             for key, job, step, ctx in suite_steps(workflow, event, platform, 'edi')

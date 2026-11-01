@@ -268,6 +268,7 @@ jobs:
           GITHUB_TOKEN: ${{ steps.crysta-token.outputs.token }}
           # Name every test over a second, so a slow one shows in the log.
           PYTEST_ADDOPTS: --durations=0 --durations-min=1
+          EDI_RUN_NIGHTLY_ONLY: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.core_only != true) }}
       # It takes about 8 minutes, so it runs on main pushes, the nightly and manual runs, not on pull requests.
       - name: The two-thread witness (ThreadSanitizer)
         if: matrix.platform == 'Linux' && github.event_name != 'pull_request'

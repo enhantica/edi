@@ -251,7 +251,7 @@ def linux_closure_errors(snapshot, actual_manifest, read_source, event):
 
 
 def catalogue_task_extension(actual, expected):
-    """ADR-0048 adds two checks; every original command and environment stays exact."""
+    """Admit the catalogue extension and owner-approved nightly core transport only."""
     if actual == expected:
         return True
     prefix = (
@@ -262,8 +262,11 @@ def catalogue_task_extension(actual, expected):
     old = 'python tools/dev/example_metadata.py --check && python tools/checks/cli_projects.py'
     if actual is None or len(actual) != len(expected):
         return False
+    core = 'python -m pytest tests/unit tests/integration --ignore=tests/integration/app -q'
     return actual == [
-        (name, prefix + 'python tools/checks/cli_projects.py', env)
+        (name, 'bash tools/ci/core-tests.sh', env)
+        if name == 'core-tests' and command == core
+        else (name, prefix + 'python tools/checks/cli_projects.py', env)
         if name == 'cli-projects' and command == old
         else (name, command, env)
         for name, command, env in expected

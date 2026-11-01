@@ -320,10 +320,10 @@ quick-tests = { cmd = [
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
     "-q",
 ], depends-on = ["core-build"] }
-# The nightly-only group (tests/test-groups.json): files that build an app of their own, run only by the nightly
-# schedule.
+# The nightly-only group retains the CIF import matrix and app-builder witnesses.
 nightly-only-tests = { cmd = [
     "python", "-m", "pytest",
+    "tests/integration/py/test_cif_import_contract.py",
     "tests/system/py/test_scan_app_execution.py",
     "tests/system/py/test_scan_accident_paths.py",
     "tests/system/py/test_plain_data_app.py",
@@ -344,11 +344,7 @@ nightly-only-tests = { cmd = [
 # the core job, and `system-tests-part <part>` for each third of the system tier, split by recorded test
 # times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection, except that only the
 # nightly schedule runs the nightly-only group.
-core-tests = { cmd = [
-    "python", "-m", "pytest",
-    "tests/unit", "tests/integration", "--ignore=tests/integration/app",
-    "-q",
-], depends-on = ["core-build"] }
+core-tests = { cmd = ["bash", "tools/ci/core-tests.sh"], depends-on = ["core-build"] }
 system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build"] }
 # --- core (C++) ---------------------------------------------------------------------- / item 8: the
 # pinned crysta SDK (downloaded or reused, never compiled) and its source, for every prefix reader — also
