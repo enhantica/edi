@@ -266,6 +266,8 @@ class ExperimentViewModel : public QObject {
         return axis == edi::PatternAxis::DSpacing && d_source_ ? *d_source_ : pattern_source_;
     }
     void capturePattern();
+    // The sidebar's categories as the experiment holds them now (edi::experiment_categories).
+    void syncCategories();
     // A running fit's pattern at one iteration: shown until the fit ends and the pattern is captured
     // again. A scan dataset's view brings its d-spacing capture too; a fit's frame does not, and the chart on d
     // keeps the last one until the fit's result is captured.

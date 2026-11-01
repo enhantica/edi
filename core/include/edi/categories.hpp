@@ -291,8 +291,12 @@ inline std::vector<Category> experiment_categories(ExperimentBase& experiment) {
         categories.push_back(texture);
     }
     categories.push_back({"scattering_source"});
-    // The file's reflections, read-only: shown when the file carried them.
-    if (experiment.carried_reflections.has_value()) {
+    // The file's reflections, read-only: the calculation's while a save writes it, else those the file carried.
+    if (detail::writes_calculation(experiment)) {
+        if (experiment.refln.size() > 0) {
+            categories.push_back({"refln", true, experiment.refln.size()});
+        }
+    } else if (experiment.carried_reflections.has_value()) {
         categories.push_back({"refln", true, experiment.carried_reflections->rows.size()});
     }
     detail::mark_dependents(categories);

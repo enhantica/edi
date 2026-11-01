@@ -501,18 +501,8 @@ void ExperimentViewModel::sync() {
     update(dataset_weight_, experiment_.dataset_weight, &ExperimentViewModel::datasetWeightChanged);
     update(scale_, one_link ? registry_.find(&experiment_.linked_structure().scale) : nullptr,
            &ExperimentViewModel::scaleChanged);
-    // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
-    // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
     measured_range_->sync();
-    std::vector<edi::Category> categories = edi::experiment_categories(experiment_);
-    for (edi::Category& category : categories) {
-        if (category.id == "data") {
-            category.is_loop = true;
-            category.rows = static_cast<std::size_t>(measured_range_->points());
-        }
-    }
-    categories_->setCategories(categories, [this] { return text_->discoveryText().toStdString(); },
-                               [this] { return edi::calculated_categories(experiment_); });
+    syncCategories();
     instrument_->sync();
     peak_->sync();
     peak_asymmetry_->sync();
@@ -541,8 +531,26 @@ std::size_t ExperimentViewModel::place() const {
     return place;
 }
 
+void ExperimentViewModel::syncCategories() {
+    // `data` is a loop in `.edi` — its points — though the core's category list counts no rows for it; the
+    // sidebar titles it as a loop, with the number of measured points (edi ADR-0017 §3).
+    std::vector<edi::Category> categories = edi::experiment_categories(experiment_);
+    for (edi::Category& category : categories) {
+        if (category.id == "data") {
+            category.is_loop = true;
+            category.rows = static_cast<std::size_t>(measured_range_->points());
+        }
+    }
+    categories_->setCategories(categories, [this] { return text_->discoveryText().toStdString(); },
+                               [this] { return edi::calculated_categories(experiment_); });
+}
+
 void ExperimentViewModel::capturePattern() {
-    single_crystal_reflections_->sync();  // a single crystal's calculated F², published with the pattern
+    // What the calculation publishes with the pattern: a single crystal's calculated F², a powder's reflections, and
+    // the categories its file holds with them, with their counts.
+    single_crystal_reflections_->sync();
+    reflections_->sync();
+    syncCategories();
     pattern_source_ = edi::capture_pattern(project_, place());
     pattern_source_.experiment_place = colourPlace();
     if (!d_charts_.isEmpty()) {
