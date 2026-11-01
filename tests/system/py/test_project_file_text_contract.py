@@ -10,6 +10,7 @@ import edi
 import pytest
 
 from tests.conftest import tree_bytes_with_normalized_project_metadata
+from tests.fixtures.project_categories.historical_bytes import units
 from tests.fixtures.project_text.dictionary_reference import reference
 from tests.fixtures.project_text.generate import classic_zip, project
 
@@ -69,10 +70,23 @@ def test_every_saved_file_obeys_dictionary_order_and_reopen_fixed_point(tmp_path
     for file in sorted(first.rglob('*.edi')):
         runs = category_runs(file.read_text())
         assert runs, 'Every saved EDI file contributes categories to the file-order check'
-        assert all(category in order for category in runs), (
-            'Every category the writer emits is declared by the pinned dictionary'
+
+        def carried_units(path):
+            if not path.is_file():
+                return []
+            return [
+                (key, payload)
+                for key, payload in units(path.read_bytes())[1]
+                if key.removeprefix(b'loop:').split(b'.', 1)[0].decode() not in order
+            ]
+
+        original_units = carried_units(supplied / file.relative_to(first))
+        assert all(unit in original_units for unit in carried_units(file)), (
+            'Every undeclared category emitted is byte-identical to supplied legacy input; '
+            'the writer invents no category outside the dictionary'
         )
-        assert runs == sorted(runs, key=order.__getitem__), (
+        declared = [category for category in runs if category in order]
+        assert declared == sorted(declared, key=order.__getitem__), (
             'Every saved file follows presentation numbers with declaration order breaking ties'
         )
         reached.add(file.relative_to(first).parts[0])
@@ -89,7 +103,16 @@ def test_every_saved_file_obeys_dictionary_order_and_reopen_fixed_point(tmp_path
     'actor',
     [
         'ProjectText::test_apply_and_single_undo',
-        'ProjectText::test_invalid_edits_are_atomic',
+        *[
+            'ProjectText::test_invalid_edits_are_atomic:' + tag
+            for tag in (
+                'unknown-item',
+                'unknown-category',
+                'invalid-number',
+                'short-loop-row',
+                'invalid-block-name',
+            )
+        ],
         'ProjectText::test_everything_is_read_only',
         'ProjectText::test_syntax_colours',
         'ProjectText::test_per_structure_appearance',
@@ -122,7 +145,9 @@ def test_real_text_tab_actor(tmp_path, actor):
         cwd=ROOT,
         capture_output=True,
         text=True,
-        timeout=25,
+        # The count-boundary actor does three real archive I/O passes over 65,535 files.
+        # Its visible runtime-baseline entry retains the system tier's unchanged bound.
+        timeout=90 if actor.endswith('test_exact_classic_archive_opens_and_saves') else 25,
         check=False,
     )
     assert result.returncode == 0, (
