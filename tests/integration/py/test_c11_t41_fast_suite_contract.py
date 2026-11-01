@@ -344,7 +344,7 @@ def _partition_transport(groups, omitted, *, core=False):
             check=False,
         )
     assert result.returncode == 0, (
-        'the actual system partition runner reaches its pytest transport'
+        'The requested production partition runner reaches its pytest transport: ' + result.stderr
     )
     return result
 
