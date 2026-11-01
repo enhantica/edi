@@ -26,3 +26,12 @@ intentional helper change, use `PYTHONPATH=. python tests/fixtures/fittability/a
 hash, requires its saved bytes to equal its current source, and refuses any other
 saved path or byte change under either uncertainty rule. The original baseline stays
 unchanged; the two exact asset transitions join the existing transition manifest.
+
+The category and text-format adaptation keeps all current and original byte pins
+and transition seals unchanged. Its layout adapter must recover their complete
+hashes, after the existing clock, unsupported-free and fitted-number checks.
+The fitted-value tolerances remain unchanged, and raw saved files are also
+checked for current spacing. Verified pre-order EDI bytes supply layout metadata;
+quoted descriptions may use the independently checked semicolon spelling with
+the same paragraph values. See the project_categories fixture README for the
+visible generator and its strict capture requirements.

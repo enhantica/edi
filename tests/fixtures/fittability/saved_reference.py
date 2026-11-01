@@ -11,6 +11,8 @@ import tempfile
 import warnings
 from pathlib import Path
 
+from tests.fixtures.project_categories.historical_bytes import prior_digest
+
 
 def staged(source, target, rule, *, link_data=False):
     target.mkdir(parents=True)
@@ -36,7 +38,7 @@ def staged(source, target, rule, *, link_data=False):
     return target
 
 
-def fingerprints(root):
+def fingerprints(root, *, order_reference=None):
     result = {}
     for path in sorted(root.rglob('*')):
         if not path.is_file():
@@ -53,7 +55,11 @@ def fingerprints(root):
             content = re.sub(
                 rb'(?m)^(_fit_result.fitting_time[ \t]+)[^\r\n]+', rb'\1<CLOCK>', content
             )
-        result[relative] = hashlib.sha256(content).hexdigest()
+        result[relative] = (
+            prior_digest(content, order_reference[relative], name=relative)
+            if order_reference is not None and relative in order_reference
+            else hashlib.sha256(content).hexdigest()
+        )
     return result
 
 
@@ -73,7 +79,7 @@ def sources(root):
     )
 
 
-def snapshot(api, source, scratch, rule):
+def snapshot(api, source, scratch, rule, *, order_reference=None):
     with warnings.catch_warnings(record=True) as notes:
         warnings.simplefilter('always')
         project = api.Project.load(staged(source, scratch / 'input', rule))
@@ -90,10 +96,10 @@ def snapshot(api, source, scratch, rule):
             message = 'The input marks a descriptor or unsupported derivative free'
             raise ValueError(message)
     project.save_as(scratch / 'saved')
-    return fingerprints(scratch / 'saved')
+    return fingerprints(scratch / 'saved', order_reference=order_reference)
 
 
-def fit_snapshot(api, source, scratch, rule):
+def fit_snapshot(api, source, scratch, rule, *, order_reference=None):
     project = api.Project.load(staged(source, scratch / 'input', rule, link_data=True))
     project.analysis.fit()
     radius = project.experiments[0].extinction.crystal_radius
@@ -101,7 +107,7 @@ def fit_snapshot(api, source, scratch, rule):
         message = 'The fitted dependent crystal radius must carry a propagated uncertainty'
         raise ValueError(message)
     project.save_as(scratch / 'saved')
-    return fingerprints(scratch / 'saved')
+    return fingerprints(scratch / 'saved', order_reference=order_reference)
 
 
 def main():

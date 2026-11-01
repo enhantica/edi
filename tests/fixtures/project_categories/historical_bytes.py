@@ -89,6 +89,32 @@ def layouts():
     return json.loads(Path(__file__).with_name('historical-layouts.json').read_text())['layouts']
 
 
+@functools.cache
+def pin_layouts():
+    record = json.loads(Path(__file__).with_name('historical-layouts.json').read_text())
+    return {
+        digest: record['layouts'][index]
+        for digest, index in record.get('pin_layout_indices', {}).items()
+    }
+
+
+@functools.cache
+def text_unit_transitions():
+    record = json.loads(Path(__file__).with_name('historical-layouts.json').read_text())
+    return record.get('text_unit_transitions', {})
+
+
+def historical_text_units(data, expected):
+    projected = data
+    for change in text_unit_transitions().get(expected, []):
+        before, after = bytes.fromhex(change['before_hex']), bytes.fromhex(change['after_hex'])
+        matching = [value for key, value in units(projected)[1] if key.decode() == change['key']]
+        if matching != [after] or projected.count(after) != 1:
+            return data
+        projected = projected.replace(after, before, 1)
+    return projected
+
+
 def same_category_order(keys, old_keys):
     def category(key):
         return key.removeprefix('loop:').split('.', 1)[0]
@@ -101,7 +127,7 @@ def same_category_order(keys, old_keys):
     )
 
 
-def candidates(data, template=None):
+def candidates(data, template=None, *, preferred=None):
     head, entries, _, _ = units(data)
     keys = [key.decode() for key, _ in entries]
     if not keys:
@@ -109,7 +135,9 @@ def candidates(data, template=None):
     if len(keys) != len(set(keys)):
         return  # Ambiguous repeated units require a separate explicit oracle.
     payload = {key.decode(): value for key, value in entries}
-    for old in [layout(template), *layouts()] if template is not None else layouts():
+    choices = [preferred] if preferred is not None else []
+    choices += [layout(template), *layouts()] if template is not None else layouts()
+    for old in choices:
         old_keys = [key for key, _ in old['entries']]
         missing = [key for key in keys if key not in old_keys]
         # These explicitly declared later blocks postdate the frozen archive.
@@ -154,7 +182,8 @@ def prior_digest(data, expected, *, template=None, name=None):
         return digest
     if name is not None and not name.endswith('.edi'):
         return digest
-    for before in candidates(data, template):
+    projected = historical_text_units(data, expected)
+    for before in candidates(projected, template, preferred=pin_layouts().get(expected)):
         if hashlib.sha256(before).hexdigest() == expected:
             return expected
     return digest  # Preserve the caller's original failure and diagnostics.
