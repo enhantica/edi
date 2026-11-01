@@ -31,7 +31,7 @@ def _sha(path):
 
 USAGE_HEADER = 'tests/unit/app/e11_t5_usage_account_phase.hpp'
 USAGE_HEADER_HASHES = {
-    'native': '3cf23e103c91159447b8594a8eae4f656ca9a3c35636614a8e961fa71b2b2fe7',
+    'native': 'b726b7b713befaf6cd278810f39985ce65c4caebbc30b4b88a944758fb6305bc',
     'original': '88a78241a487ff474a833b82e57c5ed3aab0cd594b7e8526194d310f4426c22d',
 }
 ACTIVITY_HEADER_SHA256 = '07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe'
