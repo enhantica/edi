@@ -1684,6 +1684,11 @@ struct AssistantViewModel::State {
     // An actual correlated input ACK, never message wording, establishes that
     // this backend thread already owns its genuine UI instruction history.
     bool generic_thread_has_input = false;
+    // A new thread is named after its first turn ends. The runtime queues
+    // thread requests in order, and renaming a thread that has no turn yet
+    // first writes it to disk, which can take seconds. Sent at start, the
+    // rename held up the model settings update behind it.
+    QString session_name_after_first_turn;
     Object generic_runtime_policy;
     QByteArray generic_requested_tools_digest;
     qsizetype generic_requested_tool_count=0;
@@ -13940,7 +13945,7 @@ struct AssistantViewModel::State {
                 startup_restore_observation["displayed_rows_after"]=messages.count();
                 session_preparation_observation["stage"]="original_runtime_resumed";
             }
-            if(!resumed)name_current_session(project && project->title()!=project->name()?project->title():QString());
+            session_name_after_first_turn=resumed?QString{}:actual_thread;
             if(!publication.input_current() || !generic_authenticated || generic_retiring || generic_thread!=actual_thread)return;
             if(resumed && restore_last_target==actual_thread)retire_startup_restore();
             if(session_selection_target==actual_thread) {
@@ -14639,6 +14644,11 @@ struct AssistantViewModel::State {
             if (generic_revoke_pending) generic_settle_revoke();
             else agent->settleOperation();
             if (!publication.input_current()) return;
+            if(!generic_thread.isEmpty() && session_name_after_first_turn==generic_thread) {
+                session_name_after_first_turn.clear();
+                name_current_session(project && project->title()!=project->name()?project->title():QString());
+                if (!publication.input_current()) return;
+            }
             if(status!="completed" && !generic_clear_pending)error=!observedError.message.isEmpty()?observedError.message:
                 status=="interrupted"?QObject::tr("The agent turn was interrupted. Retained work is preserved."):
                 QObject::tr("The agent turn failed without an available explanation. Retained work is preserved.");
