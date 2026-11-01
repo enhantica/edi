@@ -3,7 +3,7 @@
 .import "E04Review.js" as View
 
 var titles = ["Not measured in this fit", "Fixed by symmetry", "Set by a constraint", "Setup values"];
-var defaults = [true, false, false, true];
+var defaults = [true, false, false, false];
 
 function controls(test, root) {
     return titles.map(title => {

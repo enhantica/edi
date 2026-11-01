@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# ADR-0056: Pixi installs the original source dependency; this adapter builds only its native math subtargets.
+# ADR-0057: Pixi installs the original source dependency; this adapter builds only its native math subtargets.
 if(EMSCRIPTEN)
     return()
 endif()

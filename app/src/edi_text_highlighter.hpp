@@ -35,7 +35,6 @@ class EdiTextHighlighter : public QObject {
 
    signals:
     void documentChanged();
-    void colorsChanged();
     void datablockColorChanged();
     void itemColorChanged();
     void loopColumnColorChanged();

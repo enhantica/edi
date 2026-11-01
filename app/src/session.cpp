@@ -210,7 +210,7 @@ void Session::initializeSession() {
         connect(WebStorage::instance(), &WebStorage::usableChanged, this, &Session::locationTextChanged);
     }
     // Commit the shared history lease only after this actual owner finished
-    // every fallible initialization step (ADR-0056).
+    // every fallible initialization step (ADR-0057).
     assistant_->finishHistoryInitialization();
 }
 
@@ -919,7 +919,7 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
             project.su_rule = suRule.toStdString();
         }
         project.report_html_offline = reportLibraries;
-        created = new ProjectViewModel(std::move(project), this);
+        created = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         const auto failure = QString::fromUtf8(refusal.what());
         if (outcome) outcome->error = failure;
@@ -1051,7 +1051,7 @@ bool Session::open(const QString& directory,const QString& example,const std::fu
         for (const std::string& warning : edi::take_engine_warnings()) {
             warnings.append(QString::fromStdString(warning));
         }
-        opened = new ProjectViewModel(std::move(project), this);
+        opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         if(preparing())setLastError(QString::fromUtf8(refusal.what())); // Never overwrite a successor's error.
         return false;
@@ -1118,7 +1118,7 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
         for (const std::string& warning : edi::take_engine_warnings()) {
             warnings.append(QString::fromStdString(warning));
         }
-        opened = new ProjectViewModel(std::move(project), this);
+        opened = new ProjectViewModel(std::move(project), this, colour_scheme_);
     } catch (const std::exception& refusal) {
         if(preparing())setLastError(QString::fromUtf8(refusal.what())); // Never overwrite a successor's error.
         return false;
@@ -1141,6 +1141,13 @@ bool Session::openCopy(const QString& source,const QString& target,const QString
     };
     if(!assistant_->prepareSessionProjectRestore(opened,source,commit))return false;
     return commit();
+}
+
+void Session::setColourScheme(const QString& scheme) {
+    if (scheme != colour_scheme_) {
+        colour_scheme_ = scheme;
+        emit colourSchemeChanged();
+    }
 }
 
 void Session::setOpenedArchive(const QString& name) {

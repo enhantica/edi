@@ -1,6 +1,7 @@
-"""CIF factories preserve existing main readers and native-only project discovery."""
+"""CIF structure factories and project members follow the content contract."""
 
 import importlib
+import warnings
 
 import gemmi
 import pytest
@@ -25,14 +26,16 @@ def test_structure_factories_preserve_main_cif_admission(tmp_path, api, style, m
     path = tmp_path / 'input.cif'
     path.write_text(text)
     before = case.snapshot(tmp_path)
-    if style == 'underscore':
+    if style != 'multiblock':
         checks.main_values(
             getattr(api.StructureFactory, method)(text if method.endswith('str') else path)
         )
     else:
         with pytest.raises((ValueError, RuntimeError)) as caught:
             getattr(api.StructureFactory, method)(text if method.endswith('str') else path)
-        checks.reason(str(caught.value))
+        assert '2 structure blocks' in str(caught.value), (
+            'A singular CIF structure entrance refuses multiple structure blocks'
+        )
     assert case.snapshot(tmp_path) == before, 'A factory refusal never writes partial import files'
 
 
@@ -46,17 +49,19 @@ def test_structure_collection_preserves_main_cif_admission_and_model(tmp_path, a
     path = tmp_path / 'input.cif'
     path.write_text(case.text(style))
     argument = case.text(style) if method.endswith('str') else path
-    if style == 'underscore':
+    if style != 'multiblock':
         getattr(project.structures, method)(argument)
         checks.main_values(project.structures['cif_only'])
     else:
         with pytest.raises((ValueError, RuntimeError)) as caught:
             getattr(project.structures, method)(argument)
-        checks.reason(str(caught.value))
-    assert len(project.structures) == count + (style == 'underscore'), (
+        assert '2 structure blocks' in str(caught.value), (
+            'A singular CIF structure entrance refuses multiple structure blocks'
+        )
+    assert len(project.structures) == count + (style != 'multiblock'), (
         'Main-accepted CIF adds one structure; a refused CIF retains every existing structure'
     )
-    if style == 'underscore':
+    if style != 'multiblock':
         project.structures.remove('cif_only')
     project.save_as(tmp_path / 'after')
     after = case.saved_model(tmp_path / 'after')
@@ -69,30 +74,50 @@ def test_structure_collection_preserves_main_cif_admission_and_model(tmp_path, a
 @pytest.mark.parametrize('style', ['dot', 'underscore', 'upper', 'multiblock'])
 @pytest.mark.parametrize('layout', ['distinct', 'shadow', 'upper-suffix'])
 def test_project_structure_cif_discovery_keeps_main_native_only_selection(
-    tmp_path, api, style, layout
+    tmp_path, api, style, layout, capfd
 ):
     control = tmp_path / 'control'
     control.mkdir()
     api.Project.load(case.project(control)).save_as(tmp_path / 'before')
     source = case.poisoned_project(tmp_path, style, layout)
     before = case.snapshot(source)
-    project = api.Project.load(source)
+    capfd.readouterr()
+    if style == 'multiblock' and layout != 'shadow':
+        with pytest.raises((ValueError, RuntimeError)) as caught:
+            api.Project.load(source)
+        assert '2 structure blocks' in str(caught.value), (
+            'I9 refuses multiple structure blocks in a discovered I12 CIF member'
+        )
+        assert case.snapshot(source) == before, 'I12 failed discovery preserves every source byte'
+        return
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        project = api.Project.load(source)
+    notes = [str(w.message) for w in caught] + capfd.readouterr().err.splitlines()
+    if layout == 'shadow':
+        assert len(project.structures) == 1, (
+            'I12 reads the native member once when CIF is shadowed'
+        )
+        assert any('phase.cif' in n and 'not read' in n for n in notes), (
+            'I12 names the shadowed structure CIF in the load report'
+        )
+    else:
+        assert len(project.structures) == 2, 'I12 discovers lower and uppercase CIF members'
+        checks.main_values(project.structures['cif_only'])
     project.save_as(tmp_path / 'after')
     after = case.saved_model(tmp_path / 'after')
-    assert {
-        path: data for path, data in after.items() if path.endswith('.edi')
-    } == case.saved_model(tmp_path / 'before'), (
-        'Main ignores sidecar .cif and .CIF files, including a same-stem native sibling'
+    if layout != 'shadow':
+        assert 'structures/cif_only.edi' in after, (
+            'I12 regenerates the CIF member as a native entity'
+        )
+        del after['structures/cif_only.edi']
+    assert after == case.saved_model(tmp_path / 'before'), (
+        'I12 preserves pre-existing entity bytes and regenerates CIF members without sidecars'
     )
-    assert len(project.structures) == 1, 'Main does not import a sidecar as a new structure'
-    assert {path: data for path, data in after.items() if not path.endswith('.edi')} == {
-        path: data
-        for path, data in before.items()
-        if path.startswith('structures/') and not path.endswith('.edi')
-    }, 'Main retains ignored CIF sidecars byte-for-byte as saved project assets'
-    assert case.snapshot(source) == before, (
-        'Native-only discovery leaves all native and sidecar CIF source bytes intact'
+    assert not any(p.suffix.lower() == '.cif' for p in (tmp_path / 'after').rglob('*')), (
+        'I12 saves no lower or uppercase CIF entity documents'
     )
+    assert case.snapshot(source) == before, 'I12 discovery leaves every source byte intact'
 
 
 def test_native_structure_project_control_still_loads_and_saves(tmp_path, api):

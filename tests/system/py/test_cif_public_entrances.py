@@ -5,12 +5,12 @@ import os
 import shutil
 import subprocess
 import sys
-from operator import itemgetter
 from pathlib import Path
 
 import pytest
 
 from tests.fixtures import cif_import_cases as case
+from tests.fixtures.project_save.reference import six_digits
 
 ROOT = Path(__file__).resolve().parents[3]
 QML = """import QtQuick
@@ -160,20 +160,46 @@ def observe(tmp_path, route, kind, payloads, *, native=False):
 
 @pytest.mark.parametrize('route', ['cli', 'app'])
 @pytest.mark.parametrize('kind', ['structure', 'experiment'])
-@pytest.mark.parametrize('row', case.inventory(), ids=itemgetter('uid'))
-def test_public_entrances_account_for_every_alias_and_loop_cell(tmp_path, route, kind, row):
+@pytest.mark.parametrize('layout', ['item', 'column'])
+@pytest.mark.parametrize(
+    'probe',
+    [
+        (row, spelling, witness)
+        for row in case.inventory()
+        for name in row['cif_names']
+        for spelling in dict.fromkeys([name, name.replace('.', '_', 1).upper()])
+        for witness in range(5)
+    ],
+    ids=[
+        row['uid'] + ':' + name + ':s' + str(style) + ':v' + str(witness)
+        for row in case.inventory()
+        for name in row['cif_names']
+        for style, _ in enumerate(dict.fromkeys([name, name.replace('.', '_', 1).upper()]))
+        for witness in range(5)
+    ],
+)
+def test_public_entrances_account_for_every_alias_and_loop_cell(
+    tmp_path, route, kind, probe, layout
+):
+    row, spelling, witness = probe
     declarations = []
     inputs = [case.STRUCTURE if kind == 'structure' else case.EXPERIMENT]
-    for name in row['cif_names']:
-        for spelling in dict.fromkeys([name, name.replace('.', '_', 1).upper()]):
-            for shape in ['item', 'column']:
-                for value in [case.token(row), '?', '.', "'?'", "''"]:
-                    inputs.append(case.payload(kind, row, spelling, shape, value))
-                    declarations.append((spelling, value, shape))
+    values = [case.token(row), '?', '.', "'?'", "''"]
+    for value in [values[witness]]:
+        inputs.append(case.payload(kind, row, spelling, layout, value))
+        declarations.append((spelling, value, layout))
     results = observe(tmp_path, route, kind, inputs)
     for result, (name, value, shape) in zip(results, declarations, strict=True):
         case.accounted(
-            result, name, value, row['edi_names'][0], count=2 if shape == 'column' else 1
+            result,
+            name,
+            (
+                str(six_digits(float(value)))
+                if row.get('dtype') in {'float', 'number'} and value == case.token(row)
+                else value
+            ),
+            row['edi_names'][0],
+            count=2 if shape == 'column' else 1,
         )
 
 

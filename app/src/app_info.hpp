@@ -260,10 +260,13 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void parameterEditorCompleted() const;
     Q_INVOKABLE QJSValue typedInputRefusal(const QString& text, const QString& accepts) const;
     Q_INVOKABLE QJSValue parameterFreeRows(bool fittable) const;
+    Q_INVOKABLE QJSValue parameterActedRows() const;
     Q_INVOKABLE QJSValue parameterFreeCount() const;
+    Q_INVOKABLE QJSValue parameterFittableCount() const;
     Q_INVOKABLE void applyParametersFree(const QJSValue& free) const;
     Q_INVOKABLE void parameterMenuMembershipChanged() const;
     Q_INVOKABLE void ensureParameterSelection() const;
+    Q_INVOKABLE void parameterMeasuredChanged(bool completed) const;
     Q_INVOKABLE void parameterSelectionChanged(bool projectChanged) const;
     Q_INVOKABLE void updateParameterSliderLimits() const;
     Q_INVOKABLE void parameterSliderPressed(bool destroying) const;
@@ -327,6 +330,9 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void textTabSourceChanged() const;
     Q_INVOKABLE void textTabChanged(int cause) const;
     Q_INVOKABLE void textTabShowChoice(const QJSValue& index, const QJSValue& restoreBinding) const;
+    Q_INVOKABLE void setTextShow(const QJSValue& choice) const;
+    Q_INVOKABLE void textTabSettleEdit(const QJSValue& then, const QJSValue& abandoned) const;
+    Q_INVOKABLE void textTabDirtyChanged(bool destroyed) const;
     Q_INVOKABLE void textTabAnswer(const QString& name, const QJSValue& argument) const;
     Q_INVOKABLE void textDiscardCompleted() const;
     Q_INVOKABLE void textDiscardApplied() const;
@@ -406,7 +412,10 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE void tableAlignCell(const QJSValue& cell, const QJSValue& kind) const;
     Q_INVOKABLE void tableScheduleFitColumns() const;
     Q_INVOKABLE QJSValue tableColumnWidths() const;
-    Q_INVOKABLE void tableFitColumns() const;
+    Q_INVOKABLE void tableFitColumns(bool measure, const QJSValue& rows) const;
+    Q_INVOKABLE void tableStyleCells() const;
+    Q_INVOKABLE void tableFitWholeModel() const;
+    Q_INVOKABLE void tableVisibleChanged() const;
     Q_INVOKABLE void tableRefit() const;
     Q_INVOKABLE void tableColumnsChanged(bool widthsChanged) const;
     Q_INVOKABLE void tableDestroyed() const;
@@ -438,6 +447,8 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue sidebarOrderedChildren(const QJSValue& parent) const;
     Q_INVOKABLE QJSValue sidebarShownGroups(const QJSValue& group) const;
     Q_INVOKABLE void statusItemActionChanged(QObject* control, QObject* accessible, bool live) const;
+    Q_INVOKABLE void comboCellCompleted(const QJSValue& installBindings) const;
+    Q_INVOKABLE void statusItemKeyPressed(QObject* control, const QJSValue& event) const;
     Q_INVOKABLE void statusItemPress(QObject* control) const;
     Q_INVOKABLE QJSValue statusKeysFit() const;
     Q_INVOKABLE QJSValue statusRoomFor() const;
@@ -467,6 +478,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue savedReportRow(const QJSValue& format) const;
     Q_INVOKABLE void reportExportFailure(const QJSValue& message) const;
     Q_INVOKABLE void reportExportChanged(int event) const;
+    Q_INVOKABLE void reportSaveAsFinished(bool saved) const;
     Q_INVOKABLE QJSValue reportChartsIncluded() const;
     Q_INVOKABLE QJSValue reportSection(const QJSValue& name, bool numbered) const;
     Q_INVOKABLE QJSValue reportKeyValues(const QJSValue& rows) const;
@@ -611,7 +623,7 @@ class ApplicationInfo : public QObject {
     Q_INVOKABLE QJSValue searchMatches(const QJSValue& text) const;
     Q_INVOKABLE QJSValue searchPickedIndex() const;
     Q_INVOKABLE void searchAccepted() const;
-    Q_INVOKABLE void searchCompleted(const QJSValue& alignBinding, const QJSValue& modelBinding, const QJSValue& focusBinding) const;
+    Q_INVOKABLE void searchCompleted(const QJSValue& alignBinding, const QJSValue& modelBinding, const QJSValue& focusBinding, const QJSValue& indicatorBinding) const;
     Q_INVOKABLE void searchSchedule(const QJSValue& original) const;
     Q_INVOKABLE void searchTriggered() const;
     Q_INVOKABLE void searchAboutToShow() const;

@@ -208,6 +208,10 @@ double from_display(double display, YScale scale);
 std::string axis_label(double display, YScale scale);
 // The plot's width in device pixels: max(1, floor(plot_width × device_pixel_ratio)).
 int pixel_columns(double plot_width, double device_pixel_ratio);
+// The source a view draws from: `source` with its background subtracted when the view asks for that
+// (PatternView::subtract_background), else `source` itself. A hover read-out takes the same source as the drawing, so
+// it reports the values it points at.
+PatternSource presented_source(const PatternSource& source, const PatternView& view);
 // What a renderer shows for one presented point: x and the original value, or a tick's `h k l`.
 // Empty for a gap or a tick's end.
 std::string hover_text(const PatternSource& source, const PatternSeries& series, std::size_t point);

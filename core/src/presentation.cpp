@@ -623,6 +623,10 @@ bool has_background(const ExperimentBase& experiment) {
                                                         : !experiment.background_terms.empty();
 }
 
+PatternSource presented_source(const PatternSource& source, const PatternView& view) {
+    return view.subtract_background ? background_subtracted(source) : source;
+}
+
 PatternPresentation present_pattern(const PatternSource& given, const PatternView& view) {
     const PatternSource subtracted = view.subtract_background ? background_subtracted(given) : PatternSource{};
     const PatternSource& source = view.subtract_background ? subtracted : given;

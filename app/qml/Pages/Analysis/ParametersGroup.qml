@@ -23,17 +23,24 @@ EaElements.GroupBox {
     property ProjectViewModel project: null
     property ParameterItem selected: null
     // Some experiment holds measured data: without any, nothing can be fitted (edi ADR-0046), so the free column, its
-    // header menu and the free or fixed filter are hidden (the owner, 2026-10-27); values stay editable.
+    // header menu and the listing filters are hidden (the owner, 2026-10-27); values stay editable. Hidden filters are
+    // cleared, so the table lists every parameter its category count counts: a free or fixed choice left from a project
+    // with data showed one row under "Atomic displacement (4)" (the owner, 2026-10-27).
     readonly property bool measured: project !== null && project.fit.measured
+    onMeasuredChanged: ApplicationInfo.parameterMeasuredChanged(false)
     // The selected parameter's row, kept as the filters and the rows change; -1 when it is not shown.
     property int selectedRow: -1
     property real tableViewportHeight: 0
-    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11).
+    // The free column fits its title and the arrow after it, with a table column's padding (the owner, 2026-10-11),
+    // and a font size more before the title, so it keeps clear of "max" (the owner, 2026-10-27).
     readonly property real freeGap: 0.25 * EaStyle.Sizes.fontPixelSize
+    // The arrow ends where the right-aligned check boxes do: a check box's own padding and the table's spacing before
+    // the column's edge (DataTable.padForFiller).
+    readonly property real freeInset: 0.5 * EaStyle.Sizes.fontPixelSize + EaStyle.Sizes.tableColumnSpacing
     // The free title's word and arrow share one colour, each with the labels' own colour transition.
     property bool freeTitleHovered: false
     readonly property color freeTitleColor: !measured ? EaStyle.Colors.themeForegroundMinor : freeTitleHovered ? EaStyle.Colors.themeAccent : EaStyle.Colors.themeForeground
-    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth) + AppSizes.fieldSpacing * 2
+    readonly property real freeColumnWidth: Math.ceil(freeTitleText.advanceWidth + freeGap + freeArrowText.advanceWidth + freeInset) + AppSizes.fieldSpacing * 2 + EaStyle.Sizes.fontPixelSize
 
     TextMetrics {
         id: freeTitleText
@@ -63,7 +70,7 @@ EaElements.GroupBox {
     onSelectedChanged: ApplicationInfo.parameterSelectionChanged(false)
 
     onProjectChanged: ApplicationInfo.parameterSelectionChanged(true)
-    Component.onCompleted: group.ensureSelection()
+    Component.onCompleted: ApplicationInfo.parameterMeasuredChanged(true)
 
     Connections {
         target: parameterFilter
@@ -128,6 +135,7 @@ EaElements.GroupBox {
         Column {
             id: filters
 
+            visible: group.measured
             readonly property real third: (EaStyle.Sizes.sideBarContentWidth - 2 * AppSizes.inputSpacing) / 3
 
             spacing: AppSizes.groupContentSpacing
@@ -277,7 +285,7 @@ EaElements.GroupBox {
             id: table
             objectName: "parameters.list"
             // Reserve the controls below and half a row as a scroll cue (ADR-0029).
-            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - filters.height - sliderRow.height - 2 * AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
+            maxRowCountShow: Math.max(1, Math.floor((group.tableViewportHeight - group.topPadding - group.bottomPadding - (filters.visible ? filters.height + AppSizes.groupContentSpacing : 0) - sliderRow.height - AppSizes.groupContentSpacing) / tableRowHeight - 1.5))
             defaultInfoText: qsTr("No parameters")
             sourceModel: ParameterFilterModel {
                 id: parameterFilter
@@ -295,14 +303,14 @@ EaElements.GroupBox {
             onRowActivated: row => group.selected = parameterFilter.parameterAt(row)
 
             // A layout of its own (the owner, 2026-10-27): the name a little wider than its longest shown name, icons
-            // and text; the units as their text; of the rest, value and s.u. three tenths each, min and max two
-            // tenths each; free at the right with a wider gap before it. Value takes what rounding leaves.
+            // and text; the units as their text; value, s.u., min and max share the rest equally; free at the right
+            // with a wider gap before it. Value takes what rounding leaves.
             equalColumns: true
             readonly property real nameWidth: (fittedWidths[1] ?? 0) + autoColumnPadding + EaStyle.Sizes.fontPixelSize
             readonly property real unitsWidth: (fittedWidths[3] ?? 0) + autoColumnPadding
             readonly property real freeWidth: group.measured ? group.freeColumnWidth : 0
             readonly property real restWidth: Math.max(0, width - numberColumnWidth - nameWidth - unitsWidth - freeWidth - EaStyle.Sizes.tableColumnSpacing * (group.measured ? 7 : 6) - EaStyle.Sizes.borderThickness * 2 - rowPadding * 2)
-            columns: [numberColumnWidth, nameWidth, -1, unitsWidth, restWidth * 0.3, restWidth * 0.2, restWidth * 0.2].concat(group.measured ? [freeWidth] : [])
+            columns: [numberColumnWidth, nameWidth, -1, unitsWidth, restWidth * 0.25, restWidth * 0.25, restWidth * 0.25].concat(group.measured ? [freeWidth] : [])
 
             header: EaComponents.ListViewHeader {
                 EaComponents.ListViewLabel {
@@ -333,8 +341,8 @@ EaElements.GroupBox {
                     text: qsTr("max")
                 }
                 // The title is a button, marked by the combo boxes' arrow: a click frees or fixes every row the
-                // filters show, as one Undo step (the owner, 2026-10-11). The word and the arrow end at the column's
-                // right, over the right-aligned checkboxes; its menu opens centred, so the title is as wide as itself.
+                // filters show, as one Undo step (the owner, 2026-10-11). The arrow ends where the right-aligned check
+                // boxes do; its menu opens centred, so the title is as wide as itself.
                 EaComponents.ListViewLabel {
                     id: freeTitle
                     // Laid out here, not by the table's alignment rule.
@@ -342,7 +350,7 @@ EaElements.GroupBox {
                     objectName: "parameters.freeHeader"
                     visible: group.measured
                     horizontalAlignment: Text.AlignRight
-                    rightPadding: freeArrow.width + group.freeGap
+                    rightPadding: freeArrow.width + group.freeGap + group.freeInset
                     color: group.freeTitleColor
                     text: qsTr("free")
 
@@ -454,8 +462,8 @@ EaElements.GroupBox {
                 // Enabled where a fit can vary the value, or while it is free so a flag set before a change can be
                 // cleared; otherwise disabled, its tooltip naming why (edi ADR-0053).
                 Item {
-                    visible: group.measured
                     property int horizontalAlignment: Text.AlignHCenter
+                    visible: group.measured
                     height: parent.height
 
                     EaComponents.ListViewCheckBox {
@@ -463,7 +471,7 @@ EaElements.GroupBox {
                         anchors.fill: parent
                         horizontalAlignment: Text.AlignHCenter
                         objectName: `parameters.free.${row.index}`
-                        enabled: group.measured && row.parameter !== null && (row.parameter.fittable || row.parameter.free)
+                        enabled: row.parameter !== null && (row.parameter.fittable || row.parameter.free)
                         checked: row.parameter ? row.parameter.free : false
                         onToggled: row.parameter.free = checked
                         ToolTip.text: row.parameter && !row.parameter.fittable ? qsTr("Cannot be fitted: %1").arg(row.parameter.fitReason) : ""

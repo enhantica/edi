@@ -160,7 +160,6 @@ WorkflowPage {
         EaComponents.SideBarColumn {
             ShownParametersGroup {
                 project: page.project
-                visible: page.measured
             }
             PatternUpdatesGroup {
                 visible: page.measured

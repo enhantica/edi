@@ -2101,6 +2101,27 @@
       ]
     },
     {
+      "name": "_structure_view",
+      "form": "aggregate",
+      "columns": [
+        {
+          "member": "Structure::view",
+          "type": "detail::Written<std::map<std::string, std::string>>",
+          "items": [
+            "adp_probability",
+            "atom_scale",
+            "atom_view",
+            "atoms",
+            "axes",
+            "bonds",
+            "cell",
+            "colour_scheme",
+            "labels"
+          ]
+        }
+      ]
+    },
+    {
       "name": "carried_refln",
       "form": "aggregate",
       "columns": [
@@ -3326,6 +3347,11 @@
       "category": "_scattering_length"
     },
     {
+      "member": "Structure::view",
+      "type": "detail::Written<std::map<std::string, std::string>>",
+      "category": "_structure_view"
+    },
+    {
       "member": "Structure::epoch",
       "type": "detail::Epoch",
       "part": "the row's identity as a calculation input"
@@ -4337,6 +4363,11 @@
       "member": "ExperimentBase::data_file",
       "type": "std::string",
       "category": "_data_source"
+    },
+    {
+      "member": "ExperimentBase::description_chosen",
+      "type": "bool",
+      "not_storage": "whether the user may choose its description (ADR-0054)"
     },
     {
       "member": "ExperimentBase::background_estimate_mode",
@@ -5380,6 +5411,9 @@
     ],
     "_space_group": [
       "_space_group"
+    ],
+    "_structure_view": [
+      "_structure_view"
     ],
     "_su_format": [
       "_su_format"

@@ -152,12 +152,12 @@ llvm-openmp = "23.*"
 # tools/ci/build-crysta.sh reads them from this file. Only an update PR or a paired PR moves them.
 [target.osx-arm64.activation.env]
 MACOSX_DEPLOYMENT_TARGET = '13.4'
-CRYSTA_SDK_TAG = "build-405b4f477371bee24f3c4f410ad2157701bf52cc"
-CRYSTA_SDK_SHA256 = "7b4c0bdefb7158f0efd7b00b508bd8801eacf60c200c8119e0cb0f9db74d6529"
+CRYSTA_SDK_TAG = "build-8ba9537cc90857afeedf768693f70635f607ee36"
+CRYSTA_SDK_SHA256 = "216ca56754a1c16d981616f1ccf576c2d8f03722692b74b6e7496ee38ae85f56"
 
 [target.linux-64.activation.env]
-CRYSTA_SDK_TAG = "build-405b4f477371bee24f3c4f410ad2157701bf52cc"
-CRYSTA_SDK_SHA256 = "6f19296973804f8215ac9cafe93dbea3cba66e5fbd27a9753cc4078a16f3d36c"
+CRYSTA_SDK_TAG = "build-8ba9537cc90857afeedf768693f70635f607ee36"
+CRYSTA_SDK_SHA256 = "586eba41c9e4efd7ca4694aabbefb9f2eaf0ecdecad900316e92f3441596daef"
 
 [target.linux-64.dependencies]
 cxx-compiler = "*"
@@ -323,8 +323,7 @@ quick-tests = { cmd = [
     "tests/unit", "tests/integration", "tests/system", "--ignore=tests/integration/app",
     "-q",
 ], depends-on = ["core-build"] }
-# The nightly-only group (tests/test-groups.json): files that build an app of their own, run only by the nightly
-# schedule.
+# The nightly-only group retains the app-builder witnesses.
 nightly-only-tests = { cmd = [
     "python", "-m", "pytest",
     "tests/system/py/test_scan_app_execution.py",
@@ -343,15 +342,17 @@ nightly-only-tests = { cmd = [
     "tests/system/py/test_project_transactions.py",
     "-q",
 ], depends-on = ["core-build"] }
+# The weekly-only group is the CIF import matrix: about 140,000 short tests, two hours serial.
+weekly-only-tests = { cmd = [
+    "python", "-m", "pytest",
+    "tests/integration/py/test_cif_import_contract.py",
+    "-q",
+], depends-on = ["core-build"] }
 # CI runs the same selection as parallel jobs (owner, 2026-10-08): `core-tests` (unit and integration) in
 # the core job, and `system-tests-part <part>` for each third of the system tier, split by recorded test
 # times (tools/ci/system-tests-part.sh). Together they are exactly quick-tests' selection, except that only the
-# nightly schedule runs the nightly-only group.
-core-tests = { cmd = [
-    "python", "-m", "pytest",
-    "tests/unit", "tests/integration", "--ignore=tests/integration/app",
-    "-q",
-], depends-on = ["core-build"] }
+# nightly schedule runs the nightly-only group and the Sunday schedule the weekly-only group.
+core-tests = { cmd = ["bash", "tools/ci/core-tests.sh"], depends-on = ["core-build"] }
 system-tests-part = { cmd = ["bash", "tools/ci/system-tests-part.sh"], depends-on = ["core-build"] }
 # --- core (C++) ---------------------------------------------------------------------- / item 8: the
 # pinned crysta SDK (downloaded or reused, never compiled) and its source, for every prefix reader — also
@@ -423,6 +424,7 @@ verification-parity-tests = { cmd = [
 group-quick = { depends-on = ["quick-tests", "cpp-test"] }
 group-full = { depends-on = ["test", "cpp-test"] }
 group-nightly-only = { depends-on = ["nightly-only-tests"] }
+group-weekly-only = { depends-on = ["weekly-only-tests"] }
 # Run on its own it builds first, as every app step does: the core the suite's conftest imports and the app,
 # in its own environment; app-verify runs it with --skip-deps on its one build.
 group-app = { cmd = ["python", "-m", "pytest", "tests/integration/app", "-q"], depends-on = ["core-build", { task = "app-build", environment = "app" }] }

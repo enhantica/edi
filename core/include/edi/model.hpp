@@ -2910,8 +2910,8 @@ struct Structure : std::enable_shared_from_this<Structure> {
     // A loop category held in one cell; written whole or with `modify`.
     detail::Written<std::map<std::string, double>> scattering_lengths_fm;
     // How the Structure view shows this structure (`_structure_view`, by item name: atom_view, atom_scale, ...),
-    // saved with it; empty: the view's defaults. No calculation reads it.
-    std::map<std::string, std::string> view;
+    // saved with it; empty: the view's defaults. No calculation reads it. Written whole.
+    detail::Written<std::map<std::string, std::string>> view;
 
     // The cell's parameters, then every site's, in collection order.
     std::vector<Parameter*> parameters();
@@ -3314,7 +3314,7 @@ struct ExperimentType {
     ScatteringTypeEnum effective_scattering_type() const {
         return scattering_type.value_or(ScatteringTypeEnum::BRAGG);
     }
-    // The experiment's description (ADR-0052), each held as declared and empty until
+    // The experiment's description (ADR-0054), each held as declared and empty until
     // declared, `?` and `.` included: the dimensionality (`1d`, the only one) and the polarisation
     // (`unpolarised` for neutron, the inapplicable `.` for X-ray).
     std::string dimensionality;
@@ -3535,7 +3535,7 @@ struct InstrumentBase {
     // The X-ray CW K-alpha doublet: the second wavelength and its intensity relative to the first,
     // presence-tracked like the polarization pair (a ratio of 0 is a single wavelength).
     OptionalParameter setup_wavelength_2, setup_wavelength_2_to_1_ratio;
-    // The instrument and facility that measured the experiment (ADR-0052), text held as
+    // The instrument and facility that measured the experiment (ADR-0054), text held as
     // declared and empty until declared; `?` states an unknown one.
     std::string name;
     std::string facility;
@@ -4038,6 +4038,9 @@ struct ExperimentBase : std::enable_shared_from_this<ExperimentBase> {
     // The plain-data file the measured data was read from (`_data_source.file_name`, Load data), its own
     // name without a directory; the data itself is `data`. Empty: none.
     std::string data_file;
+    // Whether a data file was loaded into the experiment in this session, so the app lets the user choose its
+    // facility and instrument (ADR-0054). Never saved or read: a reopened file states its own description.
+    bool description_chosen = false;
     // The automatic background estimate's settings (`_background_estimate`, ADR-0040), each empty until
     // declared: the mode (`manual` or `auto`; empty is manual), the method (`auto`, `arpls`, `snip` or
     // `fabc`; empty is auto), the width, smoothness and point count (empty is derived from the data), the
@@ -5722,6 +5725,14 @@ struct ScatteringLengthCategory {
     static constexpr std::array items{"type_symbol length_fm"};
 };
 static_assert(detail::one_entry_per_column(ScatteringLengthCategory::columns, ScatteringLengthCategory::items));
+
+// How the Structure view shows a structure: its `_structure_view` items by name, in one cell.
+struct StructureViewCategory {
+    static constexpr const char* name = "_structure_view";
+    static constexpr auto columns = std::tuple{&Structure::view};
+    static constexpr std::array items{"adp_probability atom_scale atom_view atoms axes bonds cell colour_scheme labels"};
+};
+static_assert(detail::one_entry_per_column(StructureViewCategory::columns, StructureViewCategory::items));
 
 // An imported file's own `_refln` loop, kept as read: the item names, and each row's cells as
 // written. It is written back until a calculation publishes the computed `_refln` (ReflnCategory).

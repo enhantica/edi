@@ -10,8 +10,12 @@
 
 namespace edi_app {
 
-BlockText::BlockText(Source source, QObject* parent, File file)
-    : QObject(parent), source_(std::move(source)), file_(std::move(file)) {}
+BlockText::BlockText(Source source, QObject* parent, File file, Fixed fixed, Source discovery)
+    : QObject(parent),
+      source_(std::move(source)),
+      file_(std::move(file)),
+      fixed_(std::move(fixed)),
+      discovery_(std::move(discovery)) {}
 
 QString BlockText::file() const {
     const QPointer<const BlockText> receiver(this);
@@ -25,14 +29,26 @@ QString BlockText::inputText() const {
     const QPointer<const BlockText> receiver(this);
     const auto publication = notification_publication_;
     compute();
-    const QString value = error_.isEmpty() ? QString::fromStdString(edi::input_categories_text(text_.toStdString())) : QString();
+    const QString value = error_.isEmpty() ? QString::fromStdString(edi::input_categories_text(text_.toStdString(), fixed_ ? fixed_() : std::vector<std::string>{})) : QString();
     if (receiver && notification_publication_ == publication && !observed_input_) observed_input_ = value;
     return value;
 }
 
 QString BlockText::withOutputs(const QString& edited) const {
     compute();
-    return QString::fromStdString(edi::with_output_categories(edited.toStdString(), text_.toStdString()));
+    return QString::fromStdString(edi::with_output_categories(edited.toStdString(), text_.toStdString(),
+                                                              fixed_ ? fixed_() : std::vector<std::string>{}));
+}
+
+QString BlockText::discoveryText() const {
+    if ((valid_ && error_.isEmpty()) || !discovery_) {
+        return text();
+    }
+    try {
+        return QString::fromStdString(discovery_());
+    } catch (const std::exception&) {
+        return {};
+    }
 }
 
 QString BlockText::text() const {

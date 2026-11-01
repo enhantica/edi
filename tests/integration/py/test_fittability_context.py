@@ -143,7 +143,7 @@ def test_real_projects_expose_the_same_blocker_text(api, case):
         project = api.Project.load(root)
         require_refusal(project.experiments[0].peak.asym_beba_limit, 'a descriptor, never fitted')
     else:
-        root = ROOT / 'docs/user/cli/sc-neut-tof_taurine_fit/project'
+        root = ROOT / 'docs/user/cli/sc-neut-tof_taurine-senju/project'
         project = api.Project.load(root)
         targets = [parameter for parameter in project.parameters if parameter.user_constrained]
         assert targets, 'The real taurine project carries declared dependent parameters'

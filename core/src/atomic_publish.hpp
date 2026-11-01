@@ -8,7 +8,7 @@
 #include <stdio.h>
 #endif
 namespace edi::detail {
-// Shared native publication primitive (ADR-0056): fresh means no replacement;
+// Shared native publication primitive (ADR-0057): fresh means no replacement;
 // an existing owned-file exchange keeps its original caller's validation.
 inline int atomic_publish(int sourceParent,const char* source,int targetParent,const char* target,bool exchange) noexcept {
 #if defined(__linux__) && defined(SYS_renameat2) && !defined(__EMSCRIPTEN__)

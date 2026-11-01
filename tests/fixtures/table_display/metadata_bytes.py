@@ -16,6 +16,8 @@ import tarfile
 import zipfile
 from pathlib import Path
 
+from tests.fixtures.metadata_transition.source_bytes import previous_bytes
+
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 BEFORE = '1c36f7824a07eb2a3a5cca88f93ff87b8dc1518a^'
@@ -236,7 +238,7 @@ def pre_catalogue_bytes(path):
     if path.suffix != '.edi' or not path.is_relative_to(ROOT):
         return data
     name = path.relative_to(ROOT).as_posix()
-    data = pre_description_bytes(name, data)
+    data = previous_bytes(name, data)
     pins = json.loads((HERE / 'metadata-inputs.json').read_text())['files']
     if name not in pins:
         return data
@@ -262,11 +264,14 @@ def restore(source, destination):
     if not source.is_relative_to(ROOT):
         return destination
     pins = json.loads((HERE / 'metadata-inputs.json').read_text())['files']
+    migration = json.loads((ROOT / 'tests/fixtures/metadata_transition/sources.json').read_text())[
+        'files'
+    ]
     for path in source.rglob('*'):
         if not path.is_file():
             continue
         name = path.relative_to(ROOT).as_posix()
-        if name not in pins:
+        if name not in pins and name not in migration:
             continue
         (destination / path.relative_to(source)).write_bytes(pre_catalogue_bytes(path))
     return destination

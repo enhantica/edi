@@ -122,8 +122,13 @@ class ProjectEditor {
 };
 
 // A file of the project's current save, by its path relative to the project directory (D7); throws
-// the writer's refusal.
-using SavedFile = std::function<std::string(const std::string& relative)>;
+// the writer's refusal. `discovered` gives the file as a save of a copy writes it: nothing calculates, so the
+// categories only a calculation writes are left out.
+struct SavedFile {
+    std::function<std::string(const std::string& relative)> computed;
+    std::function<std::string(const std::string& relative)> discovered;
+    std::string operator()(const std::string& relative) const { return computed(relative); }
+};
 
 // A fresh name "<stem><n>" not among `taken`, for an appended or duplicated row.
 template <typename Taken>

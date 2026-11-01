@@ -44,6 +44,9 @@ class ScanLines : public QQuickItem {
     const std::vector<Style>& styles() const { return styles_; }
     /// Replaces the bands, in item pixels, all in one colour.
     void setBands(std::vector<QRectF> bands, const QColor& colour);
+    /// The colour the lines are drawn on. An opacity below 1 (this item's or an ancestor's) blends each line toward it
+    /// once, rather than making it translucent, so a pixel two segments reach is not drawn darker.
+    void setPaper(const QColor& paper);
 
     double yMin() const { return y_min_; }
     double yMax() const { return y_max_; }
@@ -70,6 +73,7 @@ class ScanLines : public QQuickItem {
     std::vector<Style> styles_;
     std::vector<QRectF> bands_;
     QColor band_colour_;
+    QColor paper_ = Qt::white;
     double y_min_ = 0.0, y_max_ = 1.0;
     double line_width_ = 2.0;
     bool traces_changed_ = true;

@@ -52,7 +52,10 @@ Item {
             function onScanShownFileChanged() {
                 const fit = Session.project.fit;
                 if (fit.running && fit.scanShownFile)
-                    test.adaptiveDraws.push({file: fit.scanShownFile, ms: Date.now()});
+                    test.adaptiveDraws.push({
+                        file: fit.scanShownFile,
+                        ms: Date.now()
+                    });
             }
         }
         Connections {
@@ -191,38 +194,35 @@ Item {
         }
         function test_placement(data) {
             open("stacked", data.n);
-            const offset = named("toolbar.offset"), height = named("toolbar.height");
-            compare(String(offset.currentText).replace(/\s/g, ""), "10%", "The offset defaults to ten percent of one trace's height");
-            compare(String(height.currentText).toLowerCase(), "fit", "The relative height defaults to Fit");
-            const layer = named("layer"), axes = named("axes");
-            for (let percent = 0; percent <= 100; percent += 10) {
-                choose(offset, percent + "%");
-                choose(height, "Fit");
+            const spacing = named("toolbar.spacing"), layer = named("layer"), axes = named("axes");
+            compare(spacing.currentText, "Wide", "New Stacked views default to the approved Wide spacing");
+            for (let step = 0; step < 5; ++step) {
+                spacing.currentIndex = step;
+                spacing.activated(step);
+                settled(chart);
+                const share = step / 4, height = 1 - share + share / data.n;
                 closeEnough(axes.axisY.min, 0, "The unzoomed Stacked axis starts at zero plot share");
                 closeEnough(axes.axisY.max, 1, "The unzoomed Stacked axis ends at one plot share");
-                const expectedHeight = 1 / (1 + (data.n - 1) * percent / 100);
                 for (let i = 0; i < data.n; ++i) {
-                    closeEnough(layer.rowOf(i), i * expectedHeight * percent / 100, "Stack baselines obey the closed-form relative offset");
-                    closeEnough(layer.peakOf(i) - layer.rowOf(i), expectedHeight, "Each independently equal triangle has exactly the Fit height");
-                    if (percent === 100 && i > 0)
-                        verify(layer.peakOf(i - 1) <= layer.rowOf(i) + 0.00001, "At full offset adjacent traces have no vertical overlap");
+                    closeEnough(layer.rowOf(i), data.n === 1 ? 0 : i * (1 - height) / (data.n - 1), "Every baseline obeys the independent linear spacing rule");
+                    closeEnough(layer.peakOf(i) - layer.rowOf(i), height, "Each equal triangle has the independently specified spacing height");
+                    if (step === 4 && i > 0)
+                        verify(layer.peakOf(i - 1) <= layer.rowOf(i) + .00001, "Separate leaves adjacent traces nonoverlapping");
                 }
-                closeEnough(layer.peakOf(data.n - 1), axes.axisY.max, "Fit places the whole stack's top exactly at the plot top");
-                for (let fixed = 10; fixed <= 100; fixed += 10) {
-                    choose(height, fixed + "%");
-                    for (const i of [0, data.n - 1]) {
-                        closeEnough(layer.rowOf(i), i * fixed / 100 * percent / 100, "A fixed height retains the independent relative baseline spacing");
-                        closeEnough(layer.peakOf(i) - layer.rowOf(i), fixed / 100, "A fixed relative height is a fraction of the unzoomed plot height");
-                    }
-                }
+                closeEnough(layer.peakOf(data.n - 1), 1, "Every spacing places the complete stack inside the plot");
             }
         }
+
         function test_wheel_reaches_last_dataset_data() {
-            return ["experiment", "analysis"].map(page => ({tag: page, page}));
+            return ["experiment", "analysis"].map(page => ({
+                        tag: page,
+                        page
+                    }));
         }
         function test_wheel_reaches_last_dataset(data) {
             open("stacked", 12);
-            chart.destroy(); chart = null;
+            chart.destroy();
+            chart = null;
             const win = window();
             Ui.click(test, Probe, win, "appBar.tab." + data.page);
             tryVerify(() => pageReady(data.page) && !Ui.moving(win.contentItem), 3000, "Wheel navigation reaches the actual settled Experiment or Analysis page");
@@ -234,29 +234,33 @@ Item {
             chart = Render.descendants(body).find(item => item.objectName === "scanView.stacked" && item.visible && item.shown);
             verify(chart !== undefined, "Wheel reachability observes the live page-owned Stacked chart");
             tryCompare(chart.scan, "loaded", 12, 8000, "Every independently supplied triangle is loaded on the shown page");
-            choose(named("toolbar.offset"), "100%");
-            choose(named("toolbar.height"), "50%");
+            choose(named("toolbar.spacing"), "Separate");
+            chart.zoomY = [0, .25];
+            settled(chart);
             const axes = named("axes"), pointer = named("pointer"), layer = named("layer");
             closeEnough(axes.axisY.min, 0, "Fixed-height stack starts at its default lower viewport");
-            closeEnough(axes.axisY.max, 1, "Fixed-height stack starts with one plot-height viewport");
+            closeEnough(axes.axisY.max, .25, "Zoomed stack starts with one plot-height viewport");
             for (let step = 0; step < 35; ++step)
                 mouseWheel(pointer, pointer.width / 2, pointer.height / 2, 0, 120);
             settled(chart);
-            closeEnough(axes.axisY.min, 5, "Real wheel input reaches the independently computed top viewport of twelve half-height traces");
-            closeEnough(axes.axisY.max, 6, "The complete fixed-height stack is reachable beyond zero to one");
-            closeEnough(layer.peakOf(11) - layer.rowOf(11), .5, "Wheel scrolling preserves the last trace's specified relative height");
+            closeEnough(axes.axisY.min, .75, "Real wheel input reaches the independently computed top viewport of twelve half-height traces");
+            closeEnough(axes.axisY.max, 1, "The complete fixed-height stack is reachable beyond zero to one");
+            closeEnough(layer.peakOf(11) - layer.rowOf(11), 1 / 12, "Wheel scrolling preserves the last trace's specified relative height");
             const x = (25 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * pointer.width;
-            const y = (axes.axisY.max - 5.75) / (axes.axisY.max - axes.axisY.min) * pointer.height;
+            const y = (axes.axisY.max - (11.5 / 12)) / (axes.axisY.max - axes.axisY.min) * pointer.height;
             mouseClick(pointer, x, y);
             tryCompare(Session.project, "currentExperimentIndex", 11, 1500, "The last independently placed triangle is selectable by real pointer input after wheel scrolling");
             for (let step = 0; step < 35; ++step)
                 mouseWheel(pointer, pointer.width / 2, pointer.height / 2, 0, -120);
             settled(chart);
             closeEnough(axes.axisY.min, 0, "Reverse wheel input returns to the first trace without losing the stack's lower end");
-            closeEnough(axes.axisY.max, 1, "Wheel navigation preserves the viewport span in both directions");
+            closeEnough(axes.axisY.max, .25, "Wheel navigation preserves the viewport span in both directions");
         }
         function test_joint_exclusions_follow_placement_data() {
-            return ["gpu", "software"].map(renderer => ({tag: renderer, renderer}));
+            return ["gpu", "software"].map(renderer => ({
+                        tag: renderer,
+                        renderer
+                    }));
         }
         function test_joint_exclusions_follow_placement(data) {
             Preferences.resetToDefaults();
@@ -273,35 +277,51 @@ Item {
                 verify(changed !== old && SettingsProof.write(location, file, changed), "Each independent joint experiment receives its own distinct native excluded interval");
             }
             verify(Session.openProject(location), "Joint exclusion placement opens the independently authored real two-bank project");
-            chart = scanFactory.createObject(surface, {project: Session.project, mode: "stacked", shown: true});
+            chart = scanFactory.createObject(surface, {
+                project: Session.project,
+                mode: "stacked",
+                shown: true
+            });
             verify(chart !== null, "Joint exclusion pixels come from the production Stacked component");
             tryCompare(chart.scan, "loaded", 2, 8000, "Both distinct joint experiments load before checking their exclusion extents");
             const layer = named("layer"), axes = named("axes");
             tryCompare(layer, "gpu", data.renderer === "gpu", 2000, "The joint exclusion matrix exercises the actual GPU and painter Stacked paths");
             const selector = named("toolbar.xaxis");
             if (chart.scan.dShown) {
-                selector.currentIndex = 0; selector.activated(0);
+                selector.currentIndex = 0;
+                selector.activated(0);
                 tryCompare(chart.scan, "dShown", false, 2000, "The independent native exclusion intervals use the native TOF axis");
             }
-            for (const placement of [{offset: "100%", height: "20%", spans: [[0, .2], [.2, .4]]}, {offset: "50%", height: "40%", spans: [[0, .4], [.2, .6]]}]) {
-                choose(named("toolbar.offset"), placement.offset);
-                choose(named("toolbar.height"), placement.height);
+            for (const placement of [
+                {
+                    spacing: "Separate",
+                    spans: [[0, .5], [.5, 1]]
+                },
+                {
+                    spacing: "Medium",
+                    spans: [[0, .75], [.25, 1]]
+                }
+            ]) {
+                choose(named("toolbar.spacing"), placement.spacing);
+                chart.zoomY = [-.1, 1.1];
                 const sample = (image, x, y) => {
                     const at = layer.mapToItem(chart, (x - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width, (axes.axisY.max - y) / (axes.axisY.max - axes.axisY.min) * layer.height);
                     return String(image.pixel(Math.floor(at.x * image.width / chart.width), Math.floor(at.y * image.height / chart.height)));
                 };
                 settled(chart);
                 const full = grabImage(chart);
-                // At each band's midpoint, compare its interior and exterior with a nearby
-                // included x column; the triangle is zero here, away from its sharp peak.
                 for (let row = 0; row < 2; ++row) {
                     const x = (bands[row][0] + bands[row][1]) / 2;
                     const plainX = row === 0 ? bands[row][0] - 100 : bands[row][1] + 100;
                     const span = placement.spans[row];
                     for (const y of [span[0] + .035, (span[0] + span[1]) / 2, span[1] - .035])
-                        verify(sample(full, x, y) !== sample(full, plainX, y), "Every experiment's exclusion tint follows its own independently placed baseline-to-top span");
-                    for (const y of [span[0] - .035, span[1] + .035].filter(value => value > 0 && value < 1))
-                        compare(sample(full, x, y), sample(full, plainX, y), "An experiment's excluded tint stops outside its own placed vertical span rather than using Map row extents");
+                        compare(sample(full, x, y), sample(full, plainX, y), "Stacked excluded ranges never tint the empty vertical span above the curve");
+                    let dimmed = false;
+                    for (let dy = -3; dy <= 3; ++dy) {
+                        const y = span[0] + dy * (axes.axisY.max - axes.axisY.min) / layer.height;
+                        dimmed = dimmed || sample(full, x, y) !== sample(full, plainX, y);
+                    }
+                    verify(dimmed, "Each experiment's excluded curve is dimmed at its independently placed baseline");
                 }
             }
         }
@@ -320,8 +340,7 @@ Item {
             closeEnough(layer.faded, 0.3, "The active scan layer uses the shared thirty-percent fade");
             Session.project.currentExperimentIndex = 1;
             if (data.mode === "stacked") {
-                choose(named("toolbar.offset"), "100%");
-                choose(named("toolbar.height"), "Fit");
+                choose(named("toolbar.spacing"), "Separate");
             }
             settled(chart);
             const before = grabImage(surface);
@@ -357,16 +376,21 @@ Item {
                 verify(best !== null && best.ink > .05, "Every independently supplied pattern has actual visible ink with highlight disabled");
                 const ratio = distance(sample(before, px, best.y)) / best.ink;
                 if (row === 1)
-                    verify(ratio > .85 && ratio < 1.15, "Highlight retains the selected dataset's full rendered colour");
-                else
-                    verify(ratio > .12 && ratio < .5, "Highlight blends every other dataset toward the background to about thirty percent");
+                    verify(data.mode === "stacked" ? ratio > 1.1 && ratio < 1.5 : ratio > .85 && ratio < 1.15, "Highlight draws the selected Stacked line at full opacity and retains the selected Map colour");
+                else {
+                    verify(ratio > 0 && ratio < .5, "Unselected patterns recede below half the normal rendered ink");
+                    if (data.mode === "stacked") {
+                        const faded = sample(before, px, best.y);
+                        verify(Math.max(faded.r, faded.g, faded.b) - Math.min(faded.r, faded.g, faded.b) <= 3 / 255, "Unselected Stacked curves use the owner's disabled neutral colour");
+                    }
+                }
             }
             if (data.mode === "stacked") {
-                choose(named("toolbar.offset"), "0%");
+                choose(named("toolbar.spacing"), "Overlay");
                 mouseClick(toggle, toggle.width / 2, toggle.height / 2);
                 tryCompare(Preferences, "chartHighlightSelected", true, 1000, "Real toolbar input restores highlighting for the overlap witness");
                 settled(chart);
-                const hex = Approved.colours(SettingsProof, "ediNatural", "measured", 3, false)[1];
+                const hex = Approved.colours(SettingsProof, "earth", "measured", 3, false)[1];
                 const expected = [1, 3, 5].map(start => parseInt(hex.substr(start, 2), 16) / 255);
                 const x = (30 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * layer.width;
                 const peak = layer.peakOf(1), base = layer.rowOf(1), value = base + (peak - base) * 2 / 3;
@@ -380,7 +404,7 @@ Item {
                 verify(error <= 3 / 255, "With fully overlapping traces the selected middle dataset is drawn on top in its independently frozen palette colour");
                 mouseClick(toggle, toggle.width / 2, toggle.height / 2);
                 tryCompare(Preferences, "chartHighlightSelected", false, 1000, "The overlap witness restores equal-dataset rendering before row selection");
-                choose(named("toolbar.offset"), "100%");
+                choose(named("toolbar.spacing"), "Separate");
             }
             compare(findChild(chart, "scanView." + data.mode + ".current"), null, "The retired selected-pattern rectangle has no remaining runtime instance");
             Session.project.currentExperimentIndex = 1;
@@ -390,49 +414,73 @@ Item {
             const label = labels[0];
             const segments = Array.from(label.segments).filter(segment => typeof segment.text === "string" && segment.text !== "" && segment.bold === true);
             verify(segments.length > 0, "The selected IconLine declares a nonempty bold text segment");
-            compare(label.textColor, Style.Colors.themeAccent, "The selected IconLine uses the theme accent colour");
+            const selectedHex = Approved.colours(SettingsProof, "earth", "measured", 3, false, {
+                scan: true
+            })[1];
+            const selectedColour = data.mode === "map" ? Style.Colors.themeAccent : Qt.rgba(parseInt(selectedHex.slice(1, 3), 16) / 255, parseInt(selectedHex.slice(3, 5), 16) / 255, parseInt(selectedHex.slice(5, 7), 16) / 255, 1);
+            compare(label.textColor, selectedColour, "The selected IconLine uses its dataset colour on Stacked and the accent on Map");
             const bold = Render.texts(label).find(item => item.opacity > 0 && segments.some(segment => segment.text === item.text) && item.font.family === Style.Fonts.ptSansBold.name && item.font.styleName === "Bold");
             verify(bold !== undefined, "The selected dataset's visible text uses the loaded bold font family and style");
-            tryCompare(bold, "color", Style.Colors.themeAccent, 1500, "The selected dataset's actual text reaches the theme accent colour");
+            tryCompare(bold, "color", selectedColour, 1500, "The selected dataset text reaches its approved view colour");
             const pointer = named("pointer");
             const row = data.mode === "map" ? chart.scan.rowOf(2) : layer.rowOf(2) + (layer.peakOf(2) - layer.rowOf(2)) * 2 / 3;
             const x = (30 - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * pointer.width;
             const y = (axes.axisY.max - row) / (axes.axisY.max - axes.axisY.min) * pointer.height;
             mouseMove(pointer, x, y);
             const hover = named("hover");
-            tryVerify(() => hover.visible && hover.text === chart.scan.rowText(2), 1500, "Actual plot hover names the independently targeted dataset");
+            tryVerify(() => hover.visible && named("hover.name").segments.some(piece => piece.text === chart.scan.rowText(2)), 1500, "Actual plot hover names the independently targeted dataset");
             mouseClick(pointer, x, y);
             tryCompare(Session.project, "currentExperimentIndex", 2, 1000, "Actual plot input selects the dataset at its independently observed row");
         }
         function test_hover_tooltip_data() {
-            return ["stacked", "map"].map(mode => ({tag: mode, mode: mode}));
+            return ["stacked", "map"].map(mode => ({
+                        tag: mode,
+                        mode: mode
+                    }));
         }
         function test_hover_tooltip(data) {
             open(data.mode);
             const layer = named("layer"), axes = named("axes"), pointer = named("pointer");
             if (data.mode === "stacked") {
-                choose(named("toolbar.offset"), "100%");
-                choose(named("toolbar.height"), "Fit");
+                choose(named("toolbar.spacing"), "Separate");
             }
-            for (const pose of [{x: 30, row: 1}, {x: 60, row: 2}, {x: 20, row: 0}]) {
+            for (const pose of [
+                {
+                    x: 30,
+                    row: 1
+                },
+                {
+                    x: 60,
+                    row: 2
+                },
+                {
+                    x: 20,
+                    row: 0
+                }
+            ]) {
                 const share = pose.x <= 40 ? (pose.x - 10) / 30 : (80 - pose.x) / 40;
                 const value = data.mode === "map" ? chart.scan.rowOf(pose.row) : layer.rowOf(pose.row) + (layer.peakOf(pose.row) - layer.rowOf(pose.row)) * share;
                 const x = (pose.x - axes.axisX.min) / (axes.axisX.max - axes.axisX.min) * pointer.width;
                 const y = (axes.axisY.max - value) / (axes.axisY.max - axes.axisY.min) * pointer.height;
                 mouseMove(pointer, x, y);
                 const tooltip = named("hover");
-                tryVerify(() => tooltip.visible && tooltip.text === chart.scan.rowText(pose.row), 2000, "Real plot hover names the independently targeted dataset");
+                tryVerify(() => tooltip.visible && named("hover.name").segments.some(piece => piece.text === chart.scan.rowText(pose.row)), 2000, "Real plot hover names the independently targeted dataset");
                 tryCompare(tooltip, "opacity", 1, 2500, "The actual tooltip finishes its entry transition before geometry and style observations");
-                compare(tooltip.backgroundColor, Style.Colors.toolTipBackground, "The plot tooltip uses the app's shared tooltip background token");
-                compare(tooltip.textColor, Style.Colors.themeForeground, "The plot tooltip uses the app's shared tooltip text colour");
-                compare(tooltip.borderColor, Style.Colors.toolTipBorder, "The plot tooltip retains the app's shared tooltip border and shadow colour");
-                compare(tooltip.font.family, Style.Fonts.fontFamily, "The plot tooltip uses the app's shared text font");
-                const background = tooltip.background;
-                verify(background !== null && Ui.rendered(background) && background.opacity > 0, "The actual tooltip background is visibly rendered");
-                const painted = Render.descendants(background).filter(item => item.visible && item.width > 0 && item.height > 0 && item.color !== undefined);
-                verify(painted.some(item => String(item.color) === String(Style.Colors.toolTipBackground)), "The actual tooltip paints its shared background colour");
-                const texts = Render.texts(tooltip.contentItem);
-                verify(texts.some(item => item.text === tooltip.text && item.font.family === Style.Fonts.fontFamily && String(item.color) === String(Style.Colors.themeForeground)), "The actual tooltip draws its dataset text in the shared app style");
+                const caption = named("hover.name"), intensity = named("hover.intensity");
+                compare(tooltip.color, chart.colors.mainContentBackgroundHalfTransparent, "The plotted readout shares the Pattern figure's translucent background");
+                compare(tooltip.border.color, chart.colors.chartGridLine, "The plotted readout shares the Pattern figure's border colour");
+                compare(intensity.color, chart.colors.themeForeground, "The intensity line uses the common figure text colour");
+                compare(intensity.font.family, Style.Fonts.fontFamily, "The intensity line uses the application's shared text font");
+                verify(caption.segments.some(piece => piece.icon === "microscope"), "The first hover line retains the experiment icon beside its name");
+                const expected = Approved.colours(SettingsProof, "earth", "measured", 3, false, {
+                    scan: true
+                })[pose.row];
+                compare(String(caption.textColor).toLowerCase(), expected, "The hovered dataset name retains its independently recorded colour");
+                verify(intensity.visible && Math.abs(parseFloat(intensity.text.replace(/^meas:\s*/, "").replace(/,/g, "")) - 255 * share) <= 1, "The second hover line draws the independent triangular input intensity within one count of pointer quantization");
+                const background = tooltip;
+                verify(Ui.rendered(background) && background.opacity > 0, "The actual plot readout background is visibly rendered");
+                const texts = Render.texts(tooltip);
+                verify(texts.some(item => item.text === chart.scan.rowText(pose.row)) && texts.some(item => item === intensity), "Both dataset and intensity lines have real rendered text");
                 const box = background.mapToItem(layer, 0, 0, background.width, background.height);
                 verify(box.x >= -1 && box.y >= -1 && box.x + box.width <= layer.width + 1 && box.y + box.height <= layer.height + 1, "The complete visible plot tooltip remains inside the plot, including edge hovers");
                 const dx = Math.max(box.x - x, 0, x - box.x - box.width), dy = Math.max(box.y - y, 0, y - box.y - box.height);
@@ -496,7 +544,8 @@ Item {
             let previous = "", stable = 0;
             tryVerify(() => {
                 const selector = Ui.control(Probe, win, "mainArea.blocks");
-                if (!selector) return false;
+                if (!selector)
+                    return false;
                 const geometry = [selector, chart].concat(controls(chart)).map(item => {
                     const point = item.mapToItem(win.contentItem, 0, 0);
                     return [point.x, point.y, item.width, item.height].map(value => Math.round(value * 10) / 10);
@@ -533,12 +582,19 @@ Item {
             for (const y of ys) {
                 const row = lines[y];
                 const left = Math.min(...row.map(item => item.left)), right = Math.max(...row.map(item => item.right));
-                console.log("TOOLBAR_CENTRE " + JSON.stringify({page: data.page, mode: data.mode, windowWidth: win.width, chartWidth: chart.width, line: [left, right], actual: (left + right) / 2, selector: centre}));
+                console.log("TOOLBAR_CENTRE " + JSON.stringify({
+                    page: data.page,
+                    mode: data.mode,
+                    windowWidth: win.width,
+                    chartWidth: chart.width,
+                    line: [left, right],
+                    actual: (left + right) / 2,
+                    selector: centre
+                }));
                 verify(Math.abs((left + right) / 2 - centre) <= 1, "Every actual toolbar line shares the dataset selector line's horizontal centre; actual=" + (left + right) / 2 + "; selector=" + centre);
             }
             if (data.width === 1200) {
-                const conservativeRoom = items.reduce((sum, item) => sum + item.width, 0)
-                    + (items.length + 1) * Math.max(AppSizes.toolbarSpacing, Style.Sizes.fontPixelSize);
+                const conservativeRoom = items.reduce((sum, item) => sum + item.width, 0) + (items.length + 1) * Math.max(AppSizes.toolbarSpacing, Style.Sizes.fontPixelSize);
                 verify(chart.width - 2 * AppSizes.mainAreaMargin >= conservativeRoom, "The wide-window scenario leaves actual chart room for every control and its spacing before requiring one line");
                 compare(ys.length, 1, "A chart with room for all controls puts them on one centred line");
             }
@@ -563,7 +619,7 @@ Item {
             const cached = layer.traceBuildCount, draws = layer.redrawCount, startFrames = frames;
             for (let i = 0; i < 31; ++i) {
                 if (data.mode === "map")
-                    Preferences.scanMapReversed = !Preferences.scanMapReversed;
+                    Session.project.mapDirection = Session.project.mapDirection === "normal" ? "inverted" : "normal";
                 else {
                     Preferences.scanStackedReversed = !Preferences.scanStackedReversed;
                     Preferences.scanStackedPalette = chart.stackedChoices[i % chart.stackedChoices.length];
@@ -571,9 +627,8 @@ Item {
                 Preferences.chartHighlightSelected = !Preferences.chartHighlightSelected;
                 Session.project.currentExperimentIndex = i % 3;
                 if (data.mode === "stacked") {
-                    const offset = named("toolbar.offset"), height = named("toolbar.height");
-                    offset.activated(i % 11);
-                    height.activated(i % 11);
+                    const spacing = named("toolbar.spacing");
+                    spacing.activated(i % 5);
                 }
             }
             settled(chart);

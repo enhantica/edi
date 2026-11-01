@@ -113,7 +113,7 @@ Rectangle {
             if (count !== 3)
                 Input.dense(SettingsProof, location, false, count);
             let text = SettingsProof.text(location, "experiments/d20.edi");
-            text = text.replace(/_background.type[^\n]+[\s\S]*?(?=\n_(?!background\.)[a-z]|$)/, noBackground ? "" : "_background.type line-segment\n\nloop_\n_background.id\n_background.position\n_background.intensity\n1 0 17\n2 180 17\n");
+            text = text.replace(/_background.type[^\n]+[\s\S]*?(?=\n(?:loop_\n_(?!background\.)|_(?!background\.)[a-z])|$)/, noBackground ? "" : "_background.type line-segment\n\nloop_\n_background.id\n_background.position\n_background.intensity\n1 0 17\n2 180 17\n");
             verify(SettingsProof.write(location, "experiments/d20.edi", text), "The background witness is the project's explicit constant line segment, never an estimate");
             verify(Session.openProject(location), "The production session opens the independent scan project");
             chart = scanFactory.createObject(surface, {
@@ -130,12 +130,21 @@ Rectangle {
             openScan("stacked");
             dialog = preferencesFactory.createObject(surface);
             verify(dialog !== null, "The strip gate creates the production Preferences dialog");
+            dialog.open();
+            tryCompare(dialog, "visible", true, 1000, "The strip witness opens Preferences before observing its rendered pixels");
+            verify(waitForPolish(dialog.contentItem) && waitForRendering(dialog.contentItem), "The opened Preferences strip completes layout and a frame");
+            const appearance = findChild(dialog.contentItem, "preferences.tab.appearance");
+            verify(appearance !== null, "Preferences exposes its real Appearance tab");
+            mouseClick(appearance, appearance.width / 2, appearance.height / 2);
+            tryCompare(appearance, "checked", true, 1000, "The strip witness selects the actual Appearance tab before capture");
             const explanation = items(dialog.contentItem).find(item => item.text === "Each new experiment or structure takes the next free colour.");
             verify(explanation !== undefined, "Preferences displays the owner's exact one-line colour-order explanation");
             const calc = items(dialog.contentItem).find(item => item.text === "calc");
             verify(calc !== undefined, "The common calculation colour is labelled calc beside its separate calculator icon");
-            const calculators = items(dialog.contentItem).filter(item => item.fontIcon === "calculator");
-            verify(calculators.length > 0, "The calculation marker uses the approved calculator icon");
+            const calculator = items(dialog.contentItem).find(item => item.objectName === "preferences.paletteStrip.calc");
+            verify(calculator !== undefined && calculator.text === "calculator", "The calculation marker uses the approved calculator glyph");
+            compare(calculator.font.family, Style.Fonts.iconsFamily, "The calculator glyph is drawn with the application's icon font");
+            compare(String(calculator.color).toUpperCase(), owner.calc.light, "The separate calculator uses the independently recorded light calculation colour");
             const strip = explanation.parent;
             const colourItems = items(strip), colourValues = [];
             for (let index = 0; index < colourItems.length; ++index) {
@@ -144,15 +153,47 @@ Rectangle {
             }
             const colours = colourValues.map(value => value.toUpperCase());
             verify(owner.palettes[0].light.every(colour => colours.includes(colour)), "The live strip displays all eleven independently recorded palette positions");
-            const before = grabImage(strip);
-            verify(before.width > 0, "The live order strip renders actual pixels");
+            tryCompare(dialog, "opened", true, 2000, "The Preferences opening transition finishes before its pixel baseline");
+            function stripSnapshot() {
+                const root = surface.Window.window.contentItem;
+                surface.Window.window.update();
+                verify(waitForRendering(root), "Each palette snapshot follows an explicitly requested whole-window frame");
+                const image = grabImage(root);
+                const at = strip.mapToItem(root, 0, 0);
+                const sx = image.width / root.width, sy = image.height / root.height;
+                const left = Math.floor(at.x * sx), top = Math.floor(at.y * sy);
+                const right = Math.ceil((at.x + strip.width) * sx), bottom = Math.ceil((at.y + strip.height) * sy);
+                verify(left >= 0 && top >= 0 && right <= image.width && bottom <= image.height, "The whole-window capture contains the visible palette strip");
+                const pixels = [];
+                for (let y = top; y < bottom; ++y)
+                    for (let x = left; x < right; ++x)
+                        pixels.push(String(image.pixel(x, y)));
+                return {
+                    width: right - left,
+                    height: bottom - top,
+                    pixels
+                };
+            }
+            function sameStrip(expected, actual) {
+                return expected.width === actual.width && expected.height === actual.height && expected.pixels.every((pixel, index) => pixel === actual.pixels[index]);
+            }
+            tryCompare(Session.project, "calculating", false, 8000, "The baseline project's calculation finishes before its palette is captured");
+            let before = stripSnapshot();
+            tryVerify(() => {
+                const next = stripSnapshot();
+                const settled = sameStrip(before, next);
+                before = next;
+                return settled;
+            }, 2000, "The visible palette reaches a stable baseline before comparing project edits");
+            verify(before.width > 0 && before.pixels.some(pixel => pixel.toUpperCase() === owner.palettes[0].light[3]), "The capture contains the recorded colour of the actual free palette square");
             verify(Session.project.createStructure(), "Adding a real project structure exercises the live assignment consumer");
-            verify(waitForPolish(strip) && waitForRendering(strip), "A project edit reaches the order strip's rendering");
-            const after = grabImage(strip);
-            verify(!before.equals(after), "Adding an item changes a free square into that item's coloured icon");
+            tryCompare(Session.project, "calculating", false, 8000, "The added structure's calculation finishes before its palette frame is compared");
+            verify(waitForPolish(strip), "A project edit reaches the order strip's layout");
+            tryVerify(() => !sameStrip(before, stripSnapshot()), 2000, "Adding an item changes a free square into that item's coloured icon");
             Session.project.removeStructure(Session.project.structures.count - 1);
-            verify(waitForPolish(strip) && waitForRendering(strip), "Removing an item reaches the order strip's rendering");
-            verify(before.equals(grabImage(strip)), "Removing the new item restores its free square and original assignments");
+            tryCompare(Session.project, "calculating", false, 8000, "The removed structure's calculation finishes before its palette frame is compared");
+            verify(waitForPolish(strip), "Removing an item reaches the order strip's layout");
+            tryVerify(() => sameStrip(before, stripSnapshot()), 2000, "Removing the new item restores its free square and original assignments");
         }
         function test_saved_html_and_pdf_are_light_data() {
             return owner.palettes.map((palette, index) => ({
@@ -208,7 +249,10 @@ Rectangle {
                     }));
         }
         function test_common_pool_and_earth_reservation(data) {
-            openScan("stacked");
+            Style.Colors.theme = Style.Colors.LightTheme;
+            verify(Session.createProject("colour_pool", "Interleaved experiment and structure colours"), "The shared-pool witness uses a regular project that admits experiment additions");
+            verify(Session.project.createExperiment(), "The shared-pool witness starts with a real experiment");
+            verify(Session.project.createStructure(), "The shared-pool witness starts with a real structure");
             const tokens = Array.from(ApplicationInfo.colourSchemes);
             compare(tokens.length, 5, "The actual assignment sees exactly five figure palettes");
             Preferences.colourScheme = tokens[data.index];
@@ -367,6 +411,9 @@ Rectangle {
         }
         function test_pattern_subtracts_each_measured_point() {
             openScan("stacked");
+            Session.project.currentExperimentIndex = 1;
+            Preferences.patternMeasuredStyle = "linePoints";
+            tryCompare(Session.project, "calculating", false, 8000, "The selected scan row finishes loading before the Pattern observer is attached");
             chart.destroy();
             chart = patternFactory.createObject(surface, {
                 experiment: Session.project.currentExperiment
@@ -376,21 +423,41 @@ Rectangle {
             compare(button.checked, false, "Pattern also starts with subtraction off");
             const measured = Render.series(chart).find(series => series.objectName === "chart.series.meas");
             verify(measured !== undefined && measured.count > 0, "The independent point observer reaches the actual measured Graphs series");
-            const before = Array.from({
-                length: measured.count
-            }, (_, i) => measured.at(i));
+            tryVerify(() => Array.from({
+                    length: measured.count
+                }, (_, i) => measured.at(i).y).some(value => isFinite(value)), 5000, "The Pattern actor waits for finite measured samples from the selected scan row");
+            function checkPoints(expected) {
+                let finitePoints = 0;
+                for (let i = 0; i < measured.count; ++i) {
+                    const point = measured.at(i);
+                    if (isNaN(point.x) || isNaN(point.y)) {
+                        verify(isNaN(point.x) && isNaN(point.y), "An excluded-range gap uses a complete NaN point");
+                        continue;
+                    }
+                    const sample = (point.x - 10) * 40;
+                    verify(sample >= -1e-6 && sample <= 4096 + 1e-6, "Every drawn x coordinate lies in the independently written scan range");
+                    fuzzyCompare(sample, Math.round(sample), 1e-6, "Every drawn x coordinate remains on the independent measured grid");
+                    fuzzyCompare(point.y, expected, 1e-6, "Every drawn Pattern point equals the independently written row intensity minus its set background");
+                    ++finitePoints;
+                }
+                verify(finitePoints > 0, "The subtraction witness checks finite measured intensities as well as gap markers");
+            }
+            checkPoints(128);
             mouseClick(button, button.width / 2, button.height / 2);
             verify(waitForPolish(chart), "Pattern applies subtraction to its real measured series");
-            compare(measured.count, before.length, "Subtraction preserves the measured point count");
-            for (let i = 0; i < before.length; ++i) {
-                fuzzyCompare(measured.at(i).x, before[i].x, 1e-10, "Subtraction keeps each measured x coordinate");
-                fuzzyCompare(measured.at(i).y, before[i].y - 17, 1e-6, "Every Pattern point subtracts the project's independently set background");
-            }
+            checkPoints(128 - 17);
+            mouseClick(button, button.width / 2, button.height / 2);
+            verify(waitForPolish(chart), "Pattern restores the measured samples when subtraction is turned off");
+            checkPoints(128);
         }
         function test_no_background_disables_subtraction() {
             openScan("map", 3, true);
             const button = subtractButton();
-            compare(button.enabled, false, "No shown pattern with a defined background disables the button");
+            compare(button.available, false, "No shown pattern with a defined background makes subtraction unavailable");
+            compare(button.active, false, "Unavailable subtraction has the actual disabled appearance");
+            const before = button.checked;
+            mouseClick(button, button.width / 2, button.height / 2);
+            compare(button.checked, before, "A real click on unavailable subtraction cannot change its state");
             verify(/background/i.test(String(button.toolTip)) && /no|not|set|defined/i.test(String(button.toolTip)), "The disabled button explains that no background is defined");
         }
         function test_short_legend_and_selection() {
@@ -405,11 +472,17 @@ Rectangle {
             Session.project.currentExperimentIndex = 78;
             Preferences.chartHighlightSelected = true;
             verify(waitForPolish(chart), "Changing the selected pattern updates the legend");
-            const selectedName = Session.project.currentExperiment.name;
-            const selected = Render.texts(legend).filter(item => String(item.text) === selectedName);
+            const selectedName = "row_078.dat";
+            const plain = item => String(item.text).replace(/<[^>]*>/g, "");
+            const selected = Render.texts(legend).filter(item => plain(item).includes(selectedName) || /646[.,]345/.test(plain(item)));
             verify(selected.length > 0, "The short legend always includes a selected middle pattern");
-            verify(selected.some(item => item.font.bold || String(item.color) === String(Style.Colors.themeAccent)), "Highlight selected marks the name inside the legend");
-            verify(!Render.texts(chart).some(item => !items(legend).includes(item) && String(item.text) === selectedName), "The selected name is no longer repeated on the y axis");
+            const axis = findChild(chart, "scanView.stacked.rowLabel.78");
+            verify(axis !== null && axis.visible, "Highlight selected retains the selected row name on the Stacked axis");
+            verify(items(legend).some(item => item.key === "78" && String(item.color) === String(axis.textColor)), "The selected legend name keeps its dataset colour, matching the retained axis name");
+            Preferences.chartHighlightSelected = false;
+            verify(waitForPolish(chart), "All-colour mode updates the selected label and short legend");
+            verify(axis.segments.some(segment => segment.bold === true), "The selected axis name is bold in all-colour mode");
+            verify(items(legend).some(item => item.key === "78" && item.selected === true), "The selected legend name is bold in all-colour mode");
             mouseClick(toggle, toggle.width / 2, toggle.height / 2);
             compare(legend.visible, false, "The legend button hides the Stacked legend");
         }

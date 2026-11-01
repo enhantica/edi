@@ -10,8 +10,9 @@ import EasyApplication.Gui.Elements as EaElements
 
 import edi.app
 
-// The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home. The
-// first item, always present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
+// The status bar of the workflow pages (easydiffractionbeta Components/StatusBar.qml); hidden on Home unless the
+// Analysis page is enabled, so its Fit button is there on every page (the owner, 2026-10-26). The first item, always
+// present, counts the messages (warnings and errors) and opens them (edi ADR-0017 §14).
 // The fit area on the right follows the running fit and then summarises the last one (§17), as status items like the
 // ones on the left: the live values with the progress bar at the far right, then the outcome and the values.
 EaElements.StatusBar {
@@ -27,7 +28,7 @@ EaElements.StatusBar {
     property int pagesWanted: 0
     readonly property bool opening: pagesWanted > 0 && pagesBuilt < pagesWanted
 
-    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || assistantStatusNeeded
+    visible: EaGlobals.Vars.appBarCurrentIndex !== 0 || AppState.analysisPageEnabled || assistantStatusNeeded
 
     // The items show their keys only when all of them fit with their keys in the bar's width; otherwise each
     // shows its icon and value (the owner, 2026-10-03). Measured from the items' own widths, so it holds for
@@ -235,7 +236,8 @@ EaElements.StatusBar {
         anchors.rightMargin: EaStyle.Sizes.fontPixelSize
         anchors.verticalCenter: parent.verticalCenter
         spacing: Math.round(EaStyle.Sizes.fontPixelSize * 1.2)
-        // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one.
+        // Shown whenever the Analysis page is, for its Fit button, and while a fit runs or after one; hidden while a
+        // project opens.
         visible: !bar.opening && bar.fit !== null && (AppState.analysisPageEnabled || running || bar.fit.outcome !== "")
 
         readonly property bool running: bar.fit !== null && bar.fit.running
@@ -427,6 +429,8 @@ EaElements.StatusBar {
                 // Enabled while a scan runs; on, the pattern tab shows the dataset being fitted.
                 clickable: bar.fit !== null && bar.fit.scanning
                 checked: bar.fit !== null && bar.fit.scanning && bar.fit.following
+                Accessible.checkable: true
+                Accessible.checked: checked
                 keyIcon: "crosshairs"
                 valueText: qsTr("Follow")
                 ToolTip.text: qsTr("Show the dataset being fitted")

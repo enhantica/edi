@@ -249,12 +249,12 @@ TestCase {
         compare(structureIcon.icon, "layer-group", "idea 12: structure table has a datablock icon");
         const structureColor = String(structureIcon.iconColor);
         // Before: one upstream orange shade. After: shared published structure palette.
-        compare(structureColor.toLowerCase(), Approved.colours(Probe, Approved.getSchemes(Preferences).structures, "structures", Math.max(Session.project.structures.count, 1), Style.Colors.isDarkPalette)[0], "idea 12: first structure follows its published contrast-safe palette shade");
+        compare(structureColor.toLowerCase(), Approved.colours(Probe, Approved.getScheme(Preferences), "structures", Math.max(Session.project.structures.count, 1), Style.Colors.isDarkPalette)[0], "idea 12: first structure follows its published contrast-safe palette shade");
         pane("experiment", "basic");
         const experimentIcon = named(group("experiments"), "experiments.color.0");
         compare(experimentIcon.icon, "microscope", "idea 12: experiment table has a datablock icon");
         // Before: one upstream blue shade. After: shared published experiment palette.
-        compare(String(experimentIcon.iconColor).toLowerCase(), Approved.colours(Probe, Approved.getSchemes(Preferences).patterns, "measured", Math.max(Session.project.experiments.count, 1), Style.Colors.isDarkPalette)[0], "idea 12: first experiment follows its published contrast-safe palette shade");
+        compare(String(experimentIcon.iconColor).toLowerCase(), Approved.colours(Probe, Approved.getScheme(Preferences), "measured", Math.max(Session.project.experiments.count, 1), Style.Colors.isDarkPalette)[0], "idea 12: first experiment follows its published contrast-safe palette shade");
         verify(String(experimentIcon.iconColor) !== structureColor, "idea 12: structure and experiment colours are distinct");
         pane("analysis", "basic");
         const rows = Probe.rows(Session.project.parameters);

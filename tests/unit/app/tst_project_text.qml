@@ -5,6 +5,7 @@ import edi.app
 import EdiAcceptance 1.0
 import ReportAcceptance 1.0
 import ProjectTextAcceptance 1.0
+import EasyApplication.Gui.Globals as Globals
 import EasyApplication.Gui.Style as Style
 import "RenderedTable.js" as Render
 
@@ -31,6 +32,7 @@ Item {
         when: windowShown
         property var tab
         property int oldTheme
+        property bool oldToolTips
         ProjectTextProof {
             id: proof
         }
@@ -45,6 +47,8 @@ Item {
         }
         function init() {
             oldTheme = Style.Colors.theme;
+            oldToolTips = Globals.Vars.showToolTips;
+            Globals.Vars.showToolTips = true;
             Session.closeProject();
             verify(Session.openProject(proof.project()), "The independently authored two-structure text witness opens");
         }
@@ -55,6 +59,7 @@ Item {
             reportSaved.target = null;
             Session.closeProject();
             Style.Colors.theme = oldTheme;
+            Globals.Vars.showToolTips = oldToolTips;
         }
         function openText(block) {
             tab = textFactory.createObject(parent, {
@@ -192,36 +197,56 @@ Item {
         }
         function test_everything_is_read_only() {
             tryCompare(Session.project, "calculating", false, 5000, "The calculated-data witness finishes its real model calculation");
-            const editor = openText(Session.project.currentExperiment), apply = applyButton(), show = showChoice();
+            const experiment = Session.project.currentExperiment;
+            const measured = !experiment.calculationOnly;
+            const editor = openText(experiment), apply = applyButton(), show = showChoice();
             const reference = proof.dictionary();
-            verify(reference.categories && reference.categories.length > 0, "The filter reference reads the selected SDK YAML independently");
+            verify(reference.categories && reference.categories.length > 0, "The filter reference reads the captured dictionary YAML independently");
             const editableCategories = new Set((editor.text.match(/^_[A-Za-z0-9_]+\./gm) ?? []).map(tag => tag.slice(1, -1)));
             verify(!/_data\.intensity_meas\b/.test(editor.text), "Editable omits measured output categories");
             choose(show, 1);
             tryCompare(editor, "readOnly", true, 1000, "Everything is view-only");
             verify(/_data\.intensity_meas\b/.test(editor.text), "Everything includes the actual measured data");
             for (const tag of ["_data.d_spacing", "_data.intensity_calc", "_data.intensity_bkg", "_data.calc_status", "_pd_calc.component_intensities_net"])
-                verify(editor.text.includes(tag), "Everything exposes every required calculated-data column and both structure curves");
+                verify(editor.text.includes(tag), "Everything exposes every required calculated-data column and both structure curves: " + tag);
             const points = Probe.rows(Session.project.currentExperiment.pattern);
             verify(points.length > 0, "The measured-data table has real calculated rows");
             for (const point of points)
                 verify(Math.abs(point.residual - (point.intensityMeas - point.intensityCalc)) <= 1e-12 * Math.max(1, Math.abs(point.intensityCalc)), "The measured-data residual is the observed intensity less the calculated intensity");
             const everythingCategories = new Set((editor.text.match(/^_[A-Za-z0-9_]+\./gm) ?? []).map(tag => tag.slice(1, -1)));
+            verify(everythingCategories.has("experiment_type"), "Everything retains the experiment type even when measured data makes it read-only");
             for (const row of reference.categories) {
                 if (!everythingCategories.has(row.id))
                     continue;
                 const marks = Object.keys(row).filter(key => ["input", "output"].includes(row[key]));
                 compare(marks.length, 1, "Every carried category has exactly one SDK input-or-output mark");
-                compare(editableCategories.has(row.id), row[marks[0]] === "input", "Editable contains exactly the input categories of Everything");
+                const expectedEditable = row[marks[0]] === "input" && !(measured && row.id === "experiment_type");
+                compare(editableCategories.has(row.id), expectedEditable, "Editable contains exactly the input categories of Everything except experiment type after measured data is loaded: " + row.id);
             }
             compare(apply.enabled, false, "Everything disables the apply action");
-            verify(/Editable/i.test(apply.ToolTip.text), "The disabled action tells the user to switch to Editable");
+            let root = tab.Window.window.contentItem;
+            while (root.parent)
+                root = root.parent;
+            const editableHint = () => Render.texts(root).some(item => /switch.*Editable/i.test(item.text));
+            mouseMove(root, 1, 1);
+            tryVerify(() => !editableHint(), 1500, "The Editable explanation is not already displayed before hovering Apply");
+            mouseMove(apply, apply.width / 2, apply.height / 2);
+            tryVerify(editableHint, 2500, "The disabled action tells the user to switch to Editable");
+            mouseMove(root, 1, 1);
+            tryVerify(() => !editableHint(), 1500, "The Editable explanation disappears after leaving Apply");
             const before = editor.text;
             editor.forceActiveFocus();
             keyClick(Qt.Key_A);
             compare(editor.text, before, "Keyboard input cannot change Everything text");
             choose(show, 0);
             tryCompare(editor, "readOnly", false, 1000, "Returning to Editable restores editing");
+            tab.destroy();
+            tab = null;
+            verify(Session.openExample("pd-neut-cwl_lbco_simulation"), "The experiment-type counterexample opens a real calculation-only project");
+            verify(Session.project.currentExperiment.calculationOnly, "The counterexample holds no measured observations");
+            const simulationEditor = openText(Session.project.currentExperiment);
+            compare(simulationEditor.readOnly, false, "The calculation-only counterexample opens in Editable view");
+            verify(/^_experiment_type\./m.test(simulationEditor.text), "Experiment type remains editable before measured data is loaded");
         }
         function luminance(color) {
             function channel(v) {
@@ -342,6 +367,7 @@ Item {
             Session.closeProject();
             verify(Session.openProject(archive), "A classic ZIP with exactly 65535 files is a valid project archive: " + Session.lastError);
             verify(Session.save(), "The normally opened classic-limit archive saves to its location");
+            compare(proof.archiveMembers(archive).length, 65535, "Saving retains all regular members at the exact classic count boundary");
             Session.closeProject();
             verify(Session.openProject(archive), "The saved classic-limit project archive reopens");
             compare(Session.project.structures.count, 2, "The count boundary preserves both structures through save and reopen");

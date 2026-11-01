@@ -735,3 +735,17 @@ PdDataBase.component_intensities_net	other-public
 PdDataBase.component_presentation_order	other-public
 PdTofData.component_intensities_net	other-public
 PdTofData.component_presentation_order	other-public
+CwlInstrumentBase.facility	other-public
+CwlInstrumentBase.name	other-public
+CwlPdInstrumentBase.facility	other-public
+CwlPdInstrumentBase.name	other-public
+CwlPdNeutronInstrument.facility	other-public
+CwlPdNeutronInstrument.name	other-public
+CwlPdXrayInstrument.facility	other-public
+CwlPdXrayInstrument.name	other-public
+ExperimentType.dimensionality	other-public
+ExperimentType.polarisation	other-public
+InstrumentBase.facility	other-public
+InstrumentBase.name	other-public
+TofPdInstrument.facility	other-public
+TofPdInstrument.name	other-public

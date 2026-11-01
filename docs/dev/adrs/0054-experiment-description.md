@@ -1,4 +1,4 @@
-# 0052. Each experiment describes itself
+# 0054. Each experiment describes itself
 
 - **Status:** Accepted
 - **Date:** 2026-10-26
@@ -23,13 +23,14 @@ and converts the retired tags in one place, `legacy_project_metadata`.
    retired tag warns once and is never written back. The committed records were migrated with crysta's
    `tools/dev/migrate_project_metadata.py`, its ledger in `tests/fixtures/metadata_migration.tsv`.
 3. **Python.** `ExperimentType.dimensionality` and `.polarisation`, and the instrument's `name` and `facility`, read the
-   effective values and set a declared one (deviation D90).
+   effective values and set a declared one (deviation D92).
 4. **The app.** The experiment-type group shows the dimensionality and the polarisation, each with its one admitted
    value. The instrument group starts with two selectors, Facility and Instrument, each listing "Not specified" first,
    then the facilities of edi's and diffraction-lib's examples and a Laboratory entry, and the instruments of the chosen
-   facility for the experiment's sample form. For an experiment made from a data file they can be chosen, and "Not
-   specified" is written `?`; for one read from a `.edi` or `.cif` file they show what the file states and cannot be
-   changed. A name the file states that the lists lack is shown as written. The example facets are read from the
+   facility for the experiment's sample form. Once a data file is loaded into an experiment in the session they can be
+   chosen, both start at "Not specified" whatever the experiment held before, and "Not specified" is written `?`. For
+   an experiment read from a `.edi` or `.cif` file, a reopened project's included, they show what the file states and
+   cannot be changed; the saved data file name does not make them choosable. A name the file states that the lists lack is shown as written. The example facets are read from the
    experiments: the instruments and facilities are the list over a project's experiments, the dimensionality and
    polarisation are mapped as the conversion maps them (`1D` to `1d`, shown as "1D"; `none` to `unpolarised`), and the
    purpose is "refinement" when any experiment has measured data, else "simulation".

@@ -134,7 +134,7 @@ def violations(text, case):
         ],
         'structure-cardinality': [
             (text['structure'], r'openFiles\("\.cif,\.edi", false\)', 'one Structure file'),
-            (text['experiment'], r'openFiles\("\.edi", true\)', 'Experiment batch'),
+            (text['experiment'], r'openFiles\("\.cif,\.edi", true\)', 'Experiment batch'),
             (
                 text['source'],
                 (
@@ -268,7 +268,7 @@ def test_every_browser_file_receiver_preserves_request_ownership(case):
         ],
         'structure-cardinality': [
             ('structure', 'openFiles(".cif,.edi", false)', 'openFiles(".cif,.edi", true)'),
-            ('experiment', 'openFiles(".edi", true)', 'openFiles(".edi", false)'),
+            ('experiment', 'openFiles(".cif,.edi", true)', 'openFiles(".edi", false)'),
         ],
     }
     for key, old, new in escapes[case]:

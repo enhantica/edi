@@ -35,3 +35,21 @@ def main_values(experiment):
     assert list(experiment.data.intensity_meas_su) == pytest.approx([10, 11]), (
         'Main already imports both measured standard uncertainties'
     )
+
+
+def imported_values(experiment):
+    assert experiment.instrument.setup_wavelength.value == pytest.approx(1.5406), (
+        'CIF import retains the authored nontrivial wavelength'
+    )
+    assert experiment.instrument.calib_twotheta_offset.value == pytest.approx(0.123), (
+        'CIF import retains the authored angular offset'
+    )
+    assert list(experiment.data.two_theta) == pytest.approx([10, 11, 12]), (
+        'CIF import retains all measured angular coordinates'
+    )
+    assert list(experiment.data.intensity_meas) == pytest.approx([21, 24, 26]), (
+        'CIF import retains every measured intensity'
+    )
+    assert list(experiment.data.intensity_meas_su) == pytest.approx([2, 3, 4]), (
+        'CIF import retains every measured uncertainty'
+    )

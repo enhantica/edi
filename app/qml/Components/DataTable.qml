@@ -32,11 +32,13 @@ EaComponents.ListView {
     // selectable and no current row) keeps the keys, and a text editor keeps its own.
     Keys.onPressed: event => ApplicationInfo.tableKeyPressed(event)
     // Rows are made when they come into view, never ahead of it: rows made ahead are built a few per frame in
-    // the background, and a page's tables kept laying out for about a second after a project opened. So the
-    // columns fit the rows measured since the content last changed: scrolling only ever widens a column, for a wider
-    // row, and never moves one back and forth (the owner, 2026-10-27).
+    // the background, and a page's tables kept laying out for about a second after a project opened. The columns fit
+    // every row of the model, measured when the content changes (fitWholeModel), so scrolling never moves one (the
+    // owner, 2026-10-27).
     cacheBuffer: 0
-    readonly property real numberColumnWidth: Math.ceil(metrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2
+    // The row-number column fits the widest number in the bold the current row's number takes, measured again when
+    // the font changes (a web font arriving after the first layout).
+    readonly property real numberColumnWidth: modelRevision >= 0 ? Math.ceil(boldMetrics.advanceWidth(String(Math.max(1, count)))) + AppSizes.fieldSpacing * 2 : 0
     property int modelRevision: 0
     // The one column rule (ADR-0029; the owner, 2026-10-24 and 2026-10-27). The row-number column and every flex
     // column (-1) fit their header and their widest cell, each with the same margin, so every two neighbours sit as
@@ -45,8 +47,8 @@ EaComponents.ListView {
     // which keep their widths at the right. `equalColumns` keeps the flex columns equal instead (atom sites, atomic
     // displacements, the Analysis parameters), and `spreadColumns` shares the rest among those columns after their
     // fitted widths (Measured data). A row too narrow for its texts loses the margins first, then narrows the
-    // texts, where a number shows its short form. Widths follow the content: scrolling only widens a column for a
-    // wider row, and a change of the content fits them again.
+    // texts, where a number shows its short form. Widths follow the content: a change of the content fits them again,
+    // and scrolling changes none.
     property var columns: []
     property bool equalColumns: false
     property var spreadColumns: []
@@ -64,8 +66,13 @@ EaComponents.ListView {
     // Each padded cell's own paddings and alignment kind, by cell.
     property var basePaddings: new Map()
     property var cellKinds: new Map()
+    // The columns whose right-aligned values are followed by a combo box or by the row buttons: they keep a font size
+    // more after their values (the owner, 2026-10-27: "WP is too close to z. Occ too close to buttons"). A value's
+    // units column stays beside it.
+    property var wideEdges: []
     // A cell's padding: its own, a spacing more on the side it aligns to, so a right-aligned number and a
-    // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it.
+    // left-aligned text in neighbouring columns never meet, and in the last data column the spare width after it. A
+    // check box, which centres itself in its room, is pushed to the right edge by its left padding.
     function columnRowOwner(row) {
         return ApplicationInfo.tableColumnRowOwner(row);
     }
@@ -77,7 +84,9 @@ EaComponents.ListView {
     function padForFiller(cell, column) {
         ApplicationInfo.tablePadForFiller(cell, column);
     }
-    // A cell's kind, which sets how it aligns: a number, an icon or button, or text.
+    property var checkCells: new Set()
+    // A cell's kind, which sets how it aligns: a number, an icon or button, or text. A row button is checkable too, so
+    // it is told from a check box by its icon first.
     function kindOf(cell) {
         return ApplicationInfo.tableCellKind(cell);
     }
@@ -93,12 +102,36 @@ EaComponents.ListView {
     }
     Component.onDestruction: ApplicationInfo.tableDestroyed()
 
-    function fitColumns() {
-        ApplicationInfo.tableFitColumns();
+    // Styles the cells of `rows` (alignment and padding) and, with `measure`, fits the columns to them and the header.
+    // Only the whole model is measured (fitWholeModel); a row the view makes, scrolled into view, is only styled and
+    // takes the widths the model was measured to (the owner, 2026-10-27).
+    function fitColumns(measure = false, rows = null) {
+        ApplicationInfo.tableFitColumns(measure, rows);
     }
-    // A change of the content fits the columns afresh; scrolling only adds rows to what was measured.
+    // A change of the content fits the columns afresh to every row of the model (fitWholeModel), once the table shows.
     function refit() {
         ApplicationInfo.tableRefit();
+    }
+    // The cells of rows the view made, styled as the measured ones are.
+    function styleCells() {
+        ApplicationInfo.tableStyleCells();
+    }
+    // Every row of the model is made at once, beside the view, measured with the header, and dropped: the columns fit
+    // the widest row wherever it is, and scrolling changes no width. A table not shown waits until it is.
+    function fitWholeModel() {
+        ApplicationInfo.tableFitWholeModel();
+    }
+    // Content that changed while the table was not shown, measured once it is.
+    property bool unfitted: false
+    onVisibleChanged: ApplicationInfo.tableVisibleChanged()
+    Item {
+        visible: false
+        width: table.width
+        Repeater {
+            id: measuringRows
+            model: null
+            delegate: table.delegate
+        }
     }
     onColumnsChanged: ApplicationInfo.tableColumnsChanged(false)
     // The spare width follows the columns: the last data column's cells take it as padding after their content.
@@ -167,6 +200,15 @@ EaComponents.ListView {
         Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
         font.family: EaStyle.Fonts.fontFamily
         font.pixelSize: EaStyle.Sizes.fontPixelSize
+        onFontChanged: ApplicationInfo.tableOwnerCallback(2)
+    }
+    FontMetrics {
+        id: boldMetrics
+        property var ownerLife: null
+        Component.onCompleted: ApplicationInfo.tableOwnerCallback(3)
+        font.family: EaStyle.Fonts.fontFamily
+        font.pixelSize: EaStyle.Sizes.fontPixelSize
+        font.bold: true
         onFontChanged: ApplicationInfo.tableOwnerCallback(2)
     }
     Connections {

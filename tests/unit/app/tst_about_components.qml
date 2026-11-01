@@ -82,8 +82,10 @@ Item {
             const names = [];
             for (let i = 0; i < table.count; ++i)
                 names.push(table.sourceModel.get(i).component);
-            for (const name of ["Scientific colour maps", "cmocean", "Turbo", "ColorBrewer", "CET colour maps"])
+            for (const name of ["Scientific colour maps", "ColorBrewer"])
                 verify(names.includes(name), "Each independently witnessed compiled colour-table origin appears in the actual licence list: " + name);
+            for (const name of ["cmocean", "Turbo", "CET colour maps"])
+                verify(!names.includes(name), "Removed colour tables have no runtime licence row: " + name);
         }
         function test_columns_fit_content_data() {
             return themes();

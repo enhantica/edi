@@ -67,6 +67,15 @@ EaComponents.SideBarColumn {
     function askLeave(apply, leave, drop, stay) {
         ApplicationInfo.textTabAskLeave(apply, leave, drop, stay);
     }
+    // Settles the unapplied edit before something replaces what the tab shows: `then` runs once the edit is applied
+    // or dropped; Cancel, or a refused apply, keeps the edit, shows it with the reason, runs nothing and calls
+    // `abandoned` when given.
+    function settleEdit(then, abandoned) {
+        ApplicationInfo.textTabSettleEdit(then, abandoned);
+    }
+    // The one tab with an unapplied edit is the one AppState settles (a tab left with its edit asks first).
+    onDirtyChanged: ApplicationInfo.textTabDirtyChanged(false)
+    Component.onDestruction: ApplicationInfo.textTabDirtyChanged(true)
     onShownTextChanged: ApplicationInfo.textTabChanged(0)
     // Another block: its own text shows, and the edit of the one left is kept while the user is asked; kept, that
     // block is shown again with it.
@@ -109,7 +118,7 @@ EaComponents.SideBarColumn {
                 toolTip: qsTr("What the Text tab shows: the categories you can edit, or also the measured data and results, read-only")
                 model: [qsTr("Editable"), qsTr("Everything")]
                 shownIndex: Math.max(0, choices.indexOf(Preferences.textShow))
-                // Another Show choice with the edit unapplied changes only once the edit is discarded.
+                // Another Show choice with an edit unapplied changes once the edit is settled (AppState.setTextShow).
                 onActivated: index => ApplicationInfo.textTabShowChoice(index, () => {
                         showBox.currentIndex = Qt.binding(() => showBox.shownIndex);
                     })
@@ -126,14 +135,15 @@ EaComponents.SideBarColumn {
                     enabled: tab.editable && tab.dirty
                     alert: true
                     fontIcon: "check"
-                    toolTip: qsTr("Apply the edited text to the project")
+                    // What it does, or why it cannot: one text, shown over the disabled button by the hover below.
+                    toolTip: tab.everything ? qsTr("Switch Show to Editable to edit the text") : !tab.dirty ? qsTr("Edit the text to apply it") : qsTr("Apply the edited text to the project")
                     onClicked: tab.applyEdit()
                 }
                 HoverHandler {
                     id: applyHover
                 }
                 EaElements.ToolTip {
-                    text: tab.everything ? qsTr("Switch Show to Editable to edit the text") : qsTr("Edit the text to apply it")
+                    text: applyButton.toolTip
                     visible: !applyButton.enabled && applyHover.hovered && EaGlobals.Vars.showToolTips
                 }
             }

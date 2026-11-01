@@ -2128,7 +2128,7 @@ neither a provider-token lifetime setting nor a week-long operation promise.
 
 ## Completed generic private reasoning is not display history
 
-FIRST is ADR0054 generic_item/generic_release_settled and the original public
+FIRST is ADR0055 generic_item/generic_release_settled and the original public
 archive owner. Completed private reasoning never creates a chat/activity row,
 clipboard/export body, file grant or scientific/native input. After all item
 frames unwind, its unused body can therefore release while the bounded actual

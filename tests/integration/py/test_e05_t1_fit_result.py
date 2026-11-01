@@ -22,6 +22,7 @@ import pytest
 import yaml
 
 from tests.fixtures.e05_t1 import declarations
+from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.fixtures.project_save.agreement import rounded_model_reference
 from tests.fixtures.project_save.reference import (
     declared_rule,
@@ -96,6 +97,11 @@ def test_cli_fixture_inventory():
         for row in registry
         if str(edi.Project.load(ROOT / 'docs/user/cli' / row['id'] / 'project').fitting_mode)
         in {'single', 'joint'}
+        and scalars(
+            read_previous(ROOT / 'docs/user/cli' / row['id'] / 'project/project.edi').decode(),
+            '_metadata.',
+        ).get('_metadata.purpose')
+        != 'simulation'
         and declarations.has_measured_data(ROOT / 'docs/user/cli' / row['id'] / 'project')
     }
     assert len(CASES) == len(expected) and {row['id'] for row in CASES} == expected, (

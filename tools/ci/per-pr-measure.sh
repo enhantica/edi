@@ -79,13 +79,16 @@ if [ "${#TARGETS[@]}" -eq 0 ] && [ "${#REMEASURE[@]}" -eq 0 ]; then
 fi
 TARGETS+=("${REMEASURE[@]}")
 echo "measuring ${#TARGETS[@]} node(s) serially, once (${#REMEASURE[@]} re-measured on request)…"
+# The node ids go to pytest in an argument file: a large collection exceeds the command line limit.
+NODES="$ROOT/build/per-pr-measure-nodes.txt"
+printf '%s\n' "${TARGETS[@]}" > "$NODES"
 # The suite's exit status is CAPTURED, not discarded: a red node's duration is the cost of
 # ERRORING, and the updater records it as a declared UNMEASURED hole (P1.28), never as a number.
 # `-vv --durations=0`: every duration is printed, floor included. PYTEST_ADDOPTS is cleared, not
 # appended to: it is the one channel that can inject `-n auto` from outside this script.
 env -u PYTEST_ADDOPTS -u PYTEST_XDIST_AUTO_NUM_WORKERS \
     EDI_FIXTURE_COST_LOG="$COSTS" PYTHONPATH="$ROOT/tools/checks${PYTHONPATH:+:$PYTHONPATH}" \
-    python -m pytest -vv "${TARGETS[@]}" -p no:cacheprovider -p no:xdist -p fixture_costs \
+    python -m pytest -vv "@$NODES" -p no:cacheprovider -p no:xdist -p fixture_costs \
     --durations=0 -o addopts= >"$LOG" 2>&1 && SUITE_RC=0 || SUITE_RC=$?
 tail -1 "$LOG"
 if [ "$SUITE_RC" -ne 0 ]; then

@@ -67,6 +67,7 @@
 #include "crysta/dictionary_items.hpp"
 #endif
 #if __has_include("crysta/report_settings.hpp")
+#include "crysta/project_output.hpp"
 #include "crysta/report_settings.hpp"
 #endif
 #include "crysta/scattering.hpp"
@@ -191,6 +192,13 @@ crysta::Cell to_completed_crysta_cell(const Cell& c, const crysta::CellFreedom& 
 // the symmetry-COMPLETED cell (fork 2's contract, above): this is the single edi→engine conversion
 // choke point, so every consumer — calculate, fit, fit_joint —
 // crosses the boundary with a cell that satisfies the model's own space-group ties.
+// One `_structure_view` item of a structure, absent while the view has not set it.
+std::optional<std::string> view_item(const Structure& s, const char* name) {
+    const std::map<std::string, std::string>& view = s.view;
+    const auto found = view.find(name);
+    return found != view.end() ? std::optional<std::string>(found->second) : std::nullopt;
+}
+
 crysta::Structure to_crysta_structure(const Structure& s) {
     crysta::SpaceGroup space_group = resolve_group(s);
     const crysta::CellFreedom freedom = crysta::cell_freedom(space_group);
@@ -203,8 +211,14 @@ crysta::Structure to_crysta_structure(const Structure& s) {
                                  // A calculation of this structure (a fit's quality) reads the declared
                                  // scattering lengths from it, as the fit reads them from select_scattering.
                                  built.scattering_lengths_fm = s.scattering_lengths_fm;
-                                 // How the view shows it, saved with it.
-                                 built.view = s.view;
+                                 // How the view shows it, saved with it: each item crysta's category has.
+                                 using View = crysta::StructureViewCategory;
+                                 std::apply(
+                                     [&](auto... column) {
+                                         std::size_t index = 0;
+                                         ((built.*column = view_item(s, View::items[index++])), ...);
+                                     },
+                                     View::columns);
                                  // The bond cutoffs cross presence-faithfully, so crysta's
                                  // writer saves a declared `_geom` and no other.
                                  built.geom.min_bond_distance_cutoff =
@@ -422,7 +436,7 @@ std::string detail::inferred_wyckoff_letter(const Structure& structure,const Ato
     const auto group=resolve_group(structure);
     const auto cell=completed_cell(structure);
     // Crysta's CIF site policy is 0.01 Angstrom (ADR-0103); use its
-    // matcher rather than adding a positional classifier here (edi ADR-0056).
+    // matcher rather than adding a positional classifier here (edi ADR-0057).
     constexpr double native_site_tolerance_angstrom=0.01;
     std::array<double,3> tolerance{};
     for(std::size_t axis=0;axis<tolerance.size();++axis) {
@@ -1446,6 +1460,11 @@ PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment,con
 PlainDataLoad experiment_with_plain_data(const BraggPdExperiment& experiment, const std::string& reader_path,
                                          const std::string& source_path, bool take_file_name) {
     PlainDataLoad load{BraggPdExperiment(experiment), std::filesystem::path(source_path).filename().string()};
+    // New data starts with an unknown facility and instrument, which the user chooses (ADR-0054); the previous
+    // data's description does not carry over.
+    load.experiment.description_chosen = true;
+    load.experiment.instrument.name.clear();
+    load.experiment.instrument.facility.clear();
     if (experiment.reflections.has_value()) {
         const auto fullprof=[](const std::string& path){
             auto extension=std::filesystem::path(path).extension().string();
@@ -2269,7 +2288,8 @@ namespace {
 // start-carrying parameters), fill the persistence-only fields the calculation conversion never
 // needed, and stamp the loader-grade identity with crysta's own exported stamp. crysta::Project
 // cannot move, so it is lent rather than returned.
-void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use) {
+void with_saved_project(const Project& model, const std::function<void(crysta::Project&)>& use,
+                        const std::string* source = nullptr) {
     BuiltExperiments built_experiments;
     built_experiments.reserve(model.experiments.size());
     for (const auto& e_item : model.experiments) {
@@ -2373,6 +2393,11 @@ void with_saved_project(const Project& model, const std::function<void(crysta::P
     cproject.path = model.path.empty() ? model.scan_data_root : model.path;
     // Scan data read in place (a temporary copy of a read-only project) are carried into the saved one.
     cproject.scan_data_root = model.scan_data_root;
+    // A save that carries its files from another folder (a scratch save writing texts) carries no scan data.
+    if (source != nullptr) {
+        cproject.path = *source;
+        cproject.scan_data_root = std::string();
+    }
     // The project identity rides the delegated save. Copy the persisted metadata fields
     // across (the two ProjectMetadata mirrors are distinct C++ types; `path` is engine
     // bookkeeping the record never carries) and ENGAGE persistence — crysta's writer then merges
@@ -2540,16 +2565,19 @@ void refresh_agreement_records(Project& project) {
     });
 }
 
-void save_project_via_crysta(const Project& model, const std::string& directory) {
+void save_project_via_crysta(const Project& model, const std::string& directory, const std::string* source) {
     // crysta::save_project does the write: staging, atomic publish and fail-closed validation are its own.
-    with_saved_project(model, [&directory](crysta::Project& project) {
-        try {
-            crysta::save_project(project, directory);
-        } catch (const std::exception& error) {
-            raise_coded(error);
-            throw;
-        }
-    });
+    with_saved_project(
+        model,
+        [&directory](crysta::Project& project) {
+            try {
+                crysta::save_project(project, directory);
+            } catch (const std::exception& error) {
+                raise_coded(error);
+                throw;
+            }
+        },
+        source);
 }
 
 SaveSpelling save_spelling(const Project& model) {
@@ -2617,6 +2645,14 @@ std::string current_edi_name(const std::string& tag, bool every_name) {
     static_cast<void>(every_name);
     return tag;
 #endif
+}
+
+std::string structure_view_refusal(const std::string& item, const std::string& value) {
+    return crysta::structure_view_refusal(item, value);
+}
+
+void replace_file(const std::string& root, const std::string& file, const std::string& text) {
+    crysta::output::replace_file(root, file, text);
 }
 
 std::string one_row_category(const std::string& tag) {
@@ -2878,7 +2914,7 @@ void apply_post_build_fields(const ExperimentBase& e, crysta::ExperimentBase& bu
     // The declared neutron source, so crysta chooses the table.
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
-    // ADR-0052: the description crosses as declared, so a save writes it back.
+    // ADR-0054: the description crosses as declared, so a save writes it back.
     built.dimensionality =
         crossed(crysta::TokenField::Dimensionality, built, e.experiment_type.dimensionality);
     built.polarisation = crossed(crysta::TokenField::Polarisation, built, e.experiment_type.polarisation);
@@ -3222,7 +3258,7 @@ crysta::BraggPdExperiment to_crysta_single_crystal(const ExperimentBase& e) {
                                                                       : std::string());
     built.neutron_scattering_length = crossed(crysta::TokenField::NeutronScatteringLength, built,
                                               e.neutron_scattering_length.value_or(""));
-    // ADR-0052: the description crosses as declared, so a save writes it back.
+    // ADR-0054: the description crosses as declared, so a save writes it back.
     built.dimensionality =
         crossed(crysta::TokenField::Dimensionality, built, e.experiment_type.dimensionality);
     built.polarisation = crossed(crysta::TokenField::Polarisation, built, e.experiment_type.polarisation);

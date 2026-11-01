@@ -7,7 +7,7 @@
 
 ## Context
 
-The ordinary Experiment background UI in [ADR-0017](0017-app-gui-design.md) and `BackgroundListModel` already exposes line-segment position, intensity, free flags, IDs, Add and Remove. Its old Add chooses a default position immediately; the assistant needs an explicit scientifically justified anchor through that same visible UI. Position/removal previously used closed scalar/collection Edits without structural Undo. [ADR-0020](0020-calculation-worker-and-publication.md) owns the single closed Edit, LivePreview, calculation publication and Undo boundary. [ADR-0054](0054-assistant-controller-and-tools.md) owns original native calls, once-only outcomes, real widget input, resource admission and currentness. Background ID renaming already follows aliases and fit-result names through the model's existing rename rule.
+The ordinary Experiment background UI in [ADR-0017](0017-app-gui-design.md) and `BackgroundListModel` already exposes line-segment position, intensity, free flags, IDs, Add and Remove. Its old Add chooses a default position immediately; the assistant needs an explicit scientifically justified anchor through that same visible UI. Position/removal previously used closed scalar/collection Edits without structural Undo. [ADR-0020](0020-calculation-worker-and-publication.md) owns the single closed Edit, LivePreview, calculation publication and Undo boundary. [ADR-0055](0055-assistant-controller-and-tools.md) owns original native calls, once-only outcomes, real widget input, resource admission and currentness. Background ID renaming already follows aliases and fit-result names through the model's existing rename rule.
 
 ## Decision
 
