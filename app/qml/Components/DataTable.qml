@@ -39,9 +39,9 @@ EaComponents.ListView {
         event.accepted = true;
     }
     // Rows are made when they come into view, never ahead of it: rows made ahead are built a few per frame in
-    // the background, and a page's tables kept laying out for about a second after a project opened. So the
-    // columns fit the rows measured since the content last changed: scrolling only ever widens a column, for a wider
-    // row, and never moves one back and forth (the owner, 2026-10-27).
+    // the background, and a page's tables kept laying out for about a second after a project opened. The columns fit
+    // every row of the model, measured when the content changes (fitWholeModel), so scrolling never moves one (the
+    // owner, 2026-10-27).
     cacheBuffer: 0
     // The row-number column fits the widest number in the bold the current row's number takes, measured again when
     // the font changes (a web font arriving after the first layout).
@@ -54,8 +54,8 @@ EaComponents.ListView {
     // which keep their widths at the right. `equalColumns` keeps the flex columns equal instead (atom sites, atomic
     // displacements, the Analysis parameters), and `spreadColumns` shares the rest among those columns after their
     // fitted widths (Measured data). A row too narrow for its texts loses the margins first, then narrows the
-    // texts, where a number shows its short form. Widths follow the content: scrolling only widens a column for a
-    // wider row, and a change of the content fits them again.
+    // texts, where a number shows its short form. Widths follow the content: a change of the content fits them again,
+    // and scrolling changes none.
     property var columns: []
     property bool equalColumns: false
     property var spreadColumns: []
@@ -147,12 +147,13 @@ EaComponents.ListView {
         else if ("horizontalAlignment" in cell)
             cell.horizontalAlignment = alignment;
     }
-    // `measure` false only styles the cells (alignment and padding): a row scrolled into view takes the widths the whole
-    // model was measured to, never changing them (the owner, 2026-10-27).
     function sameValues(a, b) {
         return a.length === b.length && a.every((value, i) => value === b[i]);
     }
-    function fitColumns(measure = true) {
+    // Styles the cells of `rows` (alignment and padding) and, with `measure`, fits the columns to them and the header.
+    // Only the whole model is measured (fitWholeModel); a row the view makes, scrolled into view, is only styled and
+    // takes the widths the model was measured to (the owner, 2026-10-27).
+    function fitColumns(measure = false, rows = null) {
         const header = headerItem && headerItem.implicitColumnWidths ? headerItem.implicitColumnWidths.filter((w, i) => true) : [];
         // A cell is measured by its whole text: a number cell by the number it would show if it fitted (it shortens
         // itself to the width it is given), a label by its natural width, an editor by its text (its implicit width
@@ -173,7 +174,7 @@ EaComponents.ListView {
         const headerWidths = headerCells ? headerCells.map((cell, i) => Math.ceil(cell.implicitWidth - (i === fillerIndex && basePaddings.has(cell) ? fillerWidth : 0))) : header;
         const widths = columns.map((w, i) => Math.max(headerWidths[i] ?? 0, refitting ? 0 : (fittedWidths[i] ?? 0)));
         let kinds = null;
-        for (const item of contentItem.children) {
+        for (const item of rows ?? contentItem.children) {
             const cells = cellsOf(item);
             if (!cells || item === headerItem)
                 continue;
@@ -203,22 +204,57 @@ EaComponents.ListView {
         if (!sameValues(widths, fittedWidths))
             fittedWidths = widths;
     }
-    // A change of the content fits the columns afresh to every row of the model: each row is made once, measured, and
-    // the view goes back to making only the rows it shows. Scrolling measures nothing (fitColumns).
+    // A change of the content fits the columns afresh to every row of the model (fitWholeModel), once the table shows.
     function refit() {
         refitting = true;
         Qt.callLater(fitWholeModel);
     }
-    // The cells of rows scrolled into view, styled as the measured ones are.
+    // The cells of rows the view made, styled as the measured ones are.
     function styleCells() {
-        fitColumns(false);
+        if (typeof fitColumns === "function")  // a call queued before the table went
+            fitColumns(false);
     }
+    // Every row of the model is made at once, beside the view, measured with the header, and dropped: the columns fit
+    // the widest row wherever it is, and scrolling changes no width. A table not shown waits until it is.
     function fitWholeModel() {
-        const shown = cacheBuffer;
-        cacheBuffer = Math.ceil(contentHeight + height);
-        forceLayout();
-        fitColumns();
-        cacheBuffer = shown;
+        if (!refitting)
+            return;
+        if (!visible) {
+            refitting = false;
+            unfitted = true;
+            return;
+        }
+        unfitted = false;
+        measuringRows.model = model;
+        const rows = [];
+        for (let row = 0; row < measuringRows.count; ++row)
+            rows.push(measuringRows.itemAt(row));
+        fitColumns(true, rows);
+        for (const row of rows) {
+            const first = row && row.contentRowData ? Array.from(row.contentRowData).find(cell => cell instanceof Item) : null;
+            for (const cell of first && first.parent ? first.parent.children : []) {
+                basePaddings.delete(cell);
+                cellKinds.delete(cell);
+                checkCells.delete(cell);
+            }
+        }
+        measuringRows.model = null;
+        styleCells();
+    }
+    // Content that changed while the table was not shown, measured once it is.
+    property bool unfitted: false
+    onVisibleChanged: {
+        if (visible && unfitted)
+            refit();
+    }
+    Item {
+        visible: false
+        width: table.width
+        Repeater {
+            id: measuringRows
+            model: null
+            delegate: table.delegate
+        }
     }
     onColumnsChanged: refit()
     // The spare width follows the columns: the last data column's cells take it as padding after their content.
@@ -226,7 +262,7 @@ EaComponents.ListView {
         const spare = fillerIndex >= 0 && fittedWidths.length === columns.length ? Math.max(0, columnWidths[fillerIndex] - (fittedWidths[fillerIndex] ?? 0) - autoColumnPadding) : 0;
         if (spare !== fillerWidth) {
             fillerWidth = spare;
-            Qt.callLater(fitColumns);
+            Qt.callLater(styleCells);
         }
     }
     onModelRevisionChanged: refit()

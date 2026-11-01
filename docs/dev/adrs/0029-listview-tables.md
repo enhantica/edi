@@ -136,8 +136,8 @@ sequential fit; plain numbers outside parameter cells keep their own rule.
 ## Column widths (2026-10-27)
 
 One rule in `DataTable`, which every table and every generated group uses (the owner, 2026-10-24 and 2026-10-27).
-The row-number column fits its digits, and every text or value column fits its header and its widest shown cell,
-each with one margin (three table spacings), so neighbouring columns sit equally far apart and every header stands
+The row-number column fits its digits, and every text or value column fits its header and its widest cell in the whole
+model, measured when the content changes and never by scrolling, each with one margin (three table spacings), so neighbouring columns sit equally far apart and every header stands
 over its values. A number cell is measured by the number it would show, a label by its natural width, an editor by
 its text, and a cell holding a combo box by the box: its widest option, a small gap and the arrow, its icon
 included. The last data column, aligned left, takes the rest of the row: a text there stretches, a number leaves the
@@ -146,8 +146,8 @@ the right edge. A row too narrow for its texts first gives up the last column's 
 then narrows the texts, where a number shows its short form. Every row has the same cells as its header (a column
 per structure is an empty cell on a row without a curve), and a row or header whose cells change is sized again,
 since the base centres each row. Atom sites, atomic displacements and the Analysis parameters keep layouts of their
-own: equal columns for the first two; for the parameters the name in full, then value and s.u. at three tenths of
-the rest each and min and max at two tenths, with free at the right.
+own: equal columns for the first two; for the parameters the name in full, then value, s.u., min and max sharing the
+rest equally, with free at the right.
 
 Alignment and gaps (the owner, 2026-10-27 and 2026-10-31). Numbers and check boxes are right-aligned under
 right-aligned headers, text left-aligned, icons centred; each takes one table spacing more on the side it aligns to.
