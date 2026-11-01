@@ -583,6 +583,31 @@ EaComponents.ApplicationWindow {
         onRejected: abandonAction()
         title: qsTr("Save the changes?")
         standardButtons: Dialog.Save | Dialog.Discard | Dialog.Cancel
+        // Name the existing visible controls, as Save as names its real native OK button.
+        Binding {
+            target: unsavedChanges.opened ? unsavedChanges.header : null
+            when: target !== null
+            property: "objectName"
+            value: "unsavedChanges.title"
+        }
+        Binding {
+            target: unsavedChanges.opened ? unsavedChanges.standardButton(Dialog.Discard) : null
+            when: target !== null
+            property: "objectName"
+            value: "unsavedChanges.discard"
+        }
+        Binding {
+            target: unsavedChanges.opened ? unsavedChanges.standardButton(Dialog.Save) : null
+            when: target !== null
+            property: "objectName"
+            value: "unsavedChanges.save"
+        }
+        Binding {
+            target: unsavedChanges.opened ? unsavedChanges.standardButton(Dialog.Cancel) : null
+            when: target !== null
+            property: "objectName"
+            value: "unsavedChanges.cancel"
+        }
         // As wide as its line (owner, 2026-10-25).
         contentWidth: unsavedRow.implicitWidth
         contentHeight: unsavedRow.implicitHeight
