@@ -966,6 +966,10 @@ _PARALLEL_LOG_PATTERNS = (
     re.compile(r'\bdist:\s*\w+', re.IGNORECASE),
 )
 
+# Node ids are removed before the markers are searched: a parametrized id such as
+# `[...:_geom_bond.dist:s0-...]` would otherwise read as a parallel run.
+_NODE_ID_RE = re.compile(r'\S+\.py::\S+')
+
 
 # The measurement records its own conditions (see tools/ci/verify-wall-clock.py). When a log
 # carries that record, the observed worker count is direct evidence about the run that produced
@@ -986,7 +990,8 @@ def _refuse_parallel_log(log_path: Path, text: str) -> None:
             f'rather than cost and may not write the runtime manifest.'
         )
         raise ManifestError(msg)
-    hits = sorted({p.pattern for p in _PARALLEL_LOG_PATTERNS if p.search(text)})
+    scanned = _NODE_ID_RE.sub('', text)
+    hits = sorted({p.pattern for p in _PARALLEL_LOG_PATTERNS if p.search(scanned)})
     if hits:
         msg = (
             f'{log_path} was produced by a PARALLEL pytest run (markers: {hits}). '
