@@ -211,13 +211,17 @@ EaComponents.ListView {
     }
     // The cells of rows the view made, styled as the measured ones are.
     function styleCells() {
-        if (typeof fitColumns === "function")  // a call queued before the table went
+        if (!gone)
             fitColumns(false);
     }
+    // Set as the table is destroyed. Its rows going queue calls (Qt.callLater) that run after its context is gone,
+    // where reading any of its functions is an error; a property can still be read.
+    property bool gone: false
+    Component.onDestruction: gone = true
     // Every row of the model is made at once, beside the view, measured with the header, and dropped: the columns fit
     // the widest row wherever it is, and scrolling changes no width. A table not shown waits until it is.
     function fitWholeModel() {
-        if (!refitting)
+        if (!refitting || gone)
             return;
         if (!visible) {
             refitting = false;
