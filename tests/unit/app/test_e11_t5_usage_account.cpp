@@ -955,18 +955,21 @@ class UsageAccountProof final : public QObject {
     const originalFinite=engineGlobal.isFinite;
     const state={json:0,jsonReceiver:true,mathReceiver:true,date:0,constructed:0,finite:0,receiver:true,reentered:0,array:0,owner:null};
     const json=Object.create(originalJSON);
-    json.stringify=function() { 'use strict'; ++state.json; state.jsonReceiver=state.jsonReceiver&&this===json; return originalJSON.stringify.apply(originalJSON,arguments); };
-    json.parse=function(value) {
+    Object.defineProperty(json, 'stringify', {configurable:true, enumerable:true, writable:true,
+        value:function() { 'use strict'; ++state.json; state.jsonReceiver=state.jsonReceiver&&this===json; return originalJSON.stringify.apply(originalJSON,arguments); }});
+    Object.defineProperty(json, 'parse', {configurable:true, enumerable:true, writable:true,
+        value:function(value) {
         'use strict'; state.jsonReceiver=state.jsonReceiver&&this===json;
         const result=originalJSON.parse.apply(originalJSON,arguments);
         if(result && Array.isArray(result.buckets) && typeof result.available==='boolean')
             result.unitContextTag=tag;
         return result;
-    };
+    }});
     function ContextArray() { return originalArray.apply(null,arguments); }
     Object.setPrototypeOf(ContextArray,originalArray);
     ContextArray.prototype=originalArray.prototype;
-    ContextArray.from=function() { ++state.array; return originalArray.from.apply(this,arguments); };
+    Object.defineProperty(ContextArray, 'from', {configurable:true, enumerable:true, writable:true,
+        value:function() { ++state.array; return originalArray.from.apply(this,arguments); }});
     function ContextDate(value) {
         const target=arguments.length===1 && value===60000;
         if(target)++state.date;
@@ -977,7 +980,8 @@ class UsageAccountProof final : public QObject {
     }
     ContextDate.now=function(){return originalDate.now();};
     const math=Object.create(originalMath);
-    math.ceil=function(value){'use strict';state.mathReceiver=state.mathReceiver&&this===math;return value===1 ? minutes : originalMath.ceil(value);};
+    Object.defineProperty(math, 'ceil', {configurable:true, enumerable:true, writable:true,
+        value:function(value){'use strict';state.mathReceiver=state.mathReceiver&&this===math;return value===1 ? minutes : originalMath.ceil(value);}});
     const finite=function(value){
         'use strict';
         ++state.finite;
