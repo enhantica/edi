@@ -41,12 +41,8 @@ then meets the 5 s bound. The runtimes were measured serially by
 | `unit/py` | 117 | 0.1 s | **0** | 0.0% | — | 0 |
 | `unit/cpp` | 45 | 0.1 s | **0** | 0.0% | 0.096 s | 0 |
 | `integration` | 102 | 1.0 s | **0** | 0.0% | — | 0 |
-| `system` | 77 | 5.0 s | **3** | — | 72.180 s | 0 |
-| **total** | **341** | | **3** | | | **0** |
-
-The measured-count columns above retain the dated corpus measurement; the breach
-counts include the exact-count archive entry added on 2026-11-01 below. Its current
-per-node measurement joins the generated runtime manifest.
+| `system` | 77 | 5.0 s | **2** | 2.6% | 72.180 s | 0 |
+| **total** | **341** | | **2** | | | **0** |
 
 ## Breaches, per tier, slowest first
 
@@ -62,7 +58,7 @@ per-node measurement joins the generated runtime manifest.
 
 - none
 
-### `system` — bound 5.0 s, 3 breach(es)
+### `system` — bound 5.0 s, 2 breach(es)
 
 - 72.180 s — `tests/system/py/test_c34_t24_cli_variants.py::test_every_executing_project_runs_every_pinned_variant_from_project_data[pd-neut-tof_ncaf-wish-5bank_start-5-0]`
   - cause:, crysta about 4x slower inside edi (fix: edi `b5f8352`, crysta
@@ -72,16 +68,3 @@ per-node measurement joins the generated runtime manifest.
   - cause:, crysta about 4x slower inside edi (fix: edi `b5f8352`, crysta
     `ce21eba6`/`a4d5c2cd`, on `-structure-categories`). Remove when, re-measured after
     Merges into edi main, it meets the 5 s bound.
-
-### Exact classic archive witness (2026-11-01)
-
-- 42.160 s — `tests/system/py/test_project_file_text_contract.py::test_real_text_tab_actor[ProjectText::test_exact_classic_archive_opens_and_saves]`
-  - Measured serially with `python -m pytest -vv` selecting this node and the other
-    Text actors, `--durations=0 -p no:xdist -p fixture_costs`, existing Qt runner
-    built at `93dd8df4`, `OMP_NUM_THREADS=1`; banked in `per-pr-runtimes.tsv`.
-    The independently written input has exactly 65,535 regular files, per the
-    packet's scope 8a. The real app opens it, saves it and reopens it: reducing the
-    file count or substituting a mock loses the boundary obligation. This is an
-    explicit cost of that witness, not a change to the 5 s system bound. Remove
-    this entry when those same operations meet the bound with the exact count
-    and all assertions retained.

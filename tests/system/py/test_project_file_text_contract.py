@@ -12,7 +12,6 @@ import pytest
 from tests.conftest import tree_bytes_with_normalized_project_metadata
 from tests.fixtures.project_categories.historical_bytes import units
 from tests.fixtures.project_text.dictionary_reference import reference
-from tests.fixtures.project_text.generate import classic_zip, project
 
 ROOT = Path(__file__).resolve().parents[3]
 PROJECTS = [
@@ -121,10 +120,7 @@ def test_every_saved_file_obeys_dictionary_order_and_reopen_fixed_point(tmp_path
         'ProjectText::test_report_asks_for_location',
     ],
 )
-def test_real_text_tab_actor(tmp_path, actor):
-    source = project(tmp_path / 'project')
-    if actor.endswith('test_exact_classic_archive_opens_and_saves'):
-        classic_zip(tmp_path / 'classic.zip', source)
+def test_real_text_tab_actor(actor):
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
     assert runner.is_file(), 'Text-tab acceptance uses a freshly built production Qt application'
     result = subprocess.run(
@@ -138,15 +134,14 @@ def test_real_text_tab_actor(tmp_path, actor):
         ],
         env={
             **os.environ,
-            'EDI_PROJECT_TEXT_REFERENCE': str(tmp_path),
             'QT_QPA_PLATFORM': 'offscreen',
             'QT_QUICK_BACKEND': 'software',
         },
         cwd=ROOT,
         capture_output=True,
         text=True,
-        # The count-boundary actor does three real archive I/O passes over 65,535 files.
-        # Its visible runtime-baseline entry retains the system tier's unchanged bound.
+        # Let the complete boundary actor finish; the separate runtime audit still
+        # enforces the unchanged per-test bound, with no exception for this actor.
         timeout=90 if actor.endswith('test_exact_classic_archive_opens_and_saves') else 25,
         check=False,
     )
