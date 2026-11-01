@@ -145,9 +145,7 @@ std::vector<std::array<int, 9>> space_group_rotations(const SpaceGroup& space_gr
 // Write a Project back out as a `.edi` project directory (inverse of load_project: structures,
 // experiments, analysis). Each bank's embedded `_data` loop is written back IFF present, so
 // presence round-trips — a complete project stays complete, a model-only one stays model-only.
-// With `source`, the project's files are carried from that folder instead of its own, and no scan data: the project
-// itself is saved, not a copy, so what it has calculated is written as current (a scratch save writing its texts).
-void save_project(const Project& project, const std::string& directory, const std::string* source = nullptr);
+void save_project(const Project& project, const std::string& directory);
 
 // Save the project to `directory` and make it the project's directory (Project.path and
 // metadata.path) — the binding's save_as rule: the last-modified time advances before the write and

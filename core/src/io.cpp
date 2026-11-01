@@ -4972,7 +4972,7 @@ void clear_fit_result(Project& project) {
     }
 }
 
-void save_project(const Project& project, const std::string& directory, const std::string* source) {
+void save_project(const Project& project, const std::string& directory) {
     // Edi's writer body is RETIRED — edi does not write, it asks crysta to: every structure, every
     // validation, the staging and the atomic publish are crysta's writer's own.
     // Review r63 F-b: refuse a datablock name carrying a reserved fit-identity delimiter BEFORE
@@ -4994,7 +4994,7 @@ void save_project(const Project& project, const std::string& directory, const st
         refuse_reserved_name(experiment_item->name, "experiment");
     }
     try {
-        save_project_via_crysta(project, directory, source);
+        save_project_via_crysta(project, directory);
     } catch (const IoError&) {  // a coded refusal (a ValidationError) keeps its codes
         throw;
     } catch (const std::exception& error) {
@@ -5296,9 +5296,16 @@ class ScratchSave {
             fs::copy_file(fs::path(project.path) / "project.edi", source / "project.edi", absent);
         }
         // The project itself, not a copy: a copy is never calculated, so its computed columns and categories would
-        // be left out of the texts.
+        // be left out of the texts. Its files come from the source folder, with no scan data, through the writer a
+        // save delegates to (save_project).
         const std::string from = source.string();
-        save_project(project, (root_ / "project").string(), &from);
+        try {
+            save_project_via_crysta(project, (root_ / "project").string(), &from);
+        } catch (const IoError&) {
+            throw;
+        } catch (const std::exception& error) {
+            throw IoError(error.what());
+        }
     }
     ~ScratchSave() {
         std::error_code ignored;
