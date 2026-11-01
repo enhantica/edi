@@ -20,25 +20,29 @@ if case.API == 'edi':
 @pytest.mark.parametrize('kind', ['structure', 'experiment'])
 @pytest.mark.parametrize('shape', ['item', 'column'])
 @pytest.mark.parametrize(
-    ('row', 'spelling'),
+    'probe',
     [
-        (row, spelling)
+        (row, spelling, witness)
         for row in case.inventory()
         for name in row['cif_names']
         for spelling in dict.fromkeys([name, name.replace('.', '_', 1).upper()])
+        for witness in range(5)
     ],
     ids=[
-        row['uid'] + ':' + name + ':s' + str(style)
+        row['uid'] + ':' + name + ':s' + str(style) + ':v' + str(witness)
         for row in case.inventory()
         for name in row['cif_names']
         for style, _ in enumerate(dict.fromkeys([name, name.replace('.', '_', 1).upper()]))
+        for witness in range(5)
     ],
 )
 def test_every_item_alias_variant_and_absence_has_a_saved_outcome(
-    tmp_path, capfd, route, kind, shape, row, spelling
+    tmp_path, capfd, route, kind, shape, probe
 ):
+    row, spelling, witness = probe
     errors = []
-    for j, value in enumerate([case.token(row), '?', '.', "'?'", "''"]):
+    values = [case.token(row), '?', '.', "'?'", "''"]
+    for j, value in enumerate([values[witness]]):
         text = case.payload(kind, row, spelling, shape, value)
         assert case.key(spelling) in case.columns(text), (
             'Each inventory probe is present in the actual CIF input'
