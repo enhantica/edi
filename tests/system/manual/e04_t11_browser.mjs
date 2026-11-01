@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import { inflateSync } from 'node:zlib';
 import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
+import { statusActionLifetimeChecks } from './web_status_action_lifetime.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
 import { assertSavedProject, assertSavedNativeChi } from './web_saved_fit.mjs';
@@ -19,6 +20,7 @@ import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
 const saveRouteOnly = process.argv.includes('--save-route-only');
 const exampleOnly = process.argv.includes('--example-only');
+const statusActionLifetimeOnly = process.argv.includes('--status-action-lifetime-only');
 const fileRequestsOnly = saveRouteOnly || process.argv.includes('--file-requests-only');
 const fitCase = process.argv.find(arg => arg.startsWith('--fit-case='))?.split('=')[1] ||
   (mode === 'singlethread' || fileRequestsOnly ? 'lbco' : 'ncaf');
@@ -32,6 +34,9 @@ assert(!reopenControl || ['noop', 'refuse'].includes(reopenControl),
   'reopen counterfactual must be the explicit no-op or refused-open case');
 assert(!exampleOnly || (!fileRequestsOnly && !reopenControl && fileRequestCase === 'none'),
   'The example-only scope must omit file requests, save-only and reopen controls');
+assert(!statusActionLifetimeOnly || (!fileRequestsOnly && !exampleOnly && !reopenControl && fileRequestCase==='none' &&
+  !process.argv.includes('--startup-only') && !process.argv.includes('--diagnostics-only')),
+  'The focused action-lifetime scope is explicit, without save/request/example/reopen counterfactual scope aliases');
 console.log(`browser ${mode}: starting`);
 assert(siteArg && outputArg && ['singlethread', 'multithread', 'shim'].includes(mode),
   'requires the produced site, an explicit thread case and a persistent output directory');
@@ -428,6 +433,8 @@ try {
   await shot('home');
   await click(/^Start$/);
   await click(/^Project$/);
+  const statusActions=statusActionLifetimeOnly ? statusActionLifetimeChecks({send,evaluate,frame,output,mode}) : null;
+  if(statusActionLifetimeOnly)await statusActions.noActions('initial-empty-project');
   const beforeExample=await send('Accessibility.getFullAXTree');
   assert(beforeExample.nodes.some(n=> !n.ignored && n.role?.value==='tab' && n.name?.value==='Analysis' &&
     (n.properties || []).some(p=>p.name==='disabled' && p.value.value)),
@@ -474,6 +481,29 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     assert.equal(result.status, 0, 'each browser save must produce a readable scientific project archive');
     return JSON.parse(result.stdout);
   };
+  if (statusActionLifetimeOnly) {
+    // New finite scope: genuine public project lifetime, entirely BEFORE fitting/Save.
+    await click(/^Analysis$/);
+    const first=await statusActions.live('first-fit');
+    await shot('status-action-first-focus');
+    // Same original toolbar Reset route as the full workflow, no native setter.
+    await click(/^Reset to initial state without project, model and data$/);
+    await settleRenderedPage();
+    await click(/^Start$/); await click(/^Project$/);
+    const empty=await send('Accessibility.getFullAXTree');
+    assert(['Structure','Experiment','Analysis'].every(name=>empty.nodes.some(node=>
+      !node.ignored&&node.role?.value==='tab'&&node.name?.value===name&&
+      (node.properties||[]).some(p=>p.name==='disabled'&&p.value.value===true))),
+      'The public Reset really retires the project before any cached action is assessed');
+    await statusActions.retired('project-closed',first);
+    await click(/Examples$/, 'button');
+    await openExampleRow(exampleId,exampleName);
+    await waitAX(/^Analysis$/,true,'tab');
+    await click(/^Analysis$/);
+    const recreated=await statusActions.live('recreated-fit',{oldBackendDOMNodeId:first.backendDOMNodeId});
+    assert.notEqual(recreated.nodeId,first.nodeId,'The recreated active AX node is not its retired predecessor');
+    await shot('status-action-recreated-focus');
+  } else {
   if (saveRouteOnly) {
     await click(/^Project$/);
     const archive = await saveArchive();
@@ -493,14 +523,42 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
     const progressKind = (${fittingObservationKind.toString()});
     const roots = [document];
     for (let i=0;i<roots.length;++i) for (const element of roots[i].querySelectorAll('*')) if (element.shadowRoot) roots.push(element.shadowRoot);
+    const observeValue = (node, value) => {
+      if (progressKind(value)) {
+        window.__e04Progress.push(value);
+        return;
+      }
+      if (typeof value !== 'string' || value.trim() !== 'Stop') return;
+      const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+      const button = element?.closest('button');
+      if (!button || !button.isConnected) return;
+      // Existing read-only Qt hooks, never a native writer or caption selector.
+      const state = window.ediFitProgress();
+      if (state.running !== true) return;
+      const owner = window.ediControlGeometry('statusBar.fit.button');
+      const action = window.ediControlGeometry('statusBar.fit.button.accessibleAction');
+      const box = button.getBoundingClientRect(), style = getComputedStyle(button);
+      const observed = {text:value,control:owner.objectName,action:action.objectName,
+        role:button.tagName.toLowerCase(),running:state.running,visible:owner.visible,
+        enabled:owner.enabled,actionVisible:action.visible,actionEnabled:action.enabled,
+        connected:button.isConnected,
+        domVisible:style.display !== 'none' && style.visibility !== 'hidden' && button.getClientRects().length > 0,
+        nativeRect:{x:owner.x,y:owner.y,width:owner.width,height:owner.height},
+        actionRect:{x:action.x,y:action.y,width:action.width,height:action.height},
+        domRect:{x:box.x,y:box.y,width:box.width,height:box.height}};
+      if (progressKind(observed) === 'control') window.__e04Progress.push(observed);
+    };
     const observer = new MutationObserver(records => {
       for (const record of records) {
-        const values = [record.oldValue,record.target.getAttribute?.('aria-label'),record.target.textContent];
+        // Same original candidate reads/order, retaining each actual DOM owner.
+        const values = [[record.target,record.oldValue],
+          [record.target,record.target.getAttribute?.('aria-label')],
+          [record.target,record.target.textContent]];
         for (const node of record.addedNodes || []) {
-          values.push(node.getAttribute?.('aria-label'), node.textContent);
-          for (const child of node.querySelectorAll?.('[aria-label]') || []) values.push(child.getAttribute('aria-label'));
+          values.push([node,node.getAttribute?.('aria-label')], [node,node.textContent]);
+          for (const child of node.querySelectorAll?.('[aria-label]') || []) values.push([child,child.getAttribute('aria-label')]);
         }
-        for (const value of values) if (progressKind(value)) window.__e04Progress.push(value);
+        for (const [node,value] of values) observeValue(node,value);
       }
     });
     for (const root of roots) observer.observe(root,{subtree:true,attributes:true,attributeOldValue:true,characterData:true,characterDataOldValue:true,childList:true});
@@ -874,11 +932,19 @@ pathlib.Path(sys.argv[3]).write_text(json.dumps(actual))`, unpack.stdout.trim(),
     }
     await writeFile(join(output,`${mode}-file-requests.json`),JSON.stringify({case:fileRequestCase,completed:true},null,2));
   }
+  } // The original fit/save/reopen/request workflow above is unchanged in its ordinary scope.
+  if(statusActionLifetimeOnly) {
+    assert.equal(errors.length,0,'The focused actual action-lifetime workflow has no browser exception');
+    await writeFile(join(output,`${mode}-status-action-only.json`),JSON.stringify({mode,fitCase,completed:true,
+      scope:'Actual empty/open/focus/close/reopen action lifetime only; no fit, Save, provider or scientific pass'},null,2));
+    console.log(`${mode}: focused status-action lifetime/focus passed; original fit/save/science scope not run`);
+  } else {
   assert.equal(errors.length, 0, 'both browser workflows must complete without runtime exceptions');
   await writeFile(join(output, `${mode}-browser.json`), JSON.stringify({ isolated, wasm, errors, transcript, fileRequestsOnly, fileRequestCase, exampleOnly }, null, 2));
   if (exampleOnly) console.log(`${mode}: example-only opening passed; fit/save/reopen checks not run`);
   else if (fileRequestsOnly) console.log(`${mode}: request-only ${fileRequestCase} passed; full browser checks not run`);
   else console.log(`${mode}: workflow and saved-fit roundtrip passed; file requests ${fileRequestCase}`);
+  }
   }
   }
   }
