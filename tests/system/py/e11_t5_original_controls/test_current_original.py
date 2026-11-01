@@ -36,7 +36,7 @@ USAGE_HEADER_HASHES = {
 }
 ACTIVITY_HEADER_SHA256 = '07cddf1a8fa777efac7c92a5133c3a1f659a2a5966495ef30d538b1905d946fe'
 ACTIVITY_ADAPTER_SHA256 = '9d3cfc16c6e85e94ed249b55924184c5d43a6ac8f7a781ffee329da18504a298'
-PROBE_SOURCE_SHA256 = '1e5d1156dc1704dcb3e3b823427881d02a0964971b72de5875a0fe42f8bcde75'
+PROBE_SOURCE_SHA256 = '5cace5b63a55b0b373848242d63646121e4532f4a7071d8ac6a4c3e68930bd5c'
 ACTIVITY_INPUTS = {
     'tests/unit/app/e11_t5_a2a_phase_adapter_impl.hpp': ACTIVITY_HEADER_SHA256,
     'tests/unit/app/e11_t5_a2a_phase_adapter.hpp': ACTIVITY_ADAPTER_SHA256,
@@ -216,7 +216,7 @@ def _source_inputs():
         if row['compiled']:
             assert receipt['compiled_sources'][row['path']] == row['sha256'], row['path']
     assert receipt['compiled_sources']['tests/integration/py/assistant_ui_probe/probe.cpp'] == (
-        '1e5d1156dc1704dcb3e3b823427881d02a0964971b72de5875a0fe42f8bcde75'
+        '5cace5b63a55b0b373848242d63646121e4532f4a7071d8ac6a4c3e68930bd5c'
     )
     assert (
         _sha(_absolute(os.environ['EDI_ASSISTANT_UI_PROBE']))
