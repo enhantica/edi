@@ -1162,7 +1162,7 @@ class UsageAccountProof final : public QObject {
                 const auto error = expression.error();
                 const bool ordinary = QByteArray(member) == "ordinary";
                 const QString expected =
-                    QStringLiteral("TypeError: Cannot read property '%1' of %2")
+                    QStringLiteral("TypeError: Cannot call method '%1' of %2")
                         .arg(QString::fromLatin1(member), QString::fromLatin1(receiver));
                 trace.append(
                     QVariantMap{{"scope",
@@ -1198,8 +1198,8 @@ class UsageAccountProof final : public QObject {
                 } else {
                     check.require(expression.hasError() && error.description() == expected &&
                                       error.url() == location && error.line() > 0,
-                                  "the public member boundary retains its first exact "
-                                  "read-property TypeError");
+                                  "the public inherited-context call boundary retains its exact "
+                                  "method-call TypeError");
                 }
                 check.require(!engine_->hasError(),
                               "the actual QQmlExpression holds the reported error without a "

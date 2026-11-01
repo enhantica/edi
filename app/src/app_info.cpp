@@ -1191,7 +1191,7 @@ QJSValue panelUsageMemberCall(const PanelUsageFrame& frame, const QJSValue& rece
     QV4::ScopedString key(scope, frame.vm()->newString(QString::fromLatin1(name)));
     QV4::ScopedValue result(scope);
     if (call.thisObject->isNullOrUndefined()) {
-        result = frame.vm()->throwTypeError(QStringLiteral("Cannot read property '%1' of %2")
+        result = frame.vm()->throwTypeError(QStringLiteral("Cannot call method '%1' of %2")
             .arg(key->toQString(), call.thisObject->toQStringNoThrow()));
     } else {
         QV4::ScopedValue callable(scope, panelUsageGet(frame, *call.thisObject, key, true));
