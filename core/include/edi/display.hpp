@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #pragma once
 
+#include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // What a surface shows for a `.edi` item: its label, units, description and `.edi` name, a selector's
@@ -36,6 +38,9 @@ std::string uid_of(const ParameterSpec& spec);
 
 /// Whether the dictionary has an item with this uid.
 bool has_item(std::string_view uid);
+/// The dictionary's type of item `uid`: `float`, `int`, `bool`, `string` or `enum`; empty for an item it does not
+/// hold.
+std::string item_dtype(std::string_view uid);
 
 /// The short label every surface shows for item `uid`. Each of these throws std::invalid_argument
 /// for a uid the dictionary does not hold.
@@ -68,19 +73,24 @@ std::string category_icon(std::string_view id);
 std::string category_description(std::string_view id);
 /// A category's title and its `.edi` name, `Cell: _cell`, as a group's tooltip names the file's category.
 std::string category_tooltip(std::string_view id);
-/// A category's order number in crysta's dictionary, which sets the sidebar's order as it sets the files'.
-/// A category the dictionary does not hold comes last.
-int category_order(std::string_view id);
+/// Where a category sorts by crysta's dictionary, as it sets the files' order: its order number, then its place in the
+/// dictionary for equal numbers. A category the dictionary does not hold comes last.
+std::pair<int, std::size_t> category_order(std::string_view id);
 /// Whether the program or a data file supplies a category (its dictionary mark is output) rather than the user.
 bool category_is_output(std::string_view id);
 /// Whether the program writes an item of an input category (the project's times and location), so no user edits
 /// it: `_metadata.created`, for example.
 bool item_is_set_by_program(std::string_view tag);
-/// A block's `.edi` text with only its input categories, as the Text tab's Editable shows it.
-std::string input_categories_text(const std::string& text);
-/// An edit of input_categories_text(full) with the output categories of `full` after it, so an apply keeps the
-/// measured data and the results the edit did not show.
-std::string with_output_categories(const std::string& edited, const std::string& full);
+/// The input categories of an experiment the user may not edit now, shown as its outputs are: its type once it holds
+/// measured data, powder, single crystal or a scan's (the owner, 2026-10-27).
+std::vector<std::string> fixed_categories(const ExperimentBase& experiment);
+/// A block's `.edi` text with only its input categories, as the Text tab's Editable shows it; `fixed` names input
+/// categories shown with the outputs instead (fixed_categories).
+std::string input_categories_text(const std::string& text, const std::vector<std::string>& fixed = {});
+/// An edit of input_categories_text(full, fixed) with the output and fixed categories of `full` after it, so an apply
+/// keeps the measured data, the results and the fixed categories the edit did not show.
+std::string with_output_categories(const std::string& edited, const std::string& full,
+                                   const std::vector<std::string>& fixed = {});
 /// One category as a block's text holds it, for a group the app makes from the dictionary: its item names and its
 /// values as written (quotes removed), a row per loop row, or one row for single items.
 struct TextCategory {

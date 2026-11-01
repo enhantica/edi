@@ -17,7 +17,7 @@
 namespace edi_app::assistant_data::summary {
 // Internal arithmetic for one already-captured inspection, never a data owner,
 // currentness proof, engine inclusion rule, fit factor or physical validator.
-// ADR-0057 owns populations/units and the later source-specific capture boundary.
+// ADR-0058 owns populations/units and the later source-specific capture boundary.
 static_assert(std::numeric_limits<double>::is_iec559 && std::numeric_limits<double>::digits == 53);
 inline constexpr std::uint64_t max_exact_index = 9007199254740991ULL; // 2^53-1, original JSON index law.
 

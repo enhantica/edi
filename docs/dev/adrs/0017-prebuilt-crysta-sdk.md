@@ -146,7 +146,7 @@ macro is defined by hand.
 The existing `app-with-crysta` development command builds the selected checkout's
 `crysta_core` and `crysta_cli`, installs them under `build/edi-local`, and launches
 edi against that prefix. Its CI refusal preserves the pinned SDK boundary above.
-The native-only app launch contract also follows ADR-0056's removal of Python
+The native-only app launch contract also follows ADR-0057's removal of Python
 binding bootstrap from this launcher.
 
 Its former `cpp-ci` install selected crysta's editable Python package and test

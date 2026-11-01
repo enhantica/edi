@@ -19,6 +19,7 @@ import pytest
 
 from conftest import calculator_load_warning, corpus_case_dir
 from tests.fixtures.fitting_modes.historical_bytes import historical_analysis
+from tests.fixtures.project_categories.historical_bytes import check_project_spacing, prior_digest
 from tests.fixtures.project_save.carried_results import carried_file_hash
 from tests.fixtures.weight_fractions.single_phase_bytes import historical_single_fraction
 from tests.unit.py.e04_t5_calculator_bytes import without_calculator
@@ -836,6 +837,7 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
     saved = tmp_path / 'saved'
 
     project.save_as(saved)
+    check_project_spacing(saved)
 
     for relative_path, prior_sha256 in PRE_FIX_DATABLOCK_SHA256.items():
         expected_sha256 = prior_sha256
@@ -858,7 +860,7 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
             assert emitted == original and len(emitted) == 1, (
                 ' must add exactly the source minimizer declaration to saved analysis'
             )
-            data, removed = re.subn(rb'(?m)^_minimizer\.type [^\n]*\n\n', b'', data)
+            data, removed = re.subn(rb'(?m)^_minimizer\.type [^\n]*\n', b'', data)
             assert removed == 1, ' normalizes only the one newly persisted declaration'
         if relative_path == 'structures/si.edi':
             #  now retains the two source-declared _geom inputs. Keep
@@ -899,7 +901,7 @@ def require_datablock_regression_pins(tmp_path: Path) -> None:
             expected_sha256 = carried_file_hash(
                 historical, relative_path, 'corpus:si-sepd-s2/project'
             )
-        actual_sha256 = hashlib.sha256(data).hexdigest()
+        actual_sha256 = prior_digest(data, expected_sha256, name=relative_path)
         assert actual_sha256 == expected_sha256, (
             f"{relative_path} must remain byte-identical to the packet's labelled pre-fix "
             'regression pin apart from the separately checked  minimizer, '

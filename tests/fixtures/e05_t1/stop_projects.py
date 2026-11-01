@@ -52,6 +52,7 @@ def background_prefix(text):
         end = items[index + 1].line_number - 1 if index + 1 < len(items) else len(lines)
         retained.extend(lines[item.line_number - 1 : end])
     return ''.join(retained)
+from tests.fixtures.project_categories.historical_bytes import units
 
 
 def materialize(engine, source, target, *, stalled):
@@ -73,10 +74,23 @@ def materialize(engine, source, target, *, stalled):
         return target
 
     experiment = target / 'experiments/hrpt.edi'
-    prefix = background_prefix(experiment.read_text())
-    experiment.write_text(
-        prefix
-        + """_background.type line-segment
+    head, entries, separators, tail = units(experiment.read_bytes())
+    if not any(key == b'_background.type' for key, _ in entries):
+        message = 'the LBCO stop input must declare its background'
+        raise ValueError(message)
+    retained = (
+        head
+        + b''.join(
+            separator + body
+            for (key, body), separator in zip(entries, separators, strict=True)
+            if key.removeprefix(b'loop:').split(b'.', 1)[0] not in {b'_background', b'_data'}
+        )
+        + tail
+    )
+    experiment.write_bytes(
+        retained.rstrip(b'\n')
+        + b'\n\n_background.type line-segment\n'
+        + b"""
 
 loop_
 _background.id

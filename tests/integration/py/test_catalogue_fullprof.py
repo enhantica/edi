@@ -13,6 +13,7 @@ import pytest
 from edi import verification
 
 from tests.fixtures.example_catalogue.fullprof_profile import read_profile
+from tests.fixtures.metadata_transition.source_bytes import read_previous
 from tests.integration.py.test_example_catalogue import SELECTED
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -56,7 +57,7 @@ def reference(case):
 
 
 def sha256(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashlib.sha256(read_previous(path)).hexdigest()
 
 
 @pytest.mark.parametrize('case', SELECTED)

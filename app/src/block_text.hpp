@@ -8,6 +8,7 @@
 #include <functional>
 #include <optional>
 #include <string>
+#include <vector>
 
 namespace edi_app {
 
@@ -29,12 +30,19 @@ class BlockText : public QObject {
    public:
     using Source = std::function<std::string()>;  // throws the writer's refusal
     using File = std::function<std::string()>;
-    BlockText(Source source, QObject* parent, File file = {});
+    // The block's input categories the user may not edit now (edi::fixed_categories), shown as its outputs are.
+    using Fixed = std::function<std::vector<std::string>()>;
+    // `discovery` is the file as a save writes it without calculating (discoveryText).
+    BlockText(Source source, QObject* parent, File file = {}, Fixed fixed = {}, Source discovery = {});
 
     QString text() const;
     QString error() const;
     QString file() const;
     QString inputText() const;
+    // What finds the block's generated groups: the text when it is made already, else the file as a save writes it
+    // without calculating, so finding them never runs a calculation (what only a calculation writes joins once the
+    // text is made). Empty when the save refuses.
+    QString discoveryText() const;
     // An edit of inputText with the text's output categories after it: what an apply writes.
     Q_INVOKABLE QString withOutputs(const QString& edited) const;
     // The project changed. Nobody shows the text: the next read computes it. A Text tab shows it:
@@ -53,6 +61,8 @@ class BlockText : public QObject {
 
     Source source_;
     File file_;
+    Fixed fixed_;
+    Source discovery_;
     mutable std::optional<QString> observed_file_;
     mutable std::optional<QString> observed_input_;
     quint64 notification_publication_ = 0;

@@ -15,24 +15,27 @@ Item {
     property bool inverted: false
     property real barWidth: 40
     property real barHeight: 10
-    readonly property var stops: ApplicationInfo.scanColourStops(map, dark, inverted, 24)
+    // Up to 24 samples, each at least about two pixels wide, so both ends of the map always show.
+    readonly property int samples: Math.max(2, Math.min(24, Math.floor(barWidth / 2)))
+    readonly property var stops: ApplicationInfo.scanColourStops(map, dark, inverted, samples)
 
     width: barWidth
     height: barHeight
     clip: true
 
-    // Whole-pixel pieces, a little wider than their share, so no seam shows between them.
-    Row {
-        Repeater {
-            model: bar.stops
+    // Each sample from its share's rounded left edge to the next one's, so neighbours meet without a seam and the
+    // last ends at the bar's right edge whatever its width.
+    Repeater {
+        model: bar.stops
 
-            Rectangle {
-                required property color modelData
+        Rectangle {
+            required property int index
+            required property color modelData
 
-                width: Math.ceil(bar.barWidth / bar.stops.length)
-                height: bar.barHeight
-                color: modelData
-            }
+            x: Math.round(index * bar.barWidth / bar.stops.length)
+            width: Math.round((index + 1) * bar.barWidth / bar.stops.length) - x
+            height: bar.barHeight
+            color: modelData
         }
     }
 }

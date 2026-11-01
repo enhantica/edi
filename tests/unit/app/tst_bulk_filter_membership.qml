@@ -12,6 +12,7 @@ TestCase {
     when: windowShown
     property var appWindow
     property var expected
+    property bool savedSetup
     property var directory
     Component {
         id: application
@@ -19,6 +20,8 @@ TestCase {
     }
     function init() {
         Session.closeProject();
+        savedSetup = Preferences.analysisShowFixedSettings;
+        Preferences.analysisShowFixedSettings = false;
         expected = JSON.parse(Probe.readFile("tests/fixtures/analysis_filters/expected.json"));
         directory = SettingsProof.copyProject(Probe.repoUrl("tests/fixtures/analysis_filters/project"));
         verify(Session.openProject(directory), "The bulk membership oracle loads the authored two-structure two-experiment project");
@@ -32,10 +35,11 @@ TestCase {
         Ui.click(test, Probe, appWindow, "sideBar.tab.basic");
         const observed = parameters();
         compare(observed.map(key).sort(), expected.map(key).sort(), "The authored project independently accounts for the complete mutable parameter inventory");
-        verify(observed.every(parameter => parameter.refinable && parameter.fittable), "The authored P1 fixture contains only independently unconstrained fit parameters");
+        verify(observed.every(parameter => parameter.fittable === !expected.find(row => key(row) === key(parameter)).blocked), "The P1 fixture admits every independent fit parameter and blocks each saved setup value");
     }
     function cleanup() {
         Session.closeProject();
+        Preferences.analysisShowFixedSettings = savedSetup;
         appWindow.destroy();
         appWindow = null;
         Probe.releaseScratchProjects();
@@ -116,7 +120,7 @@ TestCase {
         return item;
     }
     function targets(state) {
-        return expected.filter(row => (!state.block || row.block === state.block) && (!state.peak || row.category === "peak") && (!state.query || row.name.startsWith("broad_gauss"))).map(key).sort();
+        return expected.filter(row => !row.blocked && (!state.block || row.block === state.block) && (!state.peak || row.category === "peak") && (!state.query || row.name.startsWith("broad_gauss"))).map(key).sort();
     }
     function test_membership_data() {
         const cases = [];
@@ -132,7 +136,7 @@ TestCase {
     function test_membership(data) {
         const project = Session.project;
         const original = parameters();
-        verify(project.setParametersFree(original, !data.makeFree), "The authored target state supplies a genuine opposite-state bulk transition");
+        verify(project.setParametersFree(original.filter(item => item.fittable), !data.makeFree), "The authored target state supplies a genuine opposite-state bulk transition");
         if (data.transition === "east-west" || data.transition === "west-east") {
             const first = data.transition === "east-west" ? "east" : "west";
             verify(project.setParametersFree(original.filter(item => item.blockName === first && item.category === "peak"), data.makeFree), "Equal-size banks start in opposite free states before a datablock-only switch");
@@ -214,7 +218,7 @@ TestCase {
         compare(shown, wanted, "The user's selections independently predict every visible parameter identity");
         verify(wanted.length > 0, "The independent current selection supplies a nonempty bulk target set");
         if (data.transition === "east-west" || data.transition === "west-east")
-            compare(wanted.length, expected.filter(row => row.block === (state.block === "east" ? "west" : "east") && row.category === "peak").length, "The bank-switch control replaces identities while retaining exactly the same target count");
+            compare(wanted.length, expected.filter(row => !row.blocked && row.block === (state.block === "east" ? "west" : "east") && row.category === "peak").length, "The bank-switch control replaces identities while retaining exactly the same target count");
         const before = snapshot();
         const after = JSON.parse(JSON.stringify(before));
         wanted.forEach(id => after[id].free = data.makeFree);

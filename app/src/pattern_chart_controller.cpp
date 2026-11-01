@@ -1087,8 +1087,12 @@ void PatternChartController::reset() {
 
 QString PatternChartController::hoverAt(double x, double y, int pane, double height) const {
     const auto found = nearest(x, y, pane, height, std::numeric_limits<double>::infinity());
-    return found ? QString::fromStdString(edi::hover_text(experiment_->patternSource(axis()), *found->series, found->point))
-                 : QString();
+    if (!found) {
+        return {};
+    }
+    // The values drawn, with the background subtracted when it is.
+    const edi::PatternSource source = edi::presented_source(experiment_->patternSource(axis()), view());
+    return QString::fromStdString(edi::hover_text(source, *found->series, found->point));
 }
 
 QString PatternChartController::hoverReadout(double x, double y, int pane, double height) const {
@@ -1096,9 +1100,9 @@ QString PatternChartController::hoverReadout(double x, double y, int pane, doubl
     if (!found) {
         return {};
     }
+    const edi::PatternSource source = edi::presented_source(experiment_->patternSource(axis()), view());
     QStringList lines;
-    for (const edi::HoverLine& line :
-         edi::hover_readout(experiment_->patternSource(axis()), *found->series, found->point)) {
+    for (const edi::HoverLine& line : edi::hover_readout(source, *found->series, found->point)) {
         const auto piece = [this](const std::string& text, const std::string& style) {
             const QString escaped = QString::fromStdString(text).toHtmlEscaped();
             return style.empty() ? escaped

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from tests.integration.py.test_scan_app_contract import block, property_value, source
+from tests.integration.py.test_scan_app_contract import block, javascript, property_value, source
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -39,8 +39,18 @@ def test_data_table_declares_named_component_columns():
     rows = block(qml, 'delegate: TableRow {')
     repeater = block(rows, 'Repeater {')
     label = block(repeater, 'EaComponents.ListViewLabel {')
-    assert property_value(repeater, 'model') == 'row.model.componentIntensities', (
-        'Each point supplies all of its ordered structure intensities'
+    expression = property_value(repeater, 'model')
+    observed = javascript(
+        'const table={componentNames:["alpha","beta","gamma"]};'
+        'const row={};row.model={componentIntensities:[1.25,9.5,16.75]};'
+        'const full=(' + expression + ');'
+        'row.model.componentIntensities=[1.25,9.5];const partial=(' + expression + ');'
+        'delete row.model.componentIntensities;const empty=(' + expression + ');'
+        'console.log(JSON.stringify([full,partial,empty]));'
+    )
+    assert observed == [[1.25, 9.5, 16.75], [1.25, 9.5, None], [None, None, None]], (
+        'Each point supplies its ordered structure intensities and retains empty cells '
+        'for unavailable curves so rows stay aligned with every header'
     )
     assert (
         property_value(label, 'text')

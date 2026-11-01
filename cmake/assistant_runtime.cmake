@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: BSD-3-Clause
-# ADR-0056: an app-owned official native runtime, never a global installation.
+# ADR-0057: an app-owned official native runtime, never a global installation.
 # These are kind checks before direct I/O, not content/receipt substitutes.
 function(_edi_runtime_require_regular path)
     if(IS_SYMLINK "${path}")

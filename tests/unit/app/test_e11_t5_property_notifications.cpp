@@ -155,7 +155,7 @@ class PropertyNotificationProof : public QObject {
         Observations check;
         dedicated(edi_app::GeneratedCategory::staticMetaObject,
                   {"source", "categoryId", "loop", "output", "names", "labels", "units",
-                   "setByProgram", "rows"},
+                   "setByProgram", "rowCount", "kinds", "options", "cells"},
                   check);
         dedicated(edi_app::ExperimentViewModel::staticMetaObject,
                   {"facilityToken", "instrumentToken", "descriptionEditable"}, check);
@@ -183,13 +183,14 @@ class PropertyNotificationProof : public QObject {
         owner.setCategoryId(categoryId ? "first" : "metadata");
         owner.setSource(&a);
         check.require(
-            !owner.rows().isEmpty() && owner.names().contains(categoryId ? "value" : "title"),
+            owner.rowCount() > 0 && owner.names().contains(categoryId ? "value" : "title"),
             "Actual initial text category has its authored column");
         Notices notices;
         for (const auto* name : {"source", "categoryId", "loop", "output", "names", "labels",
                                  "units", "setByProgram"})
             notices.add(&owner, name, check, "category");
-        auto* rows = notices.add(&owner, "rows", check, "category");
+        const auto* rows = owner.rows();
+        check.require(rows != nullptr, "The current category owns its stable row model");
         bool entered = false;
         const auto nested = [&] {
             if (entered) return;
@@ -201,19 +202,20 @@ class PropertyNotificationProof : public QObject {
         };
         QObject legacyContext;
         if (boundary.endsWith("dedicated"))
-            rows->after = nested;
+            QObject::connect(&owner, &edi_app::GeneratedCategory::rowCountChanged,
+                             &legacyContext, nested);
         else
-            QObject::connect(&owner, &edi_app::GeneratedCategory::changed, &legacyContext, nested);
+            QObject::connect(owner.rows(), &QAbstractItemModel::modelReset,
+                             &legacyContext, nested);
         if (categoryId)
             owner.setCategoryId("middle");
         else
             owner.setSource(&b);
-        check.require(entered, "Actual legacy/dedicated callback enters same owner C");
+        check.require(entered, "Actual model/property callback enters same owner C");
         const int title = owner.names().indexOf(categoryId ? "value" : "title");
-        const auto row =
-            owner.rows().isEmpty() ? QStringList{} : owner.rows().first().toStringList();
+        check.require(owner.rows() == rows, "Reentry retains the constant row-model identity");
         check.require((categoryId ? owner.categoryId() == "last" : owner.source() == &c) &&
-                          title >= 0 && title < row.size() && row[title] == "C",
+                          owner.rowCount() > 0 && title >= 0 && owner.value(0, title) == "C",
                       "The real final category reads C, not an observer-supplied value");
         notices.finish();
         const auto before = notices.count();
@@ -469,10 +471,10 @@ class PropertyNotificationProof : public QObject {
             QPointer<edi_app::GeneratedCategory> owner = new edi_app::GeneratedCategory;
             owner->setCategoryId("metadata");
             owner->setSource(&a);
-            QObject::connect(owner.data(), &edi_app::GeneratedCategory::changed, &callbackContext,
+            QObject::connect(owner.data(), &edi_app::GeneratedCategory::rowCountChanged, &callbackContext,
                              [&] { delete owner.data(); });
             owner->setSource(&b);
-            check.require(owner.isNull(), "Actual category owner deleted at legacy boundary");
+            check.require(owner.isNull(), "Actual category owner deleted at the current row notification boundary");
             delete owner.data();
         } else if (kind == "block") {
             QString value = categoryText("A");
@@ -591,8 +593,11 @@ class PropertyNotificationProof : public QObject {
         else if (boundary == "options")
             QObject::connect(owner->instrumentOptions(), &edi_app::OptionListModel::countChanged,
                              &legacyContext, nested);
+        else if (instrument)
+            QObject::connect(owner, &edi_app::ExperimentViewModel::instrumentTokenChanged,
+                             &legacyContext, nested);
         else
-            QObject::connect(owner, &edi_app::ExperimentViewModel::descriptionChanged,
+            QObject::connect(owner, &edi_app::ExperimentViewModel::facilityTokenChanged,
                              &legacyContext, nested);
         if (instrument)
             owner->setInstrument(choices[0]);

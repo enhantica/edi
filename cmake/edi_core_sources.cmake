@@ -86,7 +86,7 @@ function(edi_core_sources root out)
     file(READ ${EDI_OPENAI_CAPABILITIES_FILE} EDI_OPENAI_CAPABILITIES)
     configure_file(${root}/core/src/openai_capabilities_data.cpp.in ${CMAKE_CURRENT_BINARY_DIR}/openai_capabilities_data.cpp @ONLY)
 
-    # ADR0057: package-relative skills are immutable product resources, not runtime paths.
+    # ADR0058: package-relative skills are immutable product resources, not runtime paths.
     set(EDI_SKILL_ROOT ${root}/data/assistant/skills)
     set(EDI_SKILL_INDEX_FILE ${EDI_SKILL_ROOT}/index.json)
     set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${EDI_SKILL_INDEX_FILE})

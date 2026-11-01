@@ -22,6 +22,7 @@ layout(std140, binding = 0) uniform buf {
     float qt_Opacity;
     float halfWidth;
     float pixel;  // one device pixel, in item pixels
+    vec4 paper;   // the colour the lines are drawn on
 };
 
 void main() {
@@ -46,6 +47,9 @@ void main() {
     ends = vec4(a, b);
     neighbours = vec4(before, after);
     present = vec2(mod(flags, 2.0), floor(flags / 2.0));
-    tint = colour[pattern] * qt_Opacity;
+    // An opacity below 1 blends the colour toward the paper and keeps the line opaque, so a pixel two segments reach is
+    // drawn in the same colour, never darker (the colours are premultiplied: a hidden line stays hidden).
+    vec4 ink = colour[pattern];
+    tint = vec4(mix(paper.rgb * ink.a, ink.rgb, qt_Opacity), ink.a);
     gl_Position = qt_Matrix * vec4(position, 0.0, 1.0);
 }

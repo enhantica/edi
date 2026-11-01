@@ -4,12 +4,12 @@ import importlib
 import math
 import re
 import warnings
-from operator import itemgetter
 
 import pytest
 import yaml
 
 from tests.fixtures import cif_import_cases as case
+from tests.fixtures.project_save.reference import six_digits
 
 ROUTES = ['factory-str', 'factory-path', 'project']
 if case.API == 'edi':
@@ -19,37 +19,57 @@ if case.API == 'edi':
 @pytest.mark.parametrize('route', ROUTES)
 @pytest.mark.parametrize('kind', ['structure', 'experiment'])
 @pytest.mark.parametrize('shape', ['item', 'column'])
-@pytest.mark.parametrize('row', case.inventory(), ids=itemgetter('uid'))
+@pytest.mark.parametrize(
+    'probe',
+    [
+        (row, spelling, witness)
+        for row in case.inventory()
+        for name in row['cif_names']
+        for spelling in dict.fromkeys([name, name.replace('.', '_', 1).upper()])
+        for witness in range(5)
+    ],
+    ids=[
+        row['uid'] + ':' + name + ':s' + str(style) + ':v' + str(witness)
+        for row in case.inventory()
+        for name in row['cif_names']
+        for style, _ in enumerate(dict.fromkeys([name, name.replace('.', '_', 1).upper()]))
+        for witness in range(5)
+    ],
+)
 def test_every_item_alias_variant_and_absence_has_a_saved_outcome(
-    tmp_path, capfd, route, kind, shape, row
+    tmp_path, capfd, route, kind, shape, probe
 ):
+    row, spelling, witness = probe
     errors = []
-    for i, name in enumerate(row['cif_names']):
-        for style, spelling in enumerate(dict.fromkeys([name, name.replace('.', '_', 1).upper()])):
-            for j, value in enumerate([case.token(row), '?', '.', "'?'", "''"]):
-                text = case.payload(kind, row, spelling, shape, value)
-                assert case.key(spelling) in case.columns(text), (
-                    'Each inventory probe is present in the actual CIF input'
-                )
-                capfd.readouterr()
-                result = case.observe(
-                    kind,
-                    text,
-                    tmp_path / f'{i}-{style}-{j}',
-                    route,
-                    '.edi' if route == 'collection-edi-path' else '.cif',
-                )
-                result['notes'] += capfd.readouterr().err.splitlines()
-                try:
-                    case.accounted(
-                        result,
-                        spelling,
-                        value,
-                        row['edi_names'][0],
-                        count=2 if shape == 'column' else 1,
-                    )
-                except AssertionError as error:
-                    errors.append(f'{spelling} {value}: {error}')
+    values = [case.token(row), '?', '.', "'?'", "''"]
+    for j, value in enumerate([values[witness]]):
+        text = case.payload(kind, row, spelling, shape, value)
+        assert case.key(spelling) in case.columns(text), (
+            'Each inventory probe is present in the actual CIF input'
+        )
+        capfd.readouterr()
+        result = case.observe(
+            kind,
+            text,
+            tmp_path / f'{j}',
+            route,
+            '.edi' if route == 'collection-edi-path' else '.cif',
+        )
+        result['notes'] += capfd.readouterr().err.splitlines()
+        try:
+            case.accounted(
+                result,
+                spelling,
+                (
+                    str(six_digits(float(value)))
+                    if row.get('dtype') in {'float', 'number'} and value == case.token(row)
+                    else value
+                ),
+                row['edi_names'][0],
+                count=2 if shape == 'column' else 1,
+            )
+        except AssertionError as error:
+            errors.append(f'{spelling} {value}: {error}')
     assert not errors, (
         'Every declaration reaches a saved value or a named terminal outcome: ' + repr(errors)
     )
@@ -248,7 +268,9 @@ def test_source_frame_tensor_is_settled_by_the_inverse_lattice_operation(
             )
             for value, (i, j) in zip(physical, pairs, strict=True)
         ]
-        assert components == pytest.approx(expected, rel=1e-8, abs=1e-10), (
+        assert components == pytest.approx(
+            [six_digits(value) for value in expected], rel=1e-8, abs=1e-10
+        ), (
             'The final tensor agrees with the cubic or hexagonal '
             'isotropic closed form in its saved units'
         )
@@ -339,7 +361,35 @@ def test_project_members_use_case_insensitive_suffixes_and_edi_shadowing(tmp_pat
     )
 
 
-def test_observer_rejects_lookup_only_and_partial_column_escapes():
+def test_observer_rejects_lookup_only_and_partial_column_escapes(tmp_path):
+    result = case.observe(
+        'experiment',
+        case.EXPERIMENT + "_diffrn_source.facility 'Authored facility'\n",
+        tmp_path,
+    )
+    assert 'refused' not in result, 'A supported facility declaration reaches the real reader'
+    assert not any(case.notices(note, '_diffrn_source.facility') for note in result['notes']), (
+        'The supported facility is consumed rather than reported unused'
+    )
+    assert [
+        case.decoded(v) for v in result['cells'].get(case.key('_instrument.facility'), [])
+    ] == ['Authored facility'], (
+        'The saved model retains the facility after the real reader looks it up'
+    )
+    native = (
+        (case.ROOT / 'tests/fixtures/loop_parameter_ids/line-segment/experiments/bank.edi')
+        .read_text()
+        .replace('data_bank', 'data_witness', 1)
+    )
+    for marker in ['', '_instrument.name ?\n_instrument.facility ?\n']:
+        result = case.observe('experiment', native + '\n' + marker, tmp_path / str(len(marker)))
+        assert 'refused' not in result, (
+            'Optional instrument descriptions may be omitted or unknown'
+        )
+        for tag in ['_instrument.name', '_instrument.facility']:
+            assert result['cells'].get(case.key(tag), [] if marker else ['?']) == ['?'], (
+                'An unspecified instrument description is written as the unknown marker'
+            )
     for found in [[], ['0.1'], ['0.271828', '0.1']]:
         with pytest.raises(AssertionError, match='saved column'):
             case.accounted(

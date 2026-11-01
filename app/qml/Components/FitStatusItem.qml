@@ -103,6 +103,12 @@ Control {
     font.family: EaStyle.Fonts.fontFamily
     font.pixelSize: EaStyle.Sizes.fontPixelSize
 
+    // A clickable item is a button for the keyboard too, as the sidebar's fit buttons were: Tab reaches it, Space, Enter
+    // or Return activates it, it shows its focus, and an unavailable one does neither. Assistive tools see the action
+    // above.
+    focusPolicy: clickable ? Qt.StrongFocus : Qt.NoFocus
+    Keys.onPressed: event => ApplicationInfo.statusItemKeyPressed(control, event)
+
     contentItem: Row {
         id: contentRow
         spacing: control.framed ? Math.round(control.font.pixelSize * 0.4) : control.font.pixelSize * 0.5
@@ -178,8 +184,9 @@ Control {
             Behavior on color {
                 EaAnimations.ThemeChange {}
             }
-            border.width: outline
-            border.color: control.frameBorderColor
+            // The keyboard focus: an accent border, inside a frame that has none of its own.
+            border.width: control.visualFocus && control.clickable ? Math.max(outline, 1) : outline
+            border.color: control.visualFocus && control.clickable ? EaStyle.Colors.themeAccent : control.frameBorderColor
         }
     }
 

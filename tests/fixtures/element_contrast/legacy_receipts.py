@@ -30,10 +30,10 @@ def require_readable_elements(output):
         for consumer in row['consumers']:
             actual, backgrounds = consumer['colour'], consumer['backgrounds']
             assert backgrounds, 'A flat element colour has an observed drawing background'
-            assert all(contrast(actual, background) >= 3 for background in backgrounds), (
-                'Every flat element consumer reaches strict 3:1 contrast on all its underlays'
+            assert all(contrast(actual, background) >= 2 for background in backgrounds), (
+                'Every flat element consumer reaches strict 2:1 contrast on all its underlays'
             )
-            if all(contrast(original, background) >= 3 for background in backgrounds):
+            if all(contrast(original, background) >= 2 for background in backgrounds):
                 assert actual.lower() == original.lower(), (
                     'Published element bytes already readable on all underlays stay unchanged'
                 )

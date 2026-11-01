@@ -141,12 +141,17 @@ EaElements.ComboBox {
         }
     }
 
+    // In a table the shown value starts where its column's header does (the owner, 2026-10-24) and at the box's left
+    // edge, and the arrow sits in the padding kept for it: the base draws it over the end of the text's room (the
+    // owner, 2026-10-27); the list keeps its own padding.
     Component.onCompleted: ApplicationInfo.searchCompleted(() => {
         control.contentItemLabel.horizontalAlignment = Qt.binding(() => control.inTable ? control.horizontalAlignment : Text.AlignLeft);
     }, () => {
         control.popup.contentItem.model = Qt.binding(() => control.popup.visible ? control.delegateModel : null);
     }, () => {
         control.popup.focus = Qt.binding(() => control.searchable);
+    }, () => {
+        control.indicator.x = Qt.binding(() => control.width - control.indicator.width - control.padding);
     })
 
     Timer {

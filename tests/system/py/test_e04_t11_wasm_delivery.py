@@ -22,6 +22,7 @@ import pytest
 import yaml
 
 from tests.fixtures.cwl_family.historical import original_tokens
+from tests.fixtures.metadata_transition.source_bytes import previous_bytes
 from tests.fixtures.table_display.metadata_bytes import pre_catalogue_bytes
 from tests.fixtures.web_parallel.numeric import uncertainty_tolerances
 
@@ -171,7 +172,7 @@ def test_native_fixture_is_bound_to_the_committed_nontrivial_project():
         for path in sorted(project.rglob('*')):
             if path.is_file():
                 digest.update(path.relative_to(project).as_posix().encode() + b'\0')
-                digest.update(pre_catalogue_bytes(path))
+                digest.update(previous_bytes(path.relative_to(ROOT).as_posix(), path.read_bytes()))
         assert digest.hexdigest() == record['project_sha256'], (
             'Browser catalogue parity: every native regression pin binds its current input bytes'
         )

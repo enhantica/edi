@@ -13,6 +13,7 @@
 #include "edi/background_estimate.hpp"
 #include "edi/parameter_walk.hpp"
 #include "edi/categories.hpp"
+#include "edi/display.hpp"
 #include "edi/fittability.hpp"
 #include "edi/validation.hpp"
 
@@ -715,7 +716,7 @@ const std::set<std::string>& known_covered_tags() {
         "_data_range.time_of_flight_max", "_data_range.time_of_flight_min",
         "_data_range.time_of_flight_step", "_data_range.two_theta_max",
         "_data_range.two_theta_min", "_data_range.two_theta_step",
-        // _experiment_type (the four typed axes and the description, ADR-0052)
+        // _experiment_type (the four typed axes and the description, ADR-0054)
         "_experiment_type.beam_mode", "_experiment_type.radiation_probe",
         "_experiment_type.sample_form", "_experiment_type.scattering_type",
         "_experiment_type.dimensionality", "_experiment_type.polarisation",
@@ -988,12 +989,18 @@ Structure structure_from_block(const Block& block, const std::string& where) {
         }
         structure.scattering_lengths_fm = std::move(declared);
     }
-    // How the Structure view shows it, as saved.
+    // How the Structure view shows it, as saved: each value one its dictionary entry admits, as crysta reads it.
+    std::map<std::string, std::string> view;
     for (const auto& [tag, value] : block.items) {
         if (tag.starts_with("_structure_view.")) {
-            structure.view[tag.substr(std::string_view("_structure_view.").size())] = value;
+            const std::string item = tag.substr(std::string_view("_structure_view.").size());
+            if (const std::string why = detail::structure_view_refusal(item, value); !why.empty()) {
+                fail_schema(where, "invalid-structure-view", why);
+            }
+            view[item] = value;
         }
     }
+    structure.view = std::move(view);
     return structure;
 }
 
@@ -1512,7 +1519,7 @@ std::optional<PdDataBase> parse_measured_data(const Block& block, BeamModeEnum m
 
 // ADR-0040: the `_background_estimate` settings. A blank (absent, `.` or `?`) item is the default; any other
 // value is checked as the Python setters check it.
-// ADR-0052: an experiment's description, each item as declared: `1d` the only
+// ADR-0054: an experiment's description, each item as declared: `1d` the only
 // dimensionality, `unpolarised` the polarisation of a neutron experiment and `.` that of an X-ray
 // one, the instrument and facility any text (`?` an unknown one).
 void read_description(const Block& block, ExperimentBase& experiment, const std::string& where) {
@@ -3325,8 +3332,10 @@ std::vector<std::string> registered_peak_types() {
 enum class ProjectLoadPolicy { Complete, Construction, SavedValues };
 std::string text_field_paragraphs(const std::vector<std::string>& lines);  // defined below
 
+// `data_root`, when given, is where a scan's data files are, for a project read from a scratch save of one.
 static Project load_project_folder(const std::string& directory, const WarningSink& on_warning,
-                                   ProjectLoadPolicy policy=ProjectLoadPolicy::Complete, bool assistant_result=false) {
+                                   ProjectLoadPolicy policy=ProjectLoadPolicy::Complete, bool assistant_result=false,
+                                   const std::string& data_root = {}) {
     const bool whole=policy==ProjectLoadPolicy::Complete;
     // One exit for the loader's warnings — the sink when given, else stderr as before.
     const auto warn = [&on_warning](const std::string& message) {
@@ -4035,7 +4044,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
                     declared_su_rule = lexical_value(line, su_rule_tag.size(), su_rule_tag);
                     continue;
                 }
-                // A retired description tag (ADR-0052) converts below, once, and is never
+                // A retired description tag (ADR-0054) converts below, once, and is never
                 // written back.
                 if (const std::string tag = line.substr(0, line.find_first_of(" \t\r"));
                     detail::is_retired_metadata_tag(tag)) {
@@ -4217,6 +4226,7 @@ static Project load_project_folder(const std::string& directory, const WarningSi
 
     project.path = directory;
     project.metadata.path = directory;
+    project.scan_data_root = data_root;
     // A declared template dataset must be one of the scan's files.
     if (!project.sequential_fit.template_file.empty()) {
         check_scan_template_file(project, project.sequential_fit.template_file);
@@ -4943,7 +4953,11 @@ namespace {
 // A save of the project into a fresh scratch directory, removed when this object goes.
 class ScratchSave {
    public:
-    explicit ScratchSave(const Project& project) {
+    // A read of the scratch save is as complete as the project (one still being built has no structure or experiment
+    // yet), and a scan's data files are read where the project's are.
+    explicit ScratchSave(const Project& project)
+        : whole_(!project.structures.empty() && !project.experiments.empty()),
+          data_root_(project.scan_data_root.empty() ? project.path : project.scan_data_root) {
         std::random_device random;
         for (int attempt = 0; root_.empty(); ++attempt) {
             const fs::path candidate =
@@ -4963,10 +4977,17 @@ class ScratchSave {
             std::error_code absent;
             fs::copy_file(fs::path(project.path) / "project.edi", source / "project.edi", absent);
         }
-        Project unseeded = project;
-        unseeded.path = source.string();
-        unseeded.scan_data_root.clear();
-        save_project(unseeded, (root_ / "project").string());
+        // The project itself, not a copy: a copy is never calculated, so its computed columns and categories would
+        // be left out of the texts. Its files come from the source folder, with no scan data, through the writer a
+        // save delegates to (save_project).
+        const std::string from = source.string();
+        try {
+            save_project_via_crysta(project, (root_ / "project").string(), &from);
+        } catch (const IoError&) {
+            throw;
+        } catch (const std::exception& error) {
+            throw IoError(error.what());
+        }
     }
     ~ScratchSave() {
         std::error_code ignored;
@@ -4986,7 +5007,7 @@ class ScratchSave {
     Project load_with(const std::string& relative, const std::string& text, const WarningSink& on_warning) const {
         const fs::path path = root_ / "project" / relative;
         fs::create_directories(path.parent_path());
-        std::ofstream(path, std::ios::binary | std::ios::trunc) << text;
+        detail::replace_file((root_ / "project").string(), path.string(), text);
         // A refusal or a warning names the project's own file, never the scratch folder.
         const std::string folder = (root_ / "project").string() + "/";
         const auto local = [&folder](std::string message) {
@@ -4996,17 +5017,23 @@ class ScratchSave {
             return message;
         };
         try {
-            return load_project((root_ / "project").string(), ProjectLoadMode::Construction, [&on_warning, &local](const std::string& warning) {
-                if (on_warning) {
-                    on_warning(local(warning));
-                }
-            });
+            // A project still being built reads with the construction role, which keeps reference integrity.
+            return load_project_folder(
+                (root_ / "project").string(),
+                [&on_warning, &local](const std::string& warning) {
+                    if (on_warning) {
+                        on_warning(local(warning));
+                    }
+                },
+                whole_ ? ProjectLoadPolicy::Complete : ProjectLoadPolicy::Construction, false, data_root_);
         } catch (const std::exception& refusal) {
             throw IoError(local(refusal.what()));
         }
     }
 
    private:
+    bool whole_;
+    std::string data_root_;
     fs::path root_;
 };
 
@@ -5028,6 +5055,53 @@ std::vector<std::string> saved_file_order(const Project& project) {
 }
 
 }  // namespace
+
+namespace {
+// Every item `text` gives, scalar items and loop columns, as the reader's tokenizer finds them (several on a line, a loop
+// header anywhere), each by its current name in lower case and as often as it is given.
+std::vector<std::string> given_item_names(const std::string& text, bool every_name) {
+    std::vector<std::string> names;
+    for (const Token& token : tokenize(text, "text")) {
+        if (is_tag(token)) {
+            std::string name = detail::current_edi_name(token.text, every_name);
+            std::ranges::transform(name, name.begin(),
+                                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            names.push_back(std::move(name));
+        }
+    }
+    return names;
+}
+}  // namespace
+
+UnappliedItems unapplied_items(const Project& read, const std::string& relative, const std::string& text,
+                               const std::string& current) {
+    const bool block = relative.starts_with("structures/") || relative.starts_with("experiments/");
+    const std::string written =
+        relative == "reports/report.edi" ? report_settings_text(read) : ScratchSave(read).text(relative);
+    const std::vector<std::string> kept = given_item_names(written, block);
+    const std::vector<std::string> held = given_item_names(current, block);
+    const auto among = [](const std::vector<std::string>& names, const std::string& name) {
+        return std::ranges::find(names, name) != names.end();
+    };
+    UnappliedItems refused;
+    std::set<std::string> seen;
+    for (const std::string& name : given_item_names(text, block)) {
+        // The header's version is the one item a text may repeat, as the reader allows.
+        if (!seen.insert(name).second) {
+            if (name != "_edi.schema_version" && !among(refused.repeated, name)) {
+                refused.repeated.push_back(name);
+            }
+            continue;
+        }
+        // An output the file holds now is kept as it is, though a read nobody calculated writes none; any other item
+        // must be one the read writes back.
+        const bool output = category_is_output(name.substr(1, name.find('.') - 1));
+        if (!among(kept, name) && !(output && among(held, name))) {
+            refused.unknown.push_back(name);
+        }
+    }
+    return refused;
+}
 
 std::string block_edi_text(const Project& project, BlockKind kind, const std::string& name) {
     const ScratchSave save(project);

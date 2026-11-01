@@ -282,7 +282,9 @@ AnalysisViewModel::AnalysisViewModel(edi::Project& project, ProjectEditor& edito
       aliases_(new AliasListModel(project, editor, this)),
       constraints_(new ConstraintListModel(project, editor, this)),
       categories_(new CategoryListModel(this)),
-      text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this, [] { return std::string("analysis/analysis.edi"); })) {
+      text_(new BlockText([saved] { return saved("analysis/analysis.edi"); }, this,
+                          [] { return std::string("analysis/analysis.edi"); }, {},
+                          [saved] { return saved.discovered("analysis/analysis.edi"); })) {
     descent_options_->setItemOptions("minimizer.descent", edi::supported_descents(), edi::default_descent());
     minimizer_type_options_->setItemOptions("minimizer.type", edi::supported_minimizer_types());
     sync();
@@ -394,7 +396,7 @@ void AnalysisViewModel::sync() {
     fit_start_->sync();
     aliases_->sync();
     constraints_->sync();
-    categories_->setCategories(edi::analysis_categories(project_), [this] { return text_->text().toStdString(); });
+    categories_->setCategories(edi::analysis_categories(project_), [this] { return text_->discoveryText().toStdString(); });
 }
 
 }  // namespace edi_app

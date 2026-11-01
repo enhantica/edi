@@ -59,7 +59,7 @@ struct NativeDependencies {
     std::function<std::uint64_t()> monotonic_ms;
 };
 
-/// Native SIWC connection (ADR-0055). Uses its own protected registrations, never another app's credentials.
+/// Native SIWC connection (ADR-0056). Uses its own protected registrations, never another app's credentials.
 /// Construct and call on the Qt event-loop thread. The sink must queue controller input rather than reenter it.
 class ChatGptConnection {
    public:

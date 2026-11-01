@@ -435,8 +435,10 @@ StructureViewModel::StructureViewModel(SavedFile saved, edi::Structure& structur
       scattering_lengths_(new ScatteringLengthListModel(structure, editor, this)),
       categories_(new CategoryListModel(this)),
       text_(new BlockText([saved, &structure] { return saved(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); }, this,
-                          [&structure] { return std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string(); })) {
-    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->text().toStdString(); });
+                          [&structure] { return std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string(); }, {},
+                          [saved, &structure] { return saved.discovered(std::filesystem::path(edi::entity_path("", "structure", structure.name)).generic_string()); })) {
+    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
+                               [this] { return edi::calculated_categories(structure_); });
     captureScene();
 }
 
@@ -468,7 +470,8 @@ void StructureViewModel::sync() {
     atom_sites_->sync();
     atom_site_adps_->sync();
     scattering_lengths_->sync();
-    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->text().toStdString(); });
+    categories_->setCategories(edi::structure_categories(structure_), [this] { return text_->discoveryText().toStdString(); },
+                               [this] { return edi::calculated_categories(structure_); });
 }
 
 }  // namespace edi_app

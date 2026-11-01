@@ -73,6 +73,8 @@ QtObject {
     // Save as, asked for from a page (Get started); the window's folder dialog answers (Main.qml; edi
     // ADR-0017 §13).
     signal saveAsRequested
+    // That Save as ended: saved at the place chosen, or cancelled or refused.
+    signal saveAsFinished(bool saved)
     // Run `action` (opening, creating or closing a project, quitting) once the open project's unsaved changes are
     // dealt with: at once when there are none, else after the window asks to save or discard them.
     signal changesQuestion(var action, var abandoned)
@@ -80,6 +82,13 @@ QtObject {
     // for it: replacing the project rebuilds the pages, and the page holding that handler with them.
     function afterChanges(action, abandoned) {
         ApplicationInfo.afterProjectChanges(action, abandoned);
+    }
+    // The Text tab holding an edit not yet applied, or null. What would replace what it shows (another project,
+    // closing the window, another Show choice) settles the edit first, as leaving the tab does (TextTab.settleEdit).
+    property var textEdit: null
+    // Every Text tab shows `choice` ("editable" or "everything") once an unapplied edit is settled.
+    function setTextShow(choice) {
+        ApplicationInfo.setTextShow(choice);
     }
     // A created project that could not be saved at its location stays open, unsaved: the window says why.
     signal createFailed

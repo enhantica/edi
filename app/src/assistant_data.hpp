@@ -19,7 +19,7 @@
 
 namespace edi_app::assistant_data {
 // Original native publication owners, without calculation or GUI publication.
-// ADR-0057 owns the scalar column contract.
+// ADR-0058 owns the scalar column contract.
 inline double index_number(std::size_t value) {
     if constexpr (std::numeric_limits<std::size_t>::digits > std::numeric_limits<double>::digits) {
         if (static_cast<std::uintmax_t>(value) > ((quint64{1} << std::numeric_limits<double>::digits) - 1))

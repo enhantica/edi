@@ -589,7 +589,8 @@ std::vector<ParameterEntry> parameter_entries(Project& project) {
     const bool joint = project.experiments.size() > 1;
     for (const auto& experiment : project.experiments) {
         const std::string prefix = joint ? "experiments[" + experiment->name + "]." : std::string("experiment.");
-        for (const Category& category : experiment_categories(*experiment)) {
+        // Every value the experiment carries, the coefficients its profile does not use included (edi ADR-0053).
+        for (const Category& category : experiment_categories(*experiment, true)) {
             std::vector<CategoryField> fields = category.fields;
             fields.insert(fields.end(), category.asymmetry.begin(), category.asymmetry.end());
             for (std::size_t i = 0; i < fields.size(); ++i) {

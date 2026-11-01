@@ -4005,7 +4005,7 @@ struct AssistantViewModel::State {
     static void control_append(Object& outcome,const std::shared_ptr<NativeRecord>& record) {
         if(!record || !record->control_capacity || !record->control_diagnostic ||
             outcome.value("complete").toBool() || outcome.contains("action_error") || outcome.contains("action_field"))return;
-        // Keep the original call's closed control diagnostic pair (ADR-0056).
+        // Keep the original call's closed control diagnostic pair (ADR-0057).
         outcome["action_error"]=QLatin1StringView(control_error(record->control_diagnostic.cause));
         outcome["action_field"]=QLatin1StringView(control_field(record->control_diagnostic.field));
     }
@@ -8367,7 +8367,7 @@ struct AssistantViewModel::State {
                 if (!original_call()) return;
                 if(!retained && (!presented || historyCapacity)) {
                     // Settle the same mandatory row after original wire roles release;
-                    // never reattempt a response or a storage/identity refusal (ADR-0056).
+                    // never reattempt a response or a storage/identity refusal (ADR-0057).
                     if(!present())return;
                 }
                 work_latch_call(call,attempted?"attempted":"unknown");
