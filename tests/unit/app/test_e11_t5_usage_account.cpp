@@ -2,13 +2,20 @@
 // First finite usage layer: real Panel pure relations; canonical/UI/timer gates remain separate.
 #include <QtCore/qtestsupport_core.h>
 #include <QtQml/qqml.h>
+#include <QtQml/qqmllist.h>
 #include <QtTest/qtestcase.h>
+#include <private/qjsvalue_p.h>
+#include <private/qqmlcontextdata_p.h>
+#include <private/qqmllistwrapper_p.h>
+#include <private/qv4persistent_p.h>
 
 #include <QColor>
 #include <QCoreApplication>
 #include <QCryptographicHash>
+#include <QDebug>
 #include <QFile>
 #include <QJSValue>
+#include <QJSValueIterator>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -28,6 +35,8 @@
 #include <QTranslator>
 #include <QUrl>
 #include <QVariantMap>
+#include <functional>
+#include <limits>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -83,6 +92,104 @@ class UsageTranslator final : public QTranslator {
 };
 void prerequisite(bool condition, const char* name) {
     if (!condition) throw std::runtime_error(name);
+}
+QVariantMap usageValueKind(const QJSValue& value) {
+    QVariantMap facts{{"object", value.isObject()}, {"callable", value.isCallable()},
+                      {"error", value.isError()},   {"undefined", value.isUndefined()},
+                      {"null", value.isNull()},     {"number", value.isNumber()},
+                      {"string", value.isString()}, {"bool", value.isBool()}};
+    if (value.isError()) {
+        facts.insert("error_name", value.property("name").toString());
+        facts.insert("error_message", value.property("message").toString());
+        facts.insert("error_stack", value.property("stack").toString());
+    }
+    return facts;
+}
+void retainUsageContextAdmission(QVariantList& trace, QVariantMap facts) {
+    facts.insert("trace_index", trace.size());
+    trace.append(facts);
+    // Retain obtainable facts BEFORE Panel creation/teardown or any failing assertion.
+    qInfo().noquote() << "E11_USAGE_CONTEXT_ADMISSION"
+                      << QJsonDocument::fromVariant(facts).toJson(QJsonDocument::Compact);
+}
+void requireUsageContextBundle(QQmlEngine* engine, const QJSValue& value, const char* tag,
+                               bool objectMode, QVariantList& trace) {
+    QVariantMap facts{{"stage", "bundle-admission"},
+                      {"tag", QString::fromLatin1(tag)},
+                      {"object_context", objectMode},
+                      {"value", usageValueKind(value)},
+                      {"pending_engine_error", engine->hasError()}};
+    const QStringList names{QStringLiteral("Array"),    QStringLiteral("Date"),
+                            QStringLiteral("JSON"),     QStringLiteral("Math"),
+                            QStringLiteral("isFinite"), QStringLiteral("state")};
+    bool valid =
+        value.isObject() && !value.isCallable() && !value.isError() && !engine->hasError();
+    QStringList actualNames;
+    QVariantMap members;
+    if (valid) {
+        QJSValueIterator iterator(value);
+        while (iterator.hasNext()) {
+            iterator.next();
+            if (value.hasOwnProperty(iterator.name())) actualNames.append(iterator.name());
+        }
+        actualNames.sort();
+        valid = actualNames == names;
+        for (const auto& name : names) {
+            const auto member = value.property(name);
+            auto kind = usageValueKind(member);
+            kind.insert("own", value.hasOwnProperty(name));
+            members.insert(name, kind);
+            const bool function = name == "Array" || name == "Date" || name == "isFinite";
+            valid = valid && value.hasOwnProperty(name) && !member.isError() &&
+                    (function ? member.isCallable() : member.isObject() && !member.isCallable());
+        }
+        for (const auto& pair : {qMakePair(QStringLiteral("JSON"), QStringLiteral("parse")),
+                                 qMakePair(QStringLiteral("JSON"), QStringLiteral("stringify")),
+                                 qMakePair(QStringLiteral("Math"), QStringLiteral("ceil")),
+                                 qMakePair(QStringLiteral("Date"), QStringLiteral("now")),
+                                 qMakePair(QStringLiteral("Array"), QStringLiteral("from"))}) {
+            const auto receiver = value.property(pair.first);
+            const bool objectReceiver = receiver.isObject() || receiver.isCallable();
+            const auto method = objectReceiver ? receiver.property(pair.second) : QJSValue();
+            auto kind = usageValueKind(method);
+            kind.insert("own", objectReceiver && receiver.hasOwnProperty(pair.second));
+            members.insert(pair.first + "." + pair.second, kind);
+            valid = valid && objectReceiver && receiver.hasOwnProperty(pair.second) &&
+                    method.isCallable() && !method.isError();
+        }
+    }
+    facts.insert("own_names", actualNames);
+    facts.insert("members", members);
+    facts.insert("admitted", valid);
+    retainUsageContextAdmission(trace, facts);
+    if (!valid)
+        throw std::runtime_error(
+            (QStringLiteral("context factory bundle refused before assignment: ") +
+             QString::fromLatin1(tag))
+                .toStdString());
+}
+void requireUsageContextReadback(QQmlContext* context, const QString& name,
+                                 const QJSValue& expected, bool objectMode, QVariantList& trace) {
+    const auto actual = context->contextProperty(name);
+    const bool typed = actual.metaType() == QMetaType::fromType<QJSValue>();
+    const auto script = typed ? actual.value<QJSValue>() : QJSValue();
+    const bool same = typed && script.strictlyEquals(expected);
+    retainUsageContextAdmission(
+        trace, {{"stage", "context-property-readback"},
+                {"name", name},
+                {"object_context", objectMode},
+                {"variant_type",
+                 QString::fromLatin1(actual.typeName() ? actual.typeName() : "<invalid>")},
+                {"variant_valid", actual.isValid()},
+                {"variant_null", actual.isNull()},
+                {"exact_qjsvalue_type", typed},
+                {"strict_same_value", same},
+                {"actual", usageValueKind(script)},
+                {"expected", usageValueKind(expected)}});
+    if (!same)
+        throw std::runtime_error(
+            (QStringLiteral("actual QQmlContext readback differs before use: ") + name)
+                .toStdString());
 }
 }  // namespace
 
@@ -153,6 +260,36 @@ class UsageCallLookupContext final : public QObject {
     void mathChanged();
     void dateChanged();
     void finiteChanged();
+};
+
+// Per-case recorder, kept alive across the genuine QML destruction handler.
+class UsageContextResult final : public QObject {
+    Q_OBJECT
+   public:
+    int calls = 0;
+    QJSValue value;
+    Q_INVOKABLE void recordResult(const QJSValue& result) {
+        ++calls;
+        value = result;
+    }
+};
+// An ordinary QObject getter may replace/retire its context during a real lookup.
+class UsageContextSwitch final : public QObject {
+    Q_OBJECT
+    Q_PROPERTY(bool equalColumns READ equalColumns NOTIFY equalColumnsChanged)
+   public:
+    mutable int reads = 0;
+    mutable std::function<void()> effect;
+    bool equalColumns() const {
+        ++reads;
+        if (effect) {
+            auto once = std::move(effect);
+            once();
+        }
+        return true;
+    }
+   signals:
+    void equalColumnsChanged();
 };
 
 class UsageAccountProof final : public QObject {
@@ -849,29 +986,35 @@ class UsageAccountProof final : public QObject {
     return {JSON:json,Array:ContextArray,Date:ContextDate,Math:math,isFinite:finite,state:state};
 })
 )JS"));
+            retainUsageContextAdmission(trace, {{"stage", "factory-admission"},
+                                                {"value", usageValueKind(make)},
+                                                {"pending_engine_error", engine_->hasError()}});
             prerequisite(make.isCallable(), "context aliases delegate to real original builtins");
             for (const bool objectMode : {false, true}) {
                 UsageLookupContext object;
                 QJSEngine::setObjectOwnership(&object, QJSEngine::CppOwnership);
                 auto context = std::make_unique<QQmlContext>(engine_->rootContext());
-                if (objectMode) context->setContextObject(&object);
                 const auto receiver =
                     objectMode ? engine_->newQObject(&object) : QJSValue(QJSValue::UndefinedValue);
                 const auto bundle = [&](const char* tag, int minutes, bool invalid,
                                         const char* finite) {
-                    return make.call({QJSValue(QString::fromLatin1(tag)), QJSValue(minutes),
-                                      QJSValue(invalid), QJSValue(QString::fromLatin1(finite)),
-                                      receiver});
+                    const auto value = make.call(
+                        {QJSValue(QString::fromLatin1(tag)), QJSValue(minutes), QJSValue(invalid),
+                         QJSValue(QString::fromLatin1(finite)), receiver});
+                    requireUsageContextBundle(engine_, value, tag, objectMode, trace);
+                    return value;
                 };
                 const auto a = bundle("context-A", 37, false, "delegate");
                 const auto b = bundle("context-B", 38, true, "delegate");
                 const auto no = bundle("context-false", 38, false, "false");
                 const auto yes = bundle("context-true", 38, false, "true");
+                if (objectMode) context->setContextObject(&object);
                 const auto assign = [&](const QString& name, const QJSValue& value) {
                     if (objectMode)
                         object.set(name, value);
                     else
                         context->setContextProperty(name, QVariant::fromValue(value));
+                    requireUsageContextReadback(context.get(), name, value, objectMode, trace);
                 };
                 for (const auto& name : {"JSON", "Array", "Date", "Math", "isFinite"})
                     assign(QString::fromLatin1(name), a.property(QString::fromLatin1(name)));
@@ -968,11 +1111,14 @@ class UsageAccountProof final : public QObject {
                     const auto explicitMath = bundle("explicit-Math", 39, false, "delegate");
                     context->setContextProperty(
                         "Math", QVariant::fromValue(explicitMath.property("Math")));
+                    requireUsageContextReadback(context.get(), "Math", explicitMath.property("Math"), true, trace);
                     snapshot("explicit-over-object");
                     check.require(
                         owner->property("unitResetText").toString() == "Resets in 39 min",
                         "explicit context properties outrank same-name context object properties");
                     object.set("Math", a.property("Math"));
+                    requireUsageContextReadback(context.get(), "Math",
+                                                explicitMath.property("Math"), true, trace);
                     snapshot("shadowed-object-notify");
                     check.require(
                         owner->property("unitResetText").toString() == "Resets in 39 min",
@@ -1005,12 +1151,17 @@ class UsageAccountProof final : public QObject {
             UsageLookupContext object;
             QJSEngine::setObjectOwnership(&object, QJSEngine::CppOwnership);
             QQmlContext context(engine_->rootContext());
-            context.setContextObject(&object);
             const auto values = make.call({QJSValue(QStringLiteral("scope-context")), QJSValue(37),
                                            QJSValue(false), QJSValue(QStringLiteral("true")),
                                            engine_->newQObject(&object)});
-            for (const auto& name : {"JSON", "Array", "Date", "Math", "isFinite"})
-                object.set(QString::fromLatin1(name), values.property(QString::fromLatin1(name)));
+            requireUsageContextBundle(engine_, values, "scope-context", true, trace);
+            context.setContextObject(&object);
+            for (const auto& name : {"JSON", "Array", "Date", "Math", "isFinite"}) {
+                const auto expected = values.property(QString::fromLatin1(name));
+                object.set(QString::fromLatin1(name), expected);
+                requireUsageContextReadback(&context, QString::fromLatin1(name), expected, true,
+                                            trace);
+            }
             QSignalSpy scopeWarnings(engine_, &QQmlEngine::warnings);
             prerequisite(scopeWarnings.isValid(), "scope-method warning observer is valid");
             auto owner = panel(
@@ -1035,6 +1186,435 @@ class UsageAccountProof final : public QObject {
         result.insert("context_lookup_trace", trace);
         return result;
     }
+    Q_INVOKABLE QVariantMap contextStorageLifetime(QObject* applicationInfo,
+                                                   const QString& scenario) const {
+        UsageChecks check;
+        QVariantList trace;
+        try {
+            prerequisite(
+                applicationInfo && qjsEngine(applicationInfo) == engine_ && !engine_->hasError(),
+                "the actual imported singleton and proof engine are identical and clean");
+            prerequisite(qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
+                         "the storage fixture uses its explicit actual selected usage phase");
+            const QStringList admitted{"scalar-known-retired",   "scalar-found-undefined",
+                                       "scalar-absent-global",   "id-precedence",
+                                       "scalar-reentry-replace", "list-replace",
+                                       "list-negative-index",    "list-at-end",
+                                       "list-maximum-index",     "list-shrink",
+                                       "list-type-change",       "list-type-change-pending",
+                                       "list-owner-destroyed"};
+            prerequisite(admitted.contains(scenario), "unknown context-storage scenario refuses");
+            UsageContextResult recorder;
+            UsageContextSwitch switcher;
+            QJSEngine::setObjectOwnership(&recorder, QJSEngine::CppOwnership);
+            QJSEngine::setObjectOwnership(&switcher, QJSEngine::CppOwnership);
+            auto context = std::make_unique<QQmlContext>(engine_->rootContext());
+            QPointer<QQmlContext> publicOwner(context.get());
+            const auto originalData = QQmlContextData::get(context.get());
+            prerequisite(originalData && originalData->publicContext() == context.get(),
+                         "the retained original data names the actual live public owner");
+            const bool listCase = scenario.startsWith("list-");
+            const bool reentry = scenario.startsWith("scalar-reentry-");
+            QObject first, second, replacement;
+            context->setContextProperty("paddingSlot", 91);
+            if (listCase)
+                context->setContextProperty("columns",
+                                            QVariant::fromValue(QList<QObject*>{&first, &second}));
+            else if (scenario != "scalar-absent-global")
+                context->setContextProperty("columns", 37);
+            if (reentry) context->setContextObject(&switcher);
+            const auto offered = context->contextProperty("columns");
+            prerequisite(
+                listCase ? offered.metaType() == QMetaType::fromType<QList<QObject*>>()
+                : scenario == "scalar-absent-global" ? !offered.isValid()
+                                                     : offered.toInt() == 37,
+                "the original public external slot contains its exact offered live value");
+            if (reentry)
+                prerequisite(context->contextProperty("equalColumns").toBool(),
+                             "the real context object's original equal-columns getter is live");
+            // A scoped global sentinel arms no-fallback without changing any builtin.
+            auto global = engine_->globalObject();
+            prerequisite(!global.hasOwnProperty("columns"),
+                         "the owned columns sentinel requires an originally absent global name");
+            auto sentinel = engine_->newObject();
+            sentinel.setProperty("tag", "forbidden-global-fallback");
+            global.setProperty("columns", sentinel);
+            const auto restoreGlobal = qScopeGuard([&] { global.deleteProperty("columns"); });
+            QQmlComponent component(engine_);
+            const QByteArray id = scenario == "id-precedence" ? "columns" : "storageHost";
+            component.setData(
+                "import QtQml\nimport edi.app\nQtObject { id: " + id +
+                    "; required property var proof; property bool recordDestruction: false;"
+                    "property var fittedWidths: []; " +
+                    (reentry ? QByteArray() : QByteArray("property bool equalColumns: true; ")) +
+                    "property var captureColumns: function() { return "
+                    "ApplicationInfo.tableColumnWidths(); }"
+                    "Component.onDestruction: if (recordDestruction) "
+                    "proof.recordResult(ApplicationInfo.tableColumnWidths());"
+                    "}",
+                QUrl("file:///e11-context-storage-lifetime.qml"));
+            QSignalSpy warnings(engine_, &QQmlEngine::warnings);
+            prerequisite(warnings.isValid(), "context-storage warnings have an actual observer");
+            std::unique_ptr<QObject> owner(component.createWithInitialProperties(
+                {{"proof", QVariant::fromValue(engine_->newQObject(&recorder))}}, context.get()));
+            if (!owner) {
+                QStringList errors;
+                for (const auto& error : component.errors()) errors.append(error.toString());
+                throw std::runtime_error(errors.join('\n').toStdString());
+            }
+            auto scriptOwner = engine_->newQObject(owner.get());
+            const auto capture = scriptOwner.property("captureColumns");
+            prerequisite(capture.isCallable(), "the real QML creation-scope callable exists");
+            const auto live = capture.callWithInstance(scriptOwner);
+            if (scenario == "id-precedence") {
+                check.require(
+                    live.toQObject() == owner.get(),
+                    "the declared QML id wins over a same-name external slot and global sentinel");
+            } else if (scenario == "scalar-absent-global") {
+                check.require(live.strictlyEquals(sentinel),
+                              "a genuinely absent context name still uses the original real "
+                              "global fallback");
+            } else if (!listCase) {
+                const bool positive = live.isNumber() && live.toInt() == 37;
+                check.require(positive,
+                              "the actual native resolver returns the original live scalar before "
+                              "any negative");
+                prerequisite(positive,
+                             "the scalar negative requires its genuine live positive first");
+            }
+            retainUsageContextAdmission(trace,
+                                        {{"stage", "storage-live-positive"},
+                                         {"scenario", scenario},
+                                         {"public_owner_alive", !publicOwner.isNull()},
+                                         {"live_kind", usageValueKind(live)},
+                                         {"global_sentinel", live.strictlyEquals(sentinel)}});
+            if (!listCase && scenario != "id-precedence" && scenario != "scalar-absent-global") {
+                if (scenario == "scalar-known-retired") {
+                    prerequisite(
+                        owner->setProperty("recordDestruction", true),
+                        "actual destruction will call the existing public native procedure");
+                    context.reset();
+                    check.require(
+                        originalData->publicContext() == nullptr,
+                        "real public-owner retirement leaves no replacement public context");
+                    check.require(publicOwner.isNull(),
+                                  "the original public creation context really died");
+                    QPointer<QObject> object(owner.get());
+                    owner.reset();
+                    check.require(originalData->publicContext() == nullptr,
+                                  "the actual destruction lookup does not recreate its retired "
+                                  "public owner");
+                    trace.append(QVariantMap{{"scenario", scenario},
+                                             {"calls", recorder.calls},
+                                             {"undefined", recorder.value.isUndefined()},
+                                             {"global", recorder.value.strictlyEquals(sentinel)}});
+                    check.require(object.isNull() && recorder.calls == 1 &&
+                                      recorder.value.isUndefined() &&
+                                      !recorder.value.strictlyEquals(sentinel),
+                                  "a genuine destruction call reaches found-retired storage as "
+                                  "undefined without global fallback or recreation");
+                } else {
+                    if (scenario == "scalar-found-undefined")
+                        context->setContextProperty(
+                            "columns", QVariant::fromValue(QJSValue(QJSValue::UndefinedValue)));
+                    else if (scenario == "scalar-reentry-replace")
+                        switcher.effect = [&] { context->setContextProperty("columns", 73); };
+                    const int reads = switcher.reads;
+                    const auto current = capture.callWithInstance(scriptOwner);
+                    trace.append(QVariantMap{{"scenario", scenario},
+                                             {"undefined", current.isUndefined()},
+                                             {"value", current.isNumber() ? current.toInt() : -1},
+                                             {"getter_reads", switcher.reads - reads},
+                                             {"global", current.strictlyEquals(sentinel)}});
+                    check.require(!current.strictlyEquals(sentinel),
+                                  "a selected external name never borrows the armed global value");
+                    if (scenario == "scalar-reentry-replace")
+                        check.require(
+                            current.isNumber() && current.toInt() == 73 && switcher.reads > reads,
+                            "ordinary getter reentry exposes the current replacement rather than "
+                            "a cached scalar");
+                    else
+                        check.require(
+                            current.isUndefined(),
+                            "a found undefined known slot remains undefined without fallback");
+                }
+            }
+            if (listCase) {
+                // Extract THAT actual returned native wrapper, never a copied callback
+                // implementation.
+                const auto* wrapper = QJSValuePrivate::asManagedType<QV4::QmlListWrapper>(&live);
+                prerequisite(
+                    wrapper,
+                    "the existing native public procedure returned its actual QmlListWrapper");
+                auto callbacks = *wrapper->d()->property();
+                prerequisite(callbacks.count && callbacks.at,
+                             "the actual native wrapper offers count and at callback entrances");
+                const auto liveCount = callbacks.count(&callbacks);
+                retainUsageContextAdmission(trace, {{"stage", "storage-list-count"},
+                                                    {"scenario", scenario},
+                                                    {"count", liveCount}});
+                prerequisite(liveCount == 2,
+                             "the actual count must admit the initial live indices");
+                const bool positive = callbacks.at(&callbacks, 0) == &first &&
+                                      callbacks.at(&callbacks, 1) == &second;
+                retainUsageContextAdmission(trace, {{"stage", "storage-list-positive"},
+                                                    {"scenario", scenario},
+                                                    {"current_values_match", positive}});
+                check.require(positive,
+                              "the real native list callbacks return their original live owner "
+                              "values before every negative");
+                prerequisite(positive,
+                             "list negatives require the real wrapper and live callbacks first");
+                engine_->collectGarbage();
+                const bool postGcPositive = callbacks.count(&callbacks) == 2 &&
+                                            callbacks.at(&callbacks, 0) == &first &&
+                                            callbacks.at(&callbacks, 1) == &second &&
+                                            originalData->publicContext() == context.get();
+                check.require(postGcPositive,
+                              "the actual retained wrapper and descriptor preserve live "
+                              "identities across GC");
+                prerequisite(postGcPositive,
+                             "the adverse list state requires the genuine post-GC positive first");
+                if (scenario == "list-replace" || scenario == "list-shrink") {
+                    context->setContextProperty(
+                        "columns", QVariant::fromValue(QList<QObject*>{&replacement}));
+                    check.require(callbacks.count(&callbacks) == 1 &&
+                                      callbacks.at(&callbacks, 0) == &replacement,
+                                  "the held wrapper rereads current replacement storage rather "
+                                  "than snapshotting its list");
+                    if (scenario == "list-shrink")
+                        check.require(callbacks.at(&callbacks, 1) == nullptr,
+                                      "an earlier count cannot authorize a stale index after "
+                                      "legal owner list shrink");
+                } else if (scenario == "list-type-change") {
+                    context->setContextProperty("columns", QStringLiteral("not-a-QObject-list"));
+                    check.require(
+                        callbacks.count(&callbacks) == 0 && callbacks.at(&callbacks, 0) == nullptr,
+                        "a current non-list slot refuses count and at rather than using cached "
+                        "list storage");
+                    context->setContextProperty(
+                        "columns", QVariant::fromValue(QList<QObject*>{&replacement}));
+                    check.require(callbacks.count(&callbacks) == 1 &&
+                                      callbacks.at(&callbacks, 0) == &replacement,
+                                  "returning to a live typed list restores the same wrapper's "
+                                  "current values");
+                } else if (scenario == "list-type-change-pending") {
+                    context->setContextProperty("columns", QStringLiteral("not-a-QObject-list"));
+                    const auto firstError =
+                        engine_->newErrorObject(QJSValue::TypeError, "owned first context error");
+                    engine_->throwError(firstError);
+                    prerequisite(
+                        engine_->hasError(),
+                        "the first same-engine exception is genuinely pending before callbacks");
+                    const auto count = callbacks.count(&callbacks);
+                    const auto item = callbacks.at(&callbacks, 0);
+                    const bool pending = engine_->hasError();
+                    const auto caught = engine_->catchError();
+                    check.require(count == 0 && item == nullptr && pending &&
+                                      caught.strictlyEquals(firstError),
+                                  "actual unavailable-list callbacks retain the exact "
+                                  "already-pending first exception");
+                } else if (scenario == "list-owner-destroyed") {
+                    context.reset();
+                    check.require(
+                        originalData->publicContext() == nullptr,
+                        "real public-owner retirement leaves no replacement public context");
+                    check.require(publicOwner.isNull(),
+                                  "the list's original public storage owner really died");
+                    check.require(
+                        callbacks.count(&callbacks) == 0 && callbacks.at(&callbacks, 0) == nullptr,
+                        "actual held callbacks safely refuse a dead original owner even when raw "
+                        "callback storage remains");
+                    check.require(
+                        originalData->publicContext() == nullptr,
+                        "actual dead-owner list callbacks do not recreate the public context");
+                } else {
+                    const qsizetype index = scenario == "list-negative-index" ? -1
+                                            : scenario == "list-at-end"
+                                                ? 2
+                                                : (std::numeric_limits<qsizetype>::max)();
+                    check.require(callbacks.at(&callbacks, index) == nullptr,
+                                  "the actual live at callback refuses negative, end and maximum "
+                                  "out-of-range indices");
+                }
+                trace.append(QVariantMap{{"scenario", scenario},
+                                         {"public_owner_alive", !publicOwner.isNull()}});
+            }
+            check.require(warnings.isEmpty() && !engine_->hasError(),
+                          "the admitted context lifetime/refusal controls add no unrelated QML or "
+                          "engine error");
+        } catch (const std::exception& error) {
+            check.require(false, QString::fromUtf8(error.what()));
+        }
+        auto result = check.result();
+        result.insert("context_storage_trace", trace);
+        return result;
+    }
+
+    Q_INVOKABLE QVariantMap contextConversionLifetime(QObject* applicationInfo,
+                                                      const QString& scenario) const {
+        UsageChecks check;
+        QVariantList trace;
+        try {
+            prerequisite(
+                applicationInfo && qjsEngine(applicationInfo) == engine_ && !engine_->hasError(),
+                "conversion uses the actual imported singleton and clean proof engine");
+            prerequisite(qgetenv("EDI_E11_USAGE_ACCOUNT_PHASE") == e11_usage_phase::phase(),
+                         "conversion uses the explicit actual selected usage phase");
+            prerequisite(scenario == "default-conversion" || scenario == "native-reference-gc",
+                         "unknown Edi conversion scenario refuses");
+            QObject first, second, replacement;
+            auto context = std::make_unique<QQmlContext>(engine_->rootContext());
+            QPointer<QQmlContext> publicOwner(context.get());
+            const auto originalData = QQmlContextData::get(context.get());
+            prerequisite(originalData && originalData->publicContext() == context.get(),
+                         "original data/public owner identity is captured while live");
+            context->setContextProperty("paddingSlot", 91);
+            context->setContextProperty("columns",
+                                        QVariant::fromValue(QList<QObject*>{&first, &second}));
+            prerequisite(context->contextProperty("columns").metaType() ==
+                             QMetaType::fromType<QList<QObject*>>(),
+                         "the offered external value is the real typed QObject list");
+            QQmlComponent component(engine_);
+            component.setData(
+                "import QtQml\nimport edi.app\nQtObject { property var fittedWidths: [];"
+                "property bool equalColumns: true;"
+                "property var captureColumns: function() { return "
+                "ApplicationInfo.tableColumnWidths(); } }",
+                QUrl("file:///e11-context-conversion-lifetime.qml"));
+            QSignalSpy warnings(engine_, &QQmlEngine::warnings);
+            prerequisite(warnings.isValid(), "actual conversion warnings are observed");
+            std::unique_ptr<QObject> owner(component.create(context.get()));
+            if (!owner) {
+                QStringList errors;
+                for (const auto& error : component.errors()) errors.append(error.toString());
+                throw std::runtime_error(errors.join('\n').toStdString());
+            }
+            const auto scriptOwner = engine_->newQObject(owner.get());
+            const auto capture = scriptOwner.property("captureColumns");
+            prerequisite(capture.isCallable(), "the actual QML creation-scope callable exists");
+            auto live = capture.callWithInstance(scriptOwner);
+            auto* wrapper = QJSValuePrivate::asManagedType<QV4::QmlListWrapper>(&live);
+            prerequisite(wrapper && wrapper->d()->object(),
+                         "the actual Edi bridge returned a wrapper with a live owner");
+            QObject* const nativeOwner = wrapper->d()->property()->object;
+            prerequisite(nativeOwner && wrapper->d()->object() == nativeOwner,
+                         "the actual wrapper guard and callback owner match");
+            QPointer<QObject> nativeOwnerGuard(nativeOwner);
+            auto converted = live.toVariant();
+            prerequisite(
+                converted.metaType() == QMetaType::fromType<QQmlListReference>(),
+                "Qt default conversion of the live bridge wrapper is a native list reference");
+            auto defaultReference = converted.value<QQmlListReference>();
+            const bool liveDefault =
+                defaultReference.isValid() && defaultReference.object() == nativeOwner &&
+                defaultReference.count() == 2 && defaultReference.at(0) == &first &&
+                defaultReference.at(1) == &second;
+            check.require(liveDefault,
+                          "default conversion retains exact live owner and element identities");
+            prerequisite(liveDefault,
+                         "conversion negatives require the genuine live positive first");
+            retainUsageContextAdmission(
+                trace, {{"stage", "conversion-live-positive"},
+                        {"scenario", scenario},
+                        {"public_owner_same", originalData->publicContext() == context.get()},
+                        {"default_type", QString::fromLatin1(converted.typeName())}});
+            if (scenario == "native-reference-gc") {
+                auto direct = wrapper->toListReference();
+                QQmlListReference copied(direct);
+                prerequisite(copied == direct && copied.isValid() &&
+                                 copied.object() == nativeOwner && copied.count() == 2 &&
+                                 copied.at(0) == &first && copied.at(1) == &second,
+                             "the copied direct bridge reference is genuine before GC");
+                QV4::WeakValue weak;
+                weak.set(QJSValuePrivate::engine(&live), QJSValuePrivate::asReturnedValue(&live));
+                prerequisite(!weak.isUndefined(),
+                             "the weak witness names the actual live wrapper");
+                direct = QQmlListReference();
+                defaultReference = QQmlListReference();
+                converted = QVariant();
+                live = QJSValue();
+                wrapper = nullptr;
+                engine_->collectGarbage();
+                retainUsageContextAdmission(trace,
+                                            {{"stage", "conversion-wrapper-gc"},
+                                             {"wrapper_collected", weak.isUndefined()},
+                                             {"native_owner_alive", !nativeOwnerGuard.isNull()}});
+                check.require(weak.isUndefined(),
+                              "dropping JS roots really permits wrapper collection");
+                prerequisite(weak.isUndefined(),
+                             "post-GC checks require actual wrapper collection");
+                const bool survived = nativeOwnerGuard && copied.isValid() &&
+                                      copied.object() == nativeOwnerGuard.data() &&
+                                      copied.count() == 2 && copied.at(0) == &first &&
+                                      copied.at(1) == &second;
+                check.require(survived,
+                              "the genuine copied native reference survives wrapper GC with exact "
+                              "live values");
+                prerequisite(survived, "owner-death checks require a true live post-GC reference");
+                context->setContextProperty("columns",
+                                            QVariant::fromValue(QList<QObject*>{&replacement}));
+                check.require(copied.count() == 1 && copied.at(0) == &replacement,
+                              "the post-GC native reference reads current replacement storage, "
+                              "not a snapshot");
+                context.reset();
+                check.require(publicOwner.isNull() && originalData->publicContext() == nullptr,
+                              "original owner death is observed without a lazy getter");
+                engine_->collectGarbage();
+                check.require(copied.count() == 0 && copied.at(0) == nullptr &&
+                                  originalData->publicContext() == nullptr,
+                              "the native reference is empty/unavailable after owner death and GC "
+                              "without context recreation");
+            } else {
+                engine_->collectGarbage();
+                const bool survived = defaultReference.count() == 2 &&
+                                      defaultReference.at(0) == &first &&
+                                      defaultReference.at(1) == &second &&
+                                      originalData->publicContext() == context.get();
+                check.require(
+                    survived,
+                    "actual default conversion stays live across GC while its owner exists");
+                prerequisite(survived,
+                             "post-death conversion requires the true post-GC live positive");
+                context.reset();
+                check.require(
+                    publicOwner.isNull() && originalData->publicContext() == nullptr,
+                    "original public owner is actually absent before default conversion");
+                engine_->collectGarbage();
+                const bool guardAlive = wrapper->d()->object() != nullptr;
+                const auto after = live.toVariant();
+                bool unavailable = false;
+                if (guardAlive) {
+                    prerequisite(
+                        after.metaType() == QMetaType::fromType<QQmlListReference>(),
+                        "the witnessed live guard selects Qt native-reference conversion");
+                    const auto reference = after.value<QQmlListReference>();
+                    unavailable = reference.count() == 0 && reference.at(0) == nullptr;
+                } else {
+                    prerequisite(after.metaType() == QMetaType::fromType<QObjectList>(),
+                                 "the witnessed absent guard selects Qt QObjectList conversion");
+                    unavailable = after.value<QObjectList>().isEmpty();
+                }
+                retainUsageContextAdmission(
+                    trace, {{"stage", "conversion-after-owner-death"},
+                            {"wrapper_guard_alive", guardAlive},
+                            {"default_type", QString::fromLatin1(after.typeName())},
+                            {"unavailable", unavailable},
+                            {"public_owner_absent", originalData->publicContext() == nullptr}});
+                check.require(unavailable && originalData->publicContext() == nullptr,
+                              "default conversion is empty/unavailable after owner death and "
+                              "never recreates public storage");
+            }
+            check.require(warnings.isEmpty() && !engine_->hasError(),
+                          "actual Edi default/native conversion and GC add no unrelated error");
+        } catch (const std::exception& error) {
+            check.require(false, QString::fromUtf8(error.what()));
+        }
+        auto result = check.result();
+        result.insert("context_conversion_trace", trace);
+        return result;
+    }
+
     Q_INVOKABLE QVariantMap callLookupOrder(QObject* applicationInfo) const {
         UsageChecks check;
         QVariantList trace;
