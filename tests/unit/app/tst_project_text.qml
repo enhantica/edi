@@ -367,6 +367,7 @@ Item {
             Session.closeProject();
             verify(Session.openProject(archive), "A classic ZIP with exactly 65535 files is a valid project archive: " + Session.lastError);
             verify(Session.save(), "The normally opened classic-limit archive saves to its location");
+            compare(proof.archiveMembers(archive).length, 65535, "Saving retains all regular members at the exact classic count boundary");
             Session.closeProject();
             verify(Session.openProject(archive), "The saved classic-limit project archive reopens");
             compare(Session.project.structures.count, 2, "The count boundary preserves both structures through save and reopen");
