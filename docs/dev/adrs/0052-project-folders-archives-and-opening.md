@@ -303,3 +303,28 @@ of the observed status timeout. Independent engine A/B ownership, asynchronous
 liveness through either destruction order, explicit replacement/detachment and
 ordinary one-engine workflow verification must precede acceptance. Existing
 Session/model/currentness, page cancellation and readiness gates remain intact.
+
+
+### Existing unsaved-work choices have native view identities
+
+FIRST is Main's ordinary unsavedChanges Save/Discard/Cancel guard and its Save-as
+counterpart: saveAsChoice exposes the actual standardButton(Dialog.Ok), and the
+existing opened callback names that original item saveAs.accept. The unsaved
+choices now follow the same view-identity principle using declarative bindings:
+while the original dialog is opened, its actual native Discard, Save and Cancel
+buttons are named unsavedChanges.discard, .save and .cancel, and its existing
+header label is named unsavedChanges.title. Null/missing native buttons stay
+unnamed; no alternate control is created. Normal Binding target/when retirement
+restores prior names when inactive or retargeted.
+
+Qt's standardButton API returns the existing standard button or null, without
+opening, pressing or constructing one. The title remains the actual translated
+header, and the dialog's flags/order/labels/layout/roles/availability, native
+pointer handling and original accepted/discarded/rejected continuations remain.
+This is metadata on the real controls, not a second input/action path or a new
+backend/export. The existing read-only named geometry hook can report the real
+visible title/button and its scene rectangle; physical input still has to reach
+the original offered choice. Closing/dismissing the guard is not a Discard
+receipt, and Reset never bypasses unsaved work merely because the browser lacks
+an accessibility node. No missing browser accessibility subtree is claimed fixed
+by naming: its Qt/WASM role/lifecycle propagation is a separate platform issue.
