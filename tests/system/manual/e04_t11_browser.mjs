@@ -13,7 +13,7 @@ import { inspectDevelopDiagnostics } from './web_develop_diagnostics.mjs';
 import { checkDesktopOnlyAssistant } from './web_assistant_desktop_only.mjs';
 import { beginFitProgress, endFitProgress, advancesLiveFitProgress, observesOrderedFitProgress } from './web_fit_progress.mjs';
 import { controlPointer, restoreCanvasViewport, waitControlGeometry } from './web_control_geometry.mjs';
-import { assertSavedProject, assertNativeChi } from './web_saved_fit.mjs';
+import { assertSavedProject, assertSavedNativeChi } from './web_saved_fit.mjs';
 import { fittingObservationKind, hasRunningProgress } from '../../fixtures/e04_t11_wasm/browser_observations.mjs';
 
 const [siteArg, mode, outputArg, chromeArg] = process.argv.slice(2);
@@ -569,9 +569,9 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   const chi = Number(before.analysis.match(/^_fit_result.reduced_chi_square\s+(\S+)/m)?.[1]);
   const referenceChi = nativeOracle.reduced_chi_square;
   const chiTolerance = fitCase === 'ncaf' ? 0.005 : 1e-11 + 1e-9*Math.abs(referenceChi);
-  assertNativeChi(chi, referenceChi, chiTolerance);
+  const writtenReferenceChi = assertSavedNativeChi(chi, referenceChi, chiTolerance);
   await writeFile(join(output, `${mode}-saved-fit.json`), JSON.stringify({
-    project:before.name, chi, referenceChi, chiTolerance,
+    project:before.name, chi, referenceChi, writtenReferenceChi, chiTolerance,
   }, null, 2));
 
   const iterations = Number(before.analysis.match(/^_fit_result.iterations\s+(\S+)/m)?.[1]);
