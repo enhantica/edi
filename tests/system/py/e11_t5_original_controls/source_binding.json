@@ -90,7 +90,7 @@
       "compiled": false
     }
   ],
-  "active_native_cases_sha256": "2f0f026f34571484879fe38360909f71102cf72249bd2d8028790f6097a89dd7",
+  "active_native_cases_sha256": "37c798b1a241d370e50a961ca769c3973a99f287729d53fd187b658a435d64ac",
   "original_source_protocol_cases_sha256": "b2f640318a0e45adabb7b4bddf430ba622ecc44c699997760bf08bece448f933",
   "compiled_caller_proof": {
     "current": {
@@ -114,7 +114,7 @@
       }
     }
   },
-  "source_proof_basis": "PENDING: independently source-prove all six cases for BOTH final variants, bound to each actual bond/source/tree/generated inputs and exact per-variant case registry. Static353 compiler inventory is an input only, not completed attribution. Retain all descriptions/counts/steps and elect only source-proved locations.",
+  "source_proof_basis": "Conditional source345B d2d91ee21032fe3be12cf17b78a386408d2702a32186e4ea45a81ddc7e1c143b: exact per-variant decoded declaration/first-error maps, native-only two conversationAvailable field replacements and one fixed prompt error in five Panel-null cases. Actual final bonds/loaded module/cache/import/pre-engine/census and BOTH compiled_caller_proof records remain PENDING. Immutable original96 contracts stay historical.",
   "original87_role": "Historical immutable pure protocol custody +unchanged Qt/compiler/GUI/runtime only. Native SDK2 equality removed ONLY for this explicitDEA/SDK116 composition and replaced by exact SDK116 tuple above.",
   "binding_status": "PENDING_ROOT_FINAL_INPUTS",
   "caller_binding_status": "PENDING_ROOT_COMPILED_CALLER_PROOF",
