@@ -6262,6 +6262,20 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
     TableFreshInputs freshInputs;
     std::vector<double> freshWidths;
     QStringList freshKinds;
+    // A view row is styled directly on its cells too, keeping the table's per-cell maps as padForFiller and alignCell
+    // keep them; ownership is checked once per cell write rather than by a script call per cell.
+    QJSValue viewPaddings, viewKinds, viewChecks, viewTable;
+    if (!fresh && panelUsageReady(f)) {
+        const auto sizes = assistantContextField(f, "EaStyle", "Sizes");
+        freshInputs.fillerIndex = panelUsageContextRead(f, "fillerIndex").toInt();
+        freshInputs.fillerWidth = panelUsageContextRead(f, "fillerWidth").toNumber();
+        freshInputs.spacing = panelUsageRead(f, sizes, "tableColumnSpacing").toNumber();
+        freshInputs.fontPixelSize = panelUsageRead(f, sizes, "fontPixelSize").toNumber();
+        viewPaddings = panelUsageContextRead(f, "basePaddings");
+        viewKinds = panelUsageContextRead(f, "cellKinds");
+        viewChecks = panelUsageContextRead(f, "checkCells");
+        viewTable = panelUsageContextRead(f, "table");
+    }
     if (fresh && panelUsageReady(f)) {
         const auto sizes = assistantContextField(f, "EaStyle", "Sizes");
         freshInputs.fillerIndex = panelUsageContextRead(f, "fillerIndex").toInt();
@@ -6285,7 +6299,7 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
             if (!tableSameValues(f, edges, panelUsageContextRead(f, "wideEdges"))) panelUsageContextWrite(f, "wideEdges", edges);
             if (!editorLife(f, life) || !panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
             if (!fresh) styleKinds = kinds.toString() + QLatin1Char('|') + panelUsageContextRead(f, "wideEdges").toString() + QLatin1Char('|');
-            if (fresh) {
+            {
                 const auto edges = tableNumbers(panelUsageContextRead(f, "wideEdges"));
                 freshInputs.wideEdges.assign(edges.size(), false);
                 for (std::size_t index = 0; index < edges.size(); ++index) freshInputs.wideEdges[index] = edges[index] != 0;
@@ -6322,6 +6336,70 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
             styleKey = styleBase + styleKinds;
             for (const auto* cell : holder->childItems()) styleKey += QString::number(quintptr(cell), 16) + QLatin1Char(',');
             if (holder->property("ediTableStyle").toString() == styleKey) return panelUsageReady(f);
+        }
+        if (!fresh) {
+            if (holder == nullptr) return panelUsageReady(f);
+            QList<QPointer<QQuickItem>> owned;
+            for (auto* cell : holder->childItems()) owned.append(cell);
+            const auto stillOwned = [&](qsizetype index) {
+                const auto current = holder->childItems();
+                return current.size() == owned.size() && owned[index] && current[index] == owned[index].data();
+            };
+            const qsizetype columnCount = panelUsageRead(f, widths, "length").toInt();
+            for (qsizetype index = 0; index < owned.size() && index < columnCount && panelUsageReady(f); ++index) {
+                if (!stillOwned(index)) { complete = false; return false; }
+                QQuickItem* cell = owned[index].data();
+                const bool keeps = tableFreshHas(cell, "keepsAlignment");
+                const QString given = index > 0 && index < freshKinds.size() && !freshKinds[index].isEmpty() && !keeps ? freshKinds[index] : QString();
+                const auto cellValue = f->newQObject(cell);
+                // alignCell: a cell keeps its kind's alignment.
+                QJSValue mapped = panelUsageMemberCall(f, viewKinds, "get", {cellValue});
+                if (!given.isEmpty() && !keeps && !(mapped.isString() && mapped.toString() == given)) {
+                    panelUsageMemberCall(f, viewKinds, "set", {cellValue, QJSValue(given)});
+                    mapped = QJSValue(given);
+                    tableFreshAlign(cell, given);
+                }
+                if (!panelUsageReady(f) || !stillOwned(index)) { complete = false; return false; }
+                // padForFiller for a view cell: its own paddings kept in the map once, then the column's padding.
+                if (!tableFreshHas(cell, "rightPadding") || keeps) continue;
+                QJSValue base = panelUsageMemberCall(f, viewPaddings, "get", {cellValue});
+                if (!base.isObject()) {
+                    base = f->newObject();
+                    base.setProperty(QStringLiteral("left"), tableFreshNumber(cell, "leftPadding"));
+                    base.setProperty(QStringLiteral("right"), tableFreshNumber(cell, "rightPadding"));
+                    base.setProperty(QStringLiteral("styled"), QString());
+                    panelUsageMemberCall(f, viewPaddings, "set", {cellValue, base});
+                }
+                const QString kind = mapped.isString() ? mapped.toString() : QString();
+                const bool rightAligned = kind == QLatin1String("number") || kind == QLatin1String("check");
+                double right = base.property(QStringLiteral("right")).toNumber() + (rightAligned ? freshInputs.spacing : 0);
+                if (rightAligned && static_cast<std::size_t>(index) < freshInputs.wideEdges.size() && freshInputs.wideEdges[static_cast<std::size_t>(index)])
+                    right += freshInputs.fontPixelSize;
+                const double naturalRight = right;
+                if (index == freshInputs.fillerIndex) right += freshInputs.fillerWidth;
+                const QString styled = kind + QLatin1Char(':') + QJSValue(right).toString();
+                if (kind != QLatin1String("check") && base.property(QStringLiteral("styled")).toString() == styled) continue;
+                base.setProperty(QStringLiteral("styled"), styled);
+                base.setProperty(QStringLiteral("naturalRight"), naturalRight);
+                cell->setProperty("rightPadding", right);
+                if (!stillOwned(index)) { complete = false; return false; }
+                const double left = base.property(QStringLiteral("left")).toNumber();
+                auto* indicator = kind == QLatin1String("check") ? cell->property("indicator").value<QQuickItem*>() : nullptr;
+                if (indicator != nullptr) {
+                    // Set, not bound: the box's implicit width follows its padding, and its column's width its implicit one.
+                    cell->setProperty("leftPadding", std::max(left, cell->width() - tableFreshNumber(cell, "rightPadding") - indicator->width()));
+                    if (!panelUsageTruth(panelUsageMemberCall(f, viewChecks, "has", {cellValue}))) {
+                        panelUsageMemberCall(f, viewChecks, "add", {cellValue});
+                        panelUsageDeferredMemberCall(f, panelUsageRead(f, cellValue, "widthChanged"), "connect",
+                            [&] { return QJSValueList({panelUsageClosure(f, 395, {viewTable, life, cellValue, QJSValue(static_cast<int>(index))}, 0)}); });
+                    }
+                    continue;
+                }
+                cell->setProperty("leftPadding", left + (kind == QLatin1String("text") ? freshInputs.spacing : 0));
+            }
+            if (!editorLife(f, life)) { complete = false; return false; }
+            if (panelUsageReady(f)) holder->setProperty("ediTableStyle", styleKey);
+            return panelUsageReady(f);
         }
         for (double index = 0; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageRead(f, cells, "length"), 0)
              && assistantRelation(f, QJSValue(index), panelUsageRead(f, widths, "length"), 0); ++index) {
