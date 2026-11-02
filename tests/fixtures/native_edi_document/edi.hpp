@@ -59,18 +59,18 @@ struct EdiItem : EdiElement {
     std::vector<std::string> render_lines() const override;
 };
 
-// A loop_ table: header data-names plus whitespace-split rows (raw tokens, delimiters kept). The
-// constructor is the one way a loop exists — parsed, translated from CIF or built by the writer —
-// and it checks every identity column the loop carries (crysta::identity_columns) after decoding
-// each cell once: a value outside the representable domain, or two equal ids, is refused by name.
-// The header and the rows are private and read-only afterwards, so no later edit can bypass the
-// check.
+// A loop_ table: header data-names plus whitespace-split rows (raw tokens, delimiters kept).
+// The constructor is the one way a loop exists —
+// parsed, translated from CIF or built by the writer — and it checks every identity column the
+// loop carries (crysta::identity_columns) after decoding each cell once: a value outside the
+// representable domain, or two equal ids, is refused by name. The header and the rows are private
+// and read-only afterwards, so no later edit can bypass the check.
 //
 // A loop is an admitted VALUE: it may be copied (a copy is the same checked loop, and a move
 // copies too, leaving its source whole), but it can never be ASSIGNED. Assignment would replace
 // the header and the rows one member at a time without the check, so a failure between the two
-// could leave a header over rows it was never checked with. The members are const for exactly
-// that reason.
+// could leave a header over rows it was never checked with. The
+// members are const for exactly that reason.
 struct EdiItem;
 struct EdiLoop;
 
@@ -116,8 +116,8 @@ class EdiBlock {
     std::vector<std::shared_ptr<EdiLoop>> loops() const;
     std::optional<std::string> get(const std::string& key) const;
     std::shared_ptr<EdiLoop> loop_with(const std::string& key) const;
-    // ADR-0082 §6: every loop with a column whose tag starts with `prefix` (a category's
-    // columns), so a loop is found by any of its columns, not only one marker.
+    // Every loop with a column whose tag starts with `prefix` (a
+    // category's columns), so a loop is found by any of its columns, not only one marker.
     std::vector<std::shared_ptr<EdiLoop>> loops_with_prefix(std::string_view prefix) const;
     std::vector<std::string> render_lines() const;
     std::shared_ptr<EdiReads> reads;  // set on a block translated from a CIF
@@ -158,8 +158,8 @@ std::tuple<double, std::optional<double>, bool> decode_su(const std::string& tok
 // Parse a plain numeric EDI data token — the raw numeric fields a project loads that
 // carry no (su): a measured intensity/TOF/sigma, a background or excluded-region
 // bound, a joint-fit weight. Locale-independent and finite-checked like decode_su, so
-// a non-finite inf/nan never enters the model outside the free-parameter path. Throws
-// EdiParseError on a malformed or non-finite token.
+// a non-finite inf/nan never enters the model outside the free-parameter path
+// Throws EdiParseError on a malformed or non-finite token.
 double parse_edi_number(const std::string& token);
 
 // The axis a `_data_range` declaration generates: `min` plus whole steps of `step`, up to `max`.

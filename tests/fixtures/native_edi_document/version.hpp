@@ -10,8 +10,9 @@ namespace crysta {
 // `import crysta` exposes the same attributes regardless of which implementation
 // the active environment installed (ADR-0029).
 const char* version() noexcept;
-// The git commit the artifact was built from: embedded at build time by
-// cmake/build_commit.cmake, so a runtime witness can bind what it measured to a source sha.
+// The git commit the artifact was built from: embedded at build
+// time by cmake/build_commit.cmake, so a runtime witness can bind what it measured to a source
+// sha.
 const char* build_commit() noexcept;
 
 }  // namespace crysta
