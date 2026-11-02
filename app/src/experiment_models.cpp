@@ -87,7 +87,7 @@ bool BackgroundListModel::setPosition(int row, double position) {
     edi::BackgroundPointInput input;
     input.action = edi::BackgroundPointInput::Action::Update; input.id = point->id.value();
     input.position = position; input.intensity = point->intensity.value.get(); input.free = point->intensity.free.get();
-    return applyDefined(input).value("applied").toBool();
+    return applyDefined(input).applied;
 }
 void BackgroundListModel::append() {
     const QPointer<BackgroundListModel> self(this);
@@ -98,18 +98,18 @@ void BackgroundListModel::append() {
         if (operation_error_ != message) { operation_error_ = message; emit operationErrorChanged(); }
     }
 }
-QVariantMap BackgroundListModel::changeDefined(const QString& operation, const QString& id, double position, double intensity, bool free) {
+BackgroundEditOutcome BackgroundListModel::changeDefined(const QString& operation, const QString& id, double position, double intensity, bool free) {
     std::optional<edi::BackgroundPointInput> input;
     try { input = background_input(operation, id, position, intensity, free, false); }
-    catch (...) { return {{"applied", false}, {"published", false}, {"message", tr("The background input is invalid or exceeds its admitted capacity")}}; }
+    catch (...) { return {false, false, tr("The background input is invalid or exceeds its admitted capacity")}; }
     return applyDefined(*input);
 }
-QVariantMap BackgroundListModel::applyDefined(const edi::BackgroundPointInput& input) {
+BackgroundEditOutcome BackgroundListModel::applyDefined(const edi::BackgroundPointInput& input) {
     const QPointer<BackgroundListModel> self(this);
     ProjectEditor::BackgroundOutcome result;
     try { result = editor_.edit_background_point(experiment_, input); }
     catch (...) { result.message = tr("The background input is invalid or exceeds its admitted capacity"); }
-    const QVariantMap outcome{{"applied", result.applied}, {"published", result.published}, {"message", result.message}};
+    const BackgroundEditOutcome outcome{result.applied, result.published, result.message};
     if (self && operation_error_ != result.message) { operation_error_ = result.message; emit operationErrorChanged(); }
     return outcome;
 }

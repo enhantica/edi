@@ -64,12 +64,10 @@ QVariantList option_identities(const QList<OptionListModel*>& options) {
 
 }  // namespace
 
-QVariantList GeneratedCategory::cells() const {
-    QVariantList cells;
+QList<GeneratedCell> GeneratedCategory::cells() const {
+    QList<GeneratedCell> cells;
     for (qsizetype column = 0; column < names_.size(); ++column) {
-        cells.append(QVariantMap{{QStringLiteral("name"), names_.at(column)},
-                                 {QStringLiteral("column"), static_cast<int>(column)},
-                                 {QStringLiteral("kind"), kinds_.value(column, QStringLiteral("text"))}});
+        cells.append({names_.at(column), static_cast<int>(column), kinds_.value(column, QStringLiteral("text"))});
     }
     return cells;
 }
@@ -90,7 +88,7 @@ void GeneratedCategory::read() {
     remember("setByProgram", QVariant::fromValue(set_by_program_));
     remember("kinds", QVariant::fromValue(kinds_));
     remember("options", option_identities(options_));
-    remember("cells", cells());
+    remember("cells", QVariant::fromValue(cells()));
     quint64 publication = 0;
     const auto propertyNotifications = qScopeGuard([receiver, &publication] {
         const auto current = [&] {
@@ -122,7 +120,7 @@ void GeneratedCategory::read() {
         if (!current()) return;
         publish("options", option_identities(receiver->options_), &GeneratedCategory::optionsChanged);
         if (!current()) return;
-        publish("cells", receiver->cells(), &GeneratedCategory::cellsChanged);
+        publish("cells", QVariant::fromValue(receiver->cells()), &GeneratedCategory::cellsChanged);
     });
     const std::string id = id_.toStdString();
     const edi::TextCategory category =

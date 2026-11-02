@@ -138,11 +138,6 @@ struct ManualControlGesture {
     bool has_action_owner = false, has_structure = false, has_experiment = false;
     bool allowed = false, consumed = false;
 };
-using ManualControlProof = std::shared_ptr<ManualControlGesture>;
-}
-Q_DECLARE_METATYPE(edi_app::ManualControlProof)
-
-namespace edi_app {
 Q_LOGGING_CATEGORY(lcAssistantWidgetLookup, "edi.assistant.widget.lookup", QtWarningMsg)
 namespace {
 Q_LOGGING_CATEGORY(lcAssistantElapsed, "edi.assistant.elapsed", QtWarningMsg)
@@ -7693,7 +7688,7 @@ struct AssistantViewModel::State {
         QPointer<QQuickItem> ordinary_save;
         bool ordinary_guard_accepted=false;
         QString ordinary_name, ordinary_title, ordinary_description, ordinary_intent, ordinary_location, ordinary_failure, ordinary_failure_target;
-        QVariantMap ordinary_facts;
+        ProjectCreationResult ordinary_facts;
         bool ordinary_returned = false, ordinary_settling = false, ordinary_title_supplied=false;
         std::uint64_t ordinary_edit_scope = 0;
         bool estimate_default = false;
@@ -10182,14 +10177,14 @@ struct AssistantViewModel::State {
             const bool current=creation->adopted && creation->receipt->project && project==creation->receipt->project && session &&
                 session->project()==project && creation->ordinary_returned && session->creationOutcomeCurrent(creation->ordinary_facts);
             const bool complete=permitComplete && !creation->cancelled && creation->ordinary_failure.isEmpty() && current &&
-                creation->ordinary_facts.value("success").toBool() && creation->ordinary_facts.value("current").toBool();
+                creation->ordinary_facts.success && creation->ordinary_facts.current;
             auto outcome=complete?creation->population_outcome:fallback;
-            outcome["saved"]=creation->ordinary_returned?QJsonValue(creation->ordinary_facts.value("saved").toBool()):QJsonValue();
-            outcome["path"]=creation->ordinary_facts.value("path").toString();
+            outcome["saved"]=creation->ordinary_returned?QJsonValue(creation->ordinary_facts.saved):QJsonValue();
+            outcome["path"]=creation->ordinary_facts.path;
             if(current) {
                 outcome["name"]=project->name();outcome["title"]=project->title();outcome["description"]=project->description();
             }
-            const auto error=creation->ordinary_facts.value("error").toString();
+            const auto error=creation->ordinary_facts.error;
             if(!error.isEmpty())outcome["message"]=bounded_error(error);
             else if(!creation->ordinary_failure.isEmpty())outcome["message"]=bounded_error(creation->ordinary_failure);
             if(creation->prior_save_attempted && !creation->adopted) {
@@ -17010,7 +17005,7 @@ bool AssistantViewModel::prepareOrdinaryProjectCreation(ProjectViewModel* target
     Q_UNUSED(target); Q_UNUSED(intent); Q_UNUSED(location); return false;
 #endif
 }
-void AssistantViewModel::finishOrdinaryProjectCreationOutcome(const QString& intent,const QVariantMap& facts) noexcept {
+void AssistantViewModel::finishOrdinaryProjectCreationOutcome(const QString& intent,const ProjectCreationResult& facts) noexcept {
 #ifndef __EMSCRIPTEN__
     auto* s=state_.get();const auto creation=s->native_creation;
     if(intent.isEmpty() && s->ordinary_empty_setup_target && s->project==s->ordinary_empty_setup_target &&
@@ -17032,9 +17027,9 @@ void AssistantViewModel::finishOrdinaryProjectCreationOutcome(const QString& int
         if(!run || !run->ordinary || run->normal_project_only || run->id!=intent || !run->confirmation_accepted || !s->create_widget_owned(run))return;
         try {
             auto* session=s->result_session();
-            if(facts.value("success").toBool() && session && session->creationOutcomeCurrent(facts) && run->project && s->project==run->project)
+            if(facts.success && session && session->creationOutcomeCurrent(facts) && run->project && s->project==run->project)
                 s->create_widget_advance(run);
-            else s->create_widget_refuse(run,facts.value("error").toString().isEmpty()?QStringLiteral("The original normal Create outcome did not complete"):facts.value("error").toString());
+            else s->create_widget_refuse(run,facts.error.isEmpty()?QStringLiteral("The original normal Create outcome did not complete"):facts.error);
         }catch(...) {if(s->create_widget_owned(run))s->create_widget_refuse(run,QStringLiteral("The original deferred Create result could not be retained"));}
         return;
     }
@@ -17585,7 +17580,7 @@ void AssistantViewModel::clearCachedHistory() {
 RowTableModel* AssistantViewModel::selectedFiles() const { return &state_->selected_files; }
 RowTableModel* AssistantViewModel::skills() const { return &state_->skills; }
 QString AssistantViewModel::selectedSkill() const { return state_->selected_skill; }
-QVariantMap AssistantViewModel::pendingPlan() const { return state_->plan.toVariantMap(); }
+AssistantPendingPlan AssistantViewModel::pendingPlan() const { return AssistantPendingPlan::fromJson(state_->plan); }
 bool AssistantViewModel::chatRevealRequested() const {
 #ifndef __EMSCRIPTEN__
     // Presentation cannot cover an original control while its input still owns it.
@@ -17599,9 +17594,9 @@ void AssistantViewModel::dismissChatReveal() {
     state_->chat_reveal_requested=false;
     state_->notify();
 }
-QVariantMap AssistantViewModel::pendingQuestion() const {
+AssistantPendingQuestion AssistantViewModel::pendingQuestion() const {
     if(state_->chat_reveal_requested && !chatRevealRequested())return {};
-    return state_->question.toVariantMap();
+    return AssistantPendingQuestion::fromJson(state_->question);
 }
 QString AssistantViewModel::activeJobId() const { return state_->core.value("active_job_id").toString(); }
 bool AssistantViewModel::canCancel() const {
@@ -17643,7 +17638,7 @@ QVariantMap AssistantViewModel::usage() const {
 #endif
     return result;
 }
-QVariantMap AssistantViewModel::account() const {
+AssistantAccount AssistantViewModel::account() const {
 #ifndef __EMSCRIPTEN__
     const auto& state=*state_;
     if (state.generic_mode && !state.generic_retiring &&
@@ -17661,7 +17656,7 @@ QVariantMap AssistantViewModel::account() const {
                 saved.has_project==bool(state.project) && !saved.workspace.isEmpty() && saved.workspace==state.generic_workspace &&
                 State::same_disclosure(saved.disclosure,state.approved_scope);
         }
-        if(known)return state.generic_native.value("account").toObject().toVariantMap();
+        if(known)return AssistantAccount::fromJson(state.generic_native.value("account").toObject());
     }
 #endif
     return {};
@@ -18184,10 +18179,10 @@ void AssistantViewModel::send(const QString& text) {
     (void)submitDraft(text);
 }
 QString AssistantViewModel::submitDraft(const QString& text) {return submitDraftImpl(text,nullptr);}
-QVariantMap AssistantViewModel::submitDraftAdmission(const QString& text) {
+AssistantDraftAdmission AssistantViewModel::submitDraftAdmission(const QString& text) {
     bool waiting=false;
     const auto row=submitDraftImpl(text,&waiting);
-    return {{"status",!row.isEmpty()?QStringLiteral("admitted"):waiting?QStringLiteral("waiting"):QStringLiteral("unconfirmed")},{"row_id",row}};
+    return {!row.isEmpty()?QStringLiteral("admitted"):waiting?QStringLiteral("waiting"):QStringLiteral("unconfirmed"),row};
 }
 QString AssistantViewModel::submitDraftImpl(const QString& text,bool* accountWaiting) {
     if(accountWaiting)*accountWaiting=false;
@@ -18506,7 +18501,7 @@ void AssistantViewModel::answerQuestion(const QString& id, const QString& answer
 #endif
     state_->command({{"type", "answer"}, {"question_id", id}, {"answer", answer}});
 }
-QVariant AssistantViewModel::beginManualControlInput(QQuickItem* control, const QEventPoint& point, QObject* actionOwner) {
+AssistantManualControlToken AssistantViewModel::beginManualControlInput(QQuickItem* control, const QEventPoint& point, QObject* actionOwner) {
     if (!control || !control->window() || !point.device() || point.state() != QEventPoint::State::Pressed) return {};
     try {
         auto gesture = std::make_shared<ManualControlGesture>();
@@ -18527,7 +18522,7 @@ QVariant AssistantViewModel::beginManualControlInput(QQuickItem* control, const 
 #endif
         // Allocate the return value BEFORE any synchronous cancellation. A
         // rejected original grab remains a rejected opaque proof, never a retry.
-        auto proof = QVariant::fromValue(gesture);
+        AssistantManualControlToken proof{gesture};
         const auto receiver = gesture->receiver;
         bool allowed = false;
         const auto private_point = AssistantWidgetInput::rejectOwnedPoint(control, point);
@@ -18548,10 +18543,9 @@ QVariant AssistantViewModel::beginManualControlInput(QQuickItem* control, const 
     } catch (...) { return {}; } // The original gesture never rearms on release.
 }
 bool AssistantViewModel::completeManualControlInput(QQuickItem* control, const QEventPoint& point,
-                                                  QObject* actionOwner, const QVariant& proof) {
+                                                  QObject* actionOwner, const AssistantManualControlToken& proof) {
     try {
-        if (proof.metaType() != QMetaType::fromType<ManualControlProof>()) return false;
-        const auto gesture = *static_cast<const ManualControlProof*>(proof.constData());
+        const auto gesture = proof.gesture;
         if (!gesture || gesture->consumed) return false;
         gesture->consumed = true; // Sole action, including a refused/stale final delivery.
         if (!gesture->allowed || gesture->receiver != this || gesture->control != control ||

@@ -880,9 +880,9 @@ struct Session::ProjectCreationOutcome {
 bool Session::createProject(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
                             bool reportLibraries, const QString& assistantIntent) {
-    return createProjectWithOutcome(name,description,location,suRule,title,authors,reportLibraries,assistantIntent).value("success").toBool();
+    return createProjectWithOutcome(name,description,location,suRule,title,authors,reportLibraries,assistantIntent).success;
 }
-QVariantMap Session::createProjectWithOutcome(const QString& name, const QString& description, const QString& location,
+edi_app::ProjectCreationResult Session::createProjectWithOutcome(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,
                             bool reportLibraries, const QString& assistantIntent) {
     const QPointer<Session> receiver(this);
@@ -892,16 +892,17 @@ QVariantMap Session::createProjectWithOutcome(const QString& name, const QString
     if (!receiver) return {};
     const bool current = (!outcome.has_owner || outcome.owner) && project_ == outcome.owner &&
         replacement_generation_ == outcome.replacement;
-    const QVariantMap result{{"success", success}, {"current", current}, {"error", outcome.error}, {"saved", outcome.saved}, {"path", outcome.path},
-        {"owner", QVariant::fromValue(static_cast<QObject*>(outcome.owner.data()))},
-        {"has_owner", outcome.has_owner}, {"replacement", QString::number(outcome.replacement)}};
+    edi_app::ProjectCreationResult result;
+    result.success = success; result.current = current; result.error = outcome.error; result.saved = outcome.saved;
+    result.path = outcome.path; result.owner = outcome.owner.data(); result.has_owner = outcome.has_owner;
+    result.replacement = QString::number(outcome.replacement);
     assistant_->finishOrdinaryProjectCreationOutcome(assistantIntent,result);
     return result;
 }
-bool Session::creationOutcomeCurrent(const QVariantMap& outcome) const {
-    const auto original = outcome.value("owner").value<QObject*>();
-    return (!outcome.value("has_owner").toBool() || original) && project_ == original &&
-        outcome.value("replacement").toString() == QString::number(replacement_generation_);
+bool Session::creationOutcomeCurrent(const edi_app::ProjectCreationResult& outcome) const {
+    const auto* original = outcome.owner.data();
+    return (!outcome.has_owner || original) && project_ == original &&
+        outcome.replacement == QString::number(replacement_generation_);
 }
 bool Session::createProjectImpl(const QString& name, const QString& description, const QString& location,
                             const QString& suRule, const QString& title, const QString& authors,

@@ -54,6 +54,7 @@ qt_add_qml_module(edi_app_module
     SOURCES
         src/app_info.hpp src/app_info.cpp
         src/assistant_message_presentation.hpp
+        src/assistant_values.hpp
         src/assistant_panel_presentation.hpp
         src/assistant_view_model.hpp src/assistant_view_model.cpp
         src/assistant_widget_input.hpp src/assistant_widget_input.cpp

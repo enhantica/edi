@@ -7255,6 +7255,11 @@ void ApplicationInfo::preferenceCopyDiagnostics(const QJSValue& button, const QJ
             for (const auto& field : {std::pair{"connection", "connectionLabel"}, {"state", "state"}, {"account", "account"},
                      {"model", "selectedModel"}, {"effort", "selectedEffort"}, {"error", "lastError"}, {"context", "contextPreview"}})
                 panelUsageWrite(f, details.value, field.first, panelUsageRead(f, owner, field.second));
+            // The account is a typed value, which JSON.stringify does not spell out: its fields are copied.
+            auto account = panelUsageLiteral(f);
+            for (const char* name : {"email", "planType"})
+                panelUsageWrite(f, account.value, name, panelUsageRead(f, panelUsageRead(f, owner, "account"), name));
+            panelUsageWrite(f, details.value, "account", panelUsageComplete(f, account));
             literal = panelUsageMemberCall(f, json, "stringify", {panelUsageComplete(f, details), consentNull(), QJSValue(2)});
         }
         if (!current()) return;
@@ -10062,7 +10067,7 @@ void ApplicationInfo::parameterFieldMouse(const QJSValue& mouse, bool hold) cons
 }
 QJSValue ApplicationInfo::assistantPlanDescription() const {
     const auto f = panelUsageEngine(this); const auto plan = assistantContextField(f, "card", "assistant"); const auto actual = panelUsageRead(f, plan, "pendingPlan");
-    if (!panelUsageTruth(panelUsageRead(f, actual, "budget"))) return QJSValue(QStringLiteral(""));
+    if (!panelUsageTruth(panelUsageRead(f, panelUsageRead(f, actual, "budget"), "defined"))) return QJSValue(QStringLiteral(""));
     const auto original = panelUsageRead(f, actual, "groups"), groups = panelUsageMemberCall(f, panelUsageMemberCall(f, panelUsageTruth(original) ? original : controlEmptyArray(f), "map", {panelUsageClosure(f, 366, {}, 1)}), "join", {QJSValue(QStringLiteral("\n"))});
     auto text = panelUsageAdd(f, groups, QJSValue(QStringLiteral("\n")));
     auto budget = panelUsageGlobalCall(f, "qsTr", {QJSValue(QString::fromUtf8(QT_TRANSLATE_NOOP("AssistantPlan", "Budget: %1 trials, %2 iterations, %3 seconds")))});

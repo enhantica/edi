@@ -6,7 +6,7 @@
 #include <QHash>
 #include <QObject>
 #include <QQmlListProperty>
-#include <QVariantList>
+#include <QList>
 #include <QVariantMap>
 #include <QPointer>
 #include <QStringList>
@@ -38,6 +38,21 @@ class GeneratedRows : public QAbstractListModel {
 // A category no designed group shows, as a block's text holds it, for the group the app makes from the dictionary
 // (edi ADR-0017 §3): its items' labels and units from the dictionary, its values as written, and an edit of one
 // value as the block's text with it, which the Text tab's apply reads (ProjectViewModel::applyText).
+// One item of a loop as a cell: its `name`, its `column` in `names` and its `kind`.
+struct GeneratedCell {
+    Q_GADGET
+    QML_VALUE_TYPE(generatedCell)
+    Q_PROPERTY(QString name MEMBER name CONSTANT)
+    Q_PROPERTY(int column MEMBER column CONSTANT)
+    Q_PROPERTY(QString kind MEMBER kind CONSTANT)
+
+   public:
+    QString name;
+    int column = 0;
+    QString kind;
+    bool operator==(const GeneratedCell&) const = default;
+};
+
 class GeneratedCategory : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -60,7 +75,7 @@ class GeneratedCategory : public QObject {
     // across reads, so a selector showing them keeps them while the text changes.
     Q_PROPERTY(QQmlListProperty<edi_app::OptionListModel> options READ options NOTIFY optionsChanged)
     // A loop's cells, one per item in the order of `names`: its `name`, `column` and `kind`.
-    Q_PROPERTY(QVariantList cells READ cells NOTIFY cellsChanged)
+    Q_PROPERTY(QList<edi_app::GeneratedCell> cells READ cells NOTIFY cellsChanged)
 
    public:
     explicit GeneratedCategory(QObject* parent = nullptr);
@@ -81,7 +96,7 @@ class GeneratedCategory : public QObject {
     Q_INVOKABLE QString value(int row, int column) const { return rows_->value(row, column); }
     QStringList kinds() const { return kinds_; }
     QQmlListProperty<OptionListModel> options() { return {this, &options_}; }
-    QVariantList cells() const;
+    QList<GeneratedCell> cells() const;
 
     // The block's text with one value replaced.
     Q_INVOKABLE QString editedText(int row, const QString& name, const QString& value) const;

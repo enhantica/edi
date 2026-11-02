@@ -5076,3 +5076,7 @@ judgment or a successful provider/mode matrix. Actual delivered requests,
 assessment order, accepted-stage retention, bulk-control use and compact evidence
 choices still need independent observation. No hidden transcript/oracle was read
 and no provider/model response is treated as a backend guarantee.
+
+## Typed assistant values
+
+The panel reads the pending question and plan, the account, a draft's admission and a manual press's proof as typed values (ADR-0015 §2), and an empty `question_id` or `plan_id` now means there is none, where an empty map did before.

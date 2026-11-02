@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 
+#include "assistant_values.hpp"
 #include "example_list_model.hpp"
 #include "project_view_model.hpp"
 #include "row_table_model.hpp"
@@ -143,8 +144,8 @@ class Session : public QObject {
     Q_INVOKABLE bool createProject(const QString& name, const QString& description, const QString& location = QString(),
                                    const QString& suRule = QStringLiteral("iucr_99"), const QString& title = QString(),
                                    const QString& authors = QString(), bool reportLibraries = false, const QString& assistantIntent = QString());
-    Q_INVOKABLE QVariantMap createProjectWithOutcome(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&);
-    Q_INVOKABLE bool creationOutcomeCurrent(const QVariantMap&) const;
+    Q_INVOKABLE edi_app::ProjectCreationResult createProjectWithOutcome(const QString&,const QString&,const QString&,const QString&,const QString&,const QString&,bool,const QString&);
+    Q_INVOKABLE bool creationOutcomeCurrent(const edi_app::ProjectCreationResult&) const;
     Q_INVOKABLE void closeProject();
     // The open project's calculation refusals into the message list, after each recalculation (§14).
     void syncCalculationMessages();

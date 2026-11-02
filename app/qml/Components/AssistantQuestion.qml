@@ -7,7 +7,7 @@ import edi.app
 Column {
     id: card
     required property AssistantViewModel assistant
-    visible: Object.keys(assistant.pendingQuestion).length > 0
+    visible: assistant.pendingQuestion.question_id !== ""
     spacing: AppSizes.unit * 0.5
     EaElements.Label {
         textFormat: Text.PlainText

@@ -90,6 +90,10 @@ The page → view-model contract is the packet's §3; its rules:
   or slot of `app/src/`; no `JSON.parse`/`JSON.stringify` and no `JsonListModel` in `app/qml/`. Collections
   are `QAbstractItemModel`s; objects are typed `QObject*`. *Closes:* the dict-shaped binding of §Context and
   untyped per-field reflection.
+  The assistant's fixed-shape values (a draft's admission, a manual press's proof, the pending question and
+  plan, the account) are typed value types (`app/src/assistant_values.hpp`). Three assistant values stay maps,
+  as they are documents with no fixed shape: an activity's payload (`activityHumanDetails`), the work report
+  (`workReportReceipt`, `captureWorkReport`) and the usage (`usage`, which the panel copies through JSON).
 - **No product rule in the app.** Validation (`assign_value`), category presence and shown fields
   (`*_categories`), block text (`block_edi_text` via the save), crystal system, parameter paths
   (`parameter_entries`) and calculation are core calls; the app's own tables are presentation only (tiers,

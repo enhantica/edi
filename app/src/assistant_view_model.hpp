@@ -2,6 +2,7 @@
 #pragma once
 
 #include <QObject>
+#include "assistant_values.hpp"
 #include <QTimer>
 #include <QQuickWindow>
 #include <QPointF>
@@ -59,14 +60,14 @@ class AssistantViewModel : public QObject {
     Q_PROPERTY(edi_app::RowTableModel* selectedFiles READ selectedFiles CONSTANT)
     Q_PROPERTY(edi_app::RowTableModel* skills READ skills CONSTANT)
     Q_PROPERTY(QString selectedSkill READ selectedSkill NOTIFY selectedSkillChanged)
-    Q_PROPERTY(QVariantMap pendingPlan READ pendingPlan NOTIFY pendingPlanChanged)
+    Q_PROPERTY(edi_app::AssistantPendingPlan pendingPlan READ pendingPlan NOTIFY pendingPlanChanged)
     Q_PROPERTY(bool chatRevealRequested READ chatRevealRequested NOTIFY chatRevealRequestedChanged)
-    Q_PROPERTY(QVariantMap pendingQuestion READ pendingQuestion NOTIFY pendingQuestionChanged)
+    Q_PROPERTY(edi_app::AssistantPendingQuestion pendingQuestion READ pendingQuestion NOTIFY pendingQuestionChanged)
     Q_PROPERTY(QString activeJobId READ activeJobId NOTIFY activeJobIdChanged)
     Q_PROPERTY(bool canCancel READ canCancel NOTIFY canCancelChanged)
     Q_PROPERTY(QString lastError READ lastError NOTIFY lastErrorChanged)
     Q_PROPERTY(QVariantMap usage READ usage NOTIFY usageChanged)
-    Q_PROPERTY(QVariantMap account READ account NOTIFY accountChanged)
+    Q_PROPERTY(edi_app::AssistantAccount account READ account NOTIFY accountChanged)
     Q_PROPERTY(QString contextPreview READ contextPreview NOTIFY contextPreviewChanged)
     Q_PROPERTY(QString contextConsentIdentity READ contextConsentIdentity NOTIFY contextConsentIdentityChanged)
     Q_PROPERTY(bool draftAdmissionReady READ draftAdmissionReady NOTIFY draftAdmissionReadyChanged)
@@ -117,15 +118,15 @@ class AssistantViewModel : public QObject {
     RowTableModel* selectedFiles() const;
     RowTableModel* skills() const;
     QString selectedSkill() const;
-    QVariantMap pendingPlan() const;
+    AssistantPendingPlan pendingPlan() const;
     bool chatRevealRequested() const;
     Q_INVOKABLE void dismissChatReveal();
-    QVariantMap pendingQuestion() const;
+    AssistantPendingQuestion pendingQuestion() const;
     QString activeJobId() const;
     bool canCancel() const;
     QString lastError() const;
     QVariantMap usage() const;
-    QVariantMap account() const;
+    AssistantAccount account() const;
     RowTableModel* skillSources() const;
     QString skillSourceError() const;
     QString skillSourceRevision() const;
@@ -151,7 +152,7 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE void send(const QString& text);
     /// Submit on the owner thread; return its admitted row ID, or empty on refusal. Durable completed status alone acknowledges it.
     Q_INVOKABLE QString submitDraft(const QString& text);
-    Q_INVOKABLE QVariantMap submitDraftAdmission(const QString& text);
+    Q_INVOKABLE edi_app::AssistantDraftAdmission submitDraftAdmission(const QString& text);
     Q_INVOKABLE QString workReportDocument();
     /// Display-only intent label for a native action identifier; no action is executed.
     Q_INVOKABLE QString nativeActionLabel(const QString& action) const;
@@ -187,9 +188,9 @@ class AssistantViewModel : public QObject {
     Q_INVOKABLE bool nativeProjectCreateSave(const QString& intent);
     // Actual grab owns this opaque proof until its sole tap, cancel or ungrab.
     // Final delivery only validates the original owner; it never cancels anew.
-    Q_INVOKABLE QVariant beginManualControlInput(QQuickItem* control, const QEventPoint& point, QObject* actionOwner);
+    Q_INVOKABLE edi_app::AssistantManualControlToken beginManualControlInput(QQuickItem* control, const QEventPoint& point, QObject* actionOwner);
     Q_INVOKABLE bool completeManualControlInput(QQuickItem* control, const QEventPoint& point,
-                                              QObject* actionOwner, const QVariant& proof);
+                                              QObject* actionOwner, const edi_app::AssistantManualControlToken& proof);
     Q_INVOKABLE void cancel();
     Q_INVOKABLE bool resumeConnection();
     Q_INVOKABLE void signIn();
@@ -279,7 +280,7 @@ class AssistantViewModel : public QObject {
     bool prepareSessionProjectRestore(ProjectViewModel*,const QString& source,const std::function<bool()>& commit);
     bool retainsSessionProject(ProjectViewModel*) const;
     bool prepareOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, const QString& location = {});
-    void finishOrdinaryProjectCreationOutcome(const QString& intent, const QVariantMap& outcome) noexcept;
+    void finishOrdinaryProjectCreationOutcome(const QString& intent, const ProjectCreationResult& outcome) noexcept;
     void finishOrdinaryProjectCreation(ProjectViewModel*, const QString& intent, bool committed) noexcept;
     bool resultSettledReady() const;
     struct State;
