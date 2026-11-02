@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 
@@ -114,18 +116,32 @@ EaComponents.ListViewTextInput {
     }
     warned: refusal !== ""
     ToolTip.text: refusal
-    WarningToolTip {
-        text: cell.refusal
-        visible: text !== "" && (cell.hovered || cell.activeFocus)
+    // The tooltips are made only when they can show: a table makes and drops whole rows to measure them, and a
+    // popup per cell was a third of a row's cost.
+    Loader {
+        anchors.fill: parent
+        active: cell.refusal !== "" && (cell.hovered || cell.activeFocus)
+        sourceComponent: Component {
+            WarningToolTip {
+                text: cell.refusal
+                visible: text !== "" && (cell.hovered || cell.activeFocus)
+            }
+        }
     }
     FontMetrics {
         id: metrics
         font: cell.font
         onFontChanged: cell.refit()
     }
-    EaElements.ToolTip {
-        text: cell.uid !== "" ? cell.written : NumberText.plainFull(cell.value)
-        visible: cell.shown !== cell.written && cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
+    Loader {
+        anchors.fill: parent
+        active: cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
+        sourceComponent: Component {
+            EaElements.ToolTip {
+                text: cell.uid !== "" ? cell.written : NumberText.plainFull(cell.value)
+                visible: cell.shown !== cell.written && cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
+            }
+        }
     }
     onValueChanged: ApplicationInfo.editorValueChanged(ApplicationInfo.TextCellEditor)
     // Qt emits editingFinished and then accepted for the SAME Return. Commit

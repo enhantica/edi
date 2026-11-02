@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
 
@@ -110,9 +112,17 @@ EaComponents.ListViewParameter {
 
     // On hover: the value as written when the cell shows it shorter or clipped, else the item's label and `.edi` name
     // (edi ADR-0051).
-    EaElements.ToolTip {
-        text: cell.shownValue !== cell.valueText ? (cell.written ? cell.valueText : NumberText.plainFull(cell.item.value)) : cell.contentWidth > cell.width ? cell.text : cell.item !== null ? cell.item.toolTip : ""
-        visible: text !== "" && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+    // The tooltips are made only when they can show: a table makes and drops whole rows to measure them, and a
+    // popup per cell was a third of a row's cost.
+    Loader {
+        anchors.fill: parent
+        active: cell.hovered && !cell.activeFocus && !cell.warned && EaGlobals.Vars.showToolTips
+        sourceComponent: Component {
+            EaElements.ToolTip {
+                text: cell.shownValue !== cell.valueText ? (cell.written ? cell.valueText : NumberText.plainFull(cell.item.value)) : cell.contentWidth > cell.width ? cell.text : cell.item !== null ? cell.item.toolTip : ""
+                visible: text !== "" && cell.hovered && !cell.activeFocus && !cell.warned && cell.ToolTip.text === "" && EaGlobals.Vars.showToolTips
+            }
+        }
     }
 
     enabled: refinable
@@ -132,14 +142,26 @@ EaComponents.ListViewParameter {
     // A help text set as `ToolTip.text` shows in the app's tooltip on hover, unless the cell shows why its value is
     // red (never the attached tooltip Qt draws in its own style).
     property bool helpToolTip: false
-    EaElements.ToolTip {
-        text: cell.ToolTip.text
-        visible: cell.helpToolTip && text !== "" && cell.hovered && !cell.warned && EaGlobals.Vars.showToolTips
+    Loader {
+        anchors.fill: parent
+        active: cell.helpToolTip && cell.hovered && !cell.warned && EaGlobals.Vars.showToolTips
+        sourceComponent: Component {
+            EaElements.ToolTip {
+                text: cell.ToolTip.text
+                visible: cell.helpToolTip && text !== "" && cell.hovered && !cell.warned && EaGlobals.Vars.showToolTips
+            }
+        }
     }
     ToolTip.text: warningText
-    WarningToolTip {
-        text: cell.warningText
-        visible: cell.warned && (cell.hovered || cell.activeFocus)
+    Loader {
+        anchors.fill: parent
+        active: cell.warned && (cell.hovered || cell.activeFocus)
+        sourceComponent: Component {
+            WarningToolTip {
+                text: cell.warningText
+                visible: cell.warned && (cell.hovered || cell.activeFocus)
+            }
+        }
     }
 
     readonly property var editOwner: Session.project
