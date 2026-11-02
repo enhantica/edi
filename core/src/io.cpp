@@ -4871,8 +4871,21 @@ std::vector<std::function<void()>> hold_calculation(Project& project) {
 // The lookup borrows parameter identities from this one readback only.
 void require_saved_parameters(const Project& project, const std::string& directory) {
     const Project saved = read_saved_project(directory);
+    // An optional profile coefficient the project leaves unset is not written, and reading the file
+    // gives it the profile's declared default: that slot is the same project, not a new parameter.
+    std::set<const Parameter*> defaulted;
+    for (const auto& experiment : project.experiments) {
+        const auto found = std::find_if(saved.experiments.begin(), saved.experiments.end(),
+            [&experiment](const auto& held) { return held->name.value() == experiment->name.value(); });
+        if (found == saved.experiments.end()) continue;
+        for (const auto member : PeakBase::optional_parameter_members) {
+            const auto& read = (*found)->peak.*member;
+            if (read && !(experiment->peak.*member)) defaulted.insert(&*read);
+        }
+    }
     std::map<std::string, const Parameter*> written;
     for (const auto& slot : parameter_slots(saved)) {
+        if (defaulted.contains(slot.parameter)) continue;
         if (!written.emplace(slot.unique_name, slot.parameter).second) {
             throw IoError("saved parameter identity is ambiguous: " + slot.unique_name);
         }
