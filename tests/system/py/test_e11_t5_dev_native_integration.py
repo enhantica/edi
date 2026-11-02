@@ -5540,7 +5540,7 @@ def _protocol_item(method, item):
 def test_lazy_command_human_details_preserve_first_supported_meanings_without_technical_copy(
     main_actor,
 ):
-    # Preserve the FIRST formatter meanings with the owner's updated fit wording.
+    # Human labels are regression pins for the published fit wording (73ba7ccb).
     hidden = 'independent-raw-command-output-NEVER-DISPLAY-69bb'
     cases = [
         (
@@ -5553,7 +5553,7 @@ def test_lazy_command_human_details_preserve_first_supported_meanings_without_te
             'strategy',
             'cat .agents/skills/refinement-strategy/SKILL.md',
             [],
-            'Read assistant fit instructions',
+            'Read assistant fitting instructions',
         ),
         (
             'read',
@@ -5611,7 +5611,7 @@ def test_lazy_command_human_details_preserve_first_supported_meanings_without_te
             'combined',
             cases[0][1] + ' ' + cases[1][1].removeprefix('cat '),
             [],
-            'Read assistant workflow and fit instructions',
+            'Read assistant workflow and fitting instructions',
         ),
     )
     steps = []
@@ -5719,6 +5719,10 @@ def test_lazy_command_human_details_preserve_first_supported_meanings_without_te
         )
         if expected not in copied['clipboard']:
             meanings_missing.append(identity + ': copy')
+        if identity in {'workflow', 'strategy', 'combined'} and re.search(
+            r'\brefin\w*', '\n'.join(displayed) + copied['clipboard'], re.IGNORECASE
+        ):
+            meanings_missing.append(identity + ': legacy assistant terminology')
         args = ','.join(json.dumps(current[key]) for key in ('id', 'kind', 'status'))
         technical = qml(actor, 'Session.assistant.activityTechnicalDetails(' + args + ')')
         original = json.loads(technical)
