@@ -341,16 +341,8 @@ void ExperimentViewModel::sync_description() {
     facility_token_ = facility_token;
     instrument_token_ = instrument_token;
     description_editable_ = editable;
-    if (facility_changed) {
-        emit facilityTokenChanged();
-    }
-    // The instrument options follow the facility, so the instrument selector looks again when either changes.
-    if (facility_changed || instrument_changed) {
-        emit instrumentTokenChanged();
-    }
-    if (editable_changed) {
-        emit descriptionEditableChanged();
-    }
+    // The scope guard above announces each changed token once (edi ADR-0017, dedicated notifications); the
+    // instrument choices follow the facility through their own options model, set above.
 }
 
 // A facility chosen: its instrument stays when the new facility has it, else it becomes "Not specified".
