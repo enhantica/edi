@@ -4305,10 +4305,28 @@ QJSValue ApplicationInfo::preferenceButtonNeed(const QJSValue& button) const {
 }
 QJSValue ApplicationInfo::preferenceRowItems() const {
     const auto f = panelUsageEngine(this);
-    const auto children = assistantContextField(f, "pages", "contentChildren");
-    const auto callback = viewCallback(f, 41, 2);
+    const auto pages = assistantContextField(f, "pages", "contentChildren");
     if (!panelUsageReady(f)) return {};
-    return panelUsageMemberCall(f, children, "reduce", {callback, f->newArray()});
+    QList<QJSValue> found;
+    const auto wanted = [](const QObject* item) {
+        return item != nullptr && (item->property("rowLabel") == QVariant(true) || item->property("rowBox") == QVariant(true)
+                                   || item->property("rowButton") == QVariant(true));
+    };
+    std::function<void(const QJSValue&)> walk = [&](const QJSValue& item) {
+        const auto children = panelUsageRead(f, item, "children");
+        const int count = panelUsageReady(f) ? std::max(0, children.property(QStringLiteral("length")).toInt()) : 0;
+        for (int index = 0; index < count && panelUsageReady(f); ++index) {
+            const auto child = children.property(static_cast<quint32>(index));
+            if (wanted(child.toQObject())) found.append(child);
+            walk(child);
+        }
+    };
+    const int pageCount = std::max(0, pages.property(QStringLiteral("length")).toInt());
+    for (int index = 0; index < pageCount && panelUsageReady(f); ++index) walk(pages.property(static_cast<quint32>(index)));
+    if (!panelUsageReady(f)) return {};
+    auto result = f->newArray(static_cast<uint>(found.size()));
+    for (qsizetype index = 0; index < found.size(); ++index) result.setProperty(static_cast<quint32>(index), found[index]);
+    return result;
 }
 QJSValue ApplicationInfo::preferenceRowWidth(bool controls) const {
     const auto f = panelUsageEngine(this);
@@ -5803,6 +5821,72 @@ QJSValue tableTextMeasurement(const PanelUsageFrame& f, const QJSValue& width,
     const auto math = panelUsageContextRead(f, "Math");
     return panelUsageMemberCall(f, math, "min", {width, limit});
 }
+// What fresh-row measuring reads from the table once per pass.
+struct TableFreshInputs {
+    std::vector<bool> wideEdges;
+    int fillerIndex = -1;
+    double fillerWidth = 0, spacing = 0, fontPixelSize = 0;
+    QObject* metrics = nullptr;
+};
+bool tableFreshHas(const QObject* object, const char* name) {
+    return object != nullptr && object->metaObject()->indexOfProperty(name) >= 0;
+}
+double tableFreshNumber(const QObject* object, const char* name) {
+    bool ok = false;
+    const double value = object->property(name).toDouble(&ok);
+    return ok ? value : 0;
+}
+void tableFreshAlign(QQuickItem* cell, const QString& kind) {
+    if (tableFreshHas(cell, "keepsAlignment")) return;
+    const int alignment = kind == QLatin1String("number") || kind == QLatin1String("check") ? int(Qt::AlignRight)
+                        : kind == QLatin1String("icon") ? int(Qt::AlignHCenter) : int(Qt::AlignLeft);
+    if (tableFreshHas(cell, "columnAlignment")) cell->setProperty("columnAlignment", alignment);
+    else if (tableFreshHas(cell, "horizontalAlignment")) cell->setProperty("horizontalAlignment", alignment);
+}
+// Pads a fresh cell; returns false for a cell padForFiller leaves alone. `left` and `naturalRight` are its base
+// paddings, the right one without the filler.
+bool tableFreshPad(QQuickItem* cell, int column, const QString& kind, const TableFreshInputs& in, double& left, double& naturalRight) {
+    if (!tableFreshHas(cell, "rightPadding") || tableFreshHas(cell, "keepsAlignment")) return false;
+    left = tableFreshNumber(cell, "leftPadding");
+    const bool rightAligned = kind == QLatin1String("number") || kind == QLatin1String("check");
+    double right = tableFreshNumber(cell, "rightPadding") + (rightAligned ? in.spacing : 0);
+    if (rightAligned && column >= 0 && static_cast<std::size_t>(column) < in.wideEdges.size() && in.wideEdges[static_cast<std::size_t>(column)])
+        right += in.fontPixelSize;
+    naturalRight = right;
+    if (column == in.fillerIndex) right += in.fillerWidth;
+    cell->setProperty("rightPadding", right);
+    auto* indicator = kind == QLatin1String("check") ? cell->property("indicator").value<QQuickItem*>() : nullptr;
+    if (indicator != nullptr) {
+        // Set, not bound: the box's implicit width follows its padding, and its column's width its implicit one.
+        cell->setProperty("leftPadding", std::max(left, cell->width() - tableFreshNumber(cell, "rightPadding") - indicator->width()));
+        return true;
+    }
+    cell->setProperty("leftPadding", left + (kind == QLatin1String("text") ? in.spacing : 0));
+    return true;
+}
+double tableFreshPadded(const QQuickItem* cell, double width) {
+    return width + tableFreshNumber(cell, "leftPadding") + tableFreshNumber(cell, "rightPadding");
+}
+double tableFreshMeasure(QJSEngine* engine, QQuickItem* cell, const QString& kind, bool padded, double left, const TableFreshInputs& in) {
+    if (kind == QLatin1String("check")) {
+        if (auto* indicator = cell->property("indicator").value<QQuickItem*>())
+            return (padded ? left : 0) + indicator->width() + tableFreshNumber(cell, "rightPadding");
+    }
+    if (tableFreshHas(cell, "number")) {
+        // The number as script text, as the metrics' advanceWidth receives it from QML.
+        const QString text = engine->toScriptValue(cell->property("number")).toString();
+        qreal width = 0;
+        if (in.metrics != nullptr) QMetaObject::invokeMethod(in.metrics, "advanceWidth", Q_RETURN_ARG(qreal, width), Q_ARG(QString, text));
+        return tableFreshPadded(cell, width);
+    }
+    if (tableFreshHas(cell, "elide")) return cell->implicitWidth();
+    if (tableFreshHas(cell, "contentWidth")) return tableFreshPadded(cell, tableFreshNumber(cell, "contentWidth"));
+    // A cell holding a control (a combo box in a ComboCell) is as wide as the control, with the cell's paddings.
+    double widest = cell->implicitWidth();
+    for (const auto* child : cell->childItems())
+        widest = std::max(widest, tableFreshHas(child, "fittedWidth") ? tableFreshNumber(child, "fittedWidth") : child->implicitWidth());
+    return tableFreshPadded(cell, widest);
+}
 // A JS array of numbers, read once.
 std::vector<double> tableNumbers(const QJSValue& array) {
     std::vector<double> values(static_cast<std::size_t>(std::max(0, array.property(QStringLiteral("length")).toInt())));
@@ -6168,6 +6252,18 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
             panelUsageRead(f, sizes, "tableColumnSpacing").toString(), panelUsageRead(f, sizes, "fontPixelSize").toString());
     }
     QString styleKinds;
+    TableFreshInputs freshInputs;
+    std::vector<double> freshWidths;
+    QStringList freshKinds;
+    if (fresh && panelUsageReady(f)) {
+        const auto sizes = assistantContextField(f, "EaStyle", "Sizes");
+        freshInputs.fillerIndex = panelUsageContextRead(f, "fillerIndex").toInt();
+        freshInputs.fillerWidth = panelUsageContextRead(f, "fillerWidth").toNumber();
+        freshInputs.spacing = panelUsageRead(f, sizes, "tableColumnSpacing").toNumber();
+        freshInputs.fontPixelSize = panelUsageRead(f, sizes, "fontPixelSize").toNumber();
+        freshInputs.metrics = panelUsageContextRead(f, "metrics").toQObject();
+        freshWidths = tableNumbers(widths);
+    }
     panelUsageEach(f, styled, [&](const QJSValue& item) {
         if (!editorLife(f, life)) { complete = false; return false; }
         const auto cells = tableCellsOf(f, item);
@@ -6182,6 +6278,36 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
             if (!tableSameValues(f, edges, panelUsageContextRead(f, "wideEdges"))) panelUsageContextWrite(f, "wideEdges", edges);
             if (!editorLife(f, life) || !panelUsageTruth(projectCall(f, owns))) { complete = false; return false; }
             if (!fresh) styleKinds = kinds.toString() + QLatin1Char('|') + panelUsageContextRead(f, "wideEdges").toString() + QLatin1Char('|');
+            if (fresh) {
+                const auto edges = tableNumbers(panelUsageContextRead(f, "wideEdges"));
+                freshInputs.wideEdges.assign(edges.size(), false);
+                for (std::size_t index = 0; index < edges.size(); ++index) freshInputs.wideEdges[index] = edges[index] != 0;
+                const int count = std::max(0, kinds.property(QStringLiteral("length")).toInt());
+                for (int index = 0; index < count; ++index) {
+                    const auto kind = kinds.property(static_cast<quint32>(index));
+                    freshKinds.append(kind.isString() ? kind.toString() : QString());
+                }
+            }
+        }
+        if (fresh) {
+            // A row made only to be measured is styled and measured directly on its cells.
+            auto* row = qobject_cast<QQuickItem*>(parent.toQObject());
+            if (row == nullptr) return panelUsageReady(f);
+            const auto cells = row->childItems();
+            for (qsizetype index = 0; index < cells.size() && static_cast<std::size_t>(index) < freshWidths.size(); ++index) {
+                auto* cell = cells[index];
+                const QString kind = index > 0 && index < freshKinds.size() && !freshKinds[index].isEmpty()
+                    && !tableFreshHas(cell, "keepsAlignment") ? freshKinds[index] : QString();
+                if (!kind.isEmpty()) tableFreshAlign(cell, kind);
+                double left = 0, naturalRight = 0;
+                const bool padded = tableFreshPad(cell, static_cast<int>(index), kind, freshInputs, left, naturalRight);
+                const double measured = tableFreshMeasure(f.data(), cell, kind, padded, left, freshInputs);
+                const double filler = padded ? tableFreshNumber(cell, "rightPadding") - naturalRight : 0;
+                auto& width = freshWidths[static_cast<std::size_t>(index)];
+                width = std::max(width, std::ceil(measured - filler));
+            }
+            if (!editorLife(f, life)) { complete = false; return false; }
+            return panelUsageReady(f);
         }
         auto* holder = qobject_cast<QQuickItem*>(parent.toQObject());
         QString styleKey;
@@ -6211,6 +6337,7 @@ QJSValue ApplicationInfo::tableFitColumns(const QJSValue& rows, const QJSValue& 
         return panelUsageReady(f);
     });
     if (!complete || !panelUsageReady(f)) return {};
+    for (std::size_t index = 0; fresh && index < freshWidths.size(); ++index) widths.setProperty(static_cast<quint32>(index), freshWidths[index]);
     if (panelUsageTruth(kinds) && panelUsageTruth(headerCells) && panelUsageTruth(panelUsageRead(f, headerCells, "length"))) {
         const auto first = textIndex(f, headerCells, QJSValue(0)); const auto owns = panelUsageGlobalCall(f, "columnRowOwner", {panelUsageRead(f, first, "parent")});
         for (double index = 1; panelUsageReady(f) && assistantRelation(f, QJSValue(index), panelUsageRead(f, headerCells, "length"), 0)
