@@ -2,10 +2,12 @@
 
 import json
 import re
-import subprocess
 from pathlib import Path
 
 import pytest
+
+from tests.fixtures.native_ui_script.runner import run_javascript
+from tests.integration.py.test_correlation_app_contract import body as declaration_body
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -43,9 +45,7 @@ def source_and_options():
 
 
 def evaluate(script):
-    result = subprocess.run(
-        ['node', '-e', script], capture_output=True, text=True, check=False, timeout=3
-    )
+    result = run_javascript(script, timeout=3)
     assert result.returncode == 0, 'The real correlation bindings must execute: ' + result.stderr
     return json.loads(result.stdout)
 
@@ -84,7 +84,7 @@ def test_label_toggle_controls_each_actual_axis_delegate(axis):
     assert source.count('text: chart.edgeText(index)') == 2, (
         'Both retained axes draw the production number-or-name binding'
     )
-    numbers = body(source, 'readonly property var numbers:')
+    numbers = declaration_body(source, 'readonly property var numbers:')
     edge = body(source, 'function edgeText(')
     script = (
         'const labels=["alpha","beta"];'

@@ -56,6 +56,14 @@ def test_data_table_declares_named_component_columns():
         property_value(label, 'text')
         == 'group.shown("pd_calc.component_intensities_net", modelData)'
     ), 'Structure contributions use the same plain numeric display as other calculated columns'
-    assert 'Session.display(uid, value)' in block(qml, 'function shown('), (
-        'Calculated component cells must use their dictionary item through the shared bridge'
+    shown = block(qml, 'function shown(')
+    observed = javascript(
+        'let calls=[];const Session={display:(...args)=>{calls.push(args);return "sentinel"}};'
+        + shown
+        + ';console.log(JSON.stringify([shown("pd_calc.component_intensities_net",1.375),'
+        'calls]));'
+    )
+    assert observed == ['sentinel', [['pd_calc.component_intensities_net', 1.375]]], (
+        'Calculated cells must pass the exact dictionary uid and nontrivial value through '
+        'the actual shared numeric display bridge'
     )

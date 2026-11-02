@@ -567,12 +567,12 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
     loader = block(session, 'bool Session::openExampleNamed(')
     require(
         loader,
-        r'extracted_ = std::make_unique<QTemporaryDir>\(\)',
+        r'copyRoot\s*=\s*prepareCopyRoot\("example"\)',
         'Working-copy wiring: the actual example loader allocates its temporary directory',
     )
     require(
         loader,
-        r'const QString target = extracted_->filePath\(',
+        r'const QString target\s*=\s*QDir\(copyRoot\)\.filePath\(',
         'Working-copy wiring: the copied project is under that temporary directory',
     )
     require(
@@ -596,20 +596,36 @@ def test_bundled_project_load_and_save_as_use_the_writable_copy_routes():
         'Working-copy wiring: each copied destination preserves the path '
         'beneath the opened target',
     )
+    allocator = block(session, 'QString Session::prepareCopyRoot(')
+    require(
+        allocator,
+        r'edi::fresh_archive_directory\(kind\)',
+        'Working-copy wiring: each native copy allocates a fresh independent root',
+    )
     qml = source('qml/Main.qml')
     action = block(qml, 'function saveProjectAs(')
     require(
         action,
-        r'saveAsChoice\.open\(\)',
+        r'ApplicationInfo\.saveCurrentProjectAs\(intent\)',
+        'Save As wiring: the actual action enters the native chooser owner',
+    )
+    native = source('src/app_info.cpp')
+    require(
+        block(native, 'void ApplicationInfo::saveCurrentProjectAs('),
+        r'projectInvoke\(frame, "saveAsChoice", "open"\)',
         'Save As wiring: every platform first opens the actual format dialog',
     )
     choice = item(qml, 'saveAs.choice')
-    accepted = block(choice, 'onAccepted:')
+    assert property_value(choice, 'onAccepted') == 'ApplicationInfo.acceptProjectSaveChoice()', (
+        'Save As wiring: the actual choice acceptance enters its native destination router'
+    )
+    accepted = block(native, 'void ApplicationInfo::acceptProjectSaveChoice(')
     for route in (
-        r'Session\.downloadWebProject\(\)',
-        r'Session\.saveWebProjectAs\(',
-        r'saveZip\.openAt\(Session\.suggestedSaveTarget\(true\)\)',
-        r'saveFolder\.openAt\(Session\.suggestedSaveTarget\(false\)\)',
+        r'projectInvoke\(frame, "Session", "downloadWebProject"\)',
+        r'projectInvoke\(frame, "Session", "saveWebProjectAs",',
+        r'zip \? "saveZip" : "saveFolder"',
+        r'projectInvoke\(frame, "Session", "suggestedSaveTarget",',
+        r'panelUsageMemberCall\(frame, picker, "openAt", \{target\}\)',
     ):
         require(
             accepted,
