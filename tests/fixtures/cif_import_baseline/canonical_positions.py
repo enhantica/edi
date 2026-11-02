@@ -47,7 +47,14 @@ def orbit_transition(case):
 
 def reader_values(path, expected, frozen):
     expected = {name: list(values) for name, values in expected.items()}
-    change = orbit_transition(path.rsplit('/structures/', 1)[0])
+    # A project can contain both the transformed Si model and unrelated LBCO.
+    # Bind the exact structure identity, never every structure in that folder.
+    case, separator, filename = path.rpartition('/structures/')
+    selected = separator and (
+        (case == SILICON and filename == 'si.edi')
+        or (case in PRASEODYMIUM and filename == 'structure.edi')
+    )
+    change = orbit_transition(case) if selected else None
     if change is not None:
         for axis, before, after in zip('xyz', *change, strict=True):
             name = '_atom_site_fract_' + axis

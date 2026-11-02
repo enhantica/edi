@@ -297,7 +297,10 @@ def test_catalogue_reversal_refuses_cross_source_pair_and_leaves_unlisted_paths_
     other = next(row[0] for row in CATALOGUE_INPUTS if row[0] != name)
     with pytest.raises(
         AssertionError,
-        match='live descriptive input must match its entire independently archived source',
+        match=(
+            'A complete committed description-migration input is required '
+            'before retaining old bytes'
+        ),
     ):
         metadata_bytes.pre_description_bytes(other, raw)
     assert metadata_bytes.pre_description_bytes('unlisted/' + name, raw) == raw

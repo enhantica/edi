@@ -1,7 +1,8 @@
 """Execute original wiring vectors on the actual Qt owner after native migration.
 
 Acorn identifies syntax and exposes lexical fixture bindings. It supplies no
-ApplicationInfo behavior. Missing/stale Qt transport is a prerequisite failure.
+ApplicationInfo behavior. Only a job lacking both artifact and Qt build capability
+can skip; an app-capable job must supply its real matching runner.
 """
 
 from __future__ import annotations
@@ -11,10 +12,36 @@ import os
 import subprocess
 import sys
 import tempfile
+import warnings
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
+
+
+def require_runner(runner: Path) -> None:
+    if not runner.is_file() or not os.access(runner, os.X_OK):
+        qt_config = 'lib/cmake/Qt6QuickTest/Qt6QuickTestConfig.cmake'
+        can_build = any(
+            (Path(sys.prefix) / base / qt_config).is_file() for base in ('', 'Library')
+        )
+        absent = not runner.exists() and not runner.is_symlink()
+        if absent and 'EDI_APP_TEST_RUNNER' not in os.environ and not can_build:
+            reason = (
+                'Native UI wiring requires edi_app_tests; this Pixi job has neither the '
+                'artifact nor Qt6QuickTest to build it. Run this case in the app environment '
+                'after app-build. Pure JavaScript checks still run in the core job.'
+            )
+            # The ordinary core task is quiet: expose the prerequisite in its
+            # warning summary as well as every skipped test's stored reason.
+            warnings.warn(reason, pytest.PytestWarning, stacklevel=2)
+            pytest.skip(reason)
+        raise AssertionError(
+            'Native UI wiring requires the real edi_app_tests runner. The app-capable job '
+            'must run app-build, and an explicit EDI_APP_TEST_RUNNER must name an executable.'
+        )
 
 
 def run_javascript(program: str, *, timeout: float = 5) -> subprocess.CompletedProcess[str]:
@@ -42,11 +69,7 @@ def run_javascript(program: str, *, timeout: float = 5) -> subprocess.CompletedP
             timeout=timeout,
         )
     runner = Path(os.environ.get('EDI_APP_TEST_RUNNER', ROOT / 'build/app/app/edi_app_tests'))
-    if not runner.is_file() or not os.access(runner, os.X_OK):
-        raise AssertionError(
-            'Native UI wiring requires the actual edi_app_tests Qt runner; the PR caller '
-            'must provide its app artifact with EDI_APP_TEST_RUNNER, never a fake ApplicationInfo'
-        )
+    require_runner(runner)
     storage = ROOT / 'build/native-ui-wiring'
     storage.mkdir(parents=True, exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix='case-', dir=storage))

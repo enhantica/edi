@@ -20,7 +20,7 @@ def text(path):
 
 
 def body(source, declaration):
-    if declaration.rstrip().endswith(':'):
+    if declaration.rstrip().endswith(':') and not declaration.lstrip().startswith('component '):
         name = re.search(r'([A-Za-z_]\w*)\s*:$', declaration).group(1)
         at = source.index(declaration)
         begin, end = min(
@@ -274,6 +274,11 @@ def test_experiment_data_header_and_link_are_declared():
 def test_diagnostics_uses_the_preferences_shared_control_width():
     # Before: the Logging level box supplied the width. After: the dialog's
     # common control column supplies every full-width button and box.
+    authored = 'Item {\n component RowButton: Button { width: 37 }\n}'
+    assert body(authored, 'component RowButton:').strip() == 'width: 37', (
+        'The declaration observer must distinguish an inline component colon '
+        'from a property binding'
+    )
     source = text('Components/AppPreferencesDialog.qml')
     match = re.search(
         r'(?P<kind>(?:EaElements\.)?Button|RowButton)\s*\{\s*'

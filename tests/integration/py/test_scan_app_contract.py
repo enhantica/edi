@@ -11,6 +11,7 @@ from pathlib import Path
 
 import pytest
 
+from tests.fixtures.native_ui_script.job_controls import check_job_requirements
 from tests.fixtures.native_ui_script.runner import run_javascript
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -53,7 +54,7 @@ def spans(text):
     return found
 
 
-def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
+def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces(tmp_path, monkeypatch):
     text = 'Item { // owner\'s } comment\n text: "{fake}"; Child { value: 3 } /* } */ }'
     blocks = [text[a:b] for a, b in spans(text)]
     assert blocks == ['{ value: 3 }', text[text.index('{') :]], (
@@ -86,6 +87,9 @@ def test_qml_spans_ignore_comment_apostrophes_and_quoted_braces():
     assert property_value('Item {\n onReady: ' + call + '\n}', 'onReady') == call, (
         'The observer retains every callback of the complete native forwarding expression'
     )
+    # The same observer must distinguish unavailable core capability from a
+    # broken app artifact before any native vector can be skipped.
+    check_job_requirements(tmp_path, monkeypatch)
 
 
 def block(text, marker):
