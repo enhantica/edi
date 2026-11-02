@@ -14,7 +14,8 @@ EaElements.TextInput {
 
     property string headerText: ""
 
-    height: parent.height
+    // A table's measuring rows make and drop their cells while the cells have no parent yet or any more.
+    height: parent ? parent.height : 0
     horizontalAlignment: Text.AlignHCenter
     verticalAlignment: Text.AlignVCenter
     hoverEnabled: true
