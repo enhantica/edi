@@ -965,6 +965,10 @@ bool Session::createProjectImpl(const QString& name, const QString& description,
     if (!current()) return false;
     emit needsSaveAsChanged();
     if (!current()) return false;
+    // The Project tab's location line reads locationText: a project the assistant creates is shown before this save,
+    // so without the signal the line kept the empty location it had then.
+    emit locationTextChanged();
+    if (!current()) return false;
     emit projectDirectoryUsed(QFileInfo(location).absoluteFilePath());
     return true;
 }
