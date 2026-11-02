@@ -6167,9 +6167,16 @@ std::vector<bool> tableNativeTextCaps(QObject* table) {
 // cells are read directly, which keeps every cell out of the binding's dependencies.
 QJSValue ApplicationInfo::tableColumnWidths() const {
     const auto f = panelUsageEngine(this);
+    // The reads keep the script order: the fitted widths and their length first, then the columns, each read once,
+    // so a value a getter replaces on the way is the one returned.
+    const auto fittedValue = panelUsageContextRead(f, "fittedWidths");
+    if (panelUsageTruth(panelUsageContextRead(f, "equalColumns"))) return panelUsageContextRead(f, "columns");
+    const auto length = panelUsageRead(f, fittedValue, "length");
+    if (!consentFieldEquals(f, panelUsageContextRead(f, "columns"), "length", length)) return panelUsageContextRead(f, "columns");
     const auto columnsValue = panelUsageContextRead(f, "columns");
-    if (panelUsageTruth(panelUsageContextRead(f, "equalColumns"))) return columnsValue;
-    const auto fitted = tableNumbers(panelUsageContextRead(f, "fittedWidths"));
+    if (!panelUsageReady(f)) return {};
+    std::vector<double> fitted(static_cast<std::size_t>(std::max(0, length.toInt())));
+    for (std::size_t index = 0; index < fitted.size(); ++index) fitted[index] = fittedValue.property(static_cast<quint32>(index)).toNumber();
     const auto columns = tableNumbers(columnsValue);
     if (!panelUsageReady(f) || fitted.size() != columns.size()) return columnsValue;
     const double width = panelUsageContextRead(f, "width").toNumber();
