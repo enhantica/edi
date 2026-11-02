@@ -839,13 +839,13 @@ Item {
             verify(Math.abs(widths[1][0] - widths[0][0]) < 0.6, "Numbering remains content-sized as the sidebar grows");
         }
         function test_generic_id_width_learns_only_real_shown_rows_and_keeps_visited_maximum() {
-            const p = parameter(), last = 111, wideText = "visited.identifier.111";
+            const p = parameter(), last = 111, wideText = "model.identifier.111";
             for (let index = 0; index <= last; ++index)
                 rows.append({id: index === last ? wideText : "r" + index,
                     position: 12, intensity: p});
             const group = createTemporaryObject(background, surface, {
                 width: 930, experiment: Session.project.currentExperiment});
-            verify(group !== null, "The visited-ID witness uses the genuine production background owner");
+            verify(group !== null, "The whole-model ID witness uses the genuine production background owner");
             const table = Ui.find(group, "background.list");
             verify(table !== null, "The actual generic auto-fitted table is present");
             table.sourceModel = rows;
@@ -866,16 +866,21 @@ Item {
                 "The later identifier really reaches the current viewport, not a hidden cache entry");
             assertSuppliedTextFits(shownCell, wideText, Session.label("background.id"));
             const visited = shownCell.width;
-            verify(visited > before, "Seeing the independently longer ID genuinely widens the column");
+            compare(visited, before, "Scrolling preserves the width already fitted to the whole model content");
             table.positionViewAtIndex(0, ListView.Contain);
             table.forceLayout();
             tryVerify(() => table.itemAtIndex(0) !== null && table.itemAtIndex(last) === null
                 && geometrySettled(table), 2000,
                 "Returning to the first real row releases the later delegate under the same clock");
-            verify(Render.cells(table.itemAtIndex(0))[1].width + 0.6 >= visited,
-                "Scroll-only widening retains the actually visited maximum after its delegate is gone");
-            compare(rows.get(last).id, wideText, "No scroll or measurement rewrites the authored source ID");
-            compare(table.count, last + 1, "Learning visible widths never drops unseen model rows");
+            compare(Render.cells(table.itemAtIndex(0))[1].width, before,
+                "Releasing the wider delegate leaves the whole-model width unchanged");
+            rows.setProperty(last, "id", "r" + last);
+            table.forceLayout();
+            settleGeometry(table);
+            verify(Render.cells(table.itemAtIndex(0))[1].width < before,
+                "Changing unseen model content to short IDs restores a compact column");
+            compare(rows.get(last).id, "r" + last, "Measurement preserves the independently changed source ID");
+            compare(table.count, last + 1, "Fitting whole-model widths never drops unseen model rows");
         }
         function test_loop_table_boundaries_align_for_identical_identifiers() {
             const p = parameter();
