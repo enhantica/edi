@@ -15,6 +15,7 @@ struct ActivityInput {
     QString kind, rowStatus, type, commandCategory, payloadStatus, nativeOutcomeStatus;
     bool decisionIsString = false, itemIdIsString = false;
     std::optional<QString> nativeLabel;
+    int steps = 0;  // how many repeated reads the step stands for
 };
 // How a message row shows an activity: QML reads it as a typed value (ADR-0015 §2).
 struct ActivityPresentation {
@@ -58,7 +59,11 @@ inline ActivityPresentation presentActivity(const ActivityInput& in) {
         else if (in.commandCategory == "listFiles") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Listed files"));
         else if (in.commandCategory == "search") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Searched files"));
         else out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Ran command"));
-    } else if (in.type == "dynamicToolCall") out.caption = out.nativeCaption;
+    } else if (in.type == "dynamicToolCall") {
+        // Repeated reads shown as one step say how many there were.
+        out.caption = in.steps > 1 ? QCoreApplication::translate("AssistantMessage", "%1 (%n times)", nullptr, in.steps).arg(out.nativeCaption)
+                                   : out.nativeCaption;
+    }
     else if (in.type == "fileChange") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Update files"));
     else if (in.type == "webSearch") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Search the web"));
     else if (in.type == "mcpToolCall") out.caption = messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Use external tool"));
@@ -276,6 +281,7 @@ inline QString fullHumanDescription(const HumanActivityInput& in, QStringList li
             appendHumanLine(lines, messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Use the reported operation to support the current task.")));
         else appendHumanLine(lines, messageText(QT_TRANSLATE_NOOP("AssistantMessage", "Carry out the requested assistant action for the current task.")));
     }
+    for (const auto& read : in.payload.value("reads").toArray()) appendHumanLine(lines, read.toString());
     appendHumanLine(lines, in.provenance);
     const auto message = humanOutcomeMessage(in);
     appendHumanLine(lines, message);

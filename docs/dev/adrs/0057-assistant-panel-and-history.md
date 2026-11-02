@@ -5080,3 +5080,7 @@ and no provider/model response is treated as a backend guarantee.
 ## Typed assistant values
 
 The panel reads the pending question and plan, the account, a draft's admission and a manual press's proof as typed values (ADR-0015 §2), and an empty `question_id` or `plan_id` now means there is none, where an empty map did before.
+
+## Repeated reads show as one step
+
+Consecutive successful reads with the same tool (`inspect_data`, `inspect_project`, `list_parameters`, `diagnostics`) show as one step in the conversation: the first read's row, its caption counting the reads ("Inspect diffraction data (4 times)") and its details listing what each read, such as the rows and dataset of a data read. Only the display folds; history, copies of the step and work reports keep every call. A failed, refused or still-running read stands alone, and so does any step that changes the project.

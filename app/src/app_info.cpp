@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 #include "app_info.hpp"
 #include "assistant_message_presentation.hpp"
-#include "assistant_native_tools.hpp"
 #include "assistant_panel_presentation.hpp"
 #include "assistant_view_model.hpp"
 #include "web_files.hpp"
@@ -762,6 +761,11 @@ edi_app::assistant_presentation::ActivityPresentation ApplicationInfo::assistant
         const auto caption = messageNativeCaption(engine, payload, original);
         if (!messageScriptReady(engine) || !caption) return {};
         input.nativeLabel = *caption; // An actually empty caption is still an observed value.
+    }
+    if (kind == "activity" && input.type == "dynamicToolCall") {
+        const auto steps = field(payload, QStringLiteral("steps"));
+        if (!messageScriptReady(engine)) return {};
+        if (steps.isNumber()) input.steps = steps.toInt();
     }
     if (command) {
         QJSValue actual = field(payload, QStringLiteral("status"));
@@ -10623,11 +10627,7 @@ std::optional<edi_app::assistant_presentation::HumanActivityInput> prepareHumanP
     }
     const auto lines = humanDescriptionLines(input);
     if (needsHumanFallback(input, lines) && input.payload.value("type") == "dynamicToolCall" && owner)
-        input.nativeDescription = [&] {
-            const auto tool = input.payload.value("tool").toString();
-            const auto detail = edi_app::assistant_native_detail(tool, input.payload.value("arguments").toObject());
-            return detail.isEmpty() ? owner->nativeActionDescription(tool, QString()) : detail;
-        }();
+        input.nativeDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QString());
     if (!nonblankLiteral(humanOutcomeMessage(input)) && humanOutcomeCode(input) == "project_required" && owner)
         input.nativeErrorDescription = owner->nativeActionDescription(input.payload.value("tool").toString(), QStringLiteral("project_required"));
     return messageScriptReady(engine) ? std::optional<HumanActivityInput>(std::move(input)) : std::nullopt;

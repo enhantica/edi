@@ -794,6 +794,23 @@ Object message_payload(const Object& source,bool full) {
     }
     return result;
 }
+// The tool of a successful read that folds into the same read just before it (several inspect_data calls show as
+// one step); empty for a step that stands alone.
+QString folding_read(const Object& row) {
+    if(row.value("kind")!="activity" || row.value("status")!="completed")return {};
+    const auto payload=row.value("payload").toObject();
+    if(payload.value("type")!="dynamicToolCall")return {};
+    const auto outcome=payload.value("nativeOutcome").toObject().value("status").toString();
+    if(outcome=="refused" || outcome=="failed" || outcome=="unconfirmed" || outcome=="applied_unconfirmed")return {};
+    const auto tool=payload.value("tool").toString();
+    return tool=="inspect_data" || tool=="inspect_project" || tool=="list_parameters" || tool=="diagnostics"?tool:QString{};
+}
+// What one step read, for its details: the rows or parts of a data read, else the purpose the assistant gave.
+QString step_detail(const Object& row) {
+    const auto payload=row.value("payload").toObject();
+    const auto detail=assistant_native_detail(payload.value("tool").toString(),payload.value("arguments").toObject());
+    return detail.isEmpty()?row.value("text").toString():detail;
+}
 Object message_display_row(const Object& original) {
     const auto kind=original.value("kind").toString();
     return {{"id",original.value("id")},{"kind",kind},{"status",original.value("status")},
@@ -815,10 +832,24 @@ class Rows : public RowTableModel {
             pending_ = false;
             const auto& source = canonical_ ? *canonical_ : own_;
             QJsonArray projected;
+            runs_.clear();
+            QString runTool,runLeader;
             for(const auto& value:source) {
                 if(message_projection_) {
                     const auto original=value.toObject();
                     if((session_ && history_thread(original)!=*session_) || (hidden_ && hidden_->contains(original.value("id").toString())))continue;
+                    const auto tool=folding_read(original);
+                    if(!tool.isEmpty() && tool==runTool) {
+                        // Shown as part of the step before it, which counts it and lists what it read.
+                        auto& members=runs_[runLeader];
+                        if(members.isEmpty())members.append(runLeader);
+                        members.append(original.value("id").toString());
+                        auto leader=projected.last().toObject();auto payload=leader.value("payload").toObject();
+                        payload["steps"]=static_cast<int>(members.size());leader["payload"]=payload;
+                        projected[projected.size()-1]=leader;
+                        continue;
+                    }
+                    runTool=tool;runLeader=original.value("id").toString();
                     projected.append(message_display_row(original));
                 }
                 else projected.append(value);
@@ -861,7 +892,11 @@ class Rows : public RowTableModel {
         if(row<0 || row>=visible_.size() || column<0 || column>=names_.size())return {};
         return visible_.at(row).toObject().value(names_[column]).toVariant();
     }
+   public:
+    // The ids of the steps shown as one, the shown one first; empty for a step shown alone.
+    QStringList run(const QString& id) const { return runs_.value(id); }
    private:
+    QHash<QString,QStringList> runs_;
     QStringList names_;
     const QJsonArray* canonical_;
     const bool message_projection_;
@@ -17959,6 +17994,21 @@ AssistantViewModel::PreparedActivityRead AssistantViewModel::prepareActivityRead
                 const bool human = kind == "error" || kind == "plan" || kind == "question" || kind == "tool" || kind == "trial" ||
                     (kind == "activity" && !payload.contains("type") && payload.value("decision").isString() && payload.value("item_id").isString());
                 result.payload = message_payload(payload, true);
+                if (kind == "activity" && payload.value("type") == "dynamicToolCall") {
+                    // What each step read; a step that stands for several lists every one.
+                    auto members = original->messages.run(rowId);
+                    if (members.isEmpty()) members.append(rowId);
+                    QJsonArray reads;
+                    for (const QJsonValue other : original->history) {
+                        const auto member = other.toObject();
+                        if (!members.contains(member.value("id").toString())) continue;
+                        const auto detail = members.size() > 1 ? step_detail(member) : assistant_native_detail(
+                            payload.value("tool").toString(), payload.value("arguments").toObject());
+                        if (!detail.isEmpty()) reads.append(detail);
+                    }
+                    if (!reads.isEmpty()) result.payload["reads"] = reads;
+                    if (members.size() > 1) result.payload["steps"] = static_cast<int>(members.size());
+                }
                 result.text = human ? row.value("text") : QJsonValue(QString());
                 if (row.value("historyOrigin") == "runtime") {
                     result.hasProvenance = true;
