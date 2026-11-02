@@ -43,3 +43,8 @@ add_executable(assistant_owner_preview_probe EXCLUDE_FROM_ALL
     "${EDI_SOURCE}/tools/probes/edi_tests_main.cpp"
     $<TARGET_OBJECTS:assistant_owner_preview_objects>)
 target_link_libraries(assistant_owner_preview_probe PRIVATE edi::core doctest::doctest)
+
+add_executable(assistant_misfit_probe misfit.cpp)
+target_include_directories(assistant_misfit_probe PRIVATE "${EDI_SOURCE}/app/src")
+target_link_libraries(assistant_misfit_probe PRIVATE edi::core Qt6::Quick Qt6::Qml Qt6::Gui Qt6::Core)
+add_dependencies(edi_app_tests assistant_real_owner_probe assistant_misfit_probe)

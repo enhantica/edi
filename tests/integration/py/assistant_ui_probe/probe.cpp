@@ -597,6 +597,23 @@ Array model_rows(edi_app::RowTableModel* model) {
     }
     return result;
 }
+Object pattern_inputs(const edi::PatternSource& source,const QString& id) {
+    const auto column=[](const edi::PatternSource::Column& values) {
+        QJsonArray result;
+        if(values)for(const auto value:*values)
+            result.append(std::isfinite(value)?QJsonValue(value):QJsonValue());
+        return result;
+    };
+    Array excluded,phases;
+    for(const auto& band:source.excluded)excluded.append(Array{band.x_min,band.x_max});
+    for(const auto& phase:source.phases)phases.append(Object{
+        {"phase_id",QString::fromStdString(phase.structure_id)},{"positions",column(phase.position)}});
+    return {{"dataset_id",id},{"axis_kind",QString::fromStdString(source.x_item)},
+        {"current",source.current},{"x",column(source.x)},{"measured",column(source.meas)},
+        {"calculated",column(source.calc)},{"sigma",column(source.su)},{"background",column(source.bkg)},
+        {"excluded",excluded},{"phases",phases}};
+}
+
 Object pending_plan_snapshot(const edi_app::AssistantPendingPlan& plan) {
     if (plan.plan_id.isEmpty()) return {};
     Array groups;
@@ -1459,6 +1476,40 @@ int main(int argc,char** argv) {
                 if(path.isEmpty()||!window->isExposed())throw std::runtime_error("current Main frame is not exposed");
                 const auto image=window->grabWindow();
                 result={{"saved",!image.isNull()&&image.save(path)},{"width",image.width()},{"height",image.height()}};
+            }
+            else if(op=="activity_description") {
+                const auto id=input["row_id"].toString();Object original;
+                for(const auto& entry:model_rows(observed->assistant()->messages())) {
+                    const auto row=entry.toObject();if(row.value("id")==id)original=row;
+                }
+                if(original.isEmpty())throw std::runtime_error("current original message identity required");
+                QQmlComponent component(engine.get(),QUrl("qrc:/qt/qml/edi/app/qml/Components/AssistantMessage.qml"));
+                std::unique_ptr<QObject> row(component.createWithInitialProperties({
+                    {"kind",original.value("kind").toString()},{"status",original.value("status").toString()},
+                    {"text",original.value("text").toString()},{"rowId",id},
+                    {"payload",original.value("payload").toObject().toVariantMap()},
+                    {"assistant",QVariant::fromValue(observed->assistant())}},engine->rootContext()));
+                if(!row)throw std::runtime_error(component.errorString().toStdString());
+                row->setParent(window);auto* item=qobject_cast<QQuickItem*>(row.get());
+                if(!item)throw std::runtime_error("original message must be a visual item");
+                item->setParentItem(window->contentItem());item->setWidth(440);
+                auto* disclosure=row->property("detailsDisclosure").value<QObject*>();
+                if(!disclosure || !disclosure->setProperty("checked",true))throw std::runtime_error("original disclosure unavailable");
+                drain();
+                auto* editor=row->property("detailsEditor").value<QObject*>();
+                if(!editor)throw std::runtime_error("original description editor unavailable");
+                result={{"description",editor->property("text").toString()}};
+            }
+            else if(op=="pattern_inputs") {
+                if(!observed->project())throw std::runtime_error("pattern input capture requires current project");
+                const auto& model=*observed->project()->assistantProject();Array patterns;
+                for(std::size_t i=0;i<model.experiments.size();++i) {
+                    const auto& member=model.experiments[i];
+                    if(member->experiment_type.effective_sample_form()==edi::SampleFormEnum::SINGLE_CRYSTAL)continue;
+                    patterns.append(pattern_inputs(edi::capture_pattern(model,i),QString::fromStdString(
+                        edi::KeyTraits<edi::BraggPdExperiment>::canonical(member->name.value()))));
+                }
+                result={{"patterns",patterns}};
             }
             else if(op=="scientific_receipt") {
                 if(!observed->project())throw std::runtime_error("scientific receipt requires current project");
