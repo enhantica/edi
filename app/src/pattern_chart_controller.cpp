@@ -300,27 +300,6 @@ void PatternChartController::stopAnimation() {
     y_max_ = target_[3];
 }
 
-void PatternChartController::publishColors() {
-    emit measuredColorChanged();
-    emit calculatedColorChanged();
-    emit backgroundColorChanged();
-    emit residualColorChanged();
-    emit excludedColorChanged();
-    bragg_colour_count_ = braggColors().size();
-    emit braggColorsChanged();
-}
-
-QList<QColor> PatternChartController::braggColors() const {
-    QList<QColor> colours;
-    const std::vector<edi::SeriesStyle> table = styles();
-    for (const edi::SeriesStyle& style : table) {
-        if (style.key.starts_with("bragg.")) {
-            colours.append(style_colour(table, style.key, dark_));
-        }
-    }
-    return colours;
-}
-
 void PatternChartController::setStructureCurves(bool on) {
     if (on != structure_curves_) {
         structure_curves_ = on;
@@ -396,10 +375,7 @@ void PatternChartController::setExperiment(ExperimentViewModel* experiment) {
         experiment_->setChartShown(this, active_);
         experiment_->setChartAxis(this, axis());
         connect(experiment_, &ExperimentViewModel::patternSourceChanged, this, &PatternChartController::invalidate);
-        connect(experiment_, &ExperimentViewModel::colourPositionsChanged, this, [this] {
-            publishColors();
-            invalidate();  // the legend's colours
-        });
+        connect(experiment_, &ExperimentViewModel::colourPositionsChanged, this, &PatternChartController::invalidate);
         // The slider let go: the y range is fitted once again, shrinking as well as growing.
         connect(experiment_, &ExperimentViewModel::adjustingChanged, this, [this] {
             if (!experiment_->adjusting()) {
@@ -433,13 +409,9 @@ void PatternChartController::setReport(ReportViewModel* report) {
     report_ = report;
     if (report_) {
         // A new model can bring other styles (another colour scheme) under the same keys.
-        connect(report_, &ReportViewModel::modelChanged, this, [this] {
-            publishColors();
-            invalidate();
-        });
+        connect(report_, &ReportViewModel::modelChanged, this, &PatternChartController::invalidate);
     }
     emit reportChanged();
-    publishColors();
     invalidate();
 }
 
@@ -473,8 +445,7 @@ void PatternChartController::setDark(bool dark) {
     if (dark != dark_) {
         dark_ = dark;
         emit darkChanged();
-        publishColors();
-        invalidate();  // the legend's colours
+        invalidate();
     }
 }
 
@@ -482,8 +453,7 @@ void PatternChartController::setColourScheme(const QString& scheme) {
     if (scheme != colour_scheme_) {
         colour_scheme_ = scheme;
         emit colourSchemeChanged();
-        publishColors();
-        invalidate();  // the legend's colours
+        invalidate();
     }
 }
 
@@ -968,12 +938,22 @@ void PatternChartController::refresh() {
     publish(structure_curve_fills_, curve_fills, &PatternChartController::structureCurveFillsChanged);
     publish(structure_curve_colors_, curve_colours, &PatternChartController::structureCurveColorsChanged);
     publish(has_calculated_, calculated != nullptr, &PatternChartController::hasCalculatedChanged);
-    // More structures than tick series: the chart makes the rest, each handed over in turn.
-    if (const auto count = static_cast<qsizetype>(std::ranges::count_if(table, [](const edi::SeriesStyle& style) { return style.key.starts_with("bragg."); }));
-        count != bragg_colour_count_) {
-        bragg_colour_count_ = count;
-        emit braggColorsChanged();
+    // The series' colours come from the same table as the legend and the row labels, so they change whenever the
+    // drawing does: another experiment or project, a structure added, a palette. More structures than tick series:
+    // the chart makes the rest, each handed over in turn.
+    QList<QColor> bragg_colours;
+    for (const edi::SeriesStyle& style : table) {
+        if (style.key.starts_with("bragg.")) {
+            bragg_colours.append(colour_of(style.key));
+        }
     }
+    publish(bragg_colors_, bragg_colours, &PatternChartController::braggColorsChanged);
+    publish(calculated_color_, colour_of("calc"), &PatternChartController::calculatedColorChanged);
+    publish(background_color_, colour_of("bkg"), &PatternChartController::backgroundColorChanged);
+    publish(residual_color_, colour_of("resid"), &PatternChartController::residualColorChanged);
+    publish(excluded_color_, colour_of("excluded"), &PatternChartController::excludedColorChanged);
+    publish(measured_color_, colour_of(measured != nullptr ? measured->style : "meas.0"),
+            &PatternChartController::measuredColorChanged);
 
     QList<ChartBandModel::Band> bands;
     for (const edi::ExcludedBand& band : shown_.excluded) {
@@ -1025,14 +1005,6 @@ void PatternChartController::refresh() {
     publish(bragg_labels_, labels, &PatternChartController::braggLabelsChanged);
     const bool subtractable = !report_ && experiment_ != nullptr && edi::has_background(*experiment_->experiment());
     publish(background_available_, subtractable, &PatternChartController::backgroundAvailableChanged);
-    // Past the palette's own colours the count sets every experiment's colour, the measured key's too.
-    if (const std::size_t count = experiment_ ? experiment_->colourCount() : 1; count != colour_count_) {
-        colour_count_ = count;
-        emit measuredColorChanged();
-    }
-    publish(measured_style_,
-            measured != nullptr ? QString::fromStdString(measured->style) : QStringLiteral("meas.0"),
-            &PatternChartController::measuredColorChanged);
     ++revision_;
     emit revisionChanged();
 }

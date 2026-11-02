@@ -170,3 +170,21 @@ for (const coordinate of [NaN,Infinity,-Infinity])
   assert.throws(()=>roundedStatusActionRect({x:coordinate,y:0,width:30,height:10}),
     /finite before Qt integer conversion/,
     'The lifetime helper refuses nonfinite native geometry rather than silently producing a rectangle');
+
+for (const text of ['Stop','stop-circle Stop']) {
+  const observed = {...ownedStop,text};
+  assert.equal(fittingObservationKind(observed),'control',
+    'The owned status-bar running button exposes Stop, with or without its icon text');
+  assert(hasRunningProgress([observed,'fitting · it 2']),
+    'The owned current Stop label and a live iteration together satisfy progress observation');
+}
+for (const text of ['Fit','Continue','Refit','Start fitting','Stop fitting','Cancel fitting','Stop search','Unstoppable']) {
+  const observed = {...ownedStop,text};
+  assert.equal(fittingObservationKind(observed),null,
+    'Idle actions, retired labels and unrelated text on the current owner cannot impersonate running progress');
+  assert(!hasRunningProgress([observed,'fitting · it 2']),
+    'Live iteration text alone cannot replace the actual running fit control');
+}
+assert(!hasRunningProgress([ownedStop,'Success','Iterations 20']),
+  'The current Stop control without a live iteration cannot impersonate running progress');
+console.log('status-bar fitting label controls green; no application fit green claimed');

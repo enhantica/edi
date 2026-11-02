@@ -192,6 +192,15 @@ try {
     await waitControlGeometry(evaluate,frame,objectName);
     return controlPointer(evaluate,objectName);
   };
+  const waitStatusBarFit = async () => {
+    const control = await waitControlGeometry(evaluate,frame,'statusBar.fit.button');
+    const node = await waitAX(/^(?:Fit|Continue|Refit)$/,true,'button');
+    assert.equal(node.description?.value,'Fit the free parameters',
+      'The idle fitting action must expose the status-bar Fit button description');
+    assert.equal(control.text?.trim().split(/\r?\n/).at(-1),node.name?.value,
+      'The accessible fit action must match the actual named status-bar button label');
+    return node;
+  };
   const click = async (regex, role, nativeObjectName, containerName) => {
     await restoreCanvasViewport(evaluate);
     const projectAction=/Save project as/.test(regex.source)?'project.saveAs':
@@ -565,6 +574,18 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   if (!fileRequestsOnly && !exampleOnly) {
   await click(/^Analysis$/);
   await waitModal(false);
+  const fitButtonAX = await waitStatusBarFit();
+  const fitButtonDOM = await send('DOM.resolveNode',{backendNodeId:fitButtonAX.backendDOMNodeId});
+  assert(fitButtonDOM.object?.objectId,
+    'The real status-bar fit action must resolve to its browser accessibility element');
+  const pinnedFitButton = await send('Runtime.callFunctionOn',{
+    objectId:fitButtonDOM.object.objectId,
+    functionDeclaration:'function() { window.__e04FitControl = this; return this.isConnected; }',
+    returnByValue:true,
+  });
+  assert(!pinnedFitButton.exceptionDetails && pinnedFitButton.result?.value === true,
+    'The progress observer must bind the actual connected status-bar fit control');
+  await send('Runtime.releaseObject',{objectId:fitButtonDOM.object.objectId});
   await evaluate(`(() => {
     window.__e04Progress = [];
     const progressKind = (${fittingObservationKind.toString()});
@@ -575,10 +596,12 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
         window.__e04Progress.push(value);
         return;
       }
-      if (typeof value !== 'string' || value.trim() !== 'Stop') return;
+      if (typeof value !== 'string' || !/^(?:stop-circle\\s*)?Stop$/i.test(value.trim())) return;
       const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
       const button = element?.closest('button');
       if (!button || !button.isConnected) return;
+      const fromFitControl = button === window.__e04FitControl || window.__e04FitControl.contains(button);
+      if (!fromFitControl) return;
       // Existing read-only Qt hooks, never a native writer or caption selector.
       const state = window.ediFitProgress();
       if (state.running !== true) return;
@@ -613,7 +636,7 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   })()`);
   const progressBefore = await beginFitProgress(evaluate);
   const fitStarted = await evaluate('performance.now()');
-  await click(/^Fit$/, 'button', 'statusBar.fit.button');
+  await click(/^(?:Fit|Continue|Refit)$/,'button','statusBar.fit.button');
 
   // Qt wasm leaves dialog DOM elements closed; observe the actual native summary instead.
   const outcome=await waitControlGeometry(evaluate,frame,'fit.results.value.0',{enabled:false});
@@ -636,17 +659,17 @@ print(json.dumps(dict(name=name, analysis=analysis, scientific=scientific)))`, a
   // The live status-bar stripe shows the running fit's current iteration: "fitting · it N".
   const runningProgress = (values,states,final) => values.some(value => fittingObservationKind(value) === 'control') &&
     advancesLiveFitProgress(states,final);
-  assert(hasRunningProgress(['stop-circle Stop fitting', 'fitting · it 2']),
+  assert(hasRunningProgress(['Stop', 'fitting · it 2']),
     'the current named Stop control and live iteration grammar must satisfy the progress oracle');
   assert(!hasRunningProgress(['Maximum iterations 400','Success','Iterations', 'it 20 · 2 s']) &&
-    !hasRunningProgress(['Stop fitting', 'Success', 'Iterations 20']) &&
-    !hasRunningProgress(['Start fitting', 'fitting · it 2']),
+    !hasRunningProgress(['Stop', 'Success', 'Iterations 20']) &&
+    !hasRunningProgress(['Fit', 'fitting · it 2']),
     'settings, completed results and either running observation alone cannot impersonate live fitting progress');
-  assert(runningProgress(['stop-circle Stop fitting'],[1,3].map(iteration =>
+  assert(runningProgress(['Stop'],[1,3].map(iteration =>
     ({running:true,visible:true,text:`fitting · it ${iteration}`})),5),
     'The shipped running control and live status-bar iteration label must satisfy the progress witness');
-  assert(!runningProgress(['Stop fitting'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
-    !runningProgress(['Stop fitting'],[{running:true,visible:true,text:'Success · it 3'}],5),
+  assert(!runningProgress(['Stop'],[{running:false,visible:true,text:'fitting · it 3'}],5) &&
+    !runningProgress(['Stop'],[{running:true,visible:true,text:'Success · it 3'}],5),
     'completed report text and minimizer settings cannot impersonate live fitting progress');
   if (mode !== 'singlethread') {
     assert(progress.some(value => fittingObservationKind(value) === 'control') &&
@@ -761,7 +784,7 @@ print(markers[0].parent)`, saved, reopened, reopenControl || 'normal'], { encodi
   assert.equal(roundtrip.status, 0,
     'reopened project must retain every saved value(s.u.) and fit byte, with derived fields equal to the native written-model calculation: ' + roundtrip.stderr);
   await writeFile(join(output, `${mode}-reopen-roundtrip.json`), JSON.stringify({before,after},null,2));
-  await click(/^Analysis$/); await waitAX(/^Fit$/, true, 'button'); await controlPointer(evaluate, 'statusBar.fit.button'); await shot('reopened');
+  await click(/^Analysis$/); await waitStatusBarFit(); await shot('reopened');
   }
   if (!exampleOnly && !reopenControl && fileRequestCase !== 'none') {
     const inputs = join(scratch,'routing');

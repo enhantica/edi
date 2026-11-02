@@ -14,7 +14,7 @@ export function fittingObservationKind(value) {
     const same = finite && ['x','y','width','height'].every(key =>
       qtRound(value.nativeRect[key]) === qtRound(value.actionRect[key]) &&
       qtRound(value.nativeRect[key]) === value.domRect[key]);
-    return text === 'Stop' && value.control === 'statusBar.fit.button' &&
+    return /^(?:stop-circle\s*)?Stop$/i.test(text) && value.control === 'statusBar.fit.button' &&
       value.action === 'statusBar.fit.button.accessibleAction' && value.role === 'button' &&
       value.running === true && value.visible === true && value.enabled === true &&
       value.actionVisible === true && value.actionEnabled === true &&
