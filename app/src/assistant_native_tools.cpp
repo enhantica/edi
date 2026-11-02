@@ -315,6 +315,9 @@ QString assistant_native_detail(const QString& action,const Object& args) {
     const bool reflections=args.value("source").toString()=="bragg";
     if(args.value("view").toString()=="summary") {
         const auto parts=static_cast<qint64>(args.value("partitions").toDouble());
+        if(parts<=1)
+            return (reflections?tr("Summarized reflections %1 to %2 of %3."):tr("Summarized rows %1 to %2 of %3."))
+                .arg(start+1).arg(start+count).arg(dataset);
         return (reflections?tr("Summarized reflections %1 to %2 of %3 in %4 parts."):tr("Summarized rows %1 to %2 of %3 in %4 parts."))
             .arg(start+1).arg(start+count).arg(dataset).arg(parts);
     }
